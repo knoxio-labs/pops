@@ -197,15 +197,22 @@ export function textSearchFor(q: string): WebItemsTextSearch {
   const escaped = escapeLike(q);
   const prefix = like(items.name, `${escaped}%`);
   const contains = like(items.name, `%${escaped}%`);
+  const wordPrefix = orConditions(
+    [' ', '\t', '\n', '\r', '\v', '\f'].map((separator) =>
+      like(items.name, `%${separator}${escaped}%`)
+    )
+  );
+  const nameTier = orConditions([prefix, wordPrefix]);
   const otherTier = orConditions([
     like(items.code, `%${escaped}%`),
     like(items.note, `%${escaped}%`),
     like(publishedTypeLabelSql(), `%${escaped}%`),
   ]);
   return {
-    match: orConditions([contains, otherTier]),
+    match: orConditions([nameTier, contains, otherTier]),
     rank: sql<number>`CASE
-      WHEN ${prefix} THEN 3
+      WHEN ${prefix} THEN 4
+      WHEN ${nameTier} THEN 3
       WHEN ${contains} THEN 2
       WHEN ${otherTier} THEN 1
       ELSE 0

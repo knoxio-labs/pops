@@ -72,7 +72,7 @@ const textCursorKeyValidators: Record<WebItemsSort, (key: readonly CursorValue[]
 
 function validTextCursorKey(sort: WebItemsSort | null, key: readonly CursorValue[]): boolean {
   const tier = key[0];
-  if (tier !== 1 && tier !== 2 && tier !== 3) return false;
+  if (tier !== 1 && tier !== 2 && tier !== 3 && tier !== 4) return false;
   const sortKey = key.slice(1);
   return sort === null
     ? sortKey.length === 1 && typeof sortKey[0] === 'string'
@@ -132,7 +132,7 @@ function textTierForRow(db: CommandDb, rank: SQL<number>, id: string): number {
     .from(items)
     .where(sql`${items.id} = ${id}`)
     .get()?.tier;
-  if (tier !== 1 && tier !== 2 && tier !== 3) {
+  if (tier !== 1 && tier !== 2 && tier !== 3 && tier !== 4) {
     throw new Error(`web item ${id} did not match its text query`);
   }
   return tier;

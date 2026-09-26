@@ -499,19 +499,25 @@ describe('web.items.list', () => {
     });
   });
 
-  it('ranks q before the requested sort and uses id to break sort ties', async () => {
+  it('ranks direct prefixes before word-boundary matches and uses id for ties', async () => {
     const first = await client().items.create({ itemName: 'Needle zulu' });
     const second = await client().items.create({ itemName: 'Needle alpha' });
-    const contains = await client().items.create({ itemName: 'Long needle' });
+    const wordBoundary = await client().items.create({ itemName: 'Long needle' });
+    const contains = await client().items.create({ itemName: 'Long xneedle' });
     const sameUpdatedAt = '2026-09-26T00:00:00.000Z';
     setUpdatedAt(first.data.id, sameUpdatedAt);
     setUpdatedAt(second.data.id, sameUpdatedAt);
+    setUpdatedAt(wordBoundary.data.id, sameUpdatedAt);
     setUpdatedAt(contains.data.id, sameUpdatedAt);
 
     const page = await client().web.listItems({ q: 'needle', sort: 'updated', limit: 50 });
     const prefixIds = [first.data.id, second.data.id].toSorted();
 
-    expect(page.items.map((item) => item.id)).toEqual([...prefixIds, contains.data.id]);
+    expect(page.items.map((item) => item.id)).toEqual([
+      ...prefixIds,
+      wordBoundary.data.id,
+      contains.data.id,
+    ]);
   });
 
   it('paginates q results without repeats or gaps with and without a sort', async () => {

@@ -28,7 +28,7 @@ const cursorSchema = z.object({
   activeOnly: z.boolean(),
   typeKey: z.string().nullable(),
   within: z.string().nullable(),
-  key: z.tuple([z.number().int().min(1).max(3), z.union([z.literal(0), z.literal(1)]), z.string()]),
+  key: z.tuple([z.number().int().min(1).max(4), z.union([z.literal(0), z.literal(1)]), z.string()]),
   after: z.string(),
 });
 type SearchCursor = z.infer<typeof cursorSchema>;
@@ -38,7 +38,9 @@ type WebSearchQuery = Pick<SearchCursor, 'q' | 'activeOnly' | 'typeKey' | 'withi
   readonly cursor?: string;
   readonly limit: number;
 };
-type WebSearchItemHit = { row: ItemRow; tier: WebSearchTier; field: WebSearchField | null };
+type WebSearchItemHit = { row: ItemRow; tier: WebSearchTier; field: WebSearchField | null } & {
+  rank: number;
+};
 type WebSearchPlaceHit = { row: LocationRow; tier: 'prefix' | 'contains' };
 type WebSearchPage = Record<'exact', ItemRow | null> &
   Record<'items', WebSearchItemHit[]> &
@@ -76,7 +78,7 @@ function searchExpressions(q: string): SearchExpressions {
   const other = anyOf([code, note, type, place]);
   return {
     match: anyOf([namePrefix, nameContains, other]),
-    rank: sql<number>`CASE WHEN ${namePrefix} THEN 3 WHEN ${nameContains} THEN 2 WHEN ${other} THEN 1 ELSE 0 END`,
+    rank: sql<number>`CASE WHEN ${like(items.name, `${escaped}%`)} THEN 4 WHEN ${namePrefix} THEN 3 WHEN ${nameContains} THEN 2 WHEN ${other} THEN 1 ELSE 0 END`,
     field: sql<WebSearchField | null>`CASE WHEN ${namePrefix} OR ${nameContains} THEN NULL WHEN ${code} THEN 'code' WHEN ${note} THEN 'note' WHEN ${type} THEN 'type' WHEN ${place} THEN 'place' ELSE NULL END`,
   };
 }
@@ -127,7 +129,7 @@ function afterCursor(...[cursor, rank, active]: CursorArgs): SQL | undefined {
 }
 
 function tierFor(value: number): WebSearchTier {
-  if (value === 3) return 'prefix';
+  if (value === 4 || value === 3) return 'prefix';
   if (value === 2) return 'contains';
   if (value === 1) return 'other';
   throw new Error(`unexpected web search tier ${String(value)}`);
@@ -151,8 +153,6 @@ function placeHits(db: CommandDb, q: string, typeKey: string | null): WebSearchP
   return rows.map(({ tier: rowTier, ...row }) => ({ row, tier: rowTier }));
 }
 
-const tierNumber = (tier: WebSearchTier): number => ({ prefix: 3, contains: 2, other: 1 })[tier];
-
 function nextCursor(query: WebSearchQuery, hit: WebSearchItemHit): string {
   return encodeCursor({
     v: 1,
@@ -161,7 +161,7 @@ function nextCursor(query: WebSearchQuery, hit: WebSearchItemHit): string {
     activeOnly: query.activeOnly,
     typeKey: query.typeKey ?? null,
     within: query.within ?? null,
-    key: [tierNumber(hit.tier), hit.row.lifecycle === 'active' ? 0 : 1, hit.row.name],
+    key: [hit.rank, hit.row.lifecycle === 'active' ? 0 : 1, hit.row.name],
     after: hit.row.id,
   });
 }
@@ -204,14 +204,14 @@ export function readWebSearchPage(db: CommandDb, query: WebSearchQuery): WebSear
     row,
     tier: tierFor(tier),
     field,
+    rank: tier,
   }));
   const last = hits.at(-1);
   return {
     exact: query.cursor === undefined ? exact : null,
     items: hits,
     places: query.cursor === undefined ? placeHits(db, query.q, query.typeKey) : [],
-    nextCursor:
-      itemRows.length > query.limit && last !== undefined ? nextCursor(query, last) : null,
+    nextCursor: itemRows.length > query.limit && last ? nextCursor(query, last) : null,
     total,
   };
 }
