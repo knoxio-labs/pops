@@ -9,6 +9,7 @@ internal struct InventoryISBNTests {
     func normalisesISBN10() {
         #expect(InventoryISBN.normalised("857542161-1") == "9788575421611")
         #expect(InventoryISBN.normalised("080442957X") == "9780804429573")
+        #expect(InventoryISBN.normalised("080442957x") == "9780804429573")
     }
 
     @Test("a formatted ISBN-13 is stripped and retained")

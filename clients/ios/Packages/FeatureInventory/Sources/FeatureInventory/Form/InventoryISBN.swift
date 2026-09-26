@@ -18,12 +18,15 @@ internal enum InventoryISBN {
     private static func normalisedISBN10(compact: String, bytes: [UInt8]) -> String? {
         guard
             bytes.prefix(9).allSatisfy(isDigit),
-            isDigit(bytes[9]) || bytes[9] == ASCII.uppercaseX
+            isDigit(bytes[9]) || bytes[9] == ASCII.uppercaseX || bytes[9] == ASCII.lowercaseX
         else { return nil }
 
         var sum = 0
         for (index, byte) in bytes.enumerated() {
-            let value = byte == ASCII.uppercaseX ? 10 : Int(byte - ASCII.zero)
+            let value =
+                byte == ASCII.uppercaseX || byte == ASCII.lowercaseX
+                ? 10
+                : Int(byte - ASCII.zero)
             sum += value * (10 - index)
         }
         guard sum.isMultiple(of: 11) else { return nil }
@@ -65,5 +68,6 @@ internal enum InventoryISBN {
         static let eight: UInt8 = 56
         static let nine: UInt8 = 57
         static let uppercaseX: UInt8 = 88
+        static let lowercaseX: UInt8 = 120
     }
 }
