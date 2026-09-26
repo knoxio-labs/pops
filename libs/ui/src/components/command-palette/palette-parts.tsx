@@ -1,7 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 
 import { cn } from '../../lib/utils';
-import { KeyCombo } from '../Kbd';
+import { KeyCombo } from '../KeyCombo';
 
 import type { ReactElement } from 'react';
 
