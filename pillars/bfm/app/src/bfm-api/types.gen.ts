@@ -187,6 +187,96 @@ export type HealthResponses = {
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
 
+export type MobileBarcodeLookupData = {
+  body?: never;
+  path: {
+    code: string;
+  };
+  query?: never;
+  url: '/mobile/barcode/lookup/{code}';
+};
+
+export type MobileBarcodeLookupErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+};
+
+export type MobileBarcodeLookupError = MobileBarcodeLookupErrors[keyof MobileBarcodeLookupErrors];
+
+export type MobileBarcodeLookupResponses = {
+  /**
+   * 200
+   */
+  200:
+    | {
+        outcome: 'found';
+        product: {
+          attributes: {
+            [key: string]: string;
+          };
+          code: string;
+          contributors: Array<{
+            name: string;
+            role?: string;
+          }>;
+          description?: string;
+          fetchedAt: string;
+          imageUrls: Array<string>;
+          kind: 'book';
+          language?: string;
+          pageCount?: number;
+          publishedDate?: string;
+          publisher?: string;
+          source: 'open_library' | 'google_books';
+          subjects: Array<string>;
+          subtitle?: string;
+          title: string;
+        };
+      }
+    | {
+        outcome: 'not_found';
+      }
+    | {
+        outcome: 'unavailable';
+      };
+};
+
+export type MobileBarcodeLookupResponse =
+  MobileBarcodeLookupResponses[keyof MobileBarcodeLookupResponses];
+
 export type MobileBootstrapData = {
   body?: never;
   path?: never;

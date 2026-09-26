@@ -573,6 +573,16 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/bfm/src/api/inventory/client.ts',
   },
   {
+    consumer: 'bfm',
+    producer: 'barcode',
+    operationId: 'lookup.get',
+    path: '/lookup/{code}',
+    method: 'get',
+    query: [],
+    pathParams: ['code'],
+    usedBy: 'pillars/bfm/src/api/barcode/client.ts',
+  },
+  {
     consumer: 'finance',
     producer: 'contacts',
     operationId: 'entities.list',

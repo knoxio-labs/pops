@@ -13,6 +13,7 @@ import { createSecretKey, type KeyObject } from 'node:crypto';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
+import { createMobileBarcodeClient, type MobileBarcodeClient } from '../barcode/client.js';
 import { createMobileContactsClient } from '../contacts/client.js';
 import { createMobileFinanceClient } from '../finance/client.js';
 import { createMobileInventoryClient } from '../inventory/client.js';
@@ -115,6 +116,8 @@ export interface TestAppOptions {
    * `finance`, to a client over a gateway whose handle factory throws.
    */
   contacts?: MobileContactsClient;
+  /** Where the `/mobile/barcode/*` route gets its lookup outcome. */
+  barcode?: MobileBarcodeClient;
   /**
    * Where the `/mobile/inventory/*` routes get their data. Defaults, like
    * `finance`, to a client over a gateway whose handle factory throws.
@@ -196,12 +199,13 @@ function passthroughDeps(options: TestAppOptions): Partial<BfmApiDeps> {
   };
 }
 
-export function createTestApp(options: TestAppOptions = {}): TestApp {
-  const { opened, cleanup } = openTempDb();
-  const accessTokenSigningKey = options.accessTokenSigningKey ?? testSigningKey();
-
-  const deps: BfmApiDeps = {
-    version: options.version ?? '0.0.1-test',
+function clientDeps(
+  options: TestAppOptions
+): Pick<
+  BfmApiDeps,
+  'finance' | 'purchases' | 'contacts' | 'barcode' | 'inventory' | 'inventoryMedia'
+> {
+  return {
     finance:
       options.finance ?? createMobileFinanceClient(createPillarGateway(unreachableHandleFactory)),
     purchases:
@@ -209,12 +213,24 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
       createMobilePurchasesClient(createPillarGateway(unreachableHandleFactory)),
     contacts:
       options.contacts ?? createMobileContactsClient(createPillarGateway(unreachableHandleFactory)),
+    barcode:
+      options.barcode ?? createMobileBarcodeClient(createPillarGateway(unreachableHandleFactory)),
     inventory:
       options.inventory ??
       createMobileInventoryClient(createPillarGateway(unreachableHandleFactory)),
     inventoryMedia:
       options.inventoryMedia ??
       createMobileInventoryMediaClient({ discovery: unreachableMediaDiscovery }),
+  };
+}
+
+export function createTestApp(options: TestAppOptions = {}): TestApp {
+  const { opened, cleanup } = openTempDb();
+  const accessTokenSigningKey = options.accessTokenSigningKey ?? testSigningKey();
+
+  const deps: BfmApiDeps = {
+    version: options.version ?? '0.0.1-test',
+    ...clientDeps(options),
     db: opened.db,
     accessTokenSigningKey,
     publicBaseUrl: options.publicBaseUrl ?? TEST_PUBLIC_BASE_URL,
