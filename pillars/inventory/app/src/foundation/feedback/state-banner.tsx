@@ -19,10 +19,15 @@ export type StateBannerKind = 'stale' | 'offline' | 'conflict' | 'needs-attentio
 /** Props for {@link StateBanner}. */
 export interface StateBannerProps {
   kind: StateBannerKind;
+  /** The literal state in one sentence. */
   title: string;
+  /** Optional second line describing the next step. */
   detail?: ReactNode;
+  /** The single action that can resolve the state. */
   actionLabel?: string;
+  /** Invoked by the optional action. */
   onAction?: () => void;
+  /** Additional token-backed classes for the banner wrapper. */
   className?: string;
 }
 

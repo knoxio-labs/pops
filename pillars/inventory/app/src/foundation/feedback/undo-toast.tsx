@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { Button, cn } from '@pops/ui';
@@ -68,6 +67,12 @@ function clearOffer(offer: ActiveUndoOffer): void {
   clearExpiryTimer();
 }
 
+function dismissOffer(offer: ActiveUndoOffer): void {
+  if (activeOffer !== offer) return;
+  clearOffer(offer);
+  toast.dismiss(offer.id);
+}
+
 function scheduleExpiry(offer: ActiveUndoOffer, duration: number): void {
   clearExpiryTimer();
   expiryTimer = setTimeout(() => clearOffer(offer), duration);
@@ -81,7 +86,14 @@ function renderOffer(offer: ActiveUndoOffer, duration: number): void {
         message={offer.message}
         state={offer.state}
         onUndo={offer.state === 'offered' ? runActiveUndo : undefined}
-        onOpenHistory={offer.state === 'conflict' ? offer.onOpenHistory : undefined}
+        onOpenHistory={
+          offer.state === 'conflict'
+            ? () => {
+                dismissOffer(offer);
+                offer.onOpenHistory?.();
+              }
+            : undefined
+        }
       />
     ),
     {
@@ -118,14 +130,12 @@ export function runActiveUndo(): void {
   const offer = activeOffer;
   if (offer === null || offer.state !== 'offered' || offer.pending) return;
   offer.pending = true;
+  clearExpiryTimer();
   void resolveUndo(offer);
 }
 
 function Body({ concept, message, state }: UndoOffer): ReactElement {
-  const Icon = useMemo(
-    () => (state === 'conflict' ? INVENTORY_ICONS.needsAttention : INVENTORY_ICONS[concept]),
-    [concept, state]
-  );
+  const Icon = state === 'conflict' ? INVENTORY_ICONS.needsAttention : INVENTORY_ICONS[concept];
   return (
     <span className="flex min-w-0 flex-1 items-start gap-2.5">
       <Icon
@@ -181,8 +191,7 @@ export function UndoToast({
 
 /** Shows one active inventory undo offer through Sonner. */
 export function showUndoToast(options: ShowUndoToastOptions): string | number {
-  if (activeOffer !== null) toast.dismiss(activeOffer.id);
-  clearExpiryTimer();
+  if (activeOffer !== null) dismissOffer(activeOffer);
 
   const offer: ActiveUndoOffer = {
     id: `inventory-undo-${++nextToastId}`,
