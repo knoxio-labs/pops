@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from '@pops/ui';
 
-import { confirmLabel } from './lifecycle-model';
+import { confirmLabel, reasonReady } from './lifecycle-model';
 import { ReasonField } from './reason-field';
 
 /** Props for {@link DestroyDialog}. */
@@ -63,6 +63,7 @@ export function DestroyDialog({
           <AlertDialogCancel>Keep it</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
+            disabled={!reasonReady('destroy', preset, text)}
             onClick={() => onConfirm?.(preset === 'Other' ? text.trim() : preset)}
           >
             {confirmLabel('destroy', subject)}

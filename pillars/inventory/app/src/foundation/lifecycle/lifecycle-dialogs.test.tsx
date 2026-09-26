@@ -99,6 +99,23 @@ describe('DestroyDialog', () => {
 
     expect(onConfirm).toHaveBeenCalledWith('Recycled');
   });
+
+  it('requires text when Other is selected', () => {
+    const onConfirm = vi.fn();
+    render(
+      <DestroyDialog subject="Camera" open onOpenChange={() => undefined} onConfirm={onConfirm} />
+    );
+
+    const confirm = screen.getByRole('button', { name: 'Destroy Camera' });
+    fireEvent.click(screen.getByRole('button', { name: 'Other' }));
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('Note'), { target: { value: '  No longer safe  ' } });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+
+    expect(onConfirm).toHaveBeenCalledWith('No longer safe');
+  });
 });
 
 describe('RestoreDialog', () => {
@@ -126,7 +143,7 @@ describe('RestoreDialog', () => {
 });
 
 describe('SplitDialog', () => {
-  it('blocks splitting the whole group and calls back with only the split count', () => {
+  it('blocks splitting the whole group and sends the count with the new name', () => {
     const onConfirm = vi.fn();
     render(
       <SplitDialog
@@ -152,8 +169,7 @@ describe('SplitDialog', () => {
     expect(confirm).toBeEnabled();
     fireEvent.click(confirm);
 
-    expect(onConfirm).toHaveBeenCalledWith(2);
-    expect(onConfirm.mock.calls[0]).toHaveLength(1);
+    expect(onConfirm).toHaveBeenCalledWith(2, 'Cables');
   });
 });
 

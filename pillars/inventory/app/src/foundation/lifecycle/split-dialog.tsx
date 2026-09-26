@@ -28,7 +28,7 @@ export interface SplitDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialCount?: number;
-  onConfirm?: (count: number) => void;
+  onConfirm?: (count: number, name: string) => void;
 }
 
 /** The split dialog. */
@@ -82,7 +82,7 @@ export function SplitDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button disabled={problem !== null} onClick={() => onConfirm?.(count)}>
+          <Button disabled={problem !== null} onClick={() => onConfirm?.(count, name.trim())}>
             Split off {Number.isFinite(count) ? count : ''}
           </Button>
         </DialogFooter>
