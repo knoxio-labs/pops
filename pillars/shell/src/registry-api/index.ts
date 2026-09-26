@@ -26,6 +26,7 @@ export {
 } from './sdk.gen';
 export type {
   ClientOptions,
+  ErrorBody,
   FeaturesClearUserPreferenceData,
   FeaturesClearUserPreferenceError,
   FeaturesClearUserPreferenceErrors,

@@ -359,27 +359,15 @@ export type FixturesListItemsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type FixturesListItemsError = FixturesListItemsErrors[keyof FixturesListItemsErrors];
@@ -6357,11 +6345,7 @@ export type WebMovingGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebMovingGetError = WebMovingGetErrors[keyof WebMovingGetErrors];
