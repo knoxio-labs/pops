@@ -116,7 +116,8 @@ export * from './components/TextInput';
 export * from './components/ContainerPanel';
 export * from './components/RelatedItemsList';
 export * from './components/SearchPickerDialog';
-export * from './components/Sheet';
+export { Sheet, SheetPanel } from './components/Sheet';
+export type { SheetContentProps, SheetProps } from './components/Sheet';
 
 // Layout composites
 export * from './components/PageHeader';

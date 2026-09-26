@@ -92,6 +92,16 @@ describe('Sheet', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('calls onClose from the SheetPanel Close button', async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+
+    render(<SheetPanel {...CONTENT} onClose={onClose} />);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('the sheet content carries md:p-0 and md:max-h-none so it is full height and unpadded at md', () => {
     render(<Sheet {...CONTENT} open onOpenChange={vi.fn()} />);
 
