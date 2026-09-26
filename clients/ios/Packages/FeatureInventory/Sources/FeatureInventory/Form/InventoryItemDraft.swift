@@ -115,6 +115,7 @@ internal enum InventoryDraftIssue: Hashable, Sendable, Error {
     case nameMissing
     case codeTaken(heldBy: String)
     case identifierIncomplete(label: String)
+    case identifierInvalid(label: String)
     case fieldMissing(label: String)
     case notANumber(label: String)
     case rangeReversed(label: String)
@@ -124,6 +125,7 @@ internal enum InventoryDraftIssue: Hashable, Sendable, Error {
         case .nameMissing: "Name is required"
         case .codeTaken(let holder): "Code already used by \(holder)"
         case .identifierIncomplete(let label): "\(label) is empty"
+        case .identifierInvalid(let label): "\(label) is not valid"
         case .fieldMissing(let label): "\(label) is required"
         case .notANumber(let label): "\(label) needs a number"
         case .rangeReversed(let label): "\(label) starts above where it ends"
@@ -141,8 +143,12 @@ internal struct InventoryIdentifierDraft: Identifiable, Hashable, Sendable {
         case model
         case barcode
         case licence
+        case isbn
 
-        internal var label: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
+        internal var label: String {
+            if self == .isbn { return "ISBN" }
+            return rawValue.prefix(1).uppercased() + rawValue.dropFirst()
+        }
     }
 
     internal let id: UUID
@@ -163,12 +169,17 @@ internal struct InventoryIdentifierDraft: Identifiable, Hashable, Sendable {
 
     /// The label a row shows: the known kind's word, or the stored kind as
     /// it came when this build does not know it.
-    internal var label: String { Kind(rawValue: kind)?.label ?? kind }
+    internal var label: String { InventoryIdentifierKindLabel.label(for: kind) }
 
     internal var isComplete: Bool { !value.trimmingCharacters(in: .whitespaces).isEmpty }
 
     internal var stored: InventoryExternalIdentifier? {
         let trimmed = value.trimmingCharacters(in: .whitespaces)
-        return trimmed.isEmpty ? nil : InventoryExternalIdentifier(kind: kind, value: trimmed)
+        guard !trimmed.isEmpty else { return nil }
+        if kind == Kind.isbn.rawValue {
+            guard let normalised = InventoryISBN.normalised(trimmed) else { return nil }
+            return InventoryExternalIdentifier(kind: kind, value: normalised)
+        }
+        return InventoryExternalIdentifier(kind: kind, value: trimmed)
     }
 }

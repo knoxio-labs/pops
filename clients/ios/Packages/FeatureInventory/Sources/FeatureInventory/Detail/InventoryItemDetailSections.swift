@@ -170,9 +170,18 @@ internal struct InventoryItemDetailIdentifiersSection: View {
     @ViewBuilder internal var body: some View {
         if !identifiers.isEmpty {
             InventoryItemDetailGroup("External identifiers") {
-                ForEach(identifiers) { InventoryPropertyLine(key: $0.kind, value: $0.value) }
+                ForEach(identifiers) {
+                    InventoryPropertyLine(
+                        key: InventoryIdentifierKindLabel.label(for: $0.kind), value: $0.value)
+                }
             }
         }
+    }
+}
+
+internal enum InventoryIdentifierKindLabel {
+    internal static func label(for kind: String) -> String {
+        InventoryIdentifierDraft.Kind(rawValue: kind)?.label ?? kind
     }
 }
 

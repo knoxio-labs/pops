@@ -156,7 +156,7 @@ internal struct InventoryItemFormView: View {
         model.issues.filter { issue in
             switch issue {
             case .codeTaken: true
-            case .identifierIncomplete: model.showsValidation
+            case .identifierIncomplete, .identifierInvalid: model.showsValidation
             default: false
             }
         }
@@ -271,7 +271,7 @@ extension InventoryItemFormView {
         guard model.showsValidation else { return [] }
         return model.issues.filter { issue in
             switch issue {
-            case .codeTaken, .identifierIncomplete: false
+            case .codeTaken, .identifierIncomplete, .identifierInvalid: false
             default: true
             }
         }

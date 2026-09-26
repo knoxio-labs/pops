@@ -68,6 +68,15 @@ internal enum InventoryItemFormSubmission {
         issues += draft.identifiers.filter { !$0.isComplete }.map {
             .identifierIncomplete(label: $0.label)
         }
+        issues += draft.identifiers.compactMap { identifier in
+            let trimmed = identifier.value.trimmingCharacters(in: .whitespaces)
+            guard
+                identifier.kind == InventoryIdentifierDraft.Kind.isbn.rawValue,
+                !trimmed.isEmpty,
+                InventoryISBN.normalised(trimmed) == nil
+            else { return nil }
+            return .identifierInvalid(label: identifier.label)
+        }
         for field in declaredFields(of: draft, in: catalogue) {
             switch draft.entry(for: field, units: catalogue.units).value(for: field) {
             case .failure(let issue): issues.append(issue)
