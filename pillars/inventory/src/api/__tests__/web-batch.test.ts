@@ -3,6 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { eq, max } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import {
+  createCatalogueDraft,
+  patchCatalogueDraft,
+  publishCatalogueDraft,
+} from '../../catalogue/authoring.js';
 import { loadPublishedCatalogue } from '../../catalogue/index.js';
 import {
   WebBatchResponseSchema,
@@ -18,6 +23,8 @@ let h: SyncHarness;
 
 type BatchRow = WebBatchBody['rows'][number];
 type BatchOutcome = WebBatchResponse['outcomes'][number];
+
+const BATCH_AUTHOR = { kind: 'web', id: 'web-batch-test', label: 'Web batch test' } as const;
 
 function row(overrides: Partial<BatchRow> = {}): BatchRow {
   return { name: '', type: '', quantity: '', code: '', where: '', note: '', ...overrides };
@@ -82,6 +89,9 @@ describe('POST /web/items/batch', () => {
     if (created?.status !== 'created') throw new Error('expected a created outcome');
     const stored = h.db.db.select().from(items).where(eq(items.id, created.itemId)).get();
     expect(stored).toMatchObject({ id: created.itemId, name: 'Lamp', note: '  keep this note  ' });
+    const read = await h.api.get(`/web/items/${created.itemId}`);
+    expect(read.status).toBe(200);
+    expect(read.body.item).toMatchObject({ id: created.itemId, name: 'Lamp' });
     expect(
       h.db.db
         .select({ actorKind: events.actorKind })
@@ -176,6 +186,7 @@ describe('POST /web/items/batch', () => {
       body([
         row({ name: 'Unknown', type: 'Not a real type' }),
         row({ name: 'Zero', quantity: '0' }),
+        row({ name: 'Negative', quantity: '-1' }),
         row({ name: 'Decimal', quantity: '2.5' }),
         row({ name: 'Missing place', where: 'Nowhere' }),
         row({ name: 'Still valid' }),
@@ -208,6 +219,11 @@ describe('POST /web/items/batch', () => {
     expect(outcomes[3]).toMatchObject({
       status: 'invalid',
       row: 3,
+      issues: [{ column: 'quantity', code: 'quantity_invalid' }],
+    });
+    expect(outcomes[4]).toMatchObject({
+      status: 'invalid',
+      row: 4,
       issues: [
         {
           column: 'where',
@@ -216,7 +232,7 @@ describe('POST /web/items/batch', () => {
         },
       ],
     });
-    expect(outcomes[4]).toMatchObject({ status: 'created', row: 4 });
+    expect(outcomes[5]).toMatchObject({ status: 'created', row: 5 });
   });
 
   it('resolves locations and uses destination for blank where cells', async () => {
@@ -253,6 +269,61 @@ describe('POST /web/items/batch', () => {
     });
   });
 
+  it('rejects a Where cell that resolves to more than one live location', async () => {
+    const firstGarage = randomUUID();
+    const secondGarage = randomUUID();
+    const locationsResponse = await send(h.api, [
+      createLocation(firstGarage, 'Garage'),
+      createLocation(secondGarage, 'Garage'),
+    ]);
+    expect(locationsResponse.status).toBe(200);
+
+    const response = await postBatch(body([row({ name: 'Ambiguous', where: ' garage ' })]));
+
+    expect(response.status).toBe(200);
+    expect(parsedOutcomes(response.body)).toEqual([
+      {
+        status: 'invalid',
+        row: 0,
+        issues: [
+          {
+            column: 'where',
+            code: 'where_unresolved',
+            message: 'No place or container is called garage.',
+          },
+        ],
+      },
+    ]);
+    expect(h.db.db.select().from(items).all()).toHaveLength(0);
+  });
+
+  it('resolves an active container by name and places the created item inside it', async () => {
+    const catalogue = loadPublishedCatalogue(h.db.db);
+    const containerType = catalogue?.types.find(
+      (type) => type.archivedAt === null && type.capabilities.includes('containment')
+    );
+    if (containerType === undefined)
+      throw new Error('the bootstrap catalogue needs a container type');
+
+    const containerResponse = await postBatch(
+      body([row({ name: 'Moving box', type: containerType.label })])
+    );
+    expect(containerResponse.status).toBe(200);
+    const containerOutcome = parsedOutcomes(containerResponse.body)[0];
+    if (containerOutcome?.status !== 'created') throw new Error('expected a container item');
+
+    const response = await postBatch(body([row({ name: 'Inside box', where: ' moving box ' })]));
+
+    expect(response.status).toBe(200);
+    const outcome = parsedOutcomes(response.body)[0];
+    if (outcome?.status !== 'created') throw new Error('expected an item inside the container');
+    expect(h.db.db.select().from(items).where(eq(items.id, outcome.itemId)).get()).toMatchObject({
+      id: outcome.itemId,
+      placementKind: 'container',
+      containingItemId: containerOutcome.itemId,
+    });
+  });
+
   it('accepts exactly 200 rows and rejects 201 rows', async () => {
     const maximum = Array.from({ length: 200 }, (_, index) => row({ name: `Item ${index}` }));
     const accepted = await postBatch(body(maximum));
@@ -265,6 +336,16 @@ describe('POST /web/items/batch', () => {
     const before = counts();
     const rejected = await postBatch(body([...maximum, row({ name: 'Too many' })]));
     expect(rejected.status).toBe(400);
+    expect(counts()).toEqual(before);
+  });
+
+  it('rejects generic field values instead of creating a row with unsupported data', async () => {
+    const before = counts();
+    const response = await h.api.post('/web/items/batch').send({
+      rows: [{ name: 'Generic field', fields: { brand: 'not a batch column' } }],
+    });
+
+    expect(response.status).toBe(400);
     expect(counts()).toEqual(before);
   });
 
@@ -307,5 +388,73 @@ describe('POST /web/items/batch', () => {
     expect(h.db.db.select().from(items).where(eq(items.id, created.itemId)).get()).toMatchObject({
       typeId: ordinaryType.id,
     });
+  });
+
+  it('maps a published type with a missing required field to a type issue', async () => {
+    const catalogue = loadPublishedCatalogue(h.db.db);
+    if (catalogue === null) throw new Error('the bootstrap catalogue must be published');
+
+    const draft = createCatalogueDraft(h.db.db, catalogue.revision.revision, BATCH_AUTHOR);
+    const withType = patchCatalogueDraft(
+      h.db.db,
+      {
+        revision: draft.revision.revision,
+        baseRevision: catalogue.revision.revision,
+        expectedDraftVersion: draft.revision.draftVersion,
+      },
+      [{ kind: 'put_type', key: 'required_batch_type', label: 'Required batch type' }]
+    ).draft;
+    const type = withType.types.find((entry) => entry.key === 'required_batch_type');
+    if (type === undefined) throw new Error('required batch type was not created');
+    const withField = patchCatalogueDraft(
+      h.db.db,
+      {
+        revision: withType.revision.revision,
+        baseRevision: catalogue.revision.revision,
+        expectedDraftVersion: withType.revision.draftVersion,
+      },
+      [
+        {
+          kind: 'put_field',
+          typeId: type.id,
+          key: 'required_value',
+          label: 'Required value',
+          fieldKind: 'short_text',
+          cardinality: 'one',
+          required: true,
+          storage: 'stored',
+        },
+      ]
+    ).draft;
+    publishCatalogueDraft(
+      h.db.db,
+      withField.revision.revision,
+      {
+        baseRevision: catalogue.revision.revision,
+        expectedDraftVersion: withField.revision.draftVersion,
+        note: null,
+      },
+      BATCH_AUTHOR
+    );
+
+    const response = await postBatch(
+      body([row({ name: 'Missing required value', type: type.label })])
+    );
+
+    expect(response.status).toBe(200);
+    expect(parsedOutcomes(response.body)).toEqual([
+      {
+        status: 'invalid',
+        row: 0,
+        issues: [
+          {
+            column: 'type',
+            code: 'invalid',
+            message: expect.stringContaining('requires a value'),
+          },
+        ],
+      },
+    ]);
+    expect(h.db.db.select().from(items).all()).toHaveLength(0);
   });
 });

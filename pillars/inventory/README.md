@@ -263,6 +263,16 @@ it, so the approved design and the shipping editor cannot drift apart. The
 editor-only parts (tree edits, the wire mapping, the saved version) stay in
 `app/src/catalogue-editor/expression`.
 
+### Web bulk item creation
+
+`POST /web/items/batch` accepts one to 200 strict grid rows with only the
+`name`, `type`, `quantity`, `code`, `where`, and `note` cells. Each row is
+validated independently; blank rows are skipped, invalid rows return their
+cell issues, and valid rows commit without rolling back other rows. Omit
+`destination` to place rows with a blank `where` cell in hand. Set `dryRun` to
+`true` to return `valid` outcomes while rolling back all item, event, mutation,
+and sequence writes.
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`
