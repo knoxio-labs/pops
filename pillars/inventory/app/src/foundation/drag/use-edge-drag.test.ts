@@ -1,136 +1,136 @@
-import { fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render, renderHook } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useEdgeDrag } from './use-edge-drag';
 
+import type { PointerEvent } from 'react';
+
 interface HarnessProps {
-  onMove: (deltaX: number) => void;
+  onPointerDown: (event: PointerEvent<HTMLElement>) => void;
+  onPrevented: (prevented: boolean) => void;
 }
 
-function Harness({ onMove }: HarnessProps) {
-  const { dragging, onPointerDown } = useEdgeDrag(onMove);
-
+function Harness({ onPointerDown, onPrevented }: HarnessProps) {
   return createElement('div', {
-    'data-dragging': dragging,
-    onPointerDown,
-    role: 'separator',
-    tabIndex: 0,
+    onPointerDown: (event) => {
+      onPointerDown(event);
+      onPrevented(event.defaultPrevented);
+    },
   });
 }
 
 function setup(onMove: (deltaX: number) => void = vi.fn()) {
-  const view = render(createElement(Harness, { onMove }));
+  const hook = renderHook(() => useEdgeDrag(onMove));
+  const onPrevented = vi.fn<(prevented: boolean) => void>();
+  const view = render(
+    createElement(Harness, {
+      onPointerDown: hook.result.current.onPointerDown,
+      onPrevented,
+    })
+  );
   const target = view.container.firstElementChild;
   if (!(target instanceof HTMLElement)) throw new Error('drag target was not rendered');
 
-  const setPointerCapture = vi.fn();
-  const releasePointerCapture = vi.fn();
+  const setPointerCapture = vi.fn<(pointerId: number) => void>();
   target.setPointerCapture = setPointerCapture;
-  target.releasePointerCapture = releasePointerCapture;
+  const removeEventListener = vi.spyOn(target, 'removeEventListener');
 
-  return { releasePointerCapture, setPointerCapture, target, view };
+  return { hook, onPrevented, removeEventListener, setPointerCapture, target, view };
 }
 
-function press(target: HTMLElement, pointerId = 7, clientX = 100): void {
-  fireEvent.pointerDown(target, {
-    button: 0,
-    clientX,
-    pointerId,
-    pointerType: 'mouse',
+function press(target: HTMLElement, pointerId = 7, clientX = 100, button = 0): void {
+  act(() => {
+    fireEvent.pointerDown(target, {
+      button,
+      clientX,
+      pointerId,
+      pointerType: 'mouse',
+    });
+  });
+}
+
+function move(target: HTMLElement, pointerId: number, clientX: number): void {
+  act(() => {
+    fireEvent.pointerMove(target, { clientX, pointerId });
+  });
+}
+
+function end(target: HTMLElement, kind: 'pointerCancel' | 'pointerUp', pointerId: number): void {
+  act(() => {
+    fireEvent[kind](target, { pointerId });
   });
 }
 
 describe('useEdgeDrag', () => {
-  it('reports movement relative to the press point and captures the pointer', () => {
-    const onMove = vi.fn<(deltaX: number) => void>();
-    const { setPointerCapture, target } = setup(onMove);
+  it('starts only for the primary button, prevents default, and captures the pointer', () => {
+    const { hook, onPrevented, setPointerCapture, target } = setup();
 
+    expect(hook.result.current.dragging).toBe(false);
     press(target);
-    fireEvent.pointerMove(target, { clientX: 135, pointerId: 7 });
-    fireEvent.pointerMove(target, { clientX: 80, pointerId: 7 });
 
+    expect(hook.result.current.dragging).toBe(true);
+    expect(onPrevented).toHaveBeenCalledWith(true);
     expect(setPointerCapture).toHaveBeenCalledWith(7);
-    expect(onMove.mock.calls.map(([deltaX]) => deltaX)).toEqual([35, -20]);
   });
 
-  it('ignores non-primary and non-pointer input', () => {
-    const onMove = vi.fn<(deltaX: number) => void>();
-    const { setPointerCapture, target } = setup(onMove);
+  it('ignores non-primary button presses', () => {
+    const { hook, onPrevented, setPointerCapture, target } = setup();
 
-    fireEvent.pointerDown(target, {
-      button: 2,
-      clientX: 100,
-      pointerId: 7,
-      pointerType: 'mouse',
-    });
-    fireEvent.mouseDown(target, { button: 0, clientX: 100 });
-    fireEvent.keyDown(target, { key: 'ArrowRight' });
+    press(target, 7, 100, 2);
 
-    expect(target).toHaveAttribute('data-dragging', 'false');
+    expect(hook.result.current.dragging).toBe(false);
+    expect(onPrevented).toHaveBeenCalledWith(false);
     expect(setPointerCapture).not.toHaveBeenCalled();
-    expect(onMove).not.toHaveBeenCalled();
   });
 
-  it('clamps oversized movement to safe deltas', () => {
+  it('reports each movement from the original press point without a limit', () => {
     const onMove = vi.fn<(deltaX: number) => void>();
     const { target } = setup(onMove);
+    const endX = Number.MAX_SAFE_INTEGER + 1;
 
     press(target, 7, 0);
-    fireEvent.pointerMove(target, { clientX: Number.MAX_VALUE, pointerId: 7 });
-    fireEvent.pointerMove(target, { clientX: -Number.MAX_VALUE, pointerId: 7 });
+    press(target, 8, 20);
+    move(target, 8, 30);
+    move(target, 7, endX);
 
-    expect(onMove.mock.calls.map(([deltaX]) => deltaX)).toEqual([
-      Number.MAX_SAFE_INTEGER,
-      -Number.MAX_SAFE_INTEGER,
-    ]);
+    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(onMove).toHaveBeenCalledWith(endX);
   });
 
-  it('stops reporting after pointerup and releases the pointer', () => {
+  it('stops and removes listeners on pointerup', () => {
     const onMove = vi.fn<(deltaX: number) => void>();
-    const { releasePointerCapture, target } = setup(onMove);
+    const { hook, removeEventListener, target } = setup(onMove);
 
     press(target);
-    fireEvent.pointerUp(target, { pointerId: 7 });
-    fireEvent.pointerMove(target, { clientX: 135, pointerId: 7 });
+    end(target, 'pointerUp', 8);
+    expect(hook.result.current.dragging).toBe(true);
+    move(target, 7, 135);
+    end(target, 'pointerUp', 7);
+    move(target, 7, 150);
 
-    expect(target).toHaveAttribute('data-dragging', 'false');
-    expect(releasePointerCapture).toHaveBeenCalledWith(7);
-    expect(onMove).not.toHaveBeenCalled();
+    expect(hook.result.current.dragging).toBe(false);
+    expect(removeEventListener).toHaveBeenCalledWith('pointermove', expect.any(Function));
+    expect(removeEventListener).toHaveBeenCalledWith('pointerup', expect.any(Function));
+    expect(removeEventListener).toHaveBeenCalledWith('pointercancel', expect.any(Function));
+    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(onMove).toHaveBeenCalledWith(35);
   });
 
-  it('stops reporting after pointercancel and releases the pointer', () => {
+  it('stops and removes listeners on pointercancel', () => {
     const onMove = vi.fn<(deltaX: number) => void>();
-    const { releasePointerCapture, target } = setup(onMove);
+    const { hook, removeEventListener, target } = setup(onMove);
 
     press(target);
-    fireEvent.pointerCancel(target, { pointerId: 7 });
-    fireEvent.pointerMove(target, { clientX: 135, pointerId: 7 });
+    end(target, 'pointerCancel', 8);
+    expect(hook.result.current.dragging).toBe(true);
+    end(target, 'pointerCancel', 7);
+    move(target, 7, 135);
 
-    expect(target).toHaveAttribute('data-dragging', 'false');
-    expect(releasePointerCapture).toHaveBeenCalledWith(7);
-    expect(onMove).not.toHaveBeenCalled();
-  });
-
-  it('is dragging only between press and release', () => {
-    const { target } = setup();
-
-    expect(target).toHaveAttribute('data-dragging', 'false');
-    press(target);
-    expect(target).toHaveAttribute('data-dragging', 'true');
-    fireEvent.pointerUp(target, { pointerId: 7 });
-    expect(target).toHaveAttribute('data-dragging', 'false');
-  });
-
-  it('cleans up listeners and pointer capture when unmounted during a drag', () => {
-    const onMove = vi.fn<(deltaX: number) => void>();
-    const { releasePointerCapture, target, view } = setup(onMove);
-
-    press(target);
-    view.unmount();
-    fireEvent.pointerMove(target, { clientX: 135, pointerId: 7 });
-
-    expect(releasePointerCapture).toHaveBeenCalledWith(7);
+    expect(hook.result.current.dragging).toBe(false);
+    expect(removeEventListener).toHaveBeenCalledWith('pointermove', expect.any(Function));
+    expect(removeEventListener).toHaveBeenCalledWith('pointerup', expect.any(Function));
+    expect(removeEventListener).toHaveBeenCalledWith('pointercancel', expect.any(Function));
     expect(onMove).not.toHaveBeenCalled();
   });
 });
