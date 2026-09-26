@@ -132,7 +132,7 @@ internal struct InventoryFormCodeRow: View {
 }
 
 /// One labelled text row: the label leading, the field filling the middle
-/// with its text trailing, and an optional icon at the end, on one line.
+/// with its text leading, and an optional icon at the end, on one line.
 ///
 /// One `HStack` inside `LabeledContent` rather than several content views,
 /// because `LabeledContent` stacks several vertically and the icon then wraps
@@ -170,7 +170,7 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
             HStack(spacing: PopsSpacing.sm) {
                 field
                     .font(monospaced && !text.isEmpty ? .popsMonospaced : .popsBody)
-                    .multilineTextAlignment(.trailing)
+                    .multilineTextAlignment(.leading)
                     .lineLimit(1)
                     .accessibilityIdentifier(identifier)
                 accessory
