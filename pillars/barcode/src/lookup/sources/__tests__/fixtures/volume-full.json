@@ -1,0 +1,37 @@
+{
+  "totalItems": 1,
+  "items": [
+    {
+      "kind": "books#volume",
+      "id": "volume-id",
+      "etag": "etag",
+      "volumeInfo": {
+        "title": "A Google Book",
+        "subtitle": "A Useful Subtitle",
+        "authors": ["Example Author"],
+        "publisher": "Example Books",
+        "publishedDate": "2024-05-06",
+        "description": "A description from Google Books.",
+        "industryIdentifiers": [
+          {"type": "ISBN_13", "identifier": "9780000000000"}
+        ],
+        "pageCount": 240,
+        "categories": ["Computers", "Reference"],
+        "imageLinks": {
+          "smallThumbnail": "https://books.example/small.jpg",
+          "thumbnail": "https://books.example/large.jpg"
+        },
+        "language": "en",
+        "previewLink": "https://books.example/preview",
+        "infoLink": "https://books.example/info",
+        "canonicalVolumeLink": "https://books.example/canonical",
+        "printType": "BOOK",
+        "averageRating": 4.5,
+        "ratingsCount": 12,
+        "allowAnonLogging": true,
+        "readingModes": {"text": true, "image": true},
+        "nestedFact": {"value": "skip"}
+      }
+    }
+  ]
+}

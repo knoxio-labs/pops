@@ -592,6 +592,7 @@ services:
       PORT: '3016'
       BARCODE_SQLITE_PATH: /data/sqlite/barcode.db
       BARCODE_SELF_BASE_URL: http://barcode-api:3016
+      BARCODE_USER_AGENT_CONTACT: ${BARCODE_USER_AGENT_CONTACT:-}
       POPS_REGISTRY_ENABLED: 'true'
     expose:
       - '3016'

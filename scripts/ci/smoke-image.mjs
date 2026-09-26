@@ -83,9 +83,11 @@ const DATA_ROOT = '/data';
  * Resist putting anything else in here — ports, paths, feature flags and
  * per-pillar tuning belong in the image's own defaults, not in the harness.
  */
-const BOOT_PLACEHOLDER_SECRETS = {
+/** Boot-only placeholders for secrets and required non-secret configuration. */
+export const BOOT_PLACEHOLDER_SECRETS = {
   POPS_INTERNAL_API_KEY: 'ci-smoke-placeholder',
   BFM_ACCESS_TOKEN_SECRET: 'ci-smoke-placeholder-access-token-secret',
+  BARCODE_USER_AGENT_CONTACT: 'ci-smoke@example.invalid',
 };
 
 /**

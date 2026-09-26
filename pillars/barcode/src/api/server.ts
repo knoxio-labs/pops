@@ -3,24 +3,34 @@ import {
   shutdownPillar,
   type PillarBootstrapHandle,
 } from '@pops/pillar-sdk/bootstrap';
+import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 
 import { openBarcodeDb } from '../db/index.js';
 import { createBarcodeLookupService } from '../lookup/service.js';
+import { createGoogleBooksSource } from '../lookup/sources/google-books.js';
+import { createOpenLibrarySource } from '../lookup/sources/open-library.js';
 import { createBarcodeApiApp } from './app.js';
 import {
   resolveBarcodeSqlitePath,
   resolvePort,
   resolveSelfBaseUrl,
+  resolveUserAgentContact,
   resolveVersion,
   shouldSelfRegister,
 } from './boot-env.js';
 import { buildBarcodeManifest } from './manifest.js';
 
+assertSecretFilesReadable();
+
 const port = resolvePort();
 const version = resolveVersion();
 const selfBaseUrl = resolveSelfBaseUrl(port);
+const userAgentContact = resolveUserAgentContact();
 const barcodeDb = openBarcodeDb(resolveBarcodeSqlitePath());
-const lookupService = createBarcodeLookupService({ db: barcodeDb.db, sources: [] });
+const lookupService = createBarcodeLookupService({
+  db: barcodeDb.db,
+  sources: [createOpenLibrarySource({ userAgentContact }), createGoogleBooksSource()],
+});
 const app = createBarcodeApiApp({ barcodeDb, version, selfBaseUrl, lookupService });
 
 const server = app.listen(port, () => {

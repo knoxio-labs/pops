@@ -7,6 +7,7 @@ import {
   resolvePort,
   resolveSelfBaseUrl,
   shouldSelfRegister,
+  resolveUserAgentContact,
 } from '../boot-env.js';
 
 describe('barcode boot environment', () => {
@@ -34,5 +35,15 @@ describe('barcode boot environment', () => {
     );
     expect(shouldSelfRegister({ POPS_REGISTRY_ENABLED: 'true' })).toBe(true);
     expect(shouldSelfRegister({ POPS_REGISTRY_ENABLED: 'TRUE' })).toBe(false);
+  });
+
+  it('requires the Open Library user-agent contact', () => {
+    expect(() => resolveUserAgentContact({})).toThrow(/BARCODE_USER_AGENT_CONTACT/u);
+    expect(() => resolveUserAgentContact({ BARCODE_USER_AGENT_CONTACT: '  ' })).toThrow(
+      /BARCODE_USER_AGENT_CONTACT/u
+    );
+    expect(resolveUserAgentContact({ BARCODE_USER_AGENT_CONTACT: ' ci@example.invalid ' })).toBe(
+      'ci@example.invalid'
+    );
   });
 });
