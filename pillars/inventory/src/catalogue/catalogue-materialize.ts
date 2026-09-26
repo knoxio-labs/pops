@@ -4,7 +4,7 @@ import {
   asReferenceKinds,
   asStorage,
 } from './catalogue-field-shape.js';
-import { parseObject, parseStringArray } from './catalogue-json.js';
+import { parseObject, parsePrimitiveValueArray, parseStringArray } from './catalogue-json.js';
 
 import type { fieldEnumOptions, itemTypeFields, itemTypes } from '../db/schema.js';
 import type {
@@ -79,6 +79,10 @@ function materializeField(
     expressionVersion: field.expressionVersion,
     expressionJson: field.expressionJson,
     allowOverride: field.allowOverride === 1,
+    defaultValues: parsePrimitiveValueArray(
+      field.defaultValuesJson,
+      `field ${field.id} default values`
+    ),
     presentation: parseObject(field.presentationJson, `field ${field.id} presentation`),
     archivedAt: field.archivedAt,
     replacedBy: field.replacedBy,

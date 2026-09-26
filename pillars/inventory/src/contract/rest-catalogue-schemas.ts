@@ -6,6 +6,7 @@ import { CatalogueCompatibilitySchema } from './rest-catalogue-compatibility-sch
 import {
   CatalogueExpressionVersionSchema,
   ExpressionV1Schema,
+  PrimitiveWireValueSchema,
 } from './rest-catalogue-expression-schema.js';
 import { ErrorBodySchema } from './rest-schemas.js';
 
@@ -66,6 +67,7 @@ const CatalogueDefinitionFieldSchema = z.object({
   expressionVersion: z.number().int().positive().nullable(),
   expression: ExpressionV1Schema.nullable(),
   allowOverride: z.boolean(),
+  defaultValues: z.array(PrimitiveWireValueSchema),
   presentation: z.record(z.string(), z.unknown()),
   archivedAt: z.string().nullable(),
   replacedBy: z.uuid().nullable(),
@@ -156,6 +158,11 @@ export const CataloguePutFieldSchema = z.object({
   expressionVersion: CatalogueExpressionVersionSchema.nullable().optional(),
   expression: ExpressionV1Schema.nullable().optional(),
   allowOverride: z.boolean().optional(),
+  defaultValues: z
+    .array(PrimitiveWireValueSchema)
+    .max(100)
+    .describe('Values a client pre-fills on item create; [] clears. The server never applies them.')
+    .optional(),
   presentation: z.record(z.string(), z.unknown()).optional(),
   archivedAt: z.string().nullable().optional(),
 });

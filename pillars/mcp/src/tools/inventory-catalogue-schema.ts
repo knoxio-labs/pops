@@ -1,5 +1,5 @@
 import { archiveDefinition, archiveEnumOption } from './inventory-catalogue-archive-schema.js';
-import { nullableExpression } from './inventory-catalogue-expression-schema.js';
+import { fieldDefaultValues, nullableExpression } from './inventory-catalogue-expression-schema.js';
 
 export {
   EXPRESSION_BINARY_OPS,
@@ -87,6 +87,7 @@ const putField = {
     },
     expression: nullableExpression,
     allowOverride: { type: 'boolean' },
+    defaultValues: fieldDefaultValues,
     presentation,
     archivedAt,
   },

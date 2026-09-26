@@ -3,6 +3,7 @@ import type {
   FieldCardinality,
   FieldStorage,
   PrimitiveKind,
+  PrimitiveWireValue,
   ValueFieldDefinition,
 } from './value-codec.js';
 
@@ -33,6 +34,8 @@ export interface PersistedItemTypeField extends ValueFieldDefinition {
   readonly expressionVersion: number | null;
   readonly expressionJson: string | null;
   readonly allowOverride: boolean;
+  /** Canonical values clients pre-fill on item create; empty means none. Never applied by the server. */
+  readonly defaultValues: readonly PrimitiveWireValue[];
   readonly presentation: Record<string, unknown>;
   readonly archivedAt: string | null;
   /** The field that took over this archived field's values, when authoring named one. */

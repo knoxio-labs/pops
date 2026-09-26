@@ -5,6 +5,7 @@ import type { fieldEnumOptions, itemTypeFields, itemTypes } from '../db/schema.j
 import type { CommandDb } from '../domain/commands/index.js';
 import type { CatalogueIssue, CatalogueOptionWire } from './authoring-types.js';
 import type { PersistedCatalogue, PersistedItemTypeField } from './catalogue-types.js';
+import type { PrimitiveWireValue } from './value-types.js';
 
 export function issue(
   definitionId: string | null,
@@ -112,6 +113,7 @@ export function persistedFieldRow(
     readonly expressionVersion: number | null;
     readonly expression: unknown | null;
     readonly allowOverride: boolean;
+    readonly defaultValues: readonly PrimitiveWireValue[];
     readonly presentation: Record<string, unknown>;
     readonly archivedAt: string | null;
   }
@@ -134,6 +136,7 @@ export function persistedFieldRow(
     expressionVersion: input.expressionVersion,
     expressionJson: input.expression === null ? null : json(input.expression),
     allowOverride: input.allowOverride ? 1 : 0,
+    defaultValuesJson: json(input.defaultValues),
     presentationJson: json(input.presentation),
     archivedAt: input.archivedAt,
   };

@@ -392,6 +392,74 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     }
   });
 
+  it('stores a field default through put_field, and refuses one on a computed field', async () => {
+    const draft = await freshDraft(catalogueGet, createDraft);
+    const target = { revision: draft.revision, baseRevision: draft.baseRevision };
+    const withType = ok(
+      await patchDraft.handler({
+        ...target,
+        expectedDraftVersion: draft.draftVersion,
+        operations: [{ kind: 'put_type', key: 'seam_defaulted', label: 'Defaulted' }],
+      })
+    );
+    const typeId =
+      (withType['draft'] as { types: { id: string; key: string }[] }).types.find(
+        (type) => type.key === 'seam_defaulted'
+      )?.id ?? '';
+    const version = draftRevision(withType).draftVersion;
+    try {
+      const refused = await patchDraft.handler({
+        ...target,
+        expectedDraftVersion: version,
+        operations: [
+          {
+            kind: 'put_field',
+            typeId,
+            key: 'seam_computed_default',
+            label: 'Computed default',
+            fieldKind: 'short_text',
+            cardinality: 'one',
+            storage: 'computed',
+            expressionVersion: 1,
+            expression: { op: 'literal', value: 'seam' },
+            allowOverride: true,
+            defaultValues: ['seam'],
+          },
+        ],
+      });
+      const stored = ok(
+        await patchDraft.handler({
+          ...target,
+          expectedDraftVersion: version,
+          operations: [
+            {
+              kind: 'put_field',
+              typeId,
+              key: 'seam_colour',
+              label: 'Colour',
+              fieldKind: 'short_text',
+              cardinality: 'many',
+              storage: 'stored',
+              defaultValues: ['red', 'blue'],
+            },
+          ],
+        })
+      );
+
+      expect(refused.isError).toBe(true);
+      expect(text(refused)).toMatch(/default_not_allowed/);
+      const type = (
+        stored['draft'] as { types: { id: string; fields: { key: string }[] }[] }
+      ).types.find((entry) => entry.id === typeId);
+      expect(type?.fields.find((field) => field.key === 'seam_colour')).toMatchObject({
+        defaultValues: ['red', 'blue'],
+      });
+    } finally {
+      const current = draftRevision(ok(await readDraft.handler({})));
+      await abandonDraft.handler({ ...target, expectedDraftVersion: current.draftVersion });
+    }
+  });
+
   describe('malformed operation payloads, per kind, through the real REST boundary', () => {
     function issuePaths(body: string): string[] {
       const jsonStart = body.indexOf('{');

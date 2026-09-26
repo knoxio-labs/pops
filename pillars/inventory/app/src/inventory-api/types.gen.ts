@@ -3835,6 +3835,22 @@ export type TypesReadCatalogueResponses = {
         allowOverride: boolean;
         archivedAt: string | null;
         cardinality: 'one' | 'many';
+        defaultValues: Array<
+          | string
+          | number
+          | boolean
+          | {
+              optionId: string;
+            }
+          | {
+              amount: string;
+              unit: string;
+            }
+          | {
+              targetId: string;
+              targetKind: 'item' | 'location';
+            }
+        >;
         enumOptions: Array<{
           archivedAt: string | null;
           id: string;
@@ -4057,6 +4073,22 @@ export type TypesManageCreateDraftResponses = {
         allowOverride: boolean;
         archivedAt: string | null;
         cardinality: 'one' | 'many';
+        defaultValues: Array<
+          | string
+          | number
+          | boolean
+          | {
+              optionId: string;
+            }
+          | {
+              amount: string;
+              unit: string;
+            }
+          | {
+              targetId: string;
+              targetKind: 'item' | 'location';
+            }
+        >;
         enumOptions: Array<{
           archivedAt: string | null;
           id: string;
@@ -4199,6 +4231,22 @@ export type TypesManageReadDraftResponses = {
         allowOverride: boolean;
         archivedAt: string | null;
         cardinality: 'one' | 'many';
+        defaultValues: Array<
+          | string
+          | number
+          | boolean
+          | {
+              optionId: string;
+            }
+          | {
+              amount: string;
+              unit: string;
+            }
+          | {
+              targetId: string;
+              targetKind: 'item' | 'location';
+            }
+        >;
         enumOptions: Array<{
           archivedAt: string | null;
           id: string;
@@ -4279,6 +4327,25 @@ export type TypesManagePatchDraftData = {
           allowOverride?: boolean;
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
+          /**
+           * Values a client pre-fills on item create; [] clears. The server never applies them.
+           */
+          defaultValues?: Array<
+            | string
+            | number
+            | boolean
+            | {
+                optionId: string;
+              }
+            | {
+                amount: string;
+                unit: string;
+              }
+            | {
+                targetId: string;
+                targetKind: 'item' | 'location';
+              }
+          >;
           expression?: ExpressionV1 | null;
           /**
            * How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
@@ -4507,6 +4574,22 @@ export type TypesManagePatchDraftResponses = {
           allowOverride: boolean;
           archivedAt: string | null;
           cardinality: 'one' | 'many';
+          defaultValues: Array<
+            | string
+            | number
+            | boolean
+            | {
+                optionId: string;
+              }
+            | {
+                amount: string;
+                unit: string;
+              }
+            | {
+                targetId: string;
+                targetKind: 'item' | 'location';
+              }
+          >;
           enumOptions: Array<{
             archivedAt: string | null;
             id: string;
@@ -4673,6 +4756,22 @@ export type TypesManageAbandonDraftResponses = {
         allowOverride: boolean;
         archivedAt: string | null;
         cardinality: 'one' | 'many';
+        defaultValues: Array<
+          | string
+          | number
+          | boolean
+          | {
+              optionId: string;
+            }
+          | {
+              amount: string;
+              unit: string;
+            }
+          | {
+              targetId: string;
+              targetKind: 'item' | 'location';
+            }
+        >;
         enumOptions: Array<{
           archivedAt: string | null;
           id: string;
@@ -4761,6 +4860,25 @@ export type TypesManagePreviewComputedFieldData = {
           allowOverride?: boolean;
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
+          /**
+           * Values a client pre-fills on item create; [] clears. The server never applies them.
+           */
+          defaultValues?: Array<
+            | string
+            | number
+            | boolean
+            | {
+                optionId: string;
+              }
+            | {
+                amount: string;
+                unit: string;
+              }
+            | {
+                targetId: string;
+                targetKind: 'item' | 'location';
+              }
+          >;
           expression?: ExpressionV1 | null;
           /**
            * How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
@@ -5014,6 +5132,25 @@ export type TypesManagePreviewDraftData = {
           allowOverride?: boolean;
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
+          /**
+           * Values a client pre-fills on item create; [] clears. The server never applies them.
+           */
+          defaultValues?: Array<
+            | string
+            | number
+            | boolean
+            | {
+                optionId: string;
+              }
+            | {
+                amount: string;
+                unit: string;
+              }
+            | {
+                targetId: string;
+                targetKind: 'item' | 'location';
+              }
+          >;
           expression?: ExpressionV1 | null;
           /**
            * How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
@@ -5417,6 +5554,22 @@ export type TypesManagePublishDraftResponses = {
         allowOverride: boolean;
         archivedAt: string | null;
         cardinality: 'one' | 'many';
+        defaultValues: Array<
+          | string
+          | number
+          | boolean
+          | {
+              optionId: string;
+            }
+          | {
+              amount: string;
+              unit: string;
+            }
+          | {
+              targetId: string;
+              targetKind: 'item' | 'location';
+            }
+        >;
         enumOptions: Array<{
           archivedAt: string | null;
           id: string;
@@ -5698,6 +5851,25 @@ export type TypesManagePreviewComputedFieldOnPublishedData = {
           allowOverride?: boolean;
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
+          /**
+           * Values a client pre-fills on item create; [] clears. The server never applies them.
+           */
+          defaultValues?: Array<
+            | string
+            | number
+            | boolean
+            | {
+                optionId: string;
+              }
+            | {
+                amount: string;
+                unit: string;
+              }
+            | {
+                targetId: string;
+                targetKind: 'item' | 'location';
+              }
+          >;
           expression?: ExpressionV1 | null;
           /**
            * How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
@@ -6017,6 +6189,22 @@ export type TypesReadTypeResponses = {
         allowOverride: boolean;
         archivedAt: string | null;
         cardinality: 'one' | 'many';
+        defaultValues: Array<
+          | string
+          | number
+          | boolean
+          | {
+              optionId: string;
+            }
+          | {
+              amount: string;
+              unit: string;
+            }
+          | {
+              targetId: string;
+              targetKind: 'item' | 'location';
+            }
+        >;
         enumOptions: Array<{
           archivedAt: string | null;
           id: string;

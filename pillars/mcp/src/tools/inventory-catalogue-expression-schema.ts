@@ -57,6 +57,16 @@ const primitiveWireValue = {
   ],
 } as const;
 
+/** `put_field.defaultValues`: stored primitive values a client pre-fills on item create. */
+export const fieldDefaultValues = {
+  type: 'array',
+  maxItems: 100,
+  items: primitiveWireValue,
+  description:
+    'Values a client pre-fills on item create; [] clears. Only stored, non-reference fields ' +
+    'take one, at most one entry on a single-value field. The server never applies them.',
+} as const;
+
 const expressionRef = { $ref: '#/$defs/expressionV1' } as const;
 
 /**

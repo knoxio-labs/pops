@@ -26602,6 +26602,8 @@ internal enum Operations {
                                 }
                                 /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/cardinality`.
                                 internal var cardinality: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.CardinalityPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/defaultValues`.
+                                internal var defaultValues: [OpenAPIRuntime.OpenAPIValueContainer]?
                                 /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/EnumOptionsPayload`.
                                 internal struct EnumOptionsPayloadPayload: Codable, Hashable, Sendable {
                                     /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/EnumOptionsPayload/archivedAt`.
@@ -26759,6 +26761,7 @@ internal enum Operations {
                                 ///   - allowOverride:
                                 ///   - archivedAt:
                                 ///   - cardinality:
+                                ///   - defaultValues:
                                 ///   - enumOptions:
                                 ///   - expression:
                                 ///   - expressionVersion:
@@ -26780,6 +26783,7 @@ internal enum Operations {
                                     allowOverride: Swift.Bool,
                                     archivedAt: Swift.String? = nil,
                                     cardinality: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.CardinalityPayload,
+                                    defaultValues: [OpenAPIRuntime.OpenAPIValueContainer]? = nil,
                                     enumOptions: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.EnumOptionsPayload,
                                     expression: OpenAPIRuntime.OpenAPIValueContainer? = nil,
                                     expressionVersion: Swift.Int? = nil,
@@ -26801,6 +26805,7 @@ internal enum Operations {
                                     self.allowOverride = allowOverride
                                     self.archivedAt = archivedAt
                                     self.cardinality = cardinality
+                                    self.defaultValues = defaultValues
                                     self.enumOptions = enumOptions
                                     self.expression = expression
                                     self.expressionVersion = expressionVersion
@@ -26823,6 +26828,7 @@ internal enum Operations {
                                     case allowOverride
                                     case archivedAt
                                     case cardinality
+                                    case defaultValues
                                     case enumOptions
                                     case expression
                                     case expressionVersion
@@ -26854,6 +26860,10 @@ internal enum Operations {
                                     self.cardinality = try container.decode(
                                         Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.CardinalityPayload.self,
                                         forKey: .cardinality
+                                    )
+                                    self.defaultValues = try container.decodeIfPresent(
+                                        [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                        forKey: .defaultValues
                                     )
                                     self.enumOptions = try container.decode(
                                         Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.EnumOptionsPayload.self,
@@ -26927,6 +26937,7 @@ internal enum Operations {
                                         "allowOverride",
                                         "archivedAt",
                                         "cardinality",
+                                        "defaultValues",
                                         "enumOptions",
                                         "expression",
                                         "expressionVersion",

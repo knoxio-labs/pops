@@ -108,6 +108,7 @@ function fieldWire(field: PersistedItemTypeField): CatalogueFieldWire {
     expressionVersion: field.expressionVersion,
     expression: expressionValue(field.expressionJson),
     allowOverride: field.allowOverride,
+    defaultValues: [...field.defaultValues],
     presentation: { ...field.presentation },
     archivedAt: field.archivedAt,
     replacedBy: field.replacedBy,

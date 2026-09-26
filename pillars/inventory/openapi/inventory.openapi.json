@@ -10588,6 +10588,63 @@
                                   "enum": ["one", "many"],
                                   "type": "string"
                                 },
+                                "defaultValues": {
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "maximum": 9007199254740991,
+                                        "minimum": -9007199254740991,
+                                        "type": "integer"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "optionId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["optionId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string"
+                                          },
+                                          "unit": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["amount", "unit"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "targetId": {
+                                            "type": "string"
+                                          },
+                                          "targetKind": {
+                                            "enum": ["item", "location"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["targetKind", "targetId"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  "type": "array"
+                                },
                                 "enumOptions": {
                                   "items": {
                                     "additionalProperties": false,
@@ -10728,6 +10785,7 @@
                                 "expressionVersion",
                                 "expression",
                                 "allowOverride",
+                                "defaultValues",
                                 "presentation",
                                 "archivedAt",
                                 "replacedBy",
@@ -11296,6 +11354,63 @@
                                   "enum": ["one", "many"],
                                   "type": "string"
                                 },
+                                "defaultValues": {
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "maximum": 9007199254740991,
+                                        "minimum": -9007199254740991,
+                                        "type": "integer"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "optionId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["optionId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string"
+                                          },
+                                          "unit": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["amount", "unit"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "targetId": {
+                                            "type": "string"
+                                          },
+                                          "targetKind": {
+                                            "enum": ["item", "location"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["targetKind", "targetId"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  "type": "array"
+                                },
                                 "enumOptions": {
                                   "items": {
                                     "additionalProperties": false,
@@ -11436,6 +11551,7 @@
                                 "expressionVersion",
                                 "expression",
                                 "allowOverride",
+                                "defaultValues",
                                 "presentation",
                                 "archivedAt",
                                 "replacedBy",
@@ -11853,6 +11969,63 @@
                                   "enum": ["one", "many"],
                                   "type": "string"
                                 },
+                                "defaultValues": {
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "maximum": 9007199254740991,
+                                        "minimum": -9007199254740991,
+                                        "type": "integer"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "optionId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["optionId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string"
+                                          },
+                                          "unit": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["amount", "unit"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "targetId": {
+                                            "type": "string"
+                                          },
+                                          "targetKind": {
+                                            "enum": ["item", "location"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["targetKind", "targetId"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  "type": "array"
+                                },
                                 "enumOptions": {
                                   "items": {
                                     "additionalProperties": false,
@@ -11993,6 +12166,7 @@
                                 "expressionVersion",
                                 "expression",
                                 "allowOverride",
+                                "defaultValues",
                                 "presentation",
                                 "archivedAt",
                                 "replacedBy",
@@ -12288,6 +12462,65 @@
                             "cardinality": {
                               "enum": ["one", "many"],
                               "type": "string"
+                            },
+                            "defaultValues": {
+                              "description": "Values a client pre-fills on item create; [] clears. The server never applies them.",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionId": {
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["optionId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string"
+                                      },
+                                      "unit": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["amount", "unit"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "targetId": {
+                                        "type": "string"
+                                      },
+                                      "targetKind": {
+                                        "enum": ["item", "location"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["targetKind", "targetId"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "maxItems": 100,
+                              "type": "array"
                             },
                             "expression": {
                               "allOf": [
@@ -12773,6 +13006,63 @@
                                       "enum": ["one", "many"],
                                       "type": "string"
                                     },
+                                    "defaultValues": {
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "optionId": {
+                                                "format": "uuid",
+                                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": ["optionId"],
+                                            "type": "object"
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "amount": {
+                                                "type": "string"
+                                              },
+                                              "unit": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": ["amount", "unit"],
+                                            "type": "object"
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "targetId": {
+                                                "type": "string"
+                                              },
+                                              "targetKind": {
+                                                "enum": ["item", "location"],
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": ["targetKind", "targetId"],
+                                            "type": "object"
+                                          }
+                                        ]
+                                      },
+                                      "type": "array"
+                                    },
                                     "enumOptions": {
                                       "items": {
                                         "additionalProperties": false,
@@ -12919,6 +13209,7 @@
                                     "expressionVersion",
                                     "expression",
                                     "allowOverride",
+                                    "defaultValues",
                                     "presentation",
                                     "archivedAt",
                                     "replacedBy",
@@ -13626,6 +13917,63 @@
                                   "enum": ["one", "many"],
                                   "type": "string"
                                 },
+                                "defaultValues": {
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "maximum": 9007199254740991,
+                                        "minimum": -9007199254740991,
+                                        "type": "integer"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "optionId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["optionId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string"
+                                          },
+                                          "unit": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["amount", "unit"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "targetId": {
+                                            "type": "string"
+                                          },
+                                          "targetKind": {
+                                            "enum": ["item", "location"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["targetKind", "targetId"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  "type": "array"
+                                },
                                 "enumOptions": {
                                   "items": {
                                     "additionalProperties": false,
@@ -13766,6 +14114,7 @@
                                 "expressionVersion",
                                 "expression",
                                 "allowOverride",
+                                "defaultValues",
                                 "presentation",
                                 "archivedAt",
                                 "replacedBy",
@@ -14146,6 +14495,65 @@
                             "cardinality": {
                               "enum": ["one", "many"],
                               "type": "string"
+                            },
+                            "defaultValues": {
+                              "description": "Values a client pre-fills on item create; [] clears. The server never applies them.",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionId": {
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["optionId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string"
+                                      },
+                                      "unit": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["amount", "unit"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "targetId": {
+                                        "type": "string"
+                                      },
+                                      "targetKind": {
+                                        "enum": ["item", "location"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["targetKind", "targetId"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "maxItems": 100,
+                              "type": "array"
                             },
                             "expression": {
                               "allOf": [
@@ -15139,6 +15547,65 @@
                             "cardinality": {
                               "enum": ["one", "many"],
                               "type": "string"
+                            },
+                            "defaultValues": {
+                              "description": "Values a client pre-fills on item create; [] clears. The server never applies them.",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionId": {
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["optionId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string"
+                                      },
+                                      "unit": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["amount", "unit"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "targetId": {
+                                        "type": "string"
+                                      },
+                                      "targetKind": {
+                                        "enum": ["item", "location"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["targetKind", "targetId"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "maxItems": 100,
+                              "type": "array"
                             },
                             "expression": {
                               "allOf": [
@@ -16309,6 +16776,63 @@
                                   "enum": ["one", "many"],
                                   "type": "string"
                                 },
+                                "defaultValues": {
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "maximum": 9007199254740991,
+                                        "minimum": -9007199254740991,
+                                        "type": "integer"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "optionId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["optionId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string"
+                                          },
+                                          "unit": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["amount", "unit"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "targetId": {
+                                            "type": "string"
+                                          },
+                                          "targetKind": {
+                                            "enum": ["item", "location"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["targetKind", "targetId"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  "type": "array"
+                                },
                                 "enumOptions": {
                                   "items": {
                                     "additionalProperties": false,
@@ -16449,6 +16973,7 @@
                                 "expressionVersion",
                                 "expression",
                                 "allowOverride",
+                                "defaultValues",
                                 "presentation",
                                 "archivedAt",
                                 "replacedBy",
@@ -17596,6 +18121,65 @@
                               "enum": ["one", "many"],
                               "type": "string"
                             },
+                            "defaultValues": {
+                              "description": "Values a client pre-fills on item create; [] clears. The server never applies them.",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "optionId": {
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["optionId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string"
+                                      },
+                                      "unit": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["amount", "unit"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "targetId": {
+                                        "type": "string"
+                                      },
+                                      "targetKind": {
+                                        "enum": ["item", "location"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["targetKind", "targetId"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "maxItems": 100,
+                              "type": "array"
+                            },
                             "expression": {
                               "allOf": [
                                 {
@@ -18678,6 +19262,63 @@
                                 "enum": ["one", "many"],
                                 "type": "string"
                               },
+                              "defaultValues": {
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "maximum": 9007199254740991,
+                                      "minimum": -9007199254740991,
+                                      "type": "integer"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "optionId": {
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["optionId"],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string"
+                                        },
+                                        "unit": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["amount", "unit"],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "targetId": {
+                                          "type": "string"
+                                        },
+                                        "targetKind": {
+                                          "enum": ["item", "location"],
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["targetKind", "targetId"],
+                                      "type": "object"
+                                    }
+                                  ]
+                                },
+                                "type": "array"
+                              },
                               "enumOptions": {
                                 "items": {
                                   "additionalProperties": false,
@@ -18818,6 +19459,7 @@
                               "expressionVersion",
                               "expression",
                               "allowOverride",
+                              "defaultValues",
                               "presentation",
                               "archivedAt",
                               "replacedBy",

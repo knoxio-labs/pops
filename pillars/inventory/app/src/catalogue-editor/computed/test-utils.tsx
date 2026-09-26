@@ -64,6 +64,7 @@ function field(typeId: string, shape: FieldShape, sortOrder: number): CatalogueF
     allowOverride: false,
     archivedAt: null,
     cardinality: 'one',
+    defaultValues: [],
     enumOptions: [],
     expression: null,
     expressionVersion: null,

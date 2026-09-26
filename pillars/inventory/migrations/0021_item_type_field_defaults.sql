@@ -1,0 +1,1 @@
+ALTER TABLE `item_type_fields` ADD COLUMN `default_values_json` text DEFAULT '[]' NOT NULL CONSTRAINT `ck_item_type_fields_default_values_json` CHECK(json_valid(`default_values_json`) AND json_type(`default_values_json`) = 'array');
