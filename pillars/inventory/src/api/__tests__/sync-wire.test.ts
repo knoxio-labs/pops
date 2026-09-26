@@ -322,6 +322,6 @@ describe('GET /sync/items/:id/events', () => {
       .set(PROTOCOL)
       .query({ cursor: page.body.nextCursor });
     expect(response.status).toBe(400);
-    expect(response.body).toMatchObject({ code: 'invalid_cursor' });
+    expect(response.body).toMatchObject({ code: 'inventory.sync.invalid_cursor' });
   });
 });

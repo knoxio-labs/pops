@@ -64,6 +64,18 @@ async function itemWithCode(code: string, typeKey?: string): Promise<string> {
 }
 
 describe('POST /codes/suggest', () => {
+  it('returns the registered code when the item name is empty', async () => {
+    const response = await h.api.post('/codes/suggest').set(PROTOCOL).send({ name: '' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      code: 'inventory.codes.name_required',
+      message: 'Name the item before asking for a code.',
+      requestId: response.headers['x-request-id'],
+      retryable: false,
+    });
+  });
+
   it('numbers from the highest code with the stem, keeping its width, case-insensitively', async () => {
     await itemWithCode('B0411');
     await itemWithCode('b0412');

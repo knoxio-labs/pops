@@ -183,20 +183,25 @@ describe('PublishPanel', () => {
   it('renders every structured validation issue returned by Inventory', () => {
     renderPanel({
       readiness: { status: 'not_previewed' },
-      error: new InventoryApiError('Catalogue validation failed', 400, 'catalogue_invalid', [
-        {
-          code: 'fixed_unit_required',
-          definitionId: 'field-voltage',
-          message: 'Fixed unit is required',
-          path: 'fixedUnit',
-        },
-        {
-          code: 'reference_target_required',
-          definitionId: 'field-stored-with',
-          message: 'Choose at least one target kind',
-          path: 'referenceKinds',
-        },
-      ]),
+      error: new InventoryApiError(
+        'Catalogue validation failed',
+        400,
+        'inventory.catalogue.invalid',
+        [
+          {
+            code: 'fixed_unit_required',
+            definitionId: 'field-voltage',
+            message: 'Fixed unit is required',
+            path: 'fixedUnit',
+          },
+          {
+            code: 'reference_target_required',
+            definitionId: 'field-stored-with',
+            message: 'Choose at least one target kind',
+            path: 'referenceKinds',
+          },
+        ]
+      ),
     });
 
     expect(screen.getByText('Catalogue validation failed')).toBeInTheDocument();

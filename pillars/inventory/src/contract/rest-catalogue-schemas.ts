@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 import { CatalogueArchiveDefinitionSchema } from './rest-catalogue-archive-schema.js';
 import { CatalogueActorSchema } from './rest-catalogue-audit-schema.js';
-import { CatalogueCompatibilitySchema } from './rest-catalogue-compatibility-schema.js';
 import {
   CatalogueExpressionVersionSchema,
   ExpressionV1Schema,
@@ -198,28 +197,8 @@ export const CatalogueDraftOperationSchema = z.discriminatedUnion('kind', [
  */
 export const ExpectedDraftVersionSchema = z.number().int().positive();
 
-export const CatalogueErrorBodySchema = ErrorBodySchema.extend({
-  currentDraftVersion: z.number().int().positive().optional(),
-  issues: z
-    .array(
-      z.object({
-        definitionId: z.string().nullable(),
-        path: z.string(),
-        code: z.string(),
-        message: z.string(),
-      })
-    )
-    .optional(),
-});
+export const CatalogueErrorBodySchema = ErrorBodySchema;
 
-export const CataloguePreviewErrorBodySchema = CatalogueErrorBodySchema.extend({
-  preview: z
-    .object({
-      baseRevision: z.number().int().positive(),
-      draftRevision: z.number().int().positive(),
-      compatibility: CatalogueCompatibilitySchema,
-    })
-    .optional(),
-});
+export const CataloguePreviewErrorBodySchema = ErrorBodySchema;
 
 export const CatalogueReadHeaders = z.object({ 'if-none-match': z.string().optional() });

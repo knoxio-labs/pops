@@ -179,9 +179,9 @@ describe('reading one type at a catalogue revision', () => {
     const unknown = await readType(api, randomUUID());
 
     expect(beforeAdded.status).toBe(404);
-    expect(beforeAdded.body.code).toBe('catalogue_type_unknown');
+    expect(beforeAdded.body.code).toBe('inventory.catalogue.type_unknown');
     expect(unknown.status).toBe(404);
-    expect(unknown.body.code).toBe('catalogue_type_unknown');
+    expect(unknown.body.code).toBe('inventory.catalogue.type_unknown');
   });
 
   it('answers 404 catalogue_revision_unknown for a missing, draft or abandoned revision', async () => {
@@ -203,7 +203,7 @@ describe('reading one type at a catalogue revision', () => {
     for (const revision of [999, abandoned.revision.revision, draft.revision.revision]) {
       const response = await readType(api, h.renamedId, revision);
       expect(response.status).toBe(404);
-      expect(response.body.code).toBe('catalogue_revision_unknown');
+      expect(response.body.code).toBe('inventory.catalogue.revision_unknown');
     }
   });
 
@@ -239,7 +239,7 @@ describe('reading one type at a catalogue revision', () => {
       .set('x-api-key', SERVICE_KEY);
 
     expect(anonymous.status).toBe(401);
-    expect(anonymous.body.code).toBe('catalogue_unauthorised');
+    expect(anonymous.body.code).toBe('inventory.catalogue.unauthorised');
     expect(granted.status).toBe(200);
     expect(ungranted.status).toBe(403);
   });

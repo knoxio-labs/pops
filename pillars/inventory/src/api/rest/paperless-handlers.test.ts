@@ -55,10 +55,11 @@ describe('paperless.search', () => {
   it('returns 412 when the documents client reports no results are servable', async () => {
     const handlers = makePaperlessHandlers(stubClient());
 
-    const result = await handlers.search({ query: { query: 'bill' } });
-
-    expect(result.status).toBe(412);
-    expect(result.body).toMatchObject({ messageKey: 'inventory.paperless.notConfigured' });
+    await expect(handlers.search({ query: { query: 'bill' } })).rejects.toMatchObject({
+      status: 412,
+      code: 'inventory.paperless.not_configured',
+      details: { messageKey: 'inventory.paperless.notConfigured' },
+    });
   });
 
   it('returns the documents client results on success', async () => {

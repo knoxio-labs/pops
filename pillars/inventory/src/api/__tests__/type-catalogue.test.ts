@@ -143,7 +143,7 @@ describe('type catalogue owner API', () => {
 
     expect(read.status).toBe(401);
     expect(create.status).toBe(401);
-    expect(read.body.code).toBe('catalogue_unauthorised');
+    expect(read.body.code).toBe('inventory.catalogue.unauthorised');
   });
 
   it('allows a read-scoped service account to read but not author', async () => {
@@ -261,17 +261,19 @@ describe('type catalogue owner API', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       message: 'field 00000000-0000-4000-8000-000000000001: is not declared',
-      code: 'item_validation_failed',
-      issues: [
-        {
-          definitionId: '00000000-0000-4000-8000-000000000001',
-          path: 'fieldValues.00000000-0000-4000-8000-000000000001',
-          code: 'field_unknown',
-          message: 'field 00000000-0000-4000-8000-000000000001: is not declared',
-        },
-      ],
+      code: 'inventory.catalogue.item_validation_failed',
+      details: {
+        issues: [
+          {
+            definitionId: '00000000-0000-4000-8000-000000000001',
+            path: 'fieldValues.00000000-0000-4000-8000-000000000001',
+            code: 'field_unknown',
+            message: 'field 00000000-0000-4000-8000-000000000001: is not declared',
+          },
+        ],
+      },
     });
   });
 
@@ -480,7 +482,7 @@ describe('type catalogue owner API', () => {
 
     expect(premature.status).toBe(409);
     expect(premature.body).toMatchObject({
-      code: 'protocol_rollout_required',
+      code: 'inventory.catalogue.protocol_rollout_required',
       message: expect.stringContaining('Activate inventory protocol 2'),
     });
     expect(draftAfterRefusal.body.revision.minimumProtocol).toBe(1);
@@ -490,7 +492,7 @@ describe('type catalogue owner API', () => {
       minimumProtocol: 3,
     });
     expect(unsupported.status).toBe(400);
-    expect(unsupported.body.code).toBe('protocol_not_supported');
+    expect(unsupported.body.code).toBe('inventory.catalogue.protocol_not_supported');
 
     const activated = await api.post('/type-catalogue/protocol-rollout').send({
       expectedMinimumProtocol: 1,
@@ -507,9 +509,9 @@ describe('type catalogue owner API', () => {
       minimumProtocol: 1,
     });
     expect(staleActivation.status).toBe(409);
-    expect(staleActivation.body.code).toBe('protocol_rollout_conflict');
+    expect(staleActivation.body.code).toBe('inventory.catalogue.protocol_rollout_conflict');
     expect(downgrade.status).toBe(409);
-    expect(downgrade.body.code).toBe('protocol_minimum_downgrade');
+    expect(downgrade.body.code).toBe('inventory.catalogue.protocol_minimum_downgrade');
 
     inventoryDb.raw.close();
     inventoryDb = openInventoryDb(join(tmpDir, 'inventory.db'));
@@ -520,7 +522,7 @@ describe('type catalogue owner API', () => {
     const protocol1 = await restarted.get('/types').set({ 'Pops-Inventory-Protocol': '1' });
     const protocol2 = await restarted.get('/types').set({ 'Pops-Inventory-Protocol': '2' });
     expect(protocol1.status).toBe(426);
-    expect(protocol1.body.code).toBe('client_too_old');
+    expect(protocol1.body.code).toBe('inventory.sync.client_too_old');
     expect(protocol2.status).toBe(200);
 
     const published = await restarted.post(`/type-catalogue/drafts/${draftRevision}/publish`).send({
@@ -584,7 +586,7 @@ describe('type catalogue owner API', () => {
     const response = await apiFor('web').get('/type-catalogue/drafts/current');
 
     expect(response.status).toBe(404);
-    expect(response.body.code).toBe('catalogue_draft_missing');
+    expect(response.body.code).toBe('inventory.catalogue.draft_missing');
   });
 
   it('previews fresh compatibility without persisting proposed operations', async () => {
@@ -661,13 +663,13 @@ describe('type catalogue owner API', () => {
     const persisted = await api.get('/type-catalogue/drafts/current');
 
     expect(preview.status, JSON.stringify(preview.body)).toBe(400);
-    expect(preview.body.code).toBe('catalogue_validation_failed');
-    expect(preview.body.preview).toMatchObject({
+    expect(preview.body.code).toBe('inventory.catalogue.validation_failed');
+    expect(preview.body.details.preview).toMatchObject({
       baseRevision,
       draftRevision: revision,
       compatibility: { affectedItems: 0 },
     });
-    expect(preview.body.issues.map((issue: { code: string }) => issue.code)).toEqual([
+    expect(preview.body.details.issues.map((issue: { code: string }) => issue.code)).toEqual([
       'unit_forbidden',
       'reference_forbidden',
       'type_unknown',
@@ -704,8 +706,8 @@ describe('type catalogue owner API', () => {
       .send({ baseRevision, expectedDraftVersion: created.body.revision.draftVersion, operations });
 
     expect(preview.status, JSON.stringify(preview.body)).toBe(400);
-    expect(preview.body.code).toBe('catalogue_validation_failed');
-    expect(preview.body.issues.map((issue: { code: string }) => issue.code)).toEqual([
+    expect(preview.body.code).toBe('inventory.catalogue.validation_failed');
+    expect(preview.body.details.issues.map((issue: { code: string }) => issue.code)).toEqual([
       'reference_kinds_required',
     ]);
 
@@ -714,8 +716,8 @@ describe('type catalogue owner API', () => {
       .send({ baseRevision, expectedDraftVersion: created.body.revision.draftVersion, operations });
 
     expect(patch.status, JSON.stringify(patch.body)).toBe(400);
-    expect(patch.body.code).toBe('catalogue_validation_failed');
-    expect(patch.body.issues.map((issue: { code: string }) => issue.code)).toEqual([
+    expect(patch.body.code).toBe('inventory.catalogue.validation_failed');
+    expect(patch.body.details.issues.map((issue: { code: string }) => issue.code)).toEqual([
       'reference_kinds_required',
     ]);
   });
@@ -795,7 +797,7 @@ describe('type catalogue owner API', () => {
       changes: [{ code: 'field_became_required' }],
     });
     expect(forbidden.status, JSON.stringify(forbidden.body)).toBe(400);
-    expect(forbidden.body.preview.compatibility).toMatchObject({
+    expect(forbidden.body.details.preview.compatibility).toMatchObject({
       classification: 'forbidden',
       changes: [{ code: 'immutable_shape' }],
     });
@@ -833,7 +835,7 @@ describe('type catalogue owner API', () => {
     });
 
     expect(stale.status).toBe(409);
-    expect(stale.body.code).toBe('catalogue_conflict');
+    expect(stale.body.code).toBe('inventory.catalogue.conflict');
     expect(
       edited.body.draft.types.find((entry: { id: string }) => entry.id === type.id).label
     ).toBe('Edited equipment');
@@ -871,7 +873,7 @@ describe('type catalogue owner API', () => {
     });
 
     expect(unknown.status).toBe(400);
-    expect(unknown.body.issues).toEqual([
+    expect(unknown.body.details.issues).toEqual([
       expect.objectContaining({ definitionId: idOf('old_meter'), code: 'replacement_unknown' }),
     ]);
     expect(replaced.status, JSON.stringify(replaced.body)).toBe(200);
@@ -888,7 +890,7 @@ describe('type catalogue owner API', () => {
     const response = await api.post('/type-catalogue/drafts').send({ baseRevision: 999_999 });
 
     expect(response.status).toBe(409);
-    expect(response.body.code).toBe('catalogue_conflict');
+    expect(response.body.code).toBe('inventory.catalogue.conflict');
   });
 
   it('abandons a draft without deleting its audit record', async () => {

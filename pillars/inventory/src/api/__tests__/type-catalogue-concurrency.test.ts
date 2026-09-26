@@ -99,8 +99,8 @@ describe('catalogue draft optimistic concurrency over REST', () => {
     const winner = responses.find((response) => response.status === 200);
     const loser = responses.find((response) => response.status === 409);
     expect(loser?.body).toMatchObject({
-      code: 'catalogue_draft_conflict',
-      currentDraftVersion: 2,
+      code: 'inventory.catalogue.draft_conflict',
+      details: { currentDraftVersion: 2 },
       message: expect.stringContaining('re-read the draft'),
     });
     const persisted = await readDraft(alice);
@@ -122,7 +122,9 @@ describe('catalogue draft optimistic concurrency over REST', () => {
 
     expect(aliceWrite.status).toBe(200);
     expect(staleBobWrite.status).toBe(409);
-    expect(staleBobWrite.body.currentDraftVersion).toBe(afterConflict.revision.draftVersion);
+    expect(staleBobWrite.body.details.currentDraftVersion).toBe(
+      afterConflict.revision.draftVersion
+    );
     expect(labelOf(afterConflict, typeId)).toBe('Alice label');
     expect(bobRetry.status).toBe(200);
     expect(bobRetry.body.draft.revision.draftVersion).toBe(3);
@@ -165,7 +167,7 @@ describe('catalogue draft optimistic concurrency over REST', () => {
 
     expect(published.status).toBe(200);
     expect(lateEdit.status).toBe(409);
-    expect(lateEdit.body).toMatchObject({ code: 'catalogue_draft_conflict' });
+    expect(lateEdit.body).toMatchObject({ code: 'inventory.catalogue.draft_conflict' });
     expect(lateEdit.body.message).toContain('already published');
     expect(current.body.revision.revision).toBe(draft.revision.revision);
     expect(labelOf(current.body as DraftView, typeId)).toBe(labelOf(draft, typeId));
@@ -198,8 +200,8 @@ describe('catalogue draft optimistic concurrency over REST', () => {
 
     expect(stalePublish.status).toBe(409);
     expect(stalePublish.body).toMatchObject({
-      code: 'catalogue_draft_conflict',
-      currentDraftVersion: 2,
+      code: 'inventory.catalogue.draft_conflict',
+      details: { currentDraftVersion: 2 },
     });
     expect(reread.revision.draftVersion).toBe(2);
     expect(labelOf(reread, typeId)).toBe('Bob edit');
@@ -222,7 +224,7 @@ describe('catalogue draft optimistic concurrency over REST', () => {
       });
 
     expect(abandoned.status).toBe(409);
-    expect(abandoned.body.currentDraftVersion).toBe(2);
+    expect(abandoned.body.details.currentDraftVersion).toBe(2);
     expect((await readDraft(alice)).revision.draftVersion).toBe(2);
     expect(await auditIds(alice)).toEqual(auditBefore);
   });
@@ -243,8 +245,8 @@ describe('catalogue draft optimistic concurrency over REST', () => {
 
     expect(preview.status).toBe(409);
     expect(preview.body).toMatchObject({
-      code: 'catalogue_draft_conflict',
-      currentDraftVersion: 2,
+      code: 'inventory.catalogue.draft_conflict',
+      details: { currentDraftVersion: 2 },
     });
   });
 

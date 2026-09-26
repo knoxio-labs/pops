@@ -54,7 +54,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
       '/inventory/documents/abc/thumbnail'
     );
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid document id');
+    expect(res.body.message).toContain('Invalid document id');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -64,7 +64,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(503);
-    expect(res.body.error).toContain('not available');
+    expect(res.body.message).toContain('not available');
   });
 
   it('returns 503 when pillar discovery throws (registry unreachable)', async () => {
@@ -72,7 +72,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
     const lookup = () => Promise.reject(new Error('registry unreachable'));
     const res = await requestOn(app(lookup, fetchImpl)).get('/inventory/documents/42/thumbnail');
     expect(res.status).toBe(503);
-    expect(res.body.error).toContain('not available');
+    expect(res.body.message).toContain('not available');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -82,7 +82,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(502);
-    expect(res.body.error).toContain('Failed to reach');
+    expect(res.body.message).toContain('Failed to reach');
   });
 
   it('returns 504 when the proxied fetch times out', async () => {
@@ -93,7 +93,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(504);
-    expect(res.body.error).toContain('timed out');
+    expect(res.body.message).toContain('timed out');
   });
 
   it('proxies the thumbnail image on success', async () => {
@@ -135,7 +135,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
       '/inventory/documents/999/thumbnail'
     );
     expect(res.status).toBe(404);
-    expect(res.body.error).toBe('Document not found');
+    expect(res.body.message).toBe('Document not found');
   });
 
   it('returns 503 when the documents pillar reports Paperless is not configured', async () => {
@@ -144,7 +144,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(503);
-    expect(res.body.error).toContain('not configured');
+    expect(res.body.message).toContain('not configured');
   });
 
   it('returns 502 on other upstream errors', async () => {
@@ -153,6 +153,6 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(502);
-    expect(res.body.error).toContain('Failed to fetch thumbnail from the documents pillar');
+    expect(res.body.message).toContain('Failed to fetch thumbnail from the documents pillar');
   });
 });

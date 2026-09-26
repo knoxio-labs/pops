@@ -348,7 +348,7 @@ describe('web.items.list', () => {
     ).rejects.toMatchObject({
       status: 400,
       body: {
-        code: 'ValidationError',
+        code: 'inventory.request.invalid',
         message: 'typeKey cannot be combined with untyped=true',
       },
     });
@@ -357,7 +357,7 @@ describe('web.items.list', () => {
     ).rejects.toMatchObject({
       status: 400,
       body: {
-        code: 'ValidationError',
+        code: 'inventory.request.invalid',
         message: 'typeKey cannot be combined with legacyLabelOf',
       },
     });

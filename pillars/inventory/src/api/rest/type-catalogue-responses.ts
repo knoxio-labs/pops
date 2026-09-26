@@ -1,4 +1,5 @@
 import { CatalogueApiError } from '../../catalogue/authoring.js';
+import { inventoryError } from '../errors.js';
 
 import type { patchCatalogueDraft } from '../../catalogue/authoring.js';
 import type {
@@ -15,26 +16,6 @@ export interface CatalogueCompatibilityBody {
   changes: CatalogueCompatibilityChange[];
 }
 
-type CatalogueFailure = {
-  status: 400 | 401 | 404 | 409;
-  body: {
-    message: string;
-    code: string;
-    currentDraftVersion?: number;
-    issues?: {
-      definitionId: string | null;
-      path: string;
-      code: string;
-      message: string;
-    }[];
-    preview?: {
-      baseRevision: number;
-      draftRevision: number;
-      compatibility: ReturnType<typeof compatibilityBody>;
-    };
-  };
-};
-
 /** Converts internal compatibility evidence to its mutable JSON response shape. */
 export function compatibilityBody(
   result: Awaited<ReturnType<typeof patchCatalogueDraft>>['compatibility']
@@ -48,37 +29,35 @@ export function compatibilityBody(
   };
 }
 
-function failure(error: CatalogueApiError): CatalogueFailure {
-  return {
-    status: error.status,
-    body: {
-      message: error.message,
-      code: error.code,
-      ...(error.currentDraftVersion === undefined
-        ? {}
-        : { currentDraftVersion: error.currentDraftVersion }),
-      ...(error.issues.length === 0 ? {} : { issues: [...error.issues] }),
-      ...(error.preview === undefined
-        ? {}
-        : {
-            preview: {
-              baseRevision: error.preview.baseRevision,
-              draftRevision: error.preview.draftRevision,
-              compatibility: compatibilityBody(error.preview.compatibility),
-            },
-          }),
-    },
-  };
-}
-
-/** Maps catalogue API failures while preserving successful handler result types. */
-export async function runCatalogue<T>(
-  operation: () => T | Promise<T>
-): Promise<T | CatalogueFailure> {
+/** Run catalogue work while leaving failures to the shared Express pipeline. */
+export async function runCatalogue<T>(operation: () => T | Promise<T>): Promise<T> {
   try {
     return await operation();
   } catch (error) {
-    if (error instanceof CatalogueApiError) return failure(error);
-    throw error;
+    if (!(error instanceof CatalogueApiError)) throw error;
+    const reason = error.code.startsWith('catalogue_')
+      ? error.code.slice('catalogue_'.length)
+      : error.code;
+    throw inventoryError({
+      area: 'catalogue',
+      reason,
+      status: error.status,
+      message: error.message,
+      details: {
+        ...(error.currentDraftVersion === undefined
+          ? {}
+          : { currentDraftVersion: error.currentDraftVersion }),
+        ...(error.issues.length === 0 ? {} : { issues: [...error.issues] }),
+        ...(error.preview === undefined
+          ? {}
+          : {
+              preview: {
+                baseRevision: error.preview.baseRevision,
+                draftRevision: error.preview.draftRevision,
+                compatibility: compatibilityBody(error.preview.compatibility),
+              },
+            }),
+      },
+    });
   }
 }

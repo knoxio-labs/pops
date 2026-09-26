@@ -200,7 +200,12 @@ describe('useCatalogueEditor readiness', () => {
   it('clears a stale save error on reload and permits a valid retry', async () => {
     api.readDraft.mockResolvedValue({ data: draft(4), error: undefined });
     api.patchDraft.mockRejectedValueOnce(
-      new InventoryApiError('This draft changed elsewhere', 409, 'catalogue_draft_stale', [])
+      new InventoryApiError(
+        'This draft changed elsewhere',
+        409,
+        'inventory.catalogue.draft_conflict',
+        []
+      )
     );
     const { result } = setup();
     await waitFor(() => expect(result.current.catalogue).toBeDefined());
