@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { coreWorld } from '../fixtures/core';
-import { at, box, inBox, item } from '../fixtures/core-factory';
+import { coreWorld } from '../test-fixtures/core';
+import { at, box, inBox, item } from '../test-fixtures/core-factory';
 import {
   buildWorld,
   deepContents,
