@@ -13,6 +13,17 @@ export class BootEnvError extends Error {
   override readonly name = 'BootEnvError' as const;
 }
 
+/** Resolve the contact included in Open Library requests. */
+export function resolveUserAgentContact(env: NodeJS.ProcessEnv = process.env): string {
+  const contact = env['BARCODE_USER_AGENT_CONTACT']?.trim();
+  if (contact === undefined || contact === '') {
+    throw new BootEnvError(
+      '[barcode-api] BARCODE_USER_AGENT_CONTACT must be set for Open Library requests'
+    );
+  }
+  return contact;
+}
+
 /** Resolve `PORT`, rejecting values that cannot be a TCP port. */
 export function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
   const raw = env['PORT'];

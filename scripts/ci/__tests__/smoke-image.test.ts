@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+  BOOT_PLACEHOLDER_SECRETS,
   collectStreams,
   dataMountsForDockerfile,
   forcesRevalidation,
@@ -29,6 +30,12 @@ import {
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 const productionCompose = readFileSync(join(repoRoot, 'infra', 'docker-compose.yml'), 'utf8');
+
+describe('boot placeholders', () => {
+  it('includes the barcode user-agent contact required by the image', () => {
+    expect(BOOT_PLACEHOLDER_SECRETS.BARCODE_USER_AGENT_CONTACT).toBe('ci-smoke@example.invalid');
+  });
+});
 
 /** Pillar ids whose directory contains every one of the named entries. */
 function pillarsWith(...entries: readonly string[]): string[] {
