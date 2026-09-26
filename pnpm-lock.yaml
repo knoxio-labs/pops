@@ -306,6 +306,18 @@ importers:
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../sdk
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../types
+      '@ts-rest/core':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@types/node@24.13.3)
+      '@ts-rest/express':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.13.3))(express@5.2.1(supports-color@10.2.2))
+      zod:
+        specifier: ^4.6.2
+        version: 4.6.5
     devDependencies:
       '@types/express':
         specifier: ^5.0.4

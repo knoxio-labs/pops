@@ -39,6 +39,25 @@ const recursiveContract = c.router({
   },
 });
 
+const errorContract = c.router({
+  getError: {
+    method: 'GET',
+    path: '/error',
+    responses: {
+      200: z.object({ ok: z.boolean() }),
+      400: z
+        .object({
+          code: z.string(),
+          message: z.string(),
+          requestId: z.string(),
+          retryable: z.boolean(),
+          details: z.unknown().optional(),
+        })
+        .meta({ id: 'ErrorBody' }),
+    },
+  },
+});
+
 let packageDir: string;
 
 function projection(overrides: Partial<PillarOpenApiProjection> = {}): PillarOpenApiProjection {
@@ -139,6 +158,19 @@ describe('buildPillarOpenApiDocument', () => {
     const document = buildPillarOpenApiDocument(projection({ hoistRecursiveDefinitions: true }));
 
     expect(Reflect.get(document as object, 'components')).toEqual({ schemas: {} });
+  });
+
+  it('hoists the shared ErrorBody component even when recursive hoisting is off', () => {
+    const document = buildPillarOpenApiDocument(
+      projection({ contract: errorContract, hoistRecursiveDefinitions: false })
+    );
+    const serialized = JSON.stringify(document);
+
+    expect(document).toMatchObject({
+      components: { schemas: { ErrorBody: { type: 'object' } } },
+    });
+    expect(serialized).toContain('#/components/schemas/ErrorBody');
+    expect(serialized).not.toContain('#/definitions/ErrorBody');
   });
 
   it('refuses a pillarId that disagrees with the package name', () => {

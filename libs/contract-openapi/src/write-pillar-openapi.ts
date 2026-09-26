@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { generateOpenApi } from '@ts-rest/open-api';
 
 import { hoistRecursiveDefinitions } from './hoist-definitions.js';
+import { hoistErrorBodyDefinition } from './hoist-error-body.js';
 import { isRecord, sortJson } from './json.js';
 import { zodSchemaTransformer } from './zod-schema-transformer.js';
 
@@ -77,6 +78,7 @@ export function buildPillarOpenApiDocument(projection: PillarOpenApiProjection):
   );
 
   if (projection.hoistRecursiveDefinitions) hoistRecursiveDefinitions(document);
+  if (isRecord(document)) hoistErrorBodyDefinition(document);
 
   return sortJson(document);
 }
