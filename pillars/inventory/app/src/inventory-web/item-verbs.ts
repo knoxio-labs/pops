@@ -10,7 +10,7 @@ import {
 import {
   createUndo,
   sendInventoryMutation,
-  type InventoryMutationOutcome,
+  type VerbResult,
   UndoRefusedError,
 } from './mutation-client.js';
 import { optimisticItemsFor, type ItemPatch, type OptimisticItems } from './optimistic-items.js';
@@ -21,16 +21,7 @@ import type { FixedPlacement } from '../foundation/model/model.js';
 import type { WebItem } from './item-row-model.js';
 import type { CatalogueDescriptor } from './useCatalogueLookups.js';
 
-/** A mutation outcome or transport failure that refused a verb. */
-export type VerbRefusal =
-  | { kind: 'outcome'; outcome: Exclude<InventoryMutationOutcome, { status: 'applied' }> }
-  | { kind: 'failed'; error: InventoryApiError };
-
-/** The result of one optimistic item verb. */
-export type VerbResult =
-  | { status: 'applied'; seq: number; undo: (() => Promise<void>) | null }
-  | { status: 'refused'; refusal: VerbRefusal };
-
+export type { VerbRefusal, VerbResult } from './mutation-client.js';
 export { UndoRefusedError };
 
 type Result = Promise<VerbResult>;
@@ -158,7 +149,7 @@ function createItemVerbs(queryClient: QueryClient, catalogue: CatalogueDescripto
       moveVerb(run, id, to, verb);
   const hand: InventoryPlacementTarget = { kind: 'hand' };
   const active: InventoryCommand = { op: 'item.setLifecycle', args: { lifecycle: 'active' } };
-  const typed = createTypedItemVerbs(
+  const typed = createTypedItemVerbs<VerbResult>(
     (id, patch, command, catalogueRevision) =>
       runState([run, id], patch, command, { canUndo: true, catalogueRevision }),
     catalogue

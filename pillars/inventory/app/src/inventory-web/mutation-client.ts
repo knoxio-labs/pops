@@ -18,7 +18,6 @@ import { syncMutations } from '../inventory-api/index.js';
 
 import type { SyncMutationsData, SyncMutationsResponses } from '../inventory-api/types.gen.js';
 import type { InventoryCommand } from './commands.js';
-import type { VerbRefusal } from './item-verbs.js';
 import type { OptimisticItems } from './optimistic-items.js';
 
 /** The protocol version this app speaks (Inventory ADR-002 D10); the server's current minimum is `1`. */
@@ -26,6 +25,16 @@ export const INVENTORY_SYNC_PROTOCOL = '1';
 
 /** One outcome of `POST /sync/mutations`, as the server reports it. */
 export type InventoryMutationOutcome = SyncMutationsResponses[200]['outcomes'][number];
+
+/** A mutation outcome or transport failure that refused a verb. */
+export type VerbRefusal =
+  | { kind: 'outcome'; outcome: Exclude<InventoryMutationOutcome, { status: 'applied' }> }
+  | { kind: 'failed'; error: InventoryApiError };
+
+/** The result of one optimistic item verb. */
+export type VerbResult =
+  | { status: 'applied'; seq: number; undo: (() => Promise<void>) | null }
+  | { status: 'refused'; refusal: VerbRefusal };
 
 /** Thrown by an undo function when the compensating event is not applied. */
 export class UndoRefusedError extends Error {

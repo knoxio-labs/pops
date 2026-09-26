@@ -1,5 +1,4 @@
 import type { WebItem } from './item-row-model.js';
-import type { VerbResult } from './item-verbs.js';
 import type { ItemPatch } from './optimistic-items.js';
 import type { CatalogueDescriptor } from './useCatalogueLookups.js';
 
@@ -101,9 +100,9 @@ export type InventoryCommand =
 /** `InventoryCommand['op']`, spelled out so a caller can narrow on it without a value in hand. */
 export type InventoryCommandOp = InventoryCommand['op'];
 
-type TypedVerbRun = (
+type TypedVerbRun<TResult> = (
   ...input: [string, ItemPatch, InventoryCommand, number]
-) => Promise<VerbResult>;
+) => Promise<TResult>;
 type OptionalCatalogue = CatalogueDescriptor | undefined;
 
 function requireCatalogueRevision(catalogue: OptionalCatalogue): number {
@@ -160,11 +159,11 @@ function overrideValuePatch(
 }
 
 /** Creates the protocol-2 single-item verbs that depend on a published catalogue. */
-export function createTypedItemVerbs(run: TypedVerbRun, catalogue: OptionalCatalogue) {
-  const editValues = async (
-    id: string,
-    patches: readonly FieldValuePatch[]
-  ): Promise<VerbResult> => {
+export function createTypedItemVerbs<TResult>(
+  run: TypedVerbRun<TResult>,
+  catalogue: OptionalCatalogue
+) {
+  const editValues = async (id: string, patches: readonly FieldValuePatch[]): Promise<TResult> => {
     if (patches.length === 0) throw new Error('item.edit requires at least one field patch');
     const revision = requireCatalogueRevision(catalogue);
     return run(
@@ -178,7 +177,7 @@ export function createTypedItemVerbs(run: TypedVerbRun, catalogue: OptionalCatal
     id: string,
     typeReference: string,
     values?: readonly FieldValueEntry[]
-  ): Promise<VerbResult> => {
+  ): Promise<TResult> => {
     const revision = requireCatalogueRevision(catalogue);
     const type = catalogue?.types.find(
       (candidate) => candidate.key === typeReference || candidate.id === typeReference
@@ -200,7 +199,7 @@ export function createTypedItemVerbs(run: TypedVerbRun, catalogue: OptionalCatal
     id: string,
     fieldId: string,
     value: FieldWireValue
-  ): Promise<VerbResult> => {
+  ): Promise<TResult> => {
     const revision = requireCatalogueRevision(catalogue);
     return run(
       id,
@@ -209,7 +208,7 @@ export function createTypedItemVerbs(run: TypedVerbRun, catalogue: OptionalCatal
       revision
     );
   };
-  const clearOverride = async (id: string, fieldId: string): Promise<VerbResult> => {
+  const clearOverride = async (id: string, fieldId: string): Promise<TResult> => {
     const revision = requireCatalogueRevision(catalogue);
     return run(
       id,
