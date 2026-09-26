@@ -211,6 +211,18 @@ beforeEach(() => {
 });
 
 describe('ItemDetailPage', () => {
+  describe('route targets', () => {
+    it('keeps the items back link separate from the inventory breadcrumb', async () => {
+      renderAtRoute('/inventory/items/item-1');
+
+      expect(await screen.findByRole('link', { name: 'Go back' })).toHaveAttribute(
+        'href',
+        '/inventory/items'
+      );
+      expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/inventory');
+    });
+  });
+
   describe('Edit button navigation (#2406)', () => {
     it('renders Edit as a link pointing to the edit route', async () => {
       renderAtRoute('/inventory/items/item-1');
