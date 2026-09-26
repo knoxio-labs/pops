@@ -186,6 +186,9 @@ export function makeCodesHandlers(db: InventoryDb, ai: AiClient = createAiClient
   return {
     suggest: async ({ body }: CodesReq['suggest']) => {
       const deterministic = suggestCodes(db, body);
+      if (deterministic.length === 0) {
+        return { status: 200 as const, body: { suggestions: [] } };
+      }
       let ranked: string[] | undefined;
       try {
         ranked = await ai.rankCodeCandidates(deterministic, {

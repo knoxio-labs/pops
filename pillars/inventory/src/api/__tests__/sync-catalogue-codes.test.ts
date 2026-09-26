@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { items } from '../../db/index.js';
+import { items, settings } from '../../db/index.js';
 import { createItem, openSyncHarness, PROTOCOL, send, type SyncHarness } from './sync-harness.js';
 import { createTestTransport } from './test-http.js';
 
@@ -85,21 +85,39 @@ describe('POST /codes/suggest', () => {
     expect(await suggest({ name: 'Anything', stem: 'Q' })).toEqual(['Q001', 'Q002', 'Q003']);
   });
 
-  it("uses the stem the type's items share before falling back to letters", async () => {
+  it("numbers after the highest code the type's pattern matches", async () => {
     await itemWithCode('CRATE12', 'storage_box');
     await itemWithCode('CRATE15', 'storage_box');
     await itemWithCode('S3', 'storage_box');
     expect(await suggest({ name: 'Moving box', typeKey: 'storage_box' })).toEqual([
-      'CRATE016',
-      'CRATE017',
-      'CRATE018',
+      'S04',
+      'S05',
+      'S06',
     ]);
   });
 
-  it("falls back to the type name's first letter, then the item name's", async () => {
-    expect((await suggest({ name: 'Moving box', typeKey: 'storage_box' }))[0]).toBe('S001');
-    expect((await suggest({ name: 'lamp' }))[0]).toBe('L001');
-    expect((await suggest({ name: '42', typeKey: 'not_a_type' }))[0]).toBe('X001');
+  it('uses the type letter, and X when untyped or the type is unknown', async () => {
+    expect((await suggest({ name: 'Moving box', typeKey: 'storage_box' }))[0]).toBe('S01');
+    expect((await suggest({ name: 'lamp' }))[0]).toBe('X01');
+    expect((await suggest({ name: '42', typeKey: 'not_a_type' }))[0]).toBe('X01');
+  });
+
+  it('returns no suggestions when the setting is off', async () => {
+    h.db.db.insert(settings).values({ key: 'inventory.suggestCodes', value: 'false' }).run();
+
+    expect(await suggest({ name: 'Anything' })).toEqual([]);
+  });
+
+  it('uses a stored pattern width and suffix', async () => {
+    h.db.db.insert(settings).values({ key: 'inventory.codePattern', value: 'B{###}-A' }).run();
+
+    expect(await suggest({ name: 'Box' })).toEqual(['B001-A', 'B002-A', 'B003-A']);
+  });
+
+  it('falls back to the default pattern when the stored pattern is invalid', async () => {
+    h.db.db.insert(settings).values({ key: 'inventory.codePattern', value: '{type}-{room}' }).run();
+
+    expect(await suggest({ name: 'Box', typeKey: 'storage_box' })).toEqual(['S01', 'S02', 'S03']);
   });
 
   it('refuses a stem ending in a digit, which would make the numbering ambiguous', async () => {

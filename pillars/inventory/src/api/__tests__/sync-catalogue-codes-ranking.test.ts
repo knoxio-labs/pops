@@ -6,6 +6,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { settings } from '../../db/index.js';
 import { openSyncHarness, PROTOCOL, type SyncHarness } from './sync-harness.js';
 import { createTestTransport } from './test-http.js';
 
@@ -58,5 +59,14 @@ describe('POST /codes/suggest — ranked through ai', () => {
     });
 
     expect(await suggest({ name: 'Anything', stem: 'Q' })).toEqual(['Q001', 'Q002', 'Q003']);
+  });
+
+  it('never calls the ai ranker when suggestions are disabled', async () => {
+    const rankCodeCandidates = vi.fn(async (candidates: readonly string[]) => [...candidates]);
+    withAi({ rankCodeCandidates });
+    h.db.db.insert(settings).values({ key: 'inventory.suggestCodes', value: 'false' }).run();
+
+    expect(await suggest({ name: 'Anything' })).toEqual([]);
+    expect(rankCodeCandidates).not.toHaveBeenCalled();
   });
 });

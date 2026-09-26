@@ -2838,7 +2838,12 @@ export type SettingsSetManyResponse = SettingsSetManyResponses[keyof SettingsSet
 export type SettingsGetData = {
   body?: never;
   path: {
-    key: 'inventory.defaultLimit' | 'inventory.searchDefaultLimit' | 'inventory.maxFileSizeBytes';
+    key:
+      | 'inventory.defaultLimit'
+      | 'inventory.searchDefaultLimit'
+      | 'inventory.suggestCodes'
+      | 'inventory.codePattern'
+      | 'inventory.maxFileSizeBytes';
   };
   query?: never;
   url: '/settings/{key}';
@@ -2895,7 +2900,12 @@ export type SettingsSetData = {
     value: string;
   };
   path: {
-    key: 'inventory.defaultLimit' | 'inventory.searchDefaultLimit' | 'inventory.maxFileSizeBytes';
+    key:
+      | 'inventory.defaultLimit'
+      | 'inventory.searchDefaultLimit'
+      | 'inventory.suggestCodes'
+      | 'inventory.codePattern'
+      | 'inventory.maxFileSizeBytes';
   };
   query?: never;
   url: '/settings/{key}';
@@ -2953,7 +2963,12 @@ export type SettingsEnsureData = {
     value: string;
   };
   path: {
-    key: 'inventory.defaultLimit' | 'inventory.searchDefaultLimit' | 'inventory.maxFileSizeBytes';
+    key:
+      | 'inventory.defaultLimit'
+      | 'inventory.searchDefaultLimit'
+      | 'inventory.suggestCodes'
+      | 'inventory.codePattern'
+      | 'inventory.maxFileSizeBytes';
   };
   query?: never;
   url: '/settings/{key}/ensure';
@@ -3010,7 +3025,12 @@ export type SettingsResetKeyData = {
     [key: string]: never;
   };
   path: {
-    key: 'inventory.defaultLimit' | 'inventory.searchDefaultLimit' | 'inventory.maxFileSizeBytes';
+    key:
+      | 'inventory.defaultLimit'
+      | 'inventory.searchDefaultLimit'
+      | 'inventory.suggestCodes'
+      | 'inventory.codePattern'
+      | 'inventory.maxFileSizeBytes';
   };
   query?: never;
   url: '/settings/{key}/reset';

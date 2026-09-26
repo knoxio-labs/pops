@@ -1,3 +1,10 @@
+import {
+  CODE_PATTERN_KEY,
+  CODE_PATTERN_RULE,
+  DEFAULT_CODE_PATTERN,
+  SUGGEST_CODES_KEY,
+} from './code-pattern.js';
+
 /**
  * Inventory settings manifest — pagination, file limits, and search defaults.
  */
@@ -29,6 +36,33 @@ export const inventoryManifest: SettingsManifest = {
           default: '20',
           description: 'Default result limit for inventory search.',
           validation: { min: 1, max: 100 },
+        },
+      ],
+    },
+    {
+      id: 'codes',
+      title: 'Codes',
+      description: 'The short code printed on a label. You can always type your own.',
+      fields: [
+        {
+          key: SUGGEST_CODES_KEY,
+          label: 'Suggest a code for new items',
+          type: 'toggle',
+          default: 'true',
+          description: 'Taken codes are skipped; a collision still blocks saving the item.',
+        },
+        {
+          key: CODE_PATTERN_KEY,
+          label: 'Code pattern',
+          type: 'text',
+          default: DEFAULT_CODE_PATTERN,
+          description:
+            '{type} is the type’s first letter, X when untyped. {##} is the number, at least as many digits as #. Used while suggestions are on.',
+          validation: {
+            required: true,
+            pattern: CODE_PATTERN_RULE,
+            message: 'Use letters, digits, hyphens, {type}, and one {#} for the number.',
+          },
         },
       ],
     },

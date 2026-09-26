@@ -7269,6 +7269,8 @@
               "enum": [
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
+                "inventory.suggestCodes",
+                "inventory.codePattern",
                 "inventory.maxFileSizeBytes"
               ],
               "type": "string"
@@ -7388,6 +7390,8 @@
               "enum": [
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
+                "inventory.suggestCodes",
+                "inventory.codePattern",
                 "inventory.maxFileSizeBytes"
               ],
               "type": "string"
@@ -7528,6 +7532,8 @@
               "enum": [
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
+                "inventory.suggestCodes",
+                "inventory.codePattern",
                 "inventory.maxFileSizeBytes"
               ],
               "type": "string"
@@ -7665,6 +7671,8 @@
               "enum": [
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
+                "inventory.suggestCodes",
+                "inventory.codePattern",
                 "inventory.maxFileSizeBytes"
               ],
               "type": "string"
