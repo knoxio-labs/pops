@@ -1,7 +1,9 @@
+import { resolveTypeTree } from '../catalogue-tree.js';
+
 import type {
   PersistedCatalogue,
-  PersistedItemType,
-  PersistedItemTypeField,
+  UnresolvedItemType,
+  UnresolvedItemTypeField,
 } from '../catalogue-types.js';
 import type {
   ExpressionSnapshot,
@@ -12,8 +14,8 @@ import type {
 
 /** Creates a complete field definition for expression-core tests. */
 export function expressionField(
-  overrides: Partial<PersistedItemTypeField> = {}
-): PersistedItemTypeField {
+  overrides: Partial<UnresolvedItemTypeField> = {}
+): UnresolvedItemTypeField {
   return {
     allowOverride: false,
     archivedAt: null,
@@ -45,8 +47,8 @@ export function expressionField(
 /** Creates a complete type definition for expression-core tests. */
 export function expressionType(
   id: string,
-  fields: readonly PersistedItemTypeField[]
-): PersistedItemType {
+  fields: readonly UnresolvedItemTypeField[]
+): UnresolvedItemType {
   return {
     archivedAt: null,
     capabilities: [],
@@ -60,11 +62,12 @@ export function expressionType(
     replacedBy: null,
     revision: 1,
     sortOrder: 0,
+    parentTypeId: null,
   };
 }
 
 /** Creates a complete catalogue snapshot for expression-core tests. */
-export function expressionCatalogue(types: readonly PersistedItemType[]): PersistedCatalogue {
+export function expressionCatalogue(types: readonly UnresolvedItemType[]): PersistedCatalogue {
   return {
     revision: {
       baseRevision: null,
@@ -72,7 +75,7 @@ export function expressionCatalogue(types: readonly PersistedItemType[]): Persis
       revision: 1,
       status: 'published',
     },
-    types,
+    types: resolveTypeTree(types),
   };
 }
 

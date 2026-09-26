@@ -9,15 +9,16 @@ import { parseObject, parsePrimitiveValueArray, parseStringArray } from './catal
 import type { fieldEnumOptions, itemTypeFields, itemTypes } from '../db/schema.js';
 import type {
   PersistedEnumOption,
-  PersistedItemType,
-  PersistedItemTypeField,
+  UnresolvedItemType,
+  UnresolvedItemTypeField,
 } from './catalogue-types.js';
 
+/** Converts one persisted type row and its child rows into an unresolved type. */
 export function materializeType(
   typeRow: typeof itemTypes.$inferSelect,
   fieldRows: readonly (typeof itemTypeFields.$inferSelect)[],
   optionRows: readonly (typeof fieldEnumOptions.$inferSelect)[]
-): PersistedItemType {
+): UnresolvedItemType {
   const fields = fieldRows
     .filter((field) => field.typeId === typeRow.id)
     .map((field) => materializeField(field, optionRows))
@@ -36,6 +37,7 @@ export function materializeType(
     presentation: parseObject(typeRow.presentationJson, `type ${typeRow.id} presentation`),
     archivedAt: typeRow.archivedAt,
     replacedBy: typeRow.replacedBy,
+    parentTypeId: typeRow.parentTypeId,
     fields,
   };
 }
@@ -43,7 +45,7 @@ export function materializeType(
 function materializeField(
   field: typeof itemTypeFields.$inferSelect,
   optionRows: readonly (typeof fieldEnumOptions.$inferSelect)[]
-): PersistedItemTypeField {
+): UnresolvedItemTypeField {
   const enumOptions = optionRows
     .filter((option) => option.fieldId === field.id)
     .map((option): PersistedEnumOption => ({
