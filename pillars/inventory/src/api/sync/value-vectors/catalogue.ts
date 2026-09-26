@@ -19,19 +19,25 @@ import { loadCatalogue } from '../../../catalogue/catalogue.js';
 import { PRIMITIVE_KINDS } from '../../../catalogue/value-types.js';
 import {
   activateMinimumProtocol,
-  PERSISTED_CATALOGUE_PROTOCOL,
   readMinimumProtocol,
+  TYPE_TREE_PROTOCOL,
 } from '../../../protocol/rollout.js';
 import {
   ENUM_MANY_OPTION_IDS,
   ENUM_ONE_OPTION_IDS,
   FIELD_IDS,
+  INHERITED_REQUIRED_CHILD_TYPE_ID,
+  INHERITED_REQUIRED_PARENT_TYPE_ID,
   fieldRows,
   insertEnumOptions,
   insertFields,
   insertType,
   TYPE_ID,
 } from './catalogue-fields.js';
+import {
+  insertInheritedRequiredField,
+  insertInheritedRequiredTypes,
+} from './catalogue-type-tree.js';
 import { VALUE_VECTOR_CLOCK } from './deterministic-ids.js';
 
 import type { CatalogueDescriptor } from '../../../catalogue/authoring-types.js';
@@ -45,20 +51,29 @@ export interface ValueVectorCatalogue {
   readonly liveRevision: number;
   /** The revision after `gamma` is archived; equal to `liveRevision` until then. */
   readonly currentRevision: number;
+  /** The base type that owns the primitive value-vector fields. */
   readonly typeId: string;
+  /** The parent type that owns the inherited required field. */
+  readonly inheritedRequiredParentTypeId: string;
+  /** The child type that inherits the required field from the parent. */
+  readonly childTypeId: string;
+  /** The deterministic id of the inherited required field. */
+  readonly inheritedRequiredFieldId: string;
   readonly fieldIds: typeof FIELD_IDS;
   readonly enumOptionIds: EnumOptionIds;
   readonly enumManyOptionIds: EnumOptionIds;
 }
 
-/** Activates protocol 2 (every primitive kind is protocol-gated) and publishes the live revision. */
+/** Activates protocol 3 and publishes the live revision with the value-vector type tree. */
 export function authorLiveValueVectorCatalogue(db: CommandDb): ValueVectorCatalogue {
-  activateMinimumProtocol(db, readMinimumProtocol(db), PERSISTED_CATALOGUE_PROTOCOL);
+  activateMinimumProtocol(db, readMinimumProtocol(db), TYPE_TREE_PROTOCOL);
   const created = createCatalogueDraft(db, 1, VECTOR_AUTHOR);
   const liveRevision = created.revision.revision;
 
   insertType(db, liveRevision);
+  insertInheritedRequiredTypes(db, liveRevision);
   insertFields(db, liveRevision, fieldRows(PRIMITIVE_KINDS));
+  insertInheritedRequiredField(db, liveRevision);
   insertEnumOptions(db, liveRevision);
 
   publishCatalogueDraft(
@@ -72,6 +87,9 @@ export function authorLiveValueVectorCatalogue(db: CommandDb): ValueVectorCatalo
     liveRevision,
     currentRevision: liveRevision,
     typeId: TYPE_ID,
+    inheritedRequiredParentTypeId: INHERITED_REQUIRED_PARENT_TYPE_ID,
+    childTypeId: INHERITED_REQUIRED_CHILD_TYPE_ID,
+    inheritedRequiredFieldId: FIELD_IDS.inheritedRequired,
     fieldIds: FIELD_IDS,
     enumOptionIds: ENUM_ONE_OPTION_IDS,
     enumManyOptionIds: ENUM_MANY_OPTION_IDS,
