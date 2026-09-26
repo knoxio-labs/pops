@@ -20,7 +20,7 @@ import type { SelectionApi, SelectionState } from './use-selection';
 const rows = ['a', 'b', 'c', 'd', 'e'];
 
 describe('selection model', () => {
-  it('toggles a row on and off and anchors it', () => {
+  it('toggles a row on and off and anchors on it', () => {
     const on = toggle(EMPTY_SELECTION, 'b');
     expect([...on.selected]).toEqual(['b']);
     expect(on.anchorId).toBe('b');
@@ -28,7 +28,7 @@ describe('selection model', () => {
     expect(toggle(on, 'b').selected).toEqual(new Set());
   });
 
-  it('extends a range in either direction without removing earlier selection', () => {
+  it('extends from the anchor in both directions without removing earlier ticks', () => {
     const anchored = toggle(EMPTY_SELECTION, 'd');
     expect(selectedInOrder(extendTo(anchored, 'b', rows), rows)).toEqual(['b', 'c', 'd']);
     expect(selectedInOrder(extendTo(anchored, 'e', rows), rows)).toEqual(['d', 'e']);
@@ -41,7 +41,13 @@ describe('selection model', () => {
     expect(selectedInOrder(twice, rows)).toEqual(['a', 'b', 'd', 'e']);
   });
 
-  it('falls back to a toggle without an anchor or when the anchor left the order', () => {
+  it('keeps the anchor through an extension so a second extension measures from it', () => {
+    const first = extendTo(toggle(EMPTY_SELECTION, 'c'), 'e', rows);
+    expect(first.anchorId).toBe('c');
+    expect(selectedInOrder(extendTo(first, 'a', rows), rows)).toEqual(rows);
+  });
+
+  it('falls back to a plain toggle with no anchor or a filtered-away anchor', () => {
     expect(selectedInOrder(extendTo(EMPTY_SELECTION, 'c', rows), rows)).toEqual(['c']);
     const stale = extendTo({ selected: new Set(['a']), anchorId: 'z', focusedId: 'z' }, 'c', rows);
     expect(selectedInOrder(stale, rows)).toEqual(['a', 'c']);
@@ -49,7 +55,7 @@ describe('selection model', () => {
     expect(stale.focusedId).toBe('c');
   });
 
-  it('selects all, preserves valid focus, and reports empty coverage for no rows', () => {
+  it('reports none, some and all, and none for an empty list', () => {
     const selected = selectAll({ ...EMPTY_SELECTION, focusedId: 'c' }, rows);
     expect(selectedInOrder(selected, rows)).toEqual(rows);
     expect(selected.focusedId).toBe('c');
@@ -59,14 +65,14 @@ describe('selection model', () => {
     expect(coverageOf(selectAll(EMPTY_SELECTION, []), [])).toBe('none');
   });
 
-  it('clears ticks and the anchor while keeping focus', () => {
+  it('clears ticks and anchor but keeps focus', () => {
     const cleared = clear(toggle(EMPTY_SELECTION, 'c'));
     expect(cleared.selected.size).toBe(0);
     expect(cleared.anchorId).toBeNull();
     expect(cleared.focusedId).toBe('c');
   });
 
-  it('clamps focus at both ends and handles an empty order', () => {
+  it('moves focus and clamps at both ends', () => {
     expect(moveFocus(EMPTY_SELECTION, 1, rows).focusedId).toBe('a');
     expect(moveFocus({ ...EMPTY_SELECTION, focusedId: 'a' }, -1, rows).focusedId).toBe('a');
     expect(moveFocus({ ...EMPTY_SELECTION, focusedId: 'e' }, 1, rows).focusedId).toBe('e');
@@ -74,7 +80,7 @@ describe('selection model', () => {
     expect(moveFocus({ ...EMPTY_SELECTION, focusedId: 'e' }, 1, []).focusedId).toBeNull();
   });
 
-  it('drops rows removed by refetch and moves focus to the nearest survivor', () => {
+  it('drops rows that left the list and moves focus to the nearest survivor', () => {
     const state = { selected: new Set(['b', 'c']), anchorId: 'c', focusedId: 'c' };
     const next = reconcile(state, rows, ['a', 'b', 'e']);
     expect([...next.selected]).toEqual(['b']);
@@ -93,7 +99,7 @@ describe('selection model', () => {
 describe('selection keys', () => {
   const focusedOnB = { ...EMPTY_SELECTION, focusedId: 'b' };
 
-  it('maps j, k, arrows, x, and Shift-x', () => {
+  it('maps j, k and arrows to focus, x to toggle and Shift-x to extend', () => {
     expect(applySelectionKey(focusedOnB, { key: 'j' }, rows)?.focusedId).toBe('c');
     expect(applySelectionKey(focusedOnB, { key: 'ArrowUp' }, rows)?.focusedId).toBe('a');
     expect(applySelectionKey(focusedOnB, { key: 'K' }, rows)?.focusedId).toBe('a');
@@ -117,21 +123,21 @@ describe('selection keys', () => {
     expect(applySelectionKey(focusedOnB, { key: 'j', metaKey: true }, rows)).toBeNull();
   });
 
-  it('clears on Esc only when something is selected, so Esc can fall through otherwise', () => {
+  it('clears on Esc only when something is ticked, so Esc can fall through otherwise', () => {
     const cleared = applySelectionKey(toggle(EMPTY_SELECTION, 'a'), { key: 'Escape' }, rows);
     expect(cleared?.selected.size).toBe(0);
     expect(cleared?.focusedId).toBe('a');
     expect(applySelectionKey(focusedOnB, { key: 'Escape' }, rows)).toBeNull();
   });
 
-  it('does nothing for x without focus or for an unrelated key', () => {
+  it('does nothing for x with no focused row, or an unrelated key', () => {
     expect(applySelectionKey(EMPTY_SELECTION, { key: 'x' }, rows)).toBeNull();
     expect(applySelectionKey(focusedOnB, { key: 'q' }, rows)).toBeNull();
   });
 });
 
 describe('useSelection', () => {
-  it('toggles rows, extends with Shift, and flips all from the header', () => {
+  it('ticks with the row toggle, extends with Shift and flips all from the header', () => {
     const { result } = renderHook(() => useSelection(rows));
     act(() => result.current.onRowToggle('b', false));
     act(() => result.current.onRowToggle('d', true));
@@ -150,7 +156,7 @@ describe('useSelection', () => {
     expect(result.current.selectedIds).toEqual(['b', 'd']);
   });
 
-  it('reports whether a key was handled and preserves Esc fallthrough', () => {
+  it('reports whether it handled a key', () => {
     const { result } = renderHook(() => useSelection(rows));
     let handled = false;
     act(() => {
@@ -172,7 +178,7 @@ describe('useSelection', () => {
     expect(handled).toBe(false);
   });
 
-  it('reconciles a refetch during render without leaving stale selection or focus', () => {
+  it('the hook drops selected ids that leave the order after a refetch and keeps focus nearby', () => {
     const { result, rerender } = renderHook(
       ({ order }: { order: readonly string[] }) => useSelection(order),
       { initialProps: { order: rows } }
@@ -188,6 +194,13 @@ describe('useSelection', () => {
     rerender({ order: ['a', 'c'] });
     expect(result.current.selectedIds).toEqual(['c']);
     expect(result.current.state.focusedId).toBe('c');
+  });
+
+  it('Shift-range across a filtered-out row selects only rows in the current order', () => {
+    const { result } = renderHook(() => useSelection(['a', 'c', 'e']));
+    act(() => result.current.onRowToggle('a', false));
+    act(() => result.current.onRowToggle('e', true));
+    expect(result.current.selectedIds).toEqual(['a', 'c', 'e']);
   });
 
   it('reconciles invalid initial state and handles an empty refetch', () => {

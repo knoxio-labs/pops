@@ -1,12 +1,15 @@
-import { Archive, Download, LockKeyhole, MoveRight } from 'lucide-react';
-import { useState } from 'react';
+import { ClipboardCopy, Download, SquarePen } from 'lucide-react';
 
+import { coreItem, coreWorld } from '../fixtures/core';
+import { INVENTORY_ICONS } from '../model';
+import { ItemList, ItemRow } from '../rows/item-row';
 import { SelectionBar } from './selection-bar';
+import { useSelection } from './use-selection';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import type { SelectionBarAction } from '../model';
-import type { SelectionCoverage } from './use-selection';
+import type { SelectionState } from './use-selection';
 
 const meta = {
   title: 'Inventory/Foundation/SelectionBar',
@@ -18,109 +21,119 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function Demo({
-  initialCount,
-  loadedCount,
-  initialCoverage,
-  carriedCount = 0,
-  actions,
+function selectionActions(insideContainer: boolean): readonly SelectionBarAction[] {
+  const icons = INVENTORY_ICONS;
+  return [
+    { id: 'pick-up', label: 'Pick up', icon: icons.pickUp, shortcutId: 'pick-up' },
+    { id: 'move', label: 'Move', icon: icons.move, shortcutId: 'move' },
+    {
+      id: 'take-out',
+      label: 'Take out',
+      icon: icons.takeOut,
+      shortcutId: 'take-out',
+      disabledReason: insideContainer ? undefined : 'Only inside a container',
+    },
+    { id: 'label', label: 'Label', icon: icons.label, shortcutId: 'label' },
+    { id: 'set-type', label: 'Set type', icon: icons.type },
+    { id: 'set-field', label: 'Set field', icon: SquarePen },
+    { id: 'retire', label: 'Retire', icon: icons.retired, overflow: true },
+    { id: 'discard', label: 'Discard', icon: icons.discarded, overflow: true },
+    { id: 'export', label: 'Export selected as CSV', icon: Download, overflow: true },
+    { id: 'copy-codes', label: 'Copy codes', icon: ClipboardCopy, overflow: true },
+  ];
+}
+
+function SelectableList({
+  ids,
+  initial,
+  insideContainer,
+  carried,
 }: {
-  initialCount: number;
-  loadedCount: number;
-  initialCoverage: SelectionCoverage;
-  carriedCount?: number;
-  actions: readonly SelectionBarAction[];
+  ids: readonly string[];
+  initial: SelectionState;
+  insideContainer: boolean;
+  carried: number;
 }) {
-  const [count, setCount] = useState(initialCount);
-  const [coverage, setCoverage] = useState(initialCoverage);
+  const selection = useSelection(ids, initial);
+
   return (
-    <div className="mx-auto max-w-3xl rounded-xl border bg-muted/30 p-6">
-      <SelectionBar
-        count={count}
-        loadedCount={loadedCount}
-        coverage={coverage}
-        carriedCount={carriedCount}
-        actions={actions}
-        onSelectAll={() => {
-          setCount(loadedCount);
-          setCoverage('all');
+    <div className="mx-auto max-w-4xl space-y-2 rounded-xl border bg-muted/30 p-6">
+      <ItemList
+        label="Items"
+        onKeyDown={(event) => {
+          if (selection.onKey(event)) event.preventDefault();
         }}
-        onClear={() => setCount(0)}
+      >
+        {ids.map((id) => (
+          <ItemRow
+            key={id}
+            item={coreItem(id)}
+            world={coreWorld}
+            selectable
+            selected={selection.isSelected(id)}
+            focused={selection.state.focusedId === id}
+            showPlacement={!insideContainer}
+            onToggle={selection.onRowToggle}
+          />
+        ))}
+      </ItemList>
+      <SelectionBar
+        count={selection.count}
+        loadedCount={ids.length}
+        coverage={selection.coverage}
+        actions={selectionActions(insideContainer)}
+        carriedCount={carried}
+        onSelectAll={selection.onHeaderToggle}
+        onClear={selection.clearSelection}
       />
     </div>
   );
 }
 
-const COMMON_ACTIONS: readonly SelectionBarAction[] = [
-  { id: 'archive', label: 'Archive', icon: Archive, shortcutId: 'move' },
-  { id: 'move', label: 'Move', icon: MoveRight, shortcutId: 'label' },
-  { id: 'download', label: 'Download', icon: Download, overflow: true },
-];
+const ITEMS_PAGE = ['itm-tv', 'box-cables', 'itm-lamp', 'itm-drill', 'itm-printer'];
+const IN_KITCHEN_12 = ['itm-plates', 'itm-mugs', 'itm-knife'];
 
-export const Partial: Story = {
+/** Items page selection with a disabled container-only action and overflow verbs. */
+export const OnItems: Story = {
   args: {
     count: 2,
-    loadedCount: 8,
+    loadedCount: 5,
     coverage: 'some',
     carriedCount: 3,
-    actions: COMMON_ACTIONS,
+    actions: selectionActions(false),
   },
   render: () => (
-    <Demo
-      initialCount={2}
-      loadedCount={8}
-      initialCoverage="some"
-      carriedCount={3}
-      actions={COMMON_ACTIONS}
+    <SelectableList
+      ids={ITEMS_PAGE}
+      initial={{
+        selected: new Set(['box-cables', 'itm-lamp']),
+        anchorId: 'itm-lamp',
+        focusedId: 'itm-lamp',
+      }}
+      insideContainer={false}
+      carried={3}
     />
   ),
 };
 
-export const AllLoaded: Story = {
+/** In-container selection with every loaded row selected and Take out available. */
+export const InsideContainer: Story = {
   args: {
-    count: 8,
-    loadedCount: 8,
+    count: 3,
+    loadedCount: 3,
     coverage: 'all',
-    actions: COMMON_ACTIONS,
+    actions: selectionActions(true),
   },
   render: () => (
-    <Demo initialCount={8} loadedCount={8} initialCoverage="all" actions={COMMON_ACTIONS} />
-  ),
-};
-
-export const DisabledAction: Story = {
-  args: {
-    count: 1,
-    loadedCount: 4,
-    coverage: 'some',
-    actions: COMMON_ACTIONS,
-  },
-  render: () => (
-    <Demo
-      initialCount={1}
-      loadedCount={4}
-      initialCoverage="some"
-      actions={[
-        ...COMMON_ACTIONS,
-        {
-          id: 'locked',
-          label: 'Unavailable',
-          icon: LockKeyhole,
-          disabledReason: 'Unavailable while offline.',
-        },
-      ]}
+    <SelectableList
+      ids={IN_KITCHEN_12}
+      initial={{
+        selected: new Set(IN_KITCHEN_12),
+        anchorId: 'itm-plates',
+        focusedId: null,
+      }}
+      insideContainer
+      carried={0}
     />
-  ),
-};
-
-export const Empty: Story = {
-  args: {
-    count: 0,
-    loadedCount: 0,
-    coverage: 'none',
-    actions: COMMON_ACTIONS,
-  },
-  render: () => (
-    <Demo initialCount={0} loadedCount={0} initialCoverage="none" actions={COMMON_ACTIONS} />
   ),
 };
