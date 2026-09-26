@@ -6,6 +6,8 @@ import { ErrorBodySchema, NonEmptyString } from './rest-schemas.js';
 
 const c = initContract();
 
+const Count = z.number().int().nonnegative();
+
 /** The response body for `GET /web/locations/:id/gone`. */
 export const WebLocationGoneResponseSchema = z.object({
   id: z.string(),
@@ -15,8 +17,28 @@ export const WebLocationGoneResponseSchema = z.object({
   inHandCount: z.number().int().nonnegative(),
 });
 
+/** Counts the live inventory directly or effectively held by one place. */
+export const WebLocationTallySchema = z.object({
+  places: Count,
+  itemsHere: Count,
+  boxesHere: Count,
+  inBoxes: Count,
+  total: Count,
+});
+
+/** The response body for `GET /web/locations/tallies`. */
+export const WebLocationTalliesResponseSchema = z.object({
+  tallies: z.record(z.string(), WebLocationTallySchema),
+});
+
 /** The deleted-location REST router for inventory web pages. */
 export const inventoryWebLocationsContract = c.router({
+  tallies: {
+    method: 'GET',
+    path: '/web/locations/tallies',
+    responses: { 200: WebLocationTalliesResponseSchema },
+    summary: 'Read inventory tallies for every live location',
+  },
   gone: {
     method: 'GET',
     path: '/web/locations/:id/gone',

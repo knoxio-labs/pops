@@ -240,6 +240,8 @@ import type {
   WebLocationsGoneData,
   WebLocationsGoneErrors,
   WebLocationsGoneResponses,
+  WebLocationsTalliesData,
+  WebLocationsTalliesResponses,
   WebSearchListData,
   WebSearchListErrors,
   WebSearchListResponses,
@@ -1431,6 +1433,17 @@ export const webGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebGetResponses, WebGetErrors, ThrowOnError> =>
   (options.client ?? client).get<WebGetResponses, WebGetErrors, ThrowOnError>({
     url: '/web/items/{id}',
+    ...options,
+  });
+
+/**
+ * Read inventory tallies for every live location
+ */
+export const webLocationsTallies = <ThrowOnError extends boolean = false>(
+  options?: Options<WebLocationsTalliesData, ThrowOnError>
+): RequestResult<WebLocationsTalliesResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<WebLocationsTalliesResponses, unknown, ThrowOnError>({
+    url: '/web/locations/tallies',
     ...options,
   });
 

@@ -87,6 +87,7 @@ export {
   webGet,
   webList,
   webLocationsGone,
+  webLocationsTallies,
   webSearchList,
   webSummaryGet,
 } from './sdk.gen';
@@ -482,6 +483,9 @@ export type {
   WebLocationsGoneErrors,
   WebLocationsGoneResponse,
   WebLocationsGoneResponses,
+  WebLocationsTalliesData,
+  WebLocationsTalliesResponse,
+  WebLocationsTalliesResponses,
   WebSearchListData,
   WebSearchListError,
   WebSearchListErrors,
