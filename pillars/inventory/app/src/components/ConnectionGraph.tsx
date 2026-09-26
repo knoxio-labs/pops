@@ -61,7 +61,7 @@ function GraphCanvas({ itemId }: { itemId: string }): React.ReactElement {
     >
       <canvas ref={canvasRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
       <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-        Scroll to zoom, drag to pan, click node to navigate
+        Scroll to zoom, drag to pan, click an item node to navigate
       </div>
     </div>
   );

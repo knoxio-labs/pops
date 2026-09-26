@@ -217,6 +217,33 @@ describe('ConnectionTracePanel — chain rendering', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
+  it('does not navigate to a fixture leaf', async () => {
+    mockTraceSuccess({
+      id: 'item-1',
+      itemName: 'Television',
+      assetId: null,
+      type: 'Electronics',
+      children: [
+        {
+          id: 'fixture-1',
+          itemName: 'Wall outlet',
+          assetId: null,
+          type: 'power',
+          isFixture: true,
+          children: [],
+        },
+      ],
+    });
+    renderPanel('item-1');
+    const fixtureRow = (await screen.findByText('Wall outlet')).closest('[role="treeitem"]');
+    expect(fixtureRow).toBeTruthy();
+
+    fireEvent.click(fixtureRow!);
+    fireEvent.keyDown(fixtureRow!, { key: 'Enter' });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('renders with role="tree" on container', async () => {
     renderPanel('item-1');
     expect(await screen.findByRole('tree')).toBeInTheDocument();

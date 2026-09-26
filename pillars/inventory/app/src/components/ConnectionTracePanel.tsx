@@ -51,34 +51,50 @@ function ExpandToggle({ open }: { open: boolean }) {
   );
 }
 
+function traceNodeClassName(isCurrent: boolean, isNavigable: boolean): string {
+  if (isCurrent) {
+    return 'bg-app-accent/10 text-foreground font-bold border-l-2 border-app-accent rounded-l-none ml-[-2px]';
+  }
+  return isNavigable ? 'hover:bg-app-accent/5 cursor-pointer' : '';
+}
+
+function navigateToTraceNode(
+  navigate: (to: string) => void,
+  nodeId: string,
+  isNavigable: boolean
+): void {
+  if (isNavigable) void navigate(`/inventory/items/${nodeId}`);
+}
+
+function handleTraceNodeKeyDown(
+  event: React.KeyboardEvent<HTMLDivElement>,
+  navigate: (to: string) => void,
+  nodeId: string,
+  isNavigable: boolean
+): void {
+  if (!isNavigable || (event.key !== 'Enter' && event.key !== ' ')) return;
+  event.preventDefault();
+  navigateToTraceNode(navigate, nodeId, true);
+}
+
 function TraceNodeRow({ node, depth, currentItemId }: TraceNodeRowProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(depth < 2);
   const hasChildren = node.children.length > 0;
   const isCurrent = node.id === currentItemId;
+  const isNavigable = !isCurrent && !node.isFixture;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div
-        className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors ${
-          isCurrent
-            ? 'bg-app-accent/10 text-foreground font-bold border-l-2 border-app-accent rounded-l-none ml-[-2px]'
-            : 'hover:bg-app-accent/5 cursor-pointer'
-        }`}
+        className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors ${traceNodeClassName(isCurrent, isNavigable)}`}
         style={{
           paddingLeft: `calc(${depth} * var(--tree-indent-step) + var(--tree-indent-base))`,
         }}
-        onClick={() => {
-          if (!isCurrent) void navigate(`/inventory/items/${node.id}`);
-        }}
-        onKeyDown={(e) => {
-          if (!isCurrent && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault();
-            void navigate(`/inventory/items/${node.id}`);
-          }
-        }}
+        onClick={() => navigateToTraceNode(navigate, node.id, isNavigable)}
+        onKeyDown={(event) => handleTraceNodeKeyDown(event, navigate, node.id, isNavigable)}
         role="treeitem"
-        tabIndex={isCurrent ? -1 : 0}
+        tabIndex={isNavigable ? 0 : -1}
         aria-expanded={hasChildren ? open : undefined}
       >
         {hasChildren ? <ExpandToggle open={open} /> : <span className="w-4.5" />}

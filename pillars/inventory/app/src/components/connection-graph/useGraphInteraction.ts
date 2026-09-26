@@ -111,7 +111,11 @@ function makeMouseUp(ctx: HandlerCtx) {
       const wasDrag = Math.abs(dx) > 3 || Math.abs(dy) > 3;
       ctx.dragRef.current.node.fx = null;
       ctx.dragRef.current.node.fy = null;
-      if (!wasDrag && ctx.dragRef.current.node.id !== ctx.itemId) {
+      if (
+        !wasDrag &&
+        !ctx.dragRef.current.node.isFixture &&
+        ctx.dragRef.current.node.id !== ctx.itemId
+      ) {
         ctx.onNavigate(ctx.dragRef.current.node.id);
       }
       ctx.dragRef.current = null;
