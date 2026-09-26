@@ -82,7 +82,7 @@ const itemsCreate: ToolDef = {
 const itemsUpdate: ToolDef = {
   name: 'inventory.items.update',
   description:
-    'Edit an item at an observed item revision using the current catalogue revision. Read inventory.items.get and inventory.catalogue.get first. fieldValues is a stable field-ID patch; null clears an optional value.',
+    'Edit an item at an observed item revision using the current catalogue revision. Read inventory.items.get and inventory.catalogue.get first. fieldValues is a stable field-ID patch; null clears an optional value. externalIds replaces the identifier list.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -97,6 +97,20 @@ const itemsUpdate: ToolDef = {
       itemName: { type: 'string', minLength: 1, description: 'New item name' },
       note: { type: ['string', 'null'], description: 'New note; null clears it' },
       fieldValues: { type: 'array', minItems: 1, items: fieldValuePatchSchema },
+      externalIds: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            kind: { type: 'string', minLength: 1 },
+            value: { type: 'string', minLength: 1 },
+          },
+          required: ['kind', 'value'],
+        },
+        description:
+          "Replaces the item's whole external-identifier list; read the current list with inventory.items.get first and send it back with your change. [] clears it.",
+      },
       ...retryIdentityProperties,
     },
     required: ['id', 'revision', 'catalogueRevision'],
@@ -111,6 +125,7 @@ const itemsUpdate: ToolDef = {
         ...(input.value.itemName === undefined ? {} : { name: input.value.itemName }),
         ...(input.value.note === undefined ? {} : { note: input.value.note }),
         ...(input.value.fieldValues === undefined ? {} : { values: input.value.fieldValues }),
+        ...(input.value.externalIds === undefined ? {} : { externalIds: input.value.externalIds }),
       },
       baseRevision: input.value.itemRevision,
       catalogueRevision: input.value.catalogueRevision,
