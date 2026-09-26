@@ -23012,6 +23012,65 @@
         "tags": ["web"]
       }
     },
+    "/web/locations/tallies": {
+      "get": {
+        "operationId": "webLocations.tallies",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "tallies": {
+                      "additionalProperties": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "boxesHere": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "inBoxes": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "itemsHere": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "places": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "total": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["places", "itemsHere", "boxesHere", "inBoxes", "total"],
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": ["tallies"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Read inventory tallies for every live location",
+        "tags": ["webLocations"]
+      }
+    },
     "/web/locations/{id}/gone": {
       "get": {
         "operationId": "webLocations.gone",

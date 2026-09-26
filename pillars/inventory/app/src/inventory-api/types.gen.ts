@@ -7227,6 +7227,33 @@ export type WebGetResponses = {
 
 export type WebGetResponse = WebGetResponses[keyof WebGetResponses];
 
+export type WebLocationsTalliesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/web/locations/tallies';
+};
+
+export type WebLocationsTalliesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    tallies: {
+      [key: string]: {
+        boxesHere: number;
+        inBoxes: number;
+        itemsHere: number;
+        places: number;
+        total: number;
+      };
+    };
+  };
+};
+
+export type WebLocationsTalliesResponse =
+  WebLocationsTalliesResponses[keyof WebLocationsTalliesResponses];
+
 export type WebLocationsGoneData = {
   body?: never;
   path: {

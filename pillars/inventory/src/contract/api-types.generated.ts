@@ -1176,6 +1176,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/locations/tallies': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read inventory tallies for every live location */
+    get: operations['webLocations.tallies'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/locations/{id}/gone': {
     parameters: {
       query?: never;
@@ -10002,6 +10019,36 @@ export interface operations {
             code?: string;
             message: string;
             messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webLocations.tallies': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            tallies: {
+              [key: string]: {
+                boxesHere: number;
+                inBoxes: number;
+                itemsHere: number;
+                places: number;
+                total: number;
+              };
+            };
           };
         };
       };
