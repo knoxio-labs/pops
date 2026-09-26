@@ -56,6 +56,7 @@ const activeRow: ItemRowModel = {
 function catalogueType(key: string, label: string): CatalogueType {
   return {
     id: `type-${key}`,
+    parentTypeId: null,
     key,
     label,
     sortOrder: 0,
