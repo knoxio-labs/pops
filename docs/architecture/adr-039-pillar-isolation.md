@@ -53,11 +53,7 @@ Registry unavailability never blocks a pillar's HTTP serving or container startu
 - **Positive:** the blast radius of a storage/backup/Redis fault collapses to one pillar; a restore drill restores one pillar's bytes without touching siblings; the diverged central backup stops being the single point of DR failure; paperless gets an owner and stops silently failing; pops-vs-infra becomes auditable; per-pillar release/canary/rollback becomes possible.
 - **Costs / tradeoffs:** more volumes, more sidecars, more Redis containers, more secret files; an **irreversible-in-place** prod data migration (copy live `.db` files) that is therefore gated on _working_ backups; the diverged pre-rename `homelab-infra` must be reconciled with live capivara before any prod-gated step.
 
-## Rollout / gating
-
-Safe repo-level fixes land first (runtime SPOF, mcp routing, CI scoping, this ADR + status corrections to ADR-026 / `database-operations.md`, per-pillar Litestream/sidecar authoring, the documents-pillar scaffold). **Working per-pillar backups + a restore drill are the hard gate** for the prod volume split. Reconciling `homelab-infra` is a precondition for every prod-gated step. Documents-pillar cut-over, Redis split, and secrets isolation follow. The HA/MQTT guardrail (Invariant 4) applies from day one to any future ha-bridge pillar.
-
-Execution is tracked in the pillar-isolation program epic and its workstream issues.
+Working per-pillar backups plus a restore drill gate the prod volume split; reconciling `homelab-infra` is a precondition for every prod-gated step. Execution is tracked in the pillar-isolation program epic.
 
 ## Related
 

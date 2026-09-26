@@ -94,7 +94,7 @@ internal struct InventoryLocationPage: View {
     private func actions(_ place: InventoryLocationNode) -> some View {
         PopsGlassGroup(spacing: PopsSpacing.lg) {
             HStack(spacing: PopsSpacing.lg) {
-                actionButton("New place inside", symbol: .addNew) { model.creating = true }
+                actionButton("Add", symbol: .addNew) { model.adding = true }
                 actionButton("Store here", symbol: .storeHere) { model.storing = true }
                 actionButton("Move", symbol: .move) { model.moveThisPlace(place) }
                 moreMenu(place)
@@ -164,12 +164,13 @@ private struct InventoryLocationPageChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $model.creating) {
-                InventoryLocationCreateSheet(tree: tree, runner: model.runner, parentID: place.id)
+            .sheet(isPresented: $model.adding) {
+                InventoryLocationAddSheet(tree: tree, place: place, runner: model.runner)
             }
             .sheet(isPresented: $model.storing) {
                 InventoryStoreHereSheet(
-                    target: .location(id: place.id, name: place.name), runner: model.runner)
+                    target: .location(id: place.id, name: place.name), runner: model.runner,
+                    startingAt: .existing)
             }
             .inventorySelectionBar(
                 $model.selection,

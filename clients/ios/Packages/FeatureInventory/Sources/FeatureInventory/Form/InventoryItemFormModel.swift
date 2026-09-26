@@ -71,6 +71,7 @@ internal final class InventoryItemFormModel {
     /// A free code to wear instead, offered while the typed one is held.
     internal var freeCode: String?
     internal var failure: InventoryWriteFailure?
+    internal var codeSuggestionFailure: InventoryCodeSuggestionFailure?
     /// The runner for photo commands already on the item: removing an
     /// attached photo (`item.removePhoto`) and reordering them
     /// (`item.reorderPhotos`) act at once and offer Undo, unlike the rest of
@@ -165,29 +166,6 @@ extension InventoryItemFormModel {
         let previous = draft.code.value
         draft.code.assist = draft.code.assist.typed(value, previous: previous)
         draft.code.value = value
-    }
-
-    internal func suggestCode() async {
-        guard draft.code.assist.canSuggest, !isOffline, draft.isNamed else { return }
-        draft.code.assist = .suggesting
-        do {
-            let suggestions = try await suggester.suggest(
-                draft.trimmedName, draft.typeKey, draft.code.normalized)
-            guard let first = suggestions.first else {
-                draft.code.assist = .unavailable
-                return
-            }
-            draft.code.value = first
-            draft.code.assist = .offered(alternatives: Array(suggestions.dropFirst()))
-            await checkCode()
-            if draft.code.normalized == first, draft.code.heldBy == nil {
-                draft.code.assist = .accepted
-            }
-        } catch RepositoryError.unavailable, RepositoryError.transport {
-            draft.code.assist = .offline
-        } catch {
-            draft.code.assist = .unavailable
-        }
     }
 
     /// Writes the draft. Returns true when every command landed and the form

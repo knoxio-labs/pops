@@ -1,6 +1,6 @@
 /**
- * POPS-4844: a catalogue field's `defaultValues` reach the phone unchanged,
- * and a catalogue from an Inventory that predates field defaults still parses.
+ * POPS-4844/4903: non-empty catalogue field defaults reach the phone unchanged,
+ * empty defaults are omitted, and older catalogues still parse.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -11,6 +11,7 @@ import { z } from 'zod';
 
 import { createInventoryFake } from './inventory-fake.js';
 import { closeOpenedApps, get, openWith } from './mobile-inventory-app.js';
+import { normalizeCatalogueFixture } from './mobile-inventory-catalogue-fixture.js';
 
 const JsonObject = z.record(z.string(), z.unknown());
 
@@ -45,9 +46,9 @@ const DEFAULTS = [{ optionId: '7a3f7c38-8a0e-4c52-9d0b-6f1c2d3e4a5b' }, 'fragile
 function catalogueWithDefaults(): CatalogueJson {
   const [type, ...otherTypes] = catalogue.types;
   if (type === undefined) throw new Error('the fixture catalogue has no types');
-  const [defaulted, legacy, ...rest] = type.fields;
-  if (defaulted === undefined || legacy === undefined) {
-    throw new Error('the fixture type needs two fields');
+  const [defaulted, empty, legacy, ...rest] = type.fields;
+  if (defaulted === undefined || empty === undefined || legacy === undefined) {
+    throw new Error('the fixture type needs three fields');
   }
   const { defaultValues: _dropped, ...legacyWithoutKey } = legacy;
   return {
@@ -55,7 +56,12 @@ function catalogueWithDefaults(): CatalogueJson {
     types: [
       {
         ...type,
-        fields: [{ ...defaulted, defaultValues: DEFAULTS }, legacyWithoutKey, ...rest],
+        fields: [
+          { ...defaulted, defaultValues: DEFAULTS },
+          { ...empty, defaultValues: [] },
+          legacyWithoutKey,
+          ...rest,
+        ],
       },
       ...otherTypes,
     ],
@@ -79,12 +85,12 @@ describe('field default values through bfm', () => {
     );
 
     expect(res.status, JSON.stringify(res.body)).toBe(200);
-    const { draftVersion: _draftVersion, ...revisionForPhone } = upstream.revision;
-    expect(res.body).toEqual({ ...upstream, revision: revisionForPhone });
+    expect(res.body).toEqual(normalizeCatalogueFixture(upstream));
     const fields = z
       .object({ types: z.array(z.object({ fields: z.array(JsonObject) })) })
       .parse(res.body).types[0]?.fields;
     expect(fields?.[0]?.['defaultValues']).toEqual(DEFAULTS);
     expect(fields?.[1]).not.toHaveProperty('defaultValues');
+    expect(fields?.[2]).not.toHaveProperty('defaultValues');
   });
 });

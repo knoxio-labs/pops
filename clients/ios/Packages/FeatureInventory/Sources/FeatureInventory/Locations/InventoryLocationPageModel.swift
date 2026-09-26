@@ -16,7 +16,7 @@ internal final class InventoryLocationPageModel {
     internal var selection = InventorySelection()
     internal var moving: InventoryPlacementRequest?
     internal var storing = false
-    internal var creating = false
+    internal var adding = false
     internal var renaming = false
     internal var deleting = false
 

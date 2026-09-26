@@ -10,7 +10,7 @@ Theme 07 (Food) needs a canonical storage format for recipe instructions that:
 
 1. Is human-readable as plain text (the cookbook-feel principle from the theme).
 2. Encodes structural references — which step uses which ingredient — without ambiguity, so a "cooking mode" UI can highlight ingredients per step and run per-step timers.
-3. Is LLM-friendly for ingest (PRDs 114–117 cover parse → resolve → materialise → cycle-check; Epic 02 PRDs cover the actual LLM extraction calls): a model parsing an Instagram caption or screenshot can emit the format directly, or emit structured JSON that we translate to the format.
+3. Is LLM-friendly for ingest: a model parsing an Instagram caption or screenshot can emit the format directly, or emit structured JSON that we translate to the format.
 4. Is editable in the pops shell without forcing the user to type complex markup, while still being a flat text file under the hood.
 5. Resolves canonical ingredient references (the chuck → patty → burger model from [food ADR-001](./adr-001-unified-recipe-ingredient-model.md)) — a recipe line should bind to a specific `ingredient_id` or `variant_id`, not a free-text string that might mean different things in different recipes.
 
@@ -85,7 +85,7 @@ At save time, the compiler:
 
 1. Parses the DSL into an AST.
 2. Validates: `@recipe` is present and first; `@yield` is present; every `@ingredient` has a unique index; every `@N` or `@slug` reference resolves; quantities parse; units exist.
-3. Looks up each ingredient slug in the slug_registry (`ingredient-model`). If a slug is unknown, the compile records it as a `proposed_slug` (Epic 03 review flow surfaces these for user approval — they do not block save when the recipe is `draft`; they DO block promotion from `draft` to `current`).
+3. Looks up each ingredient slug in the slug_registry (`ingredient-model`). If a slug is unknown, the compile records it as a `proposed_slug` (the review flow surfaces these for user approval — they do not block save when the recipe is `draft`; they DO block promotion from `draft` to `current`).
 4. Resolves variant scoped to ingredient (variant slug `raw` under ingredient `banana` is distinct from `raw` under `apple`).
 5. Materializes `recipe_lines` and `recipe_steps` rows for this `recipe_version`.
 
@@ -103,7 +103,7 @@ If the storage model is later promoted to "recipes are files on disk" (the Cereb
 
 ### Renderer
 
-The renderer is out of scope for this ADR (lives in `recipe-model` + an Epic 01 PRD), but the rule for ADR purposes: every `@func(...)` becomes a styled block or inline element. Authors never read the raw DSL except in an explicit "source view" — the editor and view always render to the cookbook-style form.
+The renderer is out of scope for this ADR (lives in `recipe-model`), but the rule for ADR purposes: every `@func(...)` becomes a styled block or inline element. Authors never read the raw DSL except in an explicit "source view" — the editor and view always render to the cookbook-style form.
 
 ## Consequences
 
@@ -121,7 +121,7 @@ The renderer is out of scope for this ADR (lives in `recipe-model` + an Epic 01 
 - Custom parser to maintain. Bugs in the parser look like data corruption.
 - Editor needs autocomplete / chip rendering for refs to be pleasant; without it, hand-typing is annoying.
 - LLM ingest prompts have to include the grammar. Token cost is small (the grammar is ~30 lines) but non-zero per ingest call.
-- Compile errors block recipe usability — needs a clear error UI (Epic 01 PRD).
+- Compile errors block recipe usability — needs a clear error UI.
 - The two-syntax-for-ingredient (compact vs named) doubles parser test surface. Acceptable because both forms have load-bearing reasons (human vs LLM).
 
 ### Neutral
@@ -135,4 +135,3 @@ The renderer is out of scope for this ADR (lives in `recipe-model` + an Epic 01 
 - [food ADR-001](./adr-001-unified-recipe-ingredient-model.md) — recipes-as-ingredients (the basis for `@ingredient(N, recipe-slug, qty:unit)` syntax)
 - [`ingredient-model`](../prds/ingredient-model.md) — slug_registry table (amended as part of this ADR)
 - `recipe-model` — Recipe & Version Model (stores `body_dsl`, materializes `recipe_lines` and `recipe_steps`)
-- Future PRD in Epic 01 — DSL-aware editor with autocomplete and chip rendering

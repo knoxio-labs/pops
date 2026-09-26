@@ -77,7 +77,8 @@ internal struct InventoryProtocol2ValueEditor: View {
                 HStack(spacing: PopsSpacing.sm) {
                     TextField(placeholder, text: textBinding)
                         .focused(focus)
-                        .multilineTextAlignment(.trailing)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(1)
                         .inventoryDecimalKeyboard()
                         .accessibilityIdentifier(identifier)
                     if let unit = field.fixedUnit {

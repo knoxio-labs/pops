@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-POPS has a shared UI component library (`@pops/ui`) consumed by multiple app packages. The library needs to be easy to develop against, require no separate build step, and support a single Storybook instance across all packages.
+POPS has a shared UI component library (`@pops/ui`) consumed by multiple pillar apps. The library needs to be easy to develop against, require no separate build step, and support a single Storybook instance across all packages.
 
 ## Options Considered
 
@@ -18,10 +18,10 @@ POPS has a shared UI component library (`@pops/ui`) consumed by multiple app pac
 
 ## Decision
 
-`@pops/ui` is a workspace package consumed as source (not compiled artifacts). Vite resolves it via TypeScript path resolution.
+`@pops/ui` is a workspace package consumed as source (not compiled artifacts), living under `libs/ui`. Vite resolves it via TypeScript path resolution.
 
 - **In `@pops/ui`:** Shadcn/Radix primitives, composite components (DataTable, forms, inputs), layout primitives, Tailwind config and CSS variables, utility functions
-- **In app packages:** Domain-specific components, page components, domain stores
+- **In `pillars/<id>/app`:** Domain-specific components, page components, domain stores
 - **Storybook:** Config-only app that discovers stories from all packages via globs. Stories co-locate with their components
 
 ## Consequences

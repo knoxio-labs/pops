@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (Theme 13, Epic 08b)
+Accepted
 
 ## Context
 
@@ -27,16 +27,16 @@ Each has a different shape; one-size-fits-all is wrong.
 
 **Per concern:**
 
-- **Search → B (new `pops-search-api`)**. Federation needs an orchestrator; the orchestrator wants its own container scope. Independent scaling, observability, and isolation are wins.
+- **Search → B (a new container, shipped as the `orchestrator` pillar)**. Federation needs an orchestrator; the orchestrator wants its own container scope. Independent scaling, observability, and isolation are wins.
 - **AI Ops → B (new `pops-ai-api`)**. Budget enforcement + usage cache + prompt registry are shared services that benefit from a single home. Right-sized container.
-- **Worker → A (stays as `pops-worker`)**. Worker is already independent; its DB access just changes from in-process drizzle imports to `pillar()` SDK calls.
+- **Worker → per-pillar worker, not a shared `pops-worker`**. Each pillar with background jobs ships its own worker (`pops-worker-food`, `cerebrum-worker`, ...), the same image as its API server with a different entrypoint, per [ADR-026](./adr-026-pillar-architecture.md). A single shared worker calling every pillar over HTTP was decided here but never built.
 - **URI dispatcher → C (folds into the registry)**. The registry knows which pillar resolves which URI types; consumers query it and call the pillar directly. No central dispatcher service needed.
 
 ## Consequences
 
 - ✅ Each cross-pillar concern has a clear, right-sized home
 - ✅ pops-api can either be fully retired or shrink to a thin shell of legacy-compatibility shims (decided in a follow-up)
-- ✅ `pops-search-api` and `pops-ai-api` become natural orchestrators that depend on every contract package, NOT on every runtime package — preserves contract discipline
-- ❌ Two new containers (search-api, ai-api) to maintain
-- ❌ Worker calls become HTTP instead of in-process — latency hit on per-job DB writes. Mitigation: most workers write to a single pillar per job; the SDK's connection pooling keeps overhead low.
+- ✅ `orchestrator` and `ai` become natural orchestrators that reach other pillars through the registry and `@pops/pillar-sdk`, NOT through their runtime packages — preserves contract discipline
+- ❌ Two new containers (`orchestrator`, `ai-api`) to maintain
+- ❌ Each pillar with background jobs owns and operates its own worker process.
 - ❌ URI dispatcher logic distributed across pillars — slightly harder to debug "why didn't this URI resolve?" Mitigation: registry exposes `pillar_id → uri_types_handled` mapping clearly.

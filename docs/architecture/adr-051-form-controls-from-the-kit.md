@@ -93,29 +93,11 @@ inheriting.
 
 ### The remaining count
 
-POPS-3187 shipped the ratchet with a starting baseline of 90 and a stated
-goal of reaching zero when the epic completed. It did not: the epic's
-tickets were scoped by control class and enumerated file list — `<select>`,
-`type="date"`, specific hand-rolled pickers — and nothing was ever scoped to
-"every remaining raw `<input>` and `<textarea>`." The count settled at 54.
-
-POPS-3260 audited all 54 individually rather than by class, and the outcome
-is **zero except a named allowlist**:
-
-| outcome                                       | count |
-| --------------------------------------------- | ----- |
-| migrate onto an existing kit component        | 47    |
-| genuine exception, named in this ADR          | 6     |
-| needs a kit component that does not exist yet | 1     |
-
-The 47 need no new kit capability — they are `TextInput`, `Textarea`,
-`NumberInput`, `CheckboxInput`, `RadioInput`, `Select`, `Autocomplete` and
-`ChipInput` sites that no ticket happened to name. The 6 are the inline row
-editors and the `design` cases in "Deliberate exceptions" below. The 1 is a
-raw `<input type="color">` in `design/src/kit/institutions-settings.tsx`,
-sitting beside a kit `TextInput` that holds the same value as hex text;
-closing it means a kit colour input, which is the "extend the kit" path this
-ADR already prescribes, not a further exception.
+POPS-3187 shipped a per-pillar ratchet baseline (90, settling at 54 as the
+epic's scoped tickets landed); POPS-3260 audited the 54 down to zero except a
+named allowlist, and POPS-3276 replaced the count with that by-name
+allowlist. Every pillar is now held at zero, with each survivor individually
+justified below rather than absorbed into a number.
 
 Two consequences worth stating, because they are the reason this was a
 decision and not just a cleanup:
@@ -230,28 +212,6 @@ the guard does not and should not count at all, recorded so nobody
   extend to `src/kit/`, which POPS-3186 held to the rule and which is held
   to it still.
 
-### What this decision does not yet claim
-
-Two things the epic did not settle, named here so this ADR does not read as
-cleaner than the tree it describes:
-
-- **Nothing about the count is outstanding any more.** The migrations
-  POPS-3260 scoped are merged (POPS-3269, POPS-3271 through POPS-3275) and
-  POPS-3276 replaced the count baseline with the allowlist above, so the
-  guard now holds every pillar at zero. A reader running it today sees the
-  five allowlisted paths and nothing else. What follows is the one thing the
-  epic genuinely did not settle.
-- **Error-message placement is not a settled convention.** `FieldLabel`'s
-  `error` slot renders above the control it labels; every input that owns
-  its own `error` prop (`TextInput` and what's built on it) renders its
-  message below the control; `DateInput` renders no message of its own at
-  all, documenting that it must pair with `FieldLabel`'s slot for the error
-  to appear anywhere. The result, shipping today, is a `TransactionFormDialog`
-  and a `CheckpointFormDialog` row where a `TextInput` and a `DateInput`
-  each show a validation error on the opposite side of their control from
-  the other. **POPS-3247** tracks picking one convention and moving every
-  consumer to it; this ADR does not pick one on its behalf.
-
 ## Consequences
 
 - A pillar author who wants to reach past `@pops/ui` for a form control now
@@ -276,5 +236,3 @@ cleaner than the tree it describes:
   number. The guard reads that allowlist directly and fails a stale entry,
   which is what stops this table drifting away from the tree the way
   `ListKindChip`'s justifying comment did once its source file was deleted.
-  The one gap this ADR still names rather than papers over is error-message
-  placement (POPS-3247).
