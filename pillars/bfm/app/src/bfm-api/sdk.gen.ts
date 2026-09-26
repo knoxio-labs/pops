@@ -15,6 +15,9 @@ import type {
   DeviceRefreshResponses,
   HealthData,
   HealthResponses,
+  MobileBarcodeLookupData,
+  MobileBarcodeLookupErrors,
+  MobileBarcodeLookupResponses,
   MobileBootstrapData,
   MobileBootstrapErrors,
   MobileBootstrapResponses,
@@ -189,6 +192,18 @@ export const health = <ThrowOnError extends boolean = false>(
     url: '/health',
     ...options,
   });
+
+/**
+ * Look up book metadata for a scanned barcode
+ */
+export const mobileBarcodeLookup = <ThrowOnError extends boolean = false>(
+  options: Options<MobileBarcodeLookupData, ThrowOnError>
+): RequestResult<MobileBarcodeLookupResponses, MobileBarcodeLookupErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileBarcodeLookupResponses,
+    MobileBarcodeLookupErrors,
+    ThrowOnError
+  >({ url: '/mobile/barcode/lookup/{code}', ...options });
 
 /**
  * What the app should render, and who the federation says it is talking to

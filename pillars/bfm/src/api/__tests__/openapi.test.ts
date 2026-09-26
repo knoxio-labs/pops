@@ -134,6 +134,7 @@ describe('GET /openapi', () => {
 
     const mobilePaths = Object.keys(body.paths ?? {}).filter((path) => path.startsWith('/mobile'));
     expect(mobilePaths.toSorted()).toEqual([
+      '/mobile/barcode/lookup/{code}',
       '/mobile/bootstrap',
       '/mobile/contacts/merchants',
       '/mobile/contacts/merchants/search',
@@ -170,6 +171,9 @@ describe('GET /openapi', () => {
     expect(body.paths?.['/mobile/bootstrap']?.['get']?.operationId).toBe('mobile.bootstrap');
     expect(body.paths?.['/mobile/finance/transactions']?.['get']?.operationId).toBe(
       'mobileFinance.listTransactions'
+    );
+    expect(body.paths?.['/mobile/barcode/lookup/{code}']?.['get']?.operationId).toBe(
+      'mobileBarcode.lookup'
     );
     expect(body.paths?.['/mobile/purchases/receipts']?.['post']?.operationId).toBe(
       'mobilePurchases.saveReceiptDraft'
