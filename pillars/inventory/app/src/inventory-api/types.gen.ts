@@ -6207,6 +6207,115 @@ export type DocumentFilesRemoveUploadResponses = {
 export type DocumentFilesRemoveUploadResponse =
   DocumentFilesRemoveUploadResponses[keyof DocumentFilesRemoveUploadResponses];
 
+export type WebEventsListData = {
+  body?: never;
+  path?: never;
+  query: {
+    kind?: string;
+    actorKind?: 'device' | 'web' | 'service' | 'migration';
+    entityId?: string;
+    q?: string;
+    cursor?: string;
+    limit: number;
+  };
+  url: '/web/events';
+};
+
+export type WebEventsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebEventsListError = WebEventsListErrors[keyof WebEventsListErrors];
+
+export type WebEventsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    events: Array<{
+      actor: {
+        kind: string;
+        label: string;
+      };
+      after: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      before: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      clientTime: string | null;
+      compensatesSeq: number | null;
+      entityId: string;
+      entityKind: 'item' | 'location';
+      entityName: string;
+      fields: Array<string>;
+      kind: string;
+      reason: string | null;
+      seq: number;
+      serverTime: string;
+      undoable: boolean;
+    }>;
+    kindCounts: {
+      [key: string]: number;
+    };
+    nextCursor: string | null;
+    total: number;
+  };
+};
+
+export type WebEventsListResponse = WebEventsListResponses[keyof WebEventsListResponses];
+
 export type WebListData = {
   body?: never;
   path?: never;

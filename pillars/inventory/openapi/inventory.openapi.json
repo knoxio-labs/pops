@@ -19329,6 +19329,376 @@
         "tags": ["documentFiles"]
       }
     },
+    "/web/events": {
+      "get": {
+        "operationId": "webEvents.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "schema": {
+              "pattern": "^[a-z_]+(,[a-z_]+)*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actorKind",
+            "schema": {
+              "enum": ["device", "web", "service", "migration"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entityId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "events": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "actor": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "kind": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["kind", "label"],
+                            "type": "object"
+                          },
+                          "after": {
+                            "additionalProperties": {},
+                            "properties": {
+                              "placement": {
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "enum": ["location"],
+                                        "type": "string"
+                                      },
+                                      "locationId": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "locationId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "itemId": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "enum": ["container"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "itemId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "enum": ["hand"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "previousPlacement": {
+                                "nullable": true,
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "enum": ["location"],
+                                        "type": "string"
+                                      },
+                                      "locationId": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "locationId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "itemId": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "enum": ["container"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "itemId"],
+                                    "type": "object"
+                                  }
+                                ]
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "before": {
+                            "additionalProperties": {},
+                            "properties": {
+                              "placement": {
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "enum": ["location"],
+                                        "type": "string"
+                                      },
+                                      "locationId": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "locationId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "itemId": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "enum": ["container"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "itemId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "enum": ["hand"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "previousPlacement": {
+                                "nullable": true,
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "enum": ["location"],
+                                        "type": "string"
+                                      },
+                                      "locationId": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "locationId"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "itemId": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "enum": ["container"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "itemId"],
+                                    "type": "object"
+                                  }
+                                ]
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "clientTime": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "compensatesSeq": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "entityKind": {
+                            "enum": ["item", "location"],
+                            "type": "string"
+                          },
+                          "entityName": {
+                            "type": "string"
+                          },
+                          "fields": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "seq": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "serverTime": {
+                            "type": "string"
+                          },
+                          "undoable": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "seq",
+                          "entityKind",
+                          "entityId",
+                          "kind",
+                          "fields",
+                          "before",
+                          "after",
+                          "reason",
+                          "actor",
+                          "clientTime",
+                          "serverTime",
+                          "compensatesSeq",
+                          "undoable",
+                          "entityName"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "kindCounts": {
+                      "additionalProperties": {
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "type": "object"
+                    },
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "total": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["events", "nextCursor", "kindCounts", "total"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "List the inventory activity and item-history events",
+        "tags": ["webEvents"]
+      }
+    },
     "/web/items": {
       "get": {
         "operationId": "web.list",

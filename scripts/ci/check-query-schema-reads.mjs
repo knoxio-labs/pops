@@ -1038,6 +1038,12 @@ export const INVENTORY_ROUTES = [
   },
   {
     method: 'get',
+    path: '/web/events',
+    handlerFile: 'pillars/inventory/src/api/rest/web-events-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
     path: '/web/search',
     handlerFile: 'pillars/inventory/src/api/rest/web-search-handlers.ts',
     handlerKey: 'list',

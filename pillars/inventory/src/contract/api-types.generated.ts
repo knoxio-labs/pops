@@ -1057,6 +1057,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/events': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the inventory activity and item-history events */
+    get: operations['webEvents.list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/items': {
     parameters: {
       query?: never;
@@ -8683,6 +8700,136 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webEvents.list': {
+    parameters: {
+      query: {
+        kind?: string;
+        actorKind?: 'device' | 'web' | 'service' | 'migration';
+        entityId?: string;
+        q?: string;
+        cursor?: string;
+        limit: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            events: {
+              actor: {
+                kind: string;
+                label: string;
+              };
+              after: {
+                placement?:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement?:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+              } & {
+                [key: string]: unknown;
+              };
+              before: {
+                placement?:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement?:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+              } & {
+                [key: string]: unknown;
+              };
+              clientTime: string | null;
+              compensatesSeq: number | null;
+              entityId: string;
+              /** @enum {string} */
+              entityKind: 'item' | 'location';
+              entityName: string;
+              fields: string[];
+              kind: string;
+              reason: string | null;
+              seq: number;
+              serverTime: string;
+              undoable: boolean;
+            }[];
+            kindCounts: {
+              [key: string]: number;
+            };
+            nextCursor: string | null;
+            total: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
         headers: {
           [name: string]: unknown;
         };

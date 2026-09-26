@@ -219,6 +219,9 @@ import type {
   TypesReadValidateItemData,
   TypesReadValidateItemErrors,
   TypesReadValidateItemResponses,
+  WebEventsListData,
+  WebEventsListErrors,
+  WebEventsListResponses,
   WebGetData,
   WebGetErrors,
   WebGetResponses,
@@ -1346,6 +1349,17 @@ export const documentFilesRemoveUpload = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * List the inventory activity and item-history events
+ */
+export const webEventsList = <ThrowOnError extends boolean = false>(
+  options: Options<WebEventsListData, ThrowOnError>
+): RequestResult<WebEventsListResponses, WebEventsListErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebEventsListResponses, WebEventsListErrors, ThrowOnError>({
+    url: '/web/events',
+    ...options,
   });
 
 /**
