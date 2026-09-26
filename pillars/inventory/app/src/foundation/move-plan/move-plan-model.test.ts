@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { at, box, inBox, inHand, item } from '../fixtures/core-factory';
 import { buildWorld } from '../model/placement-model';
+import { at, box, inBox, inHand, item } from '../test-fixtures/core-factory';
 import {
   affectedCount,
   dropVerdict,

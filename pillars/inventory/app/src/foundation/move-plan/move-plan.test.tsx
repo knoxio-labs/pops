@@ -1,10 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { coreWorld } from '../fixtures/core';
-import { at, box } from '../fixtures/core-factory';
-import { closedBoxTarget, deskTarget, shelvingTarget } from '../fixtures/placements';
 import { buildWorld } from '../model/placement-model';
+import { coreWorld } from '../test-fixtures/core';
+import { at, box } from '../test-fixtures/core-factory';
+import { closedBoxTarget, deskTarget, shelvingTarget } from '../test-fixtures/placements';
 import { MovePlanPanel } from './move-plan';
 import { planMove } from './move-plan-model';
 

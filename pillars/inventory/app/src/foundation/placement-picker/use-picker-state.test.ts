@@ -1,8 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { coreWorld } from '../fixtures/core';
-import { recentPlacements } from '../fixtures/recents';
+import { coreWorld } from '../test-fixtures/core';
+import { recentPlacements } from '../test-fixtures/recents';
 import { defaultDrill, derivePicker, usePickerState } from './use-picker-state';
 
 import type { PickerSubject } from '../model/contracts';

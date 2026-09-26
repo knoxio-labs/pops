@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { Archive } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { coreItem, coreWorld } from '../fixtures/core';
+import { coreItem, coreWorld } from '../test-fixtures/core';
 import { ItemList, ItemRow, RowVerb } from './item-row';
 
 describe('ItemRow', () => {
