@@ -38,6 +38,11 @@ config.
 
 - Every `proxy_pass` uses the variable form so nginx boots with an absent
   upstream. New upstreams must follow (`nginx-conf-template.ts`).
+- Every proxied request carries the preserved-or-minted `X-Request-Id`. Shared
+  pillar routes inherit it from `_pillar-proxy.conf`; fixed routes declare it
+  beside their other proxy headers.
+- Gateway error pages cover only nginx-generated 502, 503, and 504 responses.
+  `proxy_intercept_errors` remains off so producer-owned bodies pass through.
 - The dynamic renderer must skip the orchestrator's registry id — see
   `nginx-conf-orchestrator.ts`'s header for why.
 - A failed validate skips the reload; the previously loaded conf stays live.

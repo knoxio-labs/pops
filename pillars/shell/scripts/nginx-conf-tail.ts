@@ -16,6 +16,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         set $up_webhook_upstream http://finance-api:3004;
         proxy_pass $up_webhook_upstream;
         proxy_set_header Host $host;
+        proxy_set_header X-Request-Id $pops_request_id;
         proxy_read_timeout 30s;
     }
 
@@ -23,6 +24,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         set $inventory_upstream http://inventory-api:3002;
         proxy_pass $inventory_upstream;
         proxy_set_header Host $host;
+        proxy_set_header X-Request-Id $pops_request_id;
     }
 
     # Proxy media images (posters, backdrops) served by the media pillar
@@ -40,6 +42,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         proxy_pass $media_images_upstream;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
+        proxy_set_header X-Request-Id $pops_request_id;
         proxy_connect_timeout 10s;
         proxy_read_timeout 30s;
         proxy_send_timeout 30s;
@@ -80,6 +83,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id $pops_request_id;
         proxy_connect_timeout 5s;
         proxy_read_timeout 10s;
         proxy_send_timeout 10s;
@@ -99,6 +103,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id $pops_request_id;
         proxy_set_header Connection '';
         proxy_buffering off;
         proxy_cache off;
@@ -122,6 +127,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id $pops_request_id;
         proxy_connect_timeout 5s;
         proxy_read_timeout 10s;
         proxy_send_timeout 10s;
@@ -146,6 +152,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id $pops_request_id;
         proxy_connect_timeout 5s;
         proxy_read_timeout 10s;
         proxy_send_timeout 10s;
@@ -166,6 +173,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id $pops_request_id;
         proxy_connect_timeout 5s;
         proxy_read_timeout 10s;
         proxy_send_timeout 10s;
@@ -188,6 +196,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
     # assets are unaffected — /assets/ and the .mjs regex match first.
     location / {
         add_header Cache-Control "no-cache, must-revalidate";
+        add_header X-Request-Id $pops_request_id always;
         try_files $uri $uri/ /index.html;
     }
 }

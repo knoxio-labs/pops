@@ -25,6 +25,7 @@ import type { ManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const COMMITTED_CONF_PATH = resolve(SCRIPT_DIR, '..', 'nginx.conf');
+const PROXY_SNIPPET_PATH = resolve(SCRIPT_DIR, '..', 'nginx', 'conf.d', '_pillar-proxy.conf');
 
 function buildManifest(pillarId: string): ManifestPayload {
   return {
@@ -298,6 +299,64 @@ describe('generate-nginx-conf', () => {
         expect(positions[i]!.index).toBeGreaterThan(-1);
       }
     });
+  });
+
+  describe('request correlation and gateway failures', () => {
+    const rendered = renderNginxConf();
+
+    it('preserves an incoming request id and mints one when the header is absent', () => {
+      expect(rendered).toMatch(
+        /map \$http_x_request_id \$pops_request_id \{\s*default \$http_x_request_id;\s*"" \$request_id;\s*\}/
+      );
+      expect(rendered).toContain('add_header X-Request-Id $pops_request_id always;');
+    });
+
+    it('redeclares the response request id wherever another add_header prevents inheritance', () => {
+      const locationsWithHeaders = [...rendered.matchAll(/location [^{]+\{([\s\S]*?)\n    \}/g)]
+        .map((match) => match[1] ?? '')
+        .filter((block) => block.includes('add_header'));
+      expect(locationsWithHeaders.length).toBeGreaterThan(0);
+      for (const block of locationsWithHeaders) {
+        expect(block).toContain('add_header X-Request-Id $pops_request_id always;');
+      }
+    });
+
+    it('records the effective request id in the JSON access log', () => {
+      expect(rendered).toContain('log_format pops_json escape=json');
+      expect(rendered).toContain('"requestId":"$pops_request_id"');
+      expect(rendered).toContain('access_log /var/log/nginx/access.log pops_json;');
+    });
+
+    it('forwards the effective request id from both server defaults and the shared proxy snippet', async () => {
+      const proxySnippet = await readFile(PROXY_SNIPPET_PATH, 'utf8');
+      expect(rendered).toContain('proxy_set_header X-Request-Id $pops_request_id;');
+      expect(proxySnippet).toContain('proxy_set_header X-Request-Id $pops_request_id;');
+    });
+
+    it('replaces only nginx-generated 502, 503, and 504 failures', () => {
+      expect(rendered.match(/error_page \d{3} = @gateway_\d{3};/g)).toEqual([
+        'error_page 502 = @gateway_502;',
+        'error_page 503 = @gateway_503;',
+        'error_page 504 = @gateway_504;',
+      ]);
+      expect(rendered).toContain('proxy_intercept_errors off;');
+      expect(rendered).not.toContain('proxy_intercept_errors on;');
+    });
+
+    it.each([502, 503, 504])(
+      'returns a retryable ADR-054 gateway envelope for nginx %i failures',
+      (status) => {
+        const block = rendered.match(
+          new RegExp(`location @gateway_${status} \\{([\\s\\S]*?)\\n    \\}`)
+        )?.[1];
+        expect(block, `missing @gateway_${status} location`).toBeDefined();
+        expect(block).toContain('default_type application/json;');
+        expect(block).toContain(`return ${status} '`);
+        expect(block).toContain('"code":"gateway.upstream_unavailable"');
+        expect(block).toContain('"requestId":"$pops_request_id"');
+        expect(block).toContain('"retryable":true');
+      }
+    );
   });
 
   /**

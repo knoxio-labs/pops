@@ -144,6 +144,13 @@ on its own path instead of a boot failure. The bundle itself is a static nginx
 image built from the pillar's app (`pillars/purchases/app/Dockerfile`), the same
 shape the design playground uses.
 
+The shell preserves an incoming `X-Request-Id`, mints nginx's `$request_id` when
+the header is absent, returns it on every response, forwards it to proxied
+services, and records it in the JSON access log. If nginx itself cannot reach an
+upstream, its 502, 503, and 504 responses use the ADR-054
+`gateway.upstream_unavailable` envelope and are retryable. Upstream response
+bodies are not intercepted, including pillar-owned 502, 503, and 504 envelopes.
+
 In dev, `vite-plugin-pillar-ui-dev.ts` serves `pillars/<id>/app/dist/remote` at
 the same path, so the loader path is exercised locally rather than first in a
 deployment. Build the bundle with
