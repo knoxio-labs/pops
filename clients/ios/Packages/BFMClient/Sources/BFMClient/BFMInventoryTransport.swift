@@ -33,7 +33,7 @@ public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSugges
         do {
             output = try await client.generated.mobileInventory_catalogue()
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: Catalogue.id)
+            throw Self.failure(error, operation: Catalogue.id)
         }
 
         switch output {
@@ -62,10 +62,10 @@ public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSugges
                 for: .rateLimited, operation: Catalogue.id)
         case .badGateway(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: Catalogue.id)
+                for: .upstream(code: try upstream.body.json.code), operation: Catalogue.id)
         case .serviceUnavailable(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: Catalogue.id)
+                for: .upstream(code: try upstream.body.json.code), operation: Catalogue.id)
         case .undocumented(let status, _):
             throw BFMInventoryFailureMapping.repositoryError(
                 for: .undocumented(status), operation: Catalogue.id)
@@ -96,11 +96,11 @@ public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSugges
                 for: .rateLimited, operation: CatalogueRevision.id)
         case .badGateway(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue),
+                for: .upstream(code: try upstream.body.json.code),
                 operation: CatalogueRevision.id)
         case .serviceUnavailable(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue),
+                for: .upstream(code: try upstream.body.json.code),
                 operation: CatalogueRevision.id)
         case .undocumented(let status, _):
             throw BFMInventoryFailureMapping.repositoryError(
@@ -139,6 +139,36 @@ public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSugges
     internal static func syncReadFailure(_ error: ClientError, operation: String) -> any Error {
         if error.response?.status.kind == .successful, error.underlyingError is DecodingError {
             return InventorySyncTransportError.clientTooOld
+        }
+        return failure(error, operation: operation)
+    }
+
+    internal static func failure(_ error: ClientError, operation: String) -> any Error {
+        let statusCode = BFMRepositoryFailure.statusCode(in: error)
+        let code = BFMRepositoryFailure.code(in: error)
+
+        if code == "resync_required" || (operation == "mobileInventory.mutations" && statusCode == 409) {
+            return InventorySyncTransportError.resyncRequired
+        }
+        if code == "client_too_old" || statusCode == 426 {
+            return InventorySyncTransportError.clientTooOld
+        }
+        if operation == "mobileInventory.suggestCodes", statusCode == 503 {
+            return InventorySyncTransportError.suggestionsUnavailable
+        }
+        if operation == "mobileInventory.putMedia" {
+            if code == "payload_too_large" || statusCode == 413 {
+                return InventorySyncTransportError.mediaTooLarge
+            }
+            if code == "upstream_unsupported_media" || statusCode == 415 {
+                return InventorySyncTransportError.mediaUnsupported
+            }
+        }
+        if operation == "mobileInventory.getMedia", statusCode == 404 {
+            return RepositoryError.transport("(operation): media not found")
+        }
+        if operation == "mobileInventory.itemHistory", statusCode == 404 {
+            return RepositoryError.transport("(operation): item not found")
         }
         return BFMRepositoryFailure.failure(error, operation: operation)
     }

@@ -1,3 +1,4 @@
+import AppCore
 import HTTPTypes
 import OpenAPIRuntime
 
@@ -175,10 +176,58 @@ extension BFMHTTPClient {
         _ error: ClientError,
         operation: String
     ) -> BFMClientError {
+        if let runtime = PopsError.runtimeFailureDetails(from: error),
+            let statusCode = runtime.statusCode
+        {
+            if operation == Operations.Device_challenge.id {
+                switch statusCode {
+                case 400:
+                    return .refreshRefused(.invalidRequest)
+                case 429:
+                    return .refreshRefused(
+                        .rateLimited(retryAfterSeconds: runtime.retryAfterSeconds)
+                    )
+                default:
+                    return .undocumentedResponse(operation: operation, statusCode: statusCode)
+                }
+            }
+
+            if !Self.isHTTPFallback(runtime.popsError.code) {
+                switch runtime.popsError.code {
+                case "challenge_expired":
+                    return .refreshRefused(.challengeExpired)
+                case "invalid_grant":
+                    return .refreshRefused(.invalidGrant)
+                case "device_revoked", "bfm.auth.device_revoked":
+                    return .refreshRefused(.deviceRevoked)
+                default:
+                    break
+                }
+            }
+
+            if Self.isHTTPFallback(runtime.popsError.code), statusCode == 401 || statusCode == 403 {
+                return .transportFailure(error, operation: operation)
+            }
+
+            switch statusCode {
+            case 400:
+                return .refreshRefused(.invalidRequest)
+            case 429:
+                return .refreshRefused(
+                    .rateLimited(retryAfterSeconds: runtime.retryAfterSeconds)
+                )
+            default:
+                return .undocumentedResponse(operation: operation, statusCode: statusCode)
+            }
+        }
         guard let refusal = refusal(readableFrom: error.response) else {
             return .transportFailure(error, operation: operation)
         }
         return .refreshRefused(refusal)
+    }
+
+    private static func isHTTPFallback(_ code: String) -> Bool {
+        code.hasPrefix("ios.http.")
     }
 
     /// The refusal a status means, for a response whose *body* the generated

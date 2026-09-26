@@ -53,10 +53,10 @@ public struct BFMPurchasesRepository: PurchasesRepository {
             throw RepositoryError.transport("\(ListPurchases.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: ListPurchases.id)
+                try upstream.body.json.code, operation: ListPurchases.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: ListPurchases.id)
+                try upstream.body.json.code, operation: ListPurchases.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(ListPurchases.id): undocumented status \(statusCode)"
@@ -85,10 +85,10 @@ public struct BFMPurchasesRepository: PurchasesRepository {
             throw RepositoryError.transport("\(GetMonthSummary.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetMonthSummary.id)
+                try upstream.body.json.code, operation: GetMonthSummary.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetMonthSummary.id)
+                try upstream.body.json.code, operation: GetMonthSummary.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(GetMonthSummary.id): undocumented status \(statusCode)"

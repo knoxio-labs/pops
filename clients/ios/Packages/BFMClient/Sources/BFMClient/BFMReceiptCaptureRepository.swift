@@ -139,10 +139,10 @@ extension BFMReceiptCaptureRepository {
             throw RepositoryError.transport("\(ExtractReceipt.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: ExtractReceipt.id)
+                try upstream.body.json.code, operation: ExtractReceipt.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: ExtractReceipt.id)
+                try upstream.body.json.code, operation: ExtractReceipt.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(ExtractReceipt.id): undocumented status \(statusCode)"

@@ -1,3 +1,4 @@
+import AppCore
 import Foundation
 import HTTPTypes
 import OpenAPIRuntime
@@ -67,7 +68,7 @@ public struct BFMHTTPClient: Sendable {
             serverURL: baseURL,
             configuration: Configuration(dateTranscoder: BFMDateTranscoder()),
             transport: transport,
-            middlewares: middlewares
+            middlewares: [BFMErrorDecodingMiddleware()] + middlewares
         )
     }
 
@@ -91,6 +92,12 @@ public struct BFMHTTPClient: Sendable {
         do {
             output = try await generated.health()
         } catch let error as ClientError {
+            if let statusCode = BFMRepositoryFailure.statusCode(in: error) {
+                throw BFMClientError.undocumentedResponse(
+                    operation: Operations.Health.id,
+                    statusCode: statusCode
+                )
+            }
             throw BFMClientError.transportFailure(error, operation: Operations.Health.id)
         }
         switch output {
@@ -188,6 +195,25 @@ public struct BFMHTTPClient: Sendable {
     /// this contract does not document, including the no-response case, because
     /// those genuinely are transport failures.
     private static func pairingFailure(_ error: ClientError) -> BFMClientError {
+        if let runtime = PopsError.runtimeFailureDetails(from: error),
+            let statusCode = runtime.statusCode
+        {
+            switch statusCode {
+            case 400:
+                return .pairingRefused(.invalidRequest)
+            case 403:
+                return .pairingRefused(.codeRejected)
+            case 429:
+                return .pairingRefused(
+                    .rateLimited(retryAfterSeconds: runtime.retryAfterSeconds)
+                )
+            default:
+                return .undocumentedResponse(
+                    operation: Operations.Device_pair.id,
+                    statusCode: statusCode
+                )
+            }
+        }
         guard let refusal = refusal(readableFrom: error.response) else {
             return .transportFailure(error, operation: Operations.Device_pair.id)
         }

@@ -8,6 +8,7 @@ extension BFMPurchasesRepository {
         do {
             output = try await client.generated.mobilePurchases_getPurchase(path: .init(id: id))
         } catch let error as ClientError {
+            if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
             throw BFMRepositoryFailure.failure(error, operation: GetPurchase.id)
         }
 
@@ -21,10 +22,10 @@ extension BFMPurchasesRepository {
             throw RepositoryError.transport("\(GetPurchase.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetPurchase.id)
+                try upstream.body.json.code, operation: GetPurchase.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetPurchase.id)
+                try upstream.body.json.code, operation: GetPurchase.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(GetPurchase.id): undocumented status \(statusCode)")

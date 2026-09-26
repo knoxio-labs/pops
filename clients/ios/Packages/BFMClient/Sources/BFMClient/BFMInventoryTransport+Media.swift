@@ -24,7 +24,7 @@ extension BFMInventoryTransport {
                 )
             )
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: PutMedia.id)
+            throw Self.failure(error, operation: PutMedia.id)
         }
 
         switch output {
@@ -62,10 +62,10 @@ extension BFMInventoryTransport {
                 for: .rateLimited, operation: operation)
         case .badGateway(let upstream):
             return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: operation)
+                for: .upstream(code: try upstream.body.json.code), operation: operation)
         case .serviceUnavailable(let upstream):
             return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: operation)
+                for: .upstream(code: try upstream.body.json.code), operation: operation)
         case .undocumented(let status, _):
             return BFMInventoryFailureMapping.repositoryError(
                 for: .undocumented(status), operation: operation)
@@ -85,7 +85,7 @@ extension BFMInventoryTransport {
                 path: .init(sha256: sha256), query: .init(variant: Self.wire(variant))
             )
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: GetMedia.id)
+            throw Self.failure(error, operation: GetMedia.id)
         }
 
         switch output {
@@ -110,10 +110,10 @@ extension BFMInventoryTransport {
                 for: .rateLimited, operation: GetMedia.id)
         case .badGateway(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: GetMedia.id)
+                for: .upstream(code: try upstream.body.json.code), operation: GetMedia.id)
         case .serviceUnavailable(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: GetMedia.id)
+                for: .upstream(code: try upstream.body.json.code), operation: GetMedia.id)
         case .undocumented(let status, _):
             throw BFMInventoryFailureMapping.repositoryError(
                 for: .undocumented(status), operation: GetMedia.id)

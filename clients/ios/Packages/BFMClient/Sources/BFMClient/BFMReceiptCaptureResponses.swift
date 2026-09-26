@@ -239,10 +239,10 @@ extension Operations.MobilePurchases_saveReceiptDraft.Output: WriteOutput {
             throw RepositoryError.transport("\(operation): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: operation)
+                try upstream.body.json.code, operation: operation)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: operation)
+                try upstream.body.json.code, operation: operation)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport("\(operation): undocumented status \(statusCode)")
         }
@@ -262,10 +262,10 @@ extension Operations.MobilePurchases_createManualPurchase.Output: WriteOutput {
             throw RepositoryError.transport("\(operation): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: operation)
+                try upstream.body.json.code, operation: operation)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: operation)
+                try upstream.body.json.code, operation: operation)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport("\(operation): undocumented status \(statusCode)")
         }

@@ -7255,7 +7255,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Operations.Operator_listDevices.Output.Unauthorized.Body.JsonPayload.self,
+                            Components.Schemas.ErrorBody.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -7339,7 +7339,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Operations.Operator_revokeDevice.Output.Unauthorized.Body.JsonPayload.self,
+                            Components.Schemas.ErrorBody.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -7361,7 +7361,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Operations.Operator_revokeDevice.Output.NotFound.Body.JsonPayload.self,
+                            Components.Schemas.ErrorBody.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -7454,7 +7454,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Operations.Operator_issuePairingCode.Output.Unauthorized.Body.JsonPayload.self,
+                            Components.Schemas.ErrorBody.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -7476,7 +7476,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Operations.Operator_issuePairingCode.Output.TooManyRequests.Body.JsonPayload.self,
+                            Components.Schemas.ErrorBody.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)

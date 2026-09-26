@@ -16,6 +16,7 @@ extension BFMPurchasesRepository {
             if error.response?.status == .ok {
                 throw RepositoryError.contractMismatch
             }
+            if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
             throw BFMRepositoryFailure.failure(error, operation: UpdatePurchaseOperation.id)
         }
 
@@ -23,7 +24,7 @@ extension BFMPurchasesRepository {
         case .ok(let ok): return try detail(from: try ok.body.json)
         case .notFound: return nil
         case .conflict(let conflict):
-            throw RepositoryError.conflict(try conflict.body.json.code.rawValue)
+            throw RepositoryError.conflict(try conflict.body.json.code)
         case .badRequest:
             throw RepositoryError.transport("\(UpdatePurchaseOperation.id): invalid request")
         case .unauthorized, .forbidden: throw RepositoryError.unauthorized
@@ -31,10 +32,10 @@ extension BFMPurchasesRepository {
             throw RepositoryError.transport("\(UpdatePurchaseOperation.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: UpdatePurchaseOperation.id)
+                try upstream.body.json.code, operation: UpdatePurchaseOperation.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: UpdatePurchaseOperation.id)
+                try upstream.body.json.code, operation: UpdatePurchaseOperation.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(UpdatePurchaseOperation.id): undocumented status \(statusCode)")
