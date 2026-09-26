@@ -393,7 +393,9 @@ describe('web.items.list', () => {
 
     expectIds(page.items, [homeItem.data.id]);
     expectIds(containerPage.items, [boxed.data.id]);
-    expect(page.items).not.toEqual(expect.arrayContaining([shelfItem.data.id, boxed.data.id]));
+    expect(page.items.map((item) => item.id)).not.toEqual(
+      expect.arrayContaining([shelfItem.data.id, boxed.data.id])
+    );
   });
 
   it('sorts names case-insensitively and uses id for equal names', async () => {
