@@ -22,10 +22,11 @@ import type { PillarHandle } from '@pops/pillar-sdk/server';
 const INVENTORY_PROTOCOL_HEADER = 'pops-inventory-protocol';
 
 /**
- * The sync wire shape this build understands. Protocol 2 is required for
+ * The sync wire shape this build understands. Protocol 3 is required for
  * stable type IDs, catalogue revisions and canonical field values.
  */
-const INVENTORY_SYNC_PROTOCOL_VERSION = '2';
+const INVENTORY_SYNC_PROTOCOL_VERSION = '3';
+// Must equal the server's SUPPORTED_INVENTORY_PROTOCOL; lower values are refused once the owner raises the minimum.
 
 /** One mutation, exactly as `POST /sync/mutations` expects it on the wire. */
 export interface InventoryMutationEnvelope {

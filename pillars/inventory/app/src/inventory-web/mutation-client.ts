@@ -20,8 +20,9 @@ import type { SyncMutationsData, SyncMutationsResponses } from '../inventory-api
 import type { InventoryCommand } from './commands.js';
 import type { OptimisticItems } from './optimistic-items.js';
 
-/** The protocol version this app speaks (Inventory ADR-002 D10); the server's current minimum is `1`. */
-export const INVENTORY_SYNC_PROTOCOL = '1';
+/** The protocol version this app speaks (Inventory ADR-002 D10). */
+export const INVENTORY_SYNC_PROTOCOL = '3';
+// Must equal the server's SUPPORTED_INVENTORY_PROTOCOL; lower values are refused once the owner raises the minimum.
 
 /** One outcome of `POST /sync/mutations`, as the server reports it. */
 export type InventoryMutationOutcome = SyncMutationsResponses[200]['outcomes'][number];

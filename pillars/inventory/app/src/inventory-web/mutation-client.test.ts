@@ -12,7 +12,6 @@ vi.mock('../inventory-api/index.js', () => ({
 
 import {
   buildMutationEnvelope,
-  INVENTORY_SYNC_PROTOCOL,
   sendInventoryMutations,
   sendInventoryMutation,
 } from './mutation-client';
@@ -155,7 +154,7 @@ describe('sendInventoryMutation', () => {
     });
     expect(mocks.syncMutations).toHaveBeenCalledTimes(1);
     const call = mocks.syncMutations.mock.calls[0]?.[0];
-    expect(call?.headers).toEqual({ 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL });
+    expect(call?.headers).toEqual({ 'pops-inventory-protocol': '3' });
     expect(call?.body.mutations).toHaveLength(1);
     expect(call?.body.mutations[0]).toMatchObject({ op: 'item.setFull', entityId: 'item-1' });
   });
