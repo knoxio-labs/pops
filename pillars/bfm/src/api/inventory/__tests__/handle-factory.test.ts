@@ -19,7 +19,6 @@ const {
   createInventoryPillarHandleFactory,
   INVENTORY_ACTOR_HEADER,
   INVENTORY_PROTOCOL_HEADER,
-  INVENTORY_SYNC_PROTOCOL_VERSION,
   withInventoryActor,
 } = await import('../handle-factory.js');
 
@@ -32,7 +31,7 @@ describe('createInventoryPillarHandleFactory', () => {
     const headers = await options?.extraHeaders?.();
 
     expect(headers).toEqual({
-      [INVENTORY_PROTOCOL_HEADER]: String(INVENTORY_SYNC_PROTOCOL_VERSION),
+      [INVENTORY_PROTOCOL_HEADER]: '3',
     });
   });
 
@@ -46,14 +45,14 @@ describe('createInventoryPillarHandleFactory', () => {
     });
 
     expect(headersInsideRun).toEqual({
-      [INVENTORY_PROTOCOL_HEADER]: String(INVENTORY_SYNC_PROTOCOL_VERSION),
+      [INVENTORY_PROTOCOL_HEADER]: '3',
       [INVENTORY_ACTOR_HEADER]: 'device:d1;label=Test',
     });
 
     factory('inventory');
     const headersAfterRun = await capturedOptions.at(-1)?.extraHeaders?.();
     expect(headersAfterRun).toEqual({
-      [INVENTORY_PROTOCOL_HEADER]: String(INVENTORY_SYNC_PROTOCOL_VERSION),
+      [INVENTORY_PROTOCOL_HEADER]: '3',
     });
   });
 
