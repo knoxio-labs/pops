@@ -163,6 +163,7 @@ describe('GET /web/reports/values', () => {
     const valuedBoxId = id();
     await apply(createItem(emptyBoxId, 'Empty box'), createItem(valuedBoxId, 'Valued box'));
     setContainer(emptyBoxId);
+    setItem(emptyBoxId, { purchasePrice: 9 });
     setContainer(valuedBoxId);
     setItem(valuedBoxId, { replacementValue: 25 });
 
