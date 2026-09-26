@@ -84,6 +84,33 @@ internal struct ReplicaMigrationOrderTests {
         }
     }
 
+    @Test("the catalogue type parent check rejects self-parenting")
+    func parentCheckRejectsSelfParenting() throws {
+        let replica = try InventoryReplica()
+        let thrown = #expect(throws: DatabaseError.self) {
+            try replica.database.write { db in
+                try db.execute(
+                    sql: """
+                        INSERT INTO catalogue_revision (revision, base_revision, status, minimum_protocol)
+                        VALUES (1, NULL, 'published', 2)
+                        """
+                )
+                try db.execute(
+                    sql: """
+                        INSERT INTO catalogue_type
+                            (revision, id, key, label, sort_order, capabilities, legacy_labels,
+                             presentation, archived_at, replaced_by, parent_id)
+                        VALUES (1, 'type-1', 'bulb', 'Bulb', 0, ?, ?, ?, NULL, NULL, 'type-1')
+                        """,
+                    arguments: [
+                        try StoredJSON.encode([String]()), try StoredJSON.encode([String]()),
+                        try StoredJSON.encode(InventoryJSON.object([:])),
+                    ])
+            }
+        }
+        #expect(thrown?.extendedResultCode == .SQLITE_CONSTRAINT_CHECK)
+    }
+
     @Test("upgrading a replica with a pending change keeps it and leaves it not held")
     func upgradeKeepsPendingChanges() throws {
         let queue = try DatabaseQueue()
