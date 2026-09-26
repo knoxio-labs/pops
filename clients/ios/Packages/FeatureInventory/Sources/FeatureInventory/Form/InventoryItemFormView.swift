@@ -108,6 +108,7 @@ internal struct InventoryItemFormView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.popsBackground)
             }
+            typeSection
             identity
             // Every item has a quantity whatever its type, so it stands apart
             // from the type's fields rather than reading as one of them. A
@@ -128,6 +129,20 @@ internal struct InventoryItemFormView: View {
         // carries the same modifier for the same class of tap.
         .scrollDismissesKeyboard(.interactively)
         .task(id: model.draft.code.value) { await model.checkCode() }
+    }
+
+    private var typeSection: some View {
+        Section {
+            if let catalogue = model.protocol2Catalogue {
+                InventoryProtocol2TypePicker(
+                    model: model, catalogue: catalogue, selected: model.protocol2Draft)
+            } else {
+                InventoryFormTypeRow(
+                    types: model.catalogue.types, offersNone: model.offersNoType,
+                    typeKey: Binding(
+                        get: { model.draft.typeKey }, set: { model.selectLegacyType($0) }))
+            }
+        }
     }
 
     private var labelling: some View {
@@ -181,15 +196,6 @@ extension InventoryItemFormView {
                 "Name", placeholder: "Name", text: $model.draft.name,
                 identifier: InventoryAccessibility.itemNameField)
             InventoryFormDestinationRow(draft: $model.draft)
-            if let catalogue = model.protocol2Catalogue {
-                InventoryProtocol2TypePicker(
-                    model: model, catalogue: catalogue, selected: model.protocol2Draft)
-            } else {
-                InventoryFormTypeRow(
-                    types: model.catalogue.types, offersNone: model.offersNoType,
-                    typeKey: Binding(
-                        get: { model.draft.typeKey }, set: { model.selectLegacyType($0) }))
-            }
             if let type = model.protocol2Type, let draft = model.protocol2Draft {
                 protocol2FieldRows(type: type, draft: draft)
             } else if model.protocol2Catalogue == nil {
