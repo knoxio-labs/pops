@@ -9,9 +9,6 @@ internal struct InventoryProtocol2ComputedFieldRow {
     /// The server's evaluation reconciled with this phone's own changes, nil
     /// when the field has never been evaluated (an item still being created).
     internal let display: InventoryComputedDisplay?
-    /// Whether an override can be set or cleared right now: only once the
-    /// item exists, since the reducer requires it.
-    internal let overridesEnabled: Bool
     /// What the value is waiting on while it is unavailable, named.
     internal var missingInputs: [InventoryMissingInput] = []
 
@@ -58,10 +55,8 @@ internal struct InventoryProtocol2ComputedFieldRow {
     /// archived, and not already overridden — clearing comes first for one
     /// already overridden.
     internal var canStartOverride: Bool {
-        overridesEnabled && field.allowOverride && field.archivedAt == nil && !isOverridden
+        field.allowOverride && field.archivedAt == nil && !isOverridden
     }
 
-    internal var canClearOverride: Bool {
-        overridesEnabled && isOverridden
-    }
+    internal var canClearOverride: Bool { isOverridden }
 }

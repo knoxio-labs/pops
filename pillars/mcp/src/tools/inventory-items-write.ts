@@ -1,5 +1,6 @@
 import { requiredPositiveInteger } from './inventory-catalogue-input.js';
 import {
+  createFieldValueSchema,
   fieldValuePatchSchema,
   optionalUuid,
   requiredStoredFieldValues,
@@ -27,7 +28,7 @@ const retryIdentityProperties = {
 const itemsCreate: ToolDef = {
   name: 'inventory.items.create',
   description:
-    'Create a protocol-2 item. Read inventory.catalogue.get first, then send its current revision, stable type ID and complete stable field-value set. Reuse mutationId and entityId together when retrying an uncertain call.',
+    'Create a protocol-2 item. Read inventory.catalogue.get first, then send its current revision, stable type ID and complete stable field-value set. To create the item already overriding a computed field whose allowOverride is true, add that field with source "override" and exactly one value; any other field sent as an override is refused. Reuse mutationId and entityId together when retrying an uncertain call.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -48,7 +49,7 @@ const itemsCreate: ToolDef = {
         format: 'uuid',
         description: 'Stable type ID from that catalogue revision',
       },
-      fieldValues: { type: 'array', items: storedFieldValueSchema },
+      fieldValues: { type: 'array', items: createFieldValueSchema },
       note: { type: ['string', 'null'], description: 'Optional note' },
       ...retryIdentityProperties,
     },

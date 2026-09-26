@@ -2,12 +2,12 @@ import { requiredPositiveInteger } from './inventory-catalogue-input.js';
 import {
   optionalFieldValuePatches,
   optionalUuid,
-  requiredStoredFieldValues,
+  requiredCreateFieldValues,
   requiredUuid,
 } from './inventory-item-input.js';
 import { nullStr, reqStr } from './utils.js';
 
-import type { FieldValuePatchInput, StoredFieldValueInput } from './inventory-item-input.js';
+import type { CreateFieldValueInput, FieldValuePatchInput } from './inventory-item-input.js';
 
 type Parsed<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; error: string };
 
@@ -16,7 +16,7 @@ export interface CreateItemMutationInput {
   readonly itemName: string;
   readonly catalogueRevision: number;
   readonly typeId: string;
-  readonly fieldValues: readonly StoredFieldValueInput[];
+  readonly fieldValues: readonly CreateFieldValueInput[];
   readonly entityId?: string;
   readonly mutationId?: string;
   readonly note?: string | null;
@@ -43,7 +43,7 @@ export function parseCreateItemMutationInput(
   if (!revision.ok) return revision;
   const typeId = requiredUuid(args, 'typeId');
   if (!typeId.ok) return typeId;
-  const fieldValues = requiredStoredFieldValues(args);
+  const fieldValues = requiredCreateFieldValues(args);
   if (!fieldValues.ok) return fieldValues;
   const entityId = optionalUuid(args, 'entityId');
   if (!entityId.ok) return entityId;

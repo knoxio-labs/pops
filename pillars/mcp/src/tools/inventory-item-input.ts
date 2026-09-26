@@ -15,6 +15,16 @@ export interface StoredFieldValueInput {
   readonly values: readonly ItemJsonValue[];
 }
 
+/**
+ * One complete value group for create: stored, or an override of an
+ * overridable computed field. An absent `source` is sent as `stored`.
+ */
+export interface CreateFieldValueInput {
+  readonly fieldId: string;
+  readonly source?: 'stored' | 'override';
+  readonly values: readonly ItemJsonValue[];
+}
+
 /** One stored-value edit; `null` clears an optional value group. */
 export interface FieldValuePatchInput {
   readonly fieldId: string;
@@ -38,6 +48,23 @@ export const storedFieldValueSchema = {
   type: 'object',
   additionalProperties: false,
   properties: { fieldId: fieldIdProperty, values: jsonValuesProperty },
+  required: ['fieldId', 'values'],
+} as const;
+
+/** MCP schema for a create field-value group: stored by default, or a computed-field override. */
+export const createFieldValueSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    fieldId: fieldIdProperty,
+    source: {
+      type: 'string',
+      enum: ['stored', 'override'],
+      description:
+        "Omit or 'stored' for a stored field; 'override' for a computed field whose allowOverride is true",
+    },
+    values: jsonValuesProperty,
+  },
   required: ['fieldId', 'values'],
 } as const;
 
@@ -113,6 +140,31 @@ export function requiredStoredFieldValues(
     const values = jsonValues(entry['values'], index);
     if (!values.ok) return values;
     parsed.push({ fieldId: id.value, values: values.value });
+  }
+  return { ok: true, value: parsed };
+}
+
+/** Parses the complete create values, each optionally tagged `stored` or `override`. */
+export function requiredCreateFieldValues(
+  args: Record<string, unknown>
+): Parsed<readonly CreateFieldValueInput[]> {
+  const entries = fieldValueArray(args);
+  if (!entries.ok) return entries;
+  const parsed: CreateFieldValueInput[] = [];
+  for (const [index, entry] of entries.value.entries()) {
+    const id = fieldId(entry, index);
+    if (!id.ok) return id;
+    const source = entry['source'];
+    if (source !== undefined && source !== 'stored' && source !== 'override') {
+      return { ok: false, error: `Invalid fieldValues[${String(index)}].source` };
+    }
+    const values = jsonValues(entry['values'], index);
+    if (!values.ok) return values;
+    parsed.push({
+      fieldId: id.value,
+      ...(source === undefined ? {} : { source }),
+      values: values.value,
+    });
   }
   return { ok: true, value: parsed };
 }

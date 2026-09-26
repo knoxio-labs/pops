@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { items } from '../../db/index.js';
-import { activeFieldValueSchema, activeStoredChanges } from './active-catalogue-values.js';
+import { activeCreatedChanges, activeCreateFieldValueSchema } from './active-catalogue-values.js';
 import { CommandRejected } from './errors.js';
 import { assertCodeFree } from './item-code.js';
 import {
@@ -30,7 +30,7 @@ const createArgs = z.object({
     typeKey: z.string().min(1).nullish(),
     typeId: z.string().min(1).nullish(),
     fields: itemFieldsBlobSchema.default({}),
-    values: z.array(activeFieldValueSchema).optional(),
+    values: z.array(activeCreateFieldValueSchema).optional(),
     /** Empty or whitespace-only becomes `null`; otherwise kept exactly as sent (POPS-4053). */
     note: z.string().nullish().transform(normalizeNote),
     externalIds: externalIdsSchema.default([]),
@@ -161,7 +161,11 @@ function insertItem({
  * new ids are exactly what D6 requires clients to mint). Protocol 1 uses
  * `typeKey` and named `fields`; protocol 2 pins the active catalogue and uses
  * stable `typeId` and `values`. An absent type leaves the item untyped, in
- * which case its values must be empty. `is_container`, `access` and `is_full` are
+ * which case its values must be empty. A protocol-2 value entry may carry
+ * `source: 'override'` to create the item already overriding an overridable
+ * computed field; it is validated as `item.setOverride` validates one, and a
+ * field that is not computed or does not allow overrides refuses the create
+ * `invalid`. `is_container`, `access` and `is_full` are
  * never taken from the client; they follow from the type's `containment`
  * capability (ADR-002 D1). A container's quantity must be exactly 1:
  * `quantity_container_conflict` when a containment-capable type is
@@ -203,7 +207,7 @@ export const itemCreate = defineOp({
           ? { typeKey: type?.key ?? null, fields: item.fields }
           : {
               typeId: type?.id ?? null,
-              ...activeStoredChanges(catalogue.values),
+              ...activeCreatedChanges(catalogue.values),
             }),
         note: item.note ?? null,
         externalIds: item.externalIds,

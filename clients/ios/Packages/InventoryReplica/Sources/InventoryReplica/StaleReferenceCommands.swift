@@ -7,7 +7,8 @@ extension InventoryCommand {
     /// `referenceFieldValues` both need.
     private var protocol2FieldValues: [(fieldId: String, values: [InventoryPrimitiveValue])] {
         switch self {
-        case .createProtocol2Item(let item): item.values.map { ($0.fieldId, $0.values) }
+        case .createProtocol2Item(let item):
+            (item.values + item.overrides).map { ($0.fieldId, $0.values) }
         case .editProtocol2Item(_, _, let patches):
             patches.map { ($0.fieldId, $0.values ?? []) }
         case .changeProtocol2ItemType(_, _, _, let values):

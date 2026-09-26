@@ -23,7 +23,8 @@ extension StoredCommand {
                 id: new.id, name: new.name, catalogueRevision: new.catalogueRevision,
                 typeId: new.typeId, values: new.values, note: new.note,
                 externalIds: new.externalIds.map(StoredExternalIdentifier.init),
-                quantity: new.quantity, placement: StoredPlacement(new.placement), code: new.code)
+                quantity: new.quantity, placement: StoredPlacement(new.placement), code: new.code,
+                overrides: new.overrides)
         case .editProtocol2Item(let id, let catalogueRevision, let values):
             .editProtocol2Item(id: id, catalogueRevision: catalogueRevision, values: values)
         case .changeProtocol2ItemType(let id, let catalogueRevision, let typeId, let values):

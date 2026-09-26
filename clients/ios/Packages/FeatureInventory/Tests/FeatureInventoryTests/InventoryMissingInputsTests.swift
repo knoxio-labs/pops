@@ -159,7 +159,6 @@ internal struct InventoryMissingInputsTests {
 
         let row = InventoryProtocol2ComputedFieldRow(
             field: Self.volume, display: form.protocol2ComputedDisplays[Self.volume.id],
-            overridesEnabled: true,
             missingInputs: form.protocol2ComputedMissingInputs[Self.volume.id] ?? [])
 
         #expect(row.text(referenceLabel: { _ in nil }) == "Unavailable until 2 values are set")

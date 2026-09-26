@@ -110,6 +110,9 @@ public struct InventoryNewProtocol2Item: Hashable, Sendable {
     public let catalogueRevision: Int
     public let typeId: String
     public let values: [InventoryProtocol2FieldValue]
+    /// Overrides of overridable computed fields the item is created already
+    /// holding, sent as `source: override` entries of `item.create`'s values.
+    public let overrides: [InventoryProtocol2FieldValue]
     public let note: String?
     public let externalIds: [InventoryExternalIdentifier]
     public let quantity: Int
@@ -119,7 +122,8 @@ public struct InventoryNewProtocol2Item: Hashable, Sendable {
 
     public init(
         id: String, name: String, catalogueRevision: Int, typeId: String,
-        values: [InventoryProtocol2FieldValue] = [], note: String? = nil,
+        values: [InventoryProtocol2FieldValue] = [],
+        overrides: [InventoryProtocol2FieldValue] = [], note: String? = nil,
         externalIds: [InventoryExternalIdentifier] = [], quantity: Int = 1,
         placement: InventoryPlacement, code: String? = nil
     ) {
@@ -128,6 +132,7 @@ public struct InventoryNewProtocol2Item: Hashable, Sendable {
         self.catalogueRevision = catalogueRevision
         self.typeId = typeId
         self.values = values
+        self.overrides = overrides
         self.note = note
         self.externalIds = externalIds
         self.quantity = quantity
@@ -139,8 +144,8 @@ public struct InventoryNewProtocol2Item: Hashable, Sendable {
     public func wearing(_ code: String?) -> Self {
         Self(
             id: id, name: name, catalogueRevision: catalogueRevision, typeId: typeId,
-            values: values, note: note, externalIds: externalIds, quantity: quantity,
-            placement: placement, code: code)
+            values: values, overrides: overrides, note: note, externalIds: externalIds,
+            quantity: quantity, placement: placement, code: code)
     }
 }
 
