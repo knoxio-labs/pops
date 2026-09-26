@@ -1,3 +1,4 @@
+import { inventoryCatalogueTypes } from '@/fixtures/inventory-type-catalogue';
 /**
  * The population the Items and Containers browsers list: every named core
  * item plus the deterministic generated thousands, in one world so every
@@ -27,9 +28,32 @@ function lightingLike(): ItemRowModel[] {
 }
 
 /** Named items first, then a household-sized generated population. */
+const typeTreeItems: readonly ItemRowModel[] = [
+  item(['tree-sheet-1', 'Guest fitted sheet', 'type-sheet'], at('loc-bedroom'), {
+    typeName: 'Sheet',
+  }),
+  item(['tree-sheet-2', 'Cotton sheet', 'type-sheet'], at('loc-bedroom'), {
+    typeName: 'Sheet',
+    quantity: 2,
+  }),
+  item(['tree-quilt-cover-1', 'Blue quilt cover', 'type-quilt-cover'], at('loc-bedroom'), {
+    typeName: 'Quilt cover',
+  }),
+  item(['tree-pillow-1', 'Guest pillow', 'type-pillow'], at('loc-bedroom'), {
+    typeName: 'Pillow',
+  }),
+  item(['tree-pillowcase-1', 'Linen pillowcase', 'type-pillowcase'], at('loc-bedroom'), {
+    typeName: 'Pillowcase',
+  }),
+  item(['tree-cushion-1', 'Window cushion', 'type-cushion'], at('loc-living'), {
+    typeName: 'Cushion',
+  }),
+];
+
 export const browseInventory: readonly ItemRowModel[] = [
   ...coreInventory,
   ...lightingLike(),
+  ...typeTreeItems,
   ...householdPopulation(520),
 ];
 
@@ -57,10 +81,22 @@ export const itemsSelection: readonly string[] = ['box-cables', 'itm-tv', 'itm-h
 export const boxedSelection: readonly string[] = ['itm-mugs', 'itm-knife', 'itm-kettle'];
 
 /** The Type filter's options: every published type, by label. */
-export const typeOptions: readonly { value: string; label: string }[] = coreTypes.map((type) => ({
-  value: type.id,
-  label: type.label,
-}));
+export const typeOptions: readonly {
+  value: string;
+  label: string;
+  parentTypeId: string | null;
+}[] = [
+  ...coreTypes.map((type) => ({
+    value: type.id,
+    label: type.label,
+    parentTypeId: type.parentTypeId,
+  })),
+  ...inventoryCatalogueTypes.map((type) => ({
+    value: type.id,
+    label: type.label,
+    parentTypeId: type.parentTypeId,
+  })),
+];
 
 const pathLabel = (id: string): string =>
   locationPath(browseWorld, id)

@@ -8,7 +8,9 @@ import { MapPin, Search, Shapes } from 'lucide-react';
 import { ButtonPrimitive, Select, TextInput, cn } from '@pops/ui';
 
 import { KeyCombo } from '../foundation';
+import { typeTreeOptions } from '../type-tree/model';
 
+import type { TypeTreeRecord } from '../type-tree/model';
 import type { SearchFilters } from './search-model';
 
 /** The two things search can look through. */
@@ -18,6 +20,7 @@ export type SearchScope = 'inventory' | 'purchases';
 export interface SearchOption {
   value: string;
   label: string;
+  parentTypeId?: string | null;
 }
 
 /** Props for {@link SearchBar}. */
@@ -98,6 +101,19 @@ function FilterSelect({
   );
 }
 
+function treeTypeOptions(types: readonly SearchOption[]): SearchOption[] {
+  const records: TypeTreeRecord[] = types.map((type) => ({
+    id: type.value,
+    label: type.label,
+    parentTypeId: type.parentTypeId ?? null,
+  }));
+  const paths = typeTreeOptions(records, '', true);
+  return types.map((type) => ({
+    ...type,
+    label: paths.find((option) => option.value === type.value)?.pathLabel ?? type.label,
+  }));
+}
+
 /** The search header row. */
 export function SearchBar(props: SearchBarProps) {
   const { scope, counts, filters, onFilters } = props;
@@ -143,7 +159,7 @@ export function SearchBar(props: SearchBarProps) {
         icon={Shapes}
         label="Any type"
         value={filters.typeId}
-        options={props.types}
+        options={treeTypeOptions(props.types)}
         disabled={purchases}
         onChange={(typeId) => onFilters?.({ typeId })}
       />

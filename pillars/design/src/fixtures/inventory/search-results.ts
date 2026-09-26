@@ -22,5 +22,6 @@ export const SEARCH_QUERIES = {
   container: 'kitchen',
   place: 'garage',
   purchase: 'cable',
+  typeTree: 'sheet',
   none: 'snorkel',
 } as const;

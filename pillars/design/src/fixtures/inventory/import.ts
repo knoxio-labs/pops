@@ -54,6 +54,12 @@ export const importRows: readonly (readonly string[])[] = householdPopulation(48
     return cells.map((cell, column) => broken[column] ?? cell);
   });
 
+/** A small CSV preview proving that both a leaf and its parent resolve. */
+export const importTreeRows: readonly (readonly string[])[] = [
+  ['Guest fitted sheet', 'Sheet', '1', 'SHT-01', 'Bedroom', '', ''],
+  ['Blue quilt cover', 'Bedding', '1', 'QCV-01', 'Bedroom', '', ''],
+];
+
 /** The mapping after the owner pointed Category at Type and Label at Code. */
 export const importMapping: readonly ColumnMapping[] = [
   { header: 'Item', target: 'name' },

@@ -60,7 +60,7 @@ export function ContainersPage(props: ContainersPageProps) {
     rows,
     world,
     { ...props.seed, filters: { inactive: segment === 'retired', ...props.seed?.filters } },
-    '/inventory/containers'
+    { path: '/inventory/containers' }
   );
   return (
     <InventoryPage

@@ -51,6 +51,9 @@ export const states: ScreenStates = {
   filtered: () => (
     <Search seed={{ query: Q.results, filters: { typeId: 'type-cable', within: 'loc-garage' } }} />
   ),
+  'filter-parent-type': () => (
+    <Search seed={{ query: Q.typeTree, filters: { typeId: 'type-bedding' } }} />
+  ),
   selected: () => (
     <Search
       seed={{

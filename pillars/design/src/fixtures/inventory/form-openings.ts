@@ -54,6 +54,19 @@ const editPrinter = (draft: ItemDraft, extras: Partial<ItemFormOpening> = {}): I
   ...extras,
 });
 
+const typeTreeChangeDraft: ItemDraft = {
+  ...blankDraft(undefined, 'type-quilt-cover'),
+  name: 'Queen quilt cover',
+  fields: {
+    text: {
+      material: ['Cotton'],
+      colour: ['White'],
+      fitted: ['Yes'],
+    },
+    refs: {},
+  },
+};
+
 /** Every review state's opening, by state name. */
 export const formOpenings: Readonly<Record<string, ItemFormOpening>> = {
   'create-blank': { draft: blankDraft() },
@@ -131,4 +144,19 @@ export const formOpenings: Readonly<Record<string, ItemFormOpening>> = {
     banner: 'offline',
   },
   stale: editPrinter(labelPrinterDraft, { banner: 'stale' }),
+  'type-tree-open': {
+    draft: { ...blankDraft(undefined, 'type-bedding'), name: 'Queen sheet set' },
+    typePicker: { open: true },
+  },
+  'type-tree-search': {
+    draft: blankDraft(),
+    typePicker: { open: true, query: 'sheet' },
+  },
+  'type-parent-chosen': {
+    draft: { ...blankDraft(undefined, 'type-pillows'), name: 'Guest pillows' },
+  },
+  'type-change-in-tree': {
+    draft: typeTreeChangeDraft,
+    initial: { ...typeTreeChangeDraft, typeId: 'type-sheet' },
+  },
 };

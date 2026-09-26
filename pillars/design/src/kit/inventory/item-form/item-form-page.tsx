@@ -51,6 +51,7 @@ export function ItemFormPage({ opening, context }: ItemFormPageProps) {
           openedTypeId={opening.draft.mode === 'edit' ? opening.draft.typeId : null}
           editingId={opening.editing?.id}
           overlay={opening.overlay}
+          typePicker={opening.typePicker}
         />
         <FieldsCard
           draft={draft}

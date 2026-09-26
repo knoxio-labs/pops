@@ -1,4 +1,5 @@
 import { coreWorld } from '@/fixtures/inventory/core';
+import { browseInventory, browseWorld, typeOptions } from '@/fixtures/inventory/items-browse';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,6 +15,21 @@ const itemIds = (query: string, filters?: Parameters<typeof searchInventory>[2])
   searchInventory(coreWorld, query, filters).items.map((hit) => hit.item.id);
 
 describe('searchInventory', () => {
+  it('includes child results when the Type filter names a parent', () => {
+    const results = searchInventory(
+      browseWorld,
+      'sheet',
+      { typeId: 'type-bedding', within: null },
+      typeOptions.map((type) => ({
+        id: type.value,
+        label: type.label,
+        parentTypeId: type.parentTypeId,
+      }))
+    );
+    expect(results.items.map((hit) => hit.item.id)).toContain('tree-sheet-1');
+    expect(browseInventory.some((item) => item.id === 'tree-pillow-1')).toBe(true);
+    expect(results.items.map((hit) => hit.item.id)).not.toContain('tree-pillow-1');
+  });
   it('returns nothing for an empty query', () => {
     expect(resultCount(searchInventory(coreWorld, '   '))).toBe(0);
   });
