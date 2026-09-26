@@ -73,6 +73,7 @@ export const itemTypeFields = sqliteTable(
     expressionVersion: integer('expression_version'),
     expressionJson: text('expression_json'),
     allowOverride: integer('allow_override').notNull(),
+    defaultValuesJson: text('default_values_json').notNull().default('[]'),
     presentationJson: text('presentation_json').notNull(),
     archivedAt: text('archived_at'),
     replacedBy: text('replaced_by'),
@@ -116,6 +117,10 @@ export const itemTypeFields = sqliteTable(
     check(
       'ck_item_type_fields_presentation_json',
       sql`json_valid(${table.presentationJson}) AND json_type(${table.presentationJson}) = 'object'`
+    ),
+    check(
+      'ck_item_type_fields_default_values_json',
+      sql`json_valid(${table.defaultValuesJson}) AND json_type(${table.defaultValuesJson}) = 'array'`
     ),
     check(
       'ck_item_type_fields_expression_json',

@@ -4,6 +4,7 @@ import type { CatalogueMigrationStepSchema } from '../contract/rest-catalogue-mi
 import type { CatalogueDraftOperationSchema } from '../contract/rest-catalogue-schemas.js';
 import type { PersistedItemTypeField } from './catalogue-types.js';
 import type { CatalogueCompatibilityAssessment } from './compatibility-preview.js';
+import type { PrimitiveWireValue } from './value-types.js';
 
 export type DraftOperation = z.infer<typeof CatalogueDraftOperationSchema>;
 export type MigrationStepInput = z.infer<typeof CatalogueMigrationStepSchema>;
@@ -140,6 +141,7 @@ export interface CatalogueFieldWire {
   readonly expressionVersion: number | null;
   readonly expression: unknown | null;
   readonly allowOverride: boolean;
+  readonly defaultValues: PrimitiveWireValue[];
   readonly presentation: Record<string, unknown>;
   readonly archivedAt: string | null;
   /** The field that takes this archived field's new values, once authoring named one. */

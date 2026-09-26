@@ -5700,6 +5700,24 @@ export interface operations {
                 archivedAt: string | null;
                 /** @enum {string} */
                 cardinality: 'one' | 'many';
+                defaultValues: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 enumOptions: {
                   archivedAt: string | null;
                   /** Format: uuid */
@@ -5942,6 +5960,24 @@ export interface operations {
                 archivedAt: string | null;
                 /** @enum {string} */
                 cardinality: 'one' | 'many';
+                defaultValues: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 enumOptions: {
                   archivedAt: string | null;
                   /** Format: uuid */
@@ -6124,6 +6160,24 @@ export interface operations {
                 archivedAt: string | null;
                 /** @enum {string} */
                 cardinality: 'one' | 'many';
+                defaultValues: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 enumOptions: {
                   archivedAt: string | null;
                   /** Format: uuid */
@@ -6262,6 +6316,25 @@ export interface operations {
                 archivedAt?: string | null;
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
+                /** @description Values a client pre-fills on item create; [] clears. The server never applies them. */
+                defaultValues?: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 expression?: components['schemas']['ExpressionV1'] | null;
                 /**
                  * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
@@ -6415,6 +6488,24 @@ export interface operations {
                   archivedAt: string | null;
                   /** @enum {string} */
                   cardinality: 'one' | 'many';
+                  defaultValues: (
+                    | string
+                    | number
+                    | boolean
+                    | {
+                        /** Format: uuid */
+                        optionId: string;
+                      }
+                    | {
+                        amount: string;
+                        unit: string;
+                      }
+                    | {
+                        targetId: string;
+                        /** @enum {string} */
+                        targetKind: 'item' | 'location';
+                      }
+                  )[];
                   enumOptions: {
                     archivedAt: string | null;
                     /** Format: uuid */
@@ -6686,6 +6777,24 @@ export interface operations {
                 archivedAt: string | null;
                 /** @enum {string} */
                 cardinality: 'one' | 'many';
+                defaultValues: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 enumOptions: {
                   archivedAt: string | null;
                   /** Format: uuid */
@@ -6854,6 +6963,25 @@ export interface operations {
                 archivedAt?: string | null;
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
+                /** @description Values a client pre-fills on item create; [] clears. The server never applies them. */
+                defaultValues?: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 expression?: components['schemas']['ExpressionV1'] | null;
                 /**
                  * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
@@ -7178,6 +7306,25 @@ export interface operations {
                 archivedAt?: string | null;
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
+                /** @description Values a client pre-fills on item create; [] clears. The server never applies them. */
+                defaultValues?: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 expression?: components['schemas']['ExpressionV1'] | null;
                 /**
                  * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
@@ -7564,6 +7711,24 @@ export interface operations {
                 archivedAt: string | null;
                 /** @enum {string} */
                 cardinality: 'one' | 'many';
+                defaultValues: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 enumOptions: {
                   archivedAt: string | null;
                   /** Format: uuid */
@@ -8033,6 +8198,25 @@ export interface operations {
                 archivedAt?: string | null;
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
+                /** @description Values a client pre-fills on item create; [] clears. The server never applies them. */
+                defaultValues?: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 expression?: components['schemas']['ExpressionV1'] | null;
                 /**
                  * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
@@ -8387,6 +8571,24 @@ export interface operations {
                 archivedAt: string | null;
                 /** @enum {string} */
                 cardinality: 'one' | 'many';
+                defaultValues: (
+                  | string
+                  | number
+                  | boolean
+                  | {
+                      /** Format: uuid */
+                      optionId: string;
+                    }
+                  | {
+                      amount: string;
+                      unit: string;
+                    }
+                  | {
+                      targetId: string;
+                      /** @enum {string} */
+                      targetKind: 'item' | 'location';
+                    }
+                )[];
                 enumOptions: {
                   archivedAt: string | null;
                   /** Format: uuid */

@@ -101,6 +101,11 @@ Decimals are strings, references retain a stable target ID even when the target
 is missing, and measurements retain the field's fixed unit. The precise wire,
 SQLite, compatibility and migration rules are Inventory ADR-002 D5.
 
+A stored, non-reference field may declare `defaultValues`, canonical values that
+pass the field's own value rules (at most one on a `one` field) and never name
+an archived enum option. Clients pre-fill them on item create; the server never
+applies them, and changing one is compatible with no migration or re-send.
+
 Generic field writes validate the complete stable-ID field set against its
 exact catalogue revision: kind, cardinality, required fields, storage authority,
 archived selections and live reference constraints are one atomic check.

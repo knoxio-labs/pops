@@ -35,7 +35,8 @@ export const EXPRESSION_BINARY_OPS = [
 export const THEN_KEY = 'then' as const;
 export const ELSE_KEY = 'else' as const;
 
-const PrimitiveWireValueSchema = z.union([
+/** One canonical stored primitive value, as items, `set_default` and field defaults carry it. */
+export const PrimitiveWireValueSchema = z.union([
   z.string(),
   // Matches expression-parser.ts's primitive(): typeof value === 'number' &&
   // Number.isSafeInteger(value) — a decimal literal like 2.5 must be typed

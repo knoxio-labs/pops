@@ -31,7 +31,7 @@ function publishCandidate(harness: ReturnType<typeof openHarness>): void {
        SELECT 2, id, type_id, key, label, help, sort_order, kind, cardinality, required,
               storage, fixed_unit, reference_kinds_json, reference_type_ids_json,
               expression_version, expression_json, allow_override, presentation_json, archived_at,
-              replaced_by
+              replaced_by, default_values_json
        FROM item_type_fields WHERE revision = 1`
     )
     .run();
@@ -84,7 +84,7 @@ function publishContainmentGrant(harness: ReturnType<typeof openHarness>): void 
        SELECT 2, id, type_id, key, label, help, sort_order, kind, cardinality, required,
               storage, fixed_unit, reference_kinds_json, reference_type_ids_json,
               expression_version, expression_json, allow_override, presentation_json, archived_at,
-              replaced_by
+              replaced_by, default_values_json
        FROM item_type_fields WHERE revision = 1`
     )
     .run();

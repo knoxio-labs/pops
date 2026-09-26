@@ -2,6 +2,7 @@ import { validateCatalogueReplacements } from './authoring-replacements.js';
 import { failIssues, issue } from './authoring-shared.js';
 import { ExpressionValidationError } from './expression-types.js';
 import { validateCatalogueExpressions } from './expression-validator.js';
+import { checkFieldDefaultValues } from './field-default-values.js';
 
 import type { CatalogueIssue } from './authoring-types.js';
 import type {
@@ -154,6 +155,8 @@ function validateField(
   validateReferenceShape(field, typeIds, issues);
   validateStorageShape(field, issues);
   validateOptions(field, issues);
+  const defaults = checkFieldDefaultValues(field, field.defaultValues);
+  if (!defaults.ok) issues.push(defaults.issue);
 }
 
 function validateType(

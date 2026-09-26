@@ -26,6 +26,7 @@ function field(overrides: Partial<PersistedItemTypeField> = {}): PersistedItemTy
     expressionVersion: null,
     expressionJson: null,
     allowOverride: false,
+    defaultValues: [],
     presentation: {},
     archivedAt: null,
     replacedBy: null,
@@ -80,6 +81,17 @@ describe('classifyCatalogueCompatibility', () => {
     expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
       classification: 'compatible',
       affectedIds: ['field-b'],
+    });
+  });
+
+  it('treats a changed default as neutral: no change, no migration', () => {
+    const base = catalogue(1, [type([field({ defaultValues: ['old'] })])]);
+    const candidate = catalogue(2, [type([field({ defaultValues: ['new', 'other'] })])]);
+
+    expect(classifyCatalogueCompatibility(base, candidate)).toEqual({
+      classification: 'compatible',
+      affectedIds: [],
+      changes: [],
     });
   });
 

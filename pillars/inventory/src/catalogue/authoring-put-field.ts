@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { and, eq } from 'drizzle-orm';
 
-import { itemTypeFields, itemTypes } from '../db/schema.js';
+import { fieldEnumOptions, itemTypeFields, itemTypes } from '../db/schema.js';
 import { fieldValues, type FieldValues } from './authoring-put-field-shape.js';
 import { choose } from './authoring-put-shared.js';
 import {
@@ -12,9 +12,11 @@ import {
   issue,
   persistedFieldRow,
 } from './authoring-shared.js';
+import { checkFieldDefaultValues } from './field-default-values.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
 import type { DraftOperation } from './authoring-types.js';
+import type { PrimitiveWireValue } from './value-types.js';
 
 interface FieldWriteContext {
   readonly db: CommandDb;
@@ -55,11 +57,42 @@ function writeField(context: FieldWriteContext): void {
         expressionVersion: row.expressionVersion,
         expressionJson: row.expressionJson,
         allowOverride: row.allowOverride,
+        defaultValuesJson: row.defaultValuesJson,
         presentationJson: row.presentationJson,
         archivedAt: row.archivedAt,
       },
     })
     .run();
+}
+
+function checkedDefaultValues(
+  db: CommandDb,
+  revision: number,
+  id: string,
+  context: { readonly values: FieldValues; readonly supplied: boolean }
+): readonly PrimitiveWireValue[] {
+  const { values, supplied } = context;
+  if (!supplied) return values.defaultValues;
+  const options = db
+    .select({ id: fieldEnumOptions.id, archivedAt: fieldEnumOptions.archivedAt })
+    .from(fieldEnumOptions)
+    .where(and(eq(fieldEnumOptions.revision, revision), eq(fieldEnumOptions.fieldId, id)))
+    .all();
+  const checked = checkFieldDefaultValues(
+    {
+      ...values,
+      id,
+      enumOptionIds: new Set(options.map((option) => option.id)),
+      archivedEnumOptionIds: new Set(
+        options.filter((option) => option.archivedAt !== null).map((option) => option.id)
+      ),
+      referenceKinds: new Set(values.referenceKinds),
+      referenceTypeIds: new Set(values.referenceTypeIds),
+    },
+    values.defaultValues
+  );
+  if (!checked.ok) failIssues([checked.issue]);
+  return checked.values;
 }
 
 /** Applies a field create or mutable update to a draft snapshot. */
@@ -97,5 +130,10 @@ export function applyPutField(
     operation.key.toLocaleLowerCase() !== current.key.toLocaleLowerCase()
   )
     failIssues([issue(id, 'key', 'immutable_identity', 'Published field keys cannot be changed')]);
-  writeField({ db, revision, current, operation, id, values: fieldValues(id, current, operation) });
+  const values = fieldValues(id, current, operation);
+  const defaultValues = checkedDefaultValues(db, revision, id, {
+    values,
+    supplied: operation.defaultValues !== undefined,
+  });
+  writeField({ db, revision, current, operation, id, values: { ...values, defaultValues } });
 }
