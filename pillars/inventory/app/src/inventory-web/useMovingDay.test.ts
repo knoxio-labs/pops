@@ -22,7 +22,7 @@ const movingDay: WebMovingGetResponse = {
   boxes: [
     {
       code: 'K04',
-      contents: [{ code: null, containerId: 'box-2', id: 'thing-2', name: 'Kettle' }],
+      contents: [{ code: null, containerId: 'box-2', id: 'thing-2', name: 'Kettle', quantity: 1 }],
       count: 1,
       destination: { label: 'Banksia Road flat', optionKey: 'banksia' },
       id: 'box-2',
@@ -45,10 +45,10 @@ const movingDay: WebMovingGetResponse = {
     { label: 'Banksia Road flat', optionKey: 'banksia' },
     { label: 'Storage', optionKey: 'storage' },
   ],
-  inHand: [{ code: 'H1', id: 'hand-1', name: 'Lamp' }],
+  inHand: [{ code: 'H1', id: 'hand-1', name: 'Lamp', quantity: 1 }],
   loose: [
     {
-      items: [{ code: null, id: 'loose-1', name: 'Plate' }],
+      items: [{ code: null, id: 'loose-1', name: 'Plate', quantity: 1 }],
       room: { id: 'kitchen', name: 'Kitchen' },
     },
   ],
