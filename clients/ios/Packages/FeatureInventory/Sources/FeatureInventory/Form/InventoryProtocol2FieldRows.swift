@@ -123,35 +123,14 @@ internal struct InventoryProtocol2FieldRow: View {
                     fieldLabel: field.label, index: index, count: count)
             )
             .accessibilityHint("Drag to reorder")
-    }
-}
-
-private struct InventoryProtocol2EntryDropDelegate: DropDelegate {
-    let targetID: String
-    let entries: [InventoryProtocol2DraftEntry]
-    @Binding var draggedID: String?
-    let move: (String, Int) -> Void
-
-    func validateDrop(info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [.plainText])
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func dropEntered(info: DropInfo) {
-        guard let draggedID, draggedID != targetID,
-            let sourceIndex = entries.firstIndex(where: { $0.id == draggedID }),
-            let targetIndex = entries.firstIndex(where: { $0.id == targetID }),
-            sourceIndex != targetIndex
-        else { return }
-        move(draggedID, targetIndex > sourceIndex ? 1 : -1)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        draggedID = nil
-        return true
+            .accessibilityAction(named: "Move earlier") {
+                guard index > 0 else { return }
+                move(entry.id, -1)
+            }
+            .accessibilityAction(named: "Move later") {
+                guard index < count - 1 else { return }
+                move(entry.id, 1)
+            }
     }
 }
 
