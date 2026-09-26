@@ -215,7 +215,7 @@ internal struct InventoryScanViewModelTests {
 private enum InventoryRecordFixture {
     static func record(_ id: String, _ name: String, code: String?) -> InventoryRecord {
         InventoryRecord(
-            id: id, name: name, typeKey: nil, typeName: nil, code: code,
+            id: id, name: name, typeKey: nil, typeKeys: [], typeName: nil, code: code,
             quantity: InventoryQuantity(count: 1), lifecycle: .active, access: nil,
             placement: .hand, path: [], sync: .synchronized, photo: nil,
             createdAt: InventoryFixture.epoch)

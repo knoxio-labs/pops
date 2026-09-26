@@ -87,6 +87,43 @@ internal struct InventoryCatalogueRepairFormTests {
         #expect(Set(sent.values.map(\.fieldId)) == [Fixture.length.id, Fixture.capacity.id])
     }
 
+    @Test("a queued create re-seeds a field inherited by its current type")
+    func createPrefillUsesInheritedField() async throws {
+        let size = InventoryCatalogueField(
+            id: "f-size", typeId: "bedding", key: "size", label: "Size", sortOrder: 0,
+            kind: .shortText, cardinality: .one, required: false, storage: .stored)
+        let catalogue = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 7, minimumProtocol: 2),
+            types: [
+                InventoryCatalogueType(
+                    id: "bedding", key: "bedding", label: "Bedding", sortOrder: 0,
+                    fields: [size]),
+                InventoryCatalogueType(
+                    id: "sheet", key: "sheet", label: "Sheet", sortOrder: 1,
+                    parentTypeId: "bedding"),
+            ])
+        let create = InventoryCommand.createProtocol2Item(
+            InventoryNewProtocol2Item(
+                id: "sheet", name: "Sheet", catalogueRevision: 7, typeId: "sheet",
+                values: [.init(fieldId: size.id, values: [.string("Queen")])], placement: .hand))
+        let repair = InventoryRepair(
+            id: "inherited", entityKind: .item, entityId: "sheet", kind: .catalogueChanged,
+            catalogue: InventoryCatalogueRepair(
+                queued: create, changes: [], openedAtRevision: 7, currentRevision: 7),
+            openedAt: FormFixture.epoch)
+        let store = RecordingFormStore(
+            FormFixtureSource(
+                protocol2Catalogue: catalogue,
+                ledger: InventoryReplicaSyncLedger(repairs: [repair])))
+        let form = InventoryItemFormModel(
+            request: .repair("inherited"), store: store, suggester: .unbound)
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        #expect(form.phase == .ready)
+        #expect(form.protocol2Draft?.values(for: size) == [.string("Queen")])
+    }
+
     @Test("a repair that settled elsewhere leaves nothing to edit")
     func goneRepair() async throws {
         let form = Self.form(Fixture.store(repairs: []))

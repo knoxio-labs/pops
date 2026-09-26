@@ -114,7 +114,7 @@ public struct InventorySearchFilter: Equatable, Sendable {
         (includesInactive || record.isActive)
             && matchesPlacement(record.placement)
             && matchesContainer(record.access)
-            && (type == nil || record.typeKey == type?.key)
+            && (type.map { record.typeKeys.contains($0.key) } ?? true)
             && (quantity == .any || record.quantity.count > 1)
             && matchesMissing(record)
             && matchesSync(record.sync)
