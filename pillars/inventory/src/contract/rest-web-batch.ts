@@ -17,22 +17,26 @@ export const WEB_BATCH_COLUMNS = ['name', 'type', 'quantity', 'code', 'where', '
 export type WebBatchColumn = (typeof WEB_BATCH_COLUMNS)[number];
 
 /** One grid row; every cell is text and omitted cells are treated as empty. */
-export const WebBatchRowSchema = z.object({
-  name: z.string().default(''),
-  type: z.string().default(''),
-  quantity: z.string().default(''),
-  code: z.string().default(''),
-  where: z.string().default(''),
-  note: z.string().default(''),
-});
+export const WebBatchRowSchema = z
+  .object({
+    name: z.string().default(''),
+    type: z.string().default(''),
+    quantity: z.string().default(''),
+    code: z.string().default(''),
+    where: z.string().default(''),
+    note: z.string().default(''),
+  })
+  .strict();
 
 /** The request body for partial-accept web item creation. */
-export const WebBatchBodySchema = z.object({
-  rows: z.array(WebBatchRowSchema).min(1).max(WEB_BATCH_MAX_ROWS),
-  /** Where a row with an empty `where` cell is placed; omitted means in hand. */
-  destination: SyncPlacementSchema.optional(),
-  dryRun: z.boolean().default(false),
-});
+export const WebBatchBodySchema = z
+  .object({
+    rows: z.array(WebBatchRowSchema).min(1).max(WEB_BATCH_MAX_ROWS),
+    /** Where a row with an empty `where` cell is placed; omitted means in hand. */
+    destination: SyncPlacementSchema.optional(),
+    dryRun: z.boolean().default(false),
+  })
+  .strict();
 
 /** One validation problem attached to a row cell. */
 export const WebBatchIssueSchema = z.object({
