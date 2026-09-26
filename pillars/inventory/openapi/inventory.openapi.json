@@ -23244,9 +23244,15 @@
                                 },
                                 "name": {
                                   "type": "string"
+                                },
+                                "quantity": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
                                 }
                               },
-                              "required": ["id", "name", "code", "containerId"],
+                              "required": ["id", "name", "code", "quantity", "containerId"],
                               "type": "object"
                             },
                             "type": "array"
@@ -23369,9 +23375,15 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "quantity": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
                           }
                         },
-                        "required": ["id", "name", "code"],
+                        "required": ["id", "name", "code", "quantity"],
                         "type": "object"
                       },
                       "type": "array"
@@ -23393,9 +23405,15 @@
                                 },
                                 "name": {
                                   "type": "string"
+                                },
+                                "quantity": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
                                 }
                               },
-                              "required": ["id", "name", "code"],
+                              "required": ["id", "name", "code", "quantity"],
                               "type": "object"
                             },
                             "type": "array"

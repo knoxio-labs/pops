@@ -10173,6 +10173,7 @@ export interface operations {
                 containerId: string;
                 id: string;
                 name: string;
+                quantity: number;
               }[];
               count: number;
               destination: {
@@ -10207,12 +10208,14 @@ export interface operations {
               code: string | null;
               id: string;
               name: string;
+              quantity: number;
             }[];
             loose: {
               items: {
                 code: string | null;
                 id: string;
                 name: string;
+                quantity: number;
               }[];
               room: {
                 id: string;
