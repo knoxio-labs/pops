@@ -29,10 +29,22 @@ internal struct InventoryFormTypeRow: View {
     @Binding internal var chosen: String
 
     internal var body: some View {
-        Picker("Type", selection: $chosen) {
-            ForEach(InventoryFormType.names, id: \.self) { Text($0).tag($0) }
+        NavigationLink {
+            InventoryFormTypePicker(
+                selection: Binding(
+                    get: { chosen == InventoryFormType.none ? nil : chosen },
+                    set: { chosen = $0 ?? InventoryFormType.none }
+                )
+            )
+        } label: {
+            HStack {
+                Text("Type")
+                Spacer(minLength: PopsSpacing.sm)
+                Text(chosen)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
         }
-        .pickerStyle(.menu)
+        .accessibilityLabel("Type, \(chosen)")
     }
 }
 
