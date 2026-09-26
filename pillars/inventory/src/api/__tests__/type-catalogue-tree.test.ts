@@ -404,6 +404,9 @@ describe('type catalogue parent trees', () => {
       definitionId: created.type.id,
       path: 'parentTypeId',
     });
+    expect(result.response.body.issues).toContainEqual(
+      expect.objectContaining({ message: 'A type cannot be its own parent' })
+    );
   });
 
   it('refuses to unarchive a child whose parent remains archived', async () => {
