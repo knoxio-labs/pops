@@ -2789,6 +2789,7 @@ export type MobileInventoryCatalogueRevisionResponses = {
         allowOverride: boolean;
         archivedAt: string | null;
         cardinality: 'one' | 'many';
+        defaultValues?: Array<unknown>;
         enumOptions: Array<{
           archivedAt: string | null;
           id: string;

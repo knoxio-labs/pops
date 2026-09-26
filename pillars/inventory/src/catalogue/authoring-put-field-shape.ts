@@ -1,10 +1,12 @@
 import { choose, definitionText } from './authoring-put-shared.js';
 import { failIssues, issue } from './authoring-shared.js';
 import { asCardinality, asPrimitiveKind, asStorage } from './catalogue-field-shape.js';
+import { parsePrimitiveValueArray } from './catalogue-json.js';
 
 import type { itemTypeFields } from '../db/schema.js';
 import type { DraftOperation } from './authoring-types.js';
 import type { PersistedItemTypeField } from './catalogue-types.js';
+import type { PrimitiveWireValue } from './value-types.js';
 
 export interface FieldValues {
   readonly key: string;
@@ -19,6 +21,7 @@ export interface FieldValues {
   readonly expressionVersion: number | null;
   readonly expression: unknown | null;
   readonly allowOverride: boolean;
+  readonly defaultValues: readonly PrimitiveWireValue[];
   readonly presentation: Record<string, unknown>;
   readonly archivedAt: string | null;
 }
@@ -41,6 +44,7 @@ function fieldDefaults(
       expressionVersion: null,
       expression: null,
       allowOverride: false,
+      defaultValues: [],
       presentation: {},
       archivedAt: null,
     };
@@ -56,6 +60,10 @@ function fieldDefaults(
     expressionVersion: current.expressionVersion,
     expression: current.expressionJson === null ? null : JSON.parse(current.expressionJson),
     allowOverride: current.allowOverride === 1,
+    defaultValues: parsePrimitiveValueArray(
+      current.defaultValuesJson,
+      `field ${id} default values`
+    ),
     presentation: JSON.parse(current.presentationJson) as Record<string, unknown>,
     archivedAt: current.archivedAt,
   };
@@ -180,6 +188,7 @@ export function fieldValues(
     expressionVersion,
     expression,
     allowOverride,
+    defaultValues: choose(operation.defaultValues, defaults.defaultValues),
     fixedUnit: choose(operation.fixedUnit, defaults.fixedUnit),
     referenceKinds: choose(operation.referenceKinds, defaults.referenceKinds),
     referenceTypeIds: choose(operation.referenceTypeIds, defaults.referenceTypeIds),

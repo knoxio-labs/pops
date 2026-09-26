@@ -282,7 +282,15 @@ describe('inventory MCP schema fidelity', () => {
 
     const producerPutField = variant(producerVariants, 'put_field');
     const mcpPutField = variant(catalogueOperationSchema.oneOf, 'put_field');
-    for (const key of ['key', 'label', 'help', 'fixedUnit', 'referenceKinds', 'referenceTypeIds']) {
+    for (const key of [
+      'key',
+      'label',
+      'help',
+      'fixedUnit',
+      'referenceKinds',
+      'referenceTypeIds',
+      'defaultValues',
+    ]) {
       expect(limits(mcpPutField[key]), key).toEqual(limits(producerPutField[key]));
     }
 

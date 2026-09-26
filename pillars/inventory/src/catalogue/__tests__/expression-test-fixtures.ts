@@ -19,6 +19,7 @@ export function expressionField(
     archivedAt: null,
     archivedEnumOptionIds: new Set(),
     cardinality: 'one',
+    defaultValues: [],
     enumOptionIds: new Set(),
     enumOptions: [],
     expressionJson: null,

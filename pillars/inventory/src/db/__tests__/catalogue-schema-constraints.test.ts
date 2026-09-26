@@ -1,6 +1,6 @@
 /**
  * POPS-4356: the SQL-level invariants declared in `db/schema/catalogue.ts` and
- * `db/schema/catalogue-history.ts` (migrations 0017-0020) that no test yet
+ * `db/schema/catalogue-history.ts` (migrations 0017-0021) that no test yet
  * exercises directly: uniqueness within a revision, JSON shape checks, the
  * one-open-draft rule, the append-only and terminal-immutability triggers, and
  * the stored/computed field shape. `ck_item_types_replaced_by` and
@@ -350,6 +350,25 @@ describe('item_type_fields', () => {
     expect(() => insertField()).not.toThrow();
   });
 
+  it('stores no default unless one is given, and accepts an array default', () => {
+    insertField();
+    insertField({ id: 'field-2', key: 'Size', default_values_json: '["M"]' });
+    expect(
+      raw
+        .prepare(
+          'SELECT id, default_values_json FROM item_type_fields WHERE revision = 2 ORDER BY id'
+        )
+        .all()
+    ).toEqual([
+      { id: 'field-1', default_values_json: '[]' },
+      { id: 'field-2', default_values_json: '["M"]' },
+    ]);
+  });
+
+  it('refuses a null default', () => {
+    expect(() => insertField({ default_values_json: null })).toThrow(/NOT NULL constraint failed/);
+  });
+
   it('accepts a well-formed computed field', () => {
     expect(() =>
       insertField({
@@ -393,6 +412,17 @@ describe('item_type_fields', () => {
       'non-object presentation',
       { presentation_json: '[]' },
       'ck_item_type_fields_presentation_json',
+    ],
+    [
+      'a non-array default',
+      { default_values_json: '"M"' },
+      'ck_item_type_fields_default_values_json',
+    ],
+    ['an object default', { default_values_json: '{}' }, 'ck_item_type_fields_default_values_json'],
+    [
+      'invalid JSON in a default',
+      { default_values_json: 'not-json' },
+      'ck_item_type_fields_default_values_json',
     ],
     [
       'invalid JSON in a computed expression',

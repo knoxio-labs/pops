@@ -106,11 +106,12 @@ function rewindToBeforeMigration(): void {
     DROP TABLE computed_dependency_index_state;
     ALTER TABLE item_types DROP COLUMN replaced_by;
     ALTER TABLE item_type_fields DROP COLUMN replaced_by;
+    ALTER TABLE item_type_fields DROP COLUMN default_values_json;
   `);
   const removed = opened.raw
     .prepare('DELETE FROM __drizzle_migrations WHERE created_at >= ?')
     .run(MIGRATION_WHEN);
-  expect(removed.changes).toBe(2);
+  expect(removed.changes).toBe(3);
   opened.raw.close();
 }
 
