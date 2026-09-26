@@ -171,6 +171,9 @@ import type {
   SyncMutationsData,
   SyncMutationsErrors,
   SyncMutationsResponses,
+  SyncReportLedgerData,
+  SyncReportLedgerErrors,
+  SyncReportLedgerResponses,
   SyncSnapshotData,
   SyncSnapshotErrors,
   SyncSnapshotResponses,
@@ -247,6 +250,8 @@ import type {
   WebSearchListResponses,
   WebSummaryGetData,
   WebSummaryGetResponses,
+  WebSyncLedgerGetData,
+  WebSyncLedgerGetResponses,
 } from './types.gen';
 
 export type Options<
@@ -1061,6 +1066,23 @@ export const syncItemEvents = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Store a device's latest sync ledger report
+ */
+export const syncReportLedger = <ThrowOnError extends boolean = false>(
+  options?: Options<SyncReportLedgerData, ThrowOnError>
+): RequestResult<SyncReportLedgerResponses, SyncReportLedgerErrors, ThrowOnError> =>
+  (options?.client ?? client).post<SyncReportLedgerResponses, SyncReportLedgerErrors, ThrowOnError>(
+    {
+      url: '/sync/ledger',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    }
+  );
+
+/**
  * Apply up to 50 mutations in order, each in its own transaction, idempotently
  */
 export const syncMutations = <ThrowOnError extends boolean = false>(
@@ -1477,5 +1499,16 @@ export const webSummaryGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebSummaryGetResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<WebSummaryGetResponses, unknown, ThrowOnError>({
     url: '/web/summary',
+    ...options,
+  });
+
+/**
+ * Every device's latest sync ledger, merged
+ */
+export const webSyncLedgerGet = <ThrowOnError extends boolean = false>(
+  options?: Options<WebSyncLedgerGetData, ThrowOnError>
+): RequestResult<WebSyncLedgerGetResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<WebSyncLedgerGetResponses, unknown, ThrowOnError>({
+    url: '/web/sync/ledger',
     ...options,
   });

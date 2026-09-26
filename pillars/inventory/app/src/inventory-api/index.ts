@@ -64,6 +64,7 @@ export {
   syncChanges,
   syncItemEvents,
   syncMutations,
+  syncReportLedger,
   syncSnapshot,
   typesCatalogue,
   typesManageAbandonDraft,
@@ -90,6 +91,7 @@ export {
   webLocationsTallies,
   webSearchList,
   webSummaryGet,
+  webSyncLedgerGet,
 } from './sdk.gen';
 export type {
   ClientOptions,
@@ -367,6 +369,11 @@ export type {
   SyncMutationsErrors,
   SyncMutationsResponse,
   SyncMutationsResponses,
+  SyncReportLedgerData,
+  SyncReportLedgerError,
+  SyncReportLedgerErrors,
+  SyncReportLedgerResponse,
+  SyncReportLedgerResponses,
   SyncSnapshotData,
   SyncSnapshotError,
   SyncSnapshotErrors,
@@ -494,4 +501,7 @@ export type {
   WebSummaryGetData,
   WebSummaryGetResponse,
   WebSummaryGetResponses,
+  WebSyncLedgerGetData,
+  WebSyncLedgerGetResponse,
+  WebSyncLedgerGetResponses,
 } from './types.gen';
