@@ -158,7 +158,7 @@ extension InventoryItemFormModel {
     }
 
     internal func suggestCode() async {
-        guard draft.code.assist.canSuggest, !isOffline else { return }
+        guard draft.code.assist.canSuggest, !isOffline, draft.isNamed else { return }
         draft.code.assist = .suggesting
         do {
             let suggestions = try await suggester.suggest(

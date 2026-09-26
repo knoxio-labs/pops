@@ -72,6 +72,25 @@ internal struct InventoryFormModelTests {
         #expect(store.performed.isEmpty)
     }
 
+    @Test("an empty name does not ask the server for a code")
+    func emptyNameDoesNotSuggest() async {
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let asked = Counter()
+        let form = model(
+            store,
+            suggester: InventoryCodeSuggester { _, _, _ in
+                await asked.increment()
+                return ["D001"]
+            })
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        await form.suggestCode()
+
+        #expect(await asked.value == 0)
+        #expect(form.draft.code.assist == .idle)
+    }
+
     @Test("an item's own code is not a collision when editing it")
     func ownCodeIsNotACollision() async {
         let store = RecordingFormStore(
@@ -122,6 +141,7 @@ internal struct InventoryFormModelTests {
             store, suggester: InventoryCodeSuggester { _, _, _ in ["CBL-0042", "CBL-0043"] })
         let loading = await form.startAndAwaitReady()
         defer { loading.cancel() }
+        form.draft.name = "Cable"
 
         await form.suggestCode()
         #expect(form.draft.code.value == "CBL-0042")
@@ -142,6 +162,7 @@ internal struct InventoryFormModelTests {
             store, suggester: InventoryCodeSuggester { _, _, _ in ["CBL-0042"] })
         let loading = await form.startAndAwaitReady()
         defer { loading.cancel() }
+        form.draft.name = "Cable"
 
         await form.suggestCode()
 
@@ -155,6 +176,7 @@ internal struct InventoryFormModelTests {
         let form = model(store)
         let loading = await form.startAndAwaitReady()
         defer { loading.cancel() }
+        form.draft.name = "Drill"
 
         await form.suggestCode()
 
@@ -177,6 +199,7 @@ internal struct InventoryFormModelTests {
             })
         let loading = await form.startAndAwaitReady()
         defer { loading.cancel() }
+        form.draft.name = "Drill"
 
         await form.suggestCode()
 
