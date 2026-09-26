@@ -20391,6 +20391,10 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "connectionsChangedAt": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "groups": {
                       "items": {
                         "additionalProperties": false,
@@ -20450,7 +20454,7 @@
                       "type": "integer"
                     }
                   },
-                  "required": ["headSeq", "groups"],
+                  "required": ["headSeq", "groups", "connectionsChangedAt"],
                   "type": "object"
                 }
               }

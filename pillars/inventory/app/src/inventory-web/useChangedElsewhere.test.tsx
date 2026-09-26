@@ -32,7 +32,7 @@ function group(eventCount = 1): Head['groups'][number] {
 }
 
 function head(headSeq: number, groups: Head['groups'] = []): Head {
-  return { headSeq, groups };
+  return { headSeq, groups, connectionsChangedAt: null };
 }
 
 async function flushPromises(): Promise<void> {

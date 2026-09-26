@@ -11,6 +11,7 @@
 import { and, asc, count, eq, or } from 'drizzle-orm';
 
 import { items, itemConnections } from '../schema.js';
+import { touchConnectionsChanged } from './connections-changed.js';
 import {
   ConnectionConflictError,
   ConnectionItemNotFoundError,
@@ -136,6 +137,7 @@ export function create(db: InventoryDb, input: CreateConnectionInput): ItemConne
 
   const created = findByPair(db, itemAId, itemBId);
   if (!created) throw new ConnectionNotFoundError(itemAId, itemBId);
+  touchConnectionsChanged(db, new Date().toISOString());
   return created;
 }
 
@@ -149,6 +151,7 @@ function deleteConnection(db: InventoryDb, inputA: string, inputB: string): void
   if (!row) throw new ConnectionNotFoundError(itemAId, itemBId);
 
   db.delete(itemConnections).where(eq(itemConnections.id, row.id)).run();
+  touchConnectionsChanged(db, new Date().toISOString());
 }
 
 export { deleteConnection as delete };

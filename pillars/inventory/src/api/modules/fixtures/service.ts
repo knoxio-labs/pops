@@ -1,6 +1,12 @@
 import { and, asc, count, eq } from 'drizzle-orm';
 
-import { fixtures, items, type InventoryDb, itemFixtureConnections } from '../../../db/index.js';
+import {
+  fixtures,
+  items,
+  type InventoryDb,
+  itemFixtureConnections,
+  touchConnectionsChanged,
+} from '../../../db/index.js';
 import { ConflictError, NotFoundError } from '../../shared/errors.js';
 import {
   isForeignKeyConstraintError,
@@ -71,6 +77,7 @@ export function createFixture(db: InventoryDb, input: CreateFixtureInput): Fixtu
     .returning()
     .all();
   if (!row) throw new Error('Failed to create fixture');
+  touchConnectionsChanged(db, NOW());
   return row;
 }
 
@@ -84,12 +91,14 @@ export function updateFixture(db: InventoryDb, id: string, input: UpdateFixtureI
 
   const [row] = db.update(fixtures).set(patch).where(eq(fixtures.id, id)).returning().all();
   if (!row) throw new NotFoundError('Fixture', id);
+  touchConnectionsChanged(db, NOW());
   return row;
 }
 
 export function deleteFixture(db: InventoryDb, id: string): void {
   const result = db.delete(fixtures).where(eq(fixtures.id, id)).run();
   if (result.changes === 0) throw new NotFoundError('Fixture', id);
+  touchConnectionsChanged(db, NOW());
 }
 
 export function connectItemToFixture(
@@ -100,6 +109,7 @@ export function connectItemToFixture(
   try {
     const [row] = db.insert(itemFixtureConnections).values({ itemId, fixtureId }).returning().all();
     if (!row) throw new Error('Failed to create item-fixture connection');
+    touchConnectionsChanged(db, NOW());
     return row;
   } catch (err) {
     if (isUniqueConstraintError(err)) {
@@ -131,6 +141,7 @@ export function disconnectItemFromFixture(
   if (result.changes === 0) {
     throw new NotFoundError('Item-fixture connection', `${itemId}-${fixtureId}`);
   }
+  touchConnectionsChanged(db, NOW());
 }
 
 export function listFixturesForItem(

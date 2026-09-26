@@ -9226,6 +9226,7 @@ export interface operations {
         };
         content: {
           'application/json': {
+            connectionsChangedAt: string | null;
             groups: {
               actorId: string | null;
               /** @enum {string} */

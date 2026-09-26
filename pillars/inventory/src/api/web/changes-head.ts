@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, max, ne } from 'drizzle-orm';
 
-import { events, type EventActorKind } from '../../db/index.js';
+import { events, readConnectionsChangedAt, type EventActorKind } from '../../db/index.js';
 import { ValidationError } from '../shared/errors.js';
 
 import type { z } from 'zod';
@@ -145,10 +145,12 @@ export function readChangesHead(
   query: { since?: number; entityId?: string }
 ): WebChangesHead {
   const headSeq = readHeadSeq(db);
-  if (query.since === undefined) return { headSeq, groups: [] };
+  const connectionsChangedAt = readConnectionsChangedAt(db);
+  if (query.since === undefined) return { headSeq, groups: [], connectionsChangedAt };
   if (query.since > headSeq) throw new ValidationError('since is ahead of the head');
   return {
     headSeq,
     groups: groupChangedEvents(readChangedEvents(db, query.since, query.entityId)),
+    connectionsChangedAt,
   };
 }
