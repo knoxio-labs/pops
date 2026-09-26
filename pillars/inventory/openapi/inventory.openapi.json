@@ -11913,6 +11913,12 @@
                             },
                             "type": "array"
                           },
+                          "parentTypeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "presentation": {
                             "additionalProperties": {},
                             "type": "object"
@@ -11940,6 +11946,7 @@
                           "id",
                           "key",
                           "label",
+                          "parentTypeId",
                           "description",
                           "sortOrder",
                           "capabilities",
@@ -12679,6 +12686,12 @@
                             },
                             "type": "array"
                           },
+                          "parentTypeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "presentation": {
                             "additionalProperties": {},
                             "type": "object"
@@ -12706,6 +12719,7 @@
                           "id",
                           "key",
                           "label",
+                          "parentTypeId",
                           "description",
                           "sortOrder",
                           "capabilities",
@@ -13294,6 +13308,12 @@
                             },
                             "type": "array"
                           },
+                          "parentTypeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "presentation": {
                             "additionalProperties": {},
                             "type": "object"
@@ -13321,6 +13341,7 @@
                           "id",
                           "key",
                           "label",
+                          "parentTypeId",
                           "description",
                           "sortOrder",
                           "capabilities",
@@ -13536,6 +13557,12 @@
                               },
                               "maxItems": 50,
                               "type": "array"
+                            },
+                            "parentTypeId": {
+                              "format": "uuid",
+                              "nullable": true,
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
                             },
                             "presentation": {
                               "additionalProperties": {},
@@ -14337,6 +14364,12 @@
                                 },
                                 "type": "array"
                               },
+                              "parentTypeId": {
+                                "format": "uuid",
+                                "nullable": true,
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
                               "presentation": {
                                 "additionalProperties": {},
                                 "type": "object"
@@ -14364,6 +14397,7 @@
                               "id",
                               "key",
                               "label",
+                              "parentTypeId",
                               "description",
                               "sortOrder",
                               "capabilities",
@@ -15242,6 +15276,12 @@
                             },
                             "type": "array"
                           },
+                          "parentTypeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "presentation": {
                             "additionalProperties": {},
                             "type": "object"
@@ -15269,6 +15309,7 @@
                           "id",
                           "key",
                           "label",
+                          "parentTypeId",
                           "description",
                           "sortOrder",
                           "capabilities",
@@ -15569,6 +15610,12 @@
                               },
                               "maxItems": 50,
                               "type": "array"
+                            },
+                            "parentTypeId": {
+                              "format": "uuid",
+                              "nullable": true,
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
                             },
                             "presentation": {
                               "additionalProperties": {},
@@ -16621,6 +16668,12 @@
                               },
                               "maxItems": 50,
                               "type": "array"
+                            },
+                            "parentTypeId": {
+                              "format": "uuid",
+                              "nullable": true,
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
                             },
                             "presentation": {
                               "additionalProperties": {},
@@ -18101,6 +18154,12 @@
                             },
                             "type": "array"
                           },
+                          "parentTypeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "presentation": {
                             "additionalProperties": {},
                             "type": "object"
@@ -18128,6 +18187,7 @@
                           "id",
                           "key",
                           "label",
+                          "parentTypeId",
                           "description",
                           "sortOrder",
                           "capabilities",
@@ -19194,6 +19254,12 @@
                               },
                               "maxItems": 50,
                               "type": "array"
+                            },
+                            "parentTypeId": {
+                              "format": "uuid",
+                              "nullable": true,
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
                             },
                             "presentation": {
                               "additionalProperties": {},
@@ -20587,6 +20653,12 @@
                           },
                           "type": "array"
                         },
+                        "parentTypeId": {
+                          "format": "uuid",
+                          "nullable": true,
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "presentation": {
                           "additionalProperties": {},
                           "type": "object"
@@ -20614,6 +20686,7 @@
                         "id",
                         "key",
                         "label",
+                        "parentTypeId",
                         "description",
                         "sortOrder",
                         "capabilities",
