@@ -57,5 +57,16 @@
   "cerebrum.emit.dateRangeRequiredForSummary": "O intervalo de datas é obrigatório para o modo resumo",
 
   "core.corrections.revisionFailed": "Falha ao revisar ChangeSet: {{detail}}",
-  "core.corrections.revisionFailedGeneric": "Falha ao revisar ChangeSet"
+  "core.corrections.revisionFailedGeneric": "Falha ao revisar ChangeSet",
+
+  "web.net.offline": "Não foi possível conectar ao servidor",
+  "web.net.timeout": "A solicitação expirou",
+  "web.client.unknown": "Algo deu errado",
+  "web.client.render_failed": "Algo deu errado",
+  "web.error.code": "Código do erro",
+  "web.error.copyDetails": "Copiar detalhes",
+  "web.error.notAvailable": "Não disponível",
+  "web.error.requestId": "ID da solicitação",
+  "web.error.retry": "Tentar novamente",
+  "web.error.showDetails": "Mostrar detalhes"
 }

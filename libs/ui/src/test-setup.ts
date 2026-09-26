@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
+import enAUErrors from '@pops/locales/en-AU/errors.json';
 import enAUUi from '@pops/locales/en-AU/ui.json';
 
 // jsdom ships neither ResizeObserver nor Element.scrollIntoView; cmdk and the
@@ -45,12 +46,13 @@ const i18n = createInstance();
 void i18n.use(initReactI18next).init({
   lng: 'en-AU',
   fallbackLng: 'en-AU',
-  ns: ['ui'],
+  ns: ['ui', 'errors'],
   defaultNS: 'ui',
   interpolation: { escapeValue: false },
   resources: {
     'en-AU': {
       ui: enAUUi,
+      errors: enAUErrors,
     },
   },
 });

@@ -113,4 +113,36 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('fallback: boom')).toBeInTheDocument();
     expect(reloadForStaleChunk).not.toHaveBeenCalled();
   });
+
+  it('shows an API error safe message, code, and request ID', () => {
+    const apiError = Object.assign(new Error('Item not found'), {
+      code: 'inventory.items.not_found',
+      requestId: 'req-123',
+      retryable: false,
+    });
+
+    render(
+      <ErrorBoundary>
+        <Throws error={apiError} />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByRole('heading', { name: 'Item not found' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Error code')).toHaveTextContent('inventory.items.not_found');
+    expect(screen.queryByText('req-123')).not.toBeVisible();
+    screen.getByText('Show details').click();
+    expect(screen.getByText('req-123')).toBeVisible();
+  });
+
+  it('does not expose an untyped render error message', () => {
+    render(
+      <ErrorBoundary>
+        <Throws error={new Error('database connection string leaked')} />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument();
+    expect(screen.queryByText('database connection string leaked')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Error code')).toHaveTextContent('web.client.render_failed');
+  });
 });
