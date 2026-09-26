@@ -8,6 +8,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import { catalogueRevisions, fieldEnumOptions, itemTypeFields, itemTypes } from '../db/schema.js';
 import { materializeType } from './catalogue-materialize.js';
+import { resolveTypeTree } from './catalogue-tree.js';
 
 import type { CommandDb } from '../db/command-db.js';
 import type {
@@ -26,6 +27,8 @@ export type {
   PersistedItemType,
   PersistedItemTypeField,
   PersistedTypeLookup,
+  UnresolvedItemType,
+  UnresolvedItemTypeField,
 } from './catalogue-types.js';
 
 function asRevision(row: typeof catalogueRevisions.$inferSelect): PersistedCatalogueRevision {
@@ -106,11 +109,11 @@ export function loadCatalogue(
     .all();
   return {
     revision: asRevision(loadedRevision),
-    types: typeRows
-      .map((type) => materializeType(type, fieldRows, optionRows))
-      .toSorted(
-        (left, right) => left.sortOrder - right.sortOrder || left.key.localeCompare(right.key)
-      ),
+    types: resolveTypeTree(
+      typeRows.map((type) => materializeType(type, fieldRows, optionRows))
+    ).toSorted(
+      (left, right) => left.sortOrder - right.sortOrder || left.key.localeCompare(right.key)
+    ),
   };
 }
 

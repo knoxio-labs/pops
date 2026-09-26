@@ -21,7 +21,7 @@ function publishCandidate(harness: ReturnType<typeof openHarness>): void {
     .prepare(
       `INSERT INTO item_types
        SELECT 2, id, key, label, description, sort_order, capabilities_json,
-              legacy_labels_json, presentation_json, archived_at, replaced_by
+              legacy_labels_json, presentation_json, archived_at, replaced_by, NULL
        FROM item_types WHERE revision = 1`
     )
     .run();
@@ -74,7 +74,7 @@ function publishContainmentGrant(harness: ReturnType<typeof openHarness>): void 
       `INSERT INTO item_types
        SELECT 2, id, key, label, description, sort_order,
               CASE WHEN id = ? THEN '["containment"]' ELSE capabilities_json END,
-              legacy_labels_json, presentation_json, archived_at, replaced_by
+              legacy_labels_json, presentation_json, archived_at, replaced_by, NULL
        FROM item_types WHERE revision = 1`
     )
     .run(CABLE_TYPE_ID);

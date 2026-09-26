@@ -28,12 +28,17 @@ export const itemTypes = sqliteTable(
     presentationJson: text('presentation_json').notNull(),
     archivedAt: text('archived_at'),
     replacedBy: text('replaced_by'),
+    parentTypeId: text('parent_type_id'),
   },
   (table) => [
     primaryKey({ columns: [table.revision, table.id] }),
     check(
       'ck_item_types_replaced_by',
       sql`${table.replacedBy} IS NULL OR (${table.archivedAt} IS NOT NULL AND ${table.replacedBy} <> ${table.id})`
+    ),
+    check(
+      'ck_item_types_parent_type_id',
+      sql`${table.parentTypeId} IS NULL OR ${table.parentTypeId} <> ${table.id}`
     ),
     uniqueIndex('item_types_revision_key').on(table.revision, sql`${table.key} COLLATE NOCASE`),
     check('ck_item_types_sort_order', sql`${table.sortOrder} >= 0`),

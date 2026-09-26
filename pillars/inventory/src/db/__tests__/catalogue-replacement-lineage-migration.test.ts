@@ -95,7 +95,7 @@ describe(TAG, () => {
       VALUES (100, 1, 'draft', 1, 'web', 'now');
       INSERT INTO item_types
         SELECT 100, id, key, label, description, sort_order, capabilities_json,
-               legacy_labels_json, presentation_json, archived_at, replaced_by
+               legacy_labels_json, presentation_json, archived_at, replaced_by, NULL
         FROM item_types WHERE revision = 1;
     `);
     const id = opened.raw
