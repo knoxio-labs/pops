@@ -70,8 +70,26 @@ function useStoreHere(props: BodyProps): SheetContentProps {
   };
 }
 
+function storeHereKey(props: Pick<StoreHereViewProps, 'target' | 'initialTab'>): string {
+  return `${props.target.kind}:${props.target.id}:${props.initialTab ?? 'new'}`;
+}
+
 /** Renders the controlled Store here sheet over the current page. */
 export function StoreHereSheetView(
+  props: StoreHereViewProps & { open: boolean; onOpenChange: (open: boolean) => void }
+): ReactElement {
+  const { open, onOpenChange, ...viewProps } = props;
+  return (
+    <StoreHereSheetContent
+      key={storeHereKey(viewProps)}
+      open={open}
+      onOpenChange={onOpenChange}
+      {...viewProps}
+    />
+  );
+}
+
+function StoreHereSheetContent(
   props: StoreHereViewProps & { open: boolean; onOpenChange: (open: boolean) => void }
 ): ReactElement {
   const { open, onOpenChange, ...viewProps } = props;
@@ -83,6 +101,10 @@ export function StoreHereSheetView(
 export function StoreHereSheetPanel(
   props: StoreHereViewProps & { className?: string }
 ): ReactElement {
+  return <StoreHerePanelContent key={storeHereKey(props)} {...props} />;
+}
+
+function StoreHerePanelContent(props: StoreHereViewProps & { className?: string }): ReactElement {
   const { className, ...viewProps } = props;
   const content = useStoreHere(viewProps);
   return <SheetPanel {...content} className={className} />;

@@ -27,18 +27,26 @@ export interface NewTabProps {
 
 function CreatedList({ created, targetName }: { created: readonly string[]; targetName: string }) {
   const Item = INVENTORY_ICONS.item;
+  const occurrences = new Map<string, number>();
   return (
     <section aria-labelledby="store-created" className="min-h-0 space-y-1.5">
       <h3 id="store-created" className="text-xs font-medium text-muted-foreground">
         Created in {targetName} just now
       </h3>
       <ul className="divide-y divide-border/60 rounded-md border">
-        {created.map((name) => (
-          <li key={name} className="flex h-10 items-center gap-2.5 px-3 text-sm">
-            <Item className="size-4 text-muted-foreground" aria-hidden />
-            <span className="truncate">{name}</span>
-          </li>
-        ))}
+        {created.map((name) => {
+          const occurrence = occurrences.get(name) ?? 0;
+          occurrences.set(name, occurrence + 1);
+          return (
+            <li
+              key={`${name}-${occurrence}`}
+              className="flex h-10 items-center gap-2.5 px-3 text-sm"
+            >
+              <Item className="size-4 text-muted-foreground" aria-hidden />
+              <span className="truncate">{name}</span>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

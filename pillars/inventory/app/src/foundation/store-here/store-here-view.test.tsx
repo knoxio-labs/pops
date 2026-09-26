@@ -215,6 +215,43 @@ describe('StoreHereSheetPanel', () => {
     expect(onOpenForm).toHaveBeenCalledOnce();
   });
 
+  it('resets the tab and draft name when the target changes', async () => {
+    const { rerender } = renderView({ initialTab: 'existing' });
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'New item' }), { button: 0 });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name of the new item in Kitchen 13' }), {
+      target: { value: 'Draft name' },
+    });
+
+    rerender(
+      <StoreHereSheetPanel {...viewProps({ target: office04Target, initialTab: 'existing' })} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'Existing items' })).toHaveAttribute(
+        'data-state',
+        'active'
+      );
+    });
+
+    showTab('New item');
+    expect(screen.getByRole('textbox', { name: 'Name of the new item in Office 04' })).toHaveValue(
+      ''
+    );
+  });
+
+  it('renders duplicate created names without duplicate key warnings', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      renderView({ created: ['Tape measure', 'Tape measure'] });
+
+      expect(screen.getAllByText('Tape measure')).toHaveLength(2);
+      expect(consoleError.mock.calls.flat().join(' ')).not.toContain('unique "key" prop');
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it('reports search changes and disables only refused rows', () => {
     const onQuery = vi.fn();
     renderView({ initialTab: 'existing', target: office04Target, onQuery });
