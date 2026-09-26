@@ -7357,6 +7357,7 @@ export type WebMovingGetResponses = {
         containerId: string;
         id: string;
         name: string;
+        quantity: number;
       }>;
       count: number;
       destination: {
@@ -7387,12 +7388,14 @@ export type WebMovingGetResponses = {
       code: string | null;
       id: string;
       name: string;
+      quantity: number;
     }>;
     loose: Array<{
       items: Array<{
         code: string | null;
         id: string;
         name: string;
+        quantity: number;
       }>;
       room: {
         id: string;

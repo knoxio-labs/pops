@@ -57,6 +57,10 @@ function setLifecycle(id: string, lifecycle: 'active' | 'retired'): void {
   harness.db.db.update(items).set({ lifecycle }).where(eq(items.id, id)).run();
 }
 
+function setQuantity(id: string, quantity: number): void {
+  harness.db.db.update(items).set({ quantity }).where(eq(items.id, id)).run();
+}
+
 interface DestinationFixture {
   typeId: string;
   fieldId: string;
@@ -250,8 +254,8 @@ describe('GET /web/moving-day', () => {
     const outerContents = result.boxes.find((box) => box.id === outer)?.contents;
 
     expect(outerContents).toEqual([
-      { id: inner, name: 'Inner box', code: null, containerId: outer },
-      { id: nestedThing, name: 'Nested thing', code: null, containerId: inner },
+      { id: inner, name: 'Inner box', code: null, quantity: 1, containerId: outer },
+      { id: nestedThing, name: 'Nested thing', code: null, quantity: 1, containerId: inner },
     ]);
     expect(result.boxes.find((box) => box.id === outer)?.count).toBe(2);
   });
@@ -295,7 +299,47 @@ describe('GET /web/moving-day', () => {
 
     expect(result.packed).toBe(1);
     expect(result.looseCount).toBe(1);
-    expect(result.inHand).toEqual([{ id: inHandId, name: 'Thing in hand', code: null }]);
+    expect(result.inHand).toEqual([
+      { id: inHandId, name: 'Thing in hand', code: null, quantity: 1 },
+    ]);
+  });
+
+  it('things carry their stored quantity without changing row counts', async () => {
+    const room = randomUUID();
+    const boxId = randomUUID();
+    const looseId = randomUUID();
+    const packedId = randomUUID();
+    const inHandId = randomUUID();
+    await apply(
+      createLocation(room, 'Kitchen'),
+      createItem(boxId, 'Kitchen box', { kind: 'location', locationId: room }),
+      createItem(looseId, 'Loose mugs', { kind: 'location', locationId: room }),
+      createItem(packedId, 'Packed plates'),
+      createItem(inHandId, 'In-hand cups', { kind: 'hand' })
+    );
+    setBoxState(boxId, 'closed');
+    setContainerPlacement(packedId, boxId);
+    setQuantity(looseId, 6);
+    setQuantity(packedId, 3);
+    setQuantity(inHandId, 2);
+
+    const result = await moving();
+
+    expect(result.loose).toEqual([
+      {
+        room: { id: room, name: 'Kitchen' },
+        items: [{ id: looseId, name: 'Loose mugs', code: null, quantity: 6 }],
+      },
+    ]);
+    expect(result.inHand).toEqual([
+      { id: inHandId, name: 'In-hand cups', code: null, quantity: 2 },
+    ]);
+    expect(result.boxes[0]?.contents).toEqual([
+      { id: packedId, name: 'Packed plates', code: null, quantity: 3, containerId: boxId },
+    ]);
+    expect(result.looseCount).toBe(1);
+    expect(result.packed).toBe(1);
+    expect(result.boxes[0]?.count).toBe(1);
   });
 
   it('loose groups by room under the home and leaves out other places', async () => {
@@ -319,7 +363,7 @@ describe('GET /web/moving-day', () => {
     expect(result.loose).toEqual([
       {
         room: { id: kitchen, name: 'Kitchen' },
-        items: [{ id: kitchenThing, name: 'Loose in kitchen', code: null }],
+        items: [{ id: kitchenThing, name: 'Loose in kitchen', code: null, quantity: 1 }],
       },
     ]);
     expect(result.looseCount).toBe(1);
@@ -342,7 +386,7 @@ describe('GET /web/moving-day', () => {
     expect(result.loose).toEqual([
       {
         room: { id: kitchen, name: 'Kitchen' },
-        items: [{ id: thingId, name: 'Loose pantry thing', code: null }],
+        items: [{ id: thingId, name: 'Loose pantry thing', code: null, quantity: 1 }],
       },
     ]);
   });
@@ -393,7 +437,7 @@ describe('GET /web/moving-day', () => {
     expect(result.loose).toEqual([
       {
         room: { id: room, name: 'Kitchen' },
-        items: [{ id: looseThing, name: 'Loose thing', code: null }],
+        items: [{ id: looseThing, name: 'Loose thing', code: null, quantity: 1 }],
       },
     ]);
   });
