@@ -5433,10 +5433,12 @@ export interface operations {
             itemName: string;
             kind: string;
             mine?: {
+              /** Format: date-time */
               at: string;
               source: string;
               value: string;
             };
+            /** Format: date-time */
             openedAt: string;
             photo?: {
               limit: string;
@@ -5444,10 +5446,12 @@ export interface operations {
             };
             problem: string;
             refused?: {
+              /** Format: date-time */
               at: string;
               reason: string;
             };
             theirs?: {
+              /** Format: date-time */
               at: string;
               source: string;
               value: string;
@@ -5458,6 +5462,7 @@ export interface operations {
           /** Format: date-time */
           reportedAt: string;
           resolved: {
+            /** Format: date-time */
             at: string;
             dropped?: {
               field: string;
@@ -5479,6 +5484,7 @@ export interface operations {
               on?: string;
               revision?: number;
             };
+            /** Format: date-time */
             since: string;
             summary: string;
           }[];
@@ -10388,10 +10394,12 @@ export interface operations {
               itemName: string;
               kind: string;
               mine?: {
+                /** Format: date-time */
                 at: string;
                 source: string;
                 value: string;
               };
+              /** Format: date-time */
               openedAt: string;
               photo?: {
                 limit: string;
@@ -10399,10 +10407,12 @@ export interface operations {
               };
               problem: string;
               refused?: {
+                /** Format: date-time */
                 at: string;
                 reason: string;
               };
               theirs?: {
+                /** Format: date-time */
                 at: string;
                 source: string;
                 value: string;
@@ -10419,6 +10429,7 @@ export interface operations {
             }[];
             receivedHead: string | null;
             resolved: {
+              /** Format: date-time */
               at: string;
               deviceId: string;
               dropped?: {
@@ -10442,6 +10453,7 @@ export interface operations {
                 on?: string;
                 revision?: number;
               };
+              /** Format: date-time */
               since: string;
               summary: string;
             }[];

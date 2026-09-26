@@ -45,7 +45,7 @@ export const LEDGER_RESOLVED_DAYS = 7;
 export const LedgerConflictSideSchema = z.object({
   value: z.string(),
   source: z.string(),
-  at: z.string(),
+  at: z.iso.datetime(),
 });
 
 /** One value held by a device and its fit against the current catalogue. */
@@ -62,14 +62,14 @@ export const LedgerRepairCaseSchema = z.object({
   kind: z.string(),
   itemId: z.string(),
   itemName: z.string(),
-  openedAt: z.string(),
+  openedAt: z.iso.datetime(),
   problem: z.string(),
   mine: LedgerConflictSideSchema.optional(),
   theirs: LedgerConflictSideSchema.optional(),
   code: z.object({ wanted: z.string(), holder: z.string(), suggested: z.string() }).optional(),
   held: z.object({ title: z.string(), values: z.array(LedgerHeldValueSchema) }).optional(),
   photo: z.object({ size: z.string(), limit: z.string() }).optional(),
-  refused: z.object({ at: z.string(), reason: z.string() }).optional(),
+  refused: z.object({ at: z.iso.datetime(), reason: z.string() }).optional(),
 });
 
 /** Why a device is holding a change instead of sending it. */
@@ -86,7 +86,7 @@ export const LedgerWaitingChangeSchema = z.object({
   id: z.string(),
   itemName: z.string(),
   summary: z.string(),
-  since: z.string(),
+  since: z.iso.datetime(),
   reason: LedgerWaitReasonSchema,
 });
 
@@ -95,7 +95,7 @@ export const LedgerResolvedEntrySchema = z.object({
   id: z.string(),
   itemName: z.string(),
   outcome: z.string(),
-  at: z.string(),
+  at: z.iso.datetime(),
   dropped: z.array(LedgerHeldValueSchema).optional(),
 });
 

@@ -342,6 +342,27 @@ describe('device sync ledger', () => {
     expect((await readLedger()).devices).toEqual([]);
   });
 
+  it('rejects malformed nested timestamps without storing them', async () => {
+    const response = await h.api
+      .post('/sync/ledger')
+      .set(deviceHeaders('phone-1', "Joao's iPhone"))
+      .send({
+        ...report(),
+        attention: [
+          {
+            id: 'bad-date',
+            kind: 'field',
+            itemId: 'item-1',
+            itemName: 'Lamp',
+            openedAt: 'not-a-date',
+            problem: 'malformed opened timestamp',
+          },
+        ],
+      });
+    expect(response.status).toBe(400);
+    expect((await readLedger()).devices).toEqual([]);
+  });
+
   it('requires a device actor and returns the exact refusal body', async () => {
     const body = report();
     const noKey = await postLedger(body, 'phone-1', "Joao's iPhone", PROTOCOL);
