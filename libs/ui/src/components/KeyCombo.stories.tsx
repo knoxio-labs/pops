@@ -1,4 +1,4 @@
-import { KeyCombo } from './Kbd';
+import { KeyCombo } from './KeyCombo';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
@@ -22,4 +22,12 @@ export const Combos: Story = {
       <KeyCombo sequence={['Mod+Shift+Enter']} />
     </div>
   ),
+};
+
+export const NamedKeys: Story = {
+  args: { sequence: ['ArrowUp', 'ArrowDown', 'Backspace', 'Space'] },
+};
+
+export const ModifierOrder: Story = {
+  args: { sequence: ['Mod+Alt+Shift+k'] },
 };
