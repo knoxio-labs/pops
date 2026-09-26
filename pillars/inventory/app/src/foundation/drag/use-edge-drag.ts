@@ -20,7 +20,9 @@ export function useEdgeDrag(onMove: (deltaX: number) => void): {
     const target = event.currentTarget;
     const pointerId = event.pointerId;
     activePointerId.current = pointerId;
-    target.setPointerCapture(pointerId);
+    if (typeof target.setPointerCapture === 'function') {
+      target.setPointerCapture(pointerId);
+    }
     setDragging(true);
 
     const move = (moveEvent: globalThis.PointerEvent) => {

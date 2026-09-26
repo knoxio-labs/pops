@@ -74,6 +74,19 @@ describe('useEdgeDrag', () => {
     expect(setPointerCapture).toHaveBeenCalledWith(7);
   });
 
+  it('continues dragging when pointer capture is unavailable', () => {
+    const onMove = vi.fn<(deltaX: number) => void>();
+    const { hook, target } = setup(onMove);
+    Object.defineProperty(target, 'setPointerCapture', { configurable: true, value: undefined });
+
+    press(target);
+    move(target, 7, 135);
+    end(target, 'pointerUp', 7);
+
+    expect(hook.result.current.dragging).toBe(false);
+    expect(onMove).toHaveBeenCalledWith(35);
+  });
+
   it('ignores non-primary button presses', () => {
     const { hook, onPrevented, setPointerCapture, target } = setup();
 
