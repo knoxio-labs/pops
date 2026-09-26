@@ -3,7 +3,7 @@ import AppCore
 /// What the form reads from the store, as one query: the catalogue its type
 /// picker and field rows are built from, whether the replica is offline (the
 /// code assist's offline state), and, when editing, the item as it stands.
-internal struct InventoryItemFormContext: Equatable, Sendable {
+internal struct InventoryItemFormContext: Sendable {
     internal let catalogue: InventoryCatalogue
     /// The immutable stable-ID catalogue that matches protocol-2 item values.
     internal let protocol2Catalogue: InventoryCatalogueSnapshot?
@@ -19,6 +19,11 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
     internal let computedDisplays: [String: InventoryComputedDisplay]
     /// What each unavailable computed field is waiting on, named, by field ID.
     internal let computedMissingInputs: [String: [InventoryMissingInput]]
+    /// The replica this context was read from, kept so the form can evaluate
+    /// a computed field's expression again as the draft changes (a reference
+    /// read resolves against it) without waiting for another round of this
+    /// query.
+    internal let source: any InventoryQuerySource
     /// The name of where the item is (edit) or where it was opened from
     /// (create).
     internal let placementName: String?
@@ -61,6 +66,7 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
                 protocol2ReferenceTargets: targets, isOffline: isOffline,
                 item: item, computedDisplays: displays,
                 computedMissingInputs: missingInputs(of: item, displays: displays, in: source),
+                source: source,
                 placementName: placement.flatMap { name(of: $0, in: source) },
                 photoUploads: source.inventoryPhotoUploads(), repair: repair,
                 repairDetail: repair.flatMap(

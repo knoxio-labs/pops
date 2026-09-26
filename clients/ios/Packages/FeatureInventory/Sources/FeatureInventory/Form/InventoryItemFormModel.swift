@@ -45,14 +45,24 @@ internal final class InventoryItemFormModel {
     internal private(set) var catalogue = InventoryCatalogue(version: "", units: [], types: [])
     /// The active immutable catalogue used by the protocol-2 field editor.
     internal private(set) var protocol2Catalogue: InventoryCatalogueSnapshot?
-    internal var protocol2Draft: InventoryProtocol2Draft?
+    /// Recomputed live off the draft (POPS-4836) on every change, so a
+    /// computed row moves as its inputs do rather than waiting for the item
+    /// to round-trip through the server.
+    internal var protocol2Draft: InventoryProtocol2Draft? {
+        didSet { recomputeProtocol2ComputedFields() }
+    }
     internal private(set) var protocol2ReferenceTargets: [InventoryProtocol2ReferenceTarget] = []
+    /// The replica read the last time the store answered, kept only to
+    /// evaluate a computed field's expression again between then and now;
+    /// see ``InventoryItemFormContext/source``.
+    internal var querySource: (any InventoryQuerySource)?
     /// Each computed field's current display state, by field ID. See
-    /// ``InventoryItemFormContext/computedDisplays``.
-    internal private(set) var protocol2ComputedDisplays: [String: InventoryComputedDisplay] = [:]
+    /// ``InventoryItemFormContext/computedDisplays``; kept up to date with a
+    /// live evaluation off the draft in
+    /// `InventoryItemFormModel+LiveComputedFields.swift`.
+    internal var protocol2ComputedDisplays: [String: InventoryComputedDisplay] = [:]
     /// See ``InventoryItemFormContext/computedMissingInputs``.
-    internal private(set) var protocol2ComputedMissingInputs: [String: [InventoryMissingInput]] =
-        [:]
+    internal var protocol2ComputedMissingInputs: [String: [InventoryMissingInput]] = [:]
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
@@ -243,12 +253,14 @@ extension InventoryItemFormModel {
         protocol2ComputedDisplays = context.computedDisplays
         protocol2ComputedMissingInputs = context.computedMissingInputs
         original = context.item
+        querySource = context.source
         photoUploads = context.photoUploads
         followStoreUploads()
         if phase == .loading {
             seed(context)
         }
         setOffline(context.isOffline)
+        recomputeProtocol2ComputedFields()
     }
 
     private func seed(_ context: InventoryItemFormContext) {
