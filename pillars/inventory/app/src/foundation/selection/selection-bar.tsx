@@ -1,3 +1,4 @@
+/** The shared bulk-action bar for inventory list selections. */
 import { MoreHorizontal, X } from 'lucide-react';
 
 import {

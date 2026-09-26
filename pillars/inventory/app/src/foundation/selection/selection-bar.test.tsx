@@ -23,19 +23,19 @@ function renderBar(overrides: Partial<SelectionBarProps> = {}) {
 afterEach(cleanup);
 
 describe('SelectionBar', () => {
-  it('renders nothing when no rows are selected', () => {
+  it('renders nothing with nothing selected', () => {
     const { container } = renderBar({ count: 0 });
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('announces the selected and carried counts politely', () => {
+  it('announces the count and what the selection carries politely', () => {
     renderBar({ carriedCount: 3 });
     const summary = screen.getByText('2 selected, 3 inside');
     expect(summary).toHaveAttribute('aria-live', 'polite');
     expect(summary).toHaveAttribute('aria-atomic', 'true');
   });
 
-  it('shows Select all only for a partial selection with more loaded rows', () => {
+  it('offers Select all only when some of the loaded rows are selected', () => {
     const onSelectAll = vi.fn();
     const view = renderBar({ onSelectAll });
     const selectAll = screen.getByRole('button', { name: 'Select all 5' });
@@ -67,7 +67,7 @@ describe('SelectionBar', () => {
     expect(onArchive).toHaveBeenCalledOnce();
   });
 
-  it('keeps disabled actions visible, explains the refusal, and does not run them', async () => {
+  it('a disabled action is aria-disabled, shows its reason and does not fire', async () => {
     const onArchive = vi.fn();
     const actions: SelectionBarAction[] = [
       {
@@ -90,7 +90,7 @@ describe('SelectionBar', () => {
     await waitFor(() => expect(screen.getByText('Unavailable while offline.')).toBeInTheDocument());
   });
 
-  it('puts overflow actions in More and runs them from the menu', () => {
+  it('overflow actions appear only in the More menu', () => {
     const onDownload = vi.fn();
     const actions: SelectionBarAction[] = [
       { id: 'download', label: 'Download', icon: Download, overflow: true, onSelect: onDownload },

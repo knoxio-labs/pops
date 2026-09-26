@@ -1,3 +1,7 @@
+/**
+ * The shared selection model for inventory lists: checkbox toggles, Shift
+ * ranges, keyboard focus, and the selection keys used by every list.
+ */
 import { useCallback, useMemo, useState } from 'react';
 
 /** The selected rows, Shift range anchor, and keyboard-focused row. */
@@ -151,6 +155,7 @@ export interface SelectionApi {
   onRowToggle: (id: string, shiftKey: boolean) => void;
   onHeaderToggle: () => void;
   clearSelection: () => void;
+  /** Wire to a list's onKeyDown; true means the caller should preventDefault. */
   onKey: (event: SelectionKey) => boolean;
 }
 
