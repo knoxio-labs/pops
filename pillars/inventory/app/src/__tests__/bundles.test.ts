@@ -17,22 +17,12 @@ describe('inventory bundles record', () => {
     expect(Object.keys(bundles).toSorted()).toEqual(declared);
   });
 
-  it('covers the report pages beneath the group, not only the top level', () => {
+  it('carries the redirect slots', () => {
     const slots = Object.keys(bundles);
-    expect(slots).toContain('inventory-reports-group');
-    expect(slots).toContain('inventory-report-dashboard');
-    expect(slots).toContain('inventory-insurance-report');
-  });
-
-  /**
-   * The two `report/*` redirects were missing from the page list this
-   * replaced. Harmless while the bundle map mounted the whole route table;
-   * a 404 on an old bookmark the moment it did not. Named here so removing
-   * them again fails a test rather than shipping.
-   */
-  it('carries the legacy report redirects', () => {
+    expect(slots).toContain('inventory-warranties-redirect');
+    expect(slots).toContain('inventory-activity-redirect');
+    expect(slots).toContain('inventory-insurance-report-redirect');
     expect(Object.keys(bundles)).toContain('inventory-report-redirect');
-    expect(Object.keys(bundles)).toContain('inventory-insurance-report-redirect');
   });
 
   it('resolves every slot to a component', () => {

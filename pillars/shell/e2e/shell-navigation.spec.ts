@@ -24,7 +24,7 @@ import { stubShellBoot } from './helpers/pillar-rest';
  */
 const RAIL_TARGETS = [
   { label: 'Media', path: /\/media/, heading: 'Library' },
-  { label: 'Inventory', path: /\/inventory/, heading: 'Inventory' },
+  { label: 'Inventory', path: /\/inventory/, heading: 'Overview' },
   { label: 'Lists', path: /\/lists/, heading: 'Lists' },
   { label: 'Purchases', path: /\/purchases/, heading: 'Reconcile' },
 ] as const;

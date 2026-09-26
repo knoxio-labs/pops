@@ -6395,6 +6395,160 @@ export type DocumentFilesRemoveUploadResponses = {
 export type DocumentFilesRemoveUploadResponse =
   DocumentFilesRemoveUploadResponses[keyof DocumentFilesRemoveUploadResponses];
 
+export type WebChangesHeadData = {
+  body?: never;
+  path?: never;
+  query?: {
+    since?: number;
+    entityId?: string;
+  };
+  url: '/web/changes/head';
+};
+
+export type WebChangesHeadErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebChangesHeadError = WebChangesHeadErrors[keyof WebChangesHeadErrors];
+
+export type WebChangesHeadResponses = {
+  /**
+   * 200
+   */
+  200: {
+    groups: Array<{
+      actorId: string | null;
+      actorKind: 'device' | 'service' | 'migration';
+      actorLabel: string;
+      entityCount: number;
+      eventCount: number;
+      kindCounts: {
+        [key: string]: number;
+      };
+      latestServerTime: string;
+    }>;
+    headSeq: number;
+  };
+};
+
+export type WebChangesHeadResponse = WebChangesHeadResponses[keyof WebChangesHeadResponses];
+
+export type WebEventsListData = {
+  body?: never;
+  path?: never;
+  query: {
+    kind?: string;
+    actorKind?: 'device' | 'web' | 'service' | 'migration';
+    entityId?: string;
+    q?: string;
+    cursor?: string;
+    limit: number;
+  };
+  url: '/web/events';
+};
+
+export type WebEventsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebEventsListError = WebEventsListErrors[keyof WebEventsListErrors];
+
+export type WebEventsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    events: Array<{
+      actor: {
+        kind: string;
+        label: string;
+      };
+      after: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      before: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      clientTime: string | null;
+      compensatesSeq: number | null;
+      entityId: string;
+      entityKind: 'item' | 'location';
+      entityName: string;
+      fields: Array<string>;
+      kind: string;
+      reason: string | null;
+      seq: number;
+      serverTime: string;
+      undoable: boolean;
+    }>;
+    kindCounts: {
+      [key: string]: number;
+    };
+    nextCursor: string | null;
+    total: number;
+  };
+};
+
+export type WebEventsListResponse = WebEventsListResponses[keyof WebEventsListResponses];
+
 export type WebListData = {
   body?: never;
   path?: never;
@@ -6407,6 +6561,16 @@ export type WebListData = {
     containingItemId?: string;
     ids?: string;
     includeInactive?: boolean;
+    q?: string;
+    untyped?: 'true' | 'false';
+    isContainer?: 'true' | 'false';
+    access?: 'open' | 'closed';
+    isFull?: 'true' | 'false';
+    lifecycle?: 'active' | 'retired' | 'discarded' | 'lost' | 'destroyed';
+    legacyLabelOf?: string;
+    within?: string;
+    effectiveLocationId?: string;
+    sort?: 'name' | 'updated' | 'type' | 'where' | 'packing';
   };
   url: '/web/items';
 };
@@ -6429,6 +6593,7 @@ export type WebListResponses = {
    * 200
    */
   200: {
+    hiddenInactiveCount: number;
     items: Array<{
       access: 'open' | 'closed' | null;
       catalogueRevision: number | null;
@@ -6549,10 +6714,91 @@ export type WebListResponses = {
       updatedAt: string;
     }>;
     nextCursor: string | null;
+    total: number;
+    unfilteredTotal: number;
   };
 };
 
 export type WebListResponse = WebListResponses[keyof WebListResponses];
+
+export type WebBatchCreateData = {
+  /**
+   * Body
+   */
+  body?: {
+    destination:
+      | {
+          kind: 'location';
+          locationId: string;
+        }
+      | {
+          itemId: string;
+          kind: 'container';
+        }
+      | {
+          kind: 'hand';
+        };
+    dryRun: boolean;
+    rows: Array<{
+      code: string;
+      name: string;
+      note: string;
+      quantity: string;
+      type: string;
+      where: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/web/items/batch';
+};
+
+export type WebBatchCreateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebBatchCreateError = WebBatchCreateErrors[keyof WebBatchCreateErrors];
+
+export type WebBatchCreateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    outcomes: Array<
+      | {
+          itemId: string;
+          row: number;
+          status: 'created';
+        }
+      | {
+          row: number;
+          status: 'valid';
+        }
+      | {
+          issues: Array<{
+            code: string;
+            column: 'name' | 'type' | 'quantity' | 'code' | 'where' | 'note';
+            message: string;
+          }>;
+          row: number;
+          status: 'invalid';
+        }
+      | {
+          row: number;
+          status: 'blank';
+        }
+    >;
+  };
+};
+
+export type WebBatchCreateResponse = WebBatchCreateResponses[keyof WebBatchCreateResponses];
 
 export type WebGetData = {
   body?: never;
@@ -6784,3 +7030,336 @@ export type WebGetResponses = {
 };
 
 export type WebGetResponse = WebGetResponses[keyof WebGetResponses];
+
+export type WebSearchListData = {
+  body?: never;
+  path?: never;
+  query: {
+    q: string;
+    cursor?: string;
+    limit: number;
+    activeOnly?: 'true' | 'false';
+    typeKey?: string;
+    within?: string;
+  };
+  url: '/web/search';
+};
+
+export type WebSearchListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebSearchListError = WebSearchListErrors[keyof WebSearchListErrors];
+
+export type WebSearchListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    exact: {
+      access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
+      code: string | null;
+      computedValues: Array<
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            source: 'computed';
+            state: 'ok';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            override: {
+              catalogueRevision: number;
+            };
+            source: 'computed';
+            state: 'overridden';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            failedFieldId: string;
+            fieldId: string;
+            missingInputs: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
+            reason: string;
+            source: 'computed';
+            state: 'unavailable';
+            traversedItemIds: Array<string>;
+          }
+      >;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      legacyType: string | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeId: string | null;
+      typeKey: string | null;
+      updatedAt: string;
+    } | null;
+    items: Array<{
+      field: 'code' | 'note' | 'type' | 'place' | null;
+      item: {
+        access: 'open' | 'closed' | null;
+        catalogueRevision: number | null;
+        code: string | null;
+        computedValues: Array<
+          | {
+              catalogueRevision: number;
+              dependencies: Array<{
+                fieldId: string;
+                itemId: string;
+                revision: number;
+              }>;
+              fieldId: string;
+              source: 'computed';
+              state: 'ok';
+              traversedItemIds: Array<string>;
+              values: [unknown];
+            }
+          | {
+              catalogueRevision: number;
+              dependencies: Array<{
+                fieldId: string;
+                itemId: string;
+                revision: number;
+              }>;
+              fieldId: string;
+              override: {
+                catalogueRevision: number;
+              };
+              source: 'computed';
+              state: 'overridden';
+              traversedItemIds: Array<string>;
+              values: [unknown];
+            }
+          | {
+              catalogueRevision: number;
+              dependencies: Array<{
+                fieldId: string;
+                itemId: string;
+                revision: number;
+              }>;
+              failedFieldId: string;
+              fieldId: string;
+              missingInputs: Array<{
+                fieldId: string;
+                itemId: string;
+                reason: string;
+              }>;
+              reason: string;
+              source: 'computed';
+              state: 'unavailable';
+              traversedItemIds: Array<string>;
+            }
+        >;
+        createdAt: string;
+        deletedAt: string | null;
+        documentTitles: Array<string>;
+        documentsStatus: 'linked' | 'none' | 'unavailable';
+        externalIds: Array<{
+          kind: string;
+          value: string;
+        }>;
+        fieldValues: Array<{
+          catalogueRevision: number;
+          fieldId: string;
+          source: 'stored' | 'override';
+          values: Array<unknown>;
+        }>;
+        fields: {
+          [key: string]: unknown;
+        };
+        id: string;
+        isContainer: boolean;
+        isFull: boolean | null;
+        legacyType: string | null;
+        lifecycle: string;
+        lifecycleChangedAt: string | null;
+        name: string;
+        note: string | null;
+        photos: Array<{
+          caption: string | null;
+          sha256: string;
+        }>;
+        placement:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        provenance: {
+          merchant: string | null;
+          price: number | null;
+          purchasedOn: string | null;
+          transactionUri: string | null;
+          warrantyExpires: string | null;
+        } | null;
+        quantity: number;
+        revision: number;
+        seq: number;
+        typeId: string | null;
+        typeKey: string | null;
+        updatedAt: string;
+      };
+      tier: 'prefix' | 'contains' | 'other';
+    }>;
+    nextCursor: string | null;
+    places: Array<{
+      location: {
+        id: string;
+      };
+      tier: 'prefix' | 'contains';
+    }>;
+    total: number;
+  };
+};
+
+export type WebSearchListResponse = WebSearchListResponses[keyof WebSearchListResponses];
+
+export type WebSummaryGetData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/web/summary';
+};
+
+export type WebSummaryGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    containerSegments: {
+      all: number;
+      closed: number;
+      full: number;
+      moving: number;
+      open: number;
+      retired: number;
+    };
+    counts: {
+      containers: number;
+      inHand: number;
+      items: number;
+      locations: number;
+      openContainers: number;
+      things: number;
+    };
+    moving: {
+      closed: number;
+      full: number;
+      open: number;
+      packed: number;
+      total: number;
+    };
+    packing: {
+      closed: number;
+      fullButOpen: number;
+      open: number;
+      packedItems: number;
+    };
+  };
+};
+
+export type WebSummaryGetResponse = WebSummaryGetResponses[keyof WebSummaryGetResponses];

@@ -1057,6 +1057,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/changes/head': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the inventory web change head and changed-elsewhere groups */
+    get: operations['webChanges.head'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/web/events': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the inventory activity and item-history events */
+    get: operations['webEvents.list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/items': {
     parameters: {
       query?: never;
@@ -1074,6 +1108,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/items/batch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Partially create inventory items from typed web grid rows */
+    post: operations['webBatch.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/items/{id}': {
     parameters: {
       query?: never;
@@ -1083,6 +1134,40 @@ export interface paths {
     };
     /** An item, and one page of its history, newest first */
     get: operations['web.get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/web/search': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search live inventory items and places with ranked, cursor-paged results */
+    get: operations['webSearch.list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/web/summary': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Overview and container segment counts for the inventory web app */
+    get: operations['webSummary.get'];
     put?: never;
     post?: never;
     delete?: never;
@@ -8864,17 +8949,11 @@ export interface operations {
       };
     };
   };
-  'web.list': {
+  'webChanges.head': {
     parameters: {
-      query: {
-        cursor?: string;
-        limit: number;
-        typeKey?: string;
-        placementKind?: 'location' | 'container' | 'hand';
-        locationId?: string;
-        containingItemId?: string;
-        ids?: string;
-        includeInactive?: boolean;
+      query?: {
+        since?: number;
+        entityId?: string;
       };
       header?: never;
       path?: never;
@@ -8889,6 +8968,203 @@ export interface operations {
         };
         content: {
           'application/json': {
+            groups: {
+              actorId: string | null;
+              /** @enum {string} */
+              actorKind: 'device' | 'service' | 'migration';
+              actorLabel: string;
+              entityCount: number;
+              eventCount: number;
+              kindCounts: {
+                [key: string]: number;
+              };
+              latestServerTime: string;
+            }[];
+            headSeq: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webEvents.list': {
+    parameters: {
+      query: {
+        kind?: string;
+        actorKind?: 'device' | 'web' | 'service' | 'migration';
+        entityId?: string;
+        q?: string;
+        cursor?: string;
+        limit: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            events: {
+              actor: {
+                kind: string;
+                label: string;
+              };
+              after: {
+                placement?:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement?:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+              } & {
+                [key: string]: unknown;
+              };
+              before: {
+                placement?:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement?:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+              } & {
+                [key: string]: unknown;
+              };
+              clientTime: string | null;
+              compensatesSeq: number | null;
+              entityId: string;
+              /** @enum {string} */
+              entityKind: 'item' | 'location';
+              entityName: string;
+              fields: string[];
+              kind: string;
+              reason: string | null;
+              seq: number;
+              serverTime: string;
+              undoable: boolean;
+            }[];
+            kindCounts: {
+              [key: string]: number;
+            };
+            nextCursor: string | null;
+            total: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'web.list': {
+    parameters: {
+      query: {
+        cursor?: string;
+        limit: number;
+        typeKey?: string;
+        placementKind?: 'location' | 'container' | 'hand';
+        locationId?: string;
+        containingItemId?: string;
+        ids?: string;
+        includeInactive?: boolean;
+        q?: string;
+        untyped?: 'true' | 'false';
+        isContainer?: 'true' | 'false';
+        access?: 'open' | 'closed';
+        isFull?: 'true' | 'false';
+        lifecycle?: 'active' | 'retired' | 'discarded' | 'lost' | 'destroyed';
+        legacyLabelOf?: string;
+        within?: string;
+        effectiveLocationId?: string;
+        sort?: 'name' | 'updated' | 'type' | 'where' | 'packing';
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            hiddenInactiveCount: number;
             items: {
               /** @enum {string|null} */
               access: 'open' | 'closed' | null;
@@ -9035,6 +9311,113 @@ export interface operations {
               updatedAt: string;
             }[];
             nextCursor: string | null;
+            total: number;
+            unfilteredTotal: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webBatch.create': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          /**
+           * @default {
+           *       "kind": "hand"
+           *     }
+           */
+          destination:
+            | {
+                /** @enum {string} */
+                kind: 'location';
+                locationId: string;
+              }
+            | {
+                itemId: string;
+                /** @enum {string} */
+                kind: 'container';
+              }
+            | {
+                /** @enum {string} */
+                kind: 'hand';
+              };
+          /** @default false */
+          dryRun: boolean;
+          rows: {
+            /** @default  */
+            code: string;
+            /** @default  */
+            name: string;
+            /** @default  */
+            note: string;
+            /** @default  */
+            quantity: string;
+            /** @default  */
+            type: string;
+            /** @default  */
+            where: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            outcomes: (
+              | {
+                  itemId: string;
+                  row: number;
+                  /** @enum {string} */
+                  status: 'created';
+                }
+              | {
+                  row: number;
+                  /** @enum {string} */
+                  status: 'valid';
+                }
+              | {
+                  issues: {
+                    code: string;
+                    /** @enum {string} */
+                    column: 'name' | 'type' | 'quantity' | 'code' | 'where' | 'note';
+                    message: string;
+                  }[];
+                  row: number;
+                  /** @enum {string} */
+                  status: 'invalid';
+                }
+              | {
+                  row: number;
+                  /** @enum {string} */
+                  status: 'blank';
+                }
+            )[];
           };
         };
       };
@@ -9331,6 +9714,402 @@ export interface operations {
             code?: string;
             message: string;
             messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webSearch.list': {
+    parameters: {
+      query: {
+        q: string;
+        cursor?: string;
+        limit: number;
+        activeOnly?: 'true' | 'false';
+        typeKey?: string;
+        within?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            exact: {
+              /** @enum {string|null} */
+              access: 'open' | 'closed' | null;
+              catalogueRevision: number | null;
+              code: string | null;
+              computedValues: (
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'ok';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    override: {
+                      catalogueRevision: number;
+                    };
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'overridden';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    failedFieldId: string;
+                    /** Format: uuid */
+                    fieldId: string;
+                    missingInputs: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      reason: string;
+                    }[];
+                    reason: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'unavailable';
+                    traversedItemIds: string[];
+                  }
+              )[];
+              createdAt: string;
+              deletedAt: string | null;
+              documentTitles: string[];
+              /** @enum {string} */
+              documentsStatus: 'linked' | 'none' | 'unavailable';
+              externalIds: {
+                kind: string;
+                value: string;
+              }[];
+              fieldValues: {
+                catalogueRevision: number;
+                /** Format: uuid */
+                fieldId: string;
+                /** @enum {string} */
+                source: 'stored' | 'override';
+                values: unknown[];
+              }[];
+              fields: {
+                [key: string]: unknown;
+              };
+              id: string;
+              isContainer: boolean;
+              isFull: boolean | null;
+              legacyType: string | null;
+              lifecycle: string;
+              lifecycleChangedAt: string | null;
+              name: string;
+              note: string | null;
+              photos: {
+                caption: string | null;
+                sha256: string;
+              }[];
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              previousPlacement:
+                | (
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                  )
+                | null;
+              provenance: {
+                merchant: string | null;
+                price: number | null;
+                purchasedOn: string | null;
+                transactionUri: string | null;
+                warrantyExpires: string | null;
+              } | null;
+              quantity: number;
+              revision: number;
+              seq: number;
+              /** Format: uuid */
+              typeId: string | null;
+              typeKey: string | null;
+              updatedAt: string;
+            } | null;
+            items: {
+              /** @enum {string|null} */
+              field: 'code' | 'note' | 'type' | 'place' | null;
+              item: {
+                /** @enum {string|null} */
+                access: 'open' | 'closed' | null;
+                catalogueRevision: number | null;
+                code: string | null;
+                computedValues: (
+                  | {
+                      catalogueRevision: number;
+                      dependencies: {
+                        /** Format: uuid */
+                        fieldId: string;
+                        itemId: string;
+                        revision: number;
+                      }[];
+                      /** Format: uuid */
+                      fieldId: string;
+                      /** @enum {string} */
+                      source: 'computed';
+                      /** @enum {string} */
+                      state: 'ok';
+                      traversedItemIds: string[];
+                      values: unknown[];
+                    }
+                  | {
+                      catalogueRevision: number;
+                      dependencies: {
+                        /** Format: uuid */
+                        fieldId: string;
+                        itemId: string;
+                        revision: number;
+                      }[];
+                      /** Format: uuid */
+                      fieldId: string;
+                      override: {
+                        catalogueRevision: number;
+                      };
+                      /** @enum {string} */
+                      source: 'computed';
+                      /** @enum {string} */
+                      state: 'overridden';
+                      traversedItemIds: string[];
+                      values: unknown[];
+                    }
+                  | {
+                      catalogueRevision: number;
+                      dependencies: {
+                        /** Format: uuid */
+                        fieldId: string;
+                        itemId: string;
+                        revision: number;
+                      }[];
+                      /** Format: uuid */
+                      failedFieldId: string;
+                      /** Format: uuid */
+                      fieldId: string;
+                      missingInputs: {
+                        /** Format: uuid */
+                        fieldId: string;
+                        itemId: string;
+                        reason: string;
+                      }[];
+                      reason: string;
+                      /** @enum {string} */
+                      source: 'computed';
+                      /** @enum {string} */
+                      state: 'unavailable';
+                      traversedItemIds: string[];
+                    }
+                )[];
+                createdAt: string;
+                deletedAt: string | null;
+                documentTitles: string[];
+                /** @enum {string} */
+                documentsStatus: 'linked' | 'none' | 'unavailable';
+                externalIds: {
+                  kind: string;
+                  value: string;
+                }[];
+                fieldValues: {
+                  catalogueRevision: number;
+                  /** Format: uuid */
+                  fieldId: string;
+                  /** @enum {string} */
+                  source: 'stored' | 'override';
+                  values: unknown[];
+                }[];
+                fields: {
+                  [key: string]: unknown;
+                };
+                id: string;
+                isContainer: boolean;
+                isFull: boolean | null;
+                legacyType: string | null;
+                lifecycle: string;
+                lifecycleChangedAt: string | null;
+                name: string;
+                note: string | null;
+                photos: {
+                  caption: string | null;
+                  sha256: string;
+                }[];
+                placement:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+                provenance: {
+                  merchant: string | null;
+                  price: number | null;
+                  purchasedOn: string | null;
+                  transactionUri: string | null;
+                  warrantyExpires: string | null;
+                } | null;
+                quantity: number;
+                revision: number;
+                seq: number;
+                /** Format: uuid */
+                typeId: string | null;
+                typeKey: string | null;
+                updatedAt: string;
+              };
+              /** @enum {string} */
+              tier: 'prefix' | 'contains' | 'other';
+            }[];
+            nextCursor: string | null;
+            places: {
+              location: {
+                id: string;
+              };
+              /** @enum {string} */
+              tier: 'prefix' | 'contains';
+            }[];
+            total: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webSummary.get': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            containerSegments: {
+              all: number;
+              closed: number;
+              full: number;
+              moving: number;
+              open: number;
+              retired: number;
+            };
+            counts: {
+              containers: number;
+              inHand: number;
+              items: number;
+              locations: number;
+              openContainers: number;
+              things: number;
+            };
+            moving: {
+              closed: number;
+              full: number;
+              open: number;
+              packed: number;
+              total: number;
+            };
+            packing: {
+              closed: number;
+              fullButOpen: number;
+              open: number;
+              packedItems: number;
+            };
           };
         };
       };

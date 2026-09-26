@@ -219,12 +219,26 @@ import type {
   TypesReadValidateItemData,
   TypesReadValidateItemErrors,
   TypesReadValidateItemResponses,
+  WebBatchCreateData,
+  WebBatchCreateErrors,
+  WebBatchCreateResponses,
+  WebChangesHeadData,
+  WebChangesHeadErrors,
+  WebChangesHeadResponses,
+  WebEventsListData,
+  WebEventsListErrors,
+  WebEventsListResponses,
   WebGetData,
   WebGetErrors,
   WebGetResponses,
   WebListData,
   WebListErrors,
   WebListResponses,
+  WebSearchListData,
+  WebSearchListErrors,
+  WebSearchListResponses,
+  WebSummaryGetData,
+  WebSummaryGetResponses,
 } from './types.gen';
 
 export type Options<
@@ -1344,6 +1358,28 @@ export const documentFilesRemoveUpload = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Read the inventory web change head and changed-elsewhere groups
+ */
+export const webChangesHead = <ThrowOnError extends boolean = false>(
+  options?: Options<WebChangesHeadData, ThrowOnError>
+): RequestResult<WebChangesHeadResponses, WebChangesHeadErrors, ThrowOnError> =>
+  (options?.client ?? client).get<WebChangesHeadResponses, WebChangesHeadErrors, ThrowOnError>({
+    url: '/web/changes/head',
+    ...options,
+  });
+
+/**
+ * List the inventory activity and item-history events
+ */
+export const webEventsList = <ThrowOnError extends boolean = false>(
+  options: Options<WebEventsListData, ThrowOnError>
+): RequestResult<WebEventsListResponses, WebEventsListErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebEventsListResponses, WebEventsListErrors, ThrowOnError>({
+    url: '/web/events',
+    ...options,
+  });
+
+/**
  * A cursor-paged, filtered slice of the live item catalogue, on the new item model
  */
 export const webList = <ThrowOnError extends boolean = false>(
@@ -1355,6 +1391,21 @@ export const webList = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Partially create inventory items from typed web grid rows
+ */
+export const webBatchCreate = <ThrowOnError extends boolean = false>(
+  options?: Options<WebBatchCreateData, ThrowOnError>
+): RequestResult<WebBatchCreateResponses, WebBatchCreateErrors, ThrowOnError> =>
+  (options?.client ?? client).post<WebBatchCreateResponses, WebBatchCreateErrors, ThrowOnError>({
+    url: '/web/items/batch',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
  * An item, and one page of its history, newest first
  */
 export const webGet = <ThrowOnError extends boolean = false>(
@@ -1362,5 +1413,27 @@ export const webGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebGetResponses, WebGetErrors, ThrowOnError> =>
   (options.client ?? client).get<WebGetResponses, WebGetErrors, ThrowOnError>({
     url: '/web/items/{id}',
+    ...options,
+  });
+
+/**
+ * Search live inventory items and places with ranked, cursor-paged results
+ */
+export const webSearchList = <ThrowOnError extends boolean = false>(
+  options: Options<WebSearchListData, ThrowOnError>
+): RequestResult<WebSearchListResponses, WebSearchListErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebSearchListResponses, WebSearchListErrors, ThrowOnError>({
+    url: '/web/search',
+    ...options,
+  });
+
+/**
+ * Overview and container segment counts for the inventory web app
+ */
+export const webSummaryGet = <ThrowOnError extends boolean = false>(
+  options?: Options<WebSummaryGetData, ThrowOnError>
+): RequestResult<WebSummaryGetResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<WebSummaryGetResponses, unknown, ThrowOnError>({
+    url: '/web/summary',
     ...options,
   });

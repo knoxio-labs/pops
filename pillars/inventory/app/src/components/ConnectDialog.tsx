@@ -17,6 +17,8 @@ type ConnectInput = { itemAId: string; itemBId: string };
 interface ConnectDialogProps {
   currentItemId: string;
   onConnected: () => void;
+  /** Explains why connecting is unavailable and disables the trigger. */
+  disabledReason?: string;
 }
 
 interface ConnectResultRowProps {
@@ -74,7 +76,8 @@ function useConnectMutation(onSuccess: () => void) {
   });
 }
 
-export function ConnectDialog({ currentItemId, onConnected }: ConnectDialogProps) {
+/** Searches inventory items and connects the selected result to the current item. */
+export function ConnectDialog({ currentItemId, onConnected, disabledReason }: ConnectDialogProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -102,7 +105,13 @@ export function ConnectDialog({ currentItemId, onConnected }: ConnectDialogProps
         if (!v) setSearch('');
       }}
       trigger={
-        <Button variant="outline" size="sm">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabledReason !== undefined}
+          title={disabledReason}
+          aria-label={disabledReason ? `Connect Item (${disabledReason})` : 'Connect Item'}
+        >
           <Link2 className="h-4 w-4 mr-1.5" />
           Connect Item
         </Button>

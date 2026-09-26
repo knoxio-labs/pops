@@ -40,7 +40,7 @@ function ErrorView({
         <AlertDescription>{is404 ? "This item doesn't exist." : error.message}</AlertDescription>
       </Alert>
       <Link
-        to="/inventory"
+        to="/inventory/items"
         className="mt-4 inline-block text-sm text-app-accent hover:text-app-accent/80 underline font-medium"
       >
         Back to inventory
@@ -95,7 +95,7 @@ export function ItemFormPage() {
     <div className="p-6 max-w-2xl">
       <PageHeader
         title={isEditMode ? 'Edit Item' : 'New Item'}
-        backHref={isEditMode && id ? `/inventory/items/${id}` : '/inventory'}
+        backHref={isEditMode && id ? `/inventory/items/${id}` : '/inventory/items'}
         breadcrumbs={buildBreadcrumbs(isEditMode, id, editItemName)}
         renderLink={Link}
         className="mb-8"

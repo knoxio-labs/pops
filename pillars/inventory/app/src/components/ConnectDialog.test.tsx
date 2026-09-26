@@ -87,7 +87,7 @@ function mockListSuccess(items: ListItem[]): void {
 
 function mockListPending(): void {
   itemsListMock.mockImplementation(
-    () => new Promise(() => undefined) as Promise<{ data: ListPayload; error: undefined }>
+    () => new Promise<{ data: ListPayload; error: undefined }>(() => undefined)
   );
 }
 
@@ -124,6 +124,19 @@ describe('ConnectDialog', () => {
       openDialog();
       expect(screen.getByRole('dialog')).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Connect Item' })).toBeInTheDocument();
+    });
+
+    it('disables the trigger with a read-only reason', () => {
+      renderWithProviders(
+        <ConnectDialog {...defaultProps} disabledReason="Nothing can change on this item." />
+      );
+      const trigger = screen.getByRole('button', {
+        name: 'Connect Item (Nothing can change on this item.)',
+      });
+      expect(trigger).toBeDisabled();
+      expect(trigger).toHaveAttribute('title', 'Nothing can change on this item.');
+      fireEvent.click(trigger);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 

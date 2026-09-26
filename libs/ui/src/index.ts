@@ -101,6 +101,11 @@ export * from './components/ErrorBoundary';
 export * from './components/FieldError';
 export * from './components/FieldLabel';
 export * from './components/InfiniteScrollTable';
+export * from './components/Kbd';
+export * from './components/command-palette/CommandPalette';
+export * from './components/command-palette/palette-rank';
+export * from './components/command-palette/palette-state';
+export * from './components/command-palette/types';
 export * from './components/NumberInput';
 export * from './components/RadioInput';
 export * from './components/Select';
@@ -111,6 +116,7 @@ export * from './components/TextInput';
 export * from './components/ContainerPanel';
 export * from './components/RelatedItemsList';
 export * from './components/SearchPickerDialog';
+export * from './components/Sheet';
 
 // Layout composites
 export * from './components/PageHeader';

@@ -182,39 +182,58 @@ export function parseRouteComponents(source) {
   const arraySpan = balancedSpan(source, routesKey.index + routesKey[0].length, '[', ']');
   if (arraySpan === undefined) return map;
 
-  for (const obj of topLevelObjects(arraySpan)) {
-    const props = topLevelProperties(obj);
-    const isIndex = props.get('index') === 'true';
-    const pathValue = /^['"]([^'"]*)['"]/.exec(props.get('path') ?? '')?.[1];
-    const path = isIndex ? '' : pathValue;
-    if (path === undefined) continue;
+  /**
+   * Visit route objects recursively only through a pathless route that owns
+   * an element. Other nested routes retain the existing conservative parser.
+   * @param {string} span
+   */
+  function visit(span) {
+    for (const obj of topLevelObjects(span)) {
+      const props = topLevelProperties(obj);
+      const isIndex = props.get('index') === 'true';
+      const pathValue = /^['"]([^'"]*)['"]/.exec(props.get('path') ?? '')?.[1];
+      const childrenSpan = props.has('children')
+        ? balancedSpan(props.get('children') ?? '', 0, '[', ']')
+        : undefined;
+      const elementMatch = /^<([A-Z]\w*)/.exec(props.get('element') ?? '');
 
-    let elementMatch = /^<([A-Z]\w*)/.exec(props.get('element') ?? '');
-    // A route with `children` and no OWN `element` — e.g. `reports` nesting
-    // `{ index: true, element: <ReportDashboardPage /> }` so a future sibling
-    // like `reports/insurance` has somewhere to attach — resolves through
-    // that nested index child instead. Anything less specific than that
-    // single unambiguous case is left unresolved rather than guessed at.
-    if (elementMatch === null && props.has('children')) {
-      const childrenSpan = balancedSpan(props.get('children') ?? '', 0, '[', ']');
-      const childObjs = childrenSpan === undefined ? [] : topLevelObjects(childrenSpan);
-      const indexChildren = childObjs
-        .map((c) => topLevelProperties(c))
-        .filter((c) => c.get('index') === 'true');
-      const onlyIndexChild = indexChildren.length === 1 ? indexChildren[0] : undefined;
-      if (onlyIndexChild !== undefined) {
-        elementMatch = /^<([A-Z]\w*)/.exec(onlyIndexChild.get('element') ?? '');
+      if (
+        childrenSpan !== undefined &&
+        elementMatch !== null &&
+        !isIndex &&
+        (pathValue === undefined || pathValue === '')
+      ) {
+        visit(childrenSpan);
+        continue;
       }
+
+      const path = isIndex ? '' : pathValue;
+      if (path === undefined) continue;
+
+      let resolvedElement = elementMatch;
+      // A route with `children` and no OWN `element` resolves through its one
+      // unambiguous index child, as the pre-layout parser did for reports.
+      if (resolvedElement === null && childrenSpan !== undefined) {
+        const indexChildren = topLevelObjects(childrenSpan)
+          .map((child) => topLevelProperties(child))
+          .filter((child) => child.get('index') === 'true');
+        const onlyIndexChild = indexChildren.length === 1 ? indexChildren[0] : undefined;
+        if (onlyIndexChild !== undefined) {
+          resolvedElement = /^<([A-Z]\w*)/.exec(onlyIndexChild.get('element') ?? '');
+        }
+      }
+      if (resolvedElement === null) continue;
+      const component = resolvedElement[1];
+      if (component === undefined) continue;
+      // The path is used exactly as written — it already matches a normalized
+      // navConfig item path 1:1 (both strip the leading slash), and reducing
+      // it to a prefix would collide two genuinely different sibling routes
+      // that merely share one (e.g. `list` and `list/:id`).
+      map.set(path, component);
     }
-    if (elementMatch === null) continue;
-    const component = elementMatch[1];
-    if (component === undefined) continue;
-    // The path is used exactly as written — it already matches a normalized
-    // navConfig item path 1:1 (both strip the leading slash), and reducing
-    // it to a prefix would collide two genuinely different sibling routes
-    // that merely share one (e.g. `list` and `list/:id`).
-    map.set(path, component);
   }
+
+  visit(arraySpan);
   return map;
 }
 
@@ -581,6 +600,17 @@ function selfTest() {
       parseRouteComponents(routesSource).get('list') === 'ListPage',
     'parses the index route as the empty path':
       parseRouteComponents(routesSource).get('') === 'HomePage',
+    'resolves routes through a pathless layout route':
+      parseRouteComponents(`
+        export const routes = [{
+          path: '',
+          element: <Layout />,
+          children: [
+            { index: true, element: <HomePage /> },
+            { path: 'list', element: <ListPage /> },
+          ],
+        }];
+      `).get('list') === 'ListPage',
     'parses lazy import paths':
       parseLazyImports(routesSource).get('HomePage') === './pages/HomePage',
     'resolves an icon tag nested inside a wrapper element':

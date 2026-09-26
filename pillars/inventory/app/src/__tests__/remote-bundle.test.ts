@@ -98,15 +98,15 @@ describe('inventory remote bundle', () => {
    * Every real page keeps its own chunk, so a loader-mounted pillar still
    * fetches a page's code on first navigation rather than all of them up
    * front. The count is bounded below by the pages that are lazy and above by
-   * the slot count: the group passthrough and the two redirects are each a
-   * line or two and deliberately eager, since a network round-trip to learn
-   * where to send the reader is worse than the bytes.
+   * the slot count: the four redirects and the layout are deliberately eager,
+   * since a network round-trip to learn where to send the reader is worse than
+   * the bytes.
    */
   it('splits the real pages out without giving the redirects chunks', async () => {
     const source = await readFile(ENTRY, 'utf8');
     const dynamicImports = [...source.matchAll(/import\("\.\/([^"]+)"\)/g)];
     const slots = new Set(allPageSlots()).size;
-    expect(dynamicImports.length).toBeGreaterThanOrEqual(slots - 3);
+    expect(dynamicImports.length).toBeGreaterThanOrEqual(slots - 5);
     expect(dynamicImports.length).toBeLessThan(slots);
   });
 });

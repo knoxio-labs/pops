@@ -89,6 +89,29 @@ describe('parseRouteComponents', () => {
     expect(parseRouteComponents(ROUTES_SOURCE).has('insurance')).toBe(false);
   });
 
+  it('resolves nav items through a pathless layout route', () => {
+    const source = `
+      const HomePage = lazy(() => import('./pages/HomePage'));
+      const ListPage = lazy(() => import('./pages/ListPage'));
+      export const routes = [
+        {
+          path: '',
+          element: <Layout />,
+          children: [
+            { index: true, element: <HomePage /> },
+            { path: 'list', element: <ListPage /> },
+          ],
+        },
+      ];
+    `;
+    expect(parseRouteComponents(source)).toEqual(
+      new Map([
+        ['', 'HomePage'],
+        ['list', 'ListPage'],
+      ])
+    );
+  });
+
   it('keeps parsing past an apostrophe inside a // comment', () => {
     // Regression: an apostrophe in prose is not a string delimiter. Treating
     // it as one opens a quote state that never closes and silently drops
