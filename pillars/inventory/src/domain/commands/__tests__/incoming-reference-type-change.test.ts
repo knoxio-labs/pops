@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { activatePersistedCatalogueProtocol } from '../../../catalogue/__tests__/protocol-rollout-fixture.js';
+import { publishItemTypeTree } from '../../../catalogue/__tests__/type-tree-fixture.js';
 import {
   createCatalogueDraft,
   patchCatalogueDraft,
@@ -185,5 +186,66 @@ describe('a type change refused for another item’s incoming reference', () => 
       expect(outcome.incomingReference?.itemId).not.toBe(retypedId);
     }
     expect(harness.item(retypedId).revision).toBe(1);
+  });
+
+  it('accepts a sheet descendant for an incoming reference constrained to bedding', () => {
+    const harness = openHarness();
+    const catalogue = publishItemTypeTree(harness.db);
+    const targetId = randomUUID();
+    const holderId = randomUUID();
+    const material = () => ({
+      fieldId: catalogue.materialFieldId,
+      values: [{ optionId: catalogue.materialCottonOptionId }],
+    });
+
+    expect(
+      harness.run(
+        mutation(
+          'item.create',
+          targetId,
+          {
+            item: {
+              name: 'Target bedding',
+              typeId: catalogue.beddingTypeId,
+              values: [material()],
+            },
+          },
+          { baseRevision: null, catalogueRevision: catalogue.revision }
+        )
+      )
+    ).toMatchObject({ status: 'applied' });
+    expect(
+      harness.run(
+        mutation(
+          'item.create',
+          holderId,
+          {
+            item: {
+              name: 'Holder bedding',
+              typeId: catalogue.beddingTypeId,
+              values: [
+                material(),
+                {
+                  fieldId: catalogue.partnerFieldId,
+                  values: [{ targetKind: 'item', targetId }],
+                },
+              ],
+            },
+          },
+          { baseRevision: null, catalogueRevision: catalogue.revision }
+        )
+      )
+    ).toMatchObject({ status: 'applied' });
+
+    const changed = harness.run(
+      mutation(
+        'item.changeType',
+        targetId,
+        { typeId: catalogue.sheetTypeId, values: [material()] },
+        { baseRevision: 1, catalogueRevision: catalogue.revision }
+      )
+    );
+
+    expect(changed).toMatchObject({ status: 'applied' });
   });
 });

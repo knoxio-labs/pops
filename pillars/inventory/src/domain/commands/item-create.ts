@@ -130,7 +130,7 @@ function insertItem({
   sourceRef,
 }: InsertItemArgs): void {
   const { type } = catalogue;
-  const supportsContainment = type?.capabilities.includes('containment') ?? false;
+  const supportsContainment = type?.effectiveCapabilities.includes('containment') ?? false;
   const values: ItemInsert = {
     id,
     name: item.name,
@@ -195,7 +195,7 @@ export const itemCreate = defineOp({
     const catalogue = resolveCreateCatalogue(ctx.db, item, ctx.mutation.catalogueRevision);
     const { type } = catalogue;
     assertPlacementAllowed(ctx.db, ctx.mutation.entityId, item.placement);
-    const isContainer = type?.capabilities.includes('containment') ?? false;
+    const isContainer = type?.effectiveCapabilities.includes('containment') ?? false;
     assertContainerQuantity(isContainer, item.quantity);
     assertCodeFree(ctx.db, args.code, ctx.mutation.entityId);
 

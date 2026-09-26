@@ -10,7 +10,7 @@ import type { ExpressionValidationContext } from './expression-validation-shared
 
 function findField(type: PersistedItemType, fieldId: string, path: string): PersistedItemTypeField {
   return (
-    type.fields.find((field) => field.id === fieldId) ??
+    type.effectiveFields.find((field) => field.id === fieldId) ??
     expressionFail(
       path,
       'expression_field_unknown',
@@ -35,8 +35,8 @@ function targetTypes(
       'expression_path_not_item_reference',
       'must name a one item-reference field'
     );
-  if (field.referenceTypeIds.size === 0) return context.catalogue.types;
-  return [...field.referenceTypeIds].map(
+  if (field.admittedReferenceTypeIds.size === 0) return context.catalogue.types;
+  return [...field.admittedReferenceTypeIds].map(
     (id) =>
       context.catalogue.types.find((candidate) => candidate.id === id) ??
       expressionFail(path, 'expression_type_unknown', `target type ${id} is not present`)

@@ -465,7 +465,7 @@ describe('type catalogue owner API', () => {
 
     expect(initialRollout.body).toEqual({
       minimumProtocol: 1,
-      supportedProtocol: 2,
+      supportedProtocol: 3,
       catalogueMinimumProtocol: 1,
     });
 
@@ -486,7 +486,7 @@ describe('type catalogue owner API', () => {
 
     const unsupported = await api.post('/type-catalogue/protocol-rollout').send({
       expectedMinimumProtocol: 1,
-      minimumProtocol: 3,
+      minimumProtocol: 4,
     });
     expect(unsupported.status).toBe(400);
     expect(unsupported.body.code).toBe('protocol_not_supported');
@@ -574,7 +574,7 @@ describe('type catalogue owner API', () => {
     const finalRollout = await restarted.get('/type-catalogue/protocol-rollout');
     expect(finalRollout.body).toEqual({
       minimumProtocol: 2,
-      supportedProtocol: 2,
+      supportedProtocol: 3,
       catalogueMinimumProtocol: 2,
     });
   });

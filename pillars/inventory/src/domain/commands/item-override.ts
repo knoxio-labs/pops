@@ -41,10 +41,10 @@ function requireOverrideField(request: OverrideFieldRequest): PersistedItemTypeF
   if (typeId === null) throw new CommandRejected('type_unknown', 'an untyped item has no fields');
   const resolution = resolveCommandCatalogue(db, catalogueRevision);
   const type = resolveCommandType(resolution, typeId);
-  if (!type.authored.fields.some((candidate) => candidate.id === fieldId)) {
+  if (!type.authored.effectiveFields.some((candidate) => candidate.id === fieldId)) {
     throw new CommandRejected('invalid', `field ${fieldId} is not declared`);
   }
-  const field = type.active.fields.find((candidate) => candidate.id === fieldId);
+  const field = type.active.effectiveFields.find((candidate) => candidate.id === fieldId);
   if (field === undefined) {
     throw new CommandRejected(
       'catalogue_repair_required',

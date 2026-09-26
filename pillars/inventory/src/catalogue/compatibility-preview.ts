@@ -29,7 +29,7 @@ function affectedTypeIds(
     for (const type of catalogue.types) {
       if (affected.has(type.id)) typeIds.add(type.id);
       if (
-        type.fields.some(
+        type.effectiveFields.some(
           (field) =>
             affected.has(field.id) || field.enumOptions.some((option) => affected.has(option.id))
         )
