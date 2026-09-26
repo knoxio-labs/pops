@@ -7,8 +7,10 @@
  */
 import { placementTrail, rankMatch } from '../foundation';
 import { sitsWithin } from '../items-list/browse-model';
+import { descendantIds } from '../type-tree/model';
 
 import type { ItemRowModel, LocationModel, PlacementWorld } from '../foundation';
+import type { TypeTreeRecord } from '../type-tree/model';
 
 /** How strongly a hit matched, strongest first. */
 export type MatchTier = 'prefix' | 'contains' | 'other';
@@ -77,8 +79,18 @@ function itemHit(world: PlacementWorld, item: ItemRowModel, q: string): ItemHit 
   return field === null ? null : { kind: 'item', item, tier: 'other', field };
 }
 
-function passes(world: PlacementWorld, item: ItemRowModel, filters: SearchFilters): boolean {
-  if (filters.typeId !== null && item.typeId !== filters.typeId) return false;
+function passes(
+  world: PlacementWorld,
+  item: ItemRowModel,
+  filters: SearchFilters,
+  types: readonly TypeTreeRecord[]
+): boolean {
+  if (
+    filters.typeId !== null &&
+    item.typeId !== filters.typeId &&
+    !descendantIds(types, filters.typeId).includes(item.typeId ?? '')
+  )
+    return false;
   return filters.within === null || sitsWithin(world, item, filters.within);
 }
 
@@ -104,13 +116,14 @@ function placeHits(world: PlacementWorld, q: string, filters: SearchFilters): Pl
 export function searchInventory(
   world: PlacementWorld,
   query: string,
-  filters: SearchFilters = NO_SEARCH_FILTERS
+  filters: SearchFilters = NO_SEARCH_FILTERS,
+  types: readonly TypeTreeRecord[] = []
 ): InventoryResults {
   const q = query.trim();
   if (q === '') return { exact: null, items: [], places: [] };
   const exact = exactCode(world.items.values(), q);
   const items = [...world.items.values()]
-    .filter((item) => item.id !== exact?.id && passes(world, item, filters))
+    .filter((item) => item.id !== exact?.id && passes(world, item, filters, types))
     .flatMap((item) => itemHit(world, item, q) ?? [])
     .toSorted(byTier);
   return { exact, items, places: placeHits(world, q, filters) };

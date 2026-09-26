@@ -1,3 +1,5 @@
+import { Check } from 'lucide-react';
+
 /**
  * The item's own fields that every item has, type or not: name (the one
  * required value), type and note. Labels sit above their controls so the
@@ -6,6 +8,7 @@
 import { ComboboxSelect, Input, Label, Textarea, cn } from '@pops/ui';
 
 import { FieldHint, FieldProblem, PROBLEM_RING } from '../field-editors/field-note';
+import { typeTreeOptions } from '../type-tree/model';
 
 import type { ReactNode } from 'react';
 
@@ -70,6 +73,64 @@ export function NameField({
 
 const NO_TYPE = 'none';
 
+function typePickerOptions(types: readonly FormTypeDef[]) {
+  return typeTreeOptions(types, '', true).map((option) => ({
+    value: option.value,
+    label: `${'  '.repeat(option.depth - 1)}${option.pathLabel}`,
+    disabled: option.disabled,
+  }));
+}
+
+const DEPTH_PADDING: Readonly<Record<number, string>> = { 1: 'pl-0', 2: 'pl-3', 3: 'pl-6' };
+
+function OpenTypeTree({
+  types,
+  typeId,
+  query,
+  onChange,
+}: {
+  types: readonly FormTypeDef[];
+  typeId: string | null;
+  query: string;
+  onChange: (type: FormTypeDef | null) => void;
+}) {
+  return (
+    <div
+      role="listbox"
+      aria-label="Type tree choices"
+      className="overflow-hidden rounded-lg border bg-card shadow-sm"
+    >
+      <div className="border-b bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+        {query === '' ? 'Choose a type' : `Results for “${query}”`}
+      </div>
+      <div className="max-h-60 overflow-y-auto py-1">
+        {typeTreeOptions(types, query, true).map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="option"
+            aria-selected={option.value === typeId}
+            disabled={option.disabled}
+            onClick={() => onChange(types.find((type) => type.id === option.value) ?? null)}
+            className={cn(
+              'flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm',
+              option.disabled ? 'opacity-50' : 'hover:bg-muted',
+              option.value === typeId && 'bg-primary/10'
+            )}
+          >
+            <span className="flex w-4 shrink-0 items-center text-muted-foreground">
+              {option.value === typeId ? <Check className="size-3.5" aria-hidden /> : null}
+            </span>
+            <span className={cn('min-w-0 flex-1 truncate', DEPTH_PADDING[option.depth] ?? 'pl-6')}>
+              {option.pathLabel}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * The type. "No type yet" is a real answer while creating (the item can be
  * typed later); once an item has a type it is not offered, because nothing
@@ -80,15 +141,19 @@ export function TypeField({
   typeId,
   offerNone,
   onChange,
+  treeOpen = false,
+  treeQuery = '',
 }: {
   types: readonly FormTypeDef[];
   typeId: string | null;
   offerNone: boolean;
   onChange: (type: FormTypeDef | null) => void;
+  treeOpen?: boolean;
+  treeQuery?: string;
 }) {
   const options = [
     ...(offerNone ? [{ value: NO_TYPE, label: 'No type yet' }] : []),
-    ...types.map((type) => ({ value: type.id, label: type.label })),
+    ...typePickerOptions(types),
   ];
   const chosen = types.find((type) => type.id === typeId);
   return (
@@ -106,6 +171,9 @@ export function TypeField({
           onChange(types.find((type) => type.id === next) ?? null);
         }}
       />
+      {treeOpen ? (
+        <OpenTypeTree types={types} typeId={typeId} query={treeQuery} onChange={onChange} />
+      ) : null}
       {chosen?.containment === true ? (
         <FieldHint>A container: it holds other items and is always one.</FieldHint>
       ) : null}

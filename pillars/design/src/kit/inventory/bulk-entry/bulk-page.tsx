@@ -17,6 +17,7 @@ import { BulkBanner } from './bulk-status';
 import { isBlank, validateRows } from './row-validation';
 
 import type { PlacementTarget, PlacementWorld } from '../foundation';
+import type { TypeTreeRecord } from '../type-tree/model';
 import type { RowStatus } from './bulk-grid';
 import type { BulkCounts, BulkPhase } from './bulk-status';
 import type { BulkDraft } from './paste-parser';
@@ -29,7 +30,9 @@ export interface BulkPageProps {
   context: BulkContext;
   world: PlacementWorld;
   destination: PlacementTarget;
-  types: readonly { value: string; label: string }[];
+  types: readonly { value: string; label: string; parentTypeId?: string | null }[];
+  typeTreeOpen?: boolean;
+  typeTreeQuery?: string;
   created?: number;
   pasteNote?: string;
 }
@@ -77,6 +80,55 @@ function Defaults({
   );
 }
 
+function Grid({
+  grid,
+  issues,
+  phase,
+  nextBlank,
+  destination,
+  typeOptions,
+  typeTreeOpen,
+  typeTreeQuery,
+}: {
+  grid: readonly BulkDraft[];
+  issues: readonly BulkIssue[];
+  phase: BulkPhase;
+  nextBlank: number;
+  destination: string;
+  typeOptions: readonly TypeTreeRecord[];
+  typeTreeOpen?: boolean;
+  typeTreeQuery?: string;
+}) {
+  return (
+    <ListBody>
+      <div
+        role="grid"
+        aria-label="Items to create"
+        aria-busy={phase === 'submitting' || phase === 'validating'}
+      >
+        <BulkGridHeader />
+        {grid.map((draft, index) => {
+          const own = checked(phase) ? issues.filter((issue) => issue.row === index) : [];
+          return (
+            <BulkGridRow
+              key={`row-${String(index)}`}
+              draft={draft}
+              index={index}
+              status={statusOf(draft, own, phase)}
+              issues={own}
+              disabled={phase === 'submitting'}
+              hintWhere={index === nextBlank ? destination : undefined}
+              typeOptions={typeOptions}
+              typeTreeOpen={typeTreeOpen}
+              typeTreeQuery={typeTreeQuery}
+            />
+          );
+        })}
+      </div>
+    </ListBody>
+  );
+}
+
 /** The bulk entry page. */
 export function BulkPage(props: BulkPageProps) {
   const { phase, rows, context } = props;
@@ -92,6 +144,11 @@ export function BulkPage(props: BulkPageProps) {
   const grid = [...rows, ...Array.from({ length: SPARE_ROWS }, () => BLANK)];
   const nextBlank = grid.findIndex((row) => isBlank(row));
   const destination = destinationName(props);
+  const typeOptions: readonly TypeTreeRecord[] = props.types.map((type) => ({
+    id: type.value,
+    label: type.label,
+    parentTypeId: type.parentTypeId ?? null,
+  }));
   return (
     <InventoryPage
       title="Bulk entry"
@@ -108,29 +165,16 @@ export function BulkPage(props: BulkPageProps) {
       toolbar={<Defaults world={props.world} destination={props.destination} types={props.types} />}
       dock={<BulkActionBar phase={phase} counts={counts} />}
     >
-      <ListBody>
-        <div
-          role="grid"
-          aria-label="Items to create"
-          aria-busy={phase === 'submitting' || phase === 'validating'}
-        >
-          <BulkGridHeader />
-          {grid.map((draft, index) => {
-            const own = checked(phase) ? issues.filter((issue) => issue.row === index) : [];
-            return (
-              <BulkGridRow
-                key={`row-${String(index)}`}
-                draft={draft}
-                index={index}
-                status={statusOf(draft, own, phase)}
-                issues={own}
-                disabled={phase === 'submitting'}
-                hintWhere={index === nextBlank ? destination : undefined}
-              />
-            );
-          })}
-        </div>
-      </ListBody>
+      <Grid
+        grid={grid}
+        issues={issues}
+        phase={phase}
+        nextBlank={nextBlank}
+        destination={destination}
+        typeOptions={typeOptions}
+        typeTreeOpen={props.typeTreeOpen}
+        typeTreeQuery={props.typeTreeQuery}
+      />
     </InventoryPage>
   );
 }

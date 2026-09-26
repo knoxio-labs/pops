@@ -8,8 +8,10 @@ import { CircleCheck, TriangleAlert } from 'lucide-react';
 
 import { Input, cn } from '@pops/ui';
 
+import { typeTreeOptions } from '../type-tree/model';
 import { BULK_COLUMNS } from './paste-parser';
 
+import type { TypeTreeRecord } from '../type-tree/model';
 import type { BulkColumn, BulkDraft } from './paste-parser';
 import type { BulkIssue } from './row-validation';
 
@@ -33,6 +35,7 @@ const WIDTHS: Readonly<Record<BulkColumn, string>> = {
   where: 'w-36 shrink-0 lg:w-44',
   note: 'hidden w-40 shrink-0 lg:block',
 };
+const EMPTY_TYPES: readonly TypeTreeRecord[] = [];
 
 function placeholders(destination: string): Readonly<Partial<Record<BulkColumn, string>>> {
   return { name: 'Required', type: 'Untyped', quantity: '1', where: destination };
@@ -53,6 +56,86 @@ function Status({ status, index }: { status: RowStatus; index: number }) {
   return <span className="text-xs tabular-nums text-muted-foreground">{index + 1}</span>;
 }
 
+function TypeTreeMenu({
+  options,
+  query,
+  draftType,
+}: {
+  options: readonly TypeTreeRecord[];
+  query: string;
+  draftType: string;
+}) {
+  return (
+    <div
+      role="listbox"
+      aria-label="Type choices"
+      className="absolute top-9 left-0 z-20 w-72 overflow-hidden rounded-lg border bg-card shadow-lg"
+    >
+      {typeTreeOptions(options, query, true).map((option) => (
+        <div
+          key={option.value}
+          role="option"
+          aria-selected={draftType === option.label}
+          className={cn(
+            'min-h-11 px-3 py-2 text-sm',
+            option.depth === 2 && 'pl-6',
+            option.depth === 3 && 'pl-9'
+          )}
+        >
+          <span className="block font-medium">{option.label}</span>
+          <span className="block text-xs text-muted-foreground">{option.pathLabel}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Cell({
+  column,
+  draft,
+  index,
+  hints,
+  refused,
+  errorId,
+  disabled,
+  typeOptions,
+  typeTreeOpen,
+  typeTreeQuery,
+}: {
+  column: BulkColumn;
+  draft: BulkDraft;
+  index: number;
+  hints: Readonly<Partial<Record<BulkColumn, string>>>;
+  refused: ReadonlySet<BulkColumn>;
+  errorId: string;
+  disabled: boolean;
+  typeOptions: readonly TypeTreeRecord[];
+  typeTreeOpen: boolean;
+  typeTreeQuery: string;
+}) {
+  return (
+    <span key={column} role="gridcell" className={cn(WIDTHS[column], 'relative')}>
+      <Input
+        aria-label={`${HEADERS[column]}, row ${String(index + 1)}`}
+        aria-invalid={refused.has(column) || undefined}
+        aria-describedby={refused.has(column) ? errorId : undefined}
+        defaultValue={draft[column]}
+        placeholder={hints[column]}
+        disabled={disabled}
+        className={cn(
+          'h-8 rounded-sm border-transparent bg-transparent px-2 text-sm shadow-none hover:border-input dark:bg-transparent',
+          column === 'code' && 'font-mono text-xs',
+          column === 'quantity' && 'text-right tabular-nums',
+          'aria-invalid:border-warning aria-invalid:bg-warning/10 aria-invalid:ring-0 dark:aria-invalid:ring-0'
+        )}
+      />
+      {column === 'type' && index === 0 && typeTreeOpen ? (
+        <TypeTreeMenu options={typeOptions} query={typeTreeQuery} draftType={draft.type} />
+      ) : null}
+    </span>
+  );
+}
+
 /** Props for {@link BulkGridRow}. */
 export interface BulkGridRowProps {
   draft: BulkDraft;
@@ -62,6 +145,9 @@ export interface BulkGridRowProps {
   disabled?: boolean;
   /** What a blank Where means, shown as the cell's placeholder on the next row to type. */
   hintWhere?: string;
+  typeOptions?: readonly TypeTreeRecord[];
+  typeTreeOpen?: boolean;
+  typeTreeQuery?: string;
 }
 
 /** One grid row. */
@@ -72,6 +158,9 @@ export function BulkGridRow({
   issues,
   disabled = false,
   hintWhere,
+  typeOptions = EMPTY_TYPES,
+  typeTreeOpen = false,
+  typeTreeQuery = '',
 }: BulkGridRowProps) {
   const hints = hintWhere === undefined ? {} : placeholders(hintWhere);
   const refused = new Set(issues.map((issue) => issue.column));
@@ -86,22 +175,19 @@ export function BulkGridRow({
           <Status status={status} index={index} />
         </span>
         {BULK_COLUMNS.map((column) => (
-          <span key={column} role="gridcell" className={WIDTHS[column]}>
-            <Input
-              aria-label={`${HEADERS[column]}, row ${String(index + 1)}`}
-              aria-invalid={refused.has(column) || undefined}
-              aria-describedby={refused.has(column) ? errorId : undefined}
-              defaultValue={draft[column]}
-              placeholder={hints[column]}
-              disabled={disabled}
-              className={cn(
-                'h-8 rounded-sm border-transparent bg-transparent px-2 text-sm shadow-none hover:border-input dark:bg-transparent',
-                column === 'code' && 'font-mono text-xs',
-                column === 'quantity' && 'text-right tabular-nums',
-                'aria-invalid:border-warning aria-invalid:bg-warning/10 aria-invalid:ring-0 dark:aria-invalid:ring-0'
-              )}
-            />
-          </span>
+          <Cell
+            key={column}
+            column={column}
+            draft={draft}
+            index={index}
+            hints={hints}
+            refused={refused}
+            errorId={errorId}
+            disabled={disabled}
+            typeOptions={typeOptions}
+            typeTreeOpen={typeTreeOpen}
+            typeTreeQuery={typeTreeQuery}
+          />
         ))}
       </div>
       {issues.length > 0 ? (

@@ -128,6 +128,22 @@ describe('resolveLabel', () => {
 });
 
 describe('fieldChoices', () => {
+  it('keeps an inherited field under its owner type exactly once', () => {
+    const sheet: LabelDetails = {
+      typeName: 'Sheet',
+      fields: [
+        { id: 'bedding.material', label: 'Material', value: 'Cotton', typeName: 'Bedding' },
+        { id: 'bedding.material', label: 'Material', value: 'Cotton', typeName: 'Bedding' },
+        { id: 'sheet.fitted', label: 'Fitted', value: 'Yes' },
+      ],
+      contents: [],
+    };
+    expect(fieldChoices([sheet])).toEqual([
+      { id: 'bedding.material', label: 'Material', typeName: 'Bedding' },
+      { id: 'sheet.fitted', label: 'Fitted', typeName: 'Sheet' },
+    ]);
+  });
+
   it('lists each field once, with its type, skipping untyped items', () => {
     const appliance: LabelDetails = {
       typeName: 'Appliance',

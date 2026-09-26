@@ -47,6 +47,7 @@ export interface FormFieldDef {
 export interface FormTypeDef {
   id: string;
   label: string;
+  parentTypeId: string | null;
   /** A container type: the item holds things and its quantity is always 1. */
   containment: boolean;
   /** The stem the code suggester numbers from. */

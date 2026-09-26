@@ -7,8 +7,10 @@
 import { Button, Input, Label, Select } from '@pops/ui';
 
 import { MovePlanPanel, SheetPanel, planMove } from '../foundation';
+import { TypeTreePicker } from '../type-tree/type-tree-picker';
 
 import type { PlacementTarget, PlacementWorld } from '../foundation';
+import type { TypeTreeRecord } from '../type-tree/model';
 
 /** The bulk Move sheet, after a target was picked. */
 export function BulkMoveSheet({
@@ -87,6 +89,67 @@ export function BulkSetFieldSheet({
             : ''}
           {' Undo reverts all of them while the toast shows.'}
         </p>
+      </div>
+    </SheetPanel>
+  );
+}
+
+/** One selected item and the shared values that survive a type change. */
+export interface TypeChangePreview {
+  item: string;
+  kept: readonly string[];
+}
+
+/** The bulk type sheet, with the same shared-value preview as the item form. */
+export function BulkSetTypeSheet({
+  count,
+  currentType,
+  nextType,
+  types,
+  preview,
+}: {
+  count: number;
+  currentType: string;
+  nextType: string;
+  types: readonly TypeTreeRecord[];
+  preview: readonly TypeChangePreview[];
+}) {
+  return (
+    <SheetPanel
+      title={`Set type on ${String(count)} items`}
+      description="Choose a type. Values shared by both types stay on each item."
+      className="rounded-none rounded-l-xl"
+      footer={
+        <>
+          <Button variant="ghost">Cancel</Button>
+          <Button>Set type on {count} items</Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+          {currentType} <span className="text-muted-foreground">to</span> {nextType}
+        </p>
+        <TypeTreePicker
+          types={types}
+          value="type-quilt-cover"
+          open
+          label="New type"
+          placeholder="Choose the new type"
+        />
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">Values kept</h3>
+          <ul className="space-y-2 text-sm">
+            {preview.map((entry) => (
+              <li key={entry.item} className="rounded-lg border px-3 py-2">
+                <span className="font-medium">{entry.item}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {entry.kept.length === 0 ? 'No shared values' : entry.kept.join(' · ')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </SheetPanel>
   );

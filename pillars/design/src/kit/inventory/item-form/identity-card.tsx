@@ -13,7 +13,7 @@ import { PhotosField } from './photos-field';
 import type { ItemRowModel } from '../shared/model';
 import type { PlacementWorld } from '../shared/placement-model';
 import type { ItemDraft } from './form-draft';
-import type { FormOverlay, ItemFormContext } from './form-opening';
+import type { FormOverlay, ItemFormContext, TypePickerState } from './form-opening';
 import type { ItemFormApi } from './use-item-form';
 
 /** Props for {@link IdentityCard}. */
@@ -25,6 +25,7 @@ export interface IdentityCardProps {
   /** The item's id when editing; a new item is placed as a draft. */
   editingId?: string;
   overlay?: FormOverlay;
+  typePicker?: TypePickerState;
 }
 
 const DRAFT_ID = 'draft-item';
@@ -103,6 +104,8 @@ export function IdentityCard(props: IdentityCardProps) {
               containment: type?.containment ?? false,
             })
           }
+          treeOpen={props.typePicker?.open}
+          treeQuery={props.typePicker?.query}
         />
         <CodeField
           entry={draft.code}

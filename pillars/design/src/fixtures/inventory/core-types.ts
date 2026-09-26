@@ -19,6 +19,7 @@ export interface CoreFieldModel {
 export interface CoreTypeModel {
   id: string;
   label: string;
+  parentTypeId: string | null;
   containment: boolean;
   fields: readonly CoreFieldModel[];
 }
@@ -33,6 +34,7 @@ const one = (key: string, label: string, kind: CatalogueFieldKind): CoreFieldMod
 export const electronicsType: CoreTypeModel = {
   id: 'type-electronics',
   label: 'Electronics',
+  parentTypeId: null,
   containment: false,
   fields: [
     one('manufacturer', 'Manufacturer', 'short_text'),
@@ -61,31 +63,35 @@ export const coreTypes: readonly CoreTypeModel[] = [
   {
     id: 'type-box',
     label: 'Moving box',
+    parentTypeId: null,
     containment: true,
     fields: [one('room', 'For room', 'short_text')],
   },
-  { id: 'type-tub', label: 'Storage tub', containment: true, fields: [] },
+  { id: 'type-tub', label: 'Storage tub', parentTypeId: null, containment: true, fields: [] },
   {
     id: 'type-cable',
     label: 'Cable',
+    parentTypeId: null,
     containment: false,
     fields: [one('length', 'Length', 'measurement')],
   },
-  { id: 'type-kitchen', label: 'Kitchenware', containment: false, fields: [] },
+  { id: 'type-kitchen', label: 'Kitchenware', parentTypeId: null, containment: false, fields: [] },
   {
     id: 'type-tools',
     label: 'Tools',
+    parentTypeId: null,
     containment: false,
     fields: [one('brand', 'Brand', 'short_text')],
   },
-  { id: 'type-furniture', label: 'Furniture', containment: false, fields: [] },
+  { id: 'type-furniture', label: 'Furniture', parentTypeId: null, containment: false, fields: [] },
   {
     id: 'type-books',
     label: 'Books',
+    parentTypeId: null,
     containment: false,
     fields: [one('author', 'Author', 'short_text')],
   },
-  { id: 'type-linen', label: 'Linen', containment: false, fields: [] },
+  { id: 'type-linen', label: 'Linen', parentTypeId: null, containment: false, fields: [] },
 ];
 
 /** The label for a type id, or null for an untyped item. */

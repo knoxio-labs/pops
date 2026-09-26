@@ -5,8 +5,10 @@
  * a bookmark.
  */
 import { effectiveLocationId, isLocationWithin, isWithin, rankMatch } from '../foundation';
+import { descendantIds } from '../type-tree/model';
 
 import type { ItemRowModel, PlacementWorld } from '../foundation';
+import type { TypeTreeRecord } from '../type-tree/model';
 
 /** How the rows are drawn. */
 export type ItemsView = 'table' | 'compact' | 'cards';
@@ -49,9 +51,15 @@ export function isNarrowed(filters: ItemsFilters): boolean {
   return filters.q.trim() !== '' || activeFilterCount(filters) > 0;
 }
 
-function passesType(item: ItemRowModel, filters: ItemsFilters): boolean {
+function passesType(
+  item: ItemRowModel,
+  filters: ItemsFilters,
+  types: readonly TypeTreeRecord[]
+): boolean {
   if (filters.untyped) return item.typeId === null;
-  return filters.typeId === null || item.typeId === filters.typeId;
+  if (filters.typeId === null || item.typeId === filters.typeId) return true;
+  if (types.length === 0) return false;
+  return descendantIds(types, filters.typeId).includes(item.typeId ?? '');
 }
 
 /** Whether an item sits somewhere under `within`, never counting the place itself. */
@@ -89,13 +97,14 @@ const COMPARE: Readonly<
 export function applyFilters(
   items: readonly ItemRowModel[],
   world: PlacementWorld,
-  filters: ItemsFilters
+  filters: ItemsFilters,
+  types: readonly TypeTreeRecord[] = []
 ): ItemRowModel[] {
   const q = filters.q.trim();
   const within = filters.within;
   return items
     .filter((item) => filters.inactive || item.lifecycle === 'active')
-    .filter((item) => passesType(item, filters))
+    .filter((item) => passesType(item, filters, types))
     .filter((item) => within === null || sitsWithin(world, item, within))
     .map((item) => ({ item, rank: q === '' ? 1 : textRank(item, q) }))
     .filter((scored) => scored.rank > 0)
@@ -107,12 +116,13 @@ export function applyFilters(
 export function hiddenInactive(
   items: readonly ItemRowModel[],
   world: PlacementWorld,
-  filters: ItemsFilters
+  filters: ItemsFilters,
+  types: readonly TypeTreeRecord[] = []
 ): number {
   if (filters.inactive) return 0;
   return (
-    applyFilters(items, world, { ...filters, inactive: true }).length -
-    applyFilters(items, world, filters).length
+    applyFilters(items, world, { ...filters, inactive: true }, types).length -
+    applyFilters(items, world, filters, types).length
   );
 }
 

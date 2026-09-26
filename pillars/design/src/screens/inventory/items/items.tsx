@@ -11,7 +11,11 @@ import {
   typeOptions,
 } from '@/fixtures/inventory/items-browse';
 import { buildWorld, StateBanner } from '@/kit/inventory/foundation';
-import { BulkMoveSheet, BulkSetFieldSheet } from '@/kit/inventory/items-list/bulk-sheets';
+import {
+  BulkMoveSheet,
+  BulkSetFieldSheet,
+  BulkSetTypeSheet,
+} from '@/kit/inventory/items-list/bulk-sheets';
 import { DuplicatesBanner, TypeArrivedBanner } from '@/kit/inventory/items-list/items-banners';
 import { ItemsPage } from '@/kit/inventory/items-list/items-page';
 import { PageOverlay } from '@/kit/inventory/items-list/page-overlay';
@@ -89,6 +93,34 @@ export const states: ScreenStates = {
               { key: 'manufacturer', label: 'Manufacturer', have: 4 },
               { key: 'powered', label: 'Needs power', have: 4 },
               { key: 'brand', label: 'Brand', have: 0 },
+            ]}
+          />
+        </PageOverlay>
+      }
+    />
+  ),
+  'filter-parent-type': () => <Items seed={{ filters: { typeId: 'type-bedding' } }} filterOpen />,
+  'set-type-tree': () => (
+    <Items
+      seed={{
+        filters: { typeId: 'type-bedding' },
+        selected: ['tree-sheet-1', 'tree-sheet-2', 'tree-quilt-cover-1'],
+      }}
+      overlay={
+        <PageOverlay align="right">
+          <BulkSetTypeSheet
+            count={3}
+            currentType="Bedding"
+            nextType="Quilt cover"
+            types={typeOptions.map((type) => ({
+              id: type.value,
+              label: type.label,
+              parentTypeId: type.parentTypeId,
+            }))}
+            preview={[
+              { item: 'Guest fitted sheet', kept: ['Material', 'Colour'] },
+              { item: 'Cotton sheet', kept: ['Material', 'Colour'] },
+              { item: 'Blue quilt cover', kept: ['Material', 'Colour'] },
             ]}
           />
         </PageOverlay>

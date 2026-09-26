@@ -1,3 +1,4 @@
+import { catalogueTypes } from '@/fixtures/inventory-type-catalogue';
 /**
  * The right half of the search page: the active result, read without
  * leaving the list. Items and containers carry their placement verbs; a
@@ -20,12 +21,21 @@ import {
   TypeLabel,
   directContents,
 } from '../foundation';
+import { typePathLabel } from '../type-tree/model';
 import { PreviewFact, PreviewFrame, PreviewList, PreviewRow } from './preview-parts';
 
 import type { ItemRowModel, LocationModel, PlacementWorld } from '../foundation';
 import type { PurchaseResult } from './purchase-model';
 
 const I = INVENTORY_ICONS;
+
+function typeDisplay(item: ItemRowModel): string | null {
+  if (item.typeId !== null) {
+    const path = typePathLabel(catalogueTypes, item.typeId);
+    if (path !== '') return path;
+  }
+  return item.typeName;
+}
 
 function ItemVerbs({ item }: { item: ItemRowModel }) {
   const inHand = item.placement.kind === 'in-hand';
@@ -52,9 +62,10 @@ const changed = new Intl.DateTimeFormat('en-AU', {
 });
 
 function ItemFacts({ item, boughtIn }: { item: ItemRowModel; boughtIn?: PurchaseResult }) {
+  const typeName = typeDisplay(item);
   return (
     <dl className="divide-y divide-border/60 rounded-lg border">
-      <PreviewFact label="Type">{item.typeName ?? 'None yet'}</PreviewFact>
+      <PreviewFact label="Type">{typeName ?? 'None yet'}</PreviewFact>
       <PreviewFact label="Quantity">{item.quantity}</PreviewFact>
       <PreviewFact label="Code">{item.code ?? 'None'}</PreviewFact>
       <PreviewFact label="Bought">
@@ -87,13 +98,14 @@ export function ItemPreview({
   boughtIn?: PurchaseResult;
 }) {
   const contents = item.container === null ? [] : directContents(world, item.id);
+  const typeName = typeDisplay(item);
   return (
     <PreviewFrame
       mark={<ItemMark item={item} size="md" />}
       title={item.name}
       badges={
         <>
-          <TypeLabel typeName={item.typeName} />
+          <TypeLabel typeName={typeName} />
           <QuantityBadge quantity={item.quantity} />
           <ContainerStateBadge container={item.container} />
           <LifecycleBadge lifecycle={item.lifecycle} />

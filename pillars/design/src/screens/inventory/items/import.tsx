@@ -1,5 +1,11 @@
 import { bulkContext } from '@/fixtures/inventory/bulk-entry';
-import { importFile, importHeaders, importMapping, importRows } from '@/fixtures/inventory/import';
+import {
+  importFile,
+  importHeaders,
+  importMapping,
+  importRows,
+  importTreeRows,
+} from '@/fixtures/inventory/import';
 import { guessMapping } from '@/kit/inventory/import/import-model';
 import { ImportPage } from '@/kit/inventory/import/import-page';
 
@@ -42,6 +48,7 @@ export const states: ScreenStates = {
   'mapping-guessed': () => <Import phase="mapping" mapping={guessMapping(importHeaders)} />,
   'mapping-problem': () => <Import phase="mapping" mapping={brokenMapping} />,
   preview: () => <Import phase="preview" />,
+  'type-column-subtypes': () => <Import phase="preview" rows={importTreeRows} typeTreePreview />,
   'preview-errors': () => <Import phase="preview" onlyProblems />,
   committing: () => <Import phase="committing" />,
   done: () => <Import phase="done" />,

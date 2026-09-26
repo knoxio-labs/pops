@@ -37,6 +37,26 @@ describe('rowIssues', () => {
     ]);
   });
 
+  it('matches a type-tree leaf or parent path from pasted cells', () => {
+    const treeContext: BulkContext = {
+      ...context,
+      types: [
+        { id: 'bedding', label: 'Bedding', containment: false },
+        {
+          id: 'sheet',
+          label: 'Sheet',
+          pathLabel: 'Bedding › Sheet',
+          parentTypeId: 'bedding',
+          containment: false,
+        },
+      ],
+    };
+    expect(rowIssues([row({ name: 'Sheet', type: 'Bedding › Sheet' })], 0, treeContext)).toEqual(
+      []
+    );
+    expect(rowIssues([row({ name: 'Sheets', type: 'Bedding' })], 0, treeContext)).toEqual([]);
+  });
+
   it('wants a whole quantity of at least 1, and 1 for a container', () => {
     for (const quantity of ['0', '-2', '1.5', 'two']) {
       expect(messages([row({ name: 'A', quantity })])).toEqual([

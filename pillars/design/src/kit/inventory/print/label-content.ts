@@ -27,6 +27,8 @@ export interface LabelFieldValue {
   id: string;
   label: string;
   value: string;
+  /** The owner type for inherited fields; omitted for a field owned by the item type. */
+  typeName?: string;
 }
 
 /** What the label page knows about an item beyond the print subject. */
@@ -216,7 +218,11 @@ export function fieldChoices(details: readonly LabelDetails[]): LabelFieldChoice
     if (entry.typeName === null) continue;
     for (const field of entry.fields) {
       if (!seen.has(field.id)) {
-        seen.set(field.id, { id: field.id, label: field.label, typeName: entry.typeName });
+        seen.set(field.id, {
+          id: field.id,
+          label: field.label,
+          typeName: field.typeName ?? entry.typeName,
+        });
       }
     }
   }

@@ -49,6 +49,24 @@ function errorsFor(draft: ItemDraft, type: FormTypeDef | null): Record<string, s
   return errors;
 }
 
+/** Returns inherited and local fields once, with the child definition winning by id. */
+export function formFieldsForType(types: readonly FormTypeDef[], typeId: string): FormFieldDef[] {
+  const index = new Map(types.map((type) => [type.id, type]));
+  const path: FormTypeDef[] = [];
+  const seen = new Set<string>();
+  let current = index.get(typeId);
+  while (current !== undefined && !seen.has(current.id)) {
+    path.unshift(current);
+    seen.add(current.id);
+    current = current.parentTypeId === null ? undefined : index.get(current.parentTypeId);
+  }
+  const fields = new Map<string, FormFieldDef>();
+  for (const type of path) {
+    for (const field of type.fields) fields.set(field.id, field);
+  }
+  return [...fields.values()];
+}
+
 function notCarriedFor(
   draft: ItemDraft,
   type: FormTypeDef | null,
@@ -66,12 +84,18 @@ function notCarriedFor(
 
 /** Every field of every type, by id, for naming values a type change leaves behind. */
 export function fieldIndex(types: readonly FormTypeDef[]): Map<string, FormFieldDef> {
-  return new Map(types.flatMap((type) => type.fields.map((field) => [field.id, field] as const)));
+  return new Map(
+    types.flatMap((type) =>
+      formFieldsForType(types, type.id).map((field) => [field.id, field] as const)
+    )
+  );
 }
 
 /** Derives the form from its draft and the published types. */
 export function deriveForm(draft: ItemDraft, types: readonly FormTypeDef[]): FormView {
-  const type = types.find((candidate) => candidate.id === draft.typeId) ?? null;
+  const baseType = types.find((candidate) => candidate.id === draft.typeId) ?? null;
+  const type =
+    baseType === null ? null : { ...baseType, fields: formFieldsForType(types, baseType.id) };
   const nameMissing = draft.name.trim() === '';
   const fieldErrors = errorsFor(draft, type);
   const quantity = quantityError(draft, type);

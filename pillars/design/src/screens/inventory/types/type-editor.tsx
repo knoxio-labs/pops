@@ -1,6 +1,10 @@
 import { catalogueRevision } from '@/fixtures/inventory-type-catalogue';
 import { CatalogueList } from '@/kit/inventory/type-editor/catalogue-navigation';
 import { FocusedEditor, WorkspaceEditor } from '@/kit/inventory/type-editor/layouts';
+import {
+  TypeTreeEditor,
+  type TypeTreeEditorState,
+} from '@/kit/inventory/type-editor/type-tree-editor';
 import { Database, Plus } from 'lucide-react';
 
 import { Button, ButtonPrimitive, PageHeader } from '@pops/ui';
@@ -49,6 +53,24 @@ function EditorLayout({
 }) {
   if (layout === 'workspace') return <WorkspaceEditor mode={mode} fieldKey={fieldKey} />;
   return <FocusedEditor mode={mode} fieldKey={fieldKey} />;
+}
+
+function TypeTreeStatePage({ state }: { state: TypeTreeEditorState }) {
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Item type tree"
+        description="Assignable parent types, inherited fields and safe depth-aware changes."
+        actions={
+          <Button>
+            <Plus className="h-4 w-4" />
+            New type
+          </Button>
+        }
+      />
+      <TypeTreeEditor state={state} />
+    </div>
+  );
 }
 
 /**
@@ -114,6 +136,19 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
     'dependency-cycle': () => (
       <TypeEditor fieldKey="replacement_value" mode="cycle" layout={layout} />
     ),
+    'type-list-tree': () => <TypeTreeStatePage state="type-list-tree" />,
+    'type-list-search-child': () => <TypeTreeStatePage state="type-list-search-child" />,
+    'create-subtype': () => <TypeTreeStatePage state="create-subtype" />,
+    'parent-choices': () => <TypeTreeStatePage state="parent-choices" />,
+    'inherited-fields': () => <TypeTreeStatePage state="inherited-fields" />,
+    'leaf-no-children': () => <TypeTreeStatePage state="leaf-no-children" />,
+    'parent-no-children': () => <TypeTreeStatePage state="parent-no-children" />,
+    'depth-cap': () => <TypeTreeStatePage state="depth-cap" />,
+    'key-shadowed': () => <TypeTreeStatePage state="key-shadowed" />,
+    'archive-with-children': () => <TypeTreeStatePage state="archive-with-children" />,
+    'parent-field-added': () => <TypeTreeStatePage state="parent-field-added" />,
+    'parent-change-refused': () => <TypeTreeStatePage state="parent-change-refused" />,
+    'parent-migration-refused': () => <TypeTreeStatePage state="parent-migration-refused" />,
   };
 }
 
