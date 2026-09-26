@@ -1676,6 +1676,7 @@ export interface operations {
     parameters: {
       query?: {
         search?: string;
+        withinLocationId?: string;
         locationId?: string;
         type?: string;
         limit?: number;
@@ -1702,6 +1703,8 @@ export interface operations {
               name: string;
               notes: string | null;
               type: string;
+              wiredCount: number;
+              wiredNames: string[];
             }[];
             total: number;
           };

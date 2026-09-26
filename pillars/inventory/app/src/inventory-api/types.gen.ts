@@ -299,6 +299,7 @@ export type FixturesListData = {
   path?: never;
   query?: {
     search?: string;
+    withinLocationId?: string;
     locationId?: string;
     type?: string;
     limit?: number;
@@ -320,6 +321,8 @@ export type FixturesListResponses = {
       name: string;
       notes: string | null;
       type: string;
+      wiredCount: number;
+      wiredNames: Array<string>;
     }>;
     total: number;
   };

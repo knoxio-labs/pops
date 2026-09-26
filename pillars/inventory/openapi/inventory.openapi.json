@@ -747,6 +747,13 @@
           },
           {
             "in": "query",
+            "name": "withinLocationId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "locationId",
             "schema": {
               "type": "string"
@@ -811,6 +818,17 @@
                           },
                           "type": {
                             "type": "string"
+                          },
+                          "wiredCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "wiredNames": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
                           }
                         },
                         "required": [
@@ -820,7 +838,9 @@
                           "locationId",
                           "notes",
                           "createdAt",
-                          "lastEditedTime"
+                          "lastEditedTime",
+                          "wiredCount",
+                          "wiredNames"
                         ],
                         "type": "object"
                       },

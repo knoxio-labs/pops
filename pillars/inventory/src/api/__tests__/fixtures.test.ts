@@ -44,17 +44,19 @@ async function createFixture(
 }
 
 describe('fixtures REST', () => {
-  it('applies search and location filters together and independently', async () => {
+  it('searches fixture and wired item names, scopes to descendants, and orders by room/name', async () => {
     const { client, request } = api();
-    const room = await client.locations.create({ name: 'Room' });
-    const garage = await client.locations.create({ name: 'Garage' });
+    const house = await client.locations.create({ name: 'House' });
+    const room = await client.locations.create({ name: 'Kitchen', parentId: house.data.id });
+    const garage = await client.locations.create({ name: 'Garage', parentId: house.data.id });
+    const patio = await client.locations.create({ name: 'Patio' });
     const roomLamp = await createFixture(request, {
-      name: 'Desk lamp',
+      name: 'Room outlet',
       type: 'power',
       locationId: room.data.id,
     });
     const roomFan = await createFixture(request, {
-      name: 'Ceiling fan',
+      name: 'Room fan',
       type: 'power',
       locationId: room.data.id,
     });
@@ -63,26 +65,50 @@ describe('fixtures REST', () => {
       type: 'switch',
       locationId: garage.data.id,
     });
+    await createFixture(request, {
+      name: 'Patio outlet',
+      type: 'power',
+      locationId: patio.data.id,
+    });
+    const deskLamp = await client.items.create({ itemName: 'Desk lamp' });
+    const tableLamp = await client.items.create({ itemName: 'Table lamp' });
+    expect(
+      (await request.post(`/items/${deskLamp.data.id}/fixtures/${roomLamp.id}`).send({})).status
+    ).toBe(201);
+    expect(
+      (await request.post(`/items/${tableLamp.data.id}/fixtures/${roomLamp.id}`).send({})).status
+    ).toBe(201);
 
     const search = await request.get('/fixtures').query({ search: 'LAMP' });
     expect(search.status).toBe(200);
-    expect(search.body.data.map((fixture: { id: string }) => fixture.id)).toEqual(
-      expect.arrayContaining([roomLamp.id, garageLamp.id])
+    expect(search.body.data.map((fixture: { id: string }) => fixture.id)).toEqual([
+      garageLamp.id,
+      roomLamp.id,
+    ]);
+    expect(search.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: garageLamp.id, wiredCount: 0, wiredNames: [] }),
+        expect.objectContaining({
+          id: roomLamp.id,
+          wiredCount: 2,
+          wiredNames: ['Desk lamp', 'Table lamp'],
+        }),
+      ])
     );
-    expect(search.body.data).toHaveLength(2);
     expect(search.body.total).toBe(2);
 
-    const location = await request.get('/fixtures').query({ locationId: room.data.id });
-    expect(location.status).toBe(200);
-    expect(location.body.data.map((fixture: { id: string }) => fixture.id)).toEqual(
-      expect.arrayContaining([roomLamp.id, roomFan.id])
-    );
-    expect(location.body.data).toHaveLength(2);
-    expect(location.body.total).toBe(2);
+    const withinHouse = await request.get('/fixtures').query({ withinLocationId: house.data.id });
+    expect(withinHouse.status).toBe(200);
+    expect(withinHouse.body.data.map((fixture: { id: string }) => fixture.id)).toEqual([
+      garageLamp.id,
+      roomFan.id,
+      roomLamp.id,
+    ]);
+    expect(withinHouse.body.total).toBe(3);
 
     const combined = await request
       .get('/fixtures')
-      .query({ search: 'lamp', locationId: room.data.id, type: 'power' });
+      .query({ search: 'lamp', withinLocationId: room.data.id, type: 'power' });
     expect(combined.status).toBe(200);
     expect(combined.body.data.map((fixture: { id: string }) => fixture.id)).toEqual([roomLamp.id]);
     expect(combined.body.total).toBe(1);
