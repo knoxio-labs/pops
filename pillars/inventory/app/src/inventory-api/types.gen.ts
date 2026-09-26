@@ -69,6 +69,7 @@ export type TraceNode = {
   assetId: string | null;
   children: Array<TraceNode>;
   id: string;
+  isFixture?: boolean;
   itemName: string;
   type: string | null;
 };
@@ -1135,6 +1136,7 @@ export type ConnectionsGraphResponses = {
       nodes: Array<{
         assetId: string | null;
         id: string;
+        isFixture?: boolean;
         itemName: string;
         type: string | null;
       }>;

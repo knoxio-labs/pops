@@ -216,6 +216,9 @@
           "id": {
             "type": "string"
           },
+          "isFixture": {
+            "type": "boolean"
+          },
           "itemName": {
             "type": "string"
           },
@@ -3061,6 +3064,9 @@
                               },
                               "id": {
                                 "type": "string"
+                              },
+                              "isFixture": {
+                                "type": "boolean"
                               },
                               "itemName": {
                                 "type": "string"

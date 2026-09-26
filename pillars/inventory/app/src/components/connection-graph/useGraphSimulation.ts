@@ -6,7 +6,13 @@ import { drawGraph, NODE_RADIUS } from './draw';
 import type { GraphLink, GraphNode, Transform } from './types';
 
 interface RawGraphData {
-  nodes: Array<{ id: string; itemName: string; assetId: string | null; type: string | null }>;
+  nodes: Array<{
+    id: string;
+    itemName: string;
+    assetId: string | null;
+    type: string | null;
+    isFixture?: boolean;
+  }>;
   edges: Array<{ source: string; target: string }>;
 }
 

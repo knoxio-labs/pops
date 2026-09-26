@@ -26,6 +26,8 @@ export interface TraceNodeShape {
   itemName: string;
   assetId: string | null;
   type: string | null;
+  /** True only for fixture leaves; omitted for item nodes. */
+  isFixture?: boolean;
   children: TraceNodeShape[];
 }
 
@@ -36,6 +38,7 @@ const TraceNodeSchema: z.ZodType<TraceNodeShape> = z
       itemName: z.string(),
       assetId: z.string().nullable(),
       type: z.string().nullable(),
+      isFixture: z.boolean().optional(),
       children: z.array(TraceNodeSchema),
     })
   )
@@ -48,6 +51,7 @@ const GraphDataSchema = z.object({
       itemName: z.string(),
       assetId: z.string().nullable(),
       type: z.string().nullable(),
+      isFixture: z.boolean().optional(),
     })
   ),
   edges: z.array(z.object({ source: z.string(), target: z.string() })),

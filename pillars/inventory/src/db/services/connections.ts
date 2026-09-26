@@ -17,7 +17,11 @@ import {
   ConnectionNotFoundError,
   SelfConnectionError,
 } from './connections-errors.js';
-import { getConnectionGraph } from './connections-graph.js';
+import {
+  appendTraceChildren,
+  getConnectionGraph,
+  getFixtureNodesByItem,
+} from './connections-graph.js';
 
 import type {
   ConnectionListResult,
@@ -177,49 +181,23 @@ export function trace(db: InventoryDb, itemId: string, maxDepth: number): TraceN
   };
 
   const visited = new Set<string>([itemId]);
+  const visitedFixtureIds = new Set<string>();
+  const fixturesByItem = getFixtureNodesByItem(db);
   const queue: { node: TraceNode; depth: number }[] = [{ node: root, depth: 0 }];
+  const traversalState = {
+    depth: 0,
+    maxDepth,
+    visited,
+    queue,
+    fixturesByItem,
+    visitedFixtureIds,
+  };
 
   while (queue.length > 0) {
     const entry = queue.shift();
     if (!entry) break;
-    const { node, depth } = entry;
-    if (depth >= maxDepth) continue;
-
-    const connections = db
-      .select()
-      .from(itemConnections)
-      .where(or(eq(itemConnections.itemAId, node.id), eq(itemConnections.itemBId, node.id)))
-      .all();
-
-    for (const conn of connections) {
-      const neighborId = conn.itemAId === node.id ? conn.itemBId : conn.itemAId;
-      if (visited.has(neighborId)) continue;
-      visited.add(neighborId);
-
-      const [neighbor] = db
-        .select({
-          id: items.id,
-          itemName: items.name,
-          assetId: items.code,
-          type: items.legacyType,
-        })
-        .from(items)
-        .where(eq(items.id, neighborId))
-        .all();
-
-      if (!neighbor) continue;
-
-      const childNode: TraceNode = {
-        id: neighbor.id,
-        itemName: neighbor.itemName,
-        assetId: neighbor.assetId,
-        type: neighbor.type,
-        children: [],
-      };
-
-      node.children.push(childNode);
-      queue.push({ node: childNode, depth: depth + 1 });
-    }
+    traversalState.depth = entry.depth;
+    appendTraceChildren(db, entry.node, traversalState);
   }
 
   return root;
