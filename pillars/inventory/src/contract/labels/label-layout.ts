@@ -10,7 +10,7 @@
  * guard, so an estimate that runs long loses a line, never the next label.
  */
 import { fitCodePt } from './code-fit.js';
-import { estimateLines, fitList, fitNamePt } from './label-fitting.js';
+import { estimateLines, fitList, fitNamePt, nameLineHeight } from './label-fitting.js';
 import { MIN_QR_MM, templateFits, textWidthMm } from './sheet-layouts.js';
 
 import type { LabelFieldValue, ResolvedLabel } from './label-content.js';
@@ -149,7 +149,7 @@ function sharedPlan(label: ResolvedLabel, subject: PrintSubject, layout: SheetLa
     const pt = floorToHalf(scale.namePt * boost);
     const lines = Math.min(scale.nameLines, estimateLines(subject.name, pt, widthMm));
     name = { pt, lines: scale.nameLines };
-    reserve(lines * lineMm(pt, NAME_LEADING));
+    reserve(lines * nameLineHeight(pt));
   }
   let code: LabelPlan['code'] = null;
   if (label.parts.includes('code')) {

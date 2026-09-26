@@ -10,6 +10,11 @@ function lineMm(pt: number, leading: number): number {
   return pt * MM_PER_PT * leading;
 }
 
+/** The line height used when reserving space for a label name. */
+export function nameLineHeight(pt: number): number {
+  return lineMm(pt, NAME_LEADING);
+}
+
 /** Lines `text` wraps to at `pt` in a column `widthMm` wide, breaking between words. */
 export function estimateLines(text: string, pt: number, widthMm: number): number {
   const perLine = Math.max(1, Math.floor(widthMm / (AVERAGE_ADVANCE_EM * pt * MM_PER_PT)));
@@ -37,7 +42,7 @@ export function fitNamePt(
 ): { pt: number; lines: number } {
   for (let pt = limits.maxPt; pt >= limits.minPt; pt -= 0.5) {
     const lines = estimateLines(name, pt, box.widthMm);
-    if (lines <= limits.maxLines && lines * lineMm(pt, NAME_LEADING) <= box.heightMm) {
+    if (lines <= limits.maxLines && lines * nameLineHeight(pt) <= box.heightMm) {
       return { pt, lines };
     }
   }
