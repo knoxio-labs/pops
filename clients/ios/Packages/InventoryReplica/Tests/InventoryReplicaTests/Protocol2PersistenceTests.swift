@@ -228,3 +228,28 @@ internal struct Protocol2PersistenceTests {
 }
 
 private struct Protocol2FallbackFailure: Error {}
+
+extension Protocol2PersistenceTests {
+    @Test("a type parent survives persistence and an identical snapshot can be stored again")
+    func parentSurvivesPersistence() throws {
+        let replica = try InventoryReplica()
+        let catalogue = Self.catalogueWithChild(revision: 5)
+
+        try replica.store(catalogue)
+
+        #expect(try replica.catalogue(revision: 5) == catalogue.inStoredOrder)
+        try replica.store(catalogue)
+    }
+
+    private static func catalogueWithChild(revision: Int) -> InventoryCatalogueSnapshot {
+        let catalogue = catalogue(revision: revision, label: "Cable")
+        return InventoryCatalogueSnapshot(
+            revision: catalogue.revision,
+            types: catalogue.types
+                + [
+                    InventoryCatalogueType(
+                        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", key: "kit", label: "Kit",
+                        sortOrder: 1, parentTypeId: typeId)
+                ])
+    }
+}
