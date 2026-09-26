@@ -36,7 +36,7 @@ describe('MovePlanPanel', () => {
     expect(screen.getByRole('button', { name: 'Move 4 items' })).toBeEnabled();
   });
 
-  it('uses the carried padding override while retaining the row padding base', () => {
+  it('uses the carried padding while retaining the row padding base', () => {
     const plan = planMove({
       world: coreWorld,
       selectedIds: ['box-cables'],
@@ -47,7 +47,7 @@ describe('MovePlanPanel', () => {
 
     const carriedRow = screen.getByText('Laptop charger').closest('li');
     expect(carriedRow).not.toBeNull();
-    expect(carriedRow).toHaveClass('px-3', 'pl-8');
+    expect(carriedRow).toHaveClass('pr-3', 'pl-8');
   });
 
   it('shows a full target as a warning without disabling the move', () => {
