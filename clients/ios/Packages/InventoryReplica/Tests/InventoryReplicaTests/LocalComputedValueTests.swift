@@ -159,6 +159,29 @@ internal struct LocalComputedValueTests {
                 == .value(try Setup.decimal("0.25")))
     }
 
+    @Test("a computed field inherited by a child evaluates on the phone")
+    func inheritedComputedFieldEvaluates() throws {
+        let replica = try InheritedTypeFixture.replica()
+        _ = try replica.perform(
+            InheritedTypeFixture.create(
+                values: [
+                    InventoryProtocol2FieldValue(
+                        fieldId: InheritedTypeFixture.size,
+                        values: [InheritedTypeFixture.sizeValue()])
+                ]),
+            mutationId: "inherited", clientTime: Fixture.created)
+
+        let item = try #require(
+            try replica.read(.item(id: "50000000-0000-4000-8000-000000000201")))
+        let computed = try #require(
+            item.computedValues.first { $0.fieldId == InheritedTypeFixture.computed })
+
+        let display = computed.display(
+            in: item, activeCatalogueRevision: InheritedTypeFixture.revision,
+            revisionOf: { _ in nil })
+        #expect(display == .value(.boolean(true)))
+    }
+
     @Test("a reference to an item not downloaded yet leaves the value Out of date")
     func unresolvedReferenceStaysOutOfDate() throws {
         let replica = try Self.replica(complete: false)

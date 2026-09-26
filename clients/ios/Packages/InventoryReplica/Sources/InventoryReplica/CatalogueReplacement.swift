@@ -90,7 +90,9 @@ internal struct CatalogueReplacement {
             let before = field(change.id, in: authored) ?? field(change.id, in: target),
             let after = field(new, in: target), after.archivedAt == nil,
             Self.sameShape(before, after), !command.protocol2FieldIds.contains(new),
-            after.typeId == landingType
+            let landingType,
+            let effectiveLandingType = target.effectiveType(id: landingType),
+            effectiveLandingType.fields.contains(where: { $0.id == after.id })
         else { return nil }
         return command.renamingField(change.id, to: new)
     }
@@ -99,7 +101,8 @@ internal struct CatalogueReplacement {
         _ command: InventoryCommand, _ change: InventoryCatalogueChange
     ) -> InventoryCommand? {
         guard let new = change.replacementId,
-            let type = target.types.first(where: { $0.id == new }), type.archivedAt == nil
+            let found = target.types.first(where: { $0.id == new }),
+            let type = target.effectiveType(id: found.id), type.archivedAt == nil
         else { return nil }
         let stored = Set(
             type.fields.filter { $0.storage == .stored && $0.archivedAt == nil }.map(\.id))

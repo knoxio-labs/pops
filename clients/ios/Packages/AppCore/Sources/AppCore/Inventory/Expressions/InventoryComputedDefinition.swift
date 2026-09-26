@@ -127,7 +127,7 @@ extension InventoryCatalogueSnapshot {
     /// catalogue revision.
     public var fieldKinds: [String: InventoryPrimitiveKind] {
         Dictionary(
-            types.flatMap(\.fields).map { ($0.id, $0.kind) },
+            types.flatMap { effectiveType(id: $0.id)?.fields ?? [] }.map { ($0.id, $0.kind) },
             uniquingKeysWith: { first, _ in first })
     }
 }
