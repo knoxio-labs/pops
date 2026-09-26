@@ -6533,6 +6533,85 @@ export type WebListResponses = {
 
 export type WebListResponse = WebListResponses[keyof WebListResponses];
 
+export type WebBatchCreateData = {
+  /**
+   * Body
+   */
+  body?: {
+    destination:
+      | {
+          kind: 'location';
+          locationId: string;
+        }
+      | {
+          itemId: string;
+          kind: 'container';
+        }
+      | {
+          kind: 'hand';
+        };
+    dryRun: boolean;
+    rows: Array<{
+      code: string;
+      name: string;
+      note: string;
+      quantity: string;
+      type: string;
+      where: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/web/items/batch';
+};
+
+export type WebBatchCreateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebBatchCreateError = WebBatchCreateErrors[keyof WebBatchCreateErrors];
+
+export type WebBatchCreateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    outcomes: Array<
+      | {
+          itemId: string;
+          row: number;
+          status: 'created';
+        }
+      | {
+          row: number;
+          status: 'valid';
+        }
+      | {
+          issues: Array<{
+            code: string;
+            column: 'name' | 'type' | 'quantity' | 'code' | 'where' | 'note';
+            message: string;
+          }>;
+          row: number;
+          status: 'invalid';
+        }
+      | {
+          row: number;
+          status: 'blank';
+        }
+    >;
+  };
+};
+
+export type WebBatchCreateResponse = WebBatchCreateResponses[keyof WebBatchCreateResponses];
+
 export type WebGetData = {
   body?: never;
   path: {

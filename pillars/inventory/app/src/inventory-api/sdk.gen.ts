@@ -219,6 +219,9 @@ import type {
   TypesReadValidateItemData,
   TypesReadValidateItemErrors,
   TypesReadValidateItemResponses,
+  WebBatchCreateData,
+  WebBatchCreateErrors,
+  WebBatchCreateResponses,
   WebChangesHeadData,
   WebChangesHeadErrors,
   WebChangesHeadResponses,
@@ -1385,6 +1388,21 @@ export const webList = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<WebListResponses, WebListErrors, ThrowOnError>({
     url: '/web/items',
     ...options,
+  });
+
+/**
+ * Partially create inventory items from typed web grid rows
+ */
+export const webBatchCreate = <ThrowOnError extends boolean = false>(
+  options?: Options<WebBatchCreateData, ThrowOnError>
+): RequestResult<WebBatchCreateResponses, WebBatchCreateErrors, ThrowOnError> =>
+  (options?.client ?? client).post<WebBatchCreateResponses, WebBatchCreateErrors, ThrowOnError>({
+    url: '/web/items/batch',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
 
 /**
