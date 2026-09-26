@@ -35,8 +35,9 @@ extension InventoryItemFormModel {
         var selected = InventoryProtocol2Draft(type: type, catalogueRevision: catalogueRevision)
         if let current = protocol2Draft {
             let fieldIds = Set(type.fields.map(\.id))
-            selected.entries = Dictionary(
-                uniqueKeysWithValues: current.entries.filter { fieldIds.contains($0.key) })
+            selected.entries.merge(
+                current.entries.filter { fieldIds.contains($0.key) },
+                uniquingKeysWith: { _, current in current })
             selected.touched = current.touched.intersection(fieldIds)
             selected.overrides = Dictionary(
                 uniqueKeysWithValues: current.overrides.filter { fieldIds.contains($0.key) })
