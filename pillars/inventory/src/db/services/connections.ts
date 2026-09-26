@@ -17,12 +17,13 @@ import {
   ConnectionNotFoundError,
   SelfConnectionError,
 } from './connections-errors.js';
-import { getConnectionGraph } from './connections-graph.js';
+import { getConnectionGraph, getFixtureNodesByItem } from './connections-graph.js';
 
 import type {
   ConnectionListResult,
   CreateConnectionInput,
   GraphData,
+  GraphNode,
   ItemConnectionRow,
   TraceNode,
 } from './connections-types.js';
@@ -48,6 +49,73 @@ export {
 } from './connections-errors.js';
 
 export { getConnectionGraph } from './connections-graph.js';
+
+interface TraceTraversalState {
+  depth: number;
+  maxDepth: number;
+  visited: Set<string>;
+  queue: { node: TraceNode; depth: number }[];
+}
+
+function appendItemChildren(db: InventoryDb, node: TraceNode, state: TraceTraversalState): void {
+  const { depth, maxDepth, visited, queue } = state;
+  if (depth >= maxDepth) return;
+
+  const connections = db
+    .select()
+    .from(itemConnections)
+    .where(or(eq(itemConnections.itemAId, node.id), eq(itemConnections.itemBId, node.id)))
+    .all();
+
+  for (const conn of connections) {
+    const neighborId = conn.itemAId === node.id ? conn.itemBId : conn.itemAId;
+    if (visited.has(neighborId)) continue;
+    visited.add(neighborId);
+
+    const [neighbor] = db
+      .select({
+        id: items.id,
+        itemName: items.name,
+        assetId: items.code,
+        type: items.legacyType,
+      })
+      .from(items)
+      .where(eq(items.id, neighborId))
+      .all();
+
+    if (!neighbor) continue;
+
+    const childNode: TraceNode = {
+      id: neighbor.id,
+      itemName: neighbor.itemName,
+      assetId: neighbor.assetId,
+      type: neighbor.type,
+      children: [],
+    };
+
+    node.children.push(childNode);
+    queue.push({ node: childNode, depth: depth + 1 });
+  }
+}
+
+function appendFixtureChildren(
+  node: TraceNode,
+  fixturesByItem: Map<string, GraphNode[]>,
+  visitedFixtureIds: Set<string>
+): void {
+  for (const fixture of fixturesByItem.get(node.id) ?? []) {
+    if (visitedFixtureIds.has(fixture.id)) continue;
+    visitedFixtureIds.add(fixture.id);
+    node.children.push({
+      id: fixture.id,
+      itemName: fixture.itemName,
+      assetId: null,
+      type: fixture.type,
+      isFixture: true,
+      children: [],
+    });
+  }
+}
 
 /** Normalise a caller-provided pair to satisfy the A<B schema invariant. */
 function normalisePair(inputA: string, inputB: string): [string, string] {
@@ -177,49 +245,15 @@ export function trace(db: InventoryDb, itemId: string, maxDepth: number): TraceN
   };
 
   const visited = new Set<string>([itemId]);
+  const visitedFixtureIds = new Set<string>();
+  const fixturesByItem = getFixtureNodesByItem(db);
   const queue: { node: TraceNode; depth: number }[] = [{ node: root, depth: 0 }];
 
   while (queue.length > 0) {
     const entry = queue.shift();
     if (!entry) break;
-    const { node, depth } = entry;
-    if (depth >= maxDepth) continue;
-
-    const connections = db
-      .select()
-      .from(itemConnections)
-      .where(or(eq(itemConnections.itemAId, node.id), eq(itemConnections.itemBId, node.id)))
-      .all();
-
-    for (const conn of connections) {
-      const neighborId = conn.itemAId === node.id ? conn.itemBId : conn.itemAId;
-      if (visited.has(neighborId)) continue;
-      visited.add(neighborId);
-
-      const [neighbor] = db
-        .select({
-          id: items.id,
-          itemName: items.name,
-          assetId: items.code,
-          type: items.legacyType,
-        })
-        .from(items)
-        .where(eq(items.id, neighborId))
-        .all();
-
-      if (!neighbor) continue;
-
-      const childNode: TraceNode = {
-        id: neighbor.id,
-        itemName: neighbor.itemName,
-        assetId: neighbor.assetId,
-        type: neighbor.type,
-        children: [],
-      };
-
-      node.children.push(childNode);
-      queue.push({ node: childNode, depth: depth + 1 });
-    }
+    appendItemChildren(db, entry.node, { depth: entry.depth, maxDepth, visited, queue });
+    appendFixtureChildren(entry.node, fixturesByItem, visitedFixtureIds);
   }
 
   return root;

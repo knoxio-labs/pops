@@ -8,7 +8,9 @@
  * `select *` — the BFS works on in-memory adjacency maps so cycles, deep
  * chains, and dense fan-out don't reissue queries per node.
  */
-import { items, itemConnections } from '../schema.js';
+import { eq } from 'drizzle-orm';
+
+import { fixtures, itemConnections, itemFixtureConnections, items } from '../schema.js';
 import { ConnectionItemNotFoundError } from './connections-errors.js';
 
 import type { GraphData, GraphEdge, GraphNode } from './connections-types.js';
@@ -40,6 +42,7 @@ interface BfsState {
   nodes: GraphNode[];
   edges: GraphEdge[];
   visitedNodes: Set<string>;
+  visitedFixtureIds: Set<string>;
   visitedEdges: Set<string>;
   queue: { nodeId: string; depth: number }[];
 }
@@ -51,7 +54,7 @@ function visitNeighbors(
   depth: number
 ): void {
   for (const { neighborId, itemAId, itemBId } of neighbors) {
-    const edgeKey = `${itemAId}|${itemBId}`;
+    const edgeKey = `item:${itemAId}|${itemBId}`;
     if (!state.visitedEdges.has(edgeKey)) {
       state.visitedEdges.add(edgeKey);
       state.edges.push({ source: itemAId, target: itemBId });
@@ -64,6 +67,48 @@ function visitNeighbors(
     if (!neighbor) continue;
     state.nodes.push(neighbor);
     state.queue.push({ nodeId: neighborId, depth: depth + 1 });
+  }
+}
+
+/** Load fixture leaves grouped by the inventory item they are wired to. */
+export function getFixtureNodesByItem(db: InventoryDb): Map<string, GraphNode[]> {
+  const rows = db
+    .select({
+      itemId: itemFixtureConnections.itemId,
+      fixtureId: fixtures.id,
+      itemName: fixtures.name,
+      type: fixtures.type,
+    })
+    .from(itemFixtureConnections)
+    .innerJoin(fixtures, eq(itemFixtureConnections.fixtureId, fixtures.id))
+    .all();
+
+  const fixturesByItem = new Map<string, GraphNode[]>();
+  for (const row of rows) {
+    const nodes = fixturesByItem.get(row.itemId) ?? [];
+    nodes.push({
+      id: row.fixtureId,
+      itemName: row.itemName,
+      assetId: null,
+      type: row.type,
+      isFixture: true,
+    });
+    fixturesByItem.set(row.itemId, nodes);
+  }
+  return fixturesByItem;
+}
+
+function visitFixtures(state: BfsState, fixturesForItem: GraphNode[], itemId: string): void {
+  for (const fixture of fixturesForItem) {
+    const edgeKey = `fixture:${itemId}|${fixture.id}`;
+    if (!state.visitedEdges.has(edgeKey)) {
+      state.visitedEdges.add(edgeKey);
+      state.edges.push({ source: itemId, target: fixture.id });
+    }
+
+    if (state.visitedFixtureIds.has(fixture.id)) continue;
+    state.visitedFixtureIds.add(fixture.id);
+    state.nodes.push(fixture);
   }
 }
 
@@ -86,6 +131,7 @@ export function getConnectionGraph(db: InventoryDb, itemId: string, maxDepth: nu
 
   const itemMap = new Map(allItems.map((item) => [item.id, item]));
   const adjacency = buildAdjacency(allConnections);
+  const fixturesByItem = getFixtureNodesByItem(db);
 
   const startItem = itemMap.get(itemId);
   if (!startItem) throw new ConnectionItemNotFoundError(itemId);
@@ -94,6 +140,7 @@ export function getConnectionGraph(db: InventoryDb, itemId: string, maxDepth: nu
     nodes: [startItem],
     edges: [],
     visitedNodes: new Set<string>([itemId]),
+    visitedFixtureIds: new Set<string>(),
     visitedEdges: new Set<string>(),
     queue: [{ nodeId: itemId, depth: 0 }],
   };
@@ -101,8 +148,10 @@ export function getConnectionGraph(db: InventoryDb, itemId: string, maxDepth: nu
   while (state.queue.length > 0) {
     const entry = state.queue.shift();
     if (!entry) break;
-    if (entry.depth >= maxDepth) continue;
-    visitNeighbors(state, adjacency.get(entry.nodeId) ?? [], itemMap, entry.depth);
+    if (entry.depth < maxDepth) {
+      visitNeighbors(state, adjacency.get(entry.nodeId) ?? [], itemMap, entry.depth);
+    }
+    visitFixtures(state, fixturesByItem.get(entry.nodeId) ?? [], entry.nodeId);
   }
 
   return { nodes: state.nodes, edges: state.edges };

@@ -20,10 +20,10 @@ so fixtures can be created and wired up by conversation.
 
 ## Deliberately absent
 
-- Fixtures do not appear in the item connection graph or trace. Both traversals
-  in `src/db/services/connections-graph.ts` and `connections.ts` walk
-  `item_connections` only, so a chain that physically ends at a wall outlet ends
-  at the last owned item in the API response.
+- Fixtures are leaf nodes in the item connection graph and trace. Traversal
+  includes each fixture wired to a visited item, but never walks through a
+  fixture to another item, so two things plugged into one outlet are not
+  connected to each other.
 - There is no confirmation handshake on delete, unlike locations. Deleting a
   fixture always succeeds; the connection cascade is the whole safety story.
 - The list endpoint filters by `locationId` and `type` only — no free-text

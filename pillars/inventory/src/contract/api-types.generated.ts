@@ -1252,6 +1252,7 @@ export interface components {
       assetId: string | null;
       children: components['schemas']['TraceNode'][];
       id: string;
+      isFixture?: boolean;
       itemName: string;
       type: string | null;
     };
@@ -2493,6 +2494,7 @@ export interface operations {
               nodes: {
                 assetId: string | null;
                 id: string;
+                isFixture?: boolean;
                 itemName: string;
                 type: string | null;
               }[];
