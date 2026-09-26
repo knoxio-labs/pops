@@ -83,7 +83,7 @@ pub async fn search(
 
     let candidates = repo::search_candidates(&state.pool, &text)
         .await
-        .map_err(|err| ApiError::internal(err.to_string()))?;
+        .map_err(ApiError::database)?;
 
     let mut hits: Vec<SearchHit> = candidates
         .into_iter()

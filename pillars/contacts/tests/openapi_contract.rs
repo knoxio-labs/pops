@@ -84,6 +84,33 @@ fn document_is_openapi_30() {
 }
 
 #[test]
+fn error_schema_is_the_adr_054_envelope_with_registered_codes() {
+    let doc = openapi_30_value();
+    let schema = &doc["components"]["schemas"]["ErrorBody"];
+    let required = schema["required"].as_array().expect("required fields");
+    for field in ["code", "message", "requestId", "retryable"] {
+        assert!(
+            required.iter().any(|value| value == field),
+            "ErrorBody must require `{field}`"
+        );
+    }
+    assert!(!required.iter().any(|value| value == "details"));
+
+    let codes = doc["components"]["schemas"]["ErrorCode"]["enum"]
+        .as_array()
+        .expect("registered ErrorCode enum");
+    assert_eq!(
+        codes,
+        &[
+            "contacts.request.invalid",
+            "contacts.resource.not_found",
+            "contacts.entity.name_conflict",
+            "contacts.internal"
+        ]
+    );
+}
+
+#[test]
 fn entity_wire_schema_omits_internal_columns() {
     let doc = openapi_30_value();
     let props = doc["components"]["schemas"]["Entity"]["properties"]
