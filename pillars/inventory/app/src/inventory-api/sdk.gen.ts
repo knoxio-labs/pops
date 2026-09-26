@@ -245,6 +245,9 @@ import type {
   WebLocationsGoneResponses,
   WebLocationsTalliesData,
   WebLocationsTalliesResponses,
+  WebReportsValuesData,
+  WebReportsValuesErrors,
+  WebReportsValuesResponses,
   WebSearchListData,
   WebSearchListErrors,
   WebSearchListResponses,
@@ -1477,6 +1480,17 @@ export const webLocationsGone = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebLocationsGoneResponses, WebLocationsGoneErrors, ThrowOnError> =>
   (options.client ?? client).get<WebLocationsGoneResponses, WebLocationsGoneErrors, ThrowOnError>({
     url: '/web/locations/{id}/gone',
+    ...options,
+  });
+
+/**
+ * Replacement and purchase values grouped by room or catalogue type
+ */
+export const webReportsValues = <ThrowOnError extends boolean = false>(
+  options: Options<WebReportsValuesData, ThrowOnError>
+): RequestResult<WebReportsValuesResponses, WebReportsValuesErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebReportsValuesResponses, WebReportsValuesErrors, ThrowOnError>({
+    url: '/web/reports/values',
     ...options,
   });
 

@@ -170,8 +170,8 @@ describe('the other real pillars', () => {
     expect(LISTS_ROUTES.length).toBe(2);
   });
 
-  it('INVENTORY_ROUTES names all 28 inventory routes known to carry query fields', () => {
-    expect(INVENTORY_ROUTES.length).toBe(28);
+  it('INVENTORY_ROUTES names all 29 inventory routes known to carry query fields', () => {
+    expect(INVENTORY_ROUTES.length).toBe(29);
   });
 });
 

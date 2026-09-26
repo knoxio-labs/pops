@@ -1210,6 +1210,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/reports/values': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Replacement and purchase values grouped by room or catalogue type */
+    get: operations['webReports.values'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/search': {
     parameters: {
       query?: never;
@@ -10100,6 +10117,69 @@ export interface operations {
       };
       /** @description 404 */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webReports.values': {
+    parameters: {
+      query: {
+        by: 'room' | 'type';
+        basis: 'replacement' | 'purchase';
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            groups: {
+              entries: {
+                code: string | null;
+                isContainer: boolean;
+                itemId: string;
+                name: string;
+                quantity: number;
+                typeKey: string | null;
+                unitValue: number | null;
+                value: number | null;
+              }[];
+              key: string;
+              label: string;
+              records: number;
+              share: number;
+              unvalued: number;
+              value: number;
+            }[];
+            totals: {
+              purchase: number;
+              records: number;
+              replacement: number;
+              units: number;
+              unvalued: number;
+              withoutPhoto: number;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
         headers: {
           [name: string]: unknown;
         };

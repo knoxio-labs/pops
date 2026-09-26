@@ -1062,6 +1062,12 @@ export const INVENTORY_ROUTES = [
   },
   {
     method: 'get',
+    path: '/web/reports/values',
+    handlerFile: 'pillars/inventory/src/api/rest/web-reports-handlers.ts',
+    handlerKey: 'values',
+  },
+  {
+    method: 'get',
     path: '/type-catalogue',
     handlerFile: 'pillars/inventory/src/api/rest/type-catalogue-handlers.ts',
     handlerKey: 'catalogue',

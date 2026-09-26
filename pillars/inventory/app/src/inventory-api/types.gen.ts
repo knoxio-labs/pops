@@ -7321,6 +7321,65 @@ export type WebLocationsGoneResponses = {
 
 export type WebLocationsGoneResponse = WebLocationsGoneResponses[keyof WebLocationsGoneResponses];
 
+export type WebReportsValuesData = {
+  body?: never;
+  path?: never;
+  query: {
+    by: 'room' | 'type';
+    basis: 'replacement' | 'purchase';
+  };
+  url: '/web/reports/values';
+};
+
+export type WebReportsValuesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebReportsValuesError = WebReportsValuesErrors[keyof WebReportsValuesErrors];
+
+export type WebReportsValuesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    groups: Array<{
+      entries: Array<{
+        code: string | null;
+        isContainer: boolean;
+        itemId: string;
+        name: string;
+        quantity: number;
+        typeKey: string | null;
+        unitValue: number | null;
+        value: number | null;
+      }>;
+      key: string;
+      label: string;
+      records: number;
+      share: number;
+      unvalued: number;
+      value: number;
+    }>;
+    totals: {
+      purchase: number;
+      records: number;
+      replacement: number;
+      units: number;
+      unvalued: number;
+      withoutPhoto: number;
+    };
+  };
+};
+
+export type WebReportsValuesResponse = WebReportsValuesResponses[keyof WebReportsValuesResponses];
+
 export type WebSearchListData = {
   body?: never;
   path?: never;
