@@ -67,8 +67,7 @@ function useDeleteFlow(
       setDeleteConfirm(null);
       pendingDeleteRef.current = null;
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to delete: ${err.message}`);
+    onError: () => {
       setDeleteConfirm(null);
       pendingDeleteRef.current = null;
     },
@@ -89,7 +88,6 @@ export function useLocationMutations(args: LocationMutationsArgs) {
       args.setAddingChildOf(null);
       args.setAddingRoot(false);
     },
-    onError: (err: Error) => toast.error(`Failed to create location: ${err.message}`),
     onSettled: () => queryClient.invalidateQueries({ queryKey: LOCATIONS_KEY }),
   });
 
@@ -99,7 +97,6 @@ export function useLocationMutations(args: LocationMutationsArgs) {
     onSuccess: () => {
       toast.success('Location updated');
     },
-    onError: (err: Error) => toast.error(`Failed to update location: ${err.message}`),
     onSettled: () => queryClient.invalidateQueries({ queryKey: LOCATIONS_KEY }),
   });
 

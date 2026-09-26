@@ -205,9 +205,6 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
     onSuccess: (res) => {
       setJobId(res.data.jobId);
     },
-    onError: (err) => {
-      toast.error(`Failed to start ${label}: ${err.message}`);
-    },
   });
 
   useCompletionToast(label, jobId, statusQuery.data?.data);

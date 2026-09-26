@@ -52,7 +52,6 @@ function useCurrencyMutations(args: {
       toast.success('Currency updated');
       args.setEditing(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
 
@@ -62,7 +61,6 @@ function useCurrencyMutations(args: {
       toast.success('Currency deleted');
       args.setDeletingCode(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
 

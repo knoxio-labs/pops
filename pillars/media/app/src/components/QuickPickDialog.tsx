@@ -14,6 +14,7 @@ import {
 } from '@pops/ui';
 
 import { unwrap } from '../media-api-helpers.js';
+import { MediaApiError } from '../media-api-helpers.js';
 import { discoveryQuickPick, watchlistAdd } from '../media-api/index.js';
 import { PickCard } from './quick-pick/PickCard';
 import { EmptyView, ErrorView, FinishedView, PickLoading } from './quick-pick/PickViews';
@@ -53,9 +54,6 @@ function useQuickPickModel() {
       toast.success('Added to watchlist!');
       setOpen(false);
       void queryClient.invalidateQueries({ queryKey: ['media', 'watchlist'] });
-    },
-    onError: (err: Error) => {
-      toast.error(`Failed to add: ${err.message}`);
     },
   });
 
@@ -109,7 +107,7 @@ function PickContent({
   onRefresh,
 }: {
   isLoading: boolean;
-  error: { message: string } | null;
+  error: Error | null;
   movies: unknown[];
   isFinished: boolean;
   currentMovie: ReturnType<typeof useQuickPickModel>['currentMovie'];
@@ -120,7 +118,7 @@ function PickContent({
   onRefresh: () => void;
 }) {
   if (isLoading) return <PickLoading />;
-  if (error) return <ErrorView message={error.message} />;
+  if (error instanceof MediaApiError) return <ErrorView error={error} />;
   if (movies.length === 0) return <EmptyView />;
   if (isFinished) return <FinishedView onRefresh={onRefresh} />;
   if (!currentMovie) return null;

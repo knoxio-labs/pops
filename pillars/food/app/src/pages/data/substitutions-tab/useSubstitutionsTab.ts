@@ -72,6 +72,7 @@ function useSubstitutionMutations(
 ) {
   const { t } = useTranslation('food');
   const createMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (payload: CreatePayload) =>
       unwrap(await substitutionsCreate({ body: payload })),
     onSuccess: () => {
@@ -81,6 +82,7 @@ function useSubstitutionMutations(
     onError: (err: Error) => setCreateError(mapMutationError(err, t)),
   });
   const updateMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id, ratio, contextTags }: UpdatePayload) =>
       unwrap(await substitutionsUpdate({ path: { id }, body: { ratio, contextTags } })),
     onSuccess: () => {
@@ -90,6 +92,7 @@ function useSubstitutionMutations(
     onError: (err: Error) => setRowError(mapMutationError(err, t)),
   });
   const deleteMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id }: { id: number }) =>
       unwrap(await substitutionsDelete({ path: { id } })),
     onSuccess: () => {

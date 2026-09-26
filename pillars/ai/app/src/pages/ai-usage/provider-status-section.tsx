@@ -30,7 +30,6 @@ export function ProviderStatusSection() {
       }
       void queryClient.invalidateQueries({ queryKey: ['ai', 'aiProviders'] });
     },
-    onError: () => toast.error('Health check failed'),
   });
 
   if (isLoading) return <Skeleton className="h-32" />;

@@ -35,9 +35,8 @@ function useRemoveMutation(setRemovingId: (v: number | null) => void) {
       toast.success('Removed from watchlist');
       void queryClient.invalidateQueries({ queryKey: ['media', 'watchlist', 'list'] });
     },
-    onError: (err: Error) => {
+    onError: () => {
       setRemovingId(null);
-      toast.error(`Failed to remove: ${err.message}`);
     },
   });
 }
@@ -48,6 +47,7 @@ function useUpdateMutation(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: UpdateInput) =>
       unwrap(await watchlistUpdate({ path: { id: input.id }, body: input.data })),
     onSuccess: () => {
@@ -58,7 +58,6 @@ function useUpdateMutation(
     },
     onError: (error: Error) => {
       setUpdateErrorMsg(error.message ?? 'Failed to save notes');
-      toast.error(`Failed to save notes: ${error.message}`);
     },
   });
 }
@@ -71,9 +70,8 @@ function useReorderMutation(args: MutationsArgs) {
       args.setOptimisticOrder(null);
       void queryClient.invalidateQueries({ queryKey: ['media', 'watchlist', 'list'] });
     },
-    onError: (err: Error) => {
+    onError: () => {
       args.setOptimisticOrder(null);
-      toast.error(`Failed to reorder: ${err.message}`);
     },
     onSettled: () => {
       args.setIsReordering(false);

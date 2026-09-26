@@ -41,6 +41,7 @@ export function useAdjustQtyState({ batchId, isOpen, onClose }: UseAdjustQtyArgs
   }
 
   const adjustMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id, ...body }: BatchesAdjustQtyInput) =>
       unwrap(await batchesAdjustQty({ path: { id }, body })),
     onSuccess: (res) => {

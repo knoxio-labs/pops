@@ -141,7 +141,7 @@ describe('HeroImageUploader', () => {
       expect(toastSuccess).toHaveBeenCalled();
     });
 
-    it('surfaces server errors via toast', async () => {
+    it('leaves server errors to the global mutation handler', async () => {
       sdk.heroImageUpload.mockResolvedValue({
         error: { message: 'boom' },
         response: { status: 500 },
@@ -150,7 +150,8 @@ describe('HeroImageUploader', () => {
       const input = screen.getByTestId('hero-image-uploader-input') as HTMLInputElement;
       const file = new File([new Uint8Array([1, 2, 3, 4])], 'ok.jpg', { type: 'image/jpeg' });
       await userEvent.upload(input, file);
-      await waitFor(() => expect(toastError).toHaveBeenCalledWith('boom'));
+      await waitFor(() => expect(sdk.heroImageUpload).toHaveBeenCalledOnce());
+      expect(toastError).not.toHaveBeenCalled();
     });
   });
 

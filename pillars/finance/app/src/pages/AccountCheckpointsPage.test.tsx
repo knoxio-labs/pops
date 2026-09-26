@@ -205,7 +205,7 @@ describe('AccountCheckpointsPage', () => {
     expect(checkpointsCreate).not.toHaveBeenCalled();
   });
 
-  it('surfaces a 409 delete refusal by its own message, not a generic one', async () => {
+  it('leaves a 409 delete refusal to the global mutation handler', async () => {
     checkpointsRemove.mockResolvedValue({
       data: undefined,
       error: { message: 'a statement checkpoint cannot be deleted by hand' },
@@ -214,8 +214,7 @@ describe('AccountCheckpointsPage', () => {
     renderPage([account({ id: 'a1' })], 'a1', [checkpoint({ id: 'c1', source: 'manual' })]);
 
     await userEvent.click(await screen.findByRole('button', { name: /Delete the/ }));
-    await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith('a statement checkpoint cannot be deleted by hand')
-    );
+    await waitFor(() => expect(checkpointsRemove).toHaveBeenCalledOnce());
+    expect(toastError).not.toHaveBeenCalled();
   });
 });

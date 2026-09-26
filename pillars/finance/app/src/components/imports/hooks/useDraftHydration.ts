@@ -10,11 +10,9 @@ import {
 import { ownerToken } from '../../../store/import-draft-owner';
 import { clampResumeStep, isDraftPayload } from '../../../store/import-draft-payload';
 import { initialState } from '../../../store/import-store-types';
-import { useImportStore } from '../../../store/importStore';
+import { getImportStoreState, useImportStore } from '../../../store/importStore';
 import { firstImportStep } from '../step-labels';
 import { IMPORT_DRAFTS_LIST_KEY } from './useDraftWriteThrough';
-
-import type { ImportStore } from '../../../store/import-store-types';
 
 export type DraftGate =
   | { status: 'loading' }
@@ -24,8 +22,23 @@ export type DraftGate =
   | { status: 'unusable'; reason: string }
   /** Another tab holds it; the person can take it over here. */
   | { status: 'owned-elsewhere' }
+  /** The draft could not be loaded or claimed; keep it in the URL so retry remains possible. */
+  | { status: 'error'; error: FinanceApiError }
   /** Discarded, committed or never there: the page should drop `?draft` and start fresh. */
   | { status: 'gone' };
+
+interface HydrationAttempt {
+  force: boolean;
+  n: number;
+}
+
+function resetStoreIfAbandoned(): void {
+  const store = getImportStoreState();
+  if (store.draftId !== null) return;
+  const hasUnsavedRun =
+    store.commitResult !== null || store.rows.length > 0 || store.parsedTransactions.length > 0;
+  if (hasUnsavedRun) store.reset();
+}
 
 function codeOf(error: unknown): string | undefined {
   return error instanceof FinanceApiError ? error.code : undefined;
@@ -35,14 +48,6 @@ function statusOf(error: unknown): number | undefined {
   return error instanceof FinanceApiError ? error.status : undefined;
 }
 
-/** Drops a store holding a run with nothing saved to resume it as, so a bare `/import` starts fresh. */
-function resetStoreIfAbandoned(store: ImportStore): void {
-  if (store.draftId !== null) return;
-  const hasUnsavedRun =
-    store.commitResult !== null || store.rows.length > 0 || store.parsedTransactions.length > 0;
-  if (hasUnsavedRun) store.reset();
-}
-
 /** Take the lease as this tab; `force` is the person's "Take over" / "Take it back". */
 export async function claimDraft(draftId: string, force: boolean): Promise<void> {
   unwrap(
@@ -50,7 +55,7 @@ export async function claimDraft(draftId: string, force: boolean): Promise<void>
   );
 }
 
-async function loadInto(draftId: string, force: boolean): Promise<DraftGate> {
+async function loadInto(draftId: string, attempt: HydrationAttempt): Promise<DraftGate> {
   let draft;
   try {
     draft = unwrap(await importDraftsGet({ path: { id: draftId } })).data;
@@ -62,7 +67,7 @@ async function loadInto(draftId: string, force: boolean): Promise<DraftGate> {
     throw error;
   }
   try {
-    await claimDraft(draftId, force);
+    await claimDraft(draftId, attempt.force);
   } catch (error) {
     if (codeOf(error) === 'DraftOwnedElsewhere') return { status: 'owned-elsewhere' };
     if (statusOf(error) === 404) return { status: 'gone' };
@@ -82,6 +87,59 @@ async function loadInto(draftId: string, force: boolean): Promise<DraftGate> {
   return { status: 'ready' };
 }
 
+function toDraftError(error: unknown): FinanceApiError {
+  return error instanceof FinanceApiError
+    ? error
+    : new FinanceApiError({
+        code: 'web.client.unknown',
+        kind: 'client',
+        message: 'Something went wrong',
+        retryable: false,
+      });
+}
+
+function useDraftGate(requestedId: string | null, attempt: HydrationAttempt) {
+  const [gate, setGate] = useState<DraftGate>({ status: 'loading' });
+  const [resolvedFor, setResolvedFor] = useState<{
+    requestedId: string | null;
+    attempt: HydrationAttempt;
+  }>();
+  const isUnresolved =
+    resolvedFor === undefined ||
+    resolvedFor.requestedId !== requestedId ||
+    resolvedFor.attempt !== attempt;
+  if (isUnresolved) {
+    const store = getImportStoreState();
+    setResolvedFor({ requestedId, attempt });
+    setGate(
+      requestedId === null || requestedId === store.draftId
+        ? { status: 'ready' }
+        : { status: 'loading' }
+    );
+  }
+
+  useEffect(() => {
+    if (requestedId === null) resetStoreIfAbandoned();
+  }, [requestedId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (requestedId === null || requestedId === getImportStoreState().draftId) return;
+    loadInto(requestedId, attempt)
+      .then((next) => {
+        if (!cancelled) setGate(next);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setGate({ status: 'error', error: toDraftError(error) });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [attempt, requestedId]);
+
+  return [gate, setGate] as const;
+}
+
 /**
  * Put the wizard on the draft the URL names (finance ADR-005). Same-session
  * navigation back onto the draft the store already holds costs nothing;
@@ -92,70 +150,24 @@ async function loadInto(draftId: string, force: boolean): Promise<DraftGate> {
  */
 export function useDraftHydration(requestedId: string | null): {
   gate: DraftGate;
+  retry: () => void;
   takeOver: () => void;
   discard: () => Promise<void>;
 } {
-  const [gate, setGate] = useState<DraftGate>({ status: 'loading' });
-  const [attempt, setAttempt] = useState<{ force: boolean; n: number }>({ force: false, n: 0 });
+  const [attempt, setAttempt] = useState<HydrationAttempt>({ force: false, n: 0 });
+  const [gate, setGate] = useDraftGate(requestedId, attempt);
   const queryClient = useQueryClient();
 
-  // The `gate` transition itself is pure React state, safe to derive during
-  // render for both no-fetch-needed cases (no `?draft=`, or the store
-  // already holds the requested draft). The store reset that sometimes goes
-  // with the first case is a mutation of an EXTERNAL system (the zustand
-  // store), which render purity forbids: calling it from the render body
-  // would run it again on any render React discards or repeats (Strict
-  // Mode's dev double-invocation, a concurrent-mode speculative render).
-  // That stays in its own effect below, with no `setState` in it at all, so
-  // it does not need to derive anything — only synchronize.
-  const [resolvedFor, setResolvedFor] = useState<{
-    requestedId: string | null;
-    attempt: typeof attempt;
-  }>();
-  const isUnresolved =
-    resolvedFor === undefined ||
-    resolvedFor.requestedId !== requestedId ||
-    resolvedFor.attempt !== attempt;
-  if (isUnresolved) {
-    const store = useImportStore.getState();
-    setResolvedFor({ requestedId, attempt });
-    setGate(
-      requestedId === null || requestedId === store.draftId
-        ? { status: 'ready' }
-        : { status: 'loading' }
-    );
-  }
-
-  useEffect(() => {
-    if (requestedId !== null) return;
-    resetStoreIfAbandoned(useImportStore.getState());
-  }, [requestedId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const store = useImportStore.getState();
-    if (requestedId === null || requestedId === store.draftId) return;
-    loadInto(requestedId, attempt.force)
-      .then((next) => {
-        if (!cancelled) setGate(next);
-      })
-      .catch(() => {
-        if (!cancelled) setGate({ status: 'gone' });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [requestedId, attempt]);
-
+  const retry = useCallback(() => setAttempt((a) => ({ force: false, n: a.n + 1 })), []);
   const takeOver = useCallback(() => setAttempt((a) => ({ force: true, n: a.n + 1 })), []);
 
   const discard = useCallback(async () => {
     if (requestedId === null) return;
     await importDraftsDiscard({ path: { id: requestedId } });
     await queryClient.invalidateQueries({ queryKey: IMPORT_DRAFTS_LIST_KEY });
-    useImportStore.getState().reset();
+    getImportStoreState().reset();
     setGate({ status: 'gone' });
-  }, [requestedId, queryClient]);
+  }, [queryClient, requestedId, setGate]);
 
-  return { gate, takeOver, discard };
+  return { gate, retry, takeOver, discard };
 }

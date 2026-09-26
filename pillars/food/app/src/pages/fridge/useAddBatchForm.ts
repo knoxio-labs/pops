@@ -100,6 +100,7 @@ function useCreateBatchMutation(args: {
 }) {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: BatchesCreateInput) => unwrap(await batchesCreate({ body: input })),
     onSuccess: ({ batchId }) => {
       args.onAdded?.(batchId);

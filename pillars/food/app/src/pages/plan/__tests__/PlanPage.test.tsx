@@ -159,6 +159,18 @@ describe('PlanPage', () => {
     expect(screen.getByTestId('cooked-chip-2')).toBeTruthy();
   });
 
+  it.each([
+    ['week', planWeekViewMock, 'food.plan.week_unavailable'],
+    ['slots', planListSlotsMock, 'food.plan.slots_unavailable'],
+  ])('renders the API error code when the %s request fails', async (_name, mock, code) => {
+    mock.mockResolvedValueOnce({
+      error: { code, message: 'Planning unavailable', requestId: 'req-plan', retryable: true },
+      response: { status: 503 },
+    });
+    renderPage();
+    expect(await screen.findByLabelText('Error code')).toHaveTextContent(code);
+  });
+
   // POPS-3179: a raw `<input type="date">` opts out of `DateInput`'s pinned
   // `lang="en-AU"`, so the native picker's day/month order silently follows
   // the browser locale instead of the app's. Regression guard for that.

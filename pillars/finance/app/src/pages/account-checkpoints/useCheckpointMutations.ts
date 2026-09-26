@@ -35,7 +35,6 @@ export function useCheckpointMutations(accountId: string) {
     mutationFn: async (body: CreateBody) =>
       unwrap(await checkpointsCreate({ path: { id: accountId }, body })),
     onSuccess: () => toast.success('Checkpoint added'),
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
 
@@ -43,7 +42,6 @@ export function useCheckpointMutations(accountId: string) {
     mutationFn: async (checkpointId: string) =>
       unwrap(await checkpointsRemove({ path: { id: accountId, checkpointId } })),
     onSuccess: () => toast.success('Checkpoint deleted'),
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
 

@@ -47,7 +47,7 @@ export function useQueryPageModel(): QueryPageModel {
     updateStats: historyState.updateStats,
     unknownErrorMessage,
   });
-  const saveDocumentMutation = useSaveDocumentMutation(unknownErrorMessage);
+  const saveDocumentMutation = useSaveDocumentMutation();
 
   const actions = useQueryActions({
     form,

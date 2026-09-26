@@ -1,9 +1,10 @@
 /**
  * Mutations used by the Aliases tab.
  *
- * Each mutation lands its `onSuccess`/`onError` here so the consumer can
+ * Each mutation lands its `onSuccess` here so the consumer can
  * wire per-mutation reactions (close a dialog, clear selection) without
- * re-implementing toast + invalidation. The opts struct mirrors the
+ * re-implementing invalidation. Errors use the shell's global mutation
+ * presentation. The opts struct mirrors the
  * mutation surface; callers pass only the hooks they need.
  *
  * Dialogs must close from the success path of their mutation, not inline
@@ -12,7 +13,6 @@
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { toast } from 'sonner';
 
 import { unwrap } from '../../../food-api-helpers.js';
 import {
@@ -60,10 +60,6 @@ export interface UseAliasMutationsOpts {
   readonly onMergeSuccess?: () => void;
 }
 
-function showError(err: Error): void {
-  toast.error(err.message);
-}
-
 function useRawMutations(baseSuccess: (extra?: () => void) => void, opts: UseAliasMutationsOpts) {
   const { onCreateSuccess, onMergeSuccess } = opts;
   return {
@@ -75,31 +71,26 @@ function useRawMutations(baseSuccess: (extra?: () => void) => void, opts: UseAli
           })
         ),
       onSuccess: () => baseSuccess(onCreateSuccess),
-      onError: showError,
     }),
     updateText: useMutation({
       mutationFn: async (input: UpdateTextInput) =>
         unwrap(await aliasesUpdateText({ path: { id: input.id }, body: { alias: input.alias } })),
       onSuccess: () => baseSuccess(),
-      onError: showError,
     }),
     delete: useMutation({
       mutationFn: async (input: DeleteInput) =>
         unwrap(await aliasesDelete({ path: { id: input.id } })),
       onSuccess: () => baseSuccess(),
-      onError: showError,
     }),
     merge: useMutation({
       mutationFn: async (input: MergeInput) =>
         unwrap(await aliasesMerge({ body: { aliasIds: input.aliasIds, target: input.target } })),
       onSuccess: () => baseSuccess(onMergeSuccess),
-      onError: showError,
     }),
     bulkApprove: useMutation({
       mutationFn: async (input: BulkApproveInput) =>
         unwrap(await aliasesBulkApprove({ body: { aliasIds: input.aliasIds } })),
       onSuccess: () => baseSuccess(),
-      onError: showError,
     }),
   };
 }

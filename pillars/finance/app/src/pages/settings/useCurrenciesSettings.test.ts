@@ -159,7 +159,7 @@ describe('useCurrenciesSettings — edit', () => {
 });
 
 describe('useCurrenciesSettings — delete', () => {
-  it('surfaces a 409 conflict message from the server (via unwrap/FinanceApiError) as a toast', async () => {
+  it('leaves delete conflicts to the global mutation handler', async () => {
     currenciesDeleteMock.mockResolvedValue({
       data: undefined,
       error: { message: "Currency 'AUD' is in use and cannot be deleted" },
@@ -172,12 +172,11 @@ describe('useCurrenciesSettings — delete', () => {
       result.current.deleteMutation.mutate('AUD');
     });
 
-    await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith("Currency 'AUD' is in use and cannot be deleted")
-    );
+    await waitFor(() => expect(currenciesDeleteMock).toHaveBeenCalledOnce());
+    expect(toastError).not.toHaveBeenCalled();
   });
 
-  it('surfaces a decimals-in-use 409 conflict from an update as a toast, distinct from the delete conflict', async () => {
+  it('leaves update conflicts to the global mutation handler', async () => {
     currenciesUpdateMock.mockResolvedValue({
       data: undefined,
       error: { message: "Currency 'AUD' is in use — its decimals cannot be changed" },
@@ -198,10 +197,7 @@ describe('useCurrenciesSettings — delete', () => {
       });
     });
 
-    await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith(
-        "Currency 'AUD' is in use — its decimals cannot be changed"
-      )
-    );
+    await waitFor(() => expect(currenciesUpdateMock).toHaveBeenCalledOnce());
+    expect(toastError).not.toHaveBeenCalled();
   });
 });

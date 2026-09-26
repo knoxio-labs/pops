@@ -195,6 +195,17 @@ alone. An expiry has the opposite failure: a machine left off for longer than
 the window boots to the empty shell this exists to prevent. Every successful
 boot overwrites the entry.
 
+## API failure presentation
+
+The shell owns mutation failure notifications through the shared React Query
+`MutationCache`. A failed mutation is rendered from its ADR-054 `ApiError`, so
+the notification includes the safe server message, stable code and request
+details. A feature that renders the failure inline sets
+`meta.errorHandled: true`; otherwise adding a feature-local error toast would
+show the same failure twice. Query failures remain inline where the page has a
+natural error state, while network-wide query failures also use the shell's
+deduplicated offline notification.
+
 ## Overlay mount contract
 
 The props an overlay receives are `OverlayComponentProps` in

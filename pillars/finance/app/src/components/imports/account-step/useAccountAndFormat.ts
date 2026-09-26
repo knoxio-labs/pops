@@ -1,10 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 
 import { unwrap } from '../../../finance-api-helpers.js';
 import { currenciesList } from '../../../finance-api/index.js';
 import { useAllEntities } from '../../../lib/useAllEntities';
-import { mapAccountApiError } from '../../../pages/accounts/account-error-mapping';
+import { handleAccountApiError } from '../../../pages/accounts/account-error-mapping';
 import { useAccountFormDialogState } from '../../../pages/accounts/useAccountFormDialogState';
 import { useAccountMutations } from '../../../pages/accounts/useAccountMutations';
 import { useCreateBankEntity } from '../../../pages/accounts/useCreateBankEntity';
@@ -53,9 +52,7 @@ export function useAccountAndFormat() {
         dialog.closeDialog();
       })
       .catch((err: unknown) => {
-        if (!mapAccountApiError(err, dialog.form)) {
-          toast.error(err instanceof Error ? err.message : 'Failed to create account');
-        }
+        handleAccountApiError(err, dialog.form);
       });
   };
 

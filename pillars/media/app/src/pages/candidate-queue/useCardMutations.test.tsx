@@ -82,7 +82,7 @@ describe('useCardMutations', () => {
       });
     });
 
-    it('toasts the error message when the download fails', async () => {
+    it('leaves download failures to the global mutation handler', async () => {
       rotationDownloadCandidateMock.mockResolvedValue({
         data: undefined,
         error: { message: 'radarr offline' },
@@ -92,7 +92,8 @@ describe('useCardMutations', () => {
 
       result.current.downloadMutation.mutate({ candidateId: 7 });
 
-      await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('radarr offline'));
+      await waitFor(() => expect(rotationDownloadCandidateMock).toHaveBeenCalledOnce());
+      expect(mockToastError).not.toHaveBeenCalled();
     });
   });
 

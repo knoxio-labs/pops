@@ -1,5 +1,7 @@
 /** Shared types for the ingest page model. */
 
+import type { CerebrumApiError } from '../../cerebrum-api-helpers';
+
 /**
  * Canonical engram types supported by the ingest pipeline.
  * Must stay in sync with KNOWN_TYPES in pillars/cerebrum/src/api/modules/ingest/classifier.ts
@@ -72,7 +74,7 @@ export interface BulkSegmentOutcome {
   preview: string;
   body: string;
   result?: SubmitResult;
-  error?: string;
+  error?: CerebrumApiError;
 }
 
 export const INITIAL_FORM: IngestFormValues = {

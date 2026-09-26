@@ -91,7 +91,6 @@ function useSaveMutation(
       if (compile.ok === true) toast.success(t('recipes.edit.saved'));
       else toast.error(t('recipes.edit.compileFailed'));
     },
-    onError: (err: Error) => toast.error(t('recipes.edit.saveError', { message: err.message })),
   });
 }
 
@@ -115,7 +114,6 @@ function usePromoteMutation(
         toast.error(t(`recipes.edit.promoteFailed.${res.reason satisfies PromoteReason}` as const));
       }
     },
-    onError: (err: Error) => toast.error(t('recipes.edit.promoteError', { message: err.message })),
   });
 }
 
@@ -131,6 +129,5 @@ function useDiscardMutation(
       toast.success(t('recipes.edit.discarded'));
       void navigate(`/food/recipes/${slug}`);
     },
-    onError: (err: Error) => toast.error(t('recipes.edit.discardError', { message: err.message })),
   });
 }

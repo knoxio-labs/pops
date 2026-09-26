@@ -30,6 +30,18 @@ function isConflict(err: unknown): boolean {
   return err instanceof FoodApiError && err.status === 409;
 }
 
+async function updateVariant({
+  id,
+  slug,
+  name,
+  defaultUnit,
+  packageSizeG,
+  notes,
+}: UpdateVariantInput) {
+  const body: UpdateBody = { slug, name, defaultUnit, packageSizeG, notes };
+  return unwrap(await variantsUpdate({ path: { id }, body }));
+}
+
 export function useVariantActionMutations({ onFormSuccess, onDeleteSuccess }: Args) {
   const { t } = useTranslation('food');
   const queryClient = useQueryClient();
@@ -41,6 +53,7 @@ export function useVariantActionMutations({ onFormSuccess, onDeleteSuccess }: Ar
     [queryClient]
   );
   const create = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: CreateVariantInput) => unwrap(await variantsCreate({ body: input })),
     onSuccess: async () => {
       await invalidate();
@@ -49,17 +62,8 @@ export function useVariantActionMutations({ onFormSuccess, onDeleteSuccess }: Ar
     onError: (err: Error) => setFormError(mapVariantMutationError(err, t)),
   });
   const update = useMutation({
-    mutationFn: async ({
-      id,
-      slug,
-      name,
-      defaultUnit,
-      packageSizeG,
-      notes,
-    }: UpdateVariantInput) => {
-      const body: UpdateBody = { slug, name, defaultUnit, packageSizeG, notes };
-      return unwrap(await variantsUpdate({ path: { id }, body }));
-    },
+    meta: { errorHandled: true },
+    mutationFn: updateVariant,
     onSuccess: async () => {
       await invalidate();
       onFormSuccess();
@@ -67,6 +71,7 @@ export function useVariantActionMutations({ onFormSuccess, onDeleteSuccess }: Ar
     onError: (err: Error) => setFormError(mapVariantMutationError(err, t)),
   });
   const deleteMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id }: DeleteVariantInput) =>
       unwrap(await variantsDelete({ path: { id } })),
     onSuccess: async () => {

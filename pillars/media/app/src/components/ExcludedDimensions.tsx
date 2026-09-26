@@ -67,9 +67,6 @@ function useExcludedDimensionsModel(mediaType: 'movie' | 'tv_show', mediaId: num
       toast.success(`Included in ${dimName}`);
       void queryClient.invalidateQueries({ queryKey: ['media', 'comparisons'] });
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to include: ${err.message}`);
-    },
   });
 
   return { scores, dimensions, includeMutation };

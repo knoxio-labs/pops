@@ -70,8 +70,6 @@ function useDraftRowMutations(
         toast.error(t(`recipes.edit.promoteFailed.${res.reason satisfies PromoteReason}` as const));
       }
     },
-    onError: (err: Error) =>
-      toast.error(t('recipes.drafts.row.promoteError', { message: err.message })),
   });
   const discardMutation = useMutation({
     mutationFn: async (versionId: number) =>
@@ -80,8 +78,6 @@ function useDraftRowMutations(
       toast.success(t('recipes.drafts.row.discarded'));
       void refetch();
     },
-    onError: (err: Error) =>
-      toast.error(t('recipes.drafts.row.discardError', { message: err.message })),
   });
   return {
     promote: (versionId) => promoteMutation.mutate(versionId),

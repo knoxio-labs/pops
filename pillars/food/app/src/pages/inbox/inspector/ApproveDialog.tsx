@@ -38,8 +38,6 @@ export function ApproveDialog({
         toast.error(t(`inbox.inspector.decision.approve.error.${res.reason}` as const));
       }
     },
-    onError: (err: Error) =>
-      toast.error(t('inbox.inspector.decision.approve.error.generic', { message: err.message })),
   });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

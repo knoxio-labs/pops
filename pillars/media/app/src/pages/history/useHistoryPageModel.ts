@@ -34,9 +34,6 @@ function useDeleteFlow({
         setOffset(Math.max(0, offset - PAGE_SIZE));
       }
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to delete watch event: ${err.message}`);
-    },
   });
 
   const handleDeleteClick = useCallback((id: number) => setDeleteTarget(id), []);

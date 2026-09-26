@@ -70,13 +70,11 @@ function useReflexListMutations(): ReflexListMutations {
     mutationFn: async ({ name }: { name: string }) =>
       unwrap(await reflexEnable({ path: { name } })),
     onSuccess: invalidate,
-    onError: (err: Error) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const disableMutation = useMutation({
     mutationFn: async ({ name }: { name: string }) =>
       unwrap(await reflexDisable({ path: { name } })),
     onSuccess: invalidate,
-    onError: (err: Error) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const testMutation = useMutation({
     mutationFn: async ({ name }: { name: string }) => unwrap(await reflexTest({ path: { name } })),
@@ -84,7 +82,6 @@ function useReflexListMutations(): ReflexListMutations {
       toast.success(t('reflex.list.fireSuccess'));
       invalidate();
     },
-    onError: (err: Error) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   return {
     isPending: enableMutation.isPending || disableMutation.isPending || testMutation.isPending,

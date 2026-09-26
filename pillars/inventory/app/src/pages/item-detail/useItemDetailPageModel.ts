@@ -37,7 +37,6 @@ function useItemDetailMutations(id: string | undefined) {
       toast.success('Item deleted');
       void navigate('/inventory/items');
     },
-    onError: (err: Error) => toast.error(`Failed to delete: ${err.message}`),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['inventory', 'items'] });
       if (id) void queryClient.invalidateQueries({ queryKey: webItemDetailQueryKey(id) });
@@ -54,7 +53,6 @@ function useItemDetailMutations(id: string | undefined) {
     onSuccess: () => {
       toast.success('Items disconnected');
     },
-    onError: (err: Error) => toast.error(`Failed to disconnect: ${err.message}`),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['inventory', 'connections'] });
       if (id) void queryClient.invalidateQueries({ queryKey: webItemDetailQueryKey(id) });
@@ -69,7 +67,6 @@ function useItemDetailMutations(id: string | undefined) {
           body: { orderedIds: input.orderedIds },
         })
       ),
-    onError: (err: Error) => toast.error(`Failed to reorder photos: ${err.message}`),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['inventory', 'photos'] });
       if (id) void queryClient.invalidateQueries({ queryKey: webItemDetailQueryKey(id) });

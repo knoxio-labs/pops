@@ -70,7 +70,6 @@ function useDeleteMutation(setPendingDeletes: React.Dispatch<React.SetStateActio
         next.delete(variables.id);
         return next;
       });
-      toast.error('Failed to delete comparison');
     },
   });
 }

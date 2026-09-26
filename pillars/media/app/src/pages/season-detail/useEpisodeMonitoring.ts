@@ -1,6 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { toast } from 'sonner';
 
 import { unwrap } from '../../media-api-helpers.js';
 import { arrUpdateEpisodeMonitoring } from '../../media-api/index.js';
@@ -49,7 +48,7 @@ function useMonitorMutation(
   return useMutation({
     mutationFn: async (variables: UpdateEpisodeMonitoringInput) =>
       unwrap(await arrUpdateEpisodeMonitoring({ body: variables })),
-    onError: (err: Error, variables) => {
+    onError: (_error: Error, variables) => {
       setOptimisticEpMonitoring((prev) => {
         const next = new Map(prev);
         const affectedIds = new Set(variables.episodeIds);
@@ -58,7 +57,6 @@ function useMonitorMutation(
         }
         return next;
       });
-      toast.error(`Failed to update monitoring: ${err.message}`);
     },
     onSettled: (_data, _err, variables) => {
       if (!variables) return;

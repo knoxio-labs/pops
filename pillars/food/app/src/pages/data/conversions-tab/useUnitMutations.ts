@@ -35,6 +35,7 @@ type SetError = (msg: string | null) => void;
 
 function useCreateUnit(invalidate: () => void, setErrorMessage: SetError, t: TFunction) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: CreateUnitInput) =>
       unwrap(await conversionsCreateUnit({ body: input })),
     onSuccess: () => {
@@ -47,6 +48,7 @@ function useCreateUnit(invalidate: () => void, setErrorMessage: SetError, t: TFu
 
 function useUpdateUnit(invalidate: () => void, setErrorMessage: SetError, t: TFunction) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id, ...patch }: UpdateUnitMutationInput) =>
       unwrap(await conversionsUpdateUnit({ path: { id }, body: patch })),
     onSuccess: () => {
@@ -59,6 +61,7 @@ function useUpdateUnit(invalidate: () => void, setErrorMessage: SetError, t: TFu
 
 function useDeleteUnit(invalidate: () => void, setErrorMessage: SetError, t: TFunction) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id }: DeleteUnitMutationInput) =>
       unwrap(await conversionsDeleteUnit({ path: { id } })),
     onSuccess: (result) => {

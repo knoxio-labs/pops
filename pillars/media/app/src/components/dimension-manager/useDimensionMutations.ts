@@ -51,7 +51,6 @@ function useCoreMutations(
       toast.success('Dimension created');
       void queryClient.invalidateQueries({ queryKey: ['media', 'comparisons'] });
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   const updateMutation = useMutation({
@@ -62,7 +61,6 @@ function useCoreMutations(
       toast.success('Dimension updated');
       void queryClient.invalidateQueries({ queryKey: ['media', 'comparisons'] });
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   return { createMutation, updateMutation };

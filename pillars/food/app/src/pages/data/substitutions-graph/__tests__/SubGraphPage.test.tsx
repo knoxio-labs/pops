@@ -236,6 +236,22 @@ describe('SubGraphPage', () => {
     expect(await screen.findByText(/no substitutions match your filters/i)).toBeInTheDocument();
   });
 
+  it('renders the API error code when the graph request fails', async () => {
+    substitutionsGraphViewMock.mockResolvedValueOnce({
+      error: {
+        code: 'food.substitutions.graph_unavailable',
+        message: 'Substitution graph unavailable',
+        requestId: 'req-graph',
+        retryable: true,
+      },
+      response: { status: 503 },
+    });
+    renderAt('/food/data/substitutions/graph');
+    expect(await screen.findByLabelText('Error code')).toHaveTextContent(
+      'food.substitutions.graph_unavailable'
+    );
+  });
+
   it('view-as-table link points back to the substitutions tab', () => {
     graphViewState.data = { nodes: [], edges: [] };
     renderAt('/food/data/substitutions/graph');

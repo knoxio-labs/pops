@@ -3,9 +3,9 @@ import { Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { AssetIdBadge, Button, SearchPickerDialog, TypeBadge } from '@pops/ui';
+import { AssetIdBadge, Button, SearchPickerDialog, toastError, TypeBadge } from '@pops/ui';
 
-import { unwrap } from '../inventory-api-helpers.js';
+import { InventoryApiError, unwrap } from '../inventory-api-helpers.js';
 import { connectionsConnect, itemsList } from '../inventory-api/index.js';
 
 import type { ItemsListResponse } from '../inventory-api/index.js';
@@ -13,6 +13,28 @@ import type { ItemsListResponse } from '../inventory-api/index.js';
 type InventoryItem = ItemsListResponse['data'][number];
 
 type ConnectInput = { itemAId: string; itemBId: string };
+
+function connectError(error: Error): InventoryApiError {
+  const apiError =
+    error instanceof InventoryApiError
+      ? error
+      : new InventoryApiError({
+          code: 'web.client.unknown',
+          kind: 'client',
+          message: 'Failed to connect items',
+          retryable: false,
+        });
+  if (apiError.status !== 409) return apiError;
+  return new InventoryApiError({
+    code: apiError.code,
+    details: apiError.details,
+    kind: apiError.kind,
+    message: 'These items are already connected',
+    requestId: apiError.requestId,
+    retryable: apiError.retryable,
+    status: apiError.status,
+  });
+}
 
 interface ConnectDialogProps {
   currentItemId: string;
@@ -60,18 +82,13 @@ function ConnectResultRow({ item, disabled, onConnect }: ConnectResultRowProps) 
 function useConnectMutation(onSuccess: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: ConnectInput) =>
       unwrap(
         await connectionsConnect({ body: { itemAId: input.itemAId, itemBId: input.itemBId } })
       ),
     onSuccess,
-    onError: (err: Error) => {
-      if (err.message.toLowerCase().includes('conflict')) {
-        toast.error('These items are already connected');
-      } else {
-        toast.error(`Failed to connect: ${err.message}`);
-      }
-    },
+    onError: (error: Error) => toastError(connectError(error)),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['inventory', 'connections'] }),
   });
 }

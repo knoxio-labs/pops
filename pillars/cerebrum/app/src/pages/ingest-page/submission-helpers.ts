@@ -1,3 +1,5 @@
+import { CerebrumApiError } from '../../cerebrum-api-helpers';
+
 import type { BulkSegment } from './bulk-paste';
 import type {
   QuickCaptureMutation,
@@ -7,6 +9,16 @@ import type {
   SubmitResponse,
 } from './submission-types';
 import type { BulkSegmentOutcome, IngestFormValues, SubmitResult } from './types';
+
+function captureError(error: unknown): CerebrumApiError {
+  if (error instanceof CerebrumApiError) return error;
+  return new CerebrumApiError({
+    code: 'web.client.unknown',
+    kind: 'client',
+    message: 'Capture failed',
+    retryable: false,
+  });
+}
 
 export function buildQuickCapturePayload(
   form: IngestFormValues,
@@ -65,10 +77,11 @@ async function runSegment(args: RunSegmentArgs): Promise<void> {
     setBulkResults((prev) =>
       prev ? prev.map((b) => (b.index === segment.index ? { ...b, result: asResult(r) } : b)) : null
     );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Capture failed';
+  } catch (error) {
     setBulkResults((prev) =>
-      prev ? prev.map((b) => (b.index === segment.index ? { ...b, error: message } : b)) : null
+      prev
+        ? prev.map((b) => (b.index === segment.index ? { ...b, error: captureError(error) } : b))
+        : null
     );
   }
 }
@@ -94,12 +107,11 @@ export async function retrySegmentImpl(args: RetrySegmentArgs): Promise<void> {
           )
         : null
     );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Capture failed';
+  } catch (error) {
     setBulkResults((prev) =>
       prev
         ? prev.map((b) =>
-            b.index === segmentIndex ? { ...b, error: message, result: undefined } : b
+            b.index === segmentIndex ? { ...b, error: captureError(error), result: undefined } : b
           )
         : null
     );

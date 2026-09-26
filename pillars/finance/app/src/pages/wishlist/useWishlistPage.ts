@@ -46,7 +46,6 @@ function useWishlistMutations(deps: MutationDeps) {
       toast.success('Item added to wishlist');
       deps.setIsDialogOpen(false);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   const updateMutation = useMutation({
@@ -57,7 +56,6 @@ function useWishlistMutations(deps: MutationDeps) {
       deps.setIsDialogOpen(false);
       deps.setEditingItem(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   const deleteMutation = useMutation({
@@ -67,7 +65,6 @@ function useWishlistMutations(deps: MutationDeps) {
       toast.success('Item removed');
       deps.setDeletingId(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   return { createMutation, updateMutation, deleteMutation };

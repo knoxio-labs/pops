@@ -17,7 +17,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
-import { unwrap } from '../../../food-api-helpers.js';
+import { FoodApiError, unwrap } from '../../../food-api-helpers.js';
 import { substitutionsGraphView } from '../../../food-api/index.js';
 import { distinctContextTags, findNodeBySlug } from './helpers';
 import { SubGraphBody } from './SubGraphBody';
@@ -79,7 +79,7 @@ export function SubGraphPage(props: SubGraphPageProps = {}): React.ReactElement 
         <SubGraphBody
           view={view}
           isLoading={query.isLoading}
-          isError={query.isError}
+          error={query.error instanceof FoodApiError ? query.error : null}
           focusedNode={focusedNode}
           focusedEdge={focusedEdge}
           focusedSlug={filters.focusedSlug}

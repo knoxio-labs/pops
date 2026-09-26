@@ -99,7 +99,7 @@ describe('DocumentsPage', () => {
     expect(await screen.findByTestId('documents-result-notice')).toBeInTheDocument();
   });
 
-  it('surfaces an error toast when generation fails', async () => {
+  it('leaves generation failures to the global mutation handler', async () => {
     sdk.emitGenerate.mockResolvedValue({
       error: { message: 'Generation failed' },
       response: { status: 500 },
@@ -107,7 +107,8 @@ describe('DocumentsPage', () => {
     renderPage();
     await userEvent.type(screen.getByLabelText('Query'), 'agents');
     await userEvent.click(screen.getByRole('button', { name: /^generate$/i }));
-    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('Generation failed'));
+    await waitFor(() => expect(sdk.emitGenerate).toHaveBeenCalledOnce());
+    expect(toastErrorMock).not.toHaveBeenCalled();
     expect(screen.getByTestId('documents-result-empty')).toBeInTheDocument();
   });
 });

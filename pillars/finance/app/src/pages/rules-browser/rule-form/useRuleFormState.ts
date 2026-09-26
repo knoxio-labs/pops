@@ -52,7 +52,6 @@ function useRuleMutations(onClose: () => void) {
       void queryClient.invalidateQueries({ queryKey: ['finance', 'corrections', 'list'] });
       onClose();
     },
-    onError: (err: Error) => toast.error(err.message),
   });
   const updateMutation = useMutation({
     mutationFn: async (vars: UpdateRuleInput) =>
@@ -62,7 +61,6 @@ function useRuleMutations(onClose: () => void) {
       void queryClient.invalidateQueries({ queryKey: ['finance', 'corrections', 'list'] });
       onClose();
     },
-    onError: (err: Error) => toast.error(err.message),
   });
   return { createMutation, updateMutation };
 }

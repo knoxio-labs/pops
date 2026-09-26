@@ -160,7 +160,6 @@ export function DocumentsList({
     mutationFn: async (documentId: number) =>
       unwrap(await documentsUnlink({ path: { id: documentId } })),
     onSuccess: () => toast.success('Document unlinked'),
-    onError: (error: Error) => toast.error(`Failed to unlink: ${error.message}`),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ['inventory', 'documents'] }),
   });
   const documents = data?.data ?? [];

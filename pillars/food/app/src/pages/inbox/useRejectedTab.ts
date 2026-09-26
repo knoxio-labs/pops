@@ -45,11 +45,10 @@ function useUndoMutation(queryInput: QueryInput, t: Translate) {
       );
       return { snapshot };
     },
-    onError: (err: Error, _input, ctx) => {
+    onError: (_error: Error, _input, ctx) => {
       if (ctx?.snapshot !== undefined) {
         qc.setQueryData<ListRejectedOutput>(listKey, ctx.snapshot);
       }
-      toast.error(t('inbox.rejected.undo.error', { message: err.message }));
     },
     onSuccess: (result) => {
       if (result.ok) {

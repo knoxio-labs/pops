@@ -46,7 +46,6 @@ function useCreateUpdateMutations(deps: MutationDeps) {
       toast.success('Transaction created');
       deps.setIsDialogOpen(false);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   const updateMutation = useMutation({
@@ -57,7 +56,6 @@ function useCreateUpdateMutations(deps: MutationDeps) {
       deps.setIsDialogOpen(false);
       deps.setEditingTransaction(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   return { createMutation, updateMutation };
@@ -73,7 +71,6 @@ function useRestoreDeleteMutations(deps: MutationDeps) {
     onSuccess: () => {
       toast.success('Transaction restored');
     },
-    onError: (err: Error) => toast.error(`Failed to restore transaction: ${err.message}`),
     onSettled: invalidate,
   });
   const deleteMutation = useMutation({
@@ -82,7 +79,6 @@ function useRestoreDeleteMutations(deps: MutationDeps) {
     onSuccess: () => {
       deps.setDeletingTx(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   const unlinkMutation = useMutation({
@@ -92,7 +88,6 @@ function useRestoreDeleteMutations(deps: MutationDeps) {
       toast.success('Transfer unlinked');
       deps.setUnlinkingTx(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   return { restoreMutation, deleteMutation, unlinkMutation };

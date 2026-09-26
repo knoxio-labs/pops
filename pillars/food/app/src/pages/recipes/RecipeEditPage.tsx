@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import { toast } from 'sonner';
 
 import { Button } from '@pops/ui';
 
@@ -141,12 +140,10 @@ function useRecipeEditQueries(slug: string, versionId: number | null, versionNo:
  * `eslint-disable react-hooks/exhaustive-deps`).
  */
 function useOpenDraftOnMount(slug: string, onOpen: (next: DraftState) => void): void {
-  const { t } = useTranslation('food');
   const mutation = useMutation({
     mutationFn: async (targetSlug: string) =>
       unwrap(await recipesCreateNewDraft({ path: { slug: targetSlug } })),
     onSuccess: (res) => onOpen({ versionId: res.versionId, versionNo: res.versionNo }),
-    onError: (err: Error) => toast.error(t('recipes.edit.openError', { message: err.message })),
   });
   const opened = useRef<string | null>(null);
   useEffect(() => {

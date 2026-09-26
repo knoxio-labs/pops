@@ -50,9 +50,8 @@ function useAddMutation(apiMediaType: ApiMediaType, mediaId: number) {
     onSuccess: () => {
       toast.success('Added to watchlist');
     },
-    onError: (err: Error, _vars, context) => {
+    onError: (_error: Error, _vars, context) => {
       rollback(queryClient, apiMediaType, mediaId, context);
-      toast.error(`Failed to add: ${err.message}`);
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['media', 'watchlist', 'status'] });
@@ -70,9 +69,8 @@ function useRemoveMutation(apiMediaType: ApiMediaType, mediaId: number) {
     onSuccess: () => {
       toast.success('Removed from watchlist');
     },
-    onError: (err: Error, _vars, context) => {
+    onError: (_error: Error, _vars, context) => {
       rollback(queryClient, apiMediaType, mediaId, context);
-      toast.error(`Failed to remove: ${err.message}`);
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['media', 'watchlist', 'status'] });

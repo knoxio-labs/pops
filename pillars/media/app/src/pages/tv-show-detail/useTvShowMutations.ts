@@ -30,13 +30,12 @@ export function useMonitoringMutation({
           body: { monitored: variables.monitored },
         })
       ),
-    onError: (err: Error, variables) => {
+    onError: (_error: Error, variables) => {
       setOptimisticMonitoring((prev) => {
         const next = new Map(prev);
         next.set(variables.seasonNumber, !variables.monitored);
         return next;
       });
-      toast.error(`Failed to update monitoring: ${err.message}`);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['media', 'arr', 'checkSeries'] });
@@ -102,14 +101,13 @@ export function useBatchLogMutation(showId: number, queryClient: QueryClient) {
         `Marked ${result.data.logged} episode${result.data.logged !== 1 ? 's' : ''} as watched`
       );
     },
-    onError: (err, _vars, context) => {
+    onError: (_error, _vars, context) => {
       if (context) {
         queryClient.setQueryData<ProgressEnvelope | undefined>(
           progressKey(showId),
           context.previous
         );
       }
-      toast.error(`Failed to mark all watched: ${err.message}`);
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['media', 'watchHistory'] });

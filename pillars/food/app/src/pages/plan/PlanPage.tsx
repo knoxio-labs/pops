@@ -8,8 +8,9 @@
 import { useCallback, useState, type ReactElement } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
-import { Button, DateInput } from '@pops/ui';
+import { Button, DateInput, ErrorState } from '@pops/ui';
 
+import { FoodApiError } from '../../food-api-helpers.js';
 import { AddPlanEntryModal } from './AddPlanEntryModal.js';
 import { addDays, formatLocalDate, formatWeekLabel, toIsoMonday } from './iso-week.js';
 import { PlanDaySwiper } from './PlanDaySwiper.js';
@@ -95,17 +96,13 @@ function Body({ weekQuery, slotsQuery, onEdit, onAdd }: BodyProps): ReactElement
     return <p className="text-sm text-muted-foreground">Loading week…</p>;
   }
   if (weekQuery.isError) {
-    return (
-      <p className="text-sm text-destructive" role="alert">
-        Could not load week: {weekQuery.error.message}
-      </p>
-    );
+    return weekQuery.error instanceof FoodApiError ? <ErrorState error={weekQuery.error} /> : <></>;
   }
   if (slotsQuery.isError) {
-    return (
-      <p className="text-sm text-destructive" role="alert">
-        Could not load slots: {slotsQuery.error.message}
-      </p>
+    return slotsQuery.error instanceof FoodApiError ? (
+      <ErrorState error={slotsQuery.error} />
+    ) : (
+      <></>
     );
   }
   if (!weekQuery.data || !slotsQuery.data) return <></>;
