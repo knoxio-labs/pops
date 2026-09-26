@@ -77,6 +77,7 @@ internal struct InventoryLiveComputedFieldsTests {
         let opened = await Self.opened(store, .create(placement: nil))
         defer { opened.loading.cancel() }
         let form = opened.form
+        form.selectProtocol2Type(Self.type.id)
 
         guard
             case .unavailable(_, let firstFailure)? = form.protocol2ComputedDisplays[

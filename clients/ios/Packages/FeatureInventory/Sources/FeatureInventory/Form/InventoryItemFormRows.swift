@@ -46,7 +46,7 @@ internal enum InventoryFormTypeOptions {
     /// archived: an item already of a retired type still reads its type,
     /// but no other item can newly take it.
     internal static func protocol2(
-        _ catalogue: InventoryCatalogueSnapshot, selectedId: String
+        _ catalogue: InventoryCatalogueSnapshot, selectedId: String?
     ) -> [InventoryFormTypeOption] {
         alphabetically(
             catalogue.types

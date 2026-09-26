@@ -17,14 +17,20 @@ extension InventoryItemFormModel {
         InventoryProtocol2ReferenceTargets.allowed(for: field, among: protocol2ReferenceTargets)
     }
 
-    internal func selectProtocol2Type(_ typeId: String) {
-        guard let draft = protocol2Draft, draft.typeId != typeId,
-            let type = protocol2Catalogue?.types.first(where: {
+    internal func selectProtocol2Type(_ typeId: String?) {
+        guard let typeId else {
+            guard offersNoType else { return }
+            protocol2Draft = nil
+            return
+        }
+        guard let catalogue = protocol2Catalogue,
+            let type = catalogue.types.first(where: {
                 $0.id == typeId && $0.archivedAt == nil
             })
         else { return }
-        var selected = InventoryProtocol2Draft(
-            type: type, catalogueRevision: draft.catalogueRevision)
+        let catalogueRevision = protocol2Draft?.catalogueRevision ?? catalogue.revision.revision
+        guard protocol2Draft?.typeId != typeId else { return }
+        var selected = InventoryProtocol2Draft(type: type, catalogueRevision: catalogueRevision)
         if case .create = request { selected.prefillDefaults(for: type) }
         selected.typeSelectionChanged = true
         protocol2Draft = selected

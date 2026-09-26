@@ -58,6 +58,7 @@ internal struct InventoryAccessibilityTests {
     @Test("the Type picker and each of its options have pinned identifiers")
     func typePickerIdentifiers() {
         #expect(InventoryAccessibility.itemTypePicker == "inventory-item-type")
+        #expect(InventoryAccessibility.itemTypeNone == "inventory-item-type-option-none")
         #expect(
             InventoryAccessibility.itemTypeOption(id: "type-7")
                 == "inventory-item-type-option-type-7")

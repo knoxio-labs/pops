@@ -246,14 +246,10 @@ extension InventoryItemFormModel {
         case .create:
             draft.placementName = context.placementName
             if let catalogue = context.protocol2Catalogue {
-                guard let type = catalogue.types.first(where: { $0.archivedAt == nil }) else {
+                guard catalogue.types.contains(where: { $0.archivedAt == nil }) else {
                     phase = .unavailable
                     return
                 }
-                var created = InventoryProtocol2Draft(
-                    type: type, catalogueRevision: catalogue.revision.revision)
-                created.prefillDefaults(for: type)
-                protocol2Draft = created
             }
             phase = .ready
         case .edit, .labelling:

@@ -181,8 +181,8 @@ extension InventoryItemFormView {
                 "Name", placeholder: "Name", text: $model.draft.name,
                 identifier: InventoryAccessibility.itemNameField)
             InventoryFormDestinationRow(draft: $model.draft)
-            if let catalogue = model.protocol2Catalogue, let selected = model.protocol2Draft {
-                protocol2TypePicker(catalogue: catalogue, selected: selected)
+            if let catalogue = model.protocol2Catalogue {
+                protocol2TypePicker(catalogue: catalogue, selected: model.protocol2Draft)
             } else {
                 InventoryFormTypeRow(
                     types: model.catalogue.types, offersNone: model.offersNoType,
@@ -191,7 +191,7 @@ extension InventoryItemFormView {
             }
             if let type = model.protocol2Type, let draft = model.protocol2Draft {
                 protocol2FieldRows(type: type, draft: draft)
-            } else {
+            } else if model.protocol2Catalogue == nil {
                 legacyFieldRows
             }
         } footer: {
@@ -200,16 +200,23 @@ extension InventoryItemFormView {
     }
 
     private func protocol2TypePicker(
-        catalogue: InventoryCatalogueSnapshot, selected: InventoryProtocol2Draft
+        catalogue: InventoryCatalogueSnapshot, selected: InventoryProtocol2Draft?
     ) -> some View {
         Picker(
             "Type",
-            selection: Binding(get: { selected.typeId }, set: { model.selectProtocol2Type($0) })
+            selection: Binding(
+                get: { selected?.typeId }, set: { model.selectProtocol2Type($0) })
         ) {
-            let options = InventoryFormTypeOptions.protocol2(catalogue, selectedId: selected.typeId)
+            if model.offersNoType {
+                Text("No type yet")
+                    .tag(String?.none)
+                    .accessibilityIdentifier(InventoryAccessibility.itemTypeNone)
+            }
+            let options = InventoryFormTypeOptions.protocol2(
+                catalogue, selectedId: selected?.typeId)
             ForEach(options) { option in
                 Text(option.label)
-                    .tag(option.id)
+                    .tag(Optional(option.id))
                     .accessibilityIdentifier(option.accessibilityIdentifier)
             }
         }
