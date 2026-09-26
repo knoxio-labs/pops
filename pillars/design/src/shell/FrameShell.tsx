@@ -80,7 +80,7 @@ export function FrameShell() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <FrameChrome kind={frame} area={address?.path[0]} slug={address?.path.at(-1)}>
+      <FrameChrome kind={frame} area={address?.path[0]} slug={address?.path.slice(1).join('/')}>
         <Outlet />
       </FrameChrome>
       <CommentsOverlay

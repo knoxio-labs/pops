@@ -1,5 +1,5 @@
 import { cataloguePrimitiveDefinitions } from '@/fixtures/inventory-type-primitives';
-import { states } from '@/screens/inventory/type-editor';
+import { states } from '@/screens/inventory/types/type-editor';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 

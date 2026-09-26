@@ -10,8 +10,21 @@ vi.mock('../comments/CommentsOverlay', () => ({
   CommentsOverlay: () => null,
 }));
 
+const chromeProps: { area: string | undefined; slug: string | undefined }[] = [];
+
 vi.mock('../frames/FrameChrome', () => ({
-  FrameChrome: ({ children }: { children: React.ReactNode }) => children,
+  FrameChrome: ({
+    area,
+    slug,
+    children,
+  }: {
+    area: string | undefined;
+    slug: string | undefined;
+    children: React.ReactNode;
+  }) => {
+    chromeProps.push({ area, slug });
+    return children;
+  },
 }));
 
 function commentShortcutMessages(postMessage: ReturnType<typeof vi.fn>): FrameToShell[] {
@@ -85,5 +98,18 @@ describe('FrameShell keyboard forwarding', () => {
       })
     );
     expect(commentShortcutMessages(postMessage)).toEqual([]);
+  });
+});
+
+describe('FrameShell chrome address', () => {
+  afterEach(cleanup);
+
+  it('hands the chrome the whole screen path under the area, folders included', () => {
+    render(
+      <MemoryRouter initialEntries={['/frame/s/inventory/items/labels']}>
+        <FrameShell />
+      </MemoryRouter>
+    );
+    expect(chromeProps.at(-1)).toEqual({ area: 'inventory', slug: 'items/labels' });
   });
 });

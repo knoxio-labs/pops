@@ -2,11 +2,9 @@ import { useState } from 'react';
 
 import {
   DEFAULT_COPIES,
-  resolveTemplate,
   clampStartAt,
   CUSTOM_SHEET_ID,
   customLayout,
-  templateFits,
   expandCopies,
   nextStartAt,
   planSheets,
@@ -16,16 +14,18 @@ import {
 } from '@pops/inventory/labels';
 
 import { loadCustomSheet, storeCustomSheet } from './custom-sheet-storage';
+import { DEFAULT_LABEL_CONTENT, fieldChoices, NO_DETAILS, resolveLabel } from './label-content';
+import { fitToSheet } from './label-layout';
 
 import type {
   CopiesByKind,
-  LabelTemplateChoice,
-  LabelTemplateId,
   PrintSubject,
   SheetGeometry,
   SheetLayout,
   SheetPage,
 } from '@pops/inventory/labels';
+
+import type { LabelContent, LabelDetails, LabelFieldChoice, ResolvedLabel } from './label-content';
 
 /**
  * What happened after the browser's print dialog closed. Browsers do not
@@ -33,13 +33,16 @@ import type {
  */
 export type PrintOutcome = 'none' | 'asking' | 'printed' | 'cancelled';
 
-/** Why Print is off: nothing to print, an item still without a code, or labels too small for a QR. */
+/** Why Print is off: nothing to print, an item still without a code, or a QR the labels are too small for. */
 export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | null;
 
 /** What the page opens on: the selection it was entered with and the job's starting choices. */
 export interface PrintJobSeed {
   subjects: PrintSubject[];
-  template?: LabelTemplateChoice;
+  /** What each label shows; Auto when absent. */
+  content?: LabelContent;
+  /** Type, fields and contents by item id, for labels that show more than the QR, name and code. */
+  details?: Readonly<Record<string, LabelDetails>>;
   /** A preset's size code, or `custom` for the sheet this browser remembers. */
   sheetId?: string;
   /** Stands in for the remembered custom sheet, for reviewing that state. */
@@ -49,19 +52,29 @@ export interface PrintJobSeed {
   outcome?: PrintOutcome;
 }
 
-/** One label of the job: what it is for and the template it prints with. */
+/** One label of the job: what it is for and what it prints. */
 export interface PrintLabelEntry {
   subject: PrintSubject;
-  template: LabelTemplateId;
+  label: ResolvedLabel;
+}
+
+/** Labels the sheet or the items changed from what was chosen, for the notice under the options. */
+export interface PrintAdjustments {
+  /** Labels whose QR left no room for the rest, printed as QR and code instead. */
+  trimmed: number;
+  /** Labels that could show nothing chosen and print their code or name instead. */
+  fallback: number;
 }
 
 /** The job as the page renders it, with the actions that change it. */
 export interface PrintJob {
   subjects: PrintSubject[];
-  template: LabelTemplateChoice;
+  content: LabelContent;
+  /** Every field the job's items have, for the picker. */
+  fields: LabelFieldChoice[];
   layout: SheetLayout;
   customSheet: SheetGeometry | null;
-  fits: Record<LabelTemplateId, boolean>;
+  adjustments: PrintAdjustments;
   copies: CopiesByKind;
   startAt: number;
   labels: PrintLabelEntry[];
@@ -71,7 +84,7 @@ export interface PrintJob {
   outcome: PrintOutcome;
   /** Where the next job starts if this one printed. */
   nextStart: number;
-  setTemplate: (template: LabelTemplateChoice) => void;
+  setContent: (content: LabelContent) => void;
   setSheet: (id: string) => void;
   saveCustomSheet: (geometry: SheetGeometry) => void;
   setCopies: (kind: PrintSubject['kind'], copies: number) => void;
@@ -127,34 +140,68 @@ function printBlock(labels: number, uncoded: number, tooSmall: boolean): PrintBl
   return uncoded > 0 ? 'uncoded' : null;
 }
 
+function showsCode(label: ResolvedLabel): boolean {
+  return label.parts.includes('code');
+}
+
+function planLabels(
+  subjects: PrintSubject[],
+  content: LabelContent,
+  details: (id: string) => LabelDetails,
+  layout: SheetLayout
+) {
+  let trimmed = 0;
+  let fallback = 0;
+  let tooSmall = false;
+  const entries: PrintLabelEntry[] = [];
+  for (const subject of subjects) {
+    const wanted = resolveLabel(content, subject, details(subject.id));
+    const label = fitToSheet(wanted, layout);
+    if (label === null) {
+      tooSmall = true;
+      continue;
+    }
+    if (label.parts.length < wanted.parts.length || label.fields.length < wanted.fields.length) {
+      trimmed += 1;
+    }
+    if (label.fallback) fallback += 1;
+    entries.push({ subject, label });
+  }
+  return { entries, adjustments: { trimmed, fallback }, tooSmall };
+}
+
 /** The label page's whole state: the selection, the sheet, and the print round trip. */
 export function usePrintJob(seed: PrintJobSeed): PrintJob {
   const selection = useSubjects(seed.subjects);
   const sheet = useSheet(seed);
   const { layout } = sheet;
-  const [requestedTemplate, setTemplate] = useState<LabelTemplateChoice>(seed.template ?? 'auto');
+  const [content, setContent] = useState<LabelContent>(seed.content ?? DEFAULT_LABEL_CONTENT);
   const [copies, setCopiesState] = useState<CopiesByKind>(seed.copies ?? DEFAULT_COPIES);
   const [requestedStart, setStartAt] = useState(seed.startAt ?? 1);
   const [outcome, setOutcome] = useState<PrintOutcome>(seed.outcome ?? 'none');
-  const fits = { container: templateFits(layout, 'container'), item: templateFits(layout, 'item') };
-  const template =
-    requestedTemplate !== 'auto' && !fits[requestedTemplate] ? 'auto' : requestedTemplate;
+  const details = (id: string) => seed.details?.[id] ?? NO_DETAILS;
   const startAt = clampStartAt(requestedStart, layout);
-  const labels = expandCopies(selection.subjects, (subject) => copies[subject.kind]).flatMap(
-    (subject): PrintLabelEntry[] => {
-      const resolved = resolveTemplate(subject, template, layout);
-      return resolved ? [{ subject, template: resolved }] : [];
-    }
+  const plan = planLabels(
+    expandCopies(selection.subjects, (subject) => copies[subject.kind]),
+    content,
+    details,
+    layout
   );
-  const uncoded = selection.subjects.filter((subject) => subject.code === null);
+  const labels = plan.entries;
+  const uncoded = selection.subjects.filter(
+    (subject) =>
+      subject.code === null &&
+      labels.some((entry) => entry.subject.id === subject.id && showsCode(entry.label))
+  );
   const nextStart = nextStartAt(labels.length, startAt, layout);
-  const block = printBlock(labels.length, uncoded.length, !fits.item);
+  const block = printBlock(labels.length, uncoded.length, plan.tooSmall);
 
   return {
     ...selection,
     ...sheet,
-    template,
-    fits,
+    content,
+    fields: fieldChoices(selection.subjects.map((subject) => details(subject.id))),
+    adjustments: plan.adjustments,
     copies,
     startAt,
     labels,
@@ -163,7 +210,7 @@ export function usePrintJob(seed: PrintJobSeed): PrintJob {
     block,
     outcome,
     nextStart,
-    setTemplate,
+    setContent,
     setCopies: (kind, value) => setCopiesState((current) => ({ ...current, [kind]: value })),
     setStartAt: (value) => setStartAt(clampStartAt(value, layout)),
     print: () => {

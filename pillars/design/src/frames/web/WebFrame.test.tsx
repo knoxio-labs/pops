@@ -36,4 +36,15 @@ describe('WebFrame', () => {
     expect(screen.getByText('surface')).toBeInTheDocument();
     expect(screen.queryByRole('navigation')).toBeNull();
   });
+
+  it('marks the rail’s Settings button, and no app, for a Settings app screen', () => {
+    renderFrame('shell', 'settings/inventory');
+    expect(screen.getByLabelText('Settings')).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('navigation')).toBeNull();
+  });
+
+  it('leaves Settings unmarked inside an app', () => {
+    renderFrame('inventory', 'items/items');
+    expect(screen.getByLabelText('Settings')).not.toHaveAttribute('aria-current');
+  });
 });

@@ -1,5 +1,5 @@
 import { AppRail } from './AppRail';
-import { activeItemPath, appForArea, WEB_APPS } from './apps';
+import { activeItemPath, appForArea, isSettingsScreen, WEB_APPS } from './apps';
 import { PageNav } from './PageNav';
 import { TopBar } from './TopBar';
 
@@ -37,7 +37,11 @@ export function WebFrame({
         <TopBar />
         <div className="flex">
           <div className="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 md:flex md:top-16 md:h-[calc(100vh-4rem)]">
-            <AppRail apps={WEB_APPS} activeId={app?.id} />
+            <AppRail
+              apps={WEB_APPS}
+              activeId={app?.id}
+              settingsActive={isSettingsScreen(area, slug)}
+            />
             {app ? <PageNav app={app} activePath={activeItemPath(app, slug)} /> : null}
           </div>
           <main className="mx-auto min-w-0 max-w-screen-2xl flex-1 overflow-x-clip p-4 md:p-6 lg:p-8">

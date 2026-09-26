@@ -2,11 +2,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { INVENTORY_SCREEN_PAGES } from '@/fixtures/inventory/nav';
 import { describe, expect, it } from 'vitest';
 
 import { iconMap } from '@pops/navigation';
 
-import { activeItemPath, appForArea, railOrder, WEB_APPS } from './apps';
+import { activeItemPath, appForArea, isSettingsScreen, railOrder, WEB_APPS } from './apps';
 
 import type { AppNavConfig } from '@pops/navigation';
 
@@ -33,6 +34,21 @@ describe('railOrder', () => {
 });
 
 describe('WEB_APPS', () => {
+  it('draws inventory with its designed nine-item nav: Labels and Activity folded, Settings in the Settings app', () => {
+    const inventory = appForArea('inventory');
+    expect(inventory?.items.map((item) => item.label)).toEqual([
+      'Overview',
+      'Items',
+      'Containers',
+      'Locations',
+      'In hand',
+      'Connections',
+      'Types',
+      'Reports',
+      'Sync',
+    ]);
+  });
+
   it('is the shell rail order (each pillar contract nav.order), finance first', () => {
     expect(WEB_APPS.map((app) => app.id)).toEqual([
       'finance',
@@ -130,5 +146,61 @@ describe('activeItemPath', () => {
   it('marks nothing when no page matches, and never falls back to the index', () => {
     expect(activeItemPath(app, 'settings')).toBeUndefined();
     expect(activeItemPath(app, undefined)).toBeUndefined();
+  });
+
+  it('lands a mapped screen on its page ahead of the slug, and ignores a map to no page', () => {
+    expect(activeItemPath(app, 'history', { history: '/import' })).toBe('/import');
+    expect(activeItemPath(app, 'import-rules', { 'import-rules': '/import' })).toBe('/import');
+    expect(activeItemPath(app, 'history', { history: '/gone' })).toBeUndefined();
+  });
+});
+
+describe('inventory screens inside another page', () => {
+  const inventory = appForArea('inventory');
+  if (inventory === undefined) throw new Error('inventory nav missing');
+
+  it('marks Sync for Activity, a segment of the Sync page', () => {
+    expect(activeItemPath(inventory, 'sync/activity')).toBe('/sync');
+    expect(activeItemPath(inventory, 'sync/sync')).toBe('/sync');
+  });
+
+  it('marks the page a screen’s folder names', () => {
+    for (const slug of [
+      'items/item-detail',
+      'items/item-form',
+      'items/lifecycle',
+      'items/bulk-new',
+    ]) {
+      expect(activeItemPath(inventory, slug)).toBe('/items');
+    }
+    expect(activeItemPath(inventory, 'locations/location-page')).toBe('/locations');
+    expect(activeItemPath(inventory, 'containers/moving-day')).toBe('/containers');
+  });
+
+  it('marks Overview for the overview screen, whose folder is not a nav path', () => {
+    expect(activeItemPath(inventory, 'overview/overview')).toBe('');
+  });
+
+  it('marks nothing for a folder no nav page names', () => {
+    expect(activeItemPath(inventory, 'search/search')).toBeUndefined();
+    expect(activeItemPath(inventory, 'kit/foundation')).toBeUndefined();
+  });
+
+  it('maps every listed screen to a page the nav actually has', () => {
+    const paths = new Set(inventory.items.map((item) => item.path));
+    for (const path of Object.values(INVENTORY_SCREEN_PAGES)) expect(paths).toContain(path);
+  });
+});
+
+describe('isSettingsScreen', () => {
+  it('takes shell screens at or under settings', () => {
+    expect(isSettingsScreen('shell', 'settings')).toBe(true);
+    expect(isSettingsScreen('shell', 'settings/inventory')).toBe(true);
+  });
+
+  it('refuses other areas and look-alike slugs', () => {
+    expect(isSettingsScreen('inventory', 'settings/inventory')).toBe(false);
+    expect(isSettingsScreen('shell', 'settings-old')).toBe(false);
+    expect(isSettingsScreen('shell', undefined)).toBe(false);
   });
 });

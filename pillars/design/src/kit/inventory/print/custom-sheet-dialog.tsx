@@ -83,7 +83,7 @@ function SheetFields({
   onChange: (update: (current: SheetGeometry) => SheetGeometry) => void;
 }) {
   return (
-    <div className="grid flex-1 grid-cols-2 gap-3">
+    <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
       {FIELDS.map(({ field, label, unit }) => (
         <div key={field} className="flex flex-col gap-1.5">
           <label htmlFor={`custom-sheet-${field}`} className="text-xs font-medium">
@@ -95,6 +95,9 @@ function SheetFields({
             min={unit === 'labels' ? 1 : 0}
             step={unit === 'labels' ? 1 : 'any'}
             suffix={unit === 'mm' ? 'mm' : undefined}
+            showSteppers={false}
+            centered={false}
+            containerClassName="w-full min-w-0"
             onChange={(event) =>
               onChange((current) => ({
                 ...current,

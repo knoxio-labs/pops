@@ -1,4 +1,4 @@
-import { Archive, Check, Save, Sparkles } from 'lucide-react';
+import { Archive, Check, Save, Upload } from 'lucide-react';
 
 import { Badge, Button } from '@pops/ui';
 
@@ -111,7 +111,7 @@ export function PublishBar({ mode }: { mode: TypeEditorMode }) {
           </div>
         </div>
         <Button>
-          <Sparkles className="h-4 w-4" />
+          <Upload className="h-4 w-4" />
           Review and publish
         </Button>
       </div>

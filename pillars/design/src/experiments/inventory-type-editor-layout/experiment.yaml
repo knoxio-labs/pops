@@ -2,7 +2,7 @@ name: Inventory type editor layout
 question: Does a complex type definition read better as a persistent three-pane
   workspace or as a focused section-by-section editor?
 status: decided
-screen: inventory/type-editor
+screen: inventory/types/type-editor
 variants:
   workspace: Persistent three-pane workspace
   focused: Focused section editor
