@@ -1,11 +1,13 @@
 import { type InventoryDb } from '../../db/index.js';
 import * as service from '../modules/fixtures/service.js';
 import { paginationMeta } from '../shared/pagination.js';
+import { loadItemExtras, projectItems } from '../sync/wire.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
 import type { inventoryFixturesContract } from '../../contract/rest-fixtures.js';
+import type { DocumentsClient } from '../documents/client.js';
 
 type Req = ServerInferRequest<typeof inventoryFixturesContract>;
 
@@ -13,13 +15,14 @@ const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
 
 /** Handlers for the `fixtures.*` sub-router — fixture CRUD + item↔fixture edges. */
-export function makeFixturesHandlers(db: InventoryDb) {
+export function makeFixturesHandlers(db: InventoryDb, documents: DocumentsClient) {
   return {
     list: ({ query }: Req['list']) =>
       runHttp(() => {
         const limit = query.limit ?? DEFAULT_LIMIT;
         const offset = query.offset ?? DEFAULT_OFFSET;
         const { rows, total } = service.listFixtures(db, {
+          search: query.search,
           locationId: query.locationId,
           type: query.type,
           limit,
@@ -57,6 +60,24 @@ export function makeFixturesHandlers(db: InventoryDb) {
           message: 'Item connected to fixture',
         },
       })),
+
+    listItems: ({ params, query }: Req['listItems']) =>
+      runHttp(async () => {
+        const limit = query.limit ?? DEFAULT_LIMIT;
+        const offset = query.offset ?? DEFAULT_OFFSET;
+        const page = service.listItemsForFixture(db, params.fixtureId, limit, offset);
+        const extras = loadItemExtras(
+          db,
+          page.rows.map((row) => row.id)
+        );
+        return {
+          status: 200 as const,
+          body: {
+            data: await projectItems({ items: page.rows, extras }, documents),
+            pagination: paginationMeta(page.total, limit, offset),
+          },
+        };
+      }),
 
     disconnect: ({ params }: Req['disconnect']) =>
       runHttp(() => {

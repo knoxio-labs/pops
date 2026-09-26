@@ -1,9 +1,10 @@
-import { and, asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import {
   fixtures,
   items,
   type InventoryDb,
+  type ItemRow,
   itemFixtureConnections,
   touchConnectionsChanged,
 } from '../../../db/index.js';
@@ -22,6 +23,10 @@ import type {
 
 const NOW = (): string => new Date().toISOString();
 
+function escapeSearch(value: string): string {
+  return value.replace(/[\\%_]/gu, (character) => `\\${character}`);
+}
+
 export interface FixtureListResult {
   rows: Fixture[];
   total: number;
@@ -35,6 +40,7 @@ export interface FixtureConnectionListResult {
 export function listFixtures(
   db: InventoryDb,
   opts: {
+    search?: string;
     locationId?: string;
     type?: string;
     limit: number;
@@ -42,6 +48,12 @@ export function listFixtures(
   }
 ): FixtureListResult {
   const conditions = [];
+  const search = opts.search?.trim();
+  if (search !== undefined && search.length > 0) {
+    conditions.push(
+      sql`lower(${fixtures.name}) LIKE lower(${`%${escapeSearch(search)}%`}) ESCAPE '\\'`
+    );
+  }
   if (opts.locationId) conditions.push(eq(fixtures.locationId, opts.locationId));
   if (opts.type) conditions.push(eq(fixtures.type, opts.type));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -164,5 +176,40 @@ export function listFixturesForItem(
     .from(itemFixtureConnections)
     .where(condition)
     .all();
+  return { rows, total: countResult?.total ?? 0 };
+}
+
+/** Read the live item rows connected to one fixture, with stable offset pagination. */
+export function listItemsForFixture(
+  db: InventoryDb,
+  fixtureId: string,
+  limit: number,
+  offset: number
+): { rows: ItemRow[]; total: number } {
+  const fixture = db
+    .select({ id: fixtures.id })
+    .from(fixtures)
+    .where(eq(fixtures.id, fixtureId))
+    .get();
+  if (!fixture) throw new NotFoundError('Fixture', fixtureId);
+
+  const itemIds = db
+    .select({ itemId: itemFixtureConnections.itemId })
+    .from(itemFixtureConnections)
+    .where(eq(itemFixtureConnections.fixtureId, fixtureId))
+    .all()
+    .map(({ itemId }) => itemId);
+  if (itemIds.length === 0) return { rows: [], total: 0 };
+
+  const condition = and(inArray(items.id, itemIds), isNull(items.deletedAt));
+  const rows = db
+    .select()
+    .from(items)
+    .where(condition)
+    .orderBy(asc(items.name), asc(items.id))
+    .limit(limit)
+    .offset(offset)
+    .all();
+  const [countResult] = db.select({ total: count() }).from(items).where(condition).all();
   return { rows, total: countResult?.total ?? 0 };
 }
