@@ -21,7 +21,7 @@ export function DocumentViewAction({
         href={`${baseUrl}/documents/${documentId}/details`}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="relative inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
         title={viewLabel}
         aria-label={viewLabel}
       >
