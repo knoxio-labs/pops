@@ -8,6 +8,12 @@ const Actor = z.object({ kind: z.string(), id: z.string().nullable(), label: z.s
  * still parses; absent and null both mean none was recorded.
  */
 const ReplacedBy = z.uuid().nullable().optional();
+/**
+ * Canonical values the phone pre-fills on item create, relayed opaquely like
+ * item values. Optional so a catalogue from an Inventory that predates field
+ * defaults still parses; absent means none.
+ */
+const DefaultValues = z.array(AnyJson).optional();
 
 /** Immutable protocol-2 catalogue revision and its stable definitions. */
 export const MobileInventoryCatalogueRevisionDescriptorSchema = z.object({
@@ -63,6 +69,7 @@ export const MobileInventoryCatalogueRevisionDescriptorSchema = z.object({
           expressionVersion: z.number().int().positive().nullable(),
           expression: AnyJson.nullable(),
           allowOverride: z.boolean(),
+          defaultValues: DefaultValues,
           presentation: z.record(z.string(), AnyJson),
           archivedAt: z.string().nullable(),
           replacedBy: ReplacedBy,

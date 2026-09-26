@@ -7466,6 +7466,10 @@
                                   "enum": ["one", "many"],
                                   "type": "string"
                                 },
+                                "defaultValues": {
+                                  "items": {},
+                                  "type": "array"
+                                },
                                 "enumOptions": {
                                   "items": {
                                     "additionalProperties": false,
