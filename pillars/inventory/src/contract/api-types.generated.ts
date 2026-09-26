@@ -4685,6 +4685,8 @@ export interface operations {
         key:
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
+          | 'inventory.suggestCodes'
+          | 'inventory.codePattern'
           | 'inventory.maxFileSizeBytes';
       };
       cookie?: never;
@@ -4754,6 +4756,8 @@ export interface operations {
         key:
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
+          | 'inventory.suggestCodes'
+          | 'inventory.codePattern'
           | 'inventory.maxFileSizeBytes';
       };
       cookie?: never;
@@ -4831,6 +4835,8 @@ export interface operations {
         key:
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
+          | 'inventory.suggestCodes'
+          | 'inventory.codePattern'
           | 'inventory.maxFileSizeBytes';
       };
       cookie?: never;
@@ -4907,6 +4913,8 @@ export interface operations {
         key:
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
+          | 'inventory.suggestCodes'
+          | 'inventory.codePattern'
           | 'inventory.maxFileSizeBytes';
       };
       cookie?: never;

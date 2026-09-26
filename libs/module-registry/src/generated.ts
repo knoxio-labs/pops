@@ -941,6 +941,33 @@ export const MODULES = [
             ],
           },
           {
+            id: 'codes',
+            title: 'Codes',
+            description: 'The short code printed on a label. You can always type your own.',
+            fields: [
+              {
+                key: 'inventory.suggestCodes',
+                label: 'Suggest a code for new items',
+                type: 'toggle',
+                default: 'true',
+                description: 'Taken codes are skipped; a collision still blocks saving the item.',
+              },
+              {
+                key: 'inventory.codePattern',
+                label: 'Code pattern',
+                type: 'text',
+                default: '{type}{##}',
+                description:
+                  '{type} is the type’s first letter, X when untyped. {##} is the number, at least as many digits as #. Used while suggestions are on.',
+                validation: {
+                  required: true,
+                  pattern: '^(?:[A-Za-z0-9-]|\\{type\\})*\\{#{1,6}\\}(?:[A-Za-z0-9-]|\\{type\\})*$',
+                  message: 'Use letters, digits, hyphens, {type}, and one {#} for the number.',
+                },
+              },
+            ],
+          },
+          {
             id: 'documentFiles',
             title: 'Document Files',
             description: 'Upload constraints for inventory document attachments.',

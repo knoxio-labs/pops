@@ -142,18 +142,18 @@ describe('POST /codes/suggest against the active catalogue', () => {
     const revision = await publish(withType.draft);
     const gizmoTypeId = typeIdOf(withType.body, 'gizmo');
 
-    // Nothing of this type exists yet: the stem falls back to the runtime
-    // type's own label, not to the request name's first letter ('A').
-    expect((await suggest({ name: 'Anything', typeKey: 'gizmo' }))[0]).toBe('G001');
+    // Nothing of this type exists yet: the pattern uses the runtime type's
+    // own label, not the request name's first letter ('A').
+    expect((await suggest({ name: 'Anything', typeKey: 'gizmo' }))[0]).toBe('G01');
 
     await applyAndCode(createTypedItem(gizmoTypeId, revision, 'First gizmo'), 'G010');
 
     // Once an item of the runtime type carries a code, suggestion numbers
     // from it, exactly as it does for a built-in type.
     expect(await suggest({ name: 'Another gizmo', typeKey: 'gizmo' })).toEqual([
-      'G011',
-      'G012',
-      'G013',
+      'G11',
+      'G12',
+      'G13',
     ]);
   });
 
@@ -164,7 +164,7 @@ describe('POST /codes/suggest against the active catalogue', () => {
     const storageBox = bootCatalogue.types.find((type) => type.key === 'storage_box');
     if (!storageBox) throw new Error('storage_box type is missing at boot');
 
-    expect((await suggest({ name: 'Box', typeKey: 'storage_box' }))[0]).toBe('S001');
+    expect((await suggest({ name: 'Box', typeKey: 'storage_box' }))[0]).toBe('S01');
 
     const draft = await createDraft(bootCatalogue.revision.revision);
     const relabelled = await patch(draft, [
@@ -174,6 +174,6 @@ describe('POST /codes/suggest against the active catalogue', () => {
 
     // Same key, same stable id, new label: the stem must come from the
     // label the active revision carries now, not the one recorded at boot.
-    expect((await suggest({ name: 'Box', typeKey: 'storage_box' }))[0]).toBe('C001');
+    expect((await suggest({ name: 'Box', typeKey: 'storage_box' }))[0]).toBe('C01');
   });
 });
