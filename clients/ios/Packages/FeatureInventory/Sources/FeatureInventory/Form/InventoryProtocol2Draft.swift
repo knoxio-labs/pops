@@ -119,7 +119,11 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
         _ values: [InventoryPrimitiveValue], for field: InventoryCatalogueField
     ) {
         guard field.storage == .stored, field.archivedAt == nil, !values.isEmpty,
-            isEmpty(field)
+            isEmpty(field),
+            draftEntries(for: field).allSatisfy({ entry in
+                entry.id == Self.startingEntryId(for: field)
+                    || entry.id.hasPrefix("\(field.id):default:")
+            })
         else { return }
         entries[field.id] = values.enumerated().map { index, value in
             InventoryProtocol2DraftEntry(id: "\(field.id):prefill:\(index)", value: value)

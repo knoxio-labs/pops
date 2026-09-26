@@ -34,6 +34,27 @@ internal struct InventoryPrefillDraftTests {
         #expect(draft.draftEntries(for: field).map(\.id) == ["finish:prefill:0"])
     }
 
+    @Test("does not replace an existing stored value in an edit draft")
+    func protectsExistingStoredValue() {
+        let field = InventoryPrefillTestSupport.field(id: "title")
+        let type = InventoryPrefillTestSupport.type(fields: [field])
+        let item = InventoryItem(
+            id: "item", revision: 1, seq: 1, catalogueRevision: 1, name: "Desk",
+            typeId: type.id, typeKey: type.key,
+            fieldValues: [
+                InventoryItemFieldEntry(
+                    fieldId: field.id, state: .value([.string("Saved")]), source: .stored,
+                    catalogueRevision: 1)
+            ], placement: .hand, createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
+        var draft = InventoryProtocol2Draft(type: type, catalogueRevision: 1, item: item)
+
+        draft.fillIfEmpty([.string("Suggested")], for: field)
+
+        #expect(draft.values(for: field) == [.string("Saved")])
+        #expect(draft.draftEntries(for: field).map(\.id) == ["title:0"])
+        #expect(draft.touched.isEmpty)
+    }
+
     @Test("fills an untouched required false flag")
     func fillsUntouchedRequiredFalseFlag() {
         let field = InventoryPrefillTestSupport.field(
