@@ -8,12 +8,12 @@
  * `select *` — the BFS works on in-memory adjacency maps so cycles, deep
  * chains, and dense fan-out don't reissue queries per node.
  */
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 
 import { fixtures, itemConnections, itemFixtureConnections, items } from '../schema.js';
 import { ConnectionItemNotFoundError } from './connections-errors.js';
 
-import type { GraphData, GraphEdge, GraphNode } from './connections-types.js';
+import type { GraphData, GraphEdge, GraphNode, TraceNode } from './connections-types.js';
 import type { InventoryDb } from './internal.js';
 
 type AdjacencyEntry = { neighborId: string; itemAId: string; itemBId: string };
@@ -45,6 +45,15 @@ interface BfsState {
   visitedFixtureIds: Set<string>;
   visitedEdges: Set<string>;
   queue: { nodeId: string; depth: number }[];
+}
+
+interface TraceTraversalState {
+  depth: number;
+  maxDepth: number;
+  visited: Set<string>;
+  queue: { node: TraceNode; depth: number }[];
+  fixturesByItem: Map<string, GraphNode[]>;
+  visitedFixtureIds: Set<string>;
 }
 
 function visitNeighbors(
@@ -110,6 +119,75 @@ function visitFixtures(state: BfsState, fixturesForItem: GraphNode[], itemId: st
     state.visitedFixtureIds.add(fixture.id);
     state.nodes.push(fixture);
   }
+}
+
+function appendTraceItemChildren(
+  db: InventoryDb,
+  node: TraceNode,
+  state: TraceTraversalState
+): void {
+  if (state.depth >= state.maxDepth) return;
+
+  const connections = db
+    .select()
+    .from(itemConnections)
+    .where(or(eq(itemConnections.itemAId, node.id), eq(itemConnections.itemBId, node.id)))
+    .all();
+
+  for (const conn of connections) {
+    const neighborId = conn.itemAId === node.id ? conn.itemBId : conn.itemAId;
+    if (state.visited.has(neighborId)) continue;
+    state.visited.add(neighborId);
+
+    const [neighbor] = db
+      .select({
+        id: items.id,
+        itemName: items.name,
+        assetId: items.code,
+        type: items.legacyType,
+      })
+      .from(items)
+      .where(eq(items.id, neighborId))
+      .all();
+
+    if (!neighbor) continue;
+
+    const childNode: TraceNode = {
+      id: neighbor.id,
+      itemName: neighbor.itemName,
+      assetId: neighbor.assetId,
+      type: neighbor.type,
+      children: [],
+    };
+
+    node.children.push(childNode);
+    state.queue.push({ node: childNode, depth: state.depth + 1 });
+  }
+}
+
+function appendTraceFixtureChildren(node: TraceNode, state: TraceTraversalState): void {
+  for (const fixture of state.fixturesByItem.get(node.id) ?? []) {
+    if (state.visitedFixtureIds.has(fixture.id)) continue;
+    state.visitedFixtureIds.add(fixture.id);
+    node.children.push({
+      id: fixture.id,
+      itemName: fixture.itemName,
+      assetId: null,
+      type: fixture.type,
+      isFixture: true,
+      children: [],
+    });
+  }
+}
+
+/** Append item and fixture leaves for one node in a trace traversal. */
+export function appendTraceChildren(
+  db: InventoryDb,
+  node: TraceNode,
+  state: TraceTraversalState
+): void {
+  appendTraceItemChildren(db, node, state);
+  appendTraceFixtureChildren(node, state);
 }
 
 /**
