@@ -90,8 +90,11 @@ describe('useEdgeDrag', () => {
     const endX = Number.MAX_SAFE_INTEGER + 1;
 
     press(target, 7, 0);
+    press(target, 8, 20);
+    move(target, 8, 30);
     move(target, 7, endX);
 
+    expect(onMove).toHaveBeenCalledTimes(1);
     expect(onMove).toHaveBeenCalledWith(endX);
   });
 
@@ -100,14 +103,18 @@ describe('useEdgeDrag', () => {
     const { hook, removeEventListener, target } = setup(onMove);
 
     press(target);
-    end(target, 'pointerUp', 7);
+    end(target, 'pointerUp', 8);
+    expect(hook.result.current.dragging).toBe(true);
     move(target, 7, 135);
+    end(target, 'pointerUp', 7);
+    move(target, 7, 150);
 
     expect(hook.result.current.dragging).toBe(false);
     expect(removeEventListener).toHaveBeenCalledWith('pointermove', expect.any(Function));
     expect(removeEventListener).toHaveBeenCalledWith('pointerup', expect.any(Function));
     expect(removeEventListener).toHaveBeenCalledWith('pointercancel', expect.any(Function));
-    expect(onMove).not.toHaveBeenCalled();
+    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(onMove).toHaveBeenCalledWith(35);
   });
 
   it('stops and removes listeners on pointercancel', () => {
@@ -115,6 +122,8 @@ describe('useEdgeDrag', () => {
     const { hook, removeEventListener, target } = setup(onMove);
 
     press(target);
+    end(target, 'pointerCancel', 8);
+    expect(hook.result.current.dragging).toBe(true);
     end(target, 'pointerCancel', 7);
     move(target, 7, 135);
 
