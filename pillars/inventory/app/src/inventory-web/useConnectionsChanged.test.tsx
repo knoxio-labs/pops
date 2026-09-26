@@ -129,6 +129,34 @@ describe('useConnectionsChanged', () => {
     expect(result.current.changed.stale).toBe(false);
   });
 
+  it('absorbs a write completed while a poll request is in flight', async () => {
+    let resolvePoll: ((value: ReturnType<typeof ok<Head>>) => void) | undefined;
+    const pollResponse = new Promise<ReturnType<typeof ok<Head>>>((resolve) => {
+      resolvePoll = resolve;
+    });
+    mocks.webChangesHead
+      .mockResolvedValueOnce(ok(head('2026-09-01T00:00:00.000Z')))
+      .mockImplementationOnce(() => pollResponse)
+      .mockResolvedValueOnce(ok(head('2026-09-01T00:05:00.000Z')));
+    const { result } = renderHook(
+      () => ({
+        changed: useConnectionsChanged({ queryKeys: [['inventory', 'connections']] }),
+        mutations: useConnectionMutations(),
+      }),
+      { wrapper: withQueryClient(createTestQueryClient()) }
+    );
+
+    await flushPromises();
+    await poll();
+    await result.current.mutations.connectItems('item-a', 'item-b');
+    if (resolvePoll === undefined) throw new Error('poll response was not created');
+    resolvePoll(ok(head('2026-09-01T00:04:00.000Z')));
+    await flushPromises();
+    expect(result.current.changed.stale).toBe(false);
+    await poll();
+    expect(result.current.changed.changedAt).toBe('2026-09-01T00:05:00.000Z');
+  });
+
   it('lets two mounted instances absorb the same local write independently', async () => {
     mocks.webChangesHead
       .mockResolvedValueOnce(ok(head('2026-09-01T00:00:00.000Z')))

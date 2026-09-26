@@ -59,10 +59,10 @@ async function readAndApply(
   setChangedAt: (changedAt: string | null) => void,
   isCurrent: () => boolean
 ): Promise<void> {
-  const writeVersion = localWriteVersion;
   try {
     const changedAt = await readHead();
     if (!isCurrent()) return;
+    const writeVersion = localWriteVersion;
     const previous = baseline.current;
     if (previous === null || previous.writeVersion !== writeVersion) {
       baseline.current = { changedAt, writeVersion };
