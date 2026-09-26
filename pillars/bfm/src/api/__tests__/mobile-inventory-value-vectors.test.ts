@@ -14,6 +14,7 @@ import { z } from 'zod';
 
 import { createInventoryFake } from './inventory-fake.js';
 import { closeOpenedApps, get, openWith } from './mobile-inventory-app.js';
+import { normalizeCatalogueFixture } from './mobile-inventory-catalogue-fixture.js';
 
 const JsonObject = z.record(z.string(), z.unknown());
 
@@ -139,9 +140,9 @@ describe('protocol-2 value vectors through bfm', () => {
       expect(res.status, `revision ${String(revision)}`).toBe(200);
       const catalogue = fixture.catalogues[index];
       if (catalogue === undefined) throw new Error('the fixture has no catalogue');
-      const { draftVersion, ...revisionForPhone } = JsonObject.parse(catalogue['revision']);
-      expect(draftVersion).toEqual(expect.any(Number));
-      expect(res.body).toEqual({ ...catalogue, revision: revisionForPhone });
+      const revisionPayload = JsonObject.parse(catalogue['revision']);
+      expect(revisionPayload['draftVersion']).toEqual(expect.any(Number));
+      expect(res.body).toEqual(normalizeCatalogueFixture(catalogue));
     }
   });
 
