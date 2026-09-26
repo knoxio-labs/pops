@@ -3,12 +3,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { WebSearchResponseSchema } from '../../contract/rest-web-search.js';
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
-import { createTestTransport } from './test-http.js';
 import { makeClient } from './test-utils.js';
 
 import type { Express } from 'express';
@@ -17,7 +17,6 @@ import type { z } from 'zod';
 type SearchQuery = Record<string, string | number>;
 type SearchResponse = z.infer<typeof WebSearchResponseSchema>;
 
-const transport = createTestTransport();
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
 let app: Express;
@@ -42,7 +41,7 @@ function client() {
 }
 
 function request(query: SearchQuery = {}) {
-  return transport.requestOn(app).get('/web/search').query(query);
+  return supertest(app).get('/web/search').query(query);
 }
 
 async function search(query: SearchQuery): Promise<SearchResponse> {
