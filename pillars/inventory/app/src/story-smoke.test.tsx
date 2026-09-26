@@ -21,10 +21,11 @@ function isStoryModule(value: unknown): value is StoryModule {
 }
 
 function isComposedStory(value: unknown): value is ComposedStory {
-  return typeof value === 'function' && 'storyName' in value;
+  return typeof value === 'function' && 'storyName' in value && typeof value.storyName === 'string';
 }
 
 const storyModules = import.meta.glob('./**/*.stories.tsx', { eager: true });
+const storyModuleEntries = Object.entries(storyModules);
 
 const consoleErrors: string[] = [];
 
@@ -41,7 +42,11 @@ afterEach(() => {
 });
 
 describe('every inventory app story renders', () => {
-  for (const [path, storyModule] of Object.entries(storyModules)) {
+  it('discovers inventory app stories', () => {
+    expect(storyModuleEntries.length).toBeGreaterThan(0);
+  });
+
+  for (const [path, storyModule] of storyModuleEntries) {
     if (!isStoryModule(storyModule)) {
       it(`${path} exports a Storybook meta`, () => {
         expect.unreachable(`${path} has no default export — Storybook cannot load it`);
