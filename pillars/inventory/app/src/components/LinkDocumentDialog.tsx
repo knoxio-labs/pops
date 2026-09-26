@@ -8,6 +8,8 @@ import { Button, formatDate, SearchPickerDialog, Select } from '@pops/ui';
 import { unwrap } from '../inventory-api-helpers.js';
 import { documentsLink, paperlessSearch } from '../inventory-api/index.js';
 
+import type { ComponentPropsWithoutRef } from 'react';
+
 interface PaperlessDocResult {
   id: number;
   title: string;
@@ -21,6 +23,8 @@ const DOCUMENT_TYPES = ['receipt', 'warranty', 'manual', 'invoice', 'other'] as 
 interface LinkDocumentDialogProps {
   itemId: string;
   onLinked: () => void;
+  /** Explains why Paperless actions are unavailable and disables the trigger. */
+  disabledReason?: string;
 }
 
 interface DocumentResultRowProps {
@@ -60,17 +64,14 @@ function DocumentResultRow({ doc, linkingId, isPending, onLink }: DocumentResult
 
 type DocType = (typeof DOCUMENT_TYPES)[number];
 
+function isDocType(value: string): value is DocType {
+  return DOCUMENT_TYPES.some((documentType) => documentType === value);
+}
+
 const DOC_TYPE_OPTIONS = DOCUMENT_TYPES.map((t) => ({
   value: t,
   label: t.charAt(0).toUpperCase() + t.slice(1),
 }));
-
-const TRIGGER = (
-  <Button variant="outline" size="sm">
-    <FileText className="h-4 w-4 mr-1.5" />
-    Link Document
-  </Button>
-);
 
 function DocTypeSelect({
   docType,
@@ -82,7 +83,9 @@ function DocTypeSelect({
   return (
     <Select
       value={docType}
-      onChange={(e) => setDocType(e.target.value as DocType)}
+      onChange={(e) => {
+        if (isDocType(e.target.value)) setDocType(e.target.value);
+      }}
       size="sm"
       options={DOC_TYPE_OPTIONS}
     />
@@ -130,7 +133,27 @@ function useLinkDocumentMutation(
   });
 }
 
-export function LinkDocumentDialog({ itemId, onLinked }: LinkDocumentDialogProps) {
+function DocumentLinkTrigger({
+  disabledReason,
+  ...buttonProps
+}: { disabledReason?: string } & ComponentPropsWithoutRef<'button'>) {
+  return (
+    <Button
+      {...buttonProps}
+      variant="outline"
+      size="sm"
+      disabled={disabledReason !== undefined}
+      title={disabledReason}
+      aria-label={disabledReason ? `Link Document (${disabledReason})` : 'Link Document'}
+    >
+      <FileText className="mr-1.5 h-4 w-4" />
+      Link Document
+    </Button>
+  );
+}
+
+/** Opens Paperless search and links a selected document to an item. */
+export function LinkDocumentDialog({ itemId, onLinked, disabledReason }: LinkDocumentDialogProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [docType, setDocType] = useState<DocType>('receipt');
@@ -145,17 +168,19 @@ export function LinkDocumentDialog({ itemId, onLinked }: LinkDocumentDialogProps
   const linkMutation = useLinkDocumentMutation(onLinked, setOpen, setSearch, setLinkingId);
   const results: PaperlessDocResult[] = data?.data ?? [];
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setSearch('');
+      setLinkingId(null);
+    }
+  };
+
   return (
     <SearchPickerDialog
       open={open}
-      onOpenChange={(v) => {
-        setOpen(v);
-        if (!v) {
-          setSearch('');
-          setLinkingId(null);
-        }
-      }}
-      trigger={TRIGGER}
+      onOpenChange={handleOpenChange}
+      trigger={<DocumentLinkTrigger disabledReason={disabledReason} />}
       title="Link Document"
       description="Search Paperless-ngx for a document to link to this item."
       searchPlaceholder="Search documents..."
