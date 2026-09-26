@@ -131,7 +131,7 @@ describe('useFixtures', () => {
           offset: 0,
           search: 'lamp',
           type: 'power',
-          withinLocationId: 'room-1',
+          locationId: 'room-1',
         },
       })
     );

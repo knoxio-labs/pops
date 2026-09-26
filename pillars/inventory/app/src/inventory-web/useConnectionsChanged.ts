@@ -32,9 +32,7 @@ export function markConnectionsWrittenHere(): void {
 }
 
 function readConnectionsChangedAt(head: WebChangesHeadResponse): string | null {
-  if (!('connectionsChangedAt' in head)) return null;
-  const changedAt = head.connectionsChangedAt;
-  return typeof changedAt === 'string' || changedAt === null ? changedAt : null;
+  return head.connectionsChangedAt;
 }
 
 function useHeadReader(queryClient: QueryClient): ReadHead {

@@ -2,7 +2,6 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 
 import { InventoryApiError, unwrap } from '../inventory-api-helpers.js';
-import { client } from '../inventory-api/client.gen.js';
 import * as inventoryApi from '../inventory-api/index.js';
 import { toItemRowModel } from './item-row-model.js';
 import { useCatalogueLookups } from './useCatalogueLookups.js';
@@ -10,8 +9,8 @@ import { useCatalogueLookups } from './useCatalogueLookups.js';
 import type { ItemRowModel } from '../foundation/model/model';
 import type {
   FixturesListData,
+  FixturesListItemsResponse,
   FixturesListResponse,
-  WebListResponses,
 } from '../inventory-api/types.gen.js';
 
 /** The cache-key root for the paged fixture list. */
@@ -51,52 +50,22 @@ const EMPTY_ITEM_PAGES: readonly FixtureItemsPage[] = [];
 const EMPTY_DELETED_PREVIOUS_PLACES = new Map<string, string>();
 
 type FixtureListPage = FixturesListResponse & { readonly offset: number };
-type FixtureListQuery = NonNullable<FixturesListData['query']> & {
-  search?: string;
-  withinLocationId?: string;
-};
-type FixtureItem = WebListResponses['200']['items'][number];
+type FixtureListQuery = NonNullable<FixturesListData['query']>;
+type FixtureItem = FixturesListItemsResponse['data'][number];
 type FixtureItemsPagination = { hasMore: boolean; limit: number; offset: number; total: number };
 type FixtureItemsPage = {
   data: FixtureItem[];
   pagination: FixtureItemsPagination;
   requestOffset: number;
 };
-type FixtureItemsResult = {
-  data?: { data: FixtureItem[]; pagination: FixtureItemsPagination };
-  error?: unknown;
-  response?: Response;
-};
-type FixtureItemsOptions = {
-  path: { fixtureId: string };
-  query: { limit: number; offset: number };
-  signal?: AbortSignal;
-};
-type FixtureItemsList = (options: FixtureItemsOptions) => Promise<FixtureItemsResult>;
-type InventoryApiWithFixtureItems = typeof inventoryApi & {
-  readonly fixturesListItems?: FixtureItemsList;
-};
-type FixtureItemsResponses = { 200: { data: FixtureItem[]; pagination: FixtureItemsPagination } };
-const inventoryApiWithFixtureItems: InventoryApiWithFixtureItems = inventoryApi;
 
 function fixtureListQuery(filter: FixturesFilter, offset: number): FixtureListQuery {
   const query: FixtureListQuery = { limit: FIXTURE_PAGE_LIMIT, offset };
   const search = filter.search.trim();
   if (search.length > 0) query.search = search;
   if (filter.type !== null) query.type = filter.type;
-  if (filter.withinLocationId !== null) query.withinLocationId = filter.withinLocationId;
+  if (filter.withinLocationId !== null) query.locationId = filter.withinLocationId;
   return query;
-}
-
-function fixtureItemsList(options: FixtureItemsOptions): Promise<FixtureItemsResult> {
-  const listItems = inventoryApiWithFixtureItems.fixturesListItems;
-  if (listItems !== undefined) return listItems(options);
-  return client.get<FixtureItemsResponses, unknown>({
-    url: '/fixtures/{fixtureId}/items',
-    path: options.path,
-    query: options.query,
-    signal: options.signal,
-  });
 }
 
 function nextOffset(page: {
@@ -171,7 +140,7 @@ export function useFixtureItems(fixtureId: string): {
     queryKey: fixtureItemsQueryKey(fixtureId),
     queryFn: async ({ pageParam, signal }) => {
       const page = unwrap(
-        await fixtureItemsList({
+        await inventoryApi.fixturesListItems({
           path: { fixtureId },
           query: { limit: FIXTURE_PAGE_LIMIT, offset: pageParam },
           signal,

@@ -27,7 +27,7 @@ import { CHANGES_POLL_MS } from './useChangedElsewhere';
 import { useConnectionsChanged } from './useConnectionsChanged';
 import { useConnectionMutations } from './useConnectionsRegistry';
 
-type Head = WebChangesHeadResponses[200] & { connectionsChangedAt: string | null };
+type Head = WebChangesHeadResponses[200];
 
 function ok<T>(data: T) {
   return { data, error: undefined, response: { status: 200 } };
