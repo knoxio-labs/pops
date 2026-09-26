@@ -313,6 +313,25 @@ describe('GET /web/search', () => {
     }
   });
 
+  it('treats unknown filters as empty scopes even when the query matches an item', async () => {
+    await client().items.create({ itemName: 'Scoped boundary item' });
+
+    await expect(search({ q: 'boundary', typeKey: 'unknown-type' })).resolves.toEqual({
+      exact: null,
+      items: [],
+      places: [],
+      nextCursor: null,
+      total: 0,
+    });
+    await expect(search({ q: 'boundary', within: 'unknown-location' })).resolves.toEqual({
+      exact: null,
+      items: [],
+      places: [],
+      nextCursor: null,
+      total: 0,
+    });
+  });
+
   it('pages by keyset without repeats, keeps totals stable, and rejects foreign cursors', async () => {
     const exact = await client().items.create({ itemName: 'Exact cursor code', assetId: 'cursor' });
     const created = await Promise.all(
@@ -374,5 +393,8 @@ describe('GET /web/search', () => {
     await expectBadQuery({ q: '' });
     await expectBadQuery({ q: '   ' });
     await expectBadQuery({ q: 'x'.repeat(201) });
+    await expectBadQuery({ q: 'ordinary', limit: 0 });
+    await expectBadQuery({ q: 'ordinary', limit: 101 });
+    await expectBadQuery({ q: 'ordinary', limit: 'not-a-number' });
   });
 });
