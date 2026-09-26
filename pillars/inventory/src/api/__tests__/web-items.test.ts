@@ -783,23 +783,22 @@ describe('web.items.list', () => {
     });
   });
 
-  it('ranks direct prefixes before word-boundary matches and uses id for ties', async () => {
+  it('keeps name prefixes in one tier and sorts each tier by the requested sort and id', async () => {
     const first = await client().items.create({ itemName: 'Needle zulu' });
     const second = await client().items.create({ itemName: 'Needle alpha' });
     const wordBoundary = await client().items.create({ itemName: 'Long needle' });
     const contains = await client().items.create({ itemName: 'Long xneedle' });
-    const sameUpdatedAt = '2026-09-26T00:00:00.000Z';
-    setUpdatedAt(first.data.id, sameUpdatedAt);
-    setUpdatedAt(second.data.id, sameUpdatedAt);
-    setUpdatedAt(wordBoundary.data.id, sameUpdatedAt);
-    setUpdatedAt(contains.data.id, sameUpdatedAt);
+    setUpdatedAt(first.data.id, '2026-09-26T00:00:01.000Z');
+    setUpdatedAt(second.data.id, '2026-09-26T00:00:01.000Z');
+    setUpdatedAt(wordBoundary.data.id, '2026-09-26T00:00:02.000Z');
+    setUpdatedAt(contains.data.id, '2026-09-26T00:00:03.000Z');
 
     const page = await client().web.listItems({ q: 'needle', sort: 'updated', limit: 50 });
     const prefixIds = [first.data.id, second.data.id].toSorted();
 
     expect(page.items.map((item) => item.id)).toEqual([
-      ...prefixIds,
       wordBoundary.data.id,
+      ...prefixIds,
       contains.data.id,
     ]);
   });
@@ -814,6 +813,13 @@ describe('web.items.list', () => {
       )
     );
     const expected = new Set(created.map((item) => item.data.id));
+    const expectedOrder = [
+      created[0]!.data.id,
+      created[1]!.data.id,
+      created[3]!.data.id,
+      created[2]!.data.id,
+      created[4]!.data.id,
+    ];
 
     const collect = async (sort?: 'name') => {
       const seen: string[] = [];
@@ -832,8 +838,9 @@ describe('web.items.list', () => {
       throw new Error('q pagination did not terminate');
     };
 
-    expect(new Set(await collect())).toEqual(expected);
-    expect(new Set(await collect('name'))).toEqual(expected);
+    expect(await collect()).toEqual(expectedOrder);
+    expect(await collect('name')).toEqual(expectedOrder);
+    expect(new Set(expectedOrder)).toEqual(expected);
   });
 
   it('counts only q matches while retaining the unfiltered baseline', async () => {
@@ -867,6 +874,18 @@ describe('web.items.list', () => {
       isFull: 'false',
     });
     expect(missing).toMatchObject({ items: [], total: 0, unfilteredTotal: 1 });
+
+    const fullContainer = await client().items.create({ itemName: 'Full bin' });
+    setPublishedType(fullContainer.data.id, 'storage_box', true);
+    inventoryDb.raw.prepare(`UPDATE items SET is_full = 1 WHERE id = ?`).run(fullContainer.data.id);
+
+    await expect(
+      client().web.listItems({
+        q: 'wardrobe',
+        isContainer: 'true',
+        isFull: 'true',
+      })
+    ).resolves.toMatchObject({ items: [], total: 0, unfilteredTotal: 1 });
   });
 
   it('rejects q cursors without q, with another sort, and rejects old cursors with q', async () => {
@@ -881,6 +900,13 @@ describe('web.items.list', () => {
     });
     await expect(
       client().web.listItems({ q: 'box', sort: 'updated', cursor: qPage.nextCursor! })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'The cursor was not issued by this route' },
+    });
+    const qUnsortedPage = await client().web.listItems({ q: 'box', limit: 1 });
+    await expect(
+      client().web.listItems({ q: 'box', sort: 'name', cursor: qUnsortedPage.nextCursor! })
     ).rejects.toMatchObject({
       status: 400,
       body: { message: 'The cursor was not issued by this route' },

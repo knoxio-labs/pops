@@ -2,6 +2,7 @@
  * `GET /web/items`'s cursor page: a filtered slice of the live item catalogue
  * (Inventory ADR-002, POPS-3329). An absent sort keeps the original id order;
  * the named sorts use a keyset cursor containing the final sort key and id.
+ * Text-filtered pages add their match tier to that keyset order.
  */
 import { and, asc, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -73,7 +74,7 @@ const textCursorKeyValidators: Record<WebItemsSort, (key: readonly CursorValue[]
 
 function validTextCursorKey(sort: WebItemsSort | null, key: readonly CursorValue[]): boolean {
   const tier = key[0];
-  if (tier !== 1 && tier !== 2 && tier !== 3 && tier !== 4) return false;
+  if (tier !== 1 && tier !== 2 && tier !== 3) return false;
   const sortKey = key.slice(1);
   return sort === null
     ? sortKey.length === 1 && typeof sortKey[0] === 'string'
@@ -102,7 +103,7 @@ function textTierForRow(db: CommandDb, rank: SQL<number>, id: string): number {
     .from(items)
     .where(sql`${items.id} = ${id}`)
     .get()?.tier;
-  if (tier !== 1 && tier !== 2 && tier !== 3 && tier !== 4) {
+  if (tier !== 1 && tier !== 2 && tier !== 3) {
     throw new Error(`web item ${id} did not match its text query`);
   }
   return tier;
@@ -137,7 +138,8 @@ function nextTextCursorFor(
 
 /**
  * Read one page of live items matching `filter`, ordered by the requested
- * sort, in the caller's (read) transaction. Counts ignore the cursor.
+ * sort and, when present, its text-match tier, in the caller's (read)
+ * transaction. Counts ignore the cursor.
  */
 export function readWebItemsPage(
   db: CommandDb,
