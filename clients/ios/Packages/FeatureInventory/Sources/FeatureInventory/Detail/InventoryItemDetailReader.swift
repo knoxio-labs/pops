@@ -18,9 +18,7 @@ extension InventoryItemDetail {
         guard let item = source.inventoryItem(id: id), !item.isDeleted else { return nil }
         let status = source.inventoryReplicaStatus()
         let ledger = source.inventorySyncLedger()
-        let protocol2Type = item.typeId.flatMap { typeId in
-            source.inventoryProtocol2Catalogue()?.types.first { $0.id == typeId }
-        }
+        let protocol2Type = Self.protocol2Type(for: item, source: source)
         let type = item.typeKey.flatMap { source.inventoryCatalogue().type(forKey: $0) }
         let events = source.inventoryItemHistory(itemId: id)
         let fields =
@@ -53,6 +51,17 @@ extension InventoryItemDetail {
         }
         lastSynced = Self.lastSynced(status, now: now)
         lifecycleChange = Self.lifecycleChange(of: item, events: events)
+    }
+
+    private static func protocol2Type(
+        for item: InventoryItem, source: any InventoryQuerySource
+    ) -> InventoryCatalogueType? {
+        guard let typeId = item.typeId,
+            let catalogue = source.inventoryProtocol2Catalogue(),
+            let rawType = catalogue.types.first(where: { $0.id == typeId })
+        else { return nil }
+        guard rawType.parentTypeId != nil else { return rawType }
+        return catalogue.effectiveType(id: typeId)
     }
 
     private static func summary(
