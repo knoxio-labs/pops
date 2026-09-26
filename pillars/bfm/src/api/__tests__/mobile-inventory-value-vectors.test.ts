@@ -46,6 +46,7 @@ const FixtureSchema = z.object({
   negativeVectors: z.array(
     z.discriminatedUnion('category', [
       z.object({ category: z.literal('malformed_value'), fieldValue: JsonObject }),
+      z.object({ category: z.literal('missing_required_field'), command: JsonObject }),
       z.object({ category: z.literal('unknown_kind'), field: JsonObject }),
       z.object({ category: z.literal('protocol_above_supported'), minimumProtocol: z.number() }),
     ])

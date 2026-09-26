@@ -25,17 +25,16 @@ import type { EngineContext } from './fixture-engine-writes.js';
 
 /** One `(db, nextId)`-bound set of fixture-writing operations. */
 export interface FixtureEngine {
-  readonly createItem: (
-    catalogue: ValueVectorCatalogue,
-    revision: number,
-    name: string,
-    values: readonly { readonly fieldId: string; readonly values: readonly unknown[] }[]
-  ) => { readonly itemId: string; readonly command: Mutation };
-  /** Runs an `item.create` the engine must refuse, and returns its rejection reason. */
+  readonly createItem: (...args: CreateItemArgs) => {
+    readonly itemId: string;
+    readonly command: Mutation;
+  };
+  /** Runs an `item.create` the engine must refuse, returning its command and rejection reason. */
   readonly rejectedCreate: (
     catalogue: ValueVectorCatalogue,
-    values: readonly { readonly fieldId: string; readonly values: readonly unknown[] }[]
-  ) => string;
+    values: readonly { readonly fieldId: string; readonly values: readonly unknown[] }[],
+    typeId?: string
+  ) => { readonly command: Mutation; readonly producerRejection: string };
   /** Removes one stored field's value with `item.edit`. */
   readonly clearField: (revision: number, itemId: string, fieldId: string) => Mutation;
   readonly deleteItem: (revision: number, itemId: string) => void;
@@ -58,7 +57,16 @@ interface CreateItemSpec {
   readonly revision: number;
   readonly name: string;
   readonly values: readonly { readonly fieldId: string; readonly values: readonly unknown[] }[];
+  readonly typeId?: string;
 }
+
+type CreateItemArgs = [
+  catalogue: ValueVectorCatalogue,
+  revision: number,
+  name: string,
+  values: readonly { readonly fieldId: string; readonly values: readonly unknown[] }[],
+  typeId?: string,
+];
 
 function createMutation(ctx: EngineContext, spec: CreateItemSpec): Mutation {
   return buildMutation(ctx.nextId, {
@@ -69,7 +77,7 @@ function createMutation(ctx: EngineContext, spec: CreateItemSpec): Mutation {
     args: {
       item: {
         name: spec.name,
-        typeId: spec.catalogue.typeId,
+        typeId: spec.typeId ?? spec.catalogue.typeId,
         values: spec.values,
         note: null,
         externalIds: [],
@@ -89,26 +97,33 @@ function engineCreateItem(
   return { itemId: entry.entityId, command: entry };
 }
 
-function engineRejectedCreate(ctx: EngineContext, spec: CreateItemSpec): string {
-  const outcome = run(ctx.db, createMutation(ctx, spec));
+function engineRejectedCreate(
+  ctx: EngineContext,
+  spec: CreateItemSpec
+): { readonly command: Mutation; readonly producerRejection: string } {
+  const command = createMutation(ctx, spec);
+  const outcome = run(ctx.db, command);
   if (outcome.status !== 'rejected') {
     throw new Error(`the engine did not refuse a malformed value: ${JSON.stringify(outcome)}`);
   }
-  return outcome.reason;
+  return { command, producerRejection: outcome.reason };
 }
 
 /** Builds one `(db, nextId)`-bound {@link FixtureEngine}. */
 export function createFixtureEngine(db: CommandDb, nextId: () => string): FixtureEngine {
   const ctx: EngineContext = { db, nextId };
   return {
-    createItem: (catalogue, revision, name, values) =>
-      engineCreateItem(ctx, { catalogue, revision, name, values }),
-    rejectedCreate: (catalogue, values) =>
+    createItem: (...args) => {
+      const [catalogue, revision, name, values, typeId] = args;
+      return engineCreateItem(ctx, { catalogue, revision, name, values, typeId });
+    },
+    rejectedCreate: (catalogue, values, typeId) =>
       engineRejectedCreate(ctx, {
         catalogue,
         revision: catalogue.liveRevision,
         name: 'malformed value',
         values,
+        typeId,
       }),
     clearField: (revision, itemId, fieldId) => engineClearField(ctx, { revision, itemId, fieldId }),
     deleteItem: (revision, itemId) => engineDeleteItem(ctx, revision, itemId),
