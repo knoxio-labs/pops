@@ -58,6 +58,7 @@ export function maskNonCode(source) {
   let state = 'code';
   let quote = '';
 
+  /** @param {number} index */
   const blank = (index) => {
     if (output[index] !== '\n' && output[index] !== '\r') output[index] = ' ';
   };
@@ -183,6 +184,7 @@ export function discoverSources(root) {
 
   for (const entry of readdirSync(pillarsDirectory, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
+    /** @type {string[]} */
     const sourcePaths = [];
     walk(join(pillarsDirectory, entry.name, 'src'), sourcePaths);
     for (const absolutePath of sourcePaths) {
@@ -526,6 +528,7 @@ export function analyzeSources(sources, baselineSources = []) {
  * @returns {SourceFile[]}
  */
 export function readGitSources(root, ref) {
+  /** @type {string[]} */
   let names;
   try {
     names = execFileSync('git', ['grep', '-l', 'defineErrors', ref, '--', 'pillars'], {
@@ -536,7 +539,7 @@ export function readGitSources(root, ref) {
       .filter((name) => name.endsWith('.ts') || name.endsWith('.tsx'))
       .filter((name) => !/__tests__|(?:^|[.])(test|spec)\.[^.]+$/u.test(name));
   } catch (error) {
-    if (error?.status === 1) return [];
+    if (hasExitStatus(error, 1)) return [];
     throw new Error(`could not read ${ref} pillar sources: ${String(error)}`, { cause: error });
   }
 
@@ -549,6 +552,13 @@ export function readGitSources(root, ref) {
     }
     return { path: name, text };
   });
+}
+
+/** @param {unknown} error @param {number} status @returns {boolean} */
+function hasExitStatus(error, status) {
+  return (
+    typeof error === 'object' && error !== null && 'status' in error && error.status === status
+  );
 }
 
 /** @param {Finding[]} findings @returns {string} */
@@ -571,6 +581,7 @@ export function formatFindings(findings) {
  * @returns {boolean}
  */
 export function runSelfTest() {
+  /** @type {SourceFile[]} */
   const good = [
     {
       path: 'pillars/demo/src/api/errors.ts',
@@ -583,11 +594,15 @@ export function runSelfTest() {
     return false;
   }
 
+  const passingSource = good[0];
+  if (passingSource === undefined) throw new Error('self-test fixture is missing');
+
+  /** @type {Array<{ name: string; sources: SourceFile[]; baseline?: SourceFile[]; rule: string }>} */
   const cases = [
     {
       name: 'unregistered',
       sources: [
-        good[0],
+        passingSource,
         {
           path: 'pillars/demo/src/api/unregistered.ts',
           text: "throw new PopsError({ code: 'demo.request.missing', status: 400, message: 'No.', retryable: false });",
@@ -597,7 +612,7 @@ export function runSelfTest() {
     },
     {
       name: 'removed',
-      sources: [good[0]],
+      sources: [passingSource],
       baseline: [
         {
           path: 'pillars/demo/src/api/errors.ts',
