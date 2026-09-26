@@ -73,7 +73,7 @@ function RowVerbs({
         <RowVerb
           icon={INVENTORY_ICONS.putBack}
           label="Put back"
-          shortcutId="pick-up"
+          shortcutId="put-back"
           onClick={() => onRowVerb?.('put-back', item)}
         />
       ) : (
