@@ -57,6 +57,8 @@ Numbers never pass through a binary float. Decimals are an `Int128` coefficient 
 
 `AppDependencies.merchants` binds the merchant directory alongside purchases. The unbound container fails merchant reads with `dependencyNotBound`; a paired device receives the BFM implementation.
 
+`InventoryBarcodeLookupService` is the facts-only seam for scanned product codes. Its product value retains editable catalogue facts while excluding wire provenance, lookup codes, timestamps and images. An unbound dependency returns `unavailable`, and `AppCoreFakes` supplies a scripted lookup that records every code.
+
 ## The shell
 
 `AppShellModel` is the root's whole decision surface, and it lives here rather than in `App/` for the reason every view model does: a decision expressed as a value is a test, and a decision expressed as a view hierarchy is something someone relaunches a simulator to check. `RootDestination` is what the root view switches on — `launching`, `pairing(RevocationReason?)`, `content(FeatureSurface)` — and the view maps each case to a screen and decides nothing else.
