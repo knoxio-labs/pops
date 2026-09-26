@@ -1,7 +1,8 @@
 import {
-  MobileInventoryCatalogueRevisionDescriptorSchema,
-  MobileInventoryCatalogueSchema,
-} from '../../contract/mobile-inventory-schemas.js';
+  MobileInventoryCatalogueUpstreamSchema,
+  type MobileInventoryCatalogueUpstream,
+} from '../../contract/mobile-inventory-protocol2-catalogue-schemas.js';
+import { MobileInventoryCatalogueSchema } from '../../contract/mobile-inventory-schemas.js';
 import { isGatewayOk } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
 
@@ -14,18 +15,21 @@ import type { GatewayOutcome, PillarGateway } from '../pillars/gateway.js';
 const INVENTORY_PILLAR_ID = 'inventory';
 
 function normalizeCatalogueRevision(
-  catalogue: MobileInventoryCatalogueRevisionDescriptor
+  catalogue: MobileInventoryCatalogueUpstream
 ): MobileInventoryCatalogueRevisionDescriptor {
   return {
     ...catalogue,
-    types: catalogue.types.map((type) => ({
-      ...type,
-      fields: type.fields.map(({ defaultValues, ...field }) =>
-        defaultValues === undefined || defaultValues.length === 0
-          ? field
-          : { ...field, defaultValues }
-      ),
-    })),
+    types: catalogue.types.map(({ parentTypeId, ...type }) => {
+      const normalized = {
+        ...type,
+        fields: type.fields.map(({ defaultValues, ...field }) =>
+          defaultValues === undefined || defaultValues.length === 0
+            ? field
+            : { ...field, defaultValues }
+        ),
+      };
+      return parentTypeId == null ? normalized : { ...normalized, parentTypeId };
+    }),
   };
 }
 
@@ -72,7 +76,7 @@ export function createMobileInventoryCatalogueClient(
       const parsed = parseOrMismatch(
         INVENTORY_PILLAR_ID,
         outcome,
-        MobileInventoryCatalogueRevisionDescriptorSchema,
+        MobileInventoryCatalogueUpstreamSchema,
         'types.read.catalogue'
       );
       return isGatewayOk(parsed)

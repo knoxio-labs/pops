@@ -672,7 +672,9 @@ public protocol InventoryStore: Sendable {
 
 `perform` returns when the change is durable: in Phase A after the server's `applied` outcome, in Phase B after the local commit. Views never learn which.
 
-Replica tables: `item_base`, `item`, `item_field_value_base`, `item_field_value`, `catalogue_revision`, `catalogue_type`, `catalogue_field`, `catalogue_enum_option`, `location_base`, `location`, `photo_ref`, `event` (feed and fetched history), `mutation_log (local_seq INTEGER PK AUTOINCREMENT, mutation_id UNIQUE, op, entity_id, args JSON, depends_on JSON, base_revision, catalogue_revision, state, outcome JSON, attempts, created_at, last_attempt_at)`, `repair (mutation_id PK, kind, payload JSON, opened_at, resolved_at, resolution)`, `resolved_entry`, `media (sha256 PK, variant, path, bytes, pinned, uploaded, last_access)`, `sync_meta (epoch, since, catalogue_revision, last_refresh_at, snapshot_cursor)`, `item_fts`.
+Replica tables: `item_base`, `item`, `item_field_value_base`, `item_field_value`, `catalogue_revision`, `catalogue_type` (including nullable `parent_id`), `catalogue_field`, `catalogue_enum_option`, `location_base`, `location`, `photo_ref`, `event` (feed and fetched history), `mutation_log (local_seq INTEGER PK AUTOINCREMENT, mutation_id UNIQUE, op, entity_id, args JSON, depends_on JSON, base_revision, catalogue_revision, state, outcome JSON, attempts, created_at, last_attempt_at)`, `repair (mutation_id PK, kind, payload JSON, opened_at, resolved_at, resolution)`, `resolved_entry`, `media (sha256 PK, variant, path, bytes, pinned, uploaded, last_access)`, `sync_meta (epoch, since, catalogue_revision, last_refresh_at, snapshot_cursor)`, `item_fts`.
+
+Each catalogue type stores only its own fields plus `parentTypeId`; the phone resolves the parent chain to obtain inherited fields and capabilities. A root type has no parent. The bfm wire omits `parentTypeId` for root types so installed clients that predate type trees can still decode the response.
 
 ## Approved state to producing state
 
