@@ -133,7 +133,7 @@ internal struct InventorySearchFilterTests {
         #expect(!filter.matches(Fixture.record("a", type: nil)))
     }
 
-    @Test("a bedding filter matches a phone-created sheet with no type key")
+    @Test("choosing a parent type matches subtype items")
     func typeFilterUsesProtocol2Lineage() {
         let catalogue = InventoryCatalogueSnapshot(
             revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
@@ -150,11 +150,13 @@ internal struct InventorySearchFilterTests {
             createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
         let source = FormFixtureSource(items: [item], protocol2Catalogue: catalogue)
         let record = InventoryRecordReader(source: source).record(item)
+        let typeNames = InventoryRecordReader(source: source).typeNames
         var filter = InventorySearchFilter()
-        filter.type = InventoryTypeName(key: "bedding", name: "Bedding")
+        filter.type = typeNames.first { $0.key == "bedding" }
 
         #expect(record.typeKey == nil)
         #expect(record.typeKeys == ["bedding", "sheet"])
+        #expect(typeNames.first { $0.key == "sheet" }?.parentKey == "bedding")
         #expect(filter.matches(record))
     }
 
