@@ -78,6 +78,7 @@ export function persistedTypeRow(
     readonly legacyLabels: readonly string[];
     readonly presentation: Record<string, unknown>;
     readonly archivedAt: string | null;
+    readonly parentTypeId: string | null;
   }
 ): typeof itemTypes.$inferInsert {
   return {
@@ -91,6 +92,7 @@ export function persistedTypeRow(
     legacyLabelsJson: json(input.legacyLabels),
     presentationJson: json(input.presentation),
     archivedAt: input.archivedAt,
+    parentTypeId: input.parentTypeId,
   };
 }
 
