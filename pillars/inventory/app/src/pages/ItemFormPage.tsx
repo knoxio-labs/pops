@@ -56,12 +56,12 @@ function buildBreadcrumbs(
 ) {
   if (isEditMode && editItemName) {
     return [
-      { label: 'Inventory', href: '/inventory/items' },
+      { label: 'Inventory', href: '/inventory' },
       { label: editItemName, href: `/inventory/items/${id}` },
       { label: 'Edit' },
     ];
   }
-  return [{ label: 'Inventory', href: '/inventory/items' }, { label: 'New Item' }];
+  return [{ label: 'Inventory', href: '/inventory' }, { label: 'New Item' }];
 }
 
 function FormBody({ model }: { model: Model }) {

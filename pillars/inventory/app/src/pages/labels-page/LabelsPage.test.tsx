@@ -165,7 +165,7 @@ describe('LabelsPage', () => {
       'href',
       '/inventory/items'
     );
-    expect(screen.getByRole('link', { name: 'Items' })).toHaveAttribute('href', '/inventory/items');
+    expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/inventory');
   });
 
   it('loads the listed items by id and gives a box two labels, a thing one', async () => {

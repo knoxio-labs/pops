@@ -594,10 +594,7 @@ describe('ItemFormPage — route targets', () => {
       'href',
       '/inventory/items'
     );
-    expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute(
-      'href',
-      '/inventory/items'
-    );
+    expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/inventory');
   });
 });
 
