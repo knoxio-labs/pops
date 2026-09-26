@@ -131,6 +131,8 @@ Types form a single-parent tree. A root is depth 1 and the maximum depth is 3. A
 
 A live type cannot have an archived parent. A reference constrained to a type admits that type's descendants, resolved on the active catalogue. `changeType` remains a full replacement; clients resend shared values. Cross-branch fields (Closure, Fill, Waterproof) are duplicated, not inherited. The catalogue column is `parent_type_id`, the wire name is `parentTypeId`, and `parentId` remains reserved for `reorder`. bfm omits `parentTypeId` for a root type.
 
+Validation runs after every draft PATCH and again at publication. A chain deeper than three is rejected as `type_depth_exceeded`. A live type whose parent is archived is rejected as `type_parent_archived`; archiving a parent and all of its children in one PATCH is valid because the resulting tree has no live child under an archived parent. Two live fields whose keys collide case-insensitively in one effective field set are rejected as `inherited_key_duplicate`, naming the later field; archived fields do not participate in that check. The per-type database unique index remains unchanged because these are effective-tree validations rather than row-local constraints.
+
 Until POPS-4870, changing the parent of a published type is forbidden, as is any change that needs a migration on a type with subtypes (a field made required or a capability change). Rejected options remain:
 
 - enum-conditional fields, because the schema would depend on values;
