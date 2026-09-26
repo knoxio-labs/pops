@@ -100,8 +100,29 @@ internal struct InventoryRecordReader {
 
     /// The catalogue's type names, alphabetically, for the filter sheet.
     internal var typeNames: [InventoryTypeName] {
-        catalogue.types.map { InventoryTypeName(key: $0.key, name: $0.name) }
-            .sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
+        if let protocol2Catalogue {
+            return protocol2Catalogue.types
+                .map { type in
+                    let ancestry = protocol2Catalogue.ancestry(ofType: type.id)
+                    return InventoryTypeName(
+                        key: type.key, name: type.label,
+                        parentKey: ancestry.dropLast().last?.key)
+                }
+                .sorted(by: Self.typeNameOrder)
+        }
+        return catalogue.types
+            .map { InventoryTypeName(key: $0.key, name: $0.name) }
+            .sorted(by: Self.typeNameOrder)
+    }
+
+    private static func typeNameOrder(_ left: InventoryTypeName, _ right: InventoryTypeName) -> Bool
+    {
+        switch left.name.localizedCaseInsensitiveCompare(right.name) {
+        case .orderedAscending: true
+        case .orderedDescending: false
+        case .orderedSame:
+            left.key.localizedCaseInsensitiveCompare(right.key) == .orderedAscending
+        }
     }
 
     private func placement(_ placement: InventoryPlacement) -> InventoryRecord.Placement {
@@ -120,12 +141,15 @@ public struct InventoryTypeName: Identifiable, Hashable, Sendable {
     public let key: String
     /// The reader-facing catalogue name.
     public let name: String
+    /// The stable key of this type's protocol-2 parent, or nil for a root.
+    public let parentKey: String?
 
     public var id: String { key }
 
     /// Creates a type option from its catalogue key and display name.
-    public init(key: String, name: String) {
+    public init(key: String, name: String, parentKey: String? = nil) {
         self.key = key
         self.name = name
+        self.parentKey = parentKey
     }
 }

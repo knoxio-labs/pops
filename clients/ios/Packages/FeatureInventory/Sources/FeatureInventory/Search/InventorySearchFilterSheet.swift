@@ -1,7 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// The sheet the filter circle opens: one native form, a menu row per
+/// The sheet the filter circle opens: one native form, a row per
 /// filter, the inactive switch, and the sort when the list has one.
 internal struct InventorySearchFilterSheet: View {
     @Binding internal var filter: InventorySearchFilter
@@ -64,9 +64,16 @@ public struct InventorySearchFilterFields<Header: View>: View {
             Picker("Container", selection: $filter.containerState) {
                 ForEach(InventoryContainerStateFilter.allCases) { Text($0.title).tag($0) }
             }
-            Picker("Type", selection: $filter.type) {
-                Text("Any").tag(InventoryTypeName?.none)
-                ForEach(types) { Text($0.name).tag(InventoryTypeName?.some($0)) }
+            NavigationLink {
+                InventoryFormTypePicker(
+                    selection: typeSelection,
+                    options: InventoryFormTypeOptions.filter(types),
+                    noneTitle: "Any")
+            } label: {
+                LabeledContent("Type") {
+                    Text(filter.type?.name ?? "Any")
+                        .foregroundStyle(Color.popsMutedForeground)
+                }
             }
             Picker("Quantity", selection: $filter.quantity) {
                 ForEach(InventoryQuantityFilter.allCases) { Text($0.title).tag($0) }
@@ -84,6 +91,16 @@ public struct InventorySearchFilterFields<Header: View>: View {
         Section {
             Toggle("Include inactive", isOn: $filter.includesInactive)
         }
+    }
+
+    private var typeSelection: Binding<String?> {
+        Binding(
+            get: { filter.type?.key },
+            set: { key in
+                filter.type = key.flatMap { selectedKey in
+                    types.first { $0.key == selectedKey }
+                }
+            })
     }
 }
 

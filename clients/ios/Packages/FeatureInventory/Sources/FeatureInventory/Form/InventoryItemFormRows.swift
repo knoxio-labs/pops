@@ -3,73 +3,34 @@ import DesignSystem
 import Foundation
 import SwiftUI
 
-/// The type, from the catalogue this phone last downloaded. "No type yet" is
-/// a real answer (POPS-4016); it is not offered once an item has a type,
-/// because nothing takes a type away.
+/// The type, from the catalogue this phone last downloaded.
 internal struct InventoryFormTypeRow: View {
     internal let types: [InventoryType]
     internal let offersNone: Bool
     @Binding internal var typeKey: String?
 
     internal var body: some View {
-        Picker("Type", selection: $typeKey) {
-            if offersNone {
-                Text("No type yet").tag(String?.none)
-            }
-            ForEach(InventoryFormTypeOptions.legacy(types)) { option in
-                Text(option.label)
-                    .tag(Optional(option.id))
-                    .accessibilityIdentifier(option.accessibilityIdentifier)
+        NavigationLink {
+            InventoryFormTypePicker(
+                selection: $typeKey,
+                options: InventoryFormTypeOptions.legacy(types),
+                noneTitle: offersNone ? "No type yet" : nil,
+                noneAccessibilityIdentifier: offersNone
+                    ? InventoryAccessibility.itemTypeNone : nil)
+        } label: {
+            LabeledContent("Type") {
+                Text(selectedLabel)
+                    .foregroundStyle(Color.popsMutedForeground)
             }
         }
-        .pickerStyle(.menu)
         .accessibilityIdentifier(InventoryAccessibility.itemTypePicker)
     }
-}
 
-/// One entry of the item form's Type menu.
-internal struct InventoryFormTypeOption: Identifiable, Equatable {
-    internal let id: String
-    internal let label: String
-
-    /// The option's handle for a driver: its words are owner-authored and
-    /// may repeat, its id never does.
-    internal var accessibilityIdentifier: String {
-        InventoryAccessibility.itemTypeOption(id: id)
-    }
-}
-
-/// What the Type menu lists, apart from the menu itself, so the options and
-/// the handles automation taps them by are pinned by a test.
-internal enum InventoryFormTypeOptions {
-    /// Every active type in alphabetical order, plus `selectedId` even once
-    /// archived: an item already of a retired type still reads its type,
-    /// but no other item can newly take it.
-    internal static func protocol2(
-        _ catalogue: InventoryCatalogueSnapshot, selectedId: String?
-    ) -> [InventoryFormTypeOption] {
-        alphabetically(
-            catalogue.types
-                .filter { $0.archivedAt == nil || $0.id == selectedId }
-                .map { InventoryFormTypeOption(id: $0.id, label: $0.label) })
-    }
-
-    /// A protocol-1 catalogue's types, keyed by type key.
-    internal static func legacy(_ types: [InventoryType]) -> [InventoryFormTypeOption] {
-        alphabetically(types.map { InventoryFormTypeOption(id: $0.key, label: $0.name) })
-    }
-
-    private static func alphabetically(
-        _ options: [InventoryFormTypeOption]
-    ) -> [InventoryFormTypeOption] {
-        options.sorted { left, right in
-            switch left.label.localizedCaseInsensitiveCompare(right.label) {
-            case .orderedAscending: true
-            case .orderedDescending: false
-            case .orderedSame:
-                left.id.localizedCaseInsensitiveCompare(right.id) == .orderedAscending
-            }
+    private var selectedLabel: String {
+        guard let typeKey, let type = types.first(where: { $0.key == typeKey }) else {
+            return "No type yet"
         }
+        return type.name
     }
 }
 
