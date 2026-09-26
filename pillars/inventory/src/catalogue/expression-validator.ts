@@ -93,7 +93,7 @@ export function validateCatalogueExpressions(
     )
   );
   const expressions = catalogue.types.flatMap((ownerType) =>
-    ownerType.fields
+    ownerType.effectiveFields
       .filter((field) => field.storage === 'computed')
       .map((field) => validateFieldExpression(catalogue, ownerType, field, fieldKinds))
   );

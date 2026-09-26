@@ -153,6 +153,29 @@ describe('validateCatalogueExpressions', () => {
     );
   });
 
+  it('rejects a cycle introduced by an inherited computed field', () => {
+    const reference = expressionField({
+      id: 'reference',
+      key: 'reference',
+      kind: 'reference',
+      referenceKinds: new Set(['item']),
+      referenceTypeIds: new Set(['sheet']),
+      typeId: 'bedding',
+    });
+    const bedding = expressionType('bedding', [
+      reference,
+      computed('x', read('y', ['reference']), 'bedding'),
+    ]);
+    const sheet = {
+      ...expressionType('sheet', [computed('y', read('x'), 'sheet')]),
+      parentTypeId: 'bedding',
+    };
+
+    expect(() => validateCatalogueExpressions(expressionCatalogue([bedding, sheet]))).toThrowError(
+      expect.objectContaining({ code: 'expression_cycle' })
+    );
+  });
+
   it('rejects more than 32 declared dependencies', () => {
     const stored = Array.from({ length: 33 }, (_, index) =>
       expressionField({ id: `field-${index}`, key: `field-${index}` })

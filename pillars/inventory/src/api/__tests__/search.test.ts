@@ -16,7 +16,10 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { publishItemTypeTree } from '../../catalogue/__tests__/type-tree-fixture.js';
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
+import { mutation } from '../../domain/commands/__tests__/test-utils.js';
+import { runMutation } from '../../domain/commands/index.js';
 import { createInventoryApiApp } from '../app.js';
 import { makeClient } from './test-utils.js';
 
@@ -119,6 +122,37 @@ describe('search — inventory items adapter', () => {
     await client().items.create({ itemName: 'Anything', assetId: 'AST-9' });
     expect((await client().search.run({ query: { text: '' } })).hits).toEqual([]);
     expect((await client().search.run({ query: { text: '   ' } })).hits).toEqual([]);
+  });
+
+  it('finds a sheet item by the label of its inherited Material option', () => {
+    const catalogue = publishItemTypeTree(inventoryDb.db);
+    const itemId = '90000000-0000-4000-8000-000000000001';
+    const outcome = runMutation(
+      inventoryDb.db,
+      mutation(
+        'item.create',
+        itemId,
+        {
+          item: {
+            name: 'Sheet',
+            typeId: catalogue.sheetTypeId,
+            values: [
+              {
+                fieldId: catalogue.materialFieldId,
+                values: [{ optionId: catalogue.materialCottonOptionId }],
+              },
+            ],
+          },
+        },
+        { baseRevision: null, catalogueRevision: catalogue.revision }
+      ),
+      { kind: 'service', id: 'search-test' }
+    );
+    expect(outcome).toMatchObject({ status: 'applied' });
+
+    return expect(client().search.run({ query: { text: 'Cotton' } })).resolves.toMatchObject({
+      hits: [expect.objectContaining({ uri: `/inventory/items/${itemId}`, matchField: 'fts' })],
+    });
   });
 });
 

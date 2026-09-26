@@ -171,8 +171,7 @@ export function writeActiveFieldValues(
     }
     typeId = parsedTypeId.data;
   }
-  const current =
-    input.requestedTypeId === undefined ? currentAuthoritativeFieldValues(db, input.itemId) : [];
+  const current = currentAuthoritativeFieldValues(db, input.itemId);
   if (typeId === null || typeId === undefined) {
     if (Object.values(input.changes).some((value) => value !== null))
       throw new CommandRejected('invalid', 'an untyped item cannot carry values');

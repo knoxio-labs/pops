@@ -5,7 +5,7 @@ import { syncMeta, type SyncMetaKey } from '../db/index.js';
 import type { CommandDb } from '../domain/commands/index.js';
 
 /** Highest inventory sync protocol understood by this server build. */
-export const SUPPORTED_INVENTORY_PROTOCOL = 2;
+export const SUPPORTED_INVENTORY_PROTOCOL = 3;
 
 /**
  * First protocol that carries ADR-002 D5's persisted definitions and values, and

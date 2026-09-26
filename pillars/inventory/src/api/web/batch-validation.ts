@@ -107,7 +107,7 @@ function quantityIssue(
   if (!/^\d+$/u.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < 1) {
     return { code: 'quantity_invalid', message: 'Quantity is a whole number, 1 or more.' };
   }
-  if (type?.capabilities.includes('containment') === true && Number(value) > 1) {
+  if (type?.effectiveCapabilities.includes('containment') === true && Number(value) > 1) {
     return {
       code: 'quantity_container',
       message: `A ${type.label} is a container, so its quantity is 1.`,

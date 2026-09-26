@@ -85,7 +85,7 @@ function fieldText(
     .orderBy(itemFieldValues.fieldId, itemFieldValues.source, itemFieldValues.ordinal)
     .all();
   const parts: string[] = [];
-  for (const field of type.fields) {
+  for (const field of type.effectiveFields) {
     const persisted = persistedValues(field, rows);
     const values =
       field.storage === 'computed' && persisted.length === 0
@@ -141,7 +141,9 @@ function effectiveValuesFor(
 ): EffectiveValues {
   if (catalogue === null) return NO_EFFECTIVE_VALUES;
   const ids = rows
-    .filter((row) => typeOf(catalogue, row)?.fields.some((field) => field.storage === 'computed'))
+    .filter((row) =>
+      typeOf(catalogue, row)?.effectiveFields.some((field) => field.storage === 'computed')
+    )
     .map((row) => row.id);
   return ids.length === 0
     ? NO_EFFECTIVE_VALUES

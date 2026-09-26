@@ -55,7 +55,7 @@ export class EffectiveValueReader {
     const effective: EffectiveItemFieldValue[] = persisted
       .filter((entry) => entry.source === 'stored')
       .map(storedWire);
-    for (const field of type.fields) {
+    for (const field of type.effectiveFields) {
       if (field.storage !== 'computed' || field.archivedAt !== null) continue;
       effective.push(computedWire(field.id, this.computed(itemId, record, field, persisted)));
     }
@@ -87,7 +87,7 @@ export class EffectiveValueReader {
     const record = this.#rows.item(itemId);
     if (record === null || record.typeId === null) return undefined;
     const type = this.catalogue.types.find((candidate) => candidate.id === record.typeId);
-    const field = type?.fields.find((candidate) => candidate.id === fieldId);
+    const field = type?.effectiveFields.find((candidate) => candidate.id === fieldId);
     if (field === undefined) return undefined;
     if (field.storage === 'stored') {
       const persisted = this.#rows

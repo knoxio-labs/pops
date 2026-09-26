@@ -92,7 +92,7 @@ export function moveOntoReplacements<T extends CarriedValue>(
   const landing = type?.id ?? subject.typeId ?? subject.itemTypeId;
   const values = movedValues(resolution, subject.values, landing);
   if (type === null) return { typeId: subject.typeId, values };
-  const live = type.fields.filter((field) => field.archivedAt === null);
+  const live = type.effectiveFields.filter((field) => field.archivedAt === null);
   const stored = new Set(
     live.filter((field) => field.storage === 'stored').map((field) => field.id)
   );

@@ -1,9 +1,12 @@
+import { randomUUID } from 'node:crypto';
+
 import { describe, expect, it } from 'vitest';
 
 import { itemFieldValues } from '../../db/schema.js';
 import { mutation, openHarness, seedItem } from '../../domain/commands/__tests__/test-utils.js';
 import { ItemFieldSetError, readItemFieldValues, validateItemFieldValues } from '../item-values.js';
 import { ValueValidationError } from '../value-codec.js';
+import { publishItemTypeTree } from './type-tree-fixture.js';
 
 const TYPE_ID = '10000000-0000-5000-8000-000000000001';
 const CABLE_TYPE_ID = 'b5ea5cd3-73b3-56dc-92e1-374eac720990';
@@ -557,5 +560,50 @@ describe('validateItemFieldValues', () => {
       reason: 'reference_type_mismatch',
       incomingReference: { itemId: holderId, fieldId: FIELD_IDS.reference },
     });
+  });
+
+  it('accepts a sheet item as a target for a reference constrained to bedding', () => {
+    const harness = openHarness();
+    const catalogue = publishItemTypeTree(harness.db);
+    const targetId = randomUUID();
+    const created = harness.run(
+      mutation(
+        'item.create',
+        targetId,
+        {
+          item: {
+            name: 'Sheet target',
+            typeId: catalogue.sheetTypeId,
+            values: [
+              {
+                fieldId: catalogue.materialFieldId,
+                values: [{ optionId: catalogue.materialCottonOptionId }],
+              },
+            ],
+          },
+        },
+        { baseRevision: null, catalogueRevision: catalogue.revision }
+      )
+    );
+    expect(created).toMatchObject({ status: 'applied' });
+
+    expect(
+      validateItemFieldValues(harness.db, {
+        typeId: catalogue.beddingTypeId,
+        catalogueRevision: catalogue.revision,
+        fields: [
+          {
+            fieldId: catalogue.materialFieldId,
+            source: 'stored',
+            values: [{ optionId: catalogue.materialCottonOptionId }],
+          },
+          {
+            fieldId: catalogue.partnerFieldId,
+            source: 'stored',
+            values: [{ targetKind: 'item', targetId }],
+          },
+        ],
+      })
+    ).toHaveLength(2);
   });
 });
