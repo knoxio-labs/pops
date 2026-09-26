@@ -28,6 +28,10 @@ function unavailable<T>(): CallResult<T> {
   return { kind: 'unavailable', pillar: 'documents' };
 }
 
+function notFound<T>(): CallResult<T> {
+  return { kind: 'not-found', pillar: 'documents' };
+}
+
 function proc<Args extends readonly unknown[], Output>(
   fn: (...args: Args) => Promise<CallResult<Output>>
 ): CallableProcedure<Args, Output> {
@@ -46,6 +50,7 @@ const callDynamic: CallDynamicFn = () => {
 interface StubImpls {
   status?: () => Promise<CallResult<{ data: PaperlessStatus }>>;
   search?: (input: { query: string }) => Promise<CallResult<{ data: PaperlessSearchDocument[] }>>;
+  get?: (input: { id: number }) => Promise<CallResult<{ data: PaperlessSearchDocument }>>;
 }
 
 function unexpected(name: string): never {
@@ -57,6 +62,7 @@ function stubHandle(impls: StubImpls): PillarHandle<DocumentsRouter> {
     paperless: {
       status: proc(impls.status ?? (() => unexpected('paperless.status'))),
       search: proc(impls.search ?? (() => unexpected('paperless.search'))),
+      get: proc(impls.get ?? (() => unexpected('paperless.get'))),
     },
     callDynamic,
   };
@@ -119,5 +125,41 @@ describe('createDocumentsClient.searchPaperlessDocuments', () => {
     await client.searchPaperlessDocuments('receipt');
 
     expect(search).toHaveBeenCalledWith({ query: 'receipt' });
+  });
+});
+
+describe('createDocumentsClient.paperlessDocumentMissing', () => {
+  it('returns false when Paperless resolves the document', async () => {
+    const client = createDocumentsClient(() =>
+      stubHandle({
+        get: async () =>
+          ok({
+            data: {
+              id: 42,
+              title: 'Electricity bill',
+              created: '2026-01-01T00:00:00Z',
+              originalFileName: 'bill.pdf',
+              thumbnailUrl: 'https://paperless.example/thumb/42',
+            },
+          }),
+      })
+    );
+
+    await expect(client.paperlessDocumentMissing(42)).resolves.toBe(false);
+  });
+
+  it('returns true when Paperless reports the document is not found', async () => {
+    const client = createDocumentsClient(() => stubHandle({ get: async () => notFound() }));
+
+    await expect(client.paperlessDocumentMissing(42)).resolves.toBe(true);
+  });
+
+  it('returns null for an unavailable documents pillar', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const client = createDocumentsClient(() => stubHandle({ get: async () => unavailable() }));
+
+    await expect(client.paperlessDocumentMissing(42)).resolves.toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('paperless.get'));
+    warn.mockRestore();
   });
 });

@@ -3338,6 +3338,10 @@
                           "itemId": {
                             "type": "string"
                           },
+                          "missing": {
+                            "nullable": true,
+                            "type": "boolean"
+                          },
                           "paperlessDocumentId": {
                             "type": "number"
                           },
@@ -3352,7 +3356,8 @@
                           "paperlessDocumentId",
                           "documentType",
                           "title",
-                          "createdAt"
+                          "createdAt",
+                          "missing"
                         ],
                         "type": "object"
                       },

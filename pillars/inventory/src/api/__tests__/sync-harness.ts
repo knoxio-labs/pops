@@ -42,6 +42,7 @@ export function paperless(status: Partial<PaperlessStatus> = {}): DocumentsClien
     getPaperlessStatus: () =>
       Promise.resolve({ configured: true, available: true, baseUrl: null, ...status }),
     searchPaperlessDocuments: () => Promise.resolve([]),
+    paperlessDocumentMissing: () => Promise.resolve(null),
   };
 }
 

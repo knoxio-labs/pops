@@ -2702,6 +2702,7 @@ export interface operations {
               documentType: string;
               id: number;
               itemId: string;
+              missing: boolean | null;
               paperlessDocumentId: number;
               title: string | null;
             }[];

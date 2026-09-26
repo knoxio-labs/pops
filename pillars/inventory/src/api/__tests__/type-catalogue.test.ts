@@ -60,6 +60,7 @@ function apiFor(mode: 'web' | 'service' | 'none', scopes: readonly string[] = []
       getPaperlessStatus: () =>
         Promise.resolve({ configured: false, available: false, baseUrl: null }),
       searchPaperlessDocuments: () => Promise.resolve([]),
+      paperlessDocumentMissing: () => Promise.resolve(null),
     },
   });
   return transport.requestOn(app);
