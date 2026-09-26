@@ -31,7 +31,7 @@ Embeddings are generated via remote API (not local models) and cached in Redis (
 ## Consequences
 
 - `sqlite-vec` loaded as a runtime extension via `db.loadExtension()` in the database connection setup
-- New `embeddings` table: `source_type`, `source_id`, `content_hash`, `vector`, `model`, `created_at`
+- Vectors and their source metadata live in `src/db/schema/core/embeddings.ts`, plus the `embeddings_vec` virtual table for the vector index itself
 - Embedding generation is a background job (BullMQ via ADR-016), not synchronous with content creation
 - Similarity search is a service-layer function that combines vector k-NN with optional metadata filters
 - The extension must be compiled or distributed for both development (macOS ARM) and production (Linux x86_64) — handled via npm package `sqlite-vec`

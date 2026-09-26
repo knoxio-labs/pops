@@ -19,7 +19,7 @@ The media domain stores movies and TV shows. TV shows have a hierarchical struct
 
 Separate tables. The TV hierarchy (show > season > episode) is a real structural relationship. Encoding it as self-referential `parent_id` in a unified table loses FK enforcement, makes cascade deletes fragile, and requires application-level validation for constraints the database should own.
 
-The polymorphic reference trade-off for cross-type features is acceptable at this scale (~8,100 rows). Application-level validation in tRPC procedures handles the integrity that FKs can't.
+The polymorphic reference trade-off for cross-type features is acceptable at this scale (~8,100 rows). Application-level validation in the REST handlers handles the integrity that FKs can't.
 
 ## Consequences
 

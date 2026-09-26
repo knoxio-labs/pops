@@ -2,33 +2,14 @@
 
 ## Status
 
-Accepted
+**Superseded** by [ADR-033](./adr-033-cross-language-pillar-contracts.md) — 2026-09-26.
 
-## Context
+## What it decided
 
-tRPC provides end-to-end type safety between the React frontend and Express backend (see ADR-014). This works because both sides share a TypeScript type system in the same monorepo. Future services — Cortex (potentially Python), native mobile apps, home automation integrations, Moltbot extensions — cannot consume tRPC types. They need an API contract they can import or generate clients from. Maintaining a separate REST API alongside tRPC would double the API surface and drift over time.
+`trpc-openapi` as a bolt-on to tRPC: annotate procedures with `.meta()` to generate an OpenAPI 3.1 spec from live router definitions, as a secondary contract for non-TypeScript consumers while tRPC stayed primary for the frontend.
 
-## Options Considered
+## Why it no longer holds
 
-| Option                 | Pros                                                                | Cons                                                                               |
-| ---------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Keep tRPC only         | No additional work, no drift risk                                   | Non-TS consumers have no contract, must reverse-engineer HTTP calls                |
-| Replace tRPC with REST | Universal compatibility                                             | Lose end-to-end type safety, massive rewrite, regression risk                      |
-| Replace tRPC with gRPC | Language-neutral, performant, strong contracts via protobuf         | Massive rewrite, browser support requires grpc-web proxy, poor fit for React Query |
-| trpc-openapi bolt-on   | Annotate existing routers, generate OpenAPI 3.1 spec from live code | Additional metadata on each procedure, spec may lag if annotations are forgotten   |
-| Parallel OpenAPI spec  | Hand-written spec independent of tRPC                               | Will drift from implementation, two sources of truth                               |
+There is no tRPC anywhere in the tree (see [ADR-014](./adr-014-trpc.md)), so there is no router to bolt OpenAPI onto. OpenAPI is now each pillar's one and only contract, not a secondary layer: TypeScript pillars project it from zod → ts-rest, and the Rust `contacts` pillar emits it from utoipa (ADR-033).
 
-## Decision
-
-trpc-openapi as a bolt-on to existing routers. Each tRPC procedure that needs external access gets an `.meta()` annotation with HTTP method, path, and description. The OpenAPI 3.1 spec is generated from live router definitions — it cannot drift because it reads the same Zod schemas that tRPC uses.
-
-The approach is incremental: only procedures that external consumers need are annotated. Internal-only procedures (UI-specific queries, batch operations) stay tRPC-only.
-
-## Consequences
-
-- tRPC remains the primary API for the React frontend — no changes to existing frontend code
-- External consumers get an auto-generated OpenAPI 3.1 spec at `/api/openapi.json` and Swagger UI at `/api/docs`
-- New procedures follow a convention: if it's domain CRUD (create, read, list, update, delete), annotate it. If it's UI-specific (search suggestions, form validation), skip it
-- Client generation via `openapi-typescript` or equivalent gives non-TS consumers typed access
-- CI validates that annotated procedures have complete OpenAPI metadata (no partial annotations)
-- The OpenAPI spec is a read-only view of the tRPC API — tRPC remains the source of truth for types
+Stubbed deliberately: the full options table and rationale are in git history.

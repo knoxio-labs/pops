@@ -21,7 +21,7 @@ The system must also support fast retrieval — semantic search, structured quer
 
 ## Decision
 
-Markdown files as source of truth, SQLite as a derived index. Engrams are `.md` files with YAML frontmatter stored in a server-side directory (`/opt/pops/engrams/`). A SQLite index table mirrors frontmatter fields for structured queries. Vector embeddings (cerebrum ADR-001) index the content body for semantic search. The index is fully regenerable from the files — deleting the index and rebuilding it produces an identical result.
+Markdown files as source of truth, SQLite as a derived index. Engrams are `.md` files with YAML frontmatter stored in a server-side directory (`CEREBRUM_ENGRAMS_DIR`, defaulting to `<cwd>/data/engrams`). A SQLite index table mirrors frontmatter fields for structured queries. Vector embeddings (cerebrum ADR-001) index the content body for semantic search. The index is fully regenerable from the files — deleting the index and rebuilding it produces an identical result.
 
 This preserves the "browsable at 89" requirement while giving Thalamus (the indexing layer) the query performance it needs. The Markdown files are the contract; the SQLite index is an optimisation.
 

@@ -59,6 +59,13 @@ carries, never a stored number that can drift from that sum.
 > lives in its own append-only table, and the earliest checkpoint is the
 > opening balance.
 
+> **Amended by POPS-3062–3064 (migrations 0098–0100, 2026-09-07).** The
+> `institutions` table this ADR introduced was dropped. `institution_id` was
+> retargeted onto `accounts.entity_id` — either the contacts entity a
+> `person` account is owed by/owes (already named above), or the bank-typed
+> entity that issues the account. An institution is a contacts entity like
+> any other, not a finance-owned lookup table.
+
 `kind` is a discriminator only. It is a plain `text` column with no SQL CHECK
 constraint (the same convention `transactions.type` already uses — see
 migration `0065`'s header) validated against `ACCOUNT_KINDS`

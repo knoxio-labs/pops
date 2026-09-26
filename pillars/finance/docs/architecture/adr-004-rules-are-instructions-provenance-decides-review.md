@@ -88,56 +88,17 @@ it was the closest number lying around.
 
 ## Consequences
 
-- `HIGH_CONFIDENCE_THRESHOLD` and `MIN_MATCH_CONFIDENCE` lose every caller
-  that decides something once routing (POPS-3128) and the matching floor
-  (POPS-3129) are gone. `HIGH_CONFIDENCE_THRESHOLD` is deleted in this
-  change (POPS-3128) — it was declared **twice**, `contract/corrections-pure.ts`
-  and `api/modules/corrections/types.ts`, re-exported from both barrels, with
-  no test tying the two together, so both copies go the moment routing stops
-  reading either. Same value today by luck, not by any guard; worth
-  remembering the next time a constant this load-bearing is worth copying
-  rather than importing. `MIN_MATCH_CONFIDENCE` outlives it — the invented
-  default and the schema/validation floor still read it until POPS-3130 — and
-  is deleted last, in POPS-3132.
-- Removing the matching floor (POPS-3129) makes any rule stored below 0.7
-  live for the first time. Nothing writes one by hand once POPS-3130 lands,
-  but an AI proposal could have minted one before this ADR. What is actually
-  in prod below the old floor must be enumerated before that change merges —
-  a data question, not a code one.
-- Rule cards stop rendering a confidence percentage next to a rule that, post
-  epic, is unconditional (POPS-3131) — the number was actively misleading
-  once "confidence: 70%" no longer meant "usually", it meant nothing.
+- `HIGH_CONFIDENCE_THRESHOLD` and `MIN_MATCH_CONFIDENCE` are gone; neither
+  routing nor matching reads a confidence number to decide anything.
+- Any rule stored below the old 0.7 floor is now a live matching candidate —
+  confidence never gates matching.
+- Rule cards no longer render a confidence percentage: a rule is
+  unconditional once accepted, so "confidence: 70%" no longer meant
+  "usually" — it meant nothing.
 - `docs/architecture` conventions are per-pillar (see finance ADR-001 through
   finance ADR-003); this ADR extends none of them directly but sits beside them —
   corrections and imports are as central to `finance` as accounts and
   balances.
-- The corrections and imports module READMEs currently describe the 0.9/0.7
-  split as the ladder's classification rule
-  (`api/modules/imports/README.md`, "Learned corrections" bullet;
-  `api/modules/corrections/README.md`, the "type-only rules are terminal"
-  bullet's "no matter how confident the rule is" aside). Both are rewritten
-  in POPS-3128 to describe provenance instead of restating this ADR. The
-  account-scope bullet's separate "regardless of `priority` or `confidence`"
-  aside needs no rewrite — it already describes ordering, not routing, and
-  was accurate before this ADR too.
-- `classifyCorrectionMatch`, `resolveCorrectionApplyStatus` and
-  `correctionOutcomeBucket` are the three functions whose docstrings
-  currently explain the confidence bar; POPS-3128 rewrites them to explain
-  provenance in its place, rather than leaving the old rationale to be
-  rediscovered by whoever touches them next.
-
-## Sequence
-
-POPS-3126 (epic) → POPS-3127 (this ADR) → **POPS-3128** (routing moves to
-provenance, and deletes `HIGH_CONFIDENCE_THRESHOLD`) → **POPS-3129**
-(matching floor removed) → POPS-3130 (tag-rule ordering, stop minting the
-0.7 default) → POPS-3131 (UI) → POPS-3132 (delete `MIN_MATCH_CONFIDENCE`,
-the one constant still standing).
-
-Routing before the floor, deliberately: dropping the floor while the 0.9 bar
-still stood would put sub-0.9 rules in front of rows only to have their
-outcome discarded there — a wider version of the exact defect POPS-3120
-reported.
 
 ## Related
 
@@ -147,5 +108,5 @@ reported.
   pin) producing the same _shape_ of complaint: an instruction the user gave
   is silently unable to reach a row. Independent of this ADR.
 - POPS-2600 — the four-independent-implementations story for pattern
-  matching; the duplicate `HIGH_CONFIDENCE_THRESHOLD` above is the same
-  lesson in miniature.
+  matching; `HIGH_CONFIDENCE_THRESHOLD`, declared twice with no test tying
+  the copies together, was the same lesson in miniature.

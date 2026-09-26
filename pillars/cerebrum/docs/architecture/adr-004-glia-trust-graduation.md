@@ -4,6 +4,8 @@
 
 Accepted
 
+Current wiring status (what Phase this actually reaches in production) is documented in `src/api/modules/glia/README.md` and `src/api/modules/workers/README.md`, not here.
+
 ## Context
 
 Cerebrum's Glia workers (pruner, consolidator, linker, auditor) perform curation actions that modify or archive user content. Consolidating 20 research notes into 2 curated documents creates real value, but also risks losing nuance or destroying content the user cared about. Fully autonomous curation is the goal — a review queue that requires constant user intervention violates the Output > Input principle. But trust must be earned, not assumed.

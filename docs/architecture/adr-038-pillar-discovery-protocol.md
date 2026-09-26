@@ -71,10 +71,14 @@ current target — but the seam and the gating model should be locked now so the
   deploy they still route via their advertised `baseUrl` only (`prod-registry-driven-nginx` scope), not arbitrary host
   resolution.
 
+## Amendment — 2026-09-26
+
+Decisions 2 (discovery toggle, default OFF) and 3 (shared key, `timingSafeEqual`, reserved-core-id rejection) were never built. External registration in `pillars/registry/src/api/modules/external-registry/register.ts` is unconditional: no toggle, no per-request credential, and no reserved-id check, so the "never shadow the seven core ids" constraint above does not hold. "Accepted" applies only to decision 1 (the `DiscoveryTransport` seam). Per-request cross-pillar authentication arrived separately, via [ADR-044](./adr-044-inbound-service-account-scope-enforcement.md), and does not cover registration.
+
 ## References
 
 - [ADR-026](./adr-026-pillar-architecture.md) — the seven-pillar carve and the URI dispatcher.
-- [ADR-027](./adr-027-runtime-pillar-registry.md) — runtime registry; docker network as the trust boundary; shared key.
+- [ADR-027](./adr-027-runtime-pillar-registry.md) — runtime registry (push-with-heartbeat).
 - [ADR-035](./adr-035-pillar-redefinition-and-implicit-kinds.md) — shell-as-UI-pillar; UI surfaces as containers with a `baseUrl`.
 - [dynamic-pillar-registration](../themes/federation/prds/dynamic-pillar-registration.md) — external-pillar register/heartbeat/deregister + reserved-id rule.
 - [prod-registry-driven-nginx](../themes/federation/prds/prod-registry-driven-nginx.md) — deploys the registry-driven nginx that this protocol feeds.
