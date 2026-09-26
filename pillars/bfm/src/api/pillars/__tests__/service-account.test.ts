@@ -128,6 +128,7 @@ describe('the granted scopes', () => {
       'inventory.types',
       'inventory.codes',
       'inventory.media',
+      'barcode.lookup',
     ]);
   });
 

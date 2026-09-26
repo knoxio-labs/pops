@@ -52,6 +52,7 @@ import {
   MobileSaveReceiptDraftBodySchema,
 } from './receipt-draft.js';
 import { bfmDeviceContract } from './rest-device.js';
+import { mobileBarcodeContract } from './rest-mobile-barcode.js';
 import { mobileContactsContract } from './rest-mobile-contacts.js';
 import { mobileFinanceContract } from './rest-mobile-finance.js';
 import { mobileInventoryContract } from './rest-mobile-inventory.js';
@@ -281,6 +282,7 @@ export const bfmContract = c.router(
     operator: bfmOperatorContract,
     mobile: mobileContract,
     mobileContacts: mobileContactsContract,
+    mobileBarcode: mobileBarcodeContract,
     mobileFinance: mobileFinanceContract,
     mobileInventory: mobileInventoryContract,
     mobilePurchases: mobilePurchasesContract,

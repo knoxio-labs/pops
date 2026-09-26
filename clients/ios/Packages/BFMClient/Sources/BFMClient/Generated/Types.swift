@@ -31,6 +31,11 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /health`.
     /// - Remark: Generated from `#/paths//health/get(health)`.
     func health(_ input: Operations.Health.Input) async throws -> Operations.Health.Output
+    /// Look up book metadata for a scanned barcode
+    ///
+    /// - Remark: HTTP `GET /mobile/barcode/lookup/{code}`.
+    /// - Remark: Generated from `#/paths//mobile/barcode/lookup/{code}/get(mobileBarcode.lookup)`.
+    func mobileBarcode_lookup(_ input: Operations.MobileBarcode_lookup.Input) async throws -> Operations.MobileBarcode_lookup.Output
     /// What the app should render, and who the federation says it is talking to
     ///
     /// - Remark: HTTP `GET /mobile/bootstrap`.
@@ -245,6 +250,19 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//health/get(health)`.
     internal func health(headers: Operations.Health.Input.Headers = .init()) async throws -> Operations.Health.Output {
         try await health(Operations.Health.Input(headers: headers))
+    }
+    /// Look up book metadata for a scanned barcode
+    ///
+    /// - Remark: HTTP `GET /mobile/barcode/lookup/{code}`.
+    /// - Remark: Generated from `#/paths//mobile/barcode/lookup/{code}/get(mobileBarcode.lookup)`.
+    internal func mobileBarcode_lookup(
+        path: Operations.MobileBarcode_lookup.Input.Path,
+        headers: Operations.MobileBarcode_lookup.Input.Headers = .init()
+    ) async throws -> Operations.MobileBarcode_lookup.Output {
+        try await mobileBarcode_lookup(Operations.MobileBarcode_lookup.Input(
+            path: path,
+            headers: headers
+        ))
     }
     /// What the app should render, and who the federation says it is talking to
     ///
@@ -2327,6 +2345,999 @@ internal enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Look up book metadata for a scanned barcode
+    ///
+    /// - Remark: HTTP `GET /mobile/barcode/lookup/{code}`.
+    /// - Remark: Generated from `#/paths//mobile/barcode/lookup/{code}/get(mobileBarcode.lookup)`.
+    internal enum MobileBarcode_lookup {
+        internal static let id: Swift.String = "mobileBarcode.lookup"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/path/code`.
+                internal var code: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - code:
+                internal init(code: Swift.String) {
+                    self.code = code
+                }
+            }
+            internal var path: Operations.MobileBarcode_lookup.Input.Path
+            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileBarcode_lookup.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileBarcode_lookup.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileBarcode_lookup.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.MobileBarcode_lookup.Input.Path,
+                headers: Operations.MobileBarcode_lookup.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/outcome`.
+                            internal enum OutcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case found = "found"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/outcome`.
+                            internal var outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.OutcomePayload
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product`.
+                            internal struct ProductPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/attributes`.
+                                internal struct AttributesPayload: Codable, Hashable, Sendable {
+                                    /// A container of undocumented properties.
+                                    internal var additionalProperties: [String: Swift.String]
+                                    /// Creates a new `AttributesPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - additionalProperties: A container of undocumented properties.
+                                    internal init(additionalProperties: [String: Swift.String] = .init()) {
+                                        self.additionalProperties = additionalProperties
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeAdditionalProperties(additionalProperties)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/attributes`.
+                                internal var attributes: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.AttributesPayload
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/code`.
+                                internal var code: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/ContributorsPayload`.
+                                internal struct ContributorsPayloadPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/ContributorsPayload/name`.
+                                    internal var name: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/ContributorsPayload/role`.
+                                    internal var role: Swift.String?
+                                    /// Creates a new `ContributorsPayloadPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - name:
+                                    ///   - role:
+                                    internal init(
+                                        name: Swift.String,
+                                        role: Swift.String? = nil
+                                    ) {
+                                        self.name = name
+                                        self.role = role
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case name
+                                        case role
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.name = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .name
+                                        )
+                                        self.role = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .role
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "name",
+                                            "role"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/contributors`.
+                                internal typealias ContributorsPayload = [Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.ContributorsPayloadPayload]
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/contributors`.
+                                internal var contributors: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.ContributorsPayload
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/description`.
+                                internal var description: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/fetchedAt`.
+                                internal var fetchedAt: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/imageUrls`.
+                                internal var imageUrls: [Swift.String]
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/kind`.
+                                internal enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case book = "book"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/kind`.
+                                internal var kind: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.KindPayload
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/language`.
+                                internal var language: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/pageCount`.
+                                internal var pageCount: Swift.Int?
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/publishedDate`.
+                                internal var publishedDate: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/publisher`.
+                                internal var publisher: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/source`.
+                                internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case openLibrary = "open_library"
+                                    case googleBooks = "google_books"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/source`.
+                                internal var source: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.SourcePayload
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/subjects`.
+                                internal var subjects: [Swift.String]
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/subtitle`.
+                                internal var subtitle: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product/title`.
+                                internal var title: Swift.String
+                                /// Creates a new `ProductPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - attributes:
+                                ///   - code:
+                                ///   - contributors:
+                                ///   - description:
+                                ///   - fetchedAt:
+                                ///   - imageUrls:
+                                ///   - kind:
+                                ///   - language:
+                                ///   - pageCount:
+                                ///   - publishedDate:
+                                ///   - publisher:
+                                ///   - source:
+                                ///   - subjects:
+                                ///   - subtitle:
+                                ///   - title:
+                                internal init(
+                                    attributes: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.AttributesPayload,
+                                    code: Swift.String,
+                                    contributors: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.ContributorsPayload,
+                                    description: Swift.String? = nil,
+                                    fetchedAt: Swift.String,
+                                    imageUrls: [Swift.String],
+                                    kind: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.KindPayload,
+                                    language: Swift.String? = nil,
+                                    pageCount: Swift.Int? = nil,
+                                    publishedDate: Swift.String? = nil,
+                                    publisher: Swift.String? = nil,
+                                    source: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.SourcePayload,
+                                    subjects: [Swift.String],
+                                    subtitle: Swift.String? = nil,
+                                    title: Swift.String
+                                ) {
+                                    self.attributes = attributes
+                                    self.code = code
+                                    self.contributors = contributors
+                                    self.description = description
+                                    self.fetchedAt = fetchedAt
+                                    self.imageUrls = imageUrls
+                                    self.kind = kind
+                                    self.language = language
+                                    self.pageCount = pageCount
+                                    self.publishedDate = publishedDate
+                                    self.publisher = publisher
+                                    self.source = source
+                                    self.subjects = subjects
+                                    self.subtitle = subtitle
+                                    self.title = title
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case attributes
+                                    case code
+                                    case contributors
+                                    case description
+                                    case fetchedAt
+                                    case imageUrls
+                                    case kind
+                                    case language
+                                    case pageCount
+                                    case publishedDate
+                                    case publisher
+                                    case source
+                                    case subjects
+                                    case subtitle
+                                    case title
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.attributes = try container.decode(
+                                        Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.AttributesPayload.self,
+                                        forKey: .attributes
+                                    )
+                                    self.code = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .code
+                                    )
+                                    self.contributors = try container.decode(
+                                        Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.ContributorsPayload.self,
+                                        forKey: .contributors
+                                    )
+                                    self.description = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .description
+                                    )
+                                    self.fetchedAt = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .fetchedAt
+                                    )
+                                    self.imageUrls = try container.decode(
+                                        [Swift.String].self,
+                                        forKey: .imageUrls
+                                    )
+                                    self.kind = try container.decode(
+                                        Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.KindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.language = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .language
+                                    )
+                                    self.pageCount = try container.decodeIfPresent(
+                                        Swift.Int.self,
+                                        forKey: .pageCount
+                                    )
+                                    self.publishedDate = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .publishedDate
+                                    )
+                                    self.publisher = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .publisher
+                                    )
+                                    self.source = try container.decode(
+                                        Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.SourcePayload.self,
+                                        forKey: .source
+                                    )
+                                    self.subjects = try container.decode(
+                                        [Swift.String].self,
+                                        forKey: .subjects
+                                    )
+                                    self.subtitle = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .subtitle
+                                    )
+                                    self.title = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .title
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "attributes",
+                                        "code",
+                                        "contributors",
+                                        "description",
+                                        "fetchedAt",
+                                        "imageUrls",
+                                        "kind",
+                                        "language",
+                                        "pageCount",
+                                        "publishedDate",
+                                        "publisher",
+                                        "source",
+                                        "subjects",
+                                        "subtitle",
+                                        "title"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1/product`.
+                            internal var product: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - outcome:
+                            ///   - product:
+                            internal init(
+                                outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.OutcomePayload,
+                                product: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload
+                            ) {
+                                self.outcome = outcome
+                                self.product = product
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case outcome
+                                case product
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.outcome = try container.decode(
+                                    Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.OutcomePayload.self,
+                                    forKey: .outcome
+                                )
+                                self.product = try container.decode(
+                                    Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload.ProductPayload.self,
+                                    forKey: .product
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "outcome",
+                                    "product"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case1`.
+                        case case1(Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case2/outcome`.
+                            internal enum OutcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case notFound = "not_found"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case2/outcome`.
+                            internal var outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.OutcomePayload
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - outcome:
+                            internal init(outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.OutcomePayload) {
+                                self.outcome = outcome
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case outcome
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.outcome = try container.decode(
+                                    Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.OutcomePayload.self,
+                                    forKey: .outcome
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "outcome"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case2`.
+                        case case2(Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload)
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3`.
+                        internal struct Case3Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3/outcome`.
+                            internal enum OutcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case unavailable = "unavailable"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3/outcome`.
+                            internal var outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload.OutcomePayload
+                            /// Creates a new `Case3Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - outcome:
+                            internal init(outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload.OutcomePayload) {
+                                self.outcome = outcome
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case outcome
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.outcome = try container.decode(
+                                    Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload.OutcomePayload.self,
+                                    forKey: .outcome
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "outcome"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3`.
+                        case case3(Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case3(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            case let .case3(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/application\/json`.
+                    case json(Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileBarcode_lookup.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileBarcode_lookup.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/barcode/lookup/{code}/get(mobileBarcode.lookup)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileBarcode_lookup.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileBarcode_lookup.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case invalidRequest = "invalid_request"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/400/content/json/code`.
+                        internal var code: Operations.MobileBarcode_lookup.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileBarcode_lookup.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileBarcode_lookup.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/400/content/application\/json`.
+                    case json(Operations.MobileBarcode_lookup.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileBarcode_lookup.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileBarcode_lookup.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileBarcode_lookup.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/barcode/lookup/{code}/get(mobileBarcode.lookup)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileBarcode_lookup.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileBarcode_lookup.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidToken = "invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/401/content/json/code`.
+                        internal var code: Operations.MobileBarcode_lookup.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileBarcode_lookup.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileBarcode_lookup.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/401/content/application\/json`.
+                    case json(Operations.MobileBarcode_lookup.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileBarcode_lookup.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileBarcode_lookup.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileBarcode_lookup.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/barcode/lookup/{code}/get(mobileBarcode.lookup)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileBarcode_lookup.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileBarcode_lookup.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/403/content/application\/json`.
+                    case json(Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileBarcode_lookup.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileBarcode_lookup.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/barcode/lookup/{code}/get(mobileBarcode.lookup)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileBarcode_lookup.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileBarcode_lookup.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/429/content/json/code`.
+                        internal var code: Operations.MobileBarcode_lookup.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileBarcode_lookup.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileBarcode_lookup.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/429/content/application\/json`.
+                    case json(Operations.MobileBarcode_lookup.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileBarcode_lookup.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileBarcode_lookup.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileBarcode_lookup.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/barcode/lookup/{code}/get(mobileBarcode.lookup)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileBarcode_lookup.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileBarcode_lookup.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
                             response: self
                         )
                     }

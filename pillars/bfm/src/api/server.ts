@@ -51,6 +51,7 @@ import {
 } from '../db/index.js';
 import { createBfmApiApp } from './app.js';
 import { resolveAccessTokenSigningKey } from './auth/signing-key.js';
+import { createMobileBarcodeClient } from './barcode/client.js';
 import {
   resolvePairingCodeIssuanceLimit,
   resolvePairingCodeTtlMs,
@@ -113,6 +114,7 @@ const gateway = createPillarGateway();
 const finance = createMobileFinanceClient(gateway);
 const purchases = createMobilePurchasesClient(gateway);
 const contacts = createMobileContactsClient(gateway);
+const barcode = createMobileBarcodeClient(gateway);
 
 // Its own gateway, not the shared one above: this is the one leg that must
 // send an extra header on every call, and `extraHeaders` is scoped per
@@ -157,6 +159,7 @@ const app = createBfmApiApp({
   inventoryMedia,
   purchases,
   contacts,
+  barcode,
   refreshTokenTtlMs,
   issuanceLimiter,
   pairingCodeTtlMs,
