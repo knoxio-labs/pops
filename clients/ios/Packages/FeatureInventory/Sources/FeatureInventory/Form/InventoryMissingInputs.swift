@@ -43,16 +43,26 @@ internal enum InventoryMissingInputs {
         _ value: InventoryComputedValue, of item: InventoryItem,
         fields: [InventoryCatalogueField], itemName: (String) -> String?
     ) -> [InventoryMissingInput] {
+        named(value, rootItemId: item.id, rootName: item.name, fields: fields, itemName: itemName)
+    }
+
+    /// Names an unavailable computed value's inputs against a root that need
+    /// not be a saved item yet: the item form's draft, evaluated live from
+    /// its current values before Create has ever run.
+    internal static func named(
+        _ value: InventoryComputedValue, rootItemId: String, rootName: String,
+        fields: [InventoryCatalogueField], itemName: (String) -> String?
+    ) -> [InventoryMissingInput] {
         let labels = Dictionary(
             fields.map { ($0.id, $0.label) }, uniquingKeysWith: { first, _ in first })
         var seen: Set<String> = []
-        return inputs(of: value, rootItemId: item.id).compactMap { input in
+        return inputs(of: value, rootItemId: rootItemId).compactMap { input in
             let id = "\(input.itemId):\(input.fieldId)"
             guard seen.insert(id).inserted else { return nil }
-            let isOwn = input.itemId == item.id
+            let isOwn = input.itemId == rootItemId
             return InventoryMissingInput(
                 id: id, field: labels[input.fieldId] ?? "Unknown field",
-                item: isOwn ? item.name : itemName(input.itemId) ?? "Unknown item",
+                item: isOwn ? rootName : itemName(input.itemId) ?? "Unknown item",
                 isOnOwnItem: isOwn, reason: InventoryValueUnavailableReason(rawValue: input.reason))
         }
     }
