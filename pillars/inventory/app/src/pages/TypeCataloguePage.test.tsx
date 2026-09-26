@@ -94,6 +94,7 @@ const published: Catalogue = {
       key: 'electronics',
       label: 'Electronics',
       legacyLabels: [],
+      parentTypeId: null,
       presentation: {},
       replacedBy: null,
       revision: 1,

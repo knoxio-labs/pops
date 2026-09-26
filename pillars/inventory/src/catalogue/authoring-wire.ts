@@ -122,6 +122,7 @@ function typeWire(type: PersistedItemType): CatalogueTypeWire {
     id: type.id,
     key: type.key,
     label: type.label,
+    parentTypeId: type.parentTypeId,
     description: type.description,
     sortOrder: type.sortOrder,
     capabilities: [...type.capabilities],

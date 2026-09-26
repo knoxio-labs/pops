@@ -14,6 +14,9 @@ export const SUPPORTED_INVENTORY_PROTOCOL = 2;
  */
 export const PERSISTED_CATALOGUE_PROTOCOL = 2;
 
+/** Protocol for catalogues whose types have parents. */
+export const TYPE_TREE_PROTOCOL = 3;
+
 function requireMeta(db: CommandDb, key: SyncMetaKey): string {
   const row = db.select().from(syncMeta).where(eq(syncMeta.key, key)).get();
   if (row === undefined) throw new Error(`sync_meta has no ${key}; migration 0012 seeds it`);

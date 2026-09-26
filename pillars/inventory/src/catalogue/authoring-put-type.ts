@@ -22,6 +22,7 @@ interface TypeDefaults {
   readonly legacyLabels: readonly string[];
   readonly presentation: Record<string, unknown>;
   readonly archivedAt: string | null;
+  readonly parentTypeId: string | null;
 }
 
 function typeDefaults(current: typeof itemTypes.$inferSelect | undefined): TypeDefaults {
@@ -33,6 +34,7 @@ function typeDefaults(current: typeof itemTypes.$inferSelect | undefined): TypeD
       legacyLabels: [],
       presentation: {},
       archivedAt: null,
+      parentTypeId: null,
     };
   }
   return {
@@ -42,7 +44,17 @@ function typeDefaults(current: typeof itemTypes.$inferSelect | undefined): TypeD
     legacyLabels: JSON.parse(current.legacyLabelsJson) as string[],
     presentation: JSON.parse(current.presentationJson) as Record<string, unknown>,
     archivedAt: current.archivedAt,
+    parentTypeId: current.parentTypeId,
   };
+}
+
+function resolvedParentTypeId(
+  current: typeof itemTypes.$inferSelect | undefined,
+  operation: Extract<DraftOperation, { kind: 'put_type' }>
+): string | null {
+  return operation.parentTypeId === undefined
+    ? (current?.parentTypeId ?? null)
+    : operation.parentTypeId;
 }
 
 interface TypeWriteContext {
@@ -58,7 +70,14 @@ interface TypeWriteContext {
 function writeType(context: TypeWriteContext): void {
   const { db, revision, current, operation, id, key, label } = context;
   const defaults = typeDefaults(current);
-  const row = persistedTypeRow(revision, { ...defaults, ...operation, id, key, label });
+  const row = persistedTypeRow(revision, {
+    ...defaults,
+    ...operation,
+    id,
+    key,
+    label,
+    parentTypeId: resolvedParentTypeId(current, operation),
+  });
   assertReplacedStaysArchived(id, current, row.archivedAt);
   db.insert(itemTypes)
     .values(row)
@@ -73,6 +92,7 @@ function writeType(context: TypeWriteContext): void {
         legacyLabelsJson: row.legacyLabelsJson,
         presentationJson: row.presentationJson,
         archivedAt: row.archivedAt,
+        parentTypeId: row.parentTypeId,
       },
     })
     .run();
@@ -103,6 +123,9 @@ export function applyPutType(
     operation.key.toLocaleLowerCase() !== current.key.toLocaleLowerCase()
   ) {
     failIssues([issue(id, 'key', 'immutable_identity', 'Published type keys cannot be changed')]);
+  }
+  if (resolvedParentTypeId(current, operation) === id) {
+    failIssues([issue(id, 'parentTypeId', 'type_parent_cycle', 'A type cannot be its own parent')]);
   }
   writeType({
     db,
