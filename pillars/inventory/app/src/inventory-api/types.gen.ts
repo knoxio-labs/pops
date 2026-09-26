@@ -6726,7 +6726,7 @@ export type WebBatchCreateData = {
    * Body
    */
   body?: {
-    destination:
+    destination?:
       | {
           kind: 'location';
           locationId: string;
