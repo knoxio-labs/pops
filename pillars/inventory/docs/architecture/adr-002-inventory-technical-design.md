@@ -535,7 +535,7 @@ The application version that carries this migration reads and writes only persis
 
 ## Wire contract (`/mobile/inventory/*`, bfm)
 
-Every route: `requireDevice`, then `requireCapability`, the mobile rate limit, header `Pops-Inventory-Protocol: <n>`. Protocol 1 is the temporary revision-1 compatibility projection; D5's persisted catalogue and value-entry shapes are protocol 2. Every route declares `MOBILE_REQUEST_RESPONSES`, `MOBILE_PERIMETER_RESPONSES`, `MOBILE_UPSTREAM_RESPONSES` and `426 client_too_old`. Cursors are opaque base64url that the app echoes unmodified; a foreign cursor is `400 invalid_cursor`.
+Every route: `requireDevice`, then `requireCapability`, the mobile rate limit, no client-supplied protocol header. Protocol 1 is the temporary revision-1 compatibility projection; D5's persisted catalogue and value-entry shapes are protocol 2. Every route declares `MOBILE_REQUEST_RESPONSES`, `MOBILE_PERIMETER_RESPONSES`, `MOBILE_UPSTREAM_RESPONSES` and `426 client_too_old`. Cursors are opaque base64url that the app echoes unmodified; a foreign cursor is `400 invalid_cursor`.
 
 | Route                                    | Capability        | Request                                              | Response                                                                                                      |
 | ---------------------------------------- | ----------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
