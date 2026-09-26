@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import Testing
 
 @testable import BFMClient
@@ -35,6 +36,19 @@ internal struct CatalogueDefaultRefusal: Sendable, CustomTestStringConvertible {
             field: Protocol2Wire.field(
                 id: "r", key: "r", label: "R", kind: "reference", referenceKinds: ["item"],
                 defaultValues: #"[{"targetKind":"item","targetId":"x"}]"#)),
+        Self(
+            label: "an option the field does not have",
+            field: Protocol2Wire.field(
+                id: "e", key: "e", label: "E", kind: "enum", enumOptionIds: ["opt-matte"],
+                defaultValues: #"[{"optionId":"opt-gloss"}]"#)),
+        Self(
+            label: "an archived option",
+            field: Protocol2Wire.field(
+                id: "a", key: "a", label: "A", kind: "enum", enumOptionIds: ["opt-matte"],
+                defaultValues: #"[{"optionId":"opt-matte"}]"#
+            ).replacingOccurrences(
+                of: #""sortOrder":0,"archivedAt":null"#,
+                with: #""sortOrder":0,"archivedAt":"2026-09-01T00:00:00Z""#)),
     ]
 }
 
