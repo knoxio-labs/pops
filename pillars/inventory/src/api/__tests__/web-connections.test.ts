@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
 import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FixtureSchema } from '../../contract/rest-fixtures.js';
 import { WebConnectionsResponseSchema as WebConnectionsSchema } from '../../contract/rest-web-connections.js';
 import { items, type Lifecycle } from '../../db/index.js';
+import { readConnectionsPage } from '../web/connections-registry.js';
 import {
   createItem,
   openSyncHarness,
@@ -215,6 +217,44 @@ describe('GET /web/connections', () => {
     ).toString('base64url');
     const response = await h.api.get('/web/connections').query({ cursor: foreignCursor });
     expect(response.status).toBe(400);
+  });
+
+  it('keeps filtering, ordering and keyset bounds in the page query', async () => {
+    const first = randomUUID();
+    const second = randomUUID();
+    await apply(createItem(first, 'Alpha'), createItem(second, 'Beta'));
+    const fixtureId = await fixture('Shared outlet');
+    await connectFixture(first, fixtureId);
+    await connectFixture(second, fixtureId);
+
+    const statements: string[] = [];
+    const loggedDb = drizzle<Record<string, unknown>>(h.db.raw, {
+      logger: {
+        logQuery(query) {
+          statements.push(query);
+        },
+      },
+    });
+    const firstPage = readConnectionsPage(loggedDb, { kind: 'fixture', q: 'outlet' }, { limit: 1 });
+    const pageQuery = statements.find((statement) => statement.includes('LIMIT'));
+
+    expect(firstPage.rows).toHaveLength(1);
+    expect(pageQuery).toContain('far_kind = ?');
+    expect(pageQuery).toContain('lower(far_name) LIKE lower(?)');
+    expect(pageQuery).toContain(
+      'ORDER BY item_name COLLATE NOCASE, far_name COLLATE NOCASE, row_id'
+    );
+    expect(pageQuery).toContain('LIMIT ?');
+    expect(firstPage.nextCursor).not.toBeNull();
+
+    statements.length = 0;
+    readConnectionsPage(
+      loggedDb,
+      { kind: 'fixture', q: 'outlet' },
+      { cursor: firstPage.nextCursor ?? undefined, limit: 1 }
+    );
+    const nextPageQuery = statements.find((statement) => statement.includes('LIMIT'));
+    expect(nextPageQuery).toContain('item_name COLLATE NOCASE > ?');
   });
 
   it('edges touching a deleted item are excluded; inactive items are kept', async () => {

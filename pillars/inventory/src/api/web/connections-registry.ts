@@ -1,26 +1,34 @@
-import { and, eq, getTableColumns, isNull } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/sqlite-core';
+import { and, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { resolveProtocol1TypeById } from '../../catalogue/index.js';
-import { fixtures, itemFixtureConnections, itemConnections, items } from '../../db/index.js';
+import { WebConnectionsResponseSchema } from '../../contract/rest-web-connections.js';
 import { ValidationError } from '../shared/errors.js';
 import { decodeCursor, encodeCursor } from '../sync/cursor.js';
 
-import type { WebConnectionsResponseSchema } from '../../contract/rest-web-connections.js';
-import type { FixtureRow, ItemRow } from '../../db/index.js';
 import type { CommandDb } from '../../domain/commands/index.js';
 
 type WebConnectionsResponse = z.infer<typeof WebConnectionsResponseSchema>;
 type ConnectionRow = WebConnectionsResponse['rows'][number];
-type RawItemEnd = Pick<ItemRow, 'id' | 'name' | 'code' | 'typeId' | 'isContainer' | 'lifecycle'>;
-type RawItemConnection = { id: number; createdAt: string; itemA: RawItemEnd; itemB: RawItemEnd };
-type RawFixtureConnection = {
-  id: number;
-  createdAt: string;
-  item: RawItemEnd;
-  fixture: Pick<FixtureRow, 'id' | 'name' | 'type' | 'locationId'>;
+type ConnectionSummary = WebConnectionsResponse['summary'];
+type RawItemEnd = Pick<ConnectionRow['item'], 'id' | 'name' | 'code' | 'lifecycle'> & {
+  typeId: string | null;
+  isContainer: number;
 };
+type RawConnectionRow = Record<
+  'row_id' | 'created_at' | 'item_id' | 'item_name' | 'item_lifecycle' | 'far_id' | 'far_name',
+  string
+> &
+  Record<
+    | 'item_code'
+    | 'item_type_id'
+    | 'far_code'
+    | 'far_type_id'
+    | 'far_lifecycle'
+    | 'far_type'
+    | 'far_location_id',
+    string | null
+  > & { item_is_container: number; far_kind: 'item' | 'fixture'; far_is_container: number | null };
 
 const cursorSchema = z.object({
   v: z.literal(1),
@@ -30,29 +38,102 @@ const cursorSchema = z.object({
   key: z.tuple([z.string(), z.string(), z.string()]),
 });
 type ConnectionsCursor = z.infer<typeof cursorSchema>;
-
-const compareNoCase = (left: string, right: string): number => {
-  const leftKey = left.toLowerCase();
-  const rightKey = right.toLowerCase();
-  return Number(leftKey > rightKey) - Number(leftKey < rightKey);
+type PageRequest = {
+  kind: ConnectionsCursor['kind'];
+  query: string;
+  cursor: ConnectionsCursor | null;
+  limit: number;
 };
 
-const compareId = (left: string, right: string): number =>
-  Number(left > right) - Number(left < right);
+const escapeLike = (value: string): string =>
+  value.replace(/[\\%_]/gu, (character) => `\\${character}`);
 
-const compareEnd = (left: RawItemEnd, right: RawItemEnd): number =>
-  compareNoCase(left.name, right.name) || compareId(left.id, right.id);
+function like(expression: SQLWrapper, pattern: string): SQL {
+  return sql`lower(${expression}) LIKE lower(${pattern}) ESCAPE '\\'`;
+}
+
+function connectionRowsCte(): SQL {
+  return sql.raw(
+    `item_edges AS (SELECT ic.id,ic.created_at,a.id a_id,a.name a_name,a.code a_code,a.type_id a_type_id,a.is_container a_is_container,a.lifecycle a_lifecycle,b.id b_id,b.name b_name,b.code b_code,b.type_id b_type_id,b.is_container b_is_container,b.lifecycle b_lifecycle,CASE WHEN a.name COLLATE NOCASE < b.name COLLATE NOCASE OR (a.name COLLATE NOCASE = b.name COLLATE NOCASE AND a.id <= b.id) THEN 1 ELSE 0 END a_first FROM item_connections ic JOIN items a ON a.id=ic.item_a_id JOIN items b ON b.id=ic.item_b_id WHERE a.deleted_at IS NULL AND b.deleted_at IS NULL),connection_rows AS (SELECT 'item:'||id row_id,created_at,CASE WHEN a_first=1 THEN a_id ELSE b_id END item_id,CASE WHEN a_first=1 THEN a_name ELSE b_name END item_name,CASE WHEN a_first=1 THEN a_code ELSE b_code END item_code,CASE WHEN a_first=1 THEN a_type_id ELSE b_type_id END item_type_id,CASE WHEN a_first=1 THEN a_is_container ELSE b_is_container END item_is_container,CASE WHEN a_first=1 THEN a_lifecycle ELSE b_lifecycle END item_lifecycle,'item' far_kind,CASE WHEN a_first=1 THEN b_id ELSE a_id END far_id,CASE WHEN a_first=1 THEN b_name ELSE a_name END far_name,CASE WHEN a_first=1 THEN b_code ELSE a_code END far_code,CASE WHEN a_first=1 THEN b_type_id ELSE a_type_id END far_type_id,CASE WHEN a_first=1 THEN b_is_container ELSE a_is_container END far_is_container,CASE WHEN a_first=1 THEN b_lifecycle ELSE a_lifecycle END far_lifecycle,NULL far_type,NULL far_location_id FROM item_edges UNION ALL SELECT 'fixture:'||ifc.id row_id,ifc.created_at,i.id item_id,i.name item_name,i.code item_code,i.type_id item_type_id,i.is_container item_is_container,i.lifecycle item_lifecycle,'fixture' far_kind,f.id far_id,f.name far_name,NULL far_code,NULL far_type_id,NULL far_is_container,NULL far_lifecycle,f.type far_type,f.location_id far_location_id FROM item_fixture_connections ifc JOIN items i ON i.id=ifc.item_id JOIN fixtures f ON f.id=ifc.fixture_id WHERE i.deleted_at IS NULL)`
+  );
+}
+
+function cursorCondition(cursor: ConnectionsCursor | null): SQL | undefined {
+  if (cursor === null) return undefined;
+  const [itemName, farName, rowId] = cursor.key;
+  return sql`(item_name COLLATE NOCASE > ${itemName} OR (item_name COLLATE NOCASE = ${itemName} AND (far_name COLLATE NOCASE > ${farName} OR (far_name COLLATE NOCASE = ${farName} AND row_id > ${rowId}))))`;
+}
+
+function filterCondition(
+  kind: ConnectionsCursor['kind'],
+  query: string,
+  cursor: ConnectionsCursor | null
+): SQL {
+  const conditions: SQL[] = [];
+  if (kind !== 'all') conditions.push(sql`far_kind = ${kind}`);
+  if (query !== '') {
+    const pattern = `%${escapeLike(query)}%`;
+    const fields = [sql`item_name`, sql`item_code`, sql`far_name`, sql`far_code`];
+    conditions.push(or(...fields.map((field) => like(field, pattern))) ?? sql`0`);
+  }
+  const after = cursorCondition(cursor);
+  if (after !== undefined) conditions.push(after);
+  return and(...conditions) ?? sql`1`;
+}
+
+function readPageRows(db: CommandDb, request: PageRequest): RawConnectionRow[] {
+  const condition = filterCondition(request.kind, request.query, request.cursor);
+  return db.all(sql<RawConnectionRow>`
+    WITH ${connectionRowsCte()}, filtered AS (
+      SELECT * FROM connection_rows WHERE ${condition}
+    )
+    SELECT * FROM filtered
+    ORDER BY item_name COLLATE NOCASE, far_name COLLATE NOCASE, row_id
+    LIMIT ${request.limit + 1}
+  `);
+}
+
+function readSummary(
+  db: CommandDb,
+  request: Pick<PageRequest, 'kind' | 'query'>
+): ConnectionSummary {
+  const condition = filterCondition(request.kind, request.query, null);
+  const [summary] = db.all(
+    sql<ConnectionSummary>`WITH ${connectionRowsCte()}, filtered AS (SELECT item_id, far_kind, far_id FROM connection_rows WHERE ${condition}) SELECT COUNT(*) AS connections, (SELECT COUNT(*) FROM (SELECT item_id AS id FROM filtered UNION SELECT far_id AS id FROM filtered WHERE far_kind = 'item')) AS items, COUNT(DISTINCT CASE WHEN far_kind = 'fixture' THEN far_id END) AS fixtures FROM filtered`
+  );
+  return WebConnectionsResponseSchema.shape.summary.parse(
+    summary ?? { connections: 0, items: 0, fixtures: 0 }
+  );
+}
 
 function typeKeysFor(db: CommandDb, ends: readonly RawItemEnd[]): Map<string, string | null> {
   const keysByTypeId = new Map<string, string | null>();
   for (const end of ends) {
-    if (end.typeId !== null && !keysByTypeId.has(end.typeId)) {
+    if (end.typeId !== null && !keysByTypeId.has(end.typeId))
       keysByTypeId.set(end.typeId, resolveProtocol1TypeById(db, end.typeId)?.key ?? null);
-    }
   }
   return new Map(
     ends.map((end) => [end.id, end.typeId === null ? null : (keysByTypeId.get(end.typeId) ?? null)])
   );
+}
+
+function rawItemEnd(row: RawConnectionRow, far: boolean): RawItemEnd {
+  const id = far ? row.far_id : row.item_id;
+  const name = far ? row.far_name : row.item_name;
+  const code = far ? row.far_code : row.item_code;
+  const typeId = far ? row.far_type_id : row.item_type_id;
+  const isContainer = far ? row.far_is_container : row.item_is_container;
+  const lifecycle = far ? row.far_lifecycle : row.item_lifecycle;
+  if (isContainer === null || lifecycle === null)
+    throw new Error('fixture endpoints are not items');
+  return {
+    id,
+    name,
+    code,
+    typeId,
+    isContainer,
+    lifecycle,
+  };
 }
 
 function toItemEnd(
@@ -70,87 +151,55 @@ function toItemEnd(
   };
 }
 
-function rowsFromConnections(
-  db: CommandDb,
-  itemRows: readonly RawItemConnection[],
-  fixtureRows: readonly RawFixtureConnection[]
-): ConnectionRow[] {
-  const ends = [
-    ...itemRows.flatMap((row) => [row.itemA, row.itemB]),
-    ...fixtureRows.map((row) => row.item),
-  ];
+function rowsFromConnections(db: CommandDb, rows: readonly RawConnectionRow[]): ConnectionRow[] {
+  const ends = rows.flatMap((row) => [
+    rawItemEnd(row, false),
+    ...(row.far_kind === 'item' ? [rawItemEnd(row, true)] : []),
+  ]);
   const typeKeys = typeKeysFor(db, ends);
-  return [
-    ...itemRows.map((row) => {
-      const [item, far] =
-        compareEnd(row.itemA, row.itemB) <= 0 ? [row.itemA, row.itemB] : [row.itemB, row.itemA];
-      return {
-        id: `item:${row.id}`,
-        createdAt: row.createdAt,
-        item: toItemEnd(item, typeKeys),
-        far: toItemEnd(far, typeKeys),
-      };
-    }),
-    ...fixtureRows.map((row) => ({
-      id: `fixture:${row.id}`,
-      createdAt: row.createdAt,
-      item: toItemEnd(row.item, typeKeys),
-      far: {
-        kind: 'fixture' as const,
-        id: row.fixture.id,
-        name: row.fixture.name,
-        type: row.fixture.type,
-        locationId: row.fixture.locationId,
-      },
-    })),
-  ];
+  return rows.map((row) => ({
+    id: row.row_id,
+    createdAt: row.created_at,
+    item: toItemEnd(rawItemEnd(row, false), typeKeys),
+    far:
+      row.far_kind === 'item'
+        ? toItemEnd(rawItemEnd(row, true), typeKeys)
+        : {
+            kind: 'fixture' as const,
+            id: row.far_id,
+            name: row.far_name,
+            type: row.far_type ?? '',
+            locationId: row.far_location_id,
+          },
+  }));
 }
 
-function readRows(db: CommandDb): ConnectionRow[] {
-  const itemA = alias(items, 'item_a'),
-    itemB = alias(items, 'item_b');
-  const itemRows = db
-    .select({
-      id: itemConnections.id,
-      createdAt: itemConnections.createdAt,
-      itemA: getTableColumns(itemA),
-      itemB: getTableColumns(itemB),
-    })
-    .from(itemConnections)
-    .innerJoin(itemA, eq(itemConnections.itemAId, itemA.id))
-    .innerJoin(itemB, eq(itemConnections.itemBId, itemB.id))
-    .where(and(isNull(itemA.deletedAt), isNull(itemB.deletedAt)))
-    .all();
-  const fixtureRows = db
-    .select({
-      id: itemFixtureConnections.id,
-      createdAt: itemFixtureConnections.createdAt,
-      item: getTableColumns(items),
-      fixture: getTableColumns(fixtures),
-    })
-    .from(itemFixtureConnections)
-    .innerJoin(items, eq(itemFixtureConnections.itemId, items.id))
-    .innerJoin(fixtures, eq(itemFixtureConnections.fixtureId, fixtures.id))
-    .where(isNull(items.deletedAt))
-    .all();
-  return rowsFromConnections(db, itemRows, fixtureRows);
+/** Read the resolved, filtered, cursor-paged web connection registry. */
+export function readConnectionsPage(
+  db: CommandDb,
+  filter: { kind: 'all' | 'item' | 'fixture'; q?: string },
+  request: { cursor?: string; limit: number }
+): WebConnectionsResponse {
+  const query = filter.q?.trim().toLowerCase() ?? '';
+  const cursor = cursorFor(request.cursor, { kind: filter.kind, q: query === '' ? null : query });
+  const rawRows = readPageRows(db, { kind: filter.kind, query, cursor, limit: request.limit });
+  const pageRows = rawRows.slice(0, request.limit);
+  const last = pageRows.at(-1);
+  return {
+    rows: rowsFromConnections(db, pageRows),
+    nextCursor:
+      rawRows.length > request.limit && last
+        ? encodeCursor({
+            v: 1,
+            t: 'web-connections',
+            kind: filter.kind,
+            q: query === '' ? null : query,
+            key: [last.item_name, last.far_name, last.row_id],
+          })
+        : null,
+    summary: readSummary(db, { kind: filter.kind, query }),
+  };
 }
-
-const compareRows = (left: ConnectionRow, right: ConnectionRow): number =>
-  compareNoCase(left.item.name, right.item.name) ||
-  compareNoCase(left.far.name, right.far.name) ||
-  compareId(left.id, right.id);
-
-const rowKey = (row: ConnectionRow): [string, string, string] => [
-  row.item.name,
-  row.far.name,
-  row.id,
-];
-
-const compareRowToKey = (row: ConnectionRow, key: ConnectionsCursor['key']): number =>
-  compareNoCase(row.item.name, key[0]) ||
-  compareNoCase(row.far.name, key[1]) ||
-  compareId(row.id, key[2]);
 
 function cursorFor(
   raw: string | undefined,
@@ -164,53 +213,4 @@ function cursorFor(
   } catch {
     throw new ValidationError('The cursor was not issued by this route', { cursor: raw });
   }
-}
-
-function matches(row: ConnectionRow, kind: ConnectionsCursor['kind'], query: string): boolean {
-  if (kind !== 'all' && row.far.kind !== kind) return false;
-  const values = [row.item.name, row.item.code ?? '', row.far.name];
-  if (row.far.kind === 'item') values.push(row.far.code ?? '');
-  return values.some((value) => value.toLowerCase().includes(query));
-}
-
-function summaryFor(rows: readonly ConnectionRow[]): WebConnectionsResponse['summary'] {
-  const itemIds = new Set<string>();
-  const fixtureIds = new Set<string>();
-  rows.forEach(({ item, far }) => {
-    itemIds.add(item.id);
-    (far.kind === 'item' ? itemIds : fixtureIds).add(far.id);
-  });
-  return { connections: rows.length, items: itemIds.size, fixtures: fixtureIds.size };
-}
-
-/** Read the resolved, filtered, cursor-paged web connection registry. */
-export function readConnectionsPage(
-  db: CommandDb,
-  filter: { kind: 'all' | 'item' | 'fixture'; q?: string },
-  request: { cursor?: string; limit: number }
-): WebConnectionsResponse {
-  const query = filter.q?.trim().toLowerCase() ?? '';
-  const rows = readRows(db)
-    .filter((row) => matches(row, filter.kind, query))
-    .toSorted(compareRows);
-  const summary = summaryFor(rows);
-  const cursor = cursorFor(request.cursor, { kind: filter.kind, q: query === '' ? null : query });
-  const pageRows =
-    cursor === null ? rows : rows.filter((row) => compareRowToKey(row, cursor.key) > 0);
-  const page = pageRows.slice(0, request.limit);
-  const last = page.at(-1);
-  return {
-    rows: page,
-    nextCursor:
-      pageRows.length > request.limit && last
-        ? encodeCursor({
-            v: 1,
-            t: 'web-connections',
-            kind: filter.kind,
-            q: query === '' ? null : query,
-            key: rowKey(last),
-          })
-        : null,
-    summary,
-  };
 }
