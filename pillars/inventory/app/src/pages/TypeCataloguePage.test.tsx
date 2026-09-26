@@ -354,6 +354,67 @@ describe('TypeCataloguePage', () => {
     expect(screen.getByRole('region', { name: 'Dry-run validation' })).toBeInTheDocument();
   });
 
+  it('uses the minted parent id for a child in the next draft patch', async () => {
+    const parentType: Catalogue['types'][number] = {
+      ...published.types[0]!,
+      fields: [],
+      id: '33333333-3333-4333-8333-333333333333',
+      key: 'bedding',
+      label: 'Bedding',
+      parentTypeId: null,
+      revision: 2,
+      sortOrder: 1,
+    };
+    const childType: Catalogue['types'][number] = {
+      ...parentType,
+      id: '44444444-4444-4444-8444-444444444444',
+      key: 'sheets',
+      label: 'Sheets',
+      parentTypeId: parentType.id,
+      revision: 2,
+      sortOrder: 2,
+    };
+    api.patchDraft
+      .mockResolvedValueOnce({
+        data: {
+          compatibility: compatibleResult,
+          draft: draft([...published.types, parentType], 2),
+        },
+        error: undefined,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          compatibility: compatibleResult,
+          draft: draft([...published.types, parentType, childType], 3),
+        },
+        error: undefined,
+      });
+    renderPage();
+
+    await screen.findAllByText('Electronics');
+    fireEvent.click(screen.getByRole('button', { name: 'New type' }));
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Bedding' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create type' }));
+    await waitFor(() => expect(api.patchDraft).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'New type' }));
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Sheets' } });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Parent' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Bedding' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create type' }));
+
+    await waitFor(() => expect(api.patchDraft).toHaveBeenCalledTimes(2));
+    expect(api.patchDraft).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        body: expect.objectContaining({
+          operations: [expect.objectContaining({ kind: 'put_type', parentTypeId: parentType.id })],
+        }),
+        path: { revision: 2 },
+      })
+    );
+  });
+
   it('resumes an existing draft without creating another one', async () => {
     api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
     renderPage();

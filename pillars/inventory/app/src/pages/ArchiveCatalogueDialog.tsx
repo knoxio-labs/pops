@@ -9,19 +9,56 @@ import {
   AlertDialogTitle,
 } from '@pops/ui';
 
-import type { CatalogueOperation } from '../catalogue-editor/types';
+import { descendantIds } from '../lib/type-tree';
+
+import type { CatalogueOperation, CatalogueType } from '../catalogue-editor/types';
+import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type { ArchiveTarget } from './cataloguePageTypes';
 
 interface Props {
+  readonly issues?: readonly InventoryApiIssue[];
   readonly onOpenChange: (open: boolean) => void;
   readonly onOperation: (operation: CatalogueOperation) => void;
   readonly target: ArchiveTarget | null;
+  readonly types?: readonly CatalogueType[];
+}
+
+const EMPTY_ISSUES: readonly InventoryApiIssue[] = [];
+const EMPTY_TYPES: readonly CatalogueType[] = [];
+
+function blockingChildren(
+  target: ArchiveTarget | null,
+  issues: readonly InventoryApiIssue[],
+  types: readonly CatalogueType[]
+): CatalogueType[] {
+  if (target?.kind !== 'type') return [];
+  const childIdSet = new Set(descendantIds(types, target.id));
+  const liveChildren = types.filter((type) => childIdSet.has(type.id) && type.archivedAt === null);
+  const serverReportedChildren = issues
+    .filter((issue) => issue.code === 'type_parent_archived' && issue.definitionId !== null)
+    .flatMap((issue) => {
+      const type = types.find((candidate) => candidate.id === issue.definitionId);
+      return type === undefined ? [] : [type];
+    });
+  return [
+    ...new Map(
+      [...liveChildren, ...serverReportedChildren].map((type) => [type.id, type])
+    ).values(),
+  ];
 }
 
 /** Confirms an archive operation without deleting the immutable definition identity. */
-export function ArchiveCatalogueDialog({ onOpenChange, onOperation, target }: Props) {
+export function ArchiveCatalogueDialog({
+  issues = EMPTY_ISSUES,
+  onOpenChange,
+  onOperation,
+  target,
+  types = EMPTY_TYPES,
+}: Props) {
+  const blocking = blockingChildren(target, issues, types);
+  const hasBlockingChildren = target?.kind === 'type' && blocking.length > 0;
   function archive(): void {
-    if (target === null) return;
+    if (target === null || hasBlockingChildren) return;
     const operation: CatalogueOperation =
       target.kind === 'type'
         ? { kind: 'archive_type', id: target.id }
@@ -34,13 +71,32 @@ export function ArchiveCatalogueDialog({ onOpenChange, onOperation, target }: Pr
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Archive {target?.label}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            The definition remains readable by existing items and its key cannot be reused.
-          </AlertDialogDescription>
+          {hasBlockingChildren ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <AlertDialogDescription>
+                Move or archive the live children first. The archived descendants do not block this
+                action.
+              </AlertDialogDescription>
+              <div>
+                <span className="font-medium text-foreground">Live children</span>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  {blocking.map((child) => (
+                    <li key={child.id}>{child.label}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <AlertDialogDescription>
+              The definition remains readable by existing items and its key cannot be reused.
+            </AlertDialogDescription>
+          )}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={archive}>Archive</AlertDialogAction>
+          <AlertDialogAction onClick={archive} disabled={hasBlockingChildren}>
+            Archive
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

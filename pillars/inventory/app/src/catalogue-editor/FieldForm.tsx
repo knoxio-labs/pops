@@ -15,6 +15,7 @@ import { EnumOptions } from './FieldFormOptions';
 import { useFieldFormState } from './useFieldFormState';
 import { useOperationPreview } from './useOperationPreview';
 
+import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type { ComputedFieldEnvironment } from './computed/computed-environment';
 import type { FieldFormContextValue } from './FieldFormContext';
 import type { CatalogueField, CatalogueOperation, CatalogueType } from './types';
@@ -27,6 +28,7 @@ interface FieldFormProps {
   readonly onRestore?: () => void;
   readonly onOperation: (operation: CatalogueOperation) => void;
   readonly onPreview?: (operation: CatalogueOperation) => void;
+  readonly issues?: readonly InventoryApiIssue[];
   readonly published: boolean;
   readonly type: CatalogueType;
   readonly types: readonly CatalogueType[];
@@ -56,7 +58,11 @@ export function FieldForm(props: FieldFormProps) {
             props.onOperation(operation);
           }}
         >
-          <FieldFormIdentity onKeyChange={state.changeKey} onLabelChange={state.changeLabel} />
+          <FieldFormIdentity
+            issues={props.issues}
+            onKeyChange={state.changeKey}
+            onLabelChange={state.changeLabel}
+          />
           <FieldFormConstraints />
           <FieldFormBehaviour />
           {props.field !== undefined && state.context.kind === 'enum' && (
