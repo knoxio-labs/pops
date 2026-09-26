@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { at, item } from '../../foundation/fixtures/core-factory';
 import { buildWorld } from '../../foundation/model/placement-model';
+import { at, item } from '../../foundation/test-fixtures/core-factory';
 import { findDuplicatePair } from './items-banners';
 
 describe('findDuplicatePair', () => {

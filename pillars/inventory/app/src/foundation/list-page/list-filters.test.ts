@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { at, item } from '../fixtures/core-factory';
+import { at, item } from '../test-fixtures/core-factory';
 import {
   activeFilterCount,
   filterChips,
