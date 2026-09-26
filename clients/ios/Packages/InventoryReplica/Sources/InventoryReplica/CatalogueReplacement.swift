@@ -11,9 +11,10 @@ import AppCore
 /// refuses, and the change goes to repair with the value struck through.
 ///
 /// A replaced type accepts a new item or a type change only when it is live
-/// and declares, as stored fields, every field the change carries values
-/// for. An edit keeps the item's own type, so a replaced type always
-/// refuses one.
+/// and declares every field the change carries values for: as a stored
+/// field for a stored value, as a computed field that allows overrides for
+/// a new item's override. An edit keeps the item's own type, so a replaced
+/// type always refuses one.
 internal struct CatalogueReplacement {
     let authored: InventoryCatalogueSnapshot?
     let target: InventoryCatalogueSnapshot
@@ -102,9 +103,15 @@ internal struct CatalogueReplacement {
         else { return nil }
         let stored = Set(
             type.fields.filter { $0.storage == .stored && $0.archivedAt == nil }.map(\.id))
-        guard command.protocol2FieldIds.allSatisfy(stored.contains) else { return nil }
+        let computed = Set(
+            type.fields.filter {
+                $0.storage == .computed && $0.allowOverride && $0.archivedAt == nil
+            }.map(\.id))
         switch command {
         case .createProtocol2Item(let item):
+            guard item.values.allSatisfy({ stored.contains($0.fieldId) }),
+                item.overrides.allSatisfy({ computed.contains($0.fieldId) })
+            else { return nil }
             return .createProtocol2Item(
                 InventoryNewProtocol2Item(
                     id: item.id, name: item.name, catalogueRevision: item.catalogueRevision,
@@ -112,6 +119,7 @@ internal struct CatalogueReplacement {
                     externalIds: item.externalIds, quantity: item.quantity,
                     placement: item.placement, code: item.code))
         case .changeProtocol2ItemType(let id, let revision, _, let values):
+            guard values.allSatisfy({ stored.contains($0.fieldId) }) else { return nil }
             return .changeProtocol2ItemType(
                 id: id, catalogueRevision: revision, typeId: new, values: values)
         default:
