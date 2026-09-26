@@ -1210,6 +1210,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/moving-day': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the moving-day boxes, placements and progress aggregate */
+    get: operations['webMoving.get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/reports/values': {
     parameters: {
       query?: never;
@@ -10117,6 +10134,104 @@ export interface operations {
       };
       /** @description 404 */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webMoving.get': {
+    parameters: {
+      query: {
+        destinationField: string;
+        homeLocationId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            boxes: {
+              code: string | null;
+              contents: {
+                code: string | null;
+                containerId: string;
+                id: string;
+                name: string;
+              }[];
+              count: number;
+              destination: {
+                label: string;
+                optionKey: string;
+              } | null;
+              id: string;
+              name: string;
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              /** @enum {string} */
+              stage: 'packing' | 'full' | 'closed';
+            }[];
+            destinationOptions: {
+              label: string;
+              optionKey: string;
+            }[];
+            inHand: {
+              code: string | null;
+              id: string;
+              name: string;
+            }[];
+            loose: {
+              items: {
+                code: string | null;
+                id: string;
+                name: string;
+              }[];
+              room: {
+                id: string;
+                name: string;
+              };
+            }[];
+            looseCount: number;
+            packed: number;
+            stages: {
+              closed: number;
+              full: number;
+              packing: number;
+            };
+            unlabelledClosed: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
         headers: {
           [name: string]: unknown;
         };
