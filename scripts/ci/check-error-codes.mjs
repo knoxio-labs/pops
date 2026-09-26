@@ -54,7 +54,7 @@ const IGNORED_DIRECTORIES = new Set([
  * @returns {string}
  */
 export function maskNonCode(source) {
-  const output = [...source];
+  const output = source.split('');
   let state = 'code';
   let quote = '';
 
