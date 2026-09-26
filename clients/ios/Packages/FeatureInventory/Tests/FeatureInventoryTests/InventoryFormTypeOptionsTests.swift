@@ -21,7 +21,9 @@ internal struct InventoryFormTypeOptionsTests {
             type("bedding", label: "Bedding"),
             type("pillows", label: "Pillows", parentTypeId: "bedding"),
             type("pillowcase", label: "Pillowcase", parentTypeId: "pillows"),
-            type("gadget"), type("retired", archived: true), type("cable"),
+            type("gadget"), type("retired", archived: true),
+            type("retired-child", label: "Retired child", parentTypeId: "gadget", archived: true),
+            type("cable"),
         ])
 
     @Test("options form a tree")
@@ -84,6 +86,17 @@ internal struct InventoryFormTypeOptionsTests {
         #expect(
             !InventoryFormTypeOptions.protocol2All(Self.catalogue, selectedId: nil)
                 .contains(where: { $0.id == "retired" }))
+    }
+
+    @Test("a selected archived child remains reachable when it is the only child")
+    func selectedArchivedChildRemainsReachable() {
+        let roots = InventoryFormTypeOptions.protocol2(Self.catalogue, selectedId: "retired-child")
+
+        #expect(roots.first(where: { $0.id == "gadget" })?.hasChildren == true)
+        #expect(
+            InventoryFormTypeOptions.children(
+                of: "gadget", in: Self.catalogue, selectedId: "retired-child"
+            ).map(\.id) == ["retired-child"])
     }
 
     @Test("a protocol-1 catalogue's options are alphabetical and keyed by type key")

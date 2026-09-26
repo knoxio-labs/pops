@@ -52,7 +52,7 @@ internal enum InventoryFormTypeOptions {
                 let parentID = ancestry.dropLast().last?.id
                 let path = ancestry.map(\.label).joined(separator: " › ")
                 let hasChildren = catalogue.types.contains { child in
-                    child.archivedAt == nil
+                    (child.archivedAt == nil || child.id == selectedId)
                         && child.parentTypeId == type.id
                         && catalogue.type(child.id, isOrDescendsFrom: type.id)
                 }
