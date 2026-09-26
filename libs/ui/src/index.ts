@@ -112,6 +112,7 @@ export * from './components/TextInput';
 export * from './components/ContainerPanel';
 export * from './components/RelatedItemsList';
 export * from './components/SearchPickerDialog';
+export * from './components/Sheet';
 
 // Layout composites
 export * from './components/PageHeader';
