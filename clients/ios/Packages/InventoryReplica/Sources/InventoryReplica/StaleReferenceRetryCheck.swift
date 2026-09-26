@@ -46,16 +46,21 @@ internal enum StaleReferenceRetryCheck {
         else { return nil }
         for (fieldId, reference) in references {
             guard
-                let field = catalogue.types.lazy.flatMap(\.fields)
+                let field = catalogue.types.lazy
+                    .compactMap({ catalogue.effectiveType(id: $0.id) })
+                    .flatMap(\.fields)
                     .first(where: { $0.id == fieldId })
             else { continue }
-            if let stale = try stillStale(reference, for: field, in: db) { return stale }
+            if let stale = try stillStale(reference, for: field, in: catalogue, db: db) {
+                return stale
+            }
         }
         return nil
     }
 
     private static func stillStale(
-        _ reference: InventoryReferenceValue, for field: InventoryCatalogueField, in db: Database
+        _ reference: InventoryReferenceValue, for field: InventoryCatalogueField,
+        in catalogue: InventoryCatalogueSnapshot, db: Database
     ) throws -> InventoryStaleReference? {
         guard let target = try targetRow(reference, in: db) else {
             return .targetMissing
@@ -67,7 +72,11 @@ internal enum StaleReferenceRetryCheck {
         guard reference.targetKind == .item, !field.references.targetTypeIds.isEmpty else {
             return nil
         }
-        guard let typeId = target.typeId, field.references.targetTypeIds.contains(typeId) else {
+        guard let typeId = target.typeId,
+            field.references.targetTypeIds.contains(where: {
+                catalogue.type(typeId, isOrDescendsFrom: $0)
+            })
+        else {
             return .typeNotAllowed
         }
         return nil
