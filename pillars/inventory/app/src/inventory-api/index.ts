@@ -82,6 +82,7 @@ export {
   typesReadValidateItem,
   webGet,
   webList,
+  webSearchList,
   webSummaryGet,
 } from './sdk.gen';
 export type {
@@ -451,6 +452,11 @@ export type {
   WebListErrors,
   WebListResponse,
   WebListResponses,
+  WebSearchListData,
+  WebSearchListError,
+  WebSearchListErrors,
+  WebSearchListResponse,
+  WebSearchListResponses,
   WebSummaryGetData,
   WebSummaryGetResponse,
   WebSummaryGetResponses,

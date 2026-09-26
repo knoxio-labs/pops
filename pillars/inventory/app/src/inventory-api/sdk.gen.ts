@@ -225,6 +225,9 @@ import type {
   WebListData,
   WebListErrors,
   WebListResponses,
+  WebSearchListData,
+  WebSearchListErrors,
+  WebSearchListResponses,
   WebSummaryGetData,
   WebSummaryGetResponses,
 } from './types.gen';
@@ -1364,6 +1367,17 @@ export const webGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebGetResponses, WebGetErrors, ThrowOnError> =>
   (options.client ?? client).get<WebGetResponses, WebGetErrors, ThrowOnError>({
     url: '/web/items/{id}',
+    ...options,
+  });
+
+/**
+ * Search live inventory items and places with ranked, cursor-paged results
+ */
+export const webSearchList = <ThrowOnError extends boolean = false>(
+  options: Options<WebSearchListData, ThrowOnError>
+): RequestResult<WebSearchListResponses, WebSearchListErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebSearchListResponses, WebSearchListErrors, ThrowOnError>({
+    url: '/web/search',
     ...options,
   });
 

@@ -6610,6 +6610,293 @@ export type WebGetResponses = {
 
 export type WebGetResponse = WebGetResponses[keyof WebGetResponses];
 
+export type WebSearchListData = {
+  body?: never;
+  path?: never;
+  query: {
+    q: string;
+    cursor?: string;
+    limit: number;
+    activeOnly?: 'true' | 'false';
+    typeKey?: string;
+    within?: string;
+  };
+  url: '/web/search';
+};
+
+export type WebSearchListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebSearchListError = WebSearchListErrors[keyof WebSearchListErrors];
+
+export type WebSearchListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    exact: {
+      access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
+      code: string | null;
+      computedValues: Array<
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            source: 'computed';
+            state: 'ok';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            override: {
+              catalogueRevision: number;
+            };
+            source: 'computed';
+            state: 'overridden';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            failedFieldId: string;
+            fieldId: string;
+            missingInputs: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
+            reason: string;
+            source: 'computed';
+            state: 'unavailable';
+            traversedItemIds: Array<string>;
+          }
+      >;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      legacyType: string | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeId: string | null;
+      typeKey: string | null;
+      updatedAt: string;
+    } | null;
+    items: Array<{
+      field: 'code' | 'note' | 'type' | 'place' | null;
+      item: {
+        access: 'open' | 'closed' | null;
+        catalogueRevision: number | null;
+        code: string | null;
+        computedValues: Array<
+          | {
+              catalogueRevision: number;
+              dependencies: Array<{
+                fieldId: string;
+                itemId: string;
+                revision: number;
+              }>;
+              fieldId: string;
+              source: 'computed';
+              state: 'ok';
+              traversedItemIds: Array<string>;
+              values: [unknown];
+            }
+          | {
+              catalogueRevision: number;
+              dependencies: Array<{
+                fieldId: string;
+                itemId: string;
+                revision: number;
+              }>;
+              fieldId: string;
+              override: {
+                catalogueRevision: number;
+              };
+              source: 'computed';
+              state: 'overridden';
+              traversedItemIds: Array<string>;
+              values: [unknown];
+            }
+          | {
+              catalogueRevision: number;
+              dependencies: Array<{
+                fieldId: string;
+                itemId: string;
+                revision: number;
+              }>;
+              failedFieldId: string;
+              fieldId: string;
+              missingInputs: Array<{
+                fieldId: string;
+                itemId: string;
+                reason: string;
+              }>;
+              reason: string;
+              source: 'computed';
+              state: 'unavailable';
+              traversedItemIds: Array<string>;
+            }
+        >;
+        createdAt: string;
+        deletedAt: string | null;
+        documentTitles: Array<string>;
+        documentsStatus: 'linked' | 'none' | 'unavailable';
+        externalIds: Array<{
+          kind: string;
+          value: string;
+        }>;
+        fieldValues: Array<{
+          catalogueRevision: number;
+          fieldId: string;
+          source: 'stored' | 'override';
+          values: Array<unknown>;
+        }>;
+        fields: {
+          [key: string]: unknown;
+        };
+        id: string;
+        isContainer: boolean;
+        isFull: boolean | null;
+        legacyType: string | null;
+        lifecycle: string;
+        lifecycleChangedAt: string | null;
+        name: string;
+        note: string | null;
+        photos: Array<{
+          caption: string | null;
+          sha256: string;
+        }>;
+        placement:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        provenance: {
+          merchant: string | null;
+          price: number | null;
+          purchasedOn: string | null;
+          transactionUri: string | null;
+          warrantyExpires: string | null;
+        } | null;
+        quantity: number;
+        revision: number;
+        seq: number;
+        typeId: string | null;
+        typeKey: string | null;
+        updatedAt: string;
+      };
+      tier: 'prefix' | 'contains' | 'other';
+    }>;
+    nextCursor: string | null;
+    places: Array<{
+      location: {
+        id: string;
+      };
+      tier: 'prefix' | 'contains';
+    }>;
+    total: number;
+  };
+};
+
+export type WebSearchListResponse = WebSearchListResponses[keyof WebSearchListResponses];
+
 export type WebSummaryGetData = {
   body?: never;
   path?: never;

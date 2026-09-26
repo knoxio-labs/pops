@@ -898,7 +898,7 @@ export const LISTS_ALLOWLIST = [];
 /** Repo-relative, posix. The committed OpenAPI projection of the inventory contract. */
 export const INVENTORY_OPENAPI_REL_PATH = 'pillars/inventory/openapi/inventory.openapi.json';
 
-/** Today's real count of inventory routes carrying query fields is 23. See {@link MIN_ROUTES_WITH_FIELDS}. */
+/** Today's real count of inventory routes carrying query fields is 25. See {@link MIN_ROUTES_WITH_FIELDS}. */
 const INVENTORY_MIN_ROUTES_WITH_FIELDS = 16;
 
 /**
@@ -1035,6 +1035,12 @@ export const INVENTORY_ROUTES = [
     path: '/web/items/{id}',
     handlerFile: 'pillars/inventory/src/api/rest/web-handlers.ts',
     handlerKey: 'get',
+  },
+  {
+    method: 'get',
+    path: '/web/search',
+    handlerFile: 'pillars/inventory/src/api/rest/web-search-handlers.ts',
+    handlerKey: 'list',
   },
   {
     method: 'get',
