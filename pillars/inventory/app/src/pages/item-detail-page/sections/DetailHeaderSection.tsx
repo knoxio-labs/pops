@@ -40,7 +40,7 @@ function LocationBreadcrumb({
           <span key={loc.id} className="flex items-center gap-1.5">
             {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
             <Link
-              to={`/inventory?location=${loc.id}`}
+              to={`/inventory/items?location=${loc.id}`}
               className="text-app-accent hover:text-app-accent/80 hover:underline font-medium"
             >
               {loc.name}

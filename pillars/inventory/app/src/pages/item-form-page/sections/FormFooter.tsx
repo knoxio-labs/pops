@@ -21,7 +21,7 @@ export function FormFooter({ isEditMode, isMutating }: FormFooterProps) {
         <Save className="h-5 w-5 mr-2" />
         {isEditMode ? 'Save Changes' : 'Create Item'}
       </Button>
-      <Link to="/inventory">
+      <Link to="/inventory/items">
         <Button
           type="button"
           variant="outline"

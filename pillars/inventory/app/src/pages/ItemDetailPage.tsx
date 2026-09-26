@@ -33,7 +33,7 @@ function ErrorState({ error }: { error: Error }) {
         <AlertDescription>{is404 ? "This item doesn't exist." : error.message}</AlertDescription>
       </Alert>
       <Link
-        to="/inventory"
+        to="/inventory/items"
         className="mt-4 inline-block text-sm text-app-accent hover:text-app-accent/80 underline font-medium"
       >
         Back to inventory
@@ -84,7 +84,7 @@ function DetailContent({ model, id, item }: { model: Model; id: string; item: It
     <div className="max-w-3xl">
       <PageHeader
         title={<ItemTitle itemName={item.itemName} brand={item.brand} model={item.model} />}
-        backHref="/inventory"
+        backHref="/inventory/items"
         breadcrumbs={[{ label: 'Inventory', href: '/inventory' }, { label: item.itemName }]}
         actions={
           <HeaderActions

@@ -45,52 +45,65 @@ describe('buildInventoryManifest', () => {
         basePath: '/inventory',
         order: 30,
       });
-      expect(payload.nav?.items.map((item) => item.path)).toEqual([
-        '',
-        '/warranties',
-        '/locations',
-        '/types',
-        '/reports',
-        '/connections',
+      expect(payload.nav?.items).toEqual([
+        { path: '', label: 'Overview', labelKey: 'inventory.overview', icon: 'layout-dashboard' },
+        { path: '/items', label: 'Items', labelKey: 'inventory.items', icon: 'package' },
+        {
+          path: '/containers',
+          label: 'Containers',
+          labelKey: 'inventory.containers',
+          icon: 'box',
+        },
+        {
+          path: '/locations',
+          label: 'Locations',
+          labelKey: 'inventory.locations',
+          icon: 'map-pin',
+        },
+        { path: '/in-hand', label: 'In hand', labelKey: 'inventory.inHand', icon: 'hand' },
+        {
+          path: '/connections',
+          label: 'Connections',
+          labelKey: 'inventory.connections',
+          icon: 'cable',
+        },
+        { path: '/types', label: 'Types', labelKey: 'inventory.types', icon: 'shapes' },
+        { path: '/reports', label: 'Reports', labelKey: 'inventory.reports', icon: 'bar-chart-3' },
+        { path: '/sync', label: 'Sync', labelKey: 'inventory.sync', icon: 'refresh-cw' },
       ]);
     });
 
     it('declares pages covering every inventory route surface', () => {
       const payload = buildInventoryManifest('1.2.3');
       expect(payload.pages).toEqual([
-        { path: '', index: true, bundleSlot: 'inventory-items' },
+        { path: '', index: true, bundleSlot: 'inventory-overview' },
+        { path: 'items', bundleSlot: 'inventory-items' },
         { path: 'items/new', bundleSlot: 'inventory-item-form' },
+        { path: 'items/bulk-new', bundleSlot: 'inventory-bulk-entry' },
         { path: 'items/:id', bundleSlot: 'inventory-item-detail' },
         { path: 'items/:id/edit', bundleSlot: 'inventory-item-form' },
-        { path: 'connections', bundleSlot: 'inventory-connections' },
-        { path: 'warranties', bundleSlot: 'inventory-warranties' },
+        { path: 'items/:id/history', bundleSlot: 'inventory-item-history' },
+        { path: 'containers', bundleSlot: 'inventory-containers' },
+        { path: 'moving-day', bundleSlot: 'inventory-moving-day' },
+        { path: 'in-hand', bundleSlot: 'inventory-in-hand' },
         { path: 'locations', bundleSlot: 'inventory-location-tree' },
+        { path: 'locations/:id', bundleSlot: 'inventory-location' },
+        { path: 'search', bundleSlot: 'inventory-search' },
+        { path: 'connections', bundleSlot: 'inventory-connections' },
+        { path: 'connections/fixtures', bundleSlot: 'inventory-fixtures' },
+        { path: 'fixtures/:id', bundleSlot: 'inventory-fixture' },
         { path: 'types', bundleSlot: 'inventory-type-catalogue' },
+        { path: 'types/:id/arrived', bundleSlot: 'inventory-type-arrived' },
+        { path: 'reports', bundleSlot: 'inventory-reports' },
         { path: 'labels', bundleSlot: 'inventory-labels' },
-        {
-          path: 'reports',
-          bundleSlot: 'inventory-reports-group',
-          children: [
-            { path: '', index: true, bundleSlot: 'inventory-report-dashboard' },
-            { path: 'insurance', bundleSlot: 'inventory-insurance-report' },
-          ],
-        },
+        { path: 'sync', bundleSlot: 'inventory-sync' },
+        { path: 'import', bundleSlot: 'inventory-import' },
+        { path: 'warranties', bundleSlot: 'inventory-warranties-redirect' },
+        { path: 'activity', bundleSlot: 'inventory-activity-redirect' },
+        { path: 'reports/insurance', bundleSlot: 'inventory-insurance-report-redirect' },
         { path: 'report', bundleSlot: 'inventory-report-redirect' },
         { path: 'report/insurance', bundleSlot: 'inventory-insurance-report-redirect' },
       ]);
-    });
-
-    /**
-     * Both were absent from the list above until POPS-3223. Harmless while the
-     * bundle map mounted the whole route table; a 404 on an old bookmark the
-     * moment the pillar mounted from `pages` alone. Named separately from the
-     * `toEqual` so the reason survives a future reshuffle of that list.
-     */
-    it('declares the legacy report redirects, which the route table still mounts', () => {
-      const payload = buildInventoryManifest('1.2.3');
-      const paths = payload.pages?.map((page) => page.path) ?? [];
-      expect(paths).toContain('report');
-      expect(paths).toContain('report/insurance');
     });
 
     /**

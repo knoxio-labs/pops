@@ -336,15 +336,15 @@ describe('ItemDetailPage', () => {
 
       expect(await screen.findByRole('link', { name: 'Home' })).toHaveAttribute(
         'href',
-        '/inventory?location=loc-1'
+        '/inventory/items?location=loc-1'
       );
       expect(screen.getByRole('link', { name: 'Office' })).toHaveAttribute(
         'href',
-        '/inventory?location=loc-2'
+        '/inventory/items?location=loc-2'
       );
       expect(screen.getByRole('link', { name: 'Desk' })).toHaveAttribute(
         'href',
-        '/inventory?location=loc-3'
+        '/inventory/items?location=loc-3'
       );
     });
 

@@ -39,7 +39,7 @@ function useItemDetailMutations(id: string | undefined) {
       unwrap(await itemsDelete({ path: { id: input.id } })),
     onSuccess: () => {
       toast.success('Item deleted');
-      void navigate('/inventory');
+      void navigate('/inventory/items');
     },
     onError: (err: Error) => toast.error(`Failed to delete: ${err.message}`),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['inventory', 'items'] }),

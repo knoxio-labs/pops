@@ -1,13 +1,9 @@
 /**
  * The inventory pillar, mounted through the shell's runtime loader (POPS-3223).
  *
- * Two things here only a browser can settle. The `reports` group is a route
- * with children and no element of its own in the app — the wire needs a slot
- * per node, so the app names a passthrough rendering the `<Outlet/>` that
- * react-router would render implicitly, and this is where that is shown to
- * behave the same. And the two `report/*` redirects were missing from the
- * page list this replaces: harmless while the bundle map mounted the whole
- * route table, a 404 on an old bookmark the moment it did not.
+ * These checks exercise the route table after the shell has loaded the remote
+ * bundle. They cover the reports query tabs and the legacy redirects that are
+ * easy to break when the page tree changes.
  */
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
@@ -37,7 +33,7 @@ test.describe('inventory — mounted by the runtime loader', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('the rail carries inventory and its items page renders from the remote bundle', async ({
+  test('the rail carries inventory and its overview page renders from the remote bundle', async ({
     page,
   }) => {
     await page.goto('/inventory');
@@ -46,30 +42,24 @@ test.describe('inventory — mounted by the runtime loader', () => {
       'aria-current',
       'page'
     );
+    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
   });
 
-  // The group's index child. Reaching the dashboard at `/inventory/reports`
-  // is only possible if the child mounted beneath the passthrough.
-  test('the reports group mounts its index child', async ({ page }) => {
+  test('the reports page mounts', async ({ page }) => {
     await page.goto('/inventory/reports');
 
     await expect(page).toHaveURL(/\/inventory\/reports$/);
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
   });
 
-  test('a named child mounts under the reports group', async ({ page }) => {
-    await page.goto('/inventory/reports/insurance');
+  test('the old insurance path redirects to the Insurance tab', async ({ page }) => {
+    await page.goto('/inventory/reports/insurance?locationId=loc-123');
 
-    await expect(page).toHaveURL(/\/inventory\/reports\/insurance/);
+    await expect(page).toHaveURL(/\/inventory\/reports\?tab=insurance&locationId=loc-123/);
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
   });
 
-  /**
-   * The redirects the old page list had dropped. They also carry the query
-   * string across, which is the whole reason they are components rather than
-   * a plain `<Navigate>` — an old bookmark keeps its filters.
-   */
   test('a legacy report bookmark still redirects, keeping its query string', async ({ page }) => {
     await page.goto('/inventory/report?year=2024');
 
@@ -79,6 +69,12 @@ test.describe('inventory — mounted by the runtime loader', () => {
   test('the legacy insurance bookmark redirects too', async ({ page }) => {
     await page.goto('/inventory/report/insurance');
 
-    await expect(page).toHaveURL(/\/inventory\/reports\/insurance/);
+    await expect(page).toHaveURL(/\/inventory\/reports\?tab=insurance/);
+  });
+
+  test('the old warranties path redirects to the Warranties tab', async ({ page }) => {
+    await page.goto('/inventory/warranties?tab=old');
+
+    await expect(page).toHaveURL(/\/inventory\/reports\?tab=warranties/);
   });
 });

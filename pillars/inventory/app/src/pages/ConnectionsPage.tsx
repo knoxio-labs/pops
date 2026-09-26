@@ -1,4 +1,4 @@
-import { Network } from 'lucide-react';
+import { Cable } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { PageHeader } from '@pops/ui';
@@ -12,7 +12,7 @@ export function ConnectionsPage() {
         title={t('connections')}
         icon={
           <div className="p-2 rounded-xl bg-app-accent/10">
-            <Network className="h-6 w-6 text-app-accent" />
+            <Cable className="h-6 w-6 text-app-accent" />
           </div>
         }
       />

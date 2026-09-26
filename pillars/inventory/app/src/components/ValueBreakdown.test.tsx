@@ -309,7 +309,9 @@ describe('ValueByTypeCard', () => {
     mockTypeSuccess([{ name: 'Electronics', totalValue: 5000, itemCount: 10 }]);
     renderWithProviders(<ValueByTypeCard />);
     fireEvent.click(await screen.findByTestId('bar'));
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/inventory?type=Electronics'));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/inventory/items?type=Electronics')
+    );
   });
 });
 
@@ -364,6 +366,8 @@ describe('ValueByLocationCard', () => {
     mockLocationSuccess([{ name: 'Living Room', totalValue: 5000, itemCount: 10, key: 'loc-1' }]);
     renderWithProviders(<ValueByLocationCard />);
     fireEvent.click(await screen.findByTestId('bar'));
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/inventory?locationId=loc-1'));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/inventory/items?locationId=loc-1')
+    );
   });
 });
