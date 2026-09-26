@@ -6,6 +6,7 @@ import type { QueryClient } from '@tanstack/react-query';
 const mocks = vi.hoisted(() => ({
   recordPlacement: vi.fn(),
   syncMutations: vi.fn(),
+  useCatalogue: vi.fn(),
 }));
 
 vi.mock('../inventory-api/index.js', () => ({
@@ -14,6 +15,10 @@ vi.mock('../inventory-api/index.js', () => ({
 
 vi.mock('./recents.js', () => ({
   recordPlacement: (...args: unknown[]) => mocks.recordPlacement(...args),
+}));
+
+vi.mock('./useCatalogueLookups.js', () => ({
+  useCatalogue: (...args: unknown[]) => mocks.useCatalogue(...args),
 }));
 
 import { UndoRefusedError, useItemVerbs, usePendingItemIds, wirePlacement } from './item-verbs';
@@ -60,6 +65,11 @@ function item(overrides: Partial<WebItem> = {}): WebItem {
   return { ...baseItem, ...overrides };
 }
 
+const publishedCatalogue = {
+  revision: { revision: 7 },
+  types: [{ id: 'type-cable', key: 'cable' }],
+};
+
 function seedItem(queryClient: QueryClient, value: WebItem = item()): void {
   queryClient.setQueryData([...WEB_ITEMS_QUERY_KEY, 'list', { sort: 'name' }, 50], {
     pages: [
@@ -105,6 +115,7 @@ function firstMutation(index = 0): {
   readonly op: string;
   readonly entityId: string;
   readonly baseRevision: number | null;
+  readonly catalogueRevision: number | undefined;
   readonly args: Record<string, unknown>;
 } {
   const call = mocks.syncMutations.mock.calls[index]?.[0];
@@ -135,12 +146,17 @@ function firstMutation(index = 0): {
     op: mutation.op,
     entityId: mutation.entityId,
     baseRevision: mutation.baseRevision,
+    catalogueRevision:
+      'catalogueRevision' in mutation && typeof mutation.catalogueRevision === 'number'
+        ? mutation.catalogueRevision
+        : undefined,
     args: mutation.args,
   };
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mocks.useCatalogue.mockReturnValue({ data: undefined });
 });
 
 describe('item verbs', () => {
@@ -347,6 +363,216 @@ describe('item verbs', () => {
     expect(
       queryClient.getQueryData<{ item: WebItem }>([...webItemDetailQueryKey('item-1'), 50])?.item
     ).toMatchObject({ code: null, note: null });
+  });
+
+  it('edits stable stored values with the published catalogue revision and preserves overrides', async () => {
+    const queryClient = createTestQueryClient();
+    seedItem(
+      queryClient,
+      item({
+        fieldValues: [
+          { catalogueRevision: 7, fieldId: 'field-name', source: 'stored', values: ['old'] },
+          {
+            catalogueRevision: 7,
+            fieldId: 'field-computed',
+            source: 'override',
+            values: ['manual'],
+          },
+        ],
+      })
+    );
+    mocks.useCatalogue.mockReturnValue({ data: publishedCatalogue });
+    mocks.syncMutations.mockResolvedValue(ok([applied('m1', 2, 41)]));
+    const { result } = renderHook(() => useItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+
+    const response = await result.current.editValues('item-1', [
+      { fieldId: 'field-name', values: ['new'] },
+      { fieldId: 'field-empty', values: null },
+    ]);
+
+    expect(response).toMatchObject({ status: 'applied', seq: 41 });
+    expect(firstMutation()).toMatchObject({
+      op: 'item.edit',
+      baseRevision: 1,
+      catalogueRevision: 7,
+      args: {
+        values: [
+          { fieldId: 'field-name', values: ['new'] },
+          { fieldId: 'field-empty', values: null },
+        ],
+      },
+    });
+    expect(
+      queryClient.getQueryData<{ item: WebItem }>([...webItemDetailQueryKey('item-1'), 50])?.item
+        .fieldValues
+    ).toEqual([
+      { catalogueRevision: 7, fieldId: 'field-name', source: 'stored', values: ['new'] },
+      { catalogueRevision: 7, fieldId: 'field-computed', source: 'override', values: ['manual'] },
+    ]);
+  });
+
+  it('reverts an optimistic stored-value patch when the typed edit is refused', async () => {
+    const queryClient = createTestQueryClient();
+    seedItem(
+      queryClient,
+      item({
+        fieldValues: [
+          { catalogueRevision: 7, fieldId: 'field-name', source: 'stored', values: ['old'] },
+        ],
+      })
+    );
+    mocks.useCatalogue.mockReturnValue({ data: publishedCatalogue });
+    mocks.syncMutations.mockResolvedValue(
+      ok([{ mutationId: 'm1', status: 'rejected', reason: 'invalid', message: 'no' }])
+    );
+    const { result } = renderHook(() => useItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+
+    const response = await result.current.editValues('item-1', [
+      { fieldId: 'field-name', values: ['new'] },
+    ]);
+
+    expect(response).toMatchObject({ status: 'refused', refusal: { kind: 'outcome' } });
+    expect(
+      queryClient.getQueryData<{ item: WebItem }>([...webItemDetailQueryKey('item-1'), 50])?.item
+        .fieldValues
+    ).toEqual([{ catalogueRevision: 7, fieldId: 'field-name', source: 'stored', values: ['old'] }]);
+  });
+
+  it('queues typed edits per item and uses the acknowledged item revision', async () => {
+    const queryClient = createTestQueryClient();
+    seedItem(queryClient);
+    mocks.useCatalogue.mockReturnValue({ data: publishedCatalogue });
+    const firstResponse = deferred<ReturnType<typeof ok>>();
+    mocks.syncMutations
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockResolvedValueOnce(ok([applied('m2', 3, 42)]));
+    const { result } = renderHook(() => useItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+
+    const first = result.current.setOverride('item-1', 'field-computed', 'manual');
+    const second = result.current.editValues('item-1', [
+      { fieldId: 'field-name', values: ['new'] },
+    ]);
+    await waitFor(() => expect(mocks.syncMutations).toHaveBeenCalledTimes(1));
+
+    expect(firstMutation()).toMatchObject({ catalogueRevision: 7, baseRevision: 1 });
+    firstResponse.resolve(ok([applied('m1', 2, 41)]));
+    await expect(first).resolves.toMatchObject({ status: 'applied' });
+    await expect(second).resolves.toMatchObject({ status: 'applied' });
+    expect(firstMutation(1)).toMatchObject({
+      op: 'item.edit',
+      catalogueRevision: 7,
+      baseRevision: 2,
+    });
+  });
+
+  it('changes type with stable ids and values from the published catalogue', async () => {
+    const queryClient = createTestQueryClient();
+    seedItem(queryClient);
+    mocks.useCatalogue.mockReturnValue({ data: publishedCatalogue });
+    mocks.syncMutations.mockResolvedValue(ok([applied('m1', 2, 41)]));
+    const { result } = renderHook(() => useItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+
+    const response = await result.current.changeType('item-1', 'cable', [
+      { fieldId: 'field-name', values: ['Cable'] },
+    ]);
+
+    expect(response).toMatchObject({ status: 'applied', seq: 41 });
+    expect(firstMutation()).toMatchObject({
+      op: 'item.changeType',
+      catalogueRevision: 7,
+      args: {
+        typeId: 'type-cable',
+        values: [{ fieldId: 'field-name', values: ['Cable'] }],
+      },
+    });
+  });
+
+  it('sets and clears computed overrides optimistically, and undo omits the catalogue envelope', async () => {
+    const queryClient = createTestQueryClient();
+    seedItem(queryClient);
+    mocks.useCatalogue.mockReturnValue({ data: publishedCatalogue });
+    mocks.syncMutations
+      .mockResolvedValueOnce(ok([applied('m1', 2, 41)]))
+      .mockResolvedValueOnce(ok([applied('m2', 3, 42)]))
+      .mockResolvedValueOnce(ok([applied('m3', 4, 43)]));
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+
+    const set = await result.current.setOverride('item-1', 'field-computed', { optionId: 'yes' });
+    expect(firstMutation()).toMatchObject({
+      op: 'item.setOverride',
+      catalogueRevision: 7,
+      args: { fieldId: 'field-computed', values: [{ optionId: 'yes' }] },
+    });
+    expect(
+      queryClient.getQueryData<{ item: WebItem }>([...webItemDetailQueryKey('item-1'), 50])?.item
+        .fieldValues
+    ).toContainEqual({
+      catalogueRevision: 7,
+      fieldId: 'field-computed',
+      source: 'override',
+      values: [{ optionId: 'yes' }],
+    });
+
+    const clear = await result.current.clearOverride('item-1', 'field-computed');
+    expect(firstMutation(1)).toMatchObject({
+      op: 'item.clearOverride',
+      catalogueRevision: 7,
+      args: { fieldId: 'field-computed' },
+    });
+    expect(
+      queryClient.getQueryData<{ item: WebItem }>([...webItemDetailQueryKey('item-1'), 50])?.item
+        .fieldValues
+    ).not.toContainEqual(
+      expect.objectContaining({ fieldId: 'field-computed', source: 'override' })
+    );
+
+    if (set.status !== 'applied' || set.undo === null) throw new Error('set did not return undo');
+    if (clear.status !== 'applied' || clear.undo === null)
+      throw new Error('clear did not return undo');
+    await clear.undo();
+    expect(firstMutation(2)).toMatchObject({
+      op: 'event.revert',
+      baseRevision: null,
+      args: { seq: 42 },
+    });
+    expect(mocks.syncMutations.mock.calls[2]?.[0].body.mutations[0]).not.toHaveProperty(
+      'catalogueRevision'
+    );
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['inventory', 'web'] });
+  });
+
+  it('refuses typed verbs without a catalogue or without field patches before sending', async () => {
+    const queryClient = createTestQueryClient();
+    seedItem(queryClient);
+    const { result } = renderHook(() => useItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+
+    await expect(result.current.editValues('item-1', [])).rejects.toThrow(
+      'at least one field patch'
+    );
+    await expect(result.current.setOverride('item-1', 'field-computed', true)).rejects.toThrow(
+      'the published catalogue is not loaded'
+    );
+    await expect(result.current.changeType('item-1', 'cable')).rejects.toThrow(
+      'the published catalogue is not loaded'
+    );
+    expect(mocks.syncMutations).not.toHaveBeenCalled();
+    expect(
+      queryClient.getQueryData<{ item: WebItem }>([...webItemDetailQueryKey('item-1'), 50])?.item
+        .fieldValues
+    ).toEqual([]);
   });
 
   it('records applied move and put-back targets but not refused or pick-up verbs', async () => {

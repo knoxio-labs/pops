@@ -2,13 +2,24 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo, useSyncExternalStore } from 'react';
 
 import { InventoryApiError } from '../inventory-api-helpers.js';
-import { sendInventoryMutation, type InventoryMutationOutcome } from './mutation-client.js';
+import {
+  createTypedItemVerbs,
+  type InventoryCommand,
+  type InventoryPlacementTarget,
+} from './commands.js';
+import {
+  createUndo,
+  sendInventoryMutation,
+  type InventoryMutationOutcome,
+  UndoRefusedError,
+} from './mutation-client.js';
 import { optimisticItemsFor, type ItemPatch, type OptimisticItems } from './optimistic-items.js';
 import { recordPlacement } from './recents.js';
+import { useCatalogue } from './useCatalogueLookups.js';
 
 import type { FixedPlacement } from '../foundation/model/model.js';
-import type { InventoryCommand, InventoryPlacementTarget } from './commands.js';
 import type { WebItem } from './item-row-model.js';
+import type { CatalogueDescriptor } from './useCatalogueLookups.js';
 
 /** A mutation outcome or transport failure that refused a verb. */
 export type VerbRefusal =
@@ -20,13 +31,7 @@ export type VerbResult =
   | { status: 'applied'; seq: number; undo: (() => Promise<void>) | null }
   | { status: 'refused'; refusal: VerbRefusal };
 
-/** Thrown by an undo function when the compensating event is not applied. */
-export class UndoRefusedError extends Error {
-  constructor(readonly refusal: VerbRefusal) {
-    super('inventory undo was refused');
-    this.name = 'UndoRefusedError';
-  }
-}
+export { UndoRefusedError };
 
 type Result = Promise<VerbResult>;
 type Lifecycle = 'retired' | 'discarded' | 'lost' | 'destroyed';
@@ -56,10 +61,13 @@ export const VERB_PATCHES = {
   lifecycle: (lifecycle: 'active' | Lifecycle) => (item: WebItem) => ({ ...item, lifecycle }),
 };
 
-const WEB_QUERY_ROOT = ['inventory', 'web'] as const;
-type RunOptions = { id: string; patch: ItemPatch; command: InventoryCommand } & Completion;
+type RunOptions = {
+  id: string;
+  patch: ItemPatch;
+  command: InventoryCommand;
+} & Completion;
 type RunVerb = (options: RunOptions) => Result;
-type Completion = { canUndo: boolean; after?: () => void };
+type Completion = { canUndo: boolean; after?: () => void; catalogueRevision?: number };
 
 function runState(
   [run, id]: [RunVerb, string],
@@ -78,36 +86,8 @@ function toFixedPlacement(placement: PreviousPlacement): FixedPlacement | null {
 
 const normalizedNote = (note?: string | null) => (note?.trim() ? note : null);
 
-const revertMutation = (id: string, seq: number): Promise<InventoryMutationOutcome> =>
-  sendInventoryMutation({ command: { op: 'event.revert', args: { seq } }, entityId: id });
-
-function throwUndoFailure(error: unknown): never {
-  if (error instanceof UndoRefusedError) throw error;
-  if (error instanceof InventoryApiError) throw new UndoRefusedError({ kind: 'failed', error });
-  throw error;
-}
-
-function createUndo(
-  queryClient: QueryClient,
-  optimistic: OptimisticItems,
-  id: string,
-  seq: number
-) {
-  return async () => {
-    await optimistic.settled(id);
-    try {
-      const outcome = await revertMutation(id, seq);
-      if (outcome.status !== 'applied') throw new UndoRefusedError({ kind: 'outcome', outcome });
-    } catch (error: unknown) {
-      throwUndoFailure(error);
-    } finally {
-      void queryClient.invalidateQueries({ queryKey: WEB_QUERY_ROOT });
-    }
-  };
-}
-
 function createRunner(queryClient: QueryClient, optimistic: OptimisticItems): RunVerb {
-  return async ({ id, patch, command, canUndo, after }) => {
+  return async ({ id, patch, command, catalogueRevision, canUndo, after }) => {
     const ready = optimistic.settled(id);
     const token = optimistic.begin(id, patch);
     await ready;
@@ -116,6 +96,7 @@ function createRunner(queryClient: QueryClient, optimistic: OptimisticItems): Ru
         command,
         entityId: id,
         baseRevision: optimistic.baseRevision(id),
+        ...(catalogueRevision === undefined ? {} : { catalogueRevision }),
       });
       if (outcome.status !== 'applied') {
         optimistic.refuse(id, token);
@@ -166,7 +147,7 @@ function editVerb(run: RunVerb, id: string, changes: EditChanges): Result {
   return runState([run, id], patch, { op: 'item.edit', args }, { canUndo: true });
 }
 
-function createItemVerbs(queryClient: QueryClient) {
+function createItemVerbs(queryClient: QueryClient, catalogue: CatalogueDescriptor | undefined) {
   const optimistic = optimisticItemsFor(queryClient);
   const run = createRunner(queryClient, optimistic);
   const state = (id: string, patch: ItemPatch, command: InventoryCommand): Result =>
@@ -177,6 +158,11 @@ function createItemVerbs(queryClient: QueryClient) {
       moveVerb(run, id, to, verb);
   const hand: InventoryPlacementTarget = { kind: 'hand' };
   const active: InventoryCommand = { op: 'item.setLifecycle', args: { lifecycle: 'active' } };
+  const typed = createTypedItemVerbs(
+    (id, patch, command, catalogueRevision) =>
+      runState([run, id], patch, command, { canUndo: true, catalogueRevision }),
+    catalogue
+  );
   return {
     move: place('move'),
     store: place('store'),
@@ -212,6 +198,7 @@ function createItemVerbs(queryClient: QueryClient) {
         { canUndo: true }
       ),
     edit: (id: string, changes: EditChanges) => editVerb(run, id, changes),
+    ...typed,
   };
 }
 
@@ -221,7 +208,11 @@ export type ItemVerbs = ReturnType<typeof createItemVerbs>;
 /** Returns the single-item verbs backed by the current React Query client. */
 export const useItemVerbs = (): ItemVerbs => {
   const queryClient = useQueryClient();
-  return useMemo(() => createItemVerbs(queryClient), [queryClient]);
+  const catalogueQuery = useCatalogue();
+  return useMemo(
+    () => createItemVerbs(queryClient, catalogueQuery.data),
+    [catalogueQuery.data, queryClient]
+  );
 };
 
 /** Returns the ids whose optimistic item verb is currently in flight. */
