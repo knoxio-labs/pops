@@ -8,10 +8,29 @@ import SwiftUI
 internal enum InventoryStoreHereStep: Equatable {
     case choice
     case existing
+
+    /// The height the sheet opens at on this step.
+    internal var detent: PresentationDetent {
+        switch self {
+        case .choice: .height(InventoryChoiceStep.sheetHeight)
+        case .existing: .large
+        }
+    }
+
+    /// The heights a sheet opened on this step can take. Opened on the
+    /// choice it grows to the list; opened on the list there is no choice to
+    /// shrink back to.
+    internal var detents: Set<PresentationDetent> {
+        switch self {
+        case .choice: [Self.choice.detent, Self.existing.detent]
+        case .existing: [Self.existing.detent]
+        }
+    }
 }
 
 /// Store here: a new item placed in this container or place, or an existing
-/// one put into it. Neither needs a container open.
+/// one put into it. Neither needs a container open. A caller whose screen
+/// already offers New item elsewhere opens it `startingAt: .existing`.
 ///
 /// New item installs its own `inventoryItemFormPresentation`, scoped to this
 /// sheet's own `NavigationStack`, so the form opens as a sheet nested inside
@@ -22,15 +41,25 @@ internal enum InventoryStoreHereStep: Equatable {
 internal struct InventoryStoreHereSheet: View {
     internal let target: InventoryStoreTarget
     internal let runner: InventoryCommandRunner
-    @State private var detent: PresentationDetent = .height(Self.choiceHeight)
+    private let firstStep: InventoryStoreHereStep
+    @State private var detent: PresentationDetent
 
-    private static let choiceHeight: CGFloat = 220
+    internal init(
+        target: InventoryStoreTarget, runner: InventoryCommandRunner,
+        startingAt firstStep: InventoryStoreHereStep = .choice
+    ) {
+        self.target = target
+        self.runner = runner
+        self.firstStep = firstStep
+        _detent = State(initialValue: firstStep.detent)
+    }
 
     internal var body: some View {
         NavigationStack {
-            InventoryStoreHereRoot(target: target, runner: runner, detent: $detent)
+            InventoryStoreHereRoot(
+                target: target, runner: runner, firstStep: firstStep, detent: $detent)
         }
-        .presentationDetents([.height(Self.choiceHeight), .large], selection: $detent)
+        .presentationDetents(firstStep.detents, selection: $detent)
         .tint(.popsInventory)
         .inventoryItemFormPresentation(store: runner.store)
     }
@@ -43,20 +72,34 @@ private struct InventoryStoreHereRoot: View {
     let target: InventoryStoreTarget
     let runner: InventoryCommandRunner
     @Binding var detent: PresentationDetent
-    @State private var step: InventoryStoreHereStep = .choice
+    @State private var step: InventoryStoreHereStep
     @Environment(\.inventoryItemForm) private var itemForm
+
+    init(
+        target: InventoryStoreTarget, runner: InventoryCommandRunner,
+        firstStep: InventoryStoreHereStep, detent: Binding<PresentationDetent>
+    ) {
+        self.target = target
+        self.runner = runner
+        _detent = detent
+        _step = State(initialValue: firstStep)
+    }
 
     var body: some View {
         Group {
             switch step {
             case .choice:
-                InventoryStoreHereChoice(
-                    targetName: target.name,
-                    onNewItem: { itemForm?(.create(placement: target.placement)) },
-                    onExisting: {
-                        step = .existing
-                        detent = .large
-                    })
+                InventoryChoiceStep(
+                    title: "Store in \(target.name)",
+                    options: [
+                        InventoryChoiceOption(title: "New item", symbol: .addNew) {
+                            itemForm?(.create(placement: target.placement))
+                        },
+                        InventoryChoiceOption(title: "Existing item", symbol: .search) {
+                            step = .existing
+                            detent = InventoryStoreHereStep.existing.detent
+                        },
+                    ])
             case .existing:
                 InventoryStoreExistingPicker(
                     model: InventoryStoreHereModel(target: target, runner: runner))
@@ -64,45 +107,6 @@ private struct InventoryStoreHereRoot: View {
         }
         .transition(.opacity.combined(with: .move(edge: .trailing)))
         .popsMotion(PopsMotion.smooth, value: step)
-    }
-}
-
-/// The two ways in, side by side.
-internal struct InventoryStoreHereChoice: View {
-    internal let targetName: String
-    internal let onNewItem: () -> Void
-    internal let onExisting: () -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    internal var body: some View {
-        HStack(spacing: PopsSpacing.md) {
-            option("New item", symbol: InventorySymbol.addNew.system, action: onNewItem)
-            option("Existing item", symbol: InventorySymbol.search.system, action: onExisting)
-        }
-        .padding(.horizontal, PopsSpacing.lg)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .navigationTitle("Store in \(targetName)")
-        .popsTitleDisplay(large: false)
-        .inventoryLeadingBarItem {
-            Button("Cancel") { dismiss() }
-        }
-    }
-
-    private func option(_ title: String, symbol: String, action: @escaping () -> Void)
-        -> some View
-    {
-        Button(action: action) {
-            VStack(spacing: PopsSpacing.sm) {
-                Image(systemName: symbol)
-                    .font(.popsTitle)
-                Text(title)
-                    .font(.popsHeadline)
-                    .foregroundStyle(Color.popsForeground)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, PopsSpacing.lg)
-        }
-        .inventoryGlassButton()
     }
 }
 
