@@ -54,6 +54,14 @@ internal struct InventoryItemFormView: View {
             Task { await model.undoPhotoRemoval(offer) }
         }
         .inventoryWriteFailureAlerts($model.failure)
+        .safeAreaInset(edge: .bottom) {
+            if let failure = model.codeSuggestionFailure {
+                InventoryCodeSuggestionToast(
+                    failure: failure,
+                    retry: { Task { await model.retryCodeSuggestion() } },
+                    dismiss: { model.codeSuggestionFailure = nil })
+            }
+        }
         .onChange(of: model.phase) { _, phase in
             if phase == .ready, model.focusesCode { codeFieldFocused = true }
         }
@@ -125,7 +133,7 @@ internal struct InventoryItemFormView: View {
         Section {
             InventoryFormCodeRow(
                 entry: model.draft.code, onChange: { model.codeChanged(to: $0) },
-                onSuggest: { Task { await model.suggestCode() } },
+                onSuggest: { Task { await model.retryCodeSuggestion() } },
                 focus: $codeFieldFocused)
             InventoryFormNoteRow(note: $model.draft.note)
             InventoryFormIdentifierRows(draft: $model.draft)

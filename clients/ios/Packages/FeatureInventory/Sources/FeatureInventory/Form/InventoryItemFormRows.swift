@@ -166,15 +166,7 @@ internal struct InventoryFormCodeRow: View {
         case .suggesting:
             ProgressView()
                 .accessibilityLabel("Looking for a free code")
-        case .offline:
-            InventorySymbol.offline.image
-                .foregroundStyle(Color.popsMutedForeground)
-                .accessibilityLabel("Offline, so no code can be suggested")
-        case .unavailable:
-            InventorySymbol.unavailable.image
-                .foregroundStyle(Color.popsMutedForeground)
-                .accessibilityLabel("No code can be suggested right now")
-        case .idle, .offered, .accepted, .rejected, .edited:
+        case .idle, .offered, .accepted, .rejected, .edited, .offline, .unavailable:
             Button(action: onSuggest) {
                 InventorySymbol.suggest.image
             }
