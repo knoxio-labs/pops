@@ -73,6 +73,17 @@ let app: ReturnType<typeof createAiApiApp>;
 
 const { requestOn } = createTestTransport();
 
+function expectErrorBody(
+  body: unknown,
+  expected: { readonly code: string; readonly message: string }
+): void {
+  expect(body).toEqual({
+    ...expected,
+    requestId: expect.any(String),
+    retryable: false,
+  });
+}
+
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'ai-api-jobs-rest-errors-test-'));
   aiDb = openAiDb(join(tmpDir, 'ai.db'));
@@ -92,7 +103,10 @@ describe('UnknownQueueError -> 404', () => {
     const res = await requestOn(app).get('/jobs').query({ queue: 'bogus-queue' });
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ message: "Queue 'bogus-queue' not found", code: 'NotFoundError' });
+    expectErrorBody(res.body, {
+      message: "Queue 'bogus-queue' not found",
+      code: 'ai.resource.not_found',
+    });
   });
 });
 
@@ -103,9 +117,9 @@ describe('NoDeadLetterQueueError -> 404', () => {
     const res = await requestOn(app).get('/jobs/dead-letter');
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({
+    expectErrorBody(res.body, {
       message: `Dead-letter queue for '${AI_MAINTENANCE_QUEUE_NAME}' not found`,
-      code: 'NotFoundError',
+      code: 'ai.resource.not_found',
     });
   });
 });
@@ -117,7 +131,10 @@ describe('JobNotFoundError -> 404', () => {
     const res = await requestOn(app).get('/jobs/missing-job-id');
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ message: "Job 'missing-job-id' not found", code: 'NotFoundError' });
+    expectErrorBody(res.body, {
+      message: "Job 'missing-job-id' not found",
+      code: 'ai.resource.not_found',
+    });
   });
 });
 
@@ -132,9 +149,9 @@ describe('JobStateConflictError -> 409', () => {
     const res = await requestOn(app).post('/jobs/job-1/retry').send({});
 
     expect(res.status).toBe(409);
-    expect(res.body).toEqual({
+    expectErrorBody(res.body, {
       message: `Job 'job-1' on queue '${AI_MAINTENANCE_QUEUE_NAME}' is waiting and cannot be retried`,
-      code: 'ConflictError',
+      code: 'ai.resource.conflict',
     });
   });
 
@@ -148,9 +165,9 @@ describe('JobStateConflictError -> 409', () => {
     const res = await requestOn(app).post('/jobs/job-2/cancel').send({});
 
     expect(res.status).toBe(409);
-    expect(res.body).toEqual({
+    expectErrorBody(res.body, {
       message: `Job 'job-2' on queue '${AI_MAINTENANCE_QUEUE_NAME}' is active and cannot be cancelled`,
-      code: 'ConflictError',
+      code: 'ai.resource.conflict',
     });
   });
 });
@@ -165,9 +182,9 @@ describe('DeadLetterReplayError -> missing is 404, malformed/foreign are 409', (
     const res = await requestOn(app).post('/jobs/dead-letter/absent-id/replay').send({});
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({
+    expectErrorBody(res.body, {
       message: "Dead-letter job 'absent-id' not found",
-      code: 'NotFoundError',
+      code: 'ai.resource.not_found',
     });
   });
 
@@ -196,9 +213,9 @@ describe('DeadLetterReplayError -> missing is 404, malformed/foreign are 409', (
     const res = await requestOn(app).post('/jobs/dead-letter/dlq-1/replay').send({});
 
     expect(res.status).toBe(409);
-    expect(res.body).toEqual({
+    expectErrorBody(res.body, {
       message: "Dead-letter job 'dlq-1' does not carry a replayable payload",
-      code: 'ConflictError',
+      code: 'ai.resource.conflict',
     });
   });
 
@@ -224,9 +241,9 @@ describe('DeadLetterReplayError -> missing is 404, malformed/foreign are 409', (
     const res = await requestOn(app).post('/jobs/dead-letter/dlq-2/replay').send({});
 
     expect(res.status).toBe(409);
-    expect(res.body).toEqual({
+    expectErrorBody(res.body, {
       message: `Dead-letter job 'dlq-2' belongs to queue '${OTHER_QUEUE_NAME}', not '${AI_MAINTENANCE_QUEUE_NAME}'`,
-      code: 'ConflictError',
+      code: 'ai.resource.conflict',
     });
   });
 });

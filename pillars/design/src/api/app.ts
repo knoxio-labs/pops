@@ -14,6 +14,8 @@
  */
 import express, { Router, type Express } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
+
 import { createIdentityMiddleware } from './middleware/identity.js';
 import { mountThreadRoutes } from './threads-routes.js';
 
@@ -31,8 +33,11 @@ export const DESIGN_PILLAR_ID = 'design';
 
 export function createDesignApiApp(options: CreateDesignApiAppOptions): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: DESIGN_PILLAR_ID });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json({ limit: '64kb' }));
+  app.use(errors.bodyParser);
 
   app.get('/health', (_req, res) => {
     res.json({
@@ -48,6 +53,9 @@ export function createDesignApiApp(options: CreateDesignApiAppOptions): Express 
   api.use(createIdentityMiddleware(options.env ?? process.env));
   mountThreadRoutes(api, options.db);
   app.use(api);
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
 }

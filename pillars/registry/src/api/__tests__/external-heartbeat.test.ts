@@ -183,7 +183,7 @@ describe('POST /core.registry.heartbeat — reported capabilities', () => {
       .post('/core.registry.heartbeat')
       .send({ pillarId: 'recipes', capabilities: { smartImport: 'yes' } });
     expect(res.status).toBe(400);
-    const fields = res.body.issues.map((i: { field: string }) => i.field);
+    const fields = res.body.details.issues.map((i: { field: string }) => i.field);
     expect(fields).toContain('capabilities.smartImport');
   });
 });
@@ -202,7 +202,7 @@ describe('POST /core.registry.heartbeat — body validation', () => {
   it('returns 400 with structured issues when pillarId is missing', async () => {
     const res = await requestOn(app).post('/core.registry.heartbeat').send({});
     expect(res.status).toBe(400);
-    const fields = res.body.issues.map((i: { field: string }) => i.field);
+    const fields = res.body.details.issues.map((i: { field: string }) => i.field);
     expect(fields).toContain('pillarId');
   });
 });

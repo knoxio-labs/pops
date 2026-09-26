@@ -7,6 +7,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import express, { type Express } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
 import { shutdownPillar, type ClosableServer } from '@pops/pillar-sdk/bootstrap';
 import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 
@@ -86,7 +87,10 @@ export function createMcpServer(): Server {
 }
 
 export const app: Express = express();
+const errors = createPillarErrorHandlers({ pillar: 'mcp' });
+app.use(errors.requestId);
 app.use(express.json({ limit: '1mb' }));
+app.use(errors.bodyParser);
 
 // EventEmitter listeners cannot be async — an `await` inside one returns a
 // promise the emitter discards. If `server.close()` rejected we'd hit
@@ -129,6 +133,9 @@ app.get('/ready', (_req, res) => {
     tools: allTools.length,
   });
 });
+
+app.use(errors.notFound);
+app.use(errors.final);
 
 // Default kept distinct from every other pillar's port (see AGENTS.md's
 // pillar/port table) — it used to default to 3002, colliding with inventory.

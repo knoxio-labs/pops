@@ -86,9 +86,13 @@ describe('POST /uri/resolve', () => {
     const res = await requestOn(makeApp()).post('/uri/resolve').send({});
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
-      kind: 'malformed',
-      uri: '',
-      reason: 'request body must be { uri: string }',
+      code: 'registry.uri.invalid',
+      message: 'The URI resolution request is invalid.',
+      requestId: expect.any(String),
+      retryable: false,
+      details: {
+        issues: [{ path: ['uri'], message: 'Expected a non-empty string.' }],
+      },
     });
   });
 

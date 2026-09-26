@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers, defineErrors, PopsError } from '@pops/pillar-express';
 import {
   createRegistryServiceAccountVerifier,
   INTERNAL_CREDENTIAL_HEADER,
@@ -50,6 +51,15 @@ const AI_USAGE_SCOPE = 'ai.usage.record';
  */
 const INTERNAL_PATH_SCOPES = new Map([['/ai-usage/record', AI_USAGE_SCOPE]]);
 
+const aiErrors = defineErrors('ai', {
+  forbidden: {
+    area: 'auth',
+    status: 403,
+    message: 'This request is not authorized.',
+    retryable: false,
+  },
+});
+
 /**
  * The callers this pillar accepts for its internal paths (ADR-039 E22). Each
  * presents `name.secret` in {@link INTERNAL_CREDENTIAL_HEADER}; the secret comes
@@ -69,7 +79,7 @@ const ACCEPTED_CALLERS: readonly InternalCallerSpec[] = [
   },
 ];
 
-function requireInternalToken(req: Request, res: Response, next: NextFunction): void {
+function requireInternalToken(req: Request, _res: Response, next: NextFunction): void {
   // `req.get` normalises a possibly-repeated header to a single string so a
   // client sending a header more than once (→ `string[]`) is not spuriously
   // rejected.
@@ -82,8 +92,7 @@ function requireInternalToken(req: Request, res: Response, next: NextFunction): 
     },
   });
   if (!result.ok) {
-    res.status(403).json({ message: 'Forbidden' });
-    return;
+    aiErrors.forbidden();
   }
   next();
 }
@@ -105,8 +114,11 @@ const openapiDocument: unknown = JSON.parse(
 
 export function createAiApiApp(deps: AiApiDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'ai' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json({ limit: '512kb' }));
+  app.use(errors.bodyParser);
   app.use(requireInternalToken);
 
   const handlers = makeRequestHandler(deps);
@@ -127,7 +139,33 @@ export function createAiApiApp(deps: AiApiDeps): Express {
     deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier();
   app.use(createServiceAccountScopeMiddleware(serviceAccountVerifier));
 
-  createExpressEndpoints(aiContract, makeAiRestHandlers(deps), app);
+  createExpressEndpoints(aiContract, makeAiRestHandlers(deps), app, {
+    requestValidationErrorHandler: (error, _req, _res, next) => {
+      next(
+        new PopsError({
+          code: 'ai.request.invalid',
+          status: 400,
+          message: 'The request is invalid.',
+          retryable: false,
+          details: { issues: validationIssues(error) },
+        })
+      );
+    },
+  });
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
+}
+
+function validationIssues(error: {
+  pathParams?: { issues: readonly unknown[] } | null;
+  headers?: { issues: readonly unknown[] } | null;
+  query?: { issues: readonly unknown[] } | null;
+  body?: { issues: readonly unknown[] } | null;
+}): unknown[] {
+  return [error.pathParams, error.headers, error.query, error.body].flatMap((value) =>
+    value === null || value === undefined ? [] : [...value.issues]
+  );
 }

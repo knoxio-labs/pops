@@ -16,22 +16,19 @@ import {
   updateList,
 } from '../../db/index.js';
 import { selectListAggregate } from '../services/aggregate.js';
-import { tryMapServiceError } from './error-mapping.js';
+import { errorBody, tryMapServiceError } from './error-mapping.js';
+
+import type { ErrorBody } from '@pops/types';
 
 import type { ListsDb } from '../../db/index.js';
 
-interface ConflictBody {
-  message: string;
-  code?: string;
-}
-
-function toConflictBody(err: unknown): ConflictBody | null {
+function toConflictBody(err: unknown): ErrorBody | null {
   const mapped = tryMapServiceError(err);
-  if (mapped?.status === 409) return { message: mapped.body.message, code: mapped.body.code };
+  if (mapped?.status === 409) return mapped.body;
   return null;
 }
 
-function toNotFoundBody(err: unknown): ConflictBody | null {
+function toNotFoundBody(err: unknown): ErrorBody | null {
   const mapped = tryMapServiceError(err);
   if (mapped?.status === 404) return mapped.body;
   return null;
@@ -134,7 +131,7 @@ export function makeListHandlers(db: ListsDb) {
       if (existing === null) {
         return {
           status: 404 as const,
-          body: { message: `List #${params.id} not found`, code: 'NOT_FOUND' },
+          body: errorBody('lists.resource.not_found', `List #${params.id} not found.`, false),
         };
       }
       deleteList(db, params.id);

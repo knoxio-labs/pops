@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Shared zod building blocks for the registry REST contract.
  *
@@ -8,7 +10,9 @@
  * These schemas describe the ACTUAL wire shapes the handlers serve, so the
  * OpenAPI projection is an honest description of what the server does.
  */
-import { z } from 'zod';
+import { ErrorBodySchema } from '@pops/types';
+
+export { ErrorBodySchema } from '@pops/types';
 
 /** String identity (uuid style). Path + body alike. */
 export const NonEmptyString = z.string().min(1);
@@ -28,15 +32,6 @@ export const PaginationMetaSchema = z.object({
   limit: z.number(),
   offset: z.number(),
   hasMore: z.boolean(),
-});
-
-/**
- * Error envelope. `code` carries the originating `HttpError` subclass name
- * (e.g. `NotFoundError`) so clients can branch without parsing `message`.
- */
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
 });
 
 /** Bare `{ message }` body returned by delete-style mutations. */

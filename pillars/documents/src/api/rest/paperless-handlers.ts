@@ -1,7 +1,11 @@
+import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
+
 import { getPaperlessClient } from '../modules/paperless/index.js';
 import { PaperlessApiError } from '../modules/paperless/types.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
+
+import type { ErrorBody } from '@pops/types';
 
 import type { documentsPaperlessContract } from '../../contract/rest-paperless.js';
 import type { PaperlessClient } from '../modules/paperless/client.js';
@@ -17,13 +21,25 @@ interface WireDocument {
   thumbnailUrl: string;
 }
 
-const NOT_CONFIGURED = {
-  status: 412 as const,
-  body: {
-    message: 'Paperless-ngx is not configured',
-    messageKey: 'documents.paperless.notConfigured',
-  },
-};
+function errorBody(code: string, message: string, retryable: boolean): ErrorBody {
+  return {
+    code,
+    message,
+    requestId: getRequestId() ?? mintRequestId(),
+    retryable,
+  };
+}
+
+function notConfigured() {
+  return {
+    status: 412 as const,
+    body: errorBody(
+      'documents.paperless.not_configured',
+      'Paperless-ngx is not configured.',
+      false
+    ),
+  };
+}
 
 function toWireDocument(client: PaperlessClient, doc: PaperlessDocument): WireDocument {
   return {
@@ -80,7 +96,7 @@ export function makePaperlessHandlers() {
     search: async ({ query }: Req['search']) => {
       const client = getPaperlessClient();
       if (!client) {
-        return NOT_CONFIGURED;
+        return notConfigured();
       }
       try {
         const result = await client.searchDocuments(query.query);
@@ -96,7 +112,7 @@ export function makePaperlessHandlers() {
     get: async ({ params }: Req['get']) => {
       const client = getPaperlessClient();
       if (!client) {
-        return NOT_CONFIGURED;
+        return notConfigured();
       }
       try {
         return {
@@ -107,10 +123,11 @@ export function makePaperlessHandlers() {
         if (err instanceof PaperlessApiError && err.status === 404) {
           return {
             status: 404 as const,
-            body: {
-              message: `Document ${String(params.id)} not found`,
-              messageKey: 'documents.paperless.notFound',
-            },
+            body: errorBody(
+              'documents.paperless.not_found',
+              `Document ${String(params.id)} was not found.`,
+              false
+            ),
           };
         }
         return rethrowNonNotFound(err);

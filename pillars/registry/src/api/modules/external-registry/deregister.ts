@@ -1,3 +1,5 @@
+import { defineErrors } from '@pops/pillar-express';
+
 /**
  * HTTP-JSON deregister handler for external pillars.
  *
@@ -30,12 +32,20 @@ export interface ExternalDeregisterDeps {
 
 export type ExternalDeregisterHandler = (req: Request, res: Response) => void;
 
-function rejectInternal(res: Response): void {
-  res.status(403).json({
-    ok: false,
-    reason: 'internal-pillar-not-deregisterable-externally',
-  });
-}
+const deregistrationErrors = defineErrors('registry', {
+  invalid: {
+    area: 'deregistration',
+    status: 400,
+    message: 'The pillar deregistration request is invalid.',
+    retryable: false,
+  },
+  internal_forbidden: {
+    area: 'deregistration',
+    status: 403,
+    message: 'Internal pillars cannot be deregistered through this endpoint.',
+    retryable: false,
+  },
+});
 
 function performDelete(deps: ExternalDeregisterDeps, existing: PillarRegistration): void {
   pillarRegistryService.deletePillarRegistration(deps.coreDb, existing.pillarId);
@@ -54,8 +64,7 @@ export function createExternalDeregisterHandler(
   return function externalDeregisterHandler(req, res) {
     const parsed = parseHeartbeatBody(req.body);
     if (!parsed.ok) {
-      res.status(400).json({ ok: false, issues: parsed.issues });
-      return;
+      return deregistrationErrors.invalid({ issues: parsed.issues });
     }
 
     const existing = pillarRegistryService.getPillarRegistration(
@@ -68,8 +77,7 @@ export function createExternalDeregisterHandler(
     }
 
     if (existing.origin === 'internal') {
-      rejectInternal(res);
-      return;
+      return deregistrationErrors.internal_forbidden({ pillarId: existing.pillarId });
     }
 
     performDelete(deps, existing);

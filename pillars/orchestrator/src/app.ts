@@ -14,11 +14,28 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { z } from 'zod';
 
+import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
+
 import { type BuildToolList, createAiToolsHandler } from './ai-tools/index.js';
 import { type OrchestratorDeps, makeRequestHandler } from './handlers.js';
 import { runSearch, type SearchSource } from './search/index.js';
 
 const JSON_BODY_LIMIT = '512kb';
+
+const orchestratorErrors = defineErrors('orchestrator', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The search request is invalid.',
+    retryable: false,
+  },
+  failed: {
+    area: 'search',
+    status: 500,
+    message: 'Search could not be completed.',
+    retryable: true,
+  },
+});
 
 /**
  * Body of `POST /search`. Mirrors each pillar's `/search` envelope
@@ -65,8 +82,11 @@ export function createOrchestratorApp(
   options: CreateOrchestratorAppOptions = {}
 ): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'orchestrator' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(errors.bodyParser);
 
   const handlers = makeRequestHandler(deps);
   const aiTools = createAiToolsHandler(
@@ -84,13 +104,18 @@ export function createOrchestratorApp(
       .catch(next);
   });
 
-  app.post('/search', (req: Request, res: Response) => {
-    void handleSearch(req, res, options.searchSource);
+  app.post('/search', (req: Request, res: Response, next: NextFunction) => {
+    void handleSearch(req, res, options.searchSource).catch(next);
   });
 
-  app.get('/ai/tools', (_req: Request, res: Response) => {
-    void aiTools().then((payload) => res.json(payload));
+  app.get('/ai/tools', (_req: Request, res: Response, next: NextFunction) => {
+    void aiTools()
+      .then((payload) => res.json(payload))
+      .catch(next);
   });
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
 }
@@ -102,8 +127,7 @@ async function handleSearch(
 ): Promise<void> {
   const parsed = SearchRequestSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'invalid_request', details: parsed.error.flatten() });
-    return;
+    return orchestratorErrors.invalid({ issues: parsed.error.issues });
   }
 
   const { query, context } = parsed.data;
@@ -116,6 +140,6 @@ async function handleSearch(
     res.json(result);
   } catch (err) {
     console.error('[orchestrator] federated search failed', err);
-    res.status(500).json({ error: 'search_failed' });
+    return orchestratorErrors.failed();
   }
 }

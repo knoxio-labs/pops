@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "@pops/pillar-express": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
+    "@pops/types": "workspace:*",
     "dotenv": "^18.0.1",
     "express": "^5.0.1"
   },

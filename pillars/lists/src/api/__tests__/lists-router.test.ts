@@ -9,8 +9,8 @@
  *
  * Status semantics:
  *   - Service NotFound (`ListNotFoundError`, `ListItemNotFoundError`)
- *     → HTTP 404 with `{ message, code: 'NOT_FOUND' }`.
- *   - SQLite FK / UNIQUE constraint → HTTP 400 with `code: 'CONFLICT_FK'` /
+ *     → HTTP 404 with the ADR-054 `lists.resource.not_found` envelope.
+ *   - SQLite FK / UNIQUE constraint → HTTP 400 with registered `lists.*`
  *     `'CONFLICT_UNIQUE'`, signalling the database rejected the request.
  *   - Zod validation failure (whitespace name, empty patch) → HTTP 400.
  */
@@ -429,7 +429,13 @@ describe('lists REST surface', () => {
 
     it('returns HTTP 400 with foreign-key code when listId references a missing list', async () => {
       await expect(client.items.add({ listId: 99999, label: 'x' })).rejects.toMatchObject({
-        message: expect.stringMatching(/foreign key/i),
+        status: 400,
+        body: {
+          code: 'lists.resource.conflict_foreign_key',
+          message: 'The operation conflicts with a related record.',
+          requestId: expect.any(String),
+          retryable: false,
+        },
       });
     });
   });
@@ -836,7 +842,15 @@ describe('lists REST surface', () => {
           label: 'x',
           qty: 1,
         })
-      ).rejects.toMatchObject({ message: expect.stringMatching(/foreign key/i) });
+      ).rejects.toMatchObject({
+        status: 400,
+        body: {
+          code: 'lists.resource.conflict_foreign_key',
+          message: 'The operation conflicts with a related record.',
+          requestId: expect.any(String),
+          retryable: false,
+        },
+      });
     });
 
     it('keeps separate identities for matching refId across different refKinds', async () => {

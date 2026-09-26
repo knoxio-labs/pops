@@ -164,8 +164,12 @@ describe('POST /core.registry.register — pillar id validation', () => {
         manifest: recipesManifest({ pillar: '1recipes' }),
       });
     expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.issues[0].field).toBe('pillarId');
+    expect(res.body).toMatchObject({
+      code: 'registry.registration.invalid',
+      requestId: expect.any(String),
+      retryable: false,
+    });
+    expect(res.body.details.issues[0].field).toBe('pillarId');
   });
 
   it('rejects a pillarId with uppercase letters', async () => {
@@ -177,7 +181,7 @@ describe('POST /core.registry.register — pillar id validation', () => {
         manifest: recipesManifest({ pillar: 'Recipes' }),
       });
     expect(res.status).toBe(400);
-    expect(res.body.issues[0].field).toBe('pillarId');
+    expect(res.body.details.issues[0].field).toBe('pillarId');
   });
 });
 
@@ -201,9 +205,9 @@ describe('POST /core.registry.register — manifest validation', () => {
         },
       });
     expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
-    expect(Array.isArray(res.body.issues)).toBe(true);
-    expect(res.body.issues.length).toBeGreaterThan(0);
+    expect(res.body.code).toBe('registry.registration.invalid');
+    expect(Array.isArray(res.body.details.issues)).toBe(true);
+    expect(res.body.details.issues.length).toBeGreaterThan(0);
     expect(pillarRegistryService.getPillarRegistration(coreDb.db, 'recipes')).toBeNull();
   });
 
@@ -223,7 +227,7 @@ describe('POST /core.registry.register — manifest validation', () => {
         }),
       });
     expect(res.status).toBe(400);
-    const fields = res.body.issues.map((i: { field: string }) => i.field);
+    const fields = res.body.details.issues.map((i: { field: string }) => i.field);
     expect(fields).toContain('manifest.pillar');
   });
 
@@ -233,7 +237,7 @@ describe('POST /core.registry.register — manifest validation', () => {
       baseUrl: 'http://recipes-api:4010',
     });
     expect(res.status).toBe(400);
-    const fields = res.body.issues.map((i: { field: string }) => i.field);
+    const fields = res.body.details.issues.map((i: { field: string }) => i.field);
     expect(fields).toContain('manifest');
   });
 
@@ -244,7 +248,7 @@ describe('POST /core.registry.register — manifest validation', () => {
       manifest: recipesManifest(),
     });
     expect(res.status).toBe(400);
-    const fields = res.body.issues.map((i: { field: string }) => i.field);
+    const fields = res.body.details.issues.map((i: { field: string }) => i.field);
     expect(fields).toContain('baseUrl');
   });
 });

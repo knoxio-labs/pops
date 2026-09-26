@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers, PopsError } from '@pops/pillar-express';
+
 import { listsContract } from '../contract/rest.js';
 import { type ListsApiDeps, makeRequestHandler } from './handlers.js';
 import { makeListsRestHandlers } from './rest/handlers.js';
@@ -40,8 +42,11 @@ const openapiDocument: unknown = JSON.parse(
 
 export function createListsApiApp(deps: ListsApiDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'lists' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json());
+  app.use(errors.bodyParser);
 
   const handlers = makeRequestHandler(deps);
 
@@ -61,7 +66,33 @@ export function createListsApiApp(deps: ListsApiDeps): Express {
     res.json(openapiDocument);
   });
 
-  createExpressEndpoints(listsContract, makeListsRestHandlers(deps), app);
+  createExpressEndpoints(listsContract, makeListsRestHandlers(deps), app, {
+    requestValidationErrorHandler: (error, _req, _res, next) => {
+      next(
+        new PopsError({
+          code: 'lists.request.invalid',
+          status: 400,
+          message: 'The request is invalid.',
+          retryable: false,
+          details: { issues: validationIssues(error) },
+        })
+      );
+    },
+  });
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
+}
+
+function validationIssues(error: {
+  pathParams?: { issues: readonly unknown[] } | null;
+  headers?: { issues: readonly unknown[] } | null;
+  query?: { issues: readonly unknown[] } | null;
+  body?: { issues: readonly unknown[] } | null;
+}): unknown[] {
+  return [error.pathParams, error.headers, error.query, error.body].flatMap((value) =>
+    value === null || value === undefined ? [] : [...value.issues]
+  );
 }
