@@ -189,10 +189,16 @@ export function resolveLabel(
   details: LabelDetails
 ): ResolvedLabel {
   if (content.kind === 'auto') {
-    return { parts: autoParts(subject.kind), fields: [], contents: [], fallback: false };
+    const parts = autoParts(subject.kind).filter(
+      (part) => part !== 'code' || subject.code !== null
+    );
+    return { parts, fields: [], contents: [], fallback: parts.length === 0 };
   }
   const contents = subject.kind === 'container' ? details.contents : [];
-  const kept = content.parts.filter((part) => part !== 'contents' || contents.length > 0);
+  const kept = content.parts.filter(
+    (part) =>
+      (part !== 'contents' || contents.length > 0) && (part !== 'code' || subject.code !== null)
+  );
   const fields = details.fields.filter(
     (field) => content.fields.includes(field.id) && field.value.trim() !== ''
   );

@@ -115,6 +115,23 @@ describe('resolveLabel', () => {
     expect(resolveLabel(content, uncodedThing, NO_DETAILS).parts).toEqual(['name']);
   });
 
+  it('leaves an unavailable code off a label before falling back', () => {
+    expect(resolveLabel({ kind: 'auto' }, uncodedThing, NO_DETAILS)).toEqual({
+      parts: ['qr'],
+      fields: [],
+      contents: [],
+      fallback: false,
+    });
+    expect(
+      resolveLabel({ kind: 'parts', parts: ['code'], fields: [] }, uncodedThing, NO_DETAILS)
+    ).toEqual({
+      parts: ['name'],
+      fields: [],
+      contents: [],
+      fallback: true,
+    });
+  });
+
   it('leaves off an empty box’s contents rather than printing an empty list', () => {
     const content: LabelContent = { kind: 'parts', parts: ['name', 'contents'], fields: [] };
     const empty = resolveLabel(content, box, { ...boxDetails, contents: [] });
