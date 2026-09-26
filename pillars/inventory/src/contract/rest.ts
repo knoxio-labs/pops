@@ -30,6 +30,7 @@ import {
   inventorySyncContract,
   inventoryTypesContract,
 } from './rest-sync.js';
+import { inventoryWebSummaryContract } from './rest-web-summary.js';
 import { inventoryWebContract } from './rest-web.js';
 
 const c = initContract();
@@ -47,6 +48,7 @@ export const inventoryContract = c.router(
     paperless: inventoryPaperlessContract,
     search: inventorySearchContract,
     web: inventoryWebContract,
+    webSummary: inventoryWebSummaryContract,
     settings: inventorySettingsContract,
     sync: inventorySyncContract,
     types: inventoryTypesContract,

@@ -25,6 +25,7 @@ import { makeSettingsHandlers } from './settings-handlers.js';
 import { makeCodesHandlers, makeSyncHandlers, makeTypesHandlers } from './sync-handlers.js';
 import { makeTypeCatalogueHandlers } from './type-catalogue-handlers.js';
 import { makeWebHandlers } from './web-handlers.js';
+import { makeWebSummaryHandlers } from './web-summary-handlers.js';
 
 import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
@@ -68,6 +69,7 @@ export function makeInventoryRestHandlers(deps: {
     paperless: makePaperlessHandlers(documents),
     search: makeSearchHandlers(db),
     web: makeWebHandlers({ db, documents }),
+    webSummary: makeWebSummaryHandlers(db),
     settings: makeSettingsHandlers(db),
     sync: makeSyncHandlers({ db, documents, verify: deps.serviceAccountVerifier }),
     types: { ...makeTypesHandlers(db), ...makeTypeCatalogueHandlers(db) },

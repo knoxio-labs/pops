@@ -82,6 +82,7 @@ export {
   typesReadValidateItem,
   webGet,
   webList,
+  webSummaryGet,
 } from './sdk.gen';
 export type {
   ClientOptions,
@@ -450,4 +451,7 @@ export type {
   WebListErrors,
   WebListResponse,
   WebListResponses,
+  WebSummaryGetData,
+  WebSummaryGetResponse,
+  WebSummaryGetResponses,
 } from './types.gen';

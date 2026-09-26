@@ -6596,3 +6596,49 @@ export type WebGetResponses = {
 };
 
 export type WebGetResponse = WebGetResponses[keyof WebGetResponses];
+
+export type WebSummaryGetData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/web/summary';
+};
+
+export type WebSummaryGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    containerSegments: {
+      all: number;
+      closed: number;
+      full: number;
+      moving: number;
+      open: number;
+      retired: number;
+    };
+    counts: {
+      containers: number;
+      inHand: number;
+      items: number;
+      locations: number;
+      openContainers: number;
+      things: number;
+    };
+    moving: {
+      closed: number;
+      full: number;
+      open: number;
+      packed: number;
+      total: number;
+    };
+    packing: {
+      closed: number;
+      fullButOpen: number;
+      open: number;
+      packedItems: number;
+    };
+  };
+};
+
+export type WebSummaryGetResponse = WebSummaryGetResponses[keyof WebSummaryGetResponses];

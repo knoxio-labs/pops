@@ -1091,6 +1091,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/summary': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Overview and container segment counts for the inventory web app */
+    get: operations['webSummary.get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -9129,6 +9146,56 @@ export interface operations {
             code?: string;
             message: string;
             messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webSummary.get': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            containerSegments: {
+              all: number;
+              closed: number;
+              full: number;
+              moving: number;
+              open: number;
+              retired: number;
+            };
+            counts: {
+              containers: number;
+              inHand: number;
+              items: number;
+              locations: number;
+              openContainers: number;
+              things: number;
+            };
+            moving: {
+              closed: number;
+              full: number;
+              open: number;
+              packed: number;
+              total: number;
+            };
+            packing: {
+              closed: number;
+              fullButOpen: number;
+              open: number;
+              packedItems: number;
+            };
           };
         };
       };

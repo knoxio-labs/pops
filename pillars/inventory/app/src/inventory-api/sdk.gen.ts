@@ -225,6 +225,8 @@ import type {
   WebListData,
   WebListErrors,
   WebListResponses,
+  WebSummaryGetData,
+  WebSummaryGetResponses,
 } from './types.gen';
 
 export type Options<
@@ -1362,5 +1364,16 @@ export const webGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebGetResponses, WebGetErrors, ThrowOnError> =>
   (options.client ?? client).get<WebGetResponses, WebGetErrors, ThrowOnError>({
     url: '/web/items/{id}',
+    ...options,
+  });
+
+/**
+ * Overview and container segment counts for the inventory web app
+ */
+export const webSummaryGet = <ThrowOnError extends boolean = false>(
+  options?: Options<WebSummaryGetData, ThrowOnError>
+): RequestResult<WebSummaryGetResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<WebSummaryGetResponses, unknown, ThrowOnError>({
+    url: '/web/summary',
     ...options,
   });
