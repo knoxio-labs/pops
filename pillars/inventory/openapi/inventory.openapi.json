@@ -21492,9 +21492,6 @@
                 "additionalProperties": false,
                 "properties": {
                   "destination": {
-                    "default": {
-                      "kind": "hand"
-                    },
                     "oneOf": [
                       {
                         "additionalProperties": false,
@@ -21580,7 +21577,7 @@
                     "type": "array"
                   }
                 },
-                "required": ["rows", "destination", "dryRun"],
+                "required": ["rows", "dryRun"],
                 "type": "object"
               }
             }

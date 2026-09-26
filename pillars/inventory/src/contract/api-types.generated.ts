@@ -9456,12 +9456,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          /**
-           * @default {
-           *       "kind": "hand"
-           *     }
-           */
-          destination:
+          destination?:
             | {
                 /** @enum {string} */
                 kind: 'location';

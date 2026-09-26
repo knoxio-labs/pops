@@ -29,8 +29,8 @@ export const WebBatchRowSchema = z.object({
 /** The request body for partial-accept web item creation. */
 export const WebBatchBodySchema = z.object({
   rows: z.array(WebBatchRowSchema).min(1).max(WEB_BATCH_MAX_ROWS),
-  /** Where a row with an empty `where` cell is placed; defaults to in hand. */
-  destination: SyncPlacementSchema.default({ kind: 'hand' }),
+  /** Where a row with an empty `where` cell is placed; omitted means in hand. */
+  destination: SyncPlacementSchema.optional(),
   dryRun: z.boolean().default(false),
 });
 

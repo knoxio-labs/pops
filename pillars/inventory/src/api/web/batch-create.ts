@@ -143,6 +143,7 @@ function createRow({
 function executeBatch(db: CommandDb, body: WebBatchBody): WebBatchResponse {
   const context = createWebBatchContext(db);
   const clientTime = new Date().toISOString();
+  const destination: Placement = body.destination ?? { kind: 'hand' };
   const outcomes: WebBatchOutcome[] = [];
   for (const [rowIndex, row] of body.rows.entries()) {
     if (isBlankWebBatchRow(row)) {
@@ -160,7 +161,7 @@ function executeBatch(db: CommandDb, body: WebBatchBody): WebBatchResponse {
         row,
         rowIndex,
         context,
-        destination: body.destination,
+        destination,
         dryRun: body.dryRun,
         clientTime,
       })
