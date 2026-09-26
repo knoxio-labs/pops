@@ -25,20 +25,37 @@
                     }
                 )
                 .ignoresSafeArea(edges: .bottom)
-                .overlay(alignment: .bottom) {
-                    if session.showsTextPrompt {
-                        VStack(spacing: PopsSpacing.sm) {
+                .safeAreaInset(edge: .bottom) {
+                    VStack(spacing: PopsSpacing.sm) {
+                        if session.showsTextPrompt {
                             if let message = model.prefillStatus?.message { Text(message) }
                             Text("Point at the label text and tap Use text")
                         }
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsForeground)
-                        .padding(PopsSpacing.lg)
-                        .background(
-                            .regularMaterial, in: RoundedRectangle(cornerRadius: PopsRadius.card)
-                        )
-                        .padding(PopsSpacing.lg)
+                        Button {
+                            let lines = InventoryLabelText.lines(from: session.recognizedText)
+                            session.stop()
+                            dismiss()
+                            model.handleCapturedText(lines)
+                        } label: {
+                            Label {
+                                Text("Use text")
+                            } icon: {
+                                InventorySymbol.useText.image
+                            }
+                            .frame(maxWidth: .infinity, minHeight: PopsSize.touchTarget)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.popsInventory)
+                        .disabled(session.recognizedText.isEmpty)
+                        .accessibilityIdentifier(InventoryAccessibility.itemScanUseText)
                     }
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsForeground)
+                    .padding(PopsSpacing.lg)
+                    .background(
+                        .regularMaterial, in: RoundedRectangle(cornerRadius: PopsRadius.card)
+                    )
+                    .padding(PopsSpacing.lg)
                 }
                 .navigationTitle("Scan barcode or label")
                 .popsTitleDisplay(large: false)
@@ -93,11 +110,37 @@
             _ dataScanner: DataScannerViewController,
             didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]
         ) {
+            updateRecognizedText(allItems)
             let payloads = addedItems.compactMap { item -> String? in
                 guard case .barcode(let barcode) = item else { return nil }
                 return barcode.payloadStringValue
             }
             session.recognizeBarcodes(payloads, onFound: onFound)
+        }
+
+        func dataScanner(
+            _ dataScanner: DataScannerViewController,
+            didUpdate updatedItems: [RecognizedItem], allItems: [RecognizedItem]
+        ) {
+            updateRecognizedText(allItems)
+        }
+
+        func dataScanner(
+            _ dataScanner: DataScannerViewController,
+            didRemove removedItems: [RecognizedItem], allItems: [RecognizedItem]
+        ) {
+            updateRecognizedText(allItems)
+        }
+
+        private func updateRecognizedText(_ items: [RecognizedItem]) {
+            session.updateRecognizedText(
+                items.compactMap { item in
+                    guard case .text(let text) = item else { return nil }
+                    return InventoryRecognizedText(
+                        transcript: text.transcript,
+                        topLeft: text.bounds.topLeft, topRight: text.bounds.topRight,
+                        bottomRight: text.bounds.bottomRight, bottomLeft: text.bounds.bottomLeft)
+                })
         }
 
         func dataScanner(

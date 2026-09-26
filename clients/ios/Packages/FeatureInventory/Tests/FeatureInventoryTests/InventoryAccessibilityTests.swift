@@ -64,6 +64,12 @@ internal struct InventoryAccessibilityTests {
                 == "inventory-item-type-option-type-7")
     }
 
+    @Test("the item scanner actions have pinned identifiers")
+    func itemScannerIdentifiers() {
+        #expect(InventoryAccessibility.itemScan == "inventory-item-scan")
+        #expect(InventoryAccessibility.itemScanUseText == "inventory-item-scan-use-text")
+    }
+
     @Test("no Type option collides with the picker, another option, or a field")
     func typeOptionIdentifiersAreDistinct() {
         let ids: Set<String> = [

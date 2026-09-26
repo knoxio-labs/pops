@@ -6,6 +6,54 @@ import Testing
 @MainActor
 @Suite("Inventory scanner session", .timeLimit(.minutes(1)))
 internal struct InventoryScannerSessionTests {
+    @Test("capturing text before a queued barcode task starts preserves the text fill")
+    func textCaptureStopsQueuedBarcode() async {
+        let generator = ScanPrefillGenerator(
+            answer: [ScanPrefillFixture.detail.id: .text("from text")])
+        let opened = await ScanPrefillFixture.open(generator: generator)
+        defer { opened.loading.cancel() }
+        let session = InventoryScannerSession(model: opened.form)
+
+        session.recognizeBarcodes(["queued"], onFound: {})
+        let processing = session.processing
+        session.stop()
+        opened.form.handleCapturedText(["Label"])
+        let filling = opened.form.fillTask
+        await processing?.value
+        await filling?.value
+
+        #expect(await opened.lookup.codes.isEmpty)
+        #expect(opened.form.draft.identifiers.isEmpty)
+        #expect(
+            opened.form.protocol2Draft?.values(for: ScanPrefillFixture.detail)
+                == [.string("from text")])
+        #expect(opened.form.prefillStatus == nil)
+    }
+
+    @Test("the latest text snapshot replaces updates and removals, then stops with the session")
+    func latestTextSnapshotReplacesPreviousItems() async {
+        let opened = await ScanPrefillFixture.open()
+        defer { opened.loading.cancel() }
+        let session = InventoryScannerSession(model: opened.form)
+        let first = InventoryRecognizedText(
+            transcript: "First", topLeft: .zero, topRight: .zero,
+            bottomRight: .zero, bottomLeft: .zero)
+        let updated = InventoryRecognizedText(
+            transcript: "Updated", topLeft: .zero, topRight: .zero,
+            bottomRight: .zero, bottomLeft: .zero)
+
+        #expect(session.recognizedText.isEmpty)
+        session.updateRecognizedText([first])
+        #expect(session.recognizedText == [first])
+        session.updateRecognizedText([updated])
+        #expect(session.recognizedText == [updated])
+        session.updateRecognizedText([])
+        #expect(session.recognizedText.isEmpty)
+        session.stop()
+        session.updateRecognizedText([first])
+        #expect(session.recognizedText.isEmpty)
+    }
+
     @Test("an empty recognition batch leaves the session ready")
     func emptyBatchDoesNothing() async {
         let opened = await ScanPrefillFixture.open()

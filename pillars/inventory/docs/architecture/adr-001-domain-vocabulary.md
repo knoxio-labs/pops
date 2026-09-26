@@ -3,6 +3,7 @@
 ## Status
 
 Accepted — 2026-09-16.
+Amended 2026-09-26 (POPS-4848): types form a single-parent tree.
 
 ## Context
 
@@ -22,12 +23,10 @@ language and action semantics" while composing differently.
 Two decisions taken during POPS-3983 fix part of the vocabulary and are
 recorded here rather than left in a ticket comment:
 
-- An item's structured data is the fields its **type** declares; anything the
+- An item's structured data is the fields its **type** declares or inherits; anything the
   type does not ask for is prose. (POPS-3983, decided on the device.)
-- Types are defined in code and shipped by deploy, not authored in the product.
-  An authoring interface would have to store types as generic
-  `fields(name, kind, unit, choices)` rows — runtime-typed rows describing
-  runtime-typed rows, which is the shape POPS-3983 rejected one level up.
+- Types are persisted, owner-authored data; ADR-002 D5 records their draft and
+  publication model.
 
 ## Options Considered
 
@@ -35,12 +34,12 @@ Two axes were genuinely contested. The rest of the glossary follows from them.
 
 ### What to call the shape an item has
 
-| Option            | Pros                                                                                                                                                           | Cons                                                                                                                                                                 |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Type** (chosen) | The word the reviewer reaches for unprompted ("an item type for every type we encounter"); short; reads on a control label; matches that it is a code artefact | Collides with "type" as in value kind (text, measurement) — needs the second word below to stay clear                                                                |
-| Category          | Familiar from shopping and filing; suggests a hierarchy                                                                                                        | Suggests a hierarchy we do not have, and suggests an item could sit in several; invites "uncategorised" as a state rather than "no type", which is a different thing |
-| Template          | Describes what it does — it supplies fields                                                                                                                    | Implies a starting point you then diverge from, which is exactly what the decided design does not allow; it was POPS-3983's word for a variant that lost             |
-| Kind              | Avoids the value-kind collision                                                                                                                                | Vague in a domain where everything is a kind of something; poor as a control label                                                                                   |
+| Option            | Pros                                                                                                                       | Cons                                                                                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Type** (chosen) | The word the reviewer reaches for unprompted ("an item type for every type we encounter"); short; reads on a control label | Collides with "type" as in value kind (text, measurement) — needs the second word below to stay clear                                                                             |
+| Category          | Familiar from shopping and filing; suggests a hierarchy                                                                    | The hierarchy now exists and is called "parent type"; suggests an item could sit in several; invites "uncategorised" as a state rather than "no type", which is a different thing |
+| Template          | Describes what it does — it supplies fields                                                                                | Implies a starting point you then diverge from, which is exactly what the decided design does not allow; it was POPS-3983's word for a variant that lost                          |
+| Kind              | Avoids the value-kind collision                                                                                            | Vague in a domain where everything is a kind of something; poor as a control label                                                                                                |
 
 ### Whether containment is a field or something else
 
@@ -60,8 +59,10 @@ both clients, the contract, and this pillar's code.
 | Word                    | Means                                                                                                                                                                 | Not                                      |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
 | **Item**                | Anything tracked. The only noun for a tracked thing.                                                                                                                  | "object", "asset", "thing", "entry"      |
-| **Type**                | The catalogue-defined shape an item has: its fields and its capabilities.                                                                                             | "category", "template", "kind", "class"  |
-| **Field**               | One slot a type declares — name, value kind, unit, allowed values, required or not.                                                                                   | "property", "attribute", "key"           |
+| **Type**                | The catalogue-defined shape an item has: its fields and capabilities, its own and its ancestors'.                                                                     | "category", "template", "kind", "class"  |
+| **Parent type**         | The type a type inherits fields and capabilities from; at most one.                                                                                                   | "category", "supertype", "base"          |
+| **Subtype**             | A type with a parent.                                                                                                                                                 | "child type", "subcategory"              |
+| **Field**               | One slot a type declares; its subtypes inherit it.                                                                                                                    | "property", "attribute", "key"           |
 | **Value**               | What one item records for one field.                                                                                                                                  | "property value", "data"                 |
 | **Value kind**          | What sort of value a field takes: text, integer, exact decimal, yes/no, enum, measurement, date, date-time, HTTPS URL or reference.                                   | "type" (reserved, above), "data type"    |
 | **Note**                | Free prose on an item. Where anything the type does not ask for goes.                                                                                                 | "description", "comment", "custom field" |
@@ -111,6 +112,8 @@ not been designed yet, not a capability.
 
 Sections appear as they are needed and all of them appear while editing, the
 way the iOS Contacts app does it. Provenance and documents expand in place.
+
+A subtype has every capability of its ancestors.
 
 ### Codes are identity, not data
 
@@ -246,9 +249,6 @@ Deciding one of them updates this ADR rather than adding a second word.
 
 - Every later design ticket declares components in these words and can be
   reviewed against this file rather than against the last screen somebody drew.
-- A type is a code artefact, so adding one is a deploy. Filing an item whose
-  type does not exist yet becomes a first-class path rather than an edge case
-  (POPS-4016), and that path is load-bearing during a move.
 - "Capability" is a concept that will be under constant pressure to absorb
   things that are really fields. The test is whether it changes what screens an
   item has; if it only changes what its detail displays, it is a field.
