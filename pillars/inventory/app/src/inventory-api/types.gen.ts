@@ -7321,6 +7321,96 @@ export type WebLocationsGoneResponses = {
 
 export type WebLocationsGoneResponse = WebLocationsGoneResponses[keyof WebLocationsGoneResponses];
 
+export type WebMovingGetData = {
+  body?: never;
+  path?: never;
+  query: {
+    destinationField: string;
+    homeLocationId?: string;
+  };
+  url: '/web/moving-day';
+};
+
+export type WebMovingGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebMovingGetError = WebMovingGetErrors[keyof WebMovingGetErrors];
+
+export type WebMovingGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    boxes: Array<{
+      code: string | null;
+      contents: Array<{
+        code: string | null;
+        containerId: string;
+        id: string;
+        name: string;
+      }>;
+      count: number;
+      destination: {
+        label: string;
+        optionKey: string;
+      } | null;
+      id: string;
+      name: string;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      stage: 'packing' | 'full' | 'closed';
+    }>;
+    destinationOptions: Array<{
+      label: string;
+      optionKey: string;
+    }>;
+    inHand: Array<{
+      code: string | null;
+      id: string;
+      name: string;
+    }>;
+    loose: Array<{
+      items: Array<{
+        code: string | null;
+        id: string;
+        name: string;
+      }>;
+      room: {
+        id: string;
+        name: string;
+      };
+    }>;
+    looseCount: number;
+    packed: number;
+    stages: {
+      closed: number;
+      full: number;
+      packing: number;
+    };
+    unlabelledClosed: number;
+  };
+};
+
+export type WebMovingGetResponse = WebMovingGetResponses[keyof WebMovingGetResponses];
+
 export type WebReportsValuesData = {
   body?: never;
   path?: never;

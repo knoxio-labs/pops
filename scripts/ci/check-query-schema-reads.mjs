@@ -1056,6 +1056,12 @@ export const INVENTORY_ROUTES = [
   },
   {
     method: 'get',
+    path: '/web/moving-day',
+    handlerFile: 'pillars/inventory/src/api/rest/web-moving-handlers.ts',
+    handlerKey: 'get',
+  },
+  {
+    method: 'get',
     path: '/web/search',
     handlerFile: 'pillars/inventory/src/api/rest/web-search-handlers.ts',
     handlerKey: 'list',
