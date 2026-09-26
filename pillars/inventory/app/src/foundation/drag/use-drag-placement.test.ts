@@ -1,8 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { coreWorld } from '../fixtures/core';
-import { closedBoxTarget, deskTarget, shelvingTarget } from '../fixtures/placements';
+import { coreWorld } from '../test-fixtures/core';
+import { closedBoxTarget, deskTarget, shelvingTarget } from '../test-fixtures/placements';
 import { dragSet, useDragPlacement } from './use-drag-placement';
 
 import type { PlacementTarget } from '../model/model';

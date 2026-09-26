@@ -1050,6 +1050,12 @@ export const INVENTORY_ROUTES = [
   },
   {
     method: 'get',
+    path: '/web/connections',
+    handlerFile: 'pillars/inventory/src/api/rest/web-connections-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
     path: '/web/search',
     handlerFile: 'pillars/inventory/src/api/rest/web-search-handlers.ts',
     handlerKey: 'list',

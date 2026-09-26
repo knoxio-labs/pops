@@ -126,4 +126,22 @@ internal struct AppDependenciesTests {
 
         #expect(suggestions == ["B1"])
     }
+
+    @Test("an unbound barcode lookup is unavailable")
+    func unboundBarcodeLookupIsUnavailable() async throws {
+        let result = try await AppDependencies.unbound.barcodeLookup.lookUp(code: "9780140328721")
+
+        #expect(result == .unavailable)
+    }
+
+    @Test("a fake container binds its barcode lookup")
+    func fakeContainerBindsBarcodeLookup() async throws {
+        let lookup = FakeInventoryBarcodeLookupService(result: .notFound)
+        let dependencies = AppDependencies.fake(barcodeLookup: lookup)
+
+        let result = try await dependencies.barcodeLookup.lookUp(code: "9780140328721")
+
+        #expect(result == .notFound)
+        #expect(await lookup.codes == ["9780140328721"])
+    }
 }

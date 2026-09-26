@@ -8,6 +8,8 @@ Inventory mutation requests carry the catalogue revision stored with the
 queued edit. `BFMInventoryTransport` forwards that pin as its own wire field;
 it is not command-specific data and therefore does not belong inside `args`.
 
+The same transport relays barcode lookups through `/mobile/barcode/lookup/{code}`. It maps a found response into AppCore's facts-only product, preserves a definite `not_found`, and reduces unavailable answers, HTTP refusals and transport failures to `.unavailable` so scanning remains an optional assist.
+
 ## The client is generated, committed, and gated
 
 ```bash

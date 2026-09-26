@@ -1,91 +1,47 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { PointerEvent } from 'react';
 
-interface ActiveDrag {
-  id: symbol;
-  move: (event: globalThis.PointerEvent) => void;
-  end: (event: globalThis.PointerEvent) => void;
-  pointerId: number;
-  target: HTMLElement;
-}
-
-function clampDelta(deltaX: number): number {
-  if (Number.isNaN(deltaX)) return 0;
-  return Math.max(-Number.MAX_SAFE_INTEGER, Math.min(Number.MAX_SAFE_INTEGER, deltaX));
-}
-
 /**
- * Captures a primary pointer on a vertical edge and reports its horizontal
- * movement from the press point until release, cancellation, or unmount.
+ * Captures a primary pointer on an edge and reports horizontal movement from
+ * the press point until the pointer is released or cancelled.
  */
 export function useEdgeDrag(onMove: (deltaX: number) => void): {
   dragging: boolean;
   onPointerDown: (event: PointerEvent<HTMLElement>) => void;
 } {
   const [dragging, setDragging] = useState(false);
-  const activeDragRef = useRef<ActiveDrag | null>(null);
+  const activePointerId = useRef<number | null>(null);
+  const onPointerDown = (event: PointerEvent<HTMLElement>) => {
+    if (event.button !== 0 || activePointerId.current !== null) return;
 
-  const stop = useCallback(() => {
-    const activeDrag = activeDragRef.current;
-    if (activeDrag === null) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const target = event.currentTarget;
+    const pointerId = event.pointerId;
+    activePointerId.current = pointerId;
+    target.setPointerCapture(pointerId);
+    setDragging(true);
 
-    activeDragRef.current = null;
-    activeDrag.target.removeEventListener('pointermove', activeDrag.move);
-    activeDrag.target.removeEventListener('pointerup', activeDrag.end);
-    activeDrag.target.removeEventListener('pointercancel', activeDrag.end);
-    activeDrag.target.releasePointerCapture?.(activeDrag.pointerId);
-    setDragging(false);
-  }, []);
+    const move = (moveEvent: globalThis.PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
 
-  useEffect(() => stop, [stop]);
+      onMove(moveEvent.clientX - startX);
+    };
+    const end = (endEvent: globalThis.PointerEvent) => {
+      if (endEvent.pointerId !== pointerId) return;
 
-  const onPointerDown = useCallback(
-    (event: PointerEvent<HTMLElement>) => {
-      if (
-        event.type !== 'pointerdown' ||
-        event.button !== 0 ||
-        !Number.isFinite(event.pointerId) ||
-        event.pointerId < 0 ||
-        !Number.isFinite(event.clientX) ||
-        activeDragRef.current !== null
-      ) {
-        return;
-      }
+      activePointerId.current = null;
+      setDragging(false);
+      target.removeEventListener('pointermove', move);
+      target.removeEventListener('pointerup', end);
+      target.removeEventListener('pointercancel', end);
+    };
 
-      event.preventDefault();
-      const { clientX: startX, currentTarget: target, pointerId } = event;
-      const dragId = Symbol('edge-drag');
-
-      const move = (moveEvent: globalThis.PointerEvent) => {
-        if (
-          activeDragRef.current?.id !== dragId ||
-          moveEvent.pointerId !== pointerId ||
-          !Number.isFinite(moveEvent.clientX)
-        ) {
-          return;
-        }
-
-        onMove(clampDelta(moveEvent.clientX - startX));
-      };
-
-      const end = (endEvent: globalThis.PointerEvent) => {
-        if (activeDragRef.current?.id !== dragId || endEvent.pointerId !== pointerId) {
-          return;
-        }
-
-        stop();
-      };
-
-      activeDragRef.current = { id: dragId, move, end, pointerId, target };
-      target.setPointerCapture?.(pointerId);
-      target.addEventListener('pointermove', move);
-      target.addEventListener('pointerup', end);
-      target.addEventListener('pointercancel', end);
-      setDragging(true);
-    },
-    [onMove, stop]
-  );
+    target.addEventListener('pointermove', move);
+    target.addEventListener('pointerup', end);
+    target.addEventListener('pointercancel', end);
+  };
 
   return { dragging, onPointerDown };
 }

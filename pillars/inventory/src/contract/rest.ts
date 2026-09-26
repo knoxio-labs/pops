@@ -3,7 +3,7 @@
  *
  * Composes the module sub-routers (items, locations, connections,
  * fixtures, photos, documents, documentFiles, reports, paperless, search,
- * web search, web batch, settings, and the sync protocol's sync, types and codes) into the public
+ * web search, web batch, web connections, settings, and the sync protocol's sync, types and codes) into the public
  * wire surface.
  * `generateOpenApi(inventoryContract, …)`
  * projects this to `openapi/inventory.openapi.json`; `openapi-typescript`
@@ -25,6 +25,7 @@ import { inventoryPhotosContract } from './rest-photos.js';
 import { inventoryReportsContract } from './rest-reports.js';
 import { inventorySearchContract } from './rest-search.js';
 import { inventorySettingsContract } from './rest-settings.js';
+import { inventoryWebSyncLedgerContract } from './rest-sync-ledger.js';
 import {
   inventoryCodesContract,
   inventorySyncContract,
@@ -32,6 +33,7 @@ import {
 } from './rest-sync.js';
 import { inventoryWebBatchContract } from './rest-web-batch.js';
 import { inventoryWebChangesContract } from './rest-web-changes.js';
+import { inventoryWebConnectionsContract } from './rest-web-connections.js';
 import { inventoryWebEventsContract } from './rest-web-events.js';
 import { inventoryWebLocationsContract } from './rest-web-locations.js';
 import { inventoryWebReportsContract } from './rest-web-reports.js';
@@ -56,11 +58,13 @@ export const inventoryContract = c.router(
     web: inventoryWebContract,
     webBatch: inventoryWebBatchContract,
     webChanges: inventoryWebChangesContract,
+    webConnections: inventoryWebConnectionsContract,
     webEvents: inventoryWebEventsContract,
     webLocations: inventoryWebLocationsContract,
     webReports: inventoryWebReportsContract,
     webSearch: inventoryWebSearchContract,
     webSummary: inventoryWebSummaryContract,
+    webSyncLedger: inventoryWebSyncLedgerContract,
     settings: inventorySettingsContract,
     sync: inventorySyncContract,
     types: inventoryTypesContract,

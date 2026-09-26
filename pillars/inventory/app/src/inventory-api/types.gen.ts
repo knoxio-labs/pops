@@ -3434,6 +3434,128 @@ export type SyncItemEventsResponses = {
 
 export type SyncItemEventsResponse = SyncItemEventsResponses[keyof SyncItemEventsResponses];
 
+export type SyncReportLedgerData = {
+  /**
+   * Body
+   */
+  body?: {
+    attention: Array<{
+      code?: {
+        holder: string;
+        suggested: string;
+        wanted: string;
+      };
+      held?: {
+        title: string;
+        values: Array<{
+          field: string;
+          fit: string;
+          replacement?: string;
+          value: string;
+        }>;
+      };
+      id: string;
+      itemId: string;
+      itemName: string;
+      kind: string;
+      mine?: {
+        at: string;
+        source: string;
+        value: string;
+      };
+      openedAt: string;
+      photo?: {
+        limit: string;
+        size: string;
+      };
+      problem: string;
+      refused?: {
+        at: string;
+        reason: string;
+      };
+      theirs?: {
+        at: string;
+        source: string;
+        value: string;
+      };
+    }>;
+    lastSyncAt: string | null;
+    reportedAt: string;
+    resolved: Array<{
+      at: string;
+      dropped?: Array<{
+        field: string;
+        fit: string;
+        replacement?: string;
+        value: string;
+      }>;
+      id: string;
+      itemName: string;
+      outcome: string;
+    }>;
+    waiting: Array<{
+      id: string;
+      itemName: string;
+      reason: {
+        caseId?: string;
+        itemName?: string;
+        kind: string;
+        on?: string;
+        revision?: number;
+      };
+      since: string;
+      summary: string;
+    }>;
+  };
+  headers?: {
+    'pops-inventory-protocol'?: string;
+    'pops-actor'?: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/sync/ledger';
+};
+
+export type SyncReportLedgerErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 403
+   */
+  403: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SyncReportLedgerError = SyncReportLedgerErrors[keyof SyncReportLedgerErrors];
+
+export type SyncReportLedgerResponses = {
+  /**
+   * 200
+   */
+  200: {
+    stored: boolean;
+  };
+};
+
+export type SyncReportLedgerResponse = SyncReportLedgerResponses[keyof SyncReportLedgerResponses];
+
 export type SyncMutationsData = {
   /**
    * Body
@@ -6442,6 +6564,78 @@ export type WebChangesHeadResponses = {
 
 export type WebChangesHeadResponse = WebChangesHeadResponses[keyof WebChangesHeadResponses];
 
+export type WebConnectionsListData = {
+  body?: never;
+  path?: never;
+  query: {
+    kind: 'all' | 'item' | 'fixture';
+    q?: string;
+    cursor?: string;
+    limit: number;
+  };
+  url: '/web/connections';
+};
+
+export type WebConnectionsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebConnectionsListError = WebConnectionsListErrors[keyof WebConnectionsListErrors];
+
+export type WebConnectionsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    nextCursor: string | null;
+    rows: Array<{
+      createdAt: string;
+      far:
+        | {
+            code: string | null;
+            id: string;
+            isContainer: boolean;
+            kind: 'item';
+            lifecycle: string;
+            name: string;
+            typeKey: string | null;
+          }
+        | {
+            id: string;
+            kind: 'fixture';
+            locationId: string | null;
+            name: string;
+            type: string;
+          };
+      id: string;
+      item: {
+        code: string | null;
+        id: string;
+        isContainer: boolean;
+        kind: 'item';
+        lifecycle: string;
+        name: string;
+        typeKey: string | null;
+      };
+    }>;
+    summary: {
+      connections: number;
+      fixtures: number;
+      items: number;
+    };
+  };
+};
+
+export type WebConnectionsListResponse =
+  WebConnectionsListResponses[keyof WebConnectionsListResponses];
+
 export type WebEventsListData = {
   body?: never;
   path?: never;
@@ -6728,7 +6922,7 @@ export type WebBatchCreateData = {
    * Body
    */
   body?: {
-    destination:
+    destination?:
       | {
           kind: 'location';
           locationId: string;
@@ -7464,3 +7658,98 @@ export type WebSummaryGetResponses = {
 };
 
 export type WebSummaryGetResponse = WebSummaryGetResponses[keyof WebSummaryGetResponses];
+
+export type WebSyncLedgerGetData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/web/sync/ledger';
+};
+
+export type WebSyncLedgerGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    attention: Array<{
+      code?: {
+        holder: string;
+        suggested: string;
+        wanted: string;
+      };
+      deviceId: string;
+      held?: {
+        title: string;
+        values: Array<{
+          field: string;
+          fit: string;
+          replacement?: string;
+          value: string;
+        }>;
+      };
+      id: string;
+      itemId: string;
+      itemName: string;
+      kind: string;
+      mine?: {
+        at: string;
+        source: string;
+        value: string;
+      };
+      openedAt: string;
+      photo?: {
+        limit: string;
+        size: string;
+      };
+      problem: string;
+      refused?: {
+        at: string;
+        reason: string;
+      };
+      theirs?: {
+        at: string;
+        source: string;
+        value: string;
+      };
+    }>;
+    attentionCount: number;
+    devices: Array<{
+      attentionCount: number;
+      id: string;
+      lastSyncAt: string | null;
+      name: string;
+      receivedAt: string;
+      reportedAt: string;
+    }>;
+    receivedHead: string | null;
+    resolved: Array<{
+      at: string;
+      deviceId: string;
+      dropped?: Array<{
+        field: string;
+        fit: string;
+        replacement?: string;
+        value: string;
+      }>;
+      id: string;
+      itemName: string;
+      outcome: string;
+    }>;
+    waiting: Array<{
+      deviceId: string;
+      id: string;
+      itemName: string;
+      reason: {
+        caseId?: string;
+        itemName?: string;
+        kind: string;
+        on?: string;
+        revision?: number;
+      };
+      since: string;
+      summary: string;
+    }>;
+  };
+};
+
+export type WebSyncLedgerGetResponse = WebSyncLedgerGetResponses[keyof WebSyncLedgerGetResponses];

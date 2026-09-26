@@ -5,10 +5,10 @@
  */
 import { cn } from '@pops/ui';
 
-import { coreWorld } from '../fixtures/core';
 import { INVENTORY_ICONS } from '../model/icons';
 import { targetName } from '../model/placement-model';
 import { dropVerdict } from '../move-plan/move-plan-model';
+import { coreWorld } from '../test-fixtures/core';
 import { DROP_TARGET_CLASS, DragDock, DragGhost, DropHint } from './drag-dock';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
