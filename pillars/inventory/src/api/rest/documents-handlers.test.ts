@@ -96,4 +96,30 @@ describe('documents.listForItem', () => {
     expect(response.body.data).toEqual([]);
     expect(missing).not.toHaveBeenCalled();
   });
+
+  it('caps concurrent Paperless probes independently of the page limit', async () => {
+    let active = 0;
+    let maximumActive = 0;
+    const missing = vi.fn((_id: number): Promise<boolean | null> =>
+      (async () => {
+        active += 1;
+        maximumActive = Math.max(maximumActive, active);
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        active -= 1;
+        return false;
+      })()
+    );
+    const api = app(documentsClient(missing));
+    const item = await makeClient(api).items.create({ itemName: 'Many documents' });
+    for (let index = 1; index <= 17; index += 1) {
+      addDocument(item.data.id, index, `Document ${index}`);
+    }
+
+    const responsePromise = requestOn(api).get(`/items/${item.data.id}/documents?limit=500`);
+    const response = await responsePromise;
+    expect(missing).toHaveBeenCalledTimes(17);
+    expect(maximumActive).toBe(16);
+    expect(response.status).toBe(200);
+    expect(response.body.data).toHaveLength(17);
+  });
 });

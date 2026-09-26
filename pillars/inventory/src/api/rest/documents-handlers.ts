@@ -13,6 +13,25 @@ type Req = ServerInferRequest<typeof inventoryDocumentsContract>;
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
+const PAPERLESS_PROBE_CONCURRENCY = 16;
+
+async function annotateDocuments(rows: readonly ItemDocumentRow[], documents: DocumentsClient) {
+  const annotated = [];
+  for (let offset = 0; offset < rows.length; offset += PAPERLESS_PROBE_CONCURRENCY) {
+    const batch = rows.slice(offset, offset + PAPERLESS_PROBE_CONCURRENCY);
+    annotated.push(
+      ...(await Promise.all(
+        batch.map(async (row) => ({
+          ...toItemDocument(row),
+          missing: await documents.paperlessDocumentMissing(row.paperlessDocumentId),
+        }))
+      ))
+    );
+  }
+  return annotated;
+}
+
+type ItemDocumentRow = ReturnType<typeof service.listDocumentsForItem>['rows'][number];
 
 /** Build document-link handlers and annotate list results with live Paperless existence. */
 export function makeDocumentsHandlers(db: InventoryDb, documents: DocumentsClient) {
@@ -42,12 +61,7 @@ export function makeDocumentsHandlers(db: InventoryDb, documents: DocumentsClien
         const limit = query.limit ?? DEFAULT_LIMIT;
         const offset = query.offset ?? DEFAULT_OFFSET;
         const { rows, total } = service.listDocumentsForItem(db, params.itemId, limit, offset);
-        const data = await Promise.all(
-          rows.map(async (row) => ({
-            ...toItemDocument(row),
-            missing: await documents.paperlessDocumentMissing(row.paperlessDocumentId),
-          }))
-        );
+        const data = await annotateDocuments(rows, documents);
         return {
           status: 200 as const,
           body: {

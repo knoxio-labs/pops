@@ -216,6 +216,16 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/purchases/src/api/cron/pillar-lookup.ts',
   },
   {
+    consumer: 'inventory',
+    producer: 'documents',
+    operationId: 'paperless.get',
+    path: '/paperless/documents/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/inventory/src/api/documents/client.ts',
+  },
+  {
     consumer: 'purchases',
     producer: 'contacts',
     operationId: 'entities.list',
