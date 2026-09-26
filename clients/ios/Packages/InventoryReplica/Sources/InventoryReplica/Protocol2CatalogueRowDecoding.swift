@@ -32,7 +32,8 @@ extension Protocol2CatalogueRows {
             presentation: try StoredJSON.decode(
                 InventoryJSON.self, from: try row.decode(forColumn: "presentation")),
             archivedAt: try row.decode(forColumn: "archived_at"),
-            replacedBy: try row.decode(forColumn: "replaced_by"))
+            replacedBy: try row.decode(forColumn: "replaced_by"),
+            parentTypeId: try row.decode(forColumn: "parent_id"))
     }
 
     private static func field(

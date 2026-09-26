@@ -1,3 +1,4 @@
+import AppCore
 import GRDB
 import Testing
 
@@ -6,7 +7,7 @@ import Testing
 @Suite("Replica migration order")
 internal struct ReplicaMigrationOrderTests {
     @Test(
-        "a fresh replica applies every migration from computed values to field defaults, in order"
+        "a fresh replica applies catalogue lineage, defaults and type parents in order"
     )
     func freshReplicaAppliesBoth() throws {
         let queue = try DatabaseQueue()
@@ -20,10 +21,66 @@ internal struct ReplicaMigrationOrderTests {
                 "v8_computed_values", "v9_local_computed_values", "v10_catalogue_update_hold",
                 "v11_nullable_catalogue_revision", "v12_catalogue_hold_reason",
                 "v13_catalogue_lineage", "v14_catalogue_field_defaults",
+                "v15_catalogue_type_parent",
             ]
-            #expect(Array(applied.suffix(7)) == expected)
+            #expect(Array(applied.suffix(8)) == expected)
             #expect(try db.tableExists(ComputedValueRows.localTableName))
             #expect(try Self.mutationLogColumns(db).contains("awaiting_catalogue_after"))
+        }
+    }
+
+    @Test("upgrading a v13 catalogue keeps its rows with a nil parent")
+    func upgradeKeepsCatalogueRowsWithoutParents() throws {
+        let queue = try DatabaseQueue()
+        let migrator = ReplicaSchema.migrator()
+        try migrator.migrate(queue, upTo: "v13_catalogue_lineage")
+        try queue.write { db in
+            try db.execute(
+                sql: """
+                    INSERT INTO catalogue_revision (revision, base_revision, status, minimum_protocol)
+                    VALUES (1, NULL, 'published', 2)
+                    """)
+            try db.execute(
+                sql: """
+                    INSERT INTO catalogue_type
+                        (revision, id, key, label, sort_order, capabilities, legacy_labels,
+                         presentation, archived_at, replaced_by)
+                    VALUES (1, 'type-1', 'bulb', 'Bulb', 0, ?, ?, ?, NULL, NULL)
+                    """,
+                arguments: [
+                    try StoredJSON.encode([String]()), try StoredJSON.encode([String]()),
+                    try StoredJSON.encode(InventoryJSON.object([:])),
+                ])
+        }
+
+        try migrator.migrate(queue)
+
+        try queue.read { db in
+            let row = try Row.fetchOne(
+                db, sql: "SELECT id, parent_id FROM catalogue_type WHERE revision = 1")
+            let id: String? = row?["id"]
+            let parent: String? = row?["parent_id"]
+            #expect(id == "type-1")
+            #expect(parent == nil)
+        }
+    }
+
+    @Test("a catalogue type parent cannot be changed after it is stored")
+    func parentIsImmutable() throws {
+        let replica = try InventoryReplica()
+        try replica.store(
+            InventoryCatalogueSnapshot(
+                revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
+                types: [
+                    InventoryCatalogueType(
+                        id: "type-1", key: "bulb", label: "Bulb", sortOrder: 0)
+                ]))
+
+        #expect(throws: DatabaseError.self) {
+            try replica.database.write { db in
+                try db.execute(
+                    sql: "UPDATE catalogue_type SET parent_id = 'type-2' WHERE id = 'type-1'")
+            }
         }
     }
 

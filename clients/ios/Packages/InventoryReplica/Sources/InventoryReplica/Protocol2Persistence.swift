@@ -84,13 +84,14 @@ internal enum Protocol2CatalogueRows {
             sql: """
                 INSERT INTO catalogue_type
                     (revision, id, key, label, description, sort_order, capabilities,
-                     legacy_labels, presentation, archived_at, replaced_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     legacy_labels, presentation, archived_at, replaced_by, parent_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: [
                 revision, type.id, type.key, type.label, type.description, type.sortOrder,
                 try StoredJSON.encode(type.capabilities), try StoredJSON.encode(type.legacyLabels),
                 try StoredJSON.encode(type.presentation), type.archivedAt, type.replacedBy,
+                type.parentTypeId,
             ])
         for field in type.fields {
             try store(field, revision: revision, in: db)

@@ -94,12 +94,15 @@ public struct InventoryCatalogueType: Codable, Identifiable, Hashable, Sendable 
     /// The type that took over this archived type's items, when the
     /// catalogue records one.
     public let replacedBy: String?
+    /// The parent type whose fields and capabilities the phone resolves for
+    /// this type; `nil` identifies a root type.
+    public let parentTypeId: String?
 
     public init(
         id: String, key: String, label: String, description: String? = nil, sortOrder: Int,
         fields: [InventoryCatalogueField] = [], capabilities: [String] = [],
         legacyLabels: [String] = [], presentation: InventoryJSON = .object([:]),
-        archivedAt: String? = nil, replacedBy: String? = nil
+        archivedAt: String? = nil, replacedBy: String? = nil, parentTypeId: String? = nil
     ) {
         self.id = id
         self.key = key
@@ -112,6 +115,7 @@ public struct InventoryCatalogueType: Codable, Identifiable, Hashable, Sendable 
         self.presentation = presentation
         self.archivedAt = archivedAt
         self.replacedBy = replacedBy
+        self.parentTypeId = parentTypeId
     }
 
     /// Whether this type grants the containment capability (ADR-002 D1). A
