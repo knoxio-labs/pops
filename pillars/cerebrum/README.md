@@ -32,6 +32,12 @@ drift-checked in CI.
 `ego` is co-located here (it has no contract of its own); its settings nest
 under cerebrum, so the pillar exports both `cerebrumManifest` and `egoManifest`.
 
+All REST failures use the ADR-054 envelope from `@pops/types`:
+`{ code, message, requestId, retryable, details? }`. Codes are dotted lowercase
+values under `cerebrum.*`; the API echoes an incoming `X-Request-Id` or mints
+one, and unknown failures are logged with that ID while returning the redacted
+`cerebrum.internal` response.
+
 ## Layout
 
 ```

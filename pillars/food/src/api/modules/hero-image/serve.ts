@@ -11,6 +11,8 @@
 import { existsSync } from 'node:fs';
 import { extname } from 'node:path';
 
+import { PopsError } from '@pops/pillar-express';
+
 import { isValidHeroFilename, resolveServablePath } from './paths.js';
 
 import type { NextFunction, Request, Response } from 'express';
@@ -33,8 +35,12 @@ export function serveHeroImage(req: Request, res: Response, next: NextFunction):
   }
   const absPath = resolveServablePath(recipeId, filename);
   if (absPath === null || !existsSync(absPath)) {
-    res.status(404).json({ message: 'Hero image not found' });
-    return;
+    throw new PopsError({
+      code: 'food.hero_image.not_found',
+      status: 404,
+      message: 'Hero image not found.',
+      retryable: false,
+    });
   }
   const contentType = CONTENT_TYPE[extname(absPath).toLowerCase()];
   if (contentType !== undefined) res.type(contentType);

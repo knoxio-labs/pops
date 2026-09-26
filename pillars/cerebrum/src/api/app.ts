@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
+
 import { cerebrumContract } from '../contract/rest.js';
 import { type CerebrumApiDeps, makeRequestHandler } from './handlers.js';
 import { AnthropicEgoLlm } from './modules/ego/llm.js';
@@ -50,8 +52,11 @@ const openapiDocument: unknown = JSON.parse(
 
 export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'cerebrum' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(errors.bodyParser);
 
   const handlers = makeRequestHandler(deps);
 
@@ -101,7 +106,12 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
     })
   );
 
-  createExpressEndpoints(cerebrumContract, makeCerebrumRestHandlers(deps), app);
+  createExpressEndpoints(cerebrumContract, makeCerebrumRestHandlers(deps), app, {
+    requestValidationErrorHandler: errors.validation,
+  });
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
 }

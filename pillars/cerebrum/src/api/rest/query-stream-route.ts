@@ -1,3 +1,5 @@
+import { PopsError } from '@pops/pillar-express';
+
 /**
  * SSE route handler for streaming cerebrum query answers (pillars/cerebrum/docs/prds/query-engine).
  *
@@ -31,9 +33,24 @@ function writeSseEvent(res: Response, data: Record<string, unknown>): void {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function describeError(err: unknown): string {
-  if (err instanceof HttpError) return err.message;
-  return err instanceof Error ? err.message : 'Internal server error';
+function streamError(err: unknown, requestId: string | undefined): Record<string, unknown> {
+  if (err instanceof HttpError) {
+    return {
+      type: 'error',
+      code: err.code,
+      message: err.message,
+      requestId,
+      retryable: err.retryable,
+    };
+  }
+  console.error('[cerebrum] query stream failure', { requestId, error: err });
+  return {
+    type: 'error',
+    code: 'cerebrum.internal',
+    message: 'The service could not complete the request.',
+    requestId,
+    retryable: false,
+  };
 }
 
 async function pipeStreamEvents(
@@ -75,10 +92,18 @@ async function pipeStreamEvents(
  * terminal `error` frame.
  */
 export function makeQueryStreamHandler(deps: QueryServiceDeps): RequestHandler {
-  return (req: Request, res: Response): void => {
+  return (req: Request, res: Response, next): void => {
     const parsed = queryStreamBodySchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Invalid request body', details: parsed.error.issues });
+      next(
+        new PopsError({
+          code: 'cerebrum.request.invalid',
+          status: 400,
+          message: 'The request is invalid.',
+          retryable: false,
+          details: { issues: parsed.error.issues },
+        })
+      );
       return;
     }
 
@@ -88,7 +113,7 @@ export function makeQueryStreamHandler(deps: QueryServiceDeps): RequestHandler {
       try {
         await pipeStreamEvents(res, new QueryService(deps), parsed.data);
       } catch (err) {
-        writeSseEvent(res, { type: 'error', message: describeError(err) });
+        writeSseEvent(res, streamError(err, req.requestId));
       } finally {
         res.end();
       }

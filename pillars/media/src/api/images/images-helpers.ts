@@ -8,6 +8,8 @@ import { createHash } from 'node:crypto';
 import { open, stat, unlink } from 'node:fs/promises';
 import { basename, extname, resolve } from 'node:path';
 
+import { PopsError } from '@pops/pillar-express';
+
 import type { Response } from 'express';
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -87,12 +89,20 @@ export async function removeCorruptedPlaceholder(filePath: string): Promise<bool
 }
 
 async function sendFileWithErrorHandling(res: Response, filePath: string): Promise<boolean> {
-  return new Promise<boolean>((resolvePromise) => {
+  return new Promise<boolean>((resolvePromise, reject) => {
     res.sendFile(resolve(filePath), (err) => {
       if (err && !res.headersSent) {
         res.removeHeader('Cache-Control');
         res.removeHeader('ETag');
-        res.status(500).json({ error: 'Failed to send file' });
+        reject(
+          new PopsError({
+            code: 'media.image.send_failed',
+            status: 500,
+            message: 'The image could not be served.',
+            retryable: true,
+          })
+        );
+        return;
       }
       resolvePromise(true);
     });

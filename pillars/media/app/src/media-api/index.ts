@@ -443,6 +443,7 @@ export type {
   DiscoveryWatchlistRecommendationsData,
   DiscoveryWatchlistRecommendationsResponse,
   DiscoveryWatchlistRecommendationsResponses,
+  ErrorBody,
   LibraryAddMovieData,
   LibraryAddMovieError,
   LibraryAddMovieErrors,

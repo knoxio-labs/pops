@@ -99,7 +99,7 @@ describe('POST /ingest/classify', () => {
       status: 400,
       body: {
         message: 'body must not be empty or whitespace-only',
-        code: 'ValidationError',
+        code: 'cerebrum.request.invalid',
       },
     });
   });

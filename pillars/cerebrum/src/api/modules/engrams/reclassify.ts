@@ -10,7 +10,6 @@ import { dirname, join } from 'node:path';
 import { eq, inArray, like, or, sql } from 'drizzle-orm';
 
 import { engramIndex, engramScopes, type CerebrumDb } from '../../../db/index.js';
-import { ValidationError } from '../../shared/errors.js';
 import { parseEngramFile, serializeEngram } from './file.js';
 
 interface ReclassifyTarget {
@@ -136,7 +135,7 @@ function writeAllAtomic(work: WorkItem[]): WorkItem[] {
     }
   } catch (err) {
     rollbackWrites(written, 'reclassify rollback');
-    throw new ValidationError(`reclassify failed and was rolled back: ${(err as Error).message}`);
+    throw new Error('Engram reclassification file update failed.', { cause: err });
   }
   return written;
 }
@@ -189,9 +188,7 @@ export function reclassifyScopes(
     applyDbChanges(db, work);
   } catch (dbErr) {
     rollbackWrites(written, 'reclassify DB rollback');
-    throw new ValidationError(
-      `reclassify DB update failed and file changes were rolled back: ${(dbErr as Error).message}`
-    );
+    throw new Error('Engram reclassification database update failed.', { cause: dbErr });
   }
 
   return { affected: affectedIds.length };
