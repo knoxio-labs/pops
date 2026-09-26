@@ -4,9 +4,9 @@ import { randomUUID } from 'node:crypto';
  * Invariant tests for the connections service against an in-memory SQLite
  * brought up by the real migration journal. Pure DB + service layer.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { connectionsService } from '../index.js';
+import { connectionsService, readConnectionsChangedAt } from '../index.js';
 import { fixtures, itemFixtureConnections } from '../schema.js';
 import {
   ConnectionConflictError,
@@ -23,6 +23,10 @@ import type { InventoryDb } from '../services/internal.js';
 function freshDb(): InventoryDb {
   return openMigratedTestDb().db;
 }
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 /** Seed two items and return their IDs in sorted (A<B) order. */
 function seedPair(db: InventoryDb, nameA = 'Item A', nameB = 'Item B'): [string, string] {
@@ -206,6 +210,36 @@ describe('connectionsService.delete', () => {
     connectionsService.delete(db, pairAB[0], pairAB[1]);
 
     expect(connectionsService.get(db, pairAC[0], pairAC[1]).itemAId).toBe(pairAC[0]);
+  });
+
+  it('create and delete touch connections_changed_at', () => {
+    vi.useFakeTimers();
+    const [idA, idB] = seedPair(db);
+    const createdAt = new Date('2026-09-27T00:00:00.000Z');
+    vi.setSystemTime(createdAt);
+
+    connectionsService.create(db, { itemAId: idA, itemBId: idB });
+    expect(readConnectionsChangedAt(db)).toBe(createdAt.toISOString());
+
+    const deletedAt = new Date('2026-09-27T00:01:00.000Z');
+    vi.setSystemTime(deletedAt);
+    connectionsService.delete(db, idA, idB);
+    expect(readConnectionsChangedAt(db)).toBe(deletedAt.toISOString());
+  });
+
+  it('a refused create leaves connections_changed_at unchanged', () => {
+    vi.useFakeTimers();
+    const [idA, idB] = seedPair(db);
+    vi.setSystemTime(new Date('2026-09-27T00:00:00.000Z'));
+    connectionsService.create(db, { itemAId: idA, itemBId: idB });
+    const before = readConnectionsChangedAt(db);
+
+    vi.setSystemTime(new Date('2026-09-27T00:01:00.000Z'));
+    expect(() => connectionsService.create(db, { itemAId: idA, itemBId: 'missing' })).toThrow(
+      ConnectionItemNotFoundError
+    );
+
+    expect(readConnectionsChangedAt(db)).toBe(before);
   });
 });
 

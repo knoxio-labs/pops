@@ -72,6 +72,11 @@ export {
 
 export { searchFilterScope } from './services/search-filters.js';
 
+export {
+  readConnectionsChangedAt,
+  touchConnectionsChanged,
+} from './services/connections-changed.js';
+
 export type {
   InventorySearchScope,
   SearchFilter,
