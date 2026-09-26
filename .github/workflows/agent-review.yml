@@ -114,6 +114,7 @@ jobs:
           node scripts/ci/check-subprocess-test-timeouts.mjs --self-test
           node scripts/ci/check-cold-graph-typecheck.mjs --self-test
           node scripts/ci/check-commit-attribution.mjs --self-test
+          node scripts/ci/check-error-codes.mjs --self-test
           # Not a guard over the source tree like the ones above — it is the
           # gate that decides whether the merge queue's macOS compile happens.
           # It self-tests in its own job too, immediately before it answers;
