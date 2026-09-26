@@ -29,6 +29,7 @@ vi.mock('sonner', () => ({
 
 let nextId = 0;
 let latestOptions: ToastOptions | undefined;
+let latestElement: ReactElement | undefined;
 
 function renderLatestToast(
   renderToast: (id: string | number) => ReactElement,
@@ -36,7 +37,7 @@ function renderLatestToast(
 ): string | number {
   const id = options?.id ?? `toast-${++nextId}`;
   latestOptions = options;
-  renderToast(id);
+  latestElement = renderToast(id);
   return id;
 }
 
@@ -45,6 +46,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   nextId = 0;
   latestOptions = undefined;
+  latestElement = undefined;
   custom.mockImplementation(renderLatestToast);
 });
 
@@ -139,6 +141,29 @@ describe('showUndoToast', () => {
 
     expect(getActiveUndoOffer()).toMatchObject({ state: 'conflict' });
     act(() => vi.advanceTimersByTime(UNDO_RESULT_MS));
+    expect(getActiveUndoOffer()).toBeNull();
+  });
+
+  it('dismisses a conflict offer before opening history', async () => {
+    const onOpenHistory = vi.fn(() => {
+      expect(getActiveUndoOffer()).toBeNull();
+    });
+    const toastId = showUndoToast({
+      concept: 'move',
+      message: 'Moved a box',
+      onUndo: vi.fn().mockRejectedValue(new Error('changed since')),
+      onOpenHistory,
+    });
+
+    runActiveUndo();
+    await flushAsyncWork();
+
+    if (latestElement === undefined) throw new Error('conflict toast was not rendered');
+    render(latestElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Open history' }));
+
+    expect(dismiss).toHaveBeenCalledWith(toastId);
+    expect(onOpenHistory).toHaveBeenCalledOnce();
     expect(getActiveUndoOffer()).toBeNull();
   });
 
