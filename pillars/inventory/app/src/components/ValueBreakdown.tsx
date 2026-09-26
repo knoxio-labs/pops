@@ -60,9 +60,7 @@ export function ValueByTypeCard({ className }: { className?: string }) {
         ) : (
           <BreakdownChart
             data={typeEntries}
-            onBarClick={(entry) =>
-              navigate(`/inventory/items?type=${encodeURIComponent(entry.name)}`)
-            }
+            onBarClick={(entry) => navigate(`/inventory/items?q=${encodeURIComponent(entry.name)}`)}
           />
         )}
       </CardContent>
@@ -121,7 +119,7 @@ export function ValueByLocationCard({ className }: { className?: string }) {
             data={locationEntries}
             onBarClick={(entry) => {
               if (entry.key) {
-                void navigate(`/inventory/items?locationId=${encodeURIComponent(entry.key)}`);
+                void navigate(`/inventory/items?placement=${encodeURIComponent(entry.key)}`);
               }
             }}
           />
