@@ -55,6 +55,9 @@ import type {
   FixturesListData,
   FixturesListForItemData,
   FixturesListForItemResponses,
+  FixturesListItemsData,
+  FixturesListItemsErrors,
+  FixturesListItemsResponses,
   FixturesListResponses,
   FixturesUpdateData,
   FixturesUpdateErrors,
@@ -371,6 +374,16 @@ export const fixturesCreate = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
   });
+
+/**
+ * List items connected to a fixture
+ */
+export const fixturesListItems = <ThrowOnError extends boolean = false>(
+  options: Options<FixturesListItemsData, ThrowOnError>
+): RequestResult<FixturesListItemsResponses, FixturesListItemsErrors, ThrowOnError> =>
+  (options.client ?? client).get<FixturesListItemsResponses, FixturesListItemsErrors, ThrowOnError>(
+    { url: '/fixtures/{fixtureId}/items', ...options }
+  );
 
 /**
  * Delete a fixture

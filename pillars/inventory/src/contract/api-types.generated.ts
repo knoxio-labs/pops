@@ -73,6 +73,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/fixtures/{fixtureId}/items': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List items connected to a fixture */
+    get: operations['fixtures.listItems'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/fixtures/{id}': {
     parameters: {
       query?: never;
@@ -1658,6 +1675,7 @@ export interface operations {
   'fixtures.list': {
     parameters: {
       query?: {
+        search?: string;
         locationId?: string;
         type?: string;
         limit?: number;
@@ -1727,6 +1745,222 @@ export interface operations {
               type: string;
             };
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'fixtures.listItems': {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        fixtureId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              /** @enum {string|null} */
+              access: 'open' | 'closed' | null;
+              catalogueRevision: number | null;
+              code: string | null;
+              computedValues: (
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'ok';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    override: {
+                      catalogueRevision: number;
+                    };
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'overridden';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    failedFieldId: string;
+                    /** Format: uuid */
+                    fieldId: string;
+                    missingInputs: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      reason: string;
+                    }[];
+                    reason: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'unavailable';
+                    traversedItemIds: string[];
+                  }
+              )[];
+              createdAt: string;
+              deletedAt: string | null;
+              documentTitles: string[];
+              /** @enum {string} */
+              documentsStatus: 'linked' | 'none' | 'unavailable';
+              externalIds: {
+                kind: string;
+                value: string;
+              }[];
+              fieldValues: {
+                catalogueRevision: number;
+                /** Format: uuid */
+                fieldId: string;
+                /** @enum {string} */
+                source: 'stored' | 'override';
+                values: unknown[];
+              }[];
+              fields: {
+                [key: string]: unknown;
+              };
+              id: string;
+              isContainer: boolean;
+              isFull: boolean | null;
+              legacyType: string | null;
+              lifecycle: string;
+              lifecycleChangedAt: string | null;
+              name: string;
+              note: string | null;
+              photos: {
+                caption: string | null;
+                sha256: string;
+              }[];
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              previousPlacement:
+                | (
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                  )
+                | null;
+              provenance: {
+                merchant: string | null;
+                price: number | null;
+                purchasedOn: string | null;
+                transactionUri: string | null;
+                warrantyExpires: string | null;
+              } | null;
+              quantity: number;
+              revision: number;
+              seq: number;
+              /** Format: uuid */
+              typeId: string | null;
+              typeKey: string | null;
+              updatedAt: string;
+            }[];
+            pagination: {
+              hasMore: boolean;
+              limit: number;
+              offset: number;
+              total: number;
+            };
           };
         };
       };
@@ -10174,6 +10408,7 @@ export interface operations {
                 containerId: string;
                 id: string;
                 name: string;
+                quantity: number;
               }[];
               count: number;
               destination: {
@@ -10208,12 +10443,14 @@ export interface operations {
               code: string | null;
               id: string;
               name: string;
+              quantity: number;
             }[];
             loose: {
               items: {
                 code: string | null;
                 id: string;
                 name: string;
+                quantity: number;
               }[];
               room: {
                 id: string;

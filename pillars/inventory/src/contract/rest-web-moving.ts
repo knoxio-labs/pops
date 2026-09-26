@@ -18,7 +18,12 @@ export const WebMovingQuerySchema = z.object({
   homeLocationId: z.string().min(1).optional(),
 });
 
-const Thing = z.object({ id: z.string(), name: z.string(), code: z.string().nullable() });
+const Thing = z.object({
+  id: z.string(),
+  name: z.string(),
+  code: z.string().nullable(),
+  quantity: z.number().int().positive(),
+});
 
 /** A destination enum option shown on the moving-day board. */
 export const MovingDestinationSchema = z.object({ optionKey: z.string(), label: z.string() });

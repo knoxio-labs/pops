@@ -5,6 +5,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { ERR_RESPONSES, MessageSchema, PaginationMetaSchema } from './rest-schemas.js';
+import { SyncItemSchema } from './rest-sync-schemas.js';
 
 const c = initContract();
 
@@ -49,6 +50,7 @@ export const inventoryFixturesContract = c.router({
     method: 'GET',
     path: '/fixtures',
     query: z.object({
+      search: z.string().trim().min(1).max(200).optional(),
       locationId: z.string().optional(),
       type: z.string().optional(),
       limit: z.coerce.number().positive().max(500).optional(),
@@ -94,6 +96,20 @@ export const inventoryFixturesContract = c.router({
     body: z.object({}).optional(),
     responses: { 201: ConnectResponse, ...ERR_RESPONSES },
     summary: 'Connect an item to a fixture',
+  },
+  listItems: {
+    method: 'GET',
+    path: '/fixtures/:fixtureId/items',
+    pathParams: z.object({ fixtureId: z.string() }),
+    query: z.object({
+      limit: z.coerce.number().positive().max(500).optional(),
+      offset: z.coerce.number().nonnegative().optional(),
+    }),
+    responses: {
+      200: z.object({ data: z.array(SyncItemSchema), pagination: PaginationMetaSchema }),
+      ...ERR_RESPONSES,
+    },
+    summary: 'List items connected to a fixture',
   },
   disconnect: {
     method: 'DELETE',

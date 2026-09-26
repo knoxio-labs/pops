@@ -298,6 +298,7 @@ export type FixturesListData = {
   body?: never;
   path?: never;
   query?: {
+    search?: string;
     locationId?: string;
     type?: string;
     limit?: number;
@@ -389,6 +390,183 @@ export type FixturesCreateResponses = {
 };
 
 export type FixturesCreateResponse = FixturesCreateResponses[keyof FixturesCreateResponses];
+
+export type FixturesListItemsData = {
+  body?: never;
+  path: {
+    fixtureId: string;
+  };
+  query?: {
+    limit?: number;
+    offset?: number;
+  };
+  url: '/fixtures/{fixtureId}/items';
+};
+
+export type FixturesListItemsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type FixturesListItemsError = FixturesListItemsErrors[keyof FixturesListItemsErrors];
+
+export type FixturesListItemsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
+      code: string | null;
+      computedValues: Array<
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            source: 'computed';
+            state: 'ok';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            override: {
+              catalogueRevision: number;
+            };
+            source: 'computed';
+            state: 'overridden';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            failedFieldId: string;
+            fieldId: string;
+            missingInputs: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
+            reason: string;
+            source: 'computed';
+            state: 'unavailable';
+            traversedItemIds: Array<string>;
+          }
+      >;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      legacyType: string | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeId: string | null;
+      typeKey: string | null;
+      updatedAt: string;
+    }>;
+    pagination: {
+      hasMore: boolean;
+      limit: number;
+      offset: number;
+      total: number;
+    };
+  };
+};
+
+export type FixturesListItemsResponse =
+  FixturesListItemsResponses[keyof FixturesListItemsResponses];
 
 export type FixturesDeleteData = {
   /**
@@ -7357,6 +7535,7 @@ export type WebMovingGetResponses = {
         containerId: string;
         id: string;
         name: string;
+        quantity: number;
       }>;
       count: number;
       destination: {
@@ -7387,12 +7566,14 @@ export type WebMovingGetResponses = {
       code: string | null;
       id: string;
       name: string;
+      quantity: number;
     }>;
     loose: Array<{
       items: Array<{
         code: string | null;
         id: string;
         name: string;
+        quantity: number;
       }>;
       room: {
         id: string;

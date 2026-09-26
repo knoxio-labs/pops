@@ -44,6 +44,7 @@ export const UpdateFixtureSchema = z
 export type UpdateFixtureInput = z.infer<typeof UpdateFixtureSchema>;
 
 export const FixtureQuerySchema = z.object({
+  search: z.string().trim().min(1).max(200).optional(),
   locationId: z.string().optional(),
   type: z.string().optional(),
   limit: z.coerce.number().positive().max(500).optional(),

@@ -49,7 +49,7 @@ function boxStage(row: ItemRow): MovingBox['stage'] {
 }
 
 function thing(row: ItemRow): Thing {
-  return { id: row.id, name: row.name, code: row.code };
+  return { id: row.id, name: row.name, code: row.code, quantity: row.quantity };
 }
 
 function liveDescendants(db: CommandDb, boxId: string): ItemRow[] {
