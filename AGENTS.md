@@ -466,6 +466,12 @@ Every non-trivial piece of code ships with tests — not optional. "Non-trivial"
 
 Every PR follows these. If a convention is wrong, change this section first — don't silently deviate.
 
+### User-visible errors
+
+- **Never swallow errors.** A failed user action must show a readable explanation in the UI. Use a toast, inline message, or alert appropriate to the action; an unexplained icon, silent no-op, or log entry alone is insufficient.
+- **Make failures reportable.** Include a safe, copyable error code or diagnostic identifier so a user can report what failed without a separate investigation. Preserve useful distinctions between validation, authentication, connectivity, service, and unexpected failures. Never expose credentials, raw request/response bodies, or personal data.
+- **Keep recovery available.** Preserve entered data and offer retry when appropriate. Error messages must remain available long enough to read and copy. Prefer polished, concise presentation, but never hide the error for appearance's sake. Expected cancellation is not a failure.
+
 ### Styling
 
 - **Tailwind only** — no CSS modules, no styled-components, no inline `style={{}}` except dynamic runtime values (e.g. progress-bar widths).

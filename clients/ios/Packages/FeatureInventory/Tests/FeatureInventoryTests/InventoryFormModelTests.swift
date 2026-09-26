@@ -89,6 +89,7 @@ internal struct InventoryFormModelTests {
 
         #expect(await asked.value == 0)
         #expect(form.draft.code.assist == .idle)
+        #expect(form.codeSuggestionFailure == .nameRequired)
     }
 
     @Test("an item's own code is not a collision when editing it")
@@ -124,9 +125,10 @@ internal struct InventoryFormModelTests {
 
         #expect(form.draft.code.assist == .offline)
         #expect(!form.draft.code.assist.canSuggest)
-        await form.suggestCode()
+        await form.retryCodeSuggestion()
         #expect(await asked.value == 0)
         #expect(form.draft.code.value.isEmpty)
+        #expect(form.codeSuggestionFailure == .offline)
 
         store.setStatus(.current)
         #expect(await form.await { form.draft.code.assist == .idle })
