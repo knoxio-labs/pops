@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import Foundation
 import SwiftUI
 
 /// The type, from the catalogue this phone last downloaded. "No type yet" is
@@ -41,20 +42,34 @@ internal struct InventoryFormTypeOption: Identifiable, Equatable {
 /// What the Type menu lists, apart from the menu itself, so the options and
 /// the handles automation taps them by are pinned by a test.
 internal enum InventoryFormTypeOptions {
-    /// Every active type in catalogue order, plus `selectedId` even once
+    /// Every active type in alphabetical order, plus `selectedId` even once
     /// archived: an item already of a retired type still reads its type,
     /// but no other item can newly take it.
     internal static func protocol2(
         _ catalogue: InventoryCatalogueSnapshot, selectedId: String
     ) -> [InventoryFormTypeOption] {
-        catalogue.types
-            .filter { $0.archivedAt == nil || $0.id == selectedId }
-            .map { InventoryFormTypeOption(id: $0.id, label: $0.label) }
+        alphabetically(
+            catalogue.types
+                .filter { $0.archivedAt == nil || $0.id == selectedId }
+                .map { InventoryFormTypeOption(id: $0.id, label: $0.label) })
     }
 
     /// A protocol-1 catalogue's types, keyed by type key.
     internal static func legacy(_ types: [InventoryType]) -> [InventoryFormTypeOption] {
-        types.map { InventoryFormTypeOption(id: $0.key, label: $0.name) }
+        alphabetically(types.map { InventoryFormTypeOption(id: $0.key, label: $0.name) })
+    }
+
+    private static func alphabetically(
+        _ options: [InventoryFormTypeOption]
+    ) -> [InventoryFormTypeOption] {
+        options.sorted { left, right in
+            switch left.label.localizedCaseInsensitiveCompare(right.label) {
+            case .orderedAscending: true
+            case .orderedDescending: false
+            case .orderedSame:
+                left.id.localizedCaseInsensitiveCompare(right.id) == .orderedAscending
+            }
+        }
     }
 }
 
@@ -78,8 +93,46 @@ internal struct InventoryFormNoteRow: View {
     @Binding internal var note: String
 
     internal var body: some View {
-        TextField("Note", text: $note, axis: .vertical)
-            .lineLimit(1...5)
+        InventoryFormFocusableRow { focus in
+            TextField("Note", text: $note, axis: .vertical)
+                .focused(focus)
+                .lineLimit(1...5)
+        }
+    }
+}
+
+internal struct InventoryFormFocusableRow<Content: View>: View {
+    private let externalFocus: FocusState<Bool>.Binding?
+    private let content: (FocusState<Bool>.Binding) -> Content
+    @FocusState private var localFocus: Bool
+
+    internal init(
+        focus: FocusState<Bool>.Binding? = nil,
+        @ViewBuilder content: @escaping (FocusState<Bool>.Binding) -> Content
+    ) {
+        externalFocus = focus
+        self.content = content
+    }
+
+    internal var body: some View {
+        if let externalFocus {
+            focusedContent(content(externalFocus)) {
+                externalFocus.wrappedValue = true
+            }
+        } else {
+            focusedContent(content($localFocus)) {
+                localFocus = true
+            }
+        }
+    }
+
+    private func focusedContent(
+        _ content: Content, onTap: @escaping () -> Void
+    ) -> some View {
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
+            .onTapGesture(perform: onTap)
     }
 }
 
@@ -132,7 +185,7 @@ internal struct InventoryFormCodeRow: View {
 }
 
 /// One labelled text row: the label leading, the field filling the middle
-/// with its text trailing, and an optional icon at the end, on one line.
+/// with its text leading, and an optional icon at the end, on one line.
 ///
 /// One `HStack` inside `LabeledContent` rather than several content views,
 /// because `LabeledContent` stacks several vertically and the icon then wraps
@@ -166,28 +219,26 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
     }
 
     internal var body: some View {
-        LabeledContent {
-            HStack(spacing: PopsSpacing.sm) {
-                field
-                    .font(monospaced && !text.isEmpty ? .popsMonospaced : .popsBody)
-                    .multilineTextAlignment(.trailing)
+        InventoryFormFocusableRow(focus: focus) { focus in
+            LabeledContent {
+                HStack(spacing: PopsSpacing.sm) {
+                    field(focus: focus)
+                        .font(monospaced && !text.isEmpty ? .popsMonospaced : .popsBody)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(1)
+                        .accessibilityIdentifier(identifier)
+                    accessory
+                }
+            } label: {
+                Text(label)
                     .lineLimit(1)
-                    .accessibilityIdentifier(identifier)
-                accessory
+                    .fixedSize()
             }
-        } label: {
-            Text(label)
-                .lineLimit(1)
-                .fixedSize()
         }
     }
 
-    @ViewBuilder private var field: some View {
-        if let focus {
-            TextField(placeholder, text: $text).focused(focus)
-        } else {
-            TextField(placeholder, text: $text)
-        }
+    @ViewBuilder private func field(focus: FocusState<Bool>.Binding) -> some View {
+        TextField(placeholder, text: $text).focused(focus)
     }
 }
 

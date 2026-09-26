@@ -109,13 +109,16 @@ private struct InventoryFormIdentifierRow: View {
     @Binding var identifier: InventoryIdentifierDraft
 
     var body: some View {
-        HStack {
-            InventoryFormCompactMenu(
-                title: "Kind", options: kinds, labels: labels, selection: $identifier.kind)
-            TextField("Serial or model", text: $identifier.value)
-                .font(identifier.value.isEmpty ? .popsBody : .popsMonospaced)
-                .multilineTextAlignment(.trailing)
-                .lineLimit(1)
+        InventoryFormFocusableRow { focus in
+            HStack {
+                InventoryFormCompactMenu(
+                    title: "Kind", options: kinds, labels: labels, selection: $identifier.kind)
+                TextField("Serial or model", text: $identifier.value)
+                    .focused(focus)
+                    .font(identifier.value.isEmpty ? .popsBody : .popsMonospaced)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+            }
         }
     }
 
