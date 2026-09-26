@@ -9,7 +9,6 @@ internal struct InventoryFormTypePicker: View {
     private let initialQuery: String
     @Environment(\.dismiss) private var dismiss
     @State private var query: String
-    @State private var navigationPath = NavigationPath()
 
     internal init(
         selection: Binding<String?>, additionalNames: [String] = [], query: String = "",
@@ -24,22 +23,20 @@ internal struct InventoryFormTypePicker: View {
     }
 
     internal var body: some View {
-        NavigationStack(path: $navigationPath) {
-            List {
-                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    rootRows
-                } else {
-                    searchRows
-                }
+        List {
+            if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                rootRows
+            } else {
+                searchRows
             }
-            .playgroundInsetGroupedList()
-            .navigationTitle("Type")
-            .searchable(text: $query, prompt: "Search types")
-            .navigationDestination(for: String.self) { parentID in
-                level(for: parentID)
-            }
-            .onAppear { query = initialQuery }
         }
+        .playgroundInsetGroupedList()
+        .navigationTitle("Type")
+        .searchable(text: $query, prompt: "Search types")
+        .navigationDestination(for: String.self) { parentID in
+            level(for: parentID)
+        }
+        .onAppear { query = initialQuery }
     }
 
     @ViewBuilder private var rootRows: some View {
@@ -139,14 +136,7 @@ internal struct InventoryFormTypePicker: View {
     }
 
     private func choose(_ name: String?) {
-        Self.choose(name, selection: $selection, navigationPath: &navigationPath)
+        selection = name
         dismiss()
-    }
-
-    internal static func choose(
-        _ name: String?, selection: Binding<String?>, navigationPath: inout NavigationPath
-    ) {
-        selection.wrappedValue = name
-        navigationPath = NavigationPath()
     }
 }
