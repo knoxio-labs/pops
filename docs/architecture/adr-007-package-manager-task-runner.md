@@ -21,16 +21,17 @@ POPS is a monorepo with 10+ workspace packages. It needs a package manager that 
 
 ## Decision
 
-pnpm + Turbo + mise. Three tools, each with a clear role:
+pnpm + mise. Two tools, each with a clear role:
 
 - **pnpm** — Package management. Strict dependency resolution prevents phantom deps. Native workspace support via `pnpm-workspace.yaml`
-- **Turbo** — Build orchestration. Caching across workspace packages matters as package count grows. Handles dev/build/test/typecheck/lint
-- **mise** — Task runner and tool version management. Pins Node version (valuable when AI agents do development). Runs non-build tasks (DB management, Docker, Ansible, imports)
+- **mise** — Task runner and tool version management. Pins Node version (valuable when AI agents do development). Runs build/typecheck/test/dev as well as non-build tasks (DB management, Docker, Ansible, imports)
+
+Turbo was chosen alongside them and later removed (#3531): `tsc -b` project references order the TypeScript build (`mise run build`), `mise run build:rust` builds the cargo workspace, and `mise run run-all <task>` fans a task out to every unit that defines it.
 
 ## Consequences
 
-- Three tools with no overlap — pnpm installs, Turbo builds, mise runs tasks and pins versions
+- Two tools with no overlap — pnpm installs, mise runs tasks, pins versions, and drives builds
 - AI agents get auto-pinned Node version without manual setup
 - Strict dependency resolution catches missing dependencies early
-- Turbo caching speeds up CI and repeated local builds
+- Build ordering and incremental rebuilds come from `tsc -b`, not a task-level cache
 - All common operations available via `mise tasks` — no need to remember per-package scripts

@@ -50,5 +50,4 @@ The "POPS OS" framing is reduced to a **packaging variant**: the same codebase c
 
 - [ADR-026](adr-026-pillar-architecture.md) — establishes the per-pillar isolation model this ADR positions
 - [ADR-027](adr-027-runtime-pillar-registry.md) — runtime registry is the discovery mechanism BE-lego depends on
-- [ADR-030](adr-030-contract-packages-semver.md) — contract publishing is the cross-language / cross-repo type-safety enabler
-- Theme 13 dashboard `BE-lego readiness` tracker for current state per pillar
+- [ADR-033](adr-033-cross-language-pillar-contracts.md) — the per-pillar OpenAPI contract is the cross-language / cross-repo type-safety enabler
