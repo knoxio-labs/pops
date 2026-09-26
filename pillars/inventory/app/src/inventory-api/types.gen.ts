@@ -69,6 +69,7 @@ export type TraceNode = {
   assetId: string | null;
   children: Array<TraceNode>;
   id: string;
+  isFixture?: boolean;
   itemName: string;
   type: string | null;
 };
@@ -1135,6 +1136,7 @@ export type ConnectionsGraphResponses = {
       nodes: Array<{
         assetId: string | null;
         id: string;
+        isFixture?: boolean;
         itemName: string;
         type: string | null;
       }>;
@@ -6440,6 +6442,78 @@ export type WebChangesHeadResponses = {
 
 export type WebChangesHeadResponse = WebChangesHeadResponses[keyof WebChangesHeadResponses];
 
+export type WebConnectionsListData = {
+  body?: never;
+  path?: never;
+  query: {
+    kind: 'all' | 'item' | 'fixture';
+    q?: string;
+    cursor?: string;
+    limit: number;
+  };
+  url: '/web/connections';
+};
+
+export type WebConnectionsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebConnectionsListError = WebConnectionsListErrors[keyof WebConnectionsListErrors];
+
+export type WebConnectionsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    nextCursor: string | null;
+    rows: Array<{
+      createdAt: string;
+      far:
+        | {
+            code: string | null;
+            id: string;
+            isContainer: boolean;
+            kind: 'item';
+            lifecycle: string;
+            name: string;
+            typeKey: string | null;
+          }
+        | {
+            id: string;
+            kind: 'fixture';
+            locationId: string | null;
+            name: string;
+            type: string;
+          };
+      id: string;
+      item: {
+        code: string | null;
+        id: string;
+        isContainer: boolean;
+        kind: 'item';
+        lifecycle: string;
+        name: string;
+        typeKey: string | null;
+      };
+    }>;
+    summary: {
+      connections: number;
+      fixtures: number;
+      items: number;
+    };
+  };
+};
+
+export type WebConnectionsListResponse =
+  WebConnectionsListResponses[keyof WebConnectionsListResponses];
+
 export type WebEventsListData = {
   body?: never;
   path?: never;
@@ -7036,6 +7110,46 @@ export type WebGetResponses = {
 };
 
 export type WebGetResponse = WebGetResponses[keyof WebGetResponses];
+
+export type WebLocationsGoneData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/web/locations/{id}/gone';
+};
+
+export type WebLocationsGoneErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebLocationsGoneError = WebLocationsGoneErrors[keyof WebLocationsGoneErrors];
+
+export type WebLocationsGoneResponses = {
+  /**
+   * 200
+   */
+  200: {
+    deletedAt: string;
+    deletedBy: {
+      kind: string;
+      label: string;
+    } | null;
+    id: string;
+    inHandCount: number;
+    name: string;
+  };
+};
+
+export type WebLocationsGoneResponse = WebLocationsGoneResponses[keyof WebLocationsGoneResponses];
 
 export type WebSearchListData = {
   body?: never;

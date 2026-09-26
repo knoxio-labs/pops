@@ -17,6 +17,10 @@ import {
 } from '../rate-limit.js';
 import { makeDeviceHandlers } from './device-handlers.js';
 import {
+  makeMobileBarcodeHandlers,
+  type MobileBarcodeHandlerDeps,
+} from './mobile-barcode-handlers.js';
+import {
   makeMobileContactsHandlers,
   type MobileContactsHandlerDeps,
 } from './mobile-contacts-handlers.js';
@@ -47,6 +51,7 @@ const server: ReturnType<typeof initServer> = initServer();
 export interface BfmRestHandlerDeps
   extends
     MobileContactsHandlerDeps,
+    MobileBarcodeHandlerDeps,
     MobileFinanceHandlerDeps,
     MobileInventoryHandlerDeps,
     MobilePurchasesHandlerDeps {
@@ -157,6 +162,7 @@ export function makeBfmRestHandlers(
       }),
     },
     mobileContacts: makeMobileContactsHandlers(deps),
+    mobileBarcode: makeMobileBarcodeHandlers(deps),
     mobileFinance: makeMobileFinanceHandlers(deps),
     mobileInventory: makeMobileInventoryHandlers(deps),
     mobilePurchases: makeMobilePurchasesHandlers(deps),

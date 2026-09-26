@@ -42,6 +42,7 @@ internal struct InventoryItemFormView: View {
         .tint(.popsInventory)
         .interactiveDismissDisabled(model.hasStagedWork)
         .task(id: generation) { await model.load() }
+        .onDisappear { model.cancelScanPrefill() }
         .inventoryPhotoPickerSheet(source: $pickingPhoto) { data in
             if let sha256 = retakingSha256 {
                 retakingSha256 = nil
@@ -91,23 +92,33 @@ internal struct InventoryItemFormView: View {
     private var form: some View {
         Form {
             Section {
-                InventoryPhotoStrip(
-                    photos: model.draft.photos,
-                    capture: { pickingPhoto = $0 },
-                    retry: { sha256 in Task { await model.retryUpload(sha256: sha256) } },
-                    remove: { sha256 in Task { await model.removePhoto(sha256: sha256) } },
-                    retake: { sha256, source in
-                        retakingSha256 = sha256
-                        pickingPhoto = source
-                    },
-                    reorder: { sha256, direction in
-                        Task { await model.movePhoto(sha256, direction) }
-                    },
-                    thumbnail: { await model.thumbnail($0) }
-                )
+                HStack(spacing: PopsSpacing.sm) {
+                    InventoryPhotoStrip(
+                        photos: model.draft.photos,
+                        capture: { pickingPhoto = $0 },
+                        retry: { sha256 in Task { await model.retryUpload(sha256: sha256) } },
+                        remove: { sha256 in Task { await model.removePhoto(sha256: sha256) } },
+                        retake: { sha256, source in
+                            retakingSha256 = sha256
+                            pickingPhoto = source
+                        },
+                        reorder: { sha256, direction in
+                            Task { await model.movePhoto(sha256, direction) }
+                        },
+                        thumbnail: { await model.thumbnail($0) }
+                    )
+                    .background(
+                        Color.popsBackground, in: RoundedRectangle(cornerRadius: PopsRadius.card))
+                    if model.showsScanButton {
+                        InventoryItemScanButton(model: model)
+                            .transition(.opacity.combined(with: .scale))
+                    }
+                }
+                .popsMotion(value: model.showsScanButton)
                 .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.popsBackground)
+                .listRowBackground(EmptyView())
             }
+            typeSection
             identity
             // Every item has a quantity whatever its type, so it stands apart
             // from the type's fields rather than reading as one of them. A
@@ -128,6 +139,26 @@ internal struct InventoryItemFormView: View {
         // carries the same modifier for the same class of tap.
         .scrollDismissesKeyboard(.interactively)
         .task(id: model.draft.code.value) { await model.checkCode() }
+    }
+
+    private var typeSection: some View {
+        Section {
+            if let catalogue = model.protocol2Catalogue {
+                InventoryProtocol2TypePicker(
+                    model: model, catalogue: catalogue, selected: model.protocol2Draft)
+            } else {
+                InventoryFormTypeRow(
+                    types: model.catalogue.types, offersNone: model.offersNoType,
+                    typeKey: Binding(
+                        get: { model.draft.typeKey }, set: { model.selectLegacyType($0) }))
+            }
+        } footer: {
+            if let message = model.prefillStatus?.message {
+                Text(message)
+                    .lineLimit(1)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+        }
     }
 
     private var labelling: some View {
@@ -181,15 +212,6 @@ extension InventoryItemFormView {
                 "Name", placeholder: "Name", text: $model.draft.name,
                 identifier: InventoryAccessibility.itemNameField)
             InventoryFormDestinationRow(draft: $model.draft)
-            if let catalogue = model.protocol2Catalogue {
-                InventoryProtocol2TypePicker(
-                    model: model, catalogue: catalogue, selected: model.protocol2Draft)
-            } else {
-                InventoryFormTypeRow(
-                    types: model.catalogue.types, offersNone: model.offersNoType,
-                    typeKey: Binding(
-                        get: { model.draft.typeKey }, set: { model.selectLegacyType($0) }))
-            }
             if let type = model.protocol2Type, let draft = model.protocol2Draft {
                 protocol2FieldRows(type: type, draft: draft)
             } else if model.protocol2Catalogue == nil {

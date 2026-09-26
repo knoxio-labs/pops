@@ -105,6 +105,12 @@ export const MOBILE_CAPABILITIES = [
    */
   'inventory.write',
   /**
+   * Look up book metadata for a scanned barcode. The downstream barcode
+   * pillar is deliberately hidden behind bfm, so the handset gets one stable
+   * outcome rather than a provider-specific contract.
+   */
+  'barcode.read',
+  /**
    * Read a merchant's recorded addresses (ADR-053) — what an address
    * picker on the receipt review screen offers.
    */
@@ -198,6 +204,8 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    * account beyond what reading already needed.
    */
   'inventory.write': ['inventory.sync', 'inventory.codes', 'inventory.media'],
+  /** The barcode lookup route is the only downstream operation this grants. */
+  'barcode.read': ['barcode.lookup'],
   /**
    * Empty: contacts enforces no inbound scope check at all today (it is a
    * newer, ADR-044-unaware Rust pillar), so there is nothing on bfm's

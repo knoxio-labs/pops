@@ -51,6 +51,9 @@ internal struct InventoryItemFormView: View {
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.popsBackground)
             }
+            Section {
+                InventoryFormTypeRow(chosen: $typeName)
+            }
             identity
             labelling
             InventoryFormNotCarriedSection(values: notCarried)
@@ -75,7 +78,6 @@ internal struct InventoryItemFormView: View {
         Section {
             InventoryFormNameRow(draft: draft)
             InventoryFormDestinationRow(choice: draft.placement, name: draft.name)
-            InventoryFormTypeRow(chosen: $typeName)
             InventoryFormQuantityRow(draft: draft)
             typeFields
         } footer: {

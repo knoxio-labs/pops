@@ -1,9 +1,9 @@
+import { INVENTORY_ICONS } from '../model/icons';
 /**
  * The inventory foundation gallery for badges, marks, placement paths, and
  * the canonical concept icon map.
  */
-import { coreWorld, kitchen12, kitchen13, television } from '../fixtures/core';
-import { INVENTORY_ICONS } from '../model/icons';
+import { coreWorld, kitchen12, kitchen13, television } from '../test-fixtures/core';
 import {
   CodeBadge,
   ContainerStateBadge,

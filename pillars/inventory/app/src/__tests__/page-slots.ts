@@ -14,9 +14,8 @@ interface PageNode {
 /**
  * Every slot in the page tree, nested tabs included.
  *
- * `INVENTORY_PAGES.length` counts only the top level, so a test written against it
- * would silently skip the eight `data` tabs — which is most of what POPS-3256
- * added and exactly the part most likely to break.
+ * A top-level-only test would silently skip any nested children, which is the
+ * part most likely to drift when a page group gains another route.
  */
 export function allPageSlots(pages: readonly PageNode[] = INVENTORY_PAGES): string[] {
   return pages.flatMap((page) => [

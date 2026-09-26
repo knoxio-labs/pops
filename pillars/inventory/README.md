@@ -267,6 +267,15 @@ On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`
 from `@pops/pillar-sdk`, which POSTs the manifest to the `registry` pillar
 (`/registry/register`) and tears the entry down on `SIGTERM`.
 
+## Deleted location web read
+
+`GET /web/locations/:id/gone` returns the name, stored deletion time, deletion
+source and count of active items still in hand because their previous
+placement was the deleted location. Device deletions preserve the device
+label; web, service and migration deletions use `Server`. A live or unknown
+location returns `404`, and a tombstone without a matching deletion event
+returns a `null` deletion source.
+
 ## Who may call it
 
 An inbound service-account gate covers the whole contract surface

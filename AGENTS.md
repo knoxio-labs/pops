@@ -115,8 +115,9 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 | `shell`        | 5568 | React SPA host                                              | UI pillar; Vite + nginx, **not** the default 5173  |
 | `design`       | 5569 | design playground: screens, experiments, variants, states   | UI pillar; Vite + nginx, served at `/design/`      |
 | `design-api`   | 3015 | comment threads left on the playground                      | the design pillar's second image; see below        |
+| `barcode`      | 3016 | ISBN lookup and provider response cache                     | data pillar; books-only v1                         |
 
-The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, bfm, `design`, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, and `docs` own no DB.
+The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, bfm, barcode, `design`, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, and `docs` own no DB.
 
 `design` is the one pillar that ships **two images**: `pops-design` serves the playground as static files from nginx, and `pops-design-api` serves the comment threads written on it — one image cannot be both. `docker-build.yml` and `pillar-quality.yml` discover `Dockerfile.*` alongside `Dockerfile` for exactly this.
 

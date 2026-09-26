@@ -58,6 +58,8 @@ export interface TraceNode {
   itemName: string;
   assetId: string | null;
   type: string | null;
+  /** Present and true when this node represents a fixture leaf. */
+  isFixture?: boolean;
   children: TraceNode[];
 }
 
@@ -74,9 +76,11 @@ export interface GraphNode {
   itemName: string;
   assetId: string | null;
   type: string | null;
+  /** Present and true when this node represents a fixture leaf. */
+  isFixture?: boolean;
 }
 
-/** Edge in a connection graph. */
+/** Edge in a connection graph; fixture edges point from an item to its fixture. */
 export interface GraphEdge {
   source: string;
   target: string;

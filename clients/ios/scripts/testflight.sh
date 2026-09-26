@@ -38,10 +38,20 @@ done
 [ -f "$ASC_KEY_PATH" ] || die "ASC_KEY_PATH does not name a file."
 [ -f Pops.xcodeproj/project.pbxproj ] || die "no Pops.xcodeproj here; run 'mise run generate' in clients/ios first."
 
-versions="$(scripts/release-version.sh HEAD)"
+source_commit="$(git rev-parse --verify HEAD^{commit})"
+source_commit_count="$(git rev-list --count "$source_commit")"
+if [ -n "${SHA-}" ]; then
+    selected_commit="$(git rev-parse --verify "${SHA}^{commit}")" ||
+        die "SHA '$SHA' does not name a commit."
+    [ "$source_commit" = "$selected_commit" ] ||
+        die "checked out $source_commit, expected selected commit $selected_commit."
+fi
+versions="$(scripts/release-version.sh "$source_commit")"
 marketing_version="$(sed -n 's/^MARKETING_VERSION=//p' <<<"$versions")"
 build_number="$(sed -n 's/^CURRENT_PROJECT_VERSION=//p' <<<"$versions")"
-printf 'testflight: %s %s (%s) from %s\n' "$scheme" "$marketing_version" "$build_number" "$(git rev-parse --short HEAD)"
+[ "$source_commit_count" = "$build_number" ] ||
+    die "source commit count $source_commit_count does not match build number $build_number."
+printf 'testflight: %s %s (%s) from %s\n' "$scheme" "$marketing_version" "$build_number" "${source_commit:0:7}"
 
 work="${RUNNER_TEMP:-$(mktemp -d)}/testflight-${scheme}"
 rm -rf "$work"
@@ -115,10 +125,28 @@ cat >"$options" <<PLIST
 </plist>
 PLIST
 
-xcodebuild -exportArchive \
+export_log="$work/export.log"
+if xcodebuild -exportArchive \
     -archivePath "$archive" \
     -exportPath "$work/export" \
     -exportOptionsPlist "$options" \
-    "${auth[@]}"
+    "${auth[@]}" 2>&1 | tee "$export_log"; then
+    :
+else
+    export_status="${PIPESTATUS[0]}"
+    if node ../../scripts/ci/testflight-upload.mjs \
+        --export-log "$export_log" \
+        --scheme "$scheme" \
+        --bundle-id "$shipped_bundle_id" \
+        --marketing-version "$marketing_version" \
+        --build-number "$build_number" \
+        --source-commit "$source_commit" \
+        --source-commit-count "$source_commit_count"; then
+        :
+    else
+        [ "$export_status" -ne 0 ] || export_status=1
+        exit "$export_status"
+    fi
+fi
 
 printf 'testflight: uploaded %s %s (%s)\n' "$scheme" "$marketing_version" "$build_number"

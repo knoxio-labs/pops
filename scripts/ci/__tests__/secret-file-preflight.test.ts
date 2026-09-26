@@ -111,6 +111,7 @@ describe('every pillar that reads a secret file proves at boot that it can', () 
 
   it('lists exactly the pillars that read one', () => {
     expect(reading.map((p) => p.id)).toEqual([
+      'barcode',
       'bfm',
       'cerebrum',
       'finance',

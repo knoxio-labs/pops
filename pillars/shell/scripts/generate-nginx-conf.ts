@@ -100,6 +100,7 @@ export const PILLAR_UPSTREAMS: Record<BuildPillarId, { host: string; port: numbe
   contacts: { host: 'contacts-api', port: 3010 },
   purchases: { host: 'purchases-api', port: 3013 },
   bfm: { host: 'bfm-api', port: 3014 },
+  barcode: { host: 'barcode-api', port: 3016 },
   design: { host: 'design-api', port: 3015 },
 };
 
@@ -133,6 +134,7 @@ export const PILLAR_RENDER_ORDER: readonly BuildPillarId[] = [
   'contacts',
   'purchases',
   'bfm',
+  'barcode',
   'design',
 ];
 

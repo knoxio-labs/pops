@@ -1,0 +1,15 @@
+## Litestream replication config — barcode pillar SQLite.
+##
+## The barcode pillar owns its lookup cache and its API mounts
+## `pops-barcode-data` at `/data/sqlite`; the matching sidecar in
+## `infra/docker-compose.yml` mounts this file and the same volume read-only.
+## The replica target is supplied by the deployment environment.
+
+dbs:
+  - path: /data/sqlite/barcode.db
+    replicas:
+      - url: ${BARCODE_LITESTREAM_REPLICA_URL}
+        sync-interval: 1s
+        retention: 24h
+        snapshot-interval: 1h
+        validation-interval: 12h

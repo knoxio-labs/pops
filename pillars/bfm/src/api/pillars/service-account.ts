@@ -35,7 +35,7 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * code-suggestion route's own sub-router grant (A12), and `inventory.media`
  * is inventory's raw content-addressed media store's own scope, reached by
  * the media relay's `PUT`/`GET` (A13). Every later mobile
- * surface widens this list in its own ticket,
+ * surface—including barcode lookup—widens this list in its own ticket,
  * so it stays a readable record of what bfm calls rather than a wildcard
  * nobody can audit. Scopes match by dot prefix, so `finance.transactions`
  * authorises `finance.transactions.list` but not `finance.budgets.list`, and
@@ -70,6 +70,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'inventory.types',
   'inventory.codes',
   'inventory.media',
+  'barcode.lookup',
 ];
 
 /** Local-dev source: the key inline in the environment. */

@@ -192,7 +192,8 @@ internal final class AppComposition {
             accounts: BFMAccountsRepository(client: authenticated(device)),
             inventory: inventoryStore(
                 for: device, transport: inventoryTransport, storageFull: &storageFull),
-            codeSuggestions: inventoryTransport
+            codeSuggestions: inventoryTransport,
+            barcodeLookup: inventoryTransport
         )
         bound = BoundDevice(device: device, dependencies: dependencies, storageFull: storageFull)
         return dependencies

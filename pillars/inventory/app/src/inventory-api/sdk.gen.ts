@@ -225,6 +225,9 @@ import type {
   WebChangesHeadData,
   WebChangesHeadErrors,
   WebChangesHeadResponses,
+  WebConnectionsListData,
+  WebConnectionsListErrors,
+  WebConnectionsListResponses,
   WebEventsListData,
   WebEventsListErrors,
   WebEventsListResponses,
@@ -234,6 +237,9 @@ import type {
   WebListData,
   WebListErrors,
   WebListResponses,
+  WebLocationsGoneData,
+  WebLocationsGoneErrors,
+  WebLocationsGoneResponses,
   WebSearchListData,
   WebSearchListErrors,
   WebSearchListResponses,
@@ -1369,6 +1375,18 @@ export const webChangesHead = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * List resolved inventory item and fixture connections
+ */
+export const webConnectionsList = <ThrowOnError extends boolean = false>(
+  options: Options<WebConnectionsListData, ThrowOnError>
+): RequestResult<WebConnectionsListResponses, WebConnectionsListErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    WebConnectionsListResponses,
+    WebConnectionsListErrors,
+    ThrowOnError
+  >({ url: '/web/connections', ...options });
+
+/**
  * List the inventory activity and item-history events
  */
 export const webEventsList = <ThrowOnError extends boolean = false>(
@@ -1413,6 +1431,17 @@ export const webGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebGetResponses, WebGetErrors, ThrowOnError> =>
   (options.client ?? client).get<WebGetResponses, WebGetErrors, ThrowOnError>({
     url: '/web/items/{id}',
+    ...options,
+  });
+
+/**
+ * Read the summary of a deleted inventory location
+ */
+export const webLocationsGone = <ThrowOnError extends boolean = false>(
+  options: Options<WebLocationsGoneData, ThrowOnError>
+): RequestResult<WebLocationsGoneResponses, WebLocationsGoneErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebLocationsGoneResponses, WebLocationsGoneErrors, ThrowOnError>({
+    url: '/web/locations/{id}/gone',
     ...options,
   });
 

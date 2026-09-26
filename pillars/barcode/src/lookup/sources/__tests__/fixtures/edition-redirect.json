@@ -1,0 +1,25 @@
+{
+  "title": "The Hobbit",
+  "subtitle": "There and Back Again",
+  "publish_date": "1937",
+  "publishers": ["George Allen & Unwin"],
+  "number_of_pages": 310,
+  "languages": [{"key": "/languages/eng"}],
+  "subjects": ["Fantasy", "Hobbits"],
+  "covers": [12345],
+  "authors": [
+    {"key": "/authors/OL26320A"},
+    {"key": "/authors/OL123456A"}
+  ],
+  "works": [{"key": "/works/OL27448W"}],
+  "isbn_10": ["0261102214"],
+  "isbn_13": ["9780261102217"],
+  "identifiers": {"goodreads": ["123"]},
+  "lccn": ["37005521"],
+  "oclc_numbers": ["123456"],
+  "key": "/books/OL123M",
+  "publish_places": ["London"],
+  "edition_name": "First edition",
+  "nested_fact": {"value": "skip"},
+  "array_of_objects": [{"name": "skip"}]
+}

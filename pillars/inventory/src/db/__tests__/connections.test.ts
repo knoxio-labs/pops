@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 /**
  * Invariant tests for the connections service against an in-memory SQLite
  * brought up by the real migration journal. Pure DB + service layer.
@@ -5,6 +7,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { connectionsService } from '../index.js';
+import { fixtures, itemFixtureConnections } from '../schema.js';
 import {
   ConnectionConflictError,
   ConnectionItemNotFoundError,
@@ -26,6 +29,16 @@ function seedPair(db: InventoryDb, nameA = 'Item A', nameB = 'Item B'): [string,
   const a = seedInventoryItem(db, { name: nameA });
   const b = seedInventoryItem(db, { name: nameB });
   return [a.id, b.id].toSorted() as [string, string];
+}
+
+function seedFixture(db: InventoryDb, name = 'Wall outlet', type = 'power'): string {
+  const id = randomUUID();
+  db.insert(fixtures).values({ id, name, type, lastEditedTime: new Date().toISOString() }).run();
+  return id;
+}
+
+function wireFixture(db: InventoryDb, itemId: string, fixtureId: string): void {
+  db.insert(itemFixtureConnections).values({ itemId, fixtureId }).run();
 }
 
 describe('connectionsService.create', () => {
@@ -287,6 +300,40 @@ describe('connectionsService.trace', () => {
     expect(countNodes(tree)).toBe(3);
   });
 
+  it('trace ends at a fixture leaf flagged isFixture', () => {
+    const item = seedInventoryItem(db, { name: 'Television' });
+    const fixtureId = seedFixture(db);
+    wireFixture(db, item.id, fixtureId);
+
+    const tree = connectionsService.trace(db, item.id, 10);
+
+    expect(tree).not.toHaveProperty('isFixture');
+    expect(tree.children).toEqual([
+      {
+        id: fixtureId,
+        itemName: 'Wall outlet',
+        assetId: null,
+        type: 'power',
+        isFixture: true,
+        children: [],
+      },
+    ]);
+  });
+
+  it('includes fixtures on the item at maxDepth', () => {
+    const root = seedInventoryItem(db, { name: 'Television' });
+    const child = seedInventoryItem(db, { name: 'Stand' });
+    const fixtureId = seedFixture(db);
+    connectionsService.create(db, { itemAId: root.id, itemBId: child.id });
+    wireFixture(db, child.id, fixtureId);
+
+    const tree = connectionsService.trace(db, root.id, 1);
+
+    expect(tree.children[0]?.children).toEqual([
+      expect.objectContaining({ id: fixtureId, isFixture: true, children: [] }),
+    ]);
+  });
+
   it('throws ConnectionItemNotFoundError when the root is missing', () => {
     expect(() => connectionsService.trace(db, 'nope', 10)).toThrowError(
       ConnectionItemNotFoundError
@@ -365,6 +412,45 @@ describe('connectionsService.graph', () => {
       assetId: 'ASSET-001',
       type: 'electronics',
     });
+    expect(result.nodes[0]).not.toHaveProperty('isFixture');
+  });
+
+  it('graph adds fixture nodes and item-to-fixture edges without walking through them', () => {
+    const item = seedInventoryItem(db, { name: 'Television' });
+    const otherItem = seedInventoryItem(db, { name: 'Console' });
+    const fixtureId = seedFixture(db);
+    wireFixture(db, item.id, fixtureId);
+    wireFixture(db, otherItem.id, fixtureId);
+
+    const result = connectionsService.graph(db, item.id, 10);
+
+    expect(result.nodes.map((node) => node.id)).toEqual([item.id, fixtureId]);
+    expect(result.nodes[0]).not.toHaveProperty('isFixture');
+    expect(result.nodes[1]).toMatchObject({
+      id: fixtureId,
+      itemName: 'Wall outlet',
+      assetId: null,
+      type: 'power',
+      isFixture: true,
+    });
+    expect(result.edges).toEqual([{ source: item.id, target: fixtureId }]);
+  });
+
+  it('a fixture shared by two items appears once', () => {
+    const itemA = seedInventoryItem(db, { name: 'Television' });
+    const itemB = seedInventoryItem(db, { name: 'Console' });
+    const fixtureId = seedFixture(db);
+    connectionsService.create(db, { itemAId: itemA.id, itemBId: itemB.id });
+    wireFixture(db, itemA.id, fixtureId);
+    wireFixture(db, itemB.id, fixtureId);
+
+    const result = connectionsService.graph(db, itemA.id, 10);
+
+    expect(result.nodes.filter((node) => node.isFixture)).toHaveLength(1);
+    expect(result.edges.filter((edge) => edge.target === fixtureId)).toEqual([
+      { source: itemA.id, target: fixtureId },
+      { source: itemB.id, target: fixtureId },
+    ]);
   });
 
   it('throws ConnectionItemNotFoundError when the root is missing', () => {

@@ -15,6 +15,8 @@ export {
 export type { FormatCurrencyOptions, DateStyle } from './lib/format';
 export { highlightMatch } from './lib/highlightMatch';
 export { hashToColor } from './lib/hashToColor';
+export { formatCombo, matchesCombo, parseCombo } from './lib/key-combo';
+export type { Combo, KeyInput } from './lib/key-combo';
 
 // Primitives — non-conflicting exports
 export * from './primitives/accordion';
@@ -101,7 +103,7 @@ export * from './components/ErrorBoundary';
 export * from './components/FieldError';
 export * from './components/FieldLabel';
 export * from './components/InfiniteScrollTable';
-export * from './components/Kbd';
+export * from './components/KeyCombo';
 export * from './components/command-palette/CommandPalette';
 export * from './components/command-palette/palette-rank';
 export * from './components/command-palette/palette-state';
@@ -116,7 +118,8 @@ export * from './components/TextInput';
 export * from './components/ContainerPanel';
 export * from './components/RelatedItemsList';
 export * from './components/SearchPickerDialog';
-export * from './components/Sheet';
+export { Sheet, SheetPanel } from './components/Sheet';
+export type { SheetContentProps, SheetProps } from './components/Sheet';
 
 // Layout composites
 export * from './components/PageHeader';

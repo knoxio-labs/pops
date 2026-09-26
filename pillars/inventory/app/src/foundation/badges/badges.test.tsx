@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { coreWorld, television } from '../fixtures/core';
+import { coreWorld, television } from '../test-fixtures/core';
 import {
   CodeBadge,
   ConceptBadge,

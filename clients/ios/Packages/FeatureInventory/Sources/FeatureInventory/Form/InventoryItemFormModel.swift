@@ -49,8 +49,13 @@ internal final class InventoryItemFormModel {
     /// computed row moves as its inputs do rather than waiting for the item
     /// to round-trip through the server.
     internal var protocol2Draft: InventoryProtocol2Draft? {
-        didSet { recomputeProtocol2ComputedFields() }
+        didSet {
+            if oldValue?.typeId != protocol2Draft?.typeId { cancelScanPrefill() }
+            prefillStatus = nil
+            recomputeProtocol2ComputedFields()
+        }
     }
+    internal var prefillStatus: InventoryPrefillStatus?
     internal private(set) var protocol2ReferenceTargets: [InventoryProtocol2ReferenceTarget] = []
     /// The replica read the last time the store answered, kept only to
     /// evaluate a computed field's expression again between then and now;
@@ -80,6 +85,8 @@ internal final class InventoryItemFormModel {
 
     internal let store: any InventoryStore
     internal let suggester: InventoryCodeSuggester
+    internal let scan: InventoryScanPrefill
+    internal var fillTask: Task<Void, Never>?
     internal let mintProtocol2ValueId: () -> String
     /// The item as the store has it; nil for a create.
     internal var original: InventoryItem?
@@ -105,12 +112,14 @@ internal final class InventoryItemFormModel {
     internal init(
         request: InventoryItemFormRequest, store: any InventoryStore,
         suggester: InventoryCodeSuggester,
+        scan: InventoryScanPrefill = .unbound,
         mintId: () -> String = { UUID().uuidString.lowercased() },
         mintProtocol2ValueId: @escaping () -> String = { UUID().uuidString.lowercased() }
     ) {
         self.request = request
         self.store = store
         self.suggester = suggester
+        self.scan = scan
         self.mintProtocol2ValueId = mintProtocol2ValueId
         photoRunner = InventoryCommandRunner(store: store)
         switch request {

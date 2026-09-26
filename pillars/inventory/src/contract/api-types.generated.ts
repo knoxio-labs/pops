@@ -1074,6 +1074,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/connections': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List resolved inventory item and fixture connections */
+    get: operations['webConnections.list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/events': {
     parameters: {
       query?: never;
@@ -1134,6 +1151,23 @@ export interface paths {
     };
     /** An item, and one page of its history, newest first */
     get: operations['web.get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/web/locations/{id}/gone': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the summary of a deleted inventory location */
+    get: operations['webLocations.gone'];
     put?: never;
     post?: never;
     delete?: never;
@@ -1252,6 +1286,7 @@ export interface components {
       assetId: string | null;
       children: components['schemas']['TraceNode'][];
       id: string;
+      isFixture?: boolean;
       itemName: string;
       type: string | null;
     };
@@ -2493,6 +2528,7 @@ export interface operations {
               nodes: {
                 assetId: string | null;
                 id: string;
+                isFixture?: boolean;
                 itemName: string;
                 type: string | null;
               }[];
@@ -8999,6 +9035,84 @@ export interface operations {
       };
     };
   };
+  'webConnections.list': {
+    parameters: {
+      query: {
+        kind: 'all' | 'item' | 'fixture';
+        q?: string;
+        cursor?: string;
+        limit: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            nextCursor: string | null;
+            rows: {
+              createdAt: string;
+              far:
+                | {
+                    code: string | null;
+                    id: string;
+                    isContainer: boolean;
+                    /** @enum {string} */
+                    kind: 'item';
+                    lifecycle: string;
+                    name: string;
+                    typeKey: string | null;
+                  }
+                | {
+                    id: string;
+                    /** @enum {string} */
+                    kind: 'fixture';
+                    locationId: string | null;
+                    name: string;
+                    type: string;
+                  };
+              id: string;
+              item: {
+                code: string | null;
+                id: string;
+                isContainer: boolean;
+                /** @enum {string} */
+                kind: 'item';
+                lifecycle: string;
+                name: string;
+                typeKey: string | null;
+              };
+            }[];
+            summary: {
+              connections: number;
+              fixtures: number;
+              items: number;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'webEvents.list': {
     parameters: {
       query: {
@@ -9702,6 +9816,50 @@ export interface operations {
             code?: string;
             message: string;
             messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webLocations.gone': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            deletedAt: string;
+            deletedBy: {
+              kind: string;
+              label: string;
+            } | null;
+            id: string;
+            inHandCount: number;
+            name: string;
           };
         };
       };

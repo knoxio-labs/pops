@@ -26,8 +26,10 @@ import { makeCodesHandlers, makeSyncHandlers, makeTypesHandlers } from './sync-h
 import { makeTypeCatalogueHandlers } from './type-catalogue-handlers.js';
 import { makeWebBatchHandlers } from './web-batch-handlers.js';
 import { makeWebChangesHandlers } from './web-changes-handlers.js';
+import { makeWebConnectionsHandlers } from './web-connections-handlers.js';
 import { makeWebEventsHandlers } from './web-events-handlers.js';
 import { makeWebHandlers } from './web-handlers.js';
+import { makeWebLocationsHandlers } from './web-locations-handlers.js';
 import { makeWebSearchHandlers } from './web-search-handlers.js';
 import { makeWebSummaryHandlers } from './web-summary-handlers.js';
 
@@ -75,7 +77,9 @@ export function makeInventoryRestHandlers(deps: {
     web: makeWebHandlers({ db, documents }),
     webBatch: makeWebBatchHandlers(db),
     webChanges: makeWebChangesHandlers(db),
+    webConnections: makeWebConnectionsHandlers(db),
     webEvents: makeWebEventsHandlers(db),
+    webLocations: makeWebLocationsHandlers(db),
     webSearch: makeWebSearchHandlers({ db, documents }),
     webSummary: makeWebSummaryHandlers(db),
     settings: makeSettingsHandlers(db),

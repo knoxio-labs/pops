@@ -93,7 +93,7 @@ export function DetailHeader({
       <PageHeader
         title={<ItemTitle detail={detail} />}
         backHref="/inventory/items"
-        breadcrumbs={[{ label: 'Inventory', href: '/inventory/items' }, { label: detail.name }]}
+        breadcrumbs={[{ label: 'Inventory', href: '/inventory' }, { label: detail.name }]}
         actions={actions}
         renderLink={Link}
         className="mb-3"

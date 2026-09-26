@@ -95,7 +95,7 @@ export function effectiveLocationIdSql(): SQL<string | null> {
   )`;
 }
 
-/** The condition for a `within` id: a live location gives `withinLocationSql`, a live container item gives `insideContainerSql`, anything else gives `null` (the caller then matches nothing). */
+/** The condition for a `within` id: a live location gives `withinLocationSql`, an active live container gives `insideContainerSql`, anything else gives `null` (the caller then matches nothing). */
 export function withinSql(db: CommandDb, withinId: string): SQL | null {
   const location = db
     .select({ id: locations.id })
@@ -107,7 +107,14 @@ export function withinSql(db: CommandDb, withinId: string): SQL | null {
   const container = db
     .select({ id: items.id })
     .from(items)
-    .where(and(eq(items.id, withinId), eq(items.isContainer, 1), isNull(items.deletedAt)))
+    .where(
+      and(
+        eq(items.id, withinId),
+        eq(items.isContainer, 1),
+        eq(items.lifecycle, 'active'),
+        isNull(items.deletedAt)
+      )
+    )
     .get();
   return container ? insideContainerSql(withinId) : null;
 }
