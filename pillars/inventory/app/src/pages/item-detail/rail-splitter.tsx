@@ -53,7 +53,7 @@ export function RailSplitter({ width, onWidth }: RailSplitterProps) {
       <span
         aria-hidden
         className={cn(
-          'my-6 w-px rounded-full bg-transparent transition-colors group-hover/split:w-0.5 group-hover/split:bg-app-accent group-focus-visible/split:w-0.5 group-focus-visible/split:bg-ring',
+          'my-6 w-px rounded-full bg-transparent transition-colors group-hover/split:w-0.5 group-hover/split:bg-app-accent group-focus-visible/split:w-0.5 group-focus-visible/split:ring-2 group-focus-visible/split:ring-ring',
           drag.dragging && 'w-0.5 bg-app-accent'
         )}
       />
