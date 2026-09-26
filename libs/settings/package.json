@@ -44,12 +44,12 @@
   },
   "dependencies": {
     "@ts-rest/core": "3.53.0-rc.1",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
-    "@types/node": "^24.13.4",
+    "@types/node": "^24.13.6",
     "@vitest/coverage-v8": "^4.1.10",
     "better-sqlite3": "^12.10.0",
     "typescript": "^6.0.3",
