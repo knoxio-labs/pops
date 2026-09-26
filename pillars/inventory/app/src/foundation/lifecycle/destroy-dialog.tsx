@@ -48,7 +48,7 @@ export function DestroyDialog({
             This is final. It cannot be restored, moved or edited again. Its history stays and its
             code is freed for reuse.
             {contentsCount > 0
-              ? ` The ${contentsCount} things inside come out first and stay where it was.`
+              ? ` The ${contentsCount} ${contentsCount === 1 ? 'thing' : 'things'} inside come out first and stay where it was.`
               : null}
           </AlertDialogDescription>
         </AlertDialogHeader>

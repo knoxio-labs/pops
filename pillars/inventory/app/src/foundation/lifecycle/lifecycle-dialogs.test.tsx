@@ -100,6 +100,14 @@ describe('DestroyDialog', () => {
     expect(onConfirm).toHaveBeenCalledWith('Recycled');
   });
 
+  it('uses singular copy when one contained thing comes out first', () => {
+    render(
+      <DestroyDialog subject="Camera" open onOpenChange={() => undefined} contentsCount={1} />
+    );
+
+    expect(screen.getByText(/1 thing inside come out first/u)).toBeInTheDocument();
+  });
+
   it('requires text when Other is selected', () => {
     const onConfirm = vi.fn();
     render(
