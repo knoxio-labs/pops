@@ -8,10 +8,10 @@
  * than a filtered slice and requires the `Pops-Inventory-Protocol` header
  * this surface does not.
  *
- * Cursors are opaque base64url strings the caller echoes unmodified,
- * ordered by item id — inserting a row anywhere in the id order never
- * reshuffles a page already served, so a page fetched before an insert and
- * one fetched after agree on every row they both cover.
+ * Cursors are opaque base64url strings the caller echoes unmodified. An
+ * unsorted request without `q` is ordered by item id; named sorts and `q`
+ * requests carry the requested keyset order in the cursor. Inserting a row
+ * before a served cursor never reshuffles the rows already returned.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';

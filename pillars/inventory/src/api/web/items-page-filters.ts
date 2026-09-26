@@ -211,7 +211,6 @@ export function textSearchFor(q: string): WebItemsTextSearch {
   return {
     match: orConditions([nameTier, contains, otherTier]),
     rank: sql<number>`CASE
-      WHEN ${prefix} THEN 4
       WHEN ${nameTier} THEN 3
       WHEN ${contains} THEN 2
       WHEN ${otherTier} THEN 1
