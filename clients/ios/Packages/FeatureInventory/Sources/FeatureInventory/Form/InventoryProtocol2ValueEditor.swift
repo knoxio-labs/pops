@@ -58,25 +58,31 @@ internal struct InventoryProtocol2ValueEditor: View {
     }
 
     private var longTextEditor: some View {
-        LabeledContent(label) {
-            TextField(
-                placeholder, text: textBinding, axis: .vertical
-            )
-            .lineLimit(1...8)
-            .multilineTextAlignment(.trailing)
-            .accessibilityIdentifier(identifier)
+        InventoryFormFocusableRow { focus in
+            LabeledContent(label) {
+                TextField(
+                    placeholder, text: textBinding, axis: .vertical
+                )
+                .focused(focus)
+                .lineLimit(1...8)
+                .multilineTextAlignment(.leading)
+                .accessibilityIdentifier(identifier)
+            }
         }
     }
 
     private var measurementEditor: some View {
-        LabeledContent(label) {
-            HStack(spacing: PopsSpacing.sm) {
-                TextField(placeholder, text: textBinding)
-                    .multilineTextAlignment(.trailing)
-                    .inventoryDecimalKeyboard()
-                    .accessibilityIdentifier(identifier)
-                if let unit = field.fixedUnit {
-                    Text(unit).foregroundStyle(Color.popsMutedForeground)
+        InventoryFormFocusableRow { focus in
+            LabeledContent(label) {
+                HStack(spacing: PopsSpacing.sm) {
+                    TextField(placeholder, text: textBinding)
+                        .focused(focus)
+                        .multilineTextAlignment(.trailing)
+                        .inventoryDecimalKeyboard()
+                        .accessibilityIdentifier(identifier)
+                    if let unit = field.fixedUnit {
+                        Text(unit).foregroundStyle(Color.popsMutedForeground)
+                    }
                 }
             }
         }

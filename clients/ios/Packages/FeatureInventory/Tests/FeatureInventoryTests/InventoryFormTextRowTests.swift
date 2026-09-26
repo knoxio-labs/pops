@@ -19,4 +19,11 @@ internal struct InventoryFormTextRowTests {
         #expect(Self.source.contains(".multilineTextAlignment(.leading)"))
         #expect(!Self.source.contains(".multilineTextAlignment(.trailing)"))
     }
+
+    @Test("the whole text row focuses its field")
+    func textRowUsesFullFocusRegion() {
+        #expect(Self.source.contains("InventoryFormFocusableRow"))
+        #expect(Self.source.contains(".contentShape(.rect)"))
+        #expect(Self.source.contains(".onTapGesture(perform: onTap)"))
+    }
 }

@@ -11,13 +11,15 @@ internal struct InventoryFormMeasureRow: View {
     internal let set: (_ amount: String, _ unit: String) -> Void
 
     internal var body: some View {
-        LabeledContent(label) {
-            HStack(spacing: PopsSpacing.sm) {
-                InventoryFormFigureField(
-                    placeholder: InventoryFormBlank.placeholder,
-                    text: Binding(get: { amount }, set: { set($0, unit) }))
-                InventoryFormUnitPicker(
-                    options: units, unit: Binding(get: { unit }, set: { set(amount, $0) }))
+        InventoryFormFocusableRow { focus in
+            LabeledContent(label) {
+                HStack(spacing: PopsSpacing.sm) {
+                    InventoryFormFigureField(
+                        placeholder: InventoryFormBlank.placeholder,
+                        text: Binding(get: { amount }, set: { set($0, unit) }), focus: focus)
+                    InventoryFormUnitPicker(
+                        options: units, unit: Binding(get: { unit }, set: { set(amount, $0) }))
+                }
             }
         }
     }
@@ -32,14 +34,19 @@ internal struct InventoryFormRangeRow: View {
     internal let set: (_ low: String, _ high: String, _ unit: String) -> Void
 
     internal var body: some View {
-        LabeledContent(label) {
-            HStack(spacing: PopsSpacing.sm) {
-                InventoryFormFigureField(
-                    placeholder: "From", text: Binding(get: { low }, set: { set($0, high, unit) }))
-                InventoryFormFigureField(
-                    placeholder: "To", text: Binding(get: { high }, set: { set(low, $0, unit) }))
-                InventoryFormUnitPicker(
-                    options: units, unit: Binding(get: { unit }, set: { set(low, high, $0) }))
+        InventoryFormFocusableRow { focus in
+            LabeledContent(label) {
+                HStack(spacing: PopsSpacing.sm) {
+                    InventoryFormFigureField(
+                        placeholder: "From",
+                        text: Binding(get: { low }, set: { set($0, high, unit) }),
+                        focus: focus)
+                    InventoryFormFigureField(
+                        placeholder: "To",
+                        text: Binding(get: { high }, set: { set(low, $0, unit) }))
+                    InventoryFormUnitPicker(
+                        options: units, unit: Binding(get: { unit }, set: { set(low, high, $0) }))
+                }
             }
         }
     }
@@ -48,8 +55,25 @@ internal struct InventoryFormRangeRow: View {
 private struct InventoryFormFigureField: View {
     let placeholder: String
     @Binding var text: String
+    let focus: FocusState<Bool>.Binding?
 
-    var body: some View {
+    init(
+        placeholder: String, text: Binding<String>, focus: FocusState<Bool>.Binding? = nil
+    ) {
+        self.placeholder = placeholder
+        _text = text
+        self.focus = focus
+    }
+
+    @ViewBuilder var body: some View {
+        if let focus {
+            field.focused(focus)
+        } else {
+            field
+        }
+    }
+
+    private var field: some View {
         TextField(placeholder, text: $text)
             .font(.popsBody)
             .monospacedDigit()

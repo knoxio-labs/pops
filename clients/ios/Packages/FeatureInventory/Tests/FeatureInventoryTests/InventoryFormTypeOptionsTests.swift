@@ -15,15 +15,15 @@ internal struct InventoryFormTypeOptionsTests {
         revision: InventoryCatalogueRevision(revision: 3, minimumProtocol: 2),
         types: [type("gadget"), type("retired", archived: true), type("cable")])
 
-    @Test("every active type is offered in catalogue order, each tapped by its pinned id")
+    @Test("every active type is offered alphabetically, each tapped by its pinned id")
     func activeTypesWithPinnedIdentifiers() {
         let options = InventoryFormTypeOptions.protocol2(Self.catalogue, selectedId: "gadget")
 
-        #expect(options.map(\.id) == ["gadget", "cable"])
-        #expect(options.map(\.label) == ["Label gadget", "Label cable"])
+        #expect(options.map(\.id) == ["cable", "gadget"])
+        #expect(options.map(\.label) == ["Label cable", "Label gadget"])
         #expect(
             options.map(\.accessibilityIdentifier) == [
-                "inventory-item-type-option-gadget", "inventory-item-type-option-cable",
+                "inventory-item-type-option-cable", "inventory-item-type-option-gadget",
             ])
     }
 
@@ -31,20 +31,25 @@ internal struct InventoryFormTypeOptionsTests {
     func archivedTypeOnlyWhenSelected() {
         let editing = InventoryFormTypeOptions.protocol2(Self.catalogue, selectedId: "retired")
 
-        #expect(editing.map(\.id) == ["gadget", "retired", "cable"])
-        #expect(editing[1].accessibilityIdentifier == "inventory-item-type-option-retired")
+        #expect(editing.map(\.id) == ["cable", "gadget", "retired"])
+        #expect(editing[2].accessibilityIdentifier == "inventory-item-type-option-retired")
     }
 
-    @Test("a protocol-1 catalogue's options are keyed by type key")
+    @Test("a protocol-1 catalogue's options are alphabetical and keyed by type key")
     func legacyTypesByKey() {
-        let options = InventoryFormTypeOptions.legacy(FormFixture.catalogue.types)
+        let options = InventoryFormTypeOptions.legacy(
+            [FormFixture.box, FormFixture.charger, FormFixture.cable])
 
         #expect(options.first?.id == "cable")
         #expect(options.first?.accessibilityIdentifier == "inventory-item-type-option-cable")
-        #expect(options.map(\.id) == FormFixture.catalogue.types.map(\.key))
-        #expect(options.map(\.label) == FormFixture.catalogue.types.map(\.name))
+        #expect(options.map(\.id) == ["cable", "charger", "storage_box"])
+        #expect(options.map(\.label) == ["Cable", "Charger", "Storage box"])
         #expect(
             options.map(\.accessibilityIdentifier)
-                == FormFixture.catalogue.types.map { "inventory-item-type-option-\($0.key)" })
+                == [
+                    "inventory-item-type-option-cable",
+                    "inventory-item-type-option-charger",
+                    "inventory-item-type-option-storage_box",
+                ])
     }
 }
