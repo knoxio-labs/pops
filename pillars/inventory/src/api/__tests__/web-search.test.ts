@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { publishItemTypeTree } from '../../catalogue/__tests__/type-tree-fixture.js';
 import { WebSearchResponseSchema } from '../../contract/rest-web-search.js';
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
@@ -248,6 +249,28 @@ describe('GET /web/search', () => {
     expect(filtered.items.map((hit) => hit.item.id)).not.toContain(tombstone.data.id);
     await expectBadQuery({ q: 'filter', typeKey: '' });
     await expectBadQuery({ q: 'filter', within: '' });
+  });
+
+  it("matches a type filter against the type's descendants", async () => {
+    publishItemTypeTree(inventoryDb.db);
+    const bedding = await client().items.create({ itemName: 'Bedding filter' });
+    const linen = await client().items.create({ itemName: 'Linen filter' });
+    const sheet = await client().items.create({ itemName: 'Sheet filter' });
+    setPublishedType(bedding.data.id, 'bedding');
+    setPublishedType(linen.data.id, 'linen');
+    setPublishedType(sheet.data.id, 'sheet');
+
+    const beddingPage = await search({ q: 'filter', typeKey: 'bedding', limit: 50 });
+    const linenPage = await search({ q: 'filter', typeKey: 'linen', limit: 50 });
+    const sheetPage = await search({ q: 'filter', typeKey: 'sheet', limit: 50 });
+
+    expect(new Set(beddingPage.items.map((hit) => hit.item.id))).toEqual(
+      new Set([bedding.data.id, linen.data.id, sheet.data.id])
+    );
+    expect(new Set(linenPage.items.map((hit) => hit.item.id))).toEqual(
+      new Set([linen.data.id, sheet.data.id])
+    );
+    expect(sheetPage.items.map((hit) => hit.item.id)).toEqual([sheet.data.id]);
   });
 
   it('returns live place hits and excludes tombstoned locations and their placed items', async () => {
