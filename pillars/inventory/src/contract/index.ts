@@ -23,3 +23,4 @@ export {
 } from './measurement-units.js';
 export type { CombinedUnit, UnitDimension, UnitFactor, UnitTerm } from './measurement-units.js';
 export type { InventoryContract } from './manifest.js';
+export { WEB_ITEMS_MAX_IDS } from './rest-web.js';
