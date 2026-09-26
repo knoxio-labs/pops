@@ -60,21 +60,12 @@ internal enum InventoryAccessibility {
         "inventory-field-\(id)-add"
     }
 
-    /// Moves the entry at `index` one place earlier. A plain button, not a
-    /// menu item: a menu item only exists once its menu has animated in, so
-    /// a driver has to wait for it (POPS-4556), and a button in the row
-    /// needs no such wait.
-    internal static func protocol2FieldMoveEarlier(id: String, index: Int) -> String {
-        "inventory-field-\(id)-\(index)-move-earlier"
+    /// The drag handle for reordering a many-valued field's entry at `index`.
+    internal static func protocol2FieldReorder(id: String, index: Int) -> String {
+        "inventory-field-\(id)-\(index)-reorder"
     }
 
-    /// Moves the entry at `index` one place later, the same reasoning as
-    /// ``protocol2FieldMoveEarlier(id:index:)``.
-    internal static func protocol2FieldMoveLater(id: String, index: Int) -> String {
-        "inventory-field-\(id)-\(index)-move-later"
-    }
-
-    /// Removes the entry at `index`.
+    /// The trailing swipe action that removes the entry at `index`.
     internal static func protocol2FieldRemove(id: String, index: Int) -> String {
         "inventory-field-\(id)-\(index)-remove"
     }

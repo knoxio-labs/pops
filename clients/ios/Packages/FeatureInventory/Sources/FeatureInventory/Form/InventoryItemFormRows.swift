@@ -176,8 +176,7 @@ internal struct InventoryFormCodeRow: View {
     }
 }
 
-/// One labelled text row: the label leading, the field filling the middle
-/// with its text leading, and an optional icon at the end, on one line.
+/// One text row with an optional leading label and trailing icon.
 ///
 /// One `HStack` inside `LabeledContent` rather than several content views,
 /// because `LabeledContent` stacks several vertically and the icon then wraps
@@ -190,6 +189,7 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
     private let monospaced: Bool
     private let identifier: String
     private let focus: FocusState<Bool>.Binding?
+    private let showsLabel: Bool
     private let accessory: Accessory
 
     /// `identifier` names the text field itself for a UI flow; a flow cannot
@@ -198,7 +198,7 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
     /// as soon as it appears.
     internal init(
         _ label: String, placeholder: String, text: Binding<String>, monospaced: Bool = false,
-        identifier: String = "", focus: FocusState<Bool>.Binding? = nil,
+        identifier: String = "", focus: FocusState<Bool>.Binding? = nil, showsLabel: Bool = true,
         @ViewBuilder accessory: () -> Accessory
     ) {
         self.label = label
@@ -207,25 +207,35 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
         self.monospaced = monospaced
         self.identifier = identifier
         self.focus = focus
+        self.showsLabel = showsLabel
         self.accessory = accessory()
     }
 
     internal var body: some View {
         InventoryFormFocusableRow(focus: focus) { focus in
-            LabeledContent {
-                HStack(spacing: PopsSpacing.sm) {
-                    field(focus: focus)
-                        .font(monospaced && !text.isEmpty ? .popsMonospaced : .popsBody)
-                        .multilineTextAlignment(.leading)
+            if showsLabel {
+                LabeledContent {
+                    content(focus: focus)
+                } label: {
+                    Text(label)
                         .lineLimit(1)
-                        .accessibilityIdentifier(identifier)
-                    accessory
+                        .fixedSize()
                 }
-            } label: {
-                Text(label)
-                    .lineLimit(1)
-                    .fixedSize()
+            } else {
+                content(focus: focus)
             }
+        }
+    }
+
+    private func content(focus: FocusState<Bool>.Binding) -> some View {
+        HStack(spacing: PopsSpacing.sm) {
+            field(focus: focus)
+                .font(monospaced && !text.isEmpty ? .popsMonospaced : .popsBody)
+                .multilineTextAlignment(.leading)
+                .lineLimit(1)
+                .accessibilityLabel(label)
+                .accessibilityIdentifier(identifier)
+            accessory
         }
     }
 
@@ -237,11 +247,11 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
 extension InventoryFormTextRow where Accessory == EmptyView {
     internal init(
         _ label: String, placeholder: String, text: Binding<String>, monospaced: Bool = false,
-        identifier: String = "", focus: FocusState<Bool>.Binding? = nil
+        identifier: String = "", focus: FocusState<Bool>.Binding? = nil, showsLabel: Bool = true
     ) {
         self.init(
             label, placeholder: placeholder, text: text, monospaced: monospaced,
-            identifier: identifier, focus: focus
+            identifier: identifier, focus: focus, showsLabel: showsLabel
         ) {
             EmptyView()
         }

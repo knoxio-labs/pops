@@ -83,4 +83,12 @@ internal struct InventoryProtocol2ChoiceTests {
             InventoryProtocol2FieldHint.placeholder(for: Self.field(kind: .measurement))
                 .isEmpty)
     }
+
+    @Test("a many-valued field does not repeat its helper in every input")
+    func repeatedFieldDropsItsHelper() {
+        #expect(
+            InventoryProtocol2FieldHint.placeholder(
+                for: Self.field(help: "One entry per author"), showsLabel: false
+            ).isEmpty)
+    }
 }

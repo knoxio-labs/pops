@@ -1,32 +1,21 @@
-/// The VoiceOver strings for a protocol-2 field row, built the same way
-/// `TransactionPresentation.accessibilityLabel` is: a pure function over the
-/// row's own facts, so a test can assert the sentence without rendering a
-/// view. A many-valued field's entries and their move/remove controls are
-/// otherwise unlabelled beyond "Value 2" and a bare glyph, which reads as
-/// nothing useful once the visual position they rely on is gone.
+/// The VoiceOver strings for a protocol-2 field row, kept separate from the
+/// view so the labels remain stable while the visual row loses its repeated
+/// titles.
 internal enum InventoryProtocol2RowAccessibility {
-    /// One entry of a many-valued field, said with its position among the
-    /// others rather than just "Value 2": VoiceOver users cannot see that
-    /// there are three, so a raw index would sound like a serial number
-    /// rather than a place in a sequence.
     internal static func entryValue(fieldLabel: String, index: Int, count: Int) -> String {
-        "\(fieldLabel), value \(index + 1) of \(count)"
+        count == 1 ? fieldLabel : "\(fieldLabel) \(index + 1)"
     }
 
     internal static func addEntry(fieldLabel: String) -> String {
-        "Add \(fieldLabel) value"
+        "Add \(fieldLabel)"
     }
 
-    internal static func moveEarlier(fieldLabel: String, index: Int) -> String {
-        "Move \(fieldLabel) value \(index + 1) earlier"
+    internal static func reorderHandle(fieldLabel: String, index: Int, count: Int) -> String {
+        count == 1 ? "Reorder \(fieldLabel)" : "Reorder \(fieldLabel) \(index + 1)"
     }
 
-    internal static func moveLater(fieldLabel: String, index: Int) -> String {
-        "Move \(fieldLabel) value \(index + 1) later"
-    }
-
-    internal static func removeEntry(fieldLabel: String, index: Int) -> String {
-        "Remove \(fieldLabel) value \(index + 1)"
+    internal static func removeEntry(fieldLabel: String, index: Int, count: Int) -> String {
+        count == 1 ? "Delete \(fieldLabel)" : "Delete \(fieldLabel) \(index + 1)"
     }
 
     /// A computed field's row: its current text is the value half of the

@@ -47,6 +47,7 @@ internal struct InventoryFormChoiceRow: View {
     internal let fieldId: String
     /// The row's own handle for a driver, when the caller gives it one.
     internal let identifier: String?
+    internal let showsLabel: Bool
     internal let options: [InventoryFormChoiceOption]
     internal let chosenId: String?
     /// What the row reads while `chosenId` is set, worked out by the caller:
@@ -60,13 +61,22 @@ internal struct InventoryFormChoiceRow: View {
                 title: label, fieldId: fieldId, options: options, chosenId: chosenId,
                 choose: choose)
         } label: {
-            LabeledContent(label) {
-                Text(InventoryFormBlank.shown(chosenLabel))
-                    .foregroundStyle(
-                        chosenLabel == nil ? Color.popsMutedForeground : Color.popsForeground)
+            if showsLabel {
+                LabeledContent(label) {
+                    choiceValue
+                }
+            } else {
+                choiceValue
+                    .accessibilityLabel(label)
             }
         }
         .accessibilityIdentifier(identifier ?? "")
+    }
+
+    private var choiceValue: some View {
+        Text(InventoryFormBlank.shown(chosenLabel))
+            .foregroundStyle(
+                chosenLabel == nil ? Color.popsMutedForeground : Color.popsForeground)
     }
 }
 
@@ -76,6 +86,7 @@ extension InventoryFormChoiceRow {
     ) {
         self.init(
             label: field.label, fieldId: field.key, identifier: nil,
+            showsLabel: true,
             options: InventoryFormChoices.options(for: field).map {
                 InventoryFormChoiceOption(id: $0, label: $0)
             },

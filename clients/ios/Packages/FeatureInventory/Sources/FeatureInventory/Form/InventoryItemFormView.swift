@@ -119,6 +119,7 @@ internal struct InventoryItemFormView: View {
         }
         .popsMotion(value: model.draft.typeKey)
         .inventoryInsetGroupedList()
+        .popsGroundedSwipeActionsContainer()
         // Without this, a tap that moves on from a just-typed field (Name to
         // Type, Name to a protocol-2 field) can land while the keyboard is
         // still dismissing and miss its target row entirely — the keyboard

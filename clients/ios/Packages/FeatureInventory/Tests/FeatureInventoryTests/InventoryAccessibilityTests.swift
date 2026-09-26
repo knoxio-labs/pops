@@ -41,20 +41,18 @@ internal struct InventoryAccessibilityTests {
                 != InventoryAccessibility.protocol2FieldEntry(id: "b", index: 0))
     }
 
-    @Test("add, move and remove each have their own identifier, per field and position")
+    @Test("add, reorder and remove each have their own identifier, per field and position")
     func protocol2FieldActionIdentifiersAreDistinct() {
         let ids: Set<String> = [
             InventoryAccessibility.protocol2FieldAdd(id: "f"),
-            InventoryAccessibility.protocol2FieldMoveEarlier(id: "f", index: 0),
-            InventoryAccessibility.protocol2FieldMoveLater(id: "f", index: 0),
+            InventoryAccessibility.protocol2FieldReorder(id: "f", index: 0),
             InventoryAccessibility.protocol2FieldRemove(id: "f", index: 0),
-            InventoryAccessibility.protocol2FieldMoveEarlier(id: "f", index: 1),
-            InventoryAccessibility.protocol2FieldMoveLater(id: "f", index: 1),
+            InventoryAccessibility.protocol2FieldReorder(id: "f", index: 1),
             InventoryAccessibility.protocol2FieldRemove(id: "f", index: 1),
             InventoryAccessibility.protocol2FieldEntry(id: "f", index: 0),
             InventoryAccessibility.protocol2FieldEntry(id: "f", index: 1),
         ]
-        #expect(ids.count == 9)
+        #expect(ids.count == 7)
     }
 
     @Test("the Type picker and each of its options have pinned identifiers")

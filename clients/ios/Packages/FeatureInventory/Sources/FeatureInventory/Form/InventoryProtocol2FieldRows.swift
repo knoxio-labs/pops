@@ -1,6 +1,8 @@
 import AppCore
 import DesignSystem
+import Foundation
 import SwiftUI
+import UniformTypeIdentifiers
 
 internal struct InventoryProtocol2FieldRow: View {
     let field: InventoryCatalogueField
@@ -22,6 +24,8 @@ internal struct InventoryProtocol2FieldRow: View {
     let clearOverride: () -> Void
 
     @State private var overrideEntry: InventoryProtocol2DraftEntry?
+    @State private var draggedEntryID: String?
+    @State private var activeSwipeEntryID: String?
 
     @ViewBuilder var body: some View {
         if field.storage == .computed {
@@ -43,11 +47,6 @@ internal struct InventoryProtocol2FieldRow: View {
             Text(field.label)
                 .font(.popsHeadline)
                 .accessibilityAddTraits(.isHeader)
-            if let help = field.help {
-                Text(help)
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
-            }
             ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                 manyEntryRow(entry, index: index, count: entries.count)
             }
@@ -60,70 +59,78 @@ internal struct InventoryProtocol2FieldRow: View {
         .padding(.vertical, PopsSpacing.xs)
     }
 
-    /// One entry of a many-valued field: its scalar editor plus three plain
-    /// icon buttons rather than a `Menu`: iOS 27's own pattern for a row's
-    /// few actions is icon buttons in place, not a disclosure into a popover.
+    /// One entry of a many-valued field with drag reordering and swipe removal.
     private func manyEntryRow(
         _ entry: InventoryProtocol2DraftEntry, index: Int, count: Int
     ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.xs) {
+        HStack(alignment: .center, spacing: PopsSpacing.xs) {
+            reorderHandle(entry, index: index, count: count)
             editor(
                 entry,
                 label: InventoryProtocol2RowAccessibility.entryValue(
                     fieldLabel: field.label, index: index, count: count),
-                identifier: InventoryAccessibility.protocol2FieldEntry(id: field.id, index: index))
-            moveEarlierButton(entry, index: index, isFirst: index == 0)
-            moveLaterButton(entry, index: index, isLast: index == count - 1)
-            removeButton(entry, index: index)
+                identifier: InventoryAccessibility.protocol2FieldEntry(id: field.id, index: index),
+                showsLabel: false)
         }
+        .contentShape(.rect)
+        .onDrop(
+            of: [.plainText],
+            delegate: InventoryProtocol2EntryDropDelegate(
+                targetID: entry.id, entries: entries, draggedID: $draggedEntryID, move: move)
+        )
+        .popsGroundedSwipeRow(isActive: activeSwipeEntryID == entry.id)
+        .popsGroundedSwipeActions(
+            edge: .trailing,
+            onPresentationChanged: { presented in
+                if presented {
+                    activeSwipeEntryID = entry.id
+                } else if activeSwipeEntryID == entry.id {
+                    activeSwipeEntryID = nil
+                }
+            },
+            actions: {
+                Button(role: .destructive) {
+                    remove(entry.id)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .accessibilityIdentifier(
+                    InventoryAccessibility.protocol2FieldRemove(id: field.id, index: index)
+                )
+                .accessibilityLabel(
+                    InventoryProtocol2RowAccessibility.removeEntry(
+                        fieldLabel: field.label, index: index, count: count))
+            })
     }
 
-    private func moveEarlierButton(
-        _ entry: InventoryProtocol2DraftEntry, index: Int, isFirst: Bool
+    private func reorderHandle(
+        _ entry: InventoryProtocol2DraftEntry, index: Int, count: Int
     ) -> some View {
-        Button {
-            move(entry.id, -1)
-        } label: {
-            Image(systemName: "arrow.up")
-        }
-        .buttonStyle(.borderless)
-        .disabled(isFirst)
-        .accessibilityIdentifier(
-            InventoryAccessibility.protocol2FieldMoveEarlier(id: field.id, index: index)
-        )
-        .accessibilityLabel(
-            InventoryProtocol2RowAccessibility.moveEarlier(fieldLabel: field.label, index: index))
-    }
-
-    private func moveLaterButton(
-        _ entry: InventoryProtocol2DraftEntry, index: Int, isLast: Bool
-    ) -> some View {
-        Button {
-            move(entry.id, 1)
-        } label: {
-            Image(systemName: "arrow.down")
-        }
-        .buttonStyle(.borderless)
-        .disabled(isLast)
-        .accessibilityIdentifier(
-            InventoryAccessibility.protocol2FieldMoveLater(id: field.id, index: index)
-        )
-        .accessibilityLabel(
-            InventoryProtocol2RowAccessibility.moveLater(fieldLabel: field.label, index: index))
-    }
-
-    private func removeButton(_ entry: InventoryProtocol2DraftEntry, index: Int) -> some View {
-        Button(role: .destructive) {
-            remove(entry.id)
-        } label: {
-            Image(systemName: "trash")
-        }
-        .buttonStyle(.borderless)
-        .accessibilityIdentifier(
-            InventoryAccessibility.protocol2FieldRemove(id: field.id, index: index)
-        )
-        .accessibilityLabel(
-            InventoryProtocol2RowAccessibility.removeEntry(fieldLabel: field.label, index: index))
+        InventorySymbol.reorder.image
+            .font(.popsHeadline)
+            .foregroundStyle(Color.popsMutedForeground)
+            .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+            .contentShape(.rect)
+            .onDrag {
+                draggedEntryID = entry.id
+                return NSItemProvider(object: entry.id as NSString)
+            }
+            .accessibilityIdentifier(
+                InventoryAccessibility.protocol2FieldReorder(id: field.id, index: index)
+            )
+            .accessibilityLabel(
+                InventoryProtocol2RowAccessibility.reorderHandle(
+                    fieldLabel: field.label, index: index, count: count)
+            )
+            .accessibilityHint("Drag to reorder")
+            .accessibilityAction(named: "Move earlier") {
+                guard index > 0 else { return }
+                move(entry.id, -1)
+            }
+            .accessibilityAction(named: "Move later") {
+                guard index < count - 1 else { return }
+                move(entry.id, 1)
+            }
     }
 }
 
@@ -216,10 +223,12 @@ extension InventoryProtocol2FieldRow {
 
 extension InventoryProtocol2FieldRow {
     private func editor(
-        _ entry: InventoryProtocol2DraftEntry, label: String, identifier: String
+        _ entry: InventoryProtocol2DraftEntry, label: String, identifier: String,
+        showsLabel: Bool = true
     ) -> some View {
         InventoryProtocol2ValueEditor(
-            field: field, entry: entry, label: label, identifier: identifier,
+            field: field, entry: entry, label: label, showsLabel: showsLabel,
+            identifier: identifier,
             referenceTargets: referenceTargets,
             setText: { setText($0, entry.id) },
             setValue: { setValue($0, entry.id) },

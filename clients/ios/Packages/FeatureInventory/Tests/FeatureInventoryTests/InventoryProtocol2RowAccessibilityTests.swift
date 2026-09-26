@@ -4,42 +4,46 @@ import Testing
 
 @Suite("Protocol-2 field row VoiceOver strings")
 internal struct InventoryProtocol2RowAccessibilityTests {
-    @Test("an entry names its field, its position and how many there are")
-    func entryValueNamesPositionAndCount() {
+    @Test("multiple entries use their field name and position")
+    func entryValueNamesPosition() {
         #expect(
             InventoryProtocol2RowAccessibility.entryValue(fieldLabel: "Tags", index: 0, count: 3)
-                == "Tags, value 1 of 3")
+                == "Tags 1")
         #expect(
             InventoryProtocol2RowAccessibility.entryValue(fieldLabel: "Tags", index: 2, count: 3)
-                == "Tags, value 3 of 3")
+                == "Tags 3")
     }
 
-    @Test("a single-entry field still says 1 of 1, not a bare label")
-    func entryValueSaysOneOfOneRatherThanOmittingCount() {
+    @Test("a single entry uses only its field name")
+    func entryValueOmitsAnUnhelpfulCount() {
         #expect(
             InventoryProtocol2RowAccessibility.entryValue(fieldLabel: "Tags", index: 0, count: 1)
-                == "Tags, value 1 of 1")
+                == "Tags")
     }
 
     @Test("add names the field it appends to")
     func addNamesField() {
-        #expect(InventoryProtocol2RowAccessibility.addEntry(fieldLabel: "Tags") == "Add Tags value")
+        #expect(InventoryProtocol2RowAccessibility.addEntry(fieldLabel: "Tags") == "Add Tags")
     }
 
-    @Test("move earlier and move later are distinct sentences for the same position")
-    func moveLabelsAreDistinct() {
-        let earlier = InventoryProtocol2RowAccessibility.moveEarlier(fieldLabel: "Tags", index: 1)
-        let later = InventoryProtocol2RowAccessibility.moveLater(fieldLabel: "Tags", index: 1)
-        #expect(earlier == "Move Tags value 2 earlier")
-        #expect(later == "Move Tags value 2 later")
-        #expect(earlier != later)
+    @Test("a reorder handle names its entry without a one-of-one count")
+    func reorderHandleNamesEntry() {
+        #expect(
+            InventoryProtocol2RowAccessibility.reorderHandle(
+                fieldLabel: "Tags", index: 1, count: 3) == "Reorder Tags 2")
+        #expect(
+            InventoryProtocol2RowAccessibility.reorderHandle(
+                fieldLabel: "Tags", index: 0, count: 1) == "Reorder Tags")
     }
 
-    @Test("remove names the field and the one-based position being removed")
+    @Test("remove names the field and position only when needed")
     func removeNamesPosition() {
         #expect(
-            InventoryProtocol2RowAccessibility.removeEntry(fieldLabel: "Tags", index: 0)
-                == "Remove Tags value 1")
+            InventoryProtocol2RowAccessibility.removeEntry(fieldLabel: "Tags", index: 0, count: 3)
+                == "Delete Tags 1")
+        #expect(
+            InventoryProtocol2RowAccessibility.removeEntry(fieldLabel: "Tags", index: 0, count: 1)
+                == "Delete Tags")
     }
 
     @Test("a computed row without a caption is just the field and its value")
