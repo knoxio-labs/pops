@@ -1,36 +1,37 @@
 /**
- * Builders for the named inventory fixtures. Defaults fill every row field
- * with a quiet active, synced value.
+ * Builders that keep the named fixtures one line each: a placement helper per
+ * kind and an item builder that fills every field a row reads with the quiet
+ * default (active, synced, no code, quantity 1).
  */
 import { typeLabel } from './core-types';
 
 import type { ContainerAccess, ItemRowModel, Placement, PreviousPlacement } from '../model/model';
 
-/** Creates a placement directly inside a location. */
+/** Directly in a location. */
 export const at = (locationId: string): Placement => ({ kind: 'location', locationId });
 
-/** Creates a placement inside a container. */
+/** Inside a container. */
 export const inBox = (containerId: string): Placement => ({ kind: 'container', containerId });
 
-/** The placement for an item currently in hand. */
+/** In hand. */
 export const inHand: Placement = { kind: 'in-hand' };
 
-/** Creates a remembered location placement. */
+/** A remembered location the item came from. */
 export const wasAt = (locationId: string): PreviousPlacement => ({ kind: 'location', locationId });
 
-/** Creates a remembered container placement. */
+/** A remembered container the item came from. */
 export const wasIn = (containerId: string): PreviousPlacement => ({
   kind: 'container',
   containerId,
 });
 
-/** Creates a remembered placement whose former place was deleted. */
+/** A remembered place that has since been deleted. */
 export const wasDeleted = (name: string): PreviousPlacement => ({ kind: 'deleted', name });
 
-/** Optional fields that override an item fixture's defaults. */
+/** Everything an item can override beyond its id, name, type and placement. */
 export type ItemExtras = Partial<Omit<ItemRowModel, 'id' | 'name' | 'typeId' | 'placement'>>;
 
-/** Builds one inventory item fixture. */
+/** Builds one fixture item. */
 export function item(
   [id, name, typeId]: readonly [string, string, string | null],
   placement: Placement,
@@ -55,7 +56,7 @@ export function item(
   };
 }
 
-/** Builds a fixture item whose type grants containment. */
+/** Builds one fixture container: an item whose type grants containment. */
 export function box(
   ids: readonly [string, string, string],
   placement: Placement,

@@ -1,6 +1,8 @@
 /**
- * Named item fixtures cover grouped, untyped, in-hand, lifecycle, and sync
- * states used by inventory foundation tests and stories.
+ * The named items: grouped, labelled, untyped, in hand (with a previous
+ * place, a previous container, a deleted previous place, and found loose),
+ * every lifecycle and every sync state. Each one exists for a branch a
+ * screen has to render.
  */
 import { at, inBox, inHand, item, wasAt, wasDeleted, wasIn } from './core-factory';
 

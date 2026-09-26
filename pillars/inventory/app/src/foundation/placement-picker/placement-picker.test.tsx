@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { coreWorld } from '../fixtures/core';
-import { recentPlacements } from '../fixtures/recents';
+import { coreWorld } from '../test-fixtures/core';
+import { recentPlacements } from '../test-fixtures/recents';
 import { PlacementPicker, PlacementPickerPanel } from './placement-picker';
 
 import type { PlacementPickerProps } from '../model/contracts';

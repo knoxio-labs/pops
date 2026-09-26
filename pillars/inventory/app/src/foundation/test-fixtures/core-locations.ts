@@ -1,6 +1,8 @@
 /**
- * The fictional house used by the foundation fixtures. Locations are flat
- * parent-linked records, matching the locations API shape.
+ * The fictional house every foundation fixture places things in, flat and
+ * parent-linked the way the locations API serves it. Ids match the older
+ * `inventory-locations` tree so a place named on one screen is the same place
+ * on another.
  */
 import type { LocationModel } from '../model/model';
 
