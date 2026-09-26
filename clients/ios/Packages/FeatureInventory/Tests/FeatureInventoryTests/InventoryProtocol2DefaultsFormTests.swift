@@ -3,9 +3,9 @@ import Testing
 
 @testable import FeatureInventory
 
-/// POPS-4846: a new item's form starts each field at its type's catalogue
-/// default, and so does a type picked while creating; an edit never does, and
-/// no default lands on a value the person already set.
+/// POPS-4846: a type picked while creating starts each field at its catalogue
+/// default; an edit never does, and no default lands on a value the person
+/// already set.
 @MainActor
 @Suite("Protocol 2 item form field defaults")
 internal struct InventoryProtocol2DefaultsFormTests {
@@ -67,33 +67,26 @@ internal struct InventoryProtocol2DefaultsFormTests {
             createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
     }
 
-    @Test("a new item starts every field at its default and sends them")
-    func createPrefills() async throws {
+    @Test("a new item starts without a type and submits an untyped create")
+    func createStartsUntyped() async throws {
         let opened = await Self.opened(.create(placement: nil))
         defer { opened.loading.cancel() }
         let form = opened.form
         let store = opened.store
-        let draft = try #require(form.protocol2Draft)
 
-        #expect(draft.values(for: Self.finish) == [.string("Matte")])
-        #expect(draft.values(for: Self.tags) == [.string("warm"), .string("dimmable")])
-        #expect(draft.values(for: Self.dimmable) == [.boolean(true)])
-        #expect(draft.values(for: Self.note).isEmpty)
+        #expect(form.protocol2Draft == nil)
+        #expect(form.protocol2Type == nil)
+        #expect(form.offersNoType)
         #expect(!form.hasStagedWork)
 
         form.draft.name = "Desk lamp"
         #expect(await form.submit())
-        guard case .createProtocol2Item(let created)? = store.performed.first else {
-            Issue.record("expected a protocol-2 create")
+        guard case .createItem(let created)? = store.performed.first else {
+            Issue.record("expected an untyped create")
             return
         }
-        #expect(
-            created.values == [
-                InventoryProtocol2FieldValue(fieldId: "finish", values: [.string("Matte")]),
-                InventoryProtocol2FieldValue(
-                    fieldId: "tags", values: [.string("warm"), .string("dimmable")]),
-                InventoryProtocol2FieldValue(fieldId: "dimmable", values: [.boolean(true)]),
-            ])
+        #expect(created.typeKey == nil)
+        #expect(created.fields.isEmpty)
     }
 
     @Test("editing an item leaves its empty fields empty")
@@ -104,6 +97,7 @@ internal struct InventoryProtocol2DefaultsFormTests {
         let store = opened.store
         let draft = try #require(form.protocol2Draft)
 
+        #expect(form.protocol2Type?.id == Self.lamp)
         #expect(draft.values(for: Self.finish).isEmpty)
         #expect(draft.values(for: Self.tags).isEmpty)
         #expect(draft.values(for: Self.dimmable) == [.boolean(false)])
@@ -113,7 +107,7 @@ internal struct InventoryProtocol2DefaultsFormTests {
         #expect(store.performed.isEmpty)
     }
 
-    @Test("picking another type while creating keeps what was typed and fills its defaults")
+    @Test("picking a type while creating keeps what was typed and fills its defaults")
     func typeSwitchPrefills() async throws {
         let opened = await Self.opened(.create(placement: nil))
         defer { opened.loading.cancel() }
@@ -123,8 +117,25 @@ internal struct InventoryProtocol2DefaultsFormTests {
         form.selectProtocol2Type(Self.cable)
 
         #expect(form.draft.name == "Charger lead")
+        #expect(form.protocol2Draft?.typeSelectionChanged == true)
         #expect(form.protocol2Draft?.values(for: Self.connector) == [.string("USB-C")])
         #expect(form.hasStagedWork)
+    }
+
+    @Test("selecting no type clears a create draft")
+    func createCanClearType() async throws {
+        let opened = await Self.opened(.create(placement: nil))
+        defer { opened.loading.cancel() }
+        let form = opened.form
+
+        form.selectProtocol2Type(Self.cable)
+        #expect(form.protocol2Draft?.typeId == Self.cable)
+
+        form.selectProtocol2Type(nil)
+
+        #expect(form.protocol2Draft == nil)
+        #expect(form.protocol2Type == nil)
+        #expect(form.offersNoType)
     }
 
     @Test("a default never replaces a value the person set")

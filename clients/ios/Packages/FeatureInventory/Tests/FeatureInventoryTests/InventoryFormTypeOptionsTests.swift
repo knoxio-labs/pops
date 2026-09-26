@@ -17,7 +17,7 @@ internal struct InventoryFormTypeOptionsTests {
 
     @Test("every active type is offered alphabetically, each tapped by its pinned id")
     func activeTypesWithPinnedIdentifiers() {
-        let options = InventoryFormTypeOptions.protocol2(Self.catalogue, selectedId: "gadget")
+        let options = InventoryFormTypeOptions.protocol2(Self.catalogue, selectedId: nil)
 
         #expect(options.map(\.id) == ["cable", "gadget"])
         #expect(options.map(\.label) == ["Label cable", "Label gadget"])

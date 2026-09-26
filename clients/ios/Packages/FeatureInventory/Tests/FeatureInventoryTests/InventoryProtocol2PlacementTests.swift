@@ -22,6 +22,7 @@ internal struct InventoryProtocol2PlacementTests {
             suggester: .unbound, mintId: { "new-gadget" })
         let loading = await form.startAndAwaitReady()
         defer { loading.cancel() }
+        form.selectProtocol2Type(Self.type.id)
         form.draft.name = "Gadget"
         form.draft.quantity = 3
 

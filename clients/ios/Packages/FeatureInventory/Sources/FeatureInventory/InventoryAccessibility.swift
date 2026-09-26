@@ -14,6 +14,7 @@ internal enum InventoryAccessibility {
     /// The item form's Type picker. Its label reads "Type, <current type>",
     /// which changes with every choice, so a driver addresses it by this.
     internal static let itemTypePicker = "inventory-item-type"
+    internal static let itemTypeNone = "inventory-item-type-option-none"
 
     /// One option of the Type picker, by the catalogue type's own stable id
     /// (a protocol-1 catalogue's type key). A type's label is owner-authored

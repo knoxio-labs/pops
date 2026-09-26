@@ -58,38 +58,22 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
     end: 50%, 85%
     duration: 600
 
-# A new item's Type defaults to the first non-archived type the catalogue
-# declares (`InventoryItemFormModel.seed`), and this run's temp inventory
-# pillar has exactly one non-legacy type to default to — `Phone gadget`,
-# published above with key `acc_phone_gadget` (`inventory-user-type.mjs`).
-# Asserted rather than assumed: if a future default ever resolves to a
-# different type, the item would still get created, just of the wrong type,
-# and every assertion after it would fail on an unrelated screen instead of
-# here, where it is obvious what went wrong.
-- assertVisible: 'Type, Phone gadget'
+# A new item's Type starts unselected. This flow chooses the synced type
+# explicitly before editing its generic fields.
+- assertVisible: 'Type, No type yet'
 
-# The Type choice itself, driven through the menu the design keeps (a
-# SwiftUI `Picker` in menu style, so a `UIMenu`). By id, not by the words on
-# it: the row's label changes with every choice and a type's label is
-# owner-authored. The option is waited for rather than tapped straight
-# away, because the menu animates in and a tap aimed at a hierarchy read
-# mid-presentation lands on nothing (POPS-4556); and the menu is waited
-# out again before the next tap, which would otherwise only dismiss it.
-#
-# The tap goes to the current value inside the row, not to the row: the
-# row's element spans the whole cell, but only its trailing value is the
-# button that opens the menu, and a tap at the row's centre lands on the
-# "Type" label and opens nothing (observed on a simulator run, POPS-4556).
+# The Type choice is driven through the menu the design keeps (a SwiftUI
+# `Picker` in menu style, so a `UIMenu`). The option is waited for rather than
+# tapped straight away because the menu animates in and a tap aimed at a
+# hierarchy read mid-presentation can land on nothing (POPS-4556).
 - tapOn:
-    text: 'Phone gadget'
-    childOf:
-      id: 'inventory-item-type'
+    id: 'inventory-item-type'
 - extendedWaitUntil:
     visible:
       id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}
     timeout: 10000
 - tapOn:
-    id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}
+    text: 'Phone gadget'
 - extendedWaitUntil:
     notVisible:
       id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}

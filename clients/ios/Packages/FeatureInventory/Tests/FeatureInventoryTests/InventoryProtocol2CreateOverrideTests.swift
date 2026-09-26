@@ -37,6 +37,7 @@ internal struct InventoryProtocol2CreateOverrideTests {
             request: .create(placement: nil), store: store, suggester: .unbound,
             mintId: { "new-box" })
         let loading = await form.startAndAwaitReady()
+        form.selectProtocol2Type(type.id)
         form.draft.name = "Irregular box"
         return Opened(form: form, store: store, loading: loading)
     }
