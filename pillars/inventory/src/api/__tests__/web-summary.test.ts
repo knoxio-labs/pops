@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { WebSummaryResponseSchema } from '../../contract/rest-web-summary.js';
-import { items, type Lifecycle } from '../../db/index.js';
+import { items, locations, type Lifecycle } from '../../db/index.js';
 import {
   createItem,
   createLocation,
@@ -98,6 +98,32 @@ describe('GET /web/summary', () => {
   it('a deleted item counts nowhere', async () => {
     const deleted = randomUUID();
     await apply(createItem(deleted, 'Deleted item'));
+    setDeleted(deleted);
+
+    expect(await summary()).toEqual({
+      counts: { items: 0, things: 0, containers: 0, openContainers: 0, locations: 0, inHand: 0 },
+      containerSegments: { all: 0, open: 0, closed: 0, full: 0, moving: 0, retired: 0 },
+      packing: { closed: 0, fullButOpen: 0, open: 0, packedItems: 0 },
+      moving: { closed: 0, total: 0, open: 0, full: 0, packed: 0 },
+    });
+  });
+
+  it('a deleted location is not counted as live', async () => {
+    const [live, deleted] = [randomUUID(), randomUUID()];
+    await apply(createLocation(live, 'Live'), createLocation(deleted, 'Deleted'));
+    h.db.db
+      .update(locations)
+      .set({ deletedAt: '2026-09-19T11:00:00.000Z' })
+      .where(eq(locations.id, deleted))
+      .run();
+
+    expect((await summary()).counts.locations).toBe(1);
+  });
+
+  it('a deleted container counts nowhere, including retired', async () => {
+    const deleted = randomUUID();
+    await apply(createItem(deleted, 'Deleted box'));
+    setContainerState(deleted, 'closed');
     setDeleted(deleted);
 
     expect(await summary()).toEqual({
