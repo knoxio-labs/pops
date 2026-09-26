@@ -142,6 +142,12 @@ internal struct InventoryItemFormView: View {
                     typeKey: Binding(
                         get: { model.draft.typeKey }, set: { model.selectLegacyType($0) }))
             }
+        } footer: {
+            if let message = model.prefillStatus?.message {
+                Text(message)
+                    .lineLimit(1)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
         }
     }
 

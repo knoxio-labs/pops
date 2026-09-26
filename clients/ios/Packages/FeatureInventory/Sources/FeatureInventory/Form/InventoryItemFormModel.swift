@@ -49,8 +49,12 @@ internal final class InventoryItemFormModel {
     /// computed row moves as its inputs do rather than waiting for the item
     /// to round-trip through the server.
     internal var protocol2Draft: InventoryProtocol2Draft? {
-        didSet { recomputeProtocol2ComputedFields() }
+        didSet {
+            prefillStatus = nil
+            recomputeProtocol2ComputedFields()
+        }
     }
+    internal var prefillStatus: InventoryPrefillStatus?
     internal private(set) var protocol2ReferenceTargets: [InventoryProtocol2ReferenceTarget] = []
     /// The replica read the last time the store answered, kept only to
     /// evaluate a computed field's expression again between then and now;
