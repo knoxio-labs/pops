@@ -5,8 +5,40 @@ import { ExistingTab } from './existing-tab';
 import { NewTab } from './new-tab';
 import { carriedLine, storeButtonLabel, storePlan } from './store-here-model';
 
+import type { ItemRowModel, PlacementWorld } from '../model';
+import type { StoreHereTarget } from '../model/contracts';
 import type { TargetNotice } from './store-here-model';
-import type { StoreHereViewProps } from './store-here-view';
+import type { StoreCandidate } from './store-here-model';
+
+/** The controlled inputs and callbacks for the Store here sheet. */
+export interface StoreHereViewProps {
+  target: StoreHereTarget;
+  world: PlacementWorld;
+  /** Whether the owner's reads have loaded. */
+  status: 'pending' | 'error' | 'success';
+  /** Refetches what failed; called by the error banner's Retry. */
+  onRetry: () => void;
+  /** The Existing tab's rows, in the order shown. */
+  candidates: readonly StoreCandidate[];
+  initialTab?: 'new' | 'existing';
+  query: string;
+  onQuery: (query: string) => void;
+  selected: ReadonlySet<string>;
+  onToggle: (id: string) => void;
+  /** Names created here, newest first. */
+  created: readonly string[];
+  /** Resolves true when the item was created; the name field clears only then. */
+  onCreate: (name: string) => Promise<boolean>;
+  /** Shown under the name field; null for none. */
+  createError: string | null;
+  onStoreExisting: (items: readonly ItemRowModel[]) => void;
+  onOpenTarget: () => void;
+  onOpenForm: () => void;
+  onDone: () => void;
+  offline: boolean;
+  /** A store or create is in flight. */
+  busy: boolean;
+}
 
 /** State kept by the view for the active tab and the name being typed. */
 export interface StoreHereState {

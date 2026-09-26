@@ -14,40 +14,9 @@ import type { ReactElement } from 'react';
 
 import type { SheetContentProps } from '@pops/ui';
 
-import type { ItemRowModel, PlacementWorld } from '../model';
-import type { StoreHereTarget } from '../model/contracts';
-import type { StoreCandidate } from './store-here-model';
-import type { StoreHereState } from './store-here-view-content';
+import type { StoreHereState, StoreHereViewProps } from './store-here-view-content';
 
-/** The controlled inputs and callbacks for the Store here sheet. */
-export interface StoreHereViewProps {
-  target: StoreHereTarget;
-  world: PlacementWorld;
-  /** Whether the owner's reads have loaded. */
-  status: 'pending' | 'error' | 'success';
-  /** Refetches what failed; called by the error banner's Retry. */
-  onRetry: () => void;
-  /** The Existing tab's rows, in the order shown. */
-  candidates: readonly StoreCandidate[];
-  initialTab?: 'new' | 'existing';
-  query: string;
-  onQuery: (query: string) => void;
-  selected: ReadonlySet<string>;
-  onToggle: (id: string) => void;
-  /** Names created here, newest first. */
-  created: readonly string[];
-  /** Resolves true when the item was created; the name field clears only then. */
-  onCreate: (name: string) => Promise<boolean>;
-  /** Shown under the name field; null for none. */
-  createError: string | null;
-  onStoreExisting: (items: readonly ItemRowModel[]) => void;
-  onOpenTarget: () => void;
-  onOpenForm: () => void;
-  onDone: () => void;
-  offline: boolean;
-  /** A store or create is in flight. */
-  busy: boolean;
-}
+export type { StoreHereViewProps } from './store-here-view-content';
 
 type BodyProps = StoreHereViewProps;
 
