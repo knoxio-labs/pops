@@ -1415,7 +1415,15 @@ export interface paths {
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: never;
+  schemas: {
+    ErrorBody: {
+      code: string;
+      details?: unknown;
+      message: string;
+      requestId: string;
+      retryable: boolean;
+    };
+  };
   responses: never;
   parameters: never;
   requestBodies: never;
@@ -1641,11 +1649,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1654,11 +1676,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1667,11 +1685,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -1680,11 +1703,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -1787,11 +1824,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1800,11 +1851,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1813,11 +1860,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -1911,11 +1981,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1924,11 +2008,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1937,11 +2017,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2041,11 +2144,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2054,11 +2171,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2067,11 +2180,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2190,11 +2326,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2203,11 +2353,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2216,11 +2362,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -2229,11 +2380,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2280,11 +2445,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2293,11 +2472,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2306,11 +2481,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2348,11 +2546,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2361,11 +2573,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2374,11 +2582,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2423,11 +2654,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2436,11 +2681,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2449,11 +2690,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2508,11 +2772,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2521,11 +2799,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2534,11 +2808,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -2547,11 +2826,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2590,11 +2883,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2603,11 +2910,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2616,11 +2919,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2658,11 +2984,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2671,11 +3011,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2684,11 +3020,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -2697,11 +3038,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2750,11 +3105,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2763,11 +3132,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2776,11 +3141,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -2789,11 +3159,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2835,11 +3219,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2848,11 +3246,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2861,11 +3255,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -2874,11 +3273,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2924,11 +3337,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2937,11 +3364,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2950,11 +3373,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3016,11 +3462,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3029,11 +3489,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3042,11 +3498,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3055,11 +3516,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3109,11 +3584,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3122,11 +3611,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3135,11 +3620,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3181,11 +3689,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3194,11 +3716,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3207,11 +3725,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3220,11 +3743,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3273,11 +3810,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3286,11 +3837,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3299,11 +3846,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3312,11 +3864,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3363,11 +3929,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3376,11 +3956,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3389,11 +3965,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3402,11 +3983,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3447,11 +4042,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3460,11 +4069,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3473,11 +4078,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3486,11 +4096,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3542,11 +4166,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3555,11 +4193,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3568,11 +4202,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3581,11 +4220,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3630,11 +4283,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3643,11 +4310,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3656,11 +4319,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3669,11 +4337,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3731,11 +4413,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3744,11 +4440,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3757,11 +4449,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3770,11 +4467,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3876,11 +4587,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3889,11 +4614,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3902,11 +4623,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -3915,11 +4641,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4088,11 +4828,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4101,11 +4855,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4114,11 +4864,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -4127,11 +4882,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4196,11 +4965,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4209,11 +4992,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4222,11 +5001,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 422 */
@@ -4235,11 +5019,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4297,11 +5095,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4310,11 +5122,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4323,11 +5131,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4426,11 +5257,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4439,11 +5284,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4452,11 +5293,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4499,11 +5363,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4512,11 +5390,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4525,11 +5399,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4567,11 +5464,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4580,11 +5491,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4593,11 +5500,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4653,11 +5583,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4666,11 +5610,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4679,11 +5619,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4753,11 +5716,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4766,11 +5743,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4779,11 +5752,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4874,11 +5870,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4887,11 +5897,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4900,11 +5906,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4949,11 +5978,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4962,11 +6005,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4975,11 +6014,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5124,11 +6186,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5137,11 +6213,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5150,11 +6222,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5223,11 +6318,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5236,11 +6345,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5249,11 +6354,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5304,11 +6432,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5317,11 +6459,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5330,11 +6468,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5488,11 +6649,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5501,11 +6676,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5514,11 +6685,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5756,11 +6950,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5769,11 +6977,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5782,11 +6986,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5840,11 +7067,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5853,11 +7094,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5866,11 +7103,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6091,11 +7351,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6104,11 +7378,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6117,11 +7387,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6266,11 +7559,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6279,11 +7586,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6292,11 +7595,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6548,11 +7874,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6561,11 +7901,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6574,11 +7910,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6631,11 +7990,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6644,11 +8017,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6657,11 +8026,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6722,11 +8114,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6735,11 +8141,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6748,11 +8150,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6790,11 +8215,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6803,11 +8242,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6816,11 +8251,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6911,11 +8369,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6924,11 +8396,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6937,11 +8405,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6981,11 +8472,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6994,11 +8499,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7007,11 +8508,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7057,11 +8581,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7070,11 +8608,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7083,11 +8617,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7169,11 +8726,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7182,11 +8753,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7195,11 +8762,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7237,11 +8827,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7250,11 +8854,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7263,11 +8863,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7320,11 +8943,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7333,11 +8970,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7346,11 +8979,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7450,11 +9106,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7463,11 +9133,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7476,11 +9142,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7547,11 +9236,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7560,11 +9263,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7573,11 +9272,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7662,11 +9384,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7675,11 +9411,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7688,11 +9420,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7762,11 +9517,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7775,11 +9544,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7788,11 +9553,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7877,11 +9665,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7890,11 +9692,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7903,11 +9701,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7936,11 +9757,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7949,11 +9784,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7962,11 +9793,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8040,11 +9894,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -8053,11 +9921,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -8066,11 +9930,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8143,11 +10030,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -8156,11 +10057,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -8169,11 +10066,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8209,11 +10129,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -8222,11 +10156,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -8235,11 +10165,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8694,11 +10647,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -8707,11 +10674,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -8720,11 +10683,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 412 */
@@ -8733,11 +10692,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9032,11 +11014,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -9045,11 +11041,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -9058,11 +11050,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9101,11 +11116,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -9114,11 +11143,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -9127,11 +11152,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9188,11 +11236,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -9201,11 +11263,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -9214,11 +11272,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9605,11 +11686,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -9618,11 +11713,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -9631,11 +11722,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -10092,11 +12206,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -10105,11 +12233,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -10118,11 +12242,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 412 */
@@ -10131,11 +12251,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -10927,11 +13070,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -10940,11 +13097,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -10953,11 +13106,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11025,11 +13201,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11063,11 +13235,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11076,11 +13262,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11089,11 +13271,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11133,11 +13338,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11146,11 +13365,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11159,11 +13374,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11204,11 +13442,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11217,11 +13469,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11230,11 +13478,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11277,11 +13548,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11290,11 +13575,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11303,11 +13584,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11351,11 +13655,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11364,11 +13682,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11377,11 +13691,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11433,11 +13770,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11446,11 +13797,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11459,11 +13806,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11514,11 +13884,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11527,11 +13911,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11540,11 +13920,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11594,11 +13997,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11607,11 +14024,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11620,11 +14033,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11820,11 +14256,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11833,11 +14283,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11846,11 +14292,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -11914,11 +14383,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -11927,11 +14410,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -11940,11 +14419,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12041,11 +14543,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12054,11 +14570,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12067,11 +14579,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12150,11 +14685,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12163,11 +14712,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12176,11 +14721,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12309,11 +14877,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12322,11 +14904,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12335,11 +14913,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12474,11 +15075,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12487,11 +15102,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12500,11 +15111,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12587,11 +15221,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12600,11 +15248,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12613,11 +15257,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12703,11 +15370,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12716,11 +15397,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12729,11 +15406,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12809,11 +15509,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12822,11 +15536,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12835,11 +15545,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12877,11 +15610,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12890,11 +15637,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12903,11 +15646,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -12965,11 +15731,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -12978,11 +15758,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -12991,11 +15767,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13040,11 +15839,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -13053,11 +15866,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -13066,11 +15875,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13108,11 +15940,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -13121,11 +15967,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -13134,11 +15976,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13230,11 +16095,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -13243,11 +16122,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -13256,11 +16131,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13353,11 +16251,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -13366,11 +16278,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -13379,11 +16287,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13527,11 +16458,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -13540,11 +16485,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -13553,11 +16494,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13655,11 +16619,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -13668,11 +16646,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -13681,11 +16655,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13772,11 +16769,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -13785,11 +16796,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -13798,11 +16805,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13894,11 +16924,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -13907,11 +16951,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -13920,11 +16960,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -13993,11 +17056,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -14006,11 +17083,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -14019,11 +17092,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -14122,11 +17218,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -14135,11 +17245,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -14148,11 +17254,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -14195,11 +17324,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -14208,11 +17351,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -14221,11 +17360,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -14263,11 +17425,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -14276,11 +17452,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -14289,11 +17461,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -14351,11 +17546,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -14364,11 +17573,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -14377,11 +17582,34 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };

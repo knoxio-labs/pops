@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type AccountsListData = {
   body?: never;
   path?: never;
@@ -132,35 +140,39 @@ export type AccountsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountsCreateError = AccountsCreateErrors[keyof AccountsCreateErrors];
@@ -252,27 +264,35 @@ export type AccountsReorderErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountsReorderError = AccountsReorderErrors[keyof AccountsReorderErrors];
@@ -363,27 +383,35 @@ export type AccountsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountsDeleteError = AccountsDeleteErrors[keyof AccountsDeleteErrors];
@@ -469,27 +497,35 @@ export type AccountsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountsGetError = AccountsGetErrors[keyof AccountsGetErrors];
@@ -595,35 +631,39 @@ export type AccountsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountsUpdateError = AccountsUpdateErrors[keyof AccountsUpdateErrors];
@@ -711,27 +751,35 @@ export type CheckpointsBalanceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CheckpointsBalanceError = CheckpointsBalanceErrors[keyof CheckpointsBalanceErrors];
@@ -773,27 +821,35 @@ export type CheckpointsHistoryErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CheckpointsHistoryError = CheckpointsHistoryErrors[keyof CheckpointsHistoryErrors];
@@ -826,27 +882,35 @@ export type CheckpointsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CheckpointsListError = CheckpointsListErrors[keyof CheckpointsListErrors];
@@ -893,35 +957,39 @@ export type CheckpointsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CheckpointsCreateError = CheckpointsCreateErrors[keyof CheckpointsCreateErrors];
@@ -969,27 +1037,35 @@ export type CheckpointsRemoveErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CheckpointsRemoveError = CheckpointsRemoveErrors[keyof CheckpointsRemoveErrors];
@@ -1019,35 +1095,39 @@ export type GiftCardDetailsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type GiftCardDetailsGetError = GiftCardDetailsGetErrors[keyof GiftCardDetailsGetErrors];
@@ -1090,35 +1170,39 @@ export type GiftCardDetailsWriteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type GiftCardDetailsWriteError =
@@ -1160,35 +1244,39 @@ export type GiftCardDetailsRevealErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type GiftCardDetailsRevealError =
@@ -1223,27 +1311,35 @@ export type AccountImportsGetConfigErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountImportsGetConfigError =
@@ -1296,35 +1392,39 @@ export type AccountImportsWriteConfigErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountImportsWriteConfigError =
@@ -1370,27 +1470,35 @@ export type AccountImportsListBatchesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountImportsListBatchesError =
@@ -1436,35 +1544,39 @@ export type LoanListOffsetLinksErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type LoanListOffsetLinksError = LoanListOffsetLinksErrors[keyof LoanListOffsetLinksErrors];
@@ -1507,35 +1619,39 @@ export type LoanLinkOffsetAccountErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type LoanLinkOffsetAccountError =
@@ -1580,35 +1696,39 @@ export type LoanUnlinkOffsetAccountErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type LoanUnlinkOffsetAccountError =
@@ -1647,35 +1767,39 @@ export type LoanListRateHistoryErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type LoanListRateHistoryError = LoanListRateHistoryErrors[keyof LoanListRateHistoryErrors];
@@ -1719,35 +1843,39 @@ export type LoanRecordRateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type LoanRecordRateError = LoanRecordRateErrors[keyof LoanRecordRateErrors];
@@ -1784,35 +1912,39 @@ export type LoanGetTermsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type LoanGetTermsError = LoanGetTermsErrors[keyof LoanGetTermsErrors];
@@ -1862,35 +1994,39 @@ export type LoanWriteTermsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type LoanWriteTermsError = LoanWriteTermsErrors[keyof LoanWriteTermsErrors];
@@ -1936,35 +2072,39 @@ export type AccountsMergeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountsMergeError = AccountsMergeErrors[keyof AccountsMergeErrors];
@@ -2055,35 +2195,39 @@ export type AccountsPreviewMergeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountsPreviewMergeError =
@@ -2239,35 +2383,39 @@ export type AccountImportsTriggerSyncErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
   /**
    * 422
    */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  422: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountImportsTriggerSyncError =
@@ -2321,27 +2469,35 @@ export type AccountImportsGetSyncJobErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AccountImportsGetSyncJobError =
@@ -2441,27 +2597,35 @@ export type BudgetsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type BudgetsCreateError = BudgetsCreateErrors[keyof BudgetsCreateErrors];
@@ -2506,27 +2670,35 @@ export type BudgetsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type BudgetsDeleteError = BudgetsDeleteErrors[keyof BudgetsDeleteErrors];
@@ -2555,27 +2727,35 @@ export type BudgetsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type BudgetsGetError = BudgetsGetErrors[keyof BudgetsGetErrors];
@@ -2623,27 +2803,35 @@ export type BudgetsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type BudgetsUpdateError = BudgetsUpdateErrors[keyof BudgetsUpdateErrors];
@@ -2686,27 +2874,35 @@ export type CorrectionsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsListError = CorrectionsListErrors[keyof CorrectionsListErrors];
@@ -2788,27 +2984,35 @@ export type CorrectionsCreateOrUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsCreateOrUpdateError =
@@ -2871,27 +3075,35 @@ export type CorrectionsAnalyzeCorrectionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsAnalyzeCorrectionError =
@@ -2995,27 +3207,35 @@ export type CorrectionsApplyChangeSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsApplyChangeSetError =
@@ -3077,27 +3297,35 @@ export type CorrectionsFindMatchErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsFindMatchError =
@@ -3164,27 +3392,35 @@ export type CorrectionsGenerateRulesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsGenerateRulesError =
@@ -3293,27 +3529,35 @@ export type CorrectionsListMergedErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsListMergedError =
@@ -3522,27 +3766,35 @@ export type CorrectionsPreviewChangeSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsPreviewChangeSetError =
@@ -3607,27 +3859,35 @@ export type CorrectionsPreviewMatchesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsPreviewMatchesError =
@@ -3693,27 +3953,35 @@ export type CorrectionsProposeChangeSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsProposeChangeSetError =
@@ -3985,27 +4253,35 @@ export type CorrectionsRejectChangeSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsRejectChangeSetError =
@@ -4129,27 +4405,35 @@ export type CorrectionsReviseChangeSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsReviseChangeSetError =
@@ -4282,27 +4566,35 @@ export type CorrectionsRuleMatchPreviewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsRuleMatchPreviewError =
@@ -4349,27 +4641,35 @@ export type CorrectionsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsDeleteError = CorrectionsDeleteErrors[keyof CorrectionsDeleteErrors];
@@ -4399,27 +4699,35 @@ export type CorrectionsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsGetError = CorrectionsGetErrors[keyof CorrectionsGetErrors];
@@ -4499,27 +4807,35 @@ export type CorrectionsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsUpdateError = CorrectionsUpdateErrors[keyof CorrectionsUpdateErrors];
@@ -4581,27 +4897,35 @@ export type CorrectionsAdjustConfidenceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsAdjustConfidenceError =
@@ -4637,27 +4961,35 @@ export type CorrectionsApplyExistingErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CorrectionsApplyExistingError =
@@ -4726,27 +5058,35 @@ export type CurrenciesCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CurrenciesCreateError = CurrenciesCreateErrors[keyof CurrenciesCreateErrors];
@@ -4788,27 +5128,35 @@ export type CurrenciesDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CurrenciesDeleteError = CurrenciesDeleteErrors[keyof CurrenciesDeleteErrors];
@@ -4845,27 +5193,35 @@ export type CurrenciesUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type CurrenciesUpdateError = CurrenciesUpdateErrors[keyof CurrenciesUpdateErrors];
@@ -4945,27 +5301,35 @@ export type EntityUsageListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type EntityUsageListError = EntityUsageListErrors[keyof EntityUsageListErrors];
@@ -5014,27 +5378,35 @@ export type ImportDraftsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportDraftsListError = ImportDraftsListErrors[keyof ImportDraftsListErrors];
@@ -5108,27 +5480,35 @@ export type ImportDraftsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportDraftsCreateError = ImportDraftsCreateErrors[keyof ImportDraftsCreateErrors];
@@ -5186,27 +5566,35 @@ export type ImportDraftsDiscardErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportDraftsDiscardError = ImportDraftsDiscardErrors[keyof ImportDraftsDiscardErrors];
@@ -5234,27 +5622,35 @@ export type ImportDraftsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportDraftsGetError = ImportDraftsGetErrors[keyof ImportDraftsGetErrors];
@@ -5332,27 +5728,35 @@ export type ImportDraftsWriteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportDraftsWriteError = ImportDraftsWriteErrors[keyof ImportDraftsWriteErrors];
@@ -5416,27 +5820,35 @@ export type ImportDraftsClaimErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportDraftsClaimError = ImportDraftsClaimErrors[keyof ImportDraftsClaimErrors];
@@ -5499,27 +5911,35 @@ export type ImportDraftsHeartbeatErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportDraftsHeartbeatError =
@@ -5583,27 +6003,35 @@ export type ImportDraftsReleaseErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportDraftsReleaseError = ImportDraftsReleaseErrors[keyof ImportDraftsReleaseErrors];
@@ -5701,35 +6129,39 @@ export type ImportsApplyChangeSetAndReevaluateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
   /**
    * 412
    */
-  412: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  412: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportsApplyChangeSetAndReevaluateError =
@@ -6227,27 +6659,35 @@ export type ImportsCommitImportErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportsCommitImportError = ImportsCommitImportErrors[keyof ImportsCommitImportErrors];
@@ -6328,27 +6768,35 @@ export type ImportsCreateEntityErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportsCreateEntityError = ImportsCreateEntityErrors[keyof ImportsCreateEntityErrors];
@@ -6399,27 +6847,35 @@ export type ImportsProcessImportErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportsProcessImportError =
@@ -6450,27 +6906,35 @@ export type ImportsGetImportProgressErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportsGetImportProgressError =
@@ -6887,35 +7351,39 @@ export type ImportsReevaluateWithPendingRulesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
   /**
    * 412
    */
-  412: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  412: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportsReevaluateWithPendingRulesError =
@@ -7617,27 +8085,35 @@ export type ImportsReevaluateRowsWithPendingRulesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ImportsReevaluateRowsWithPendingRulesError =
@@ -7990,11 +8466,7 @@ export type SearchSearchErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type SearchSearchError = SearchSearchErrors[keyof SearchSearchErrors];
@@ -8029,27 +8501,35 @@ export type SettingsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SettingsListError = SettingsListErrors[keyof SettingsListErrors];
@@ -8084,27 +8564,35 @@ export type SettingsGetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SettingsGetManyError = SettingsGetManyErrors[keyof SettingsGetManyErrors];
@@ -8138,27 +8626,35 @@ export type SettingsResetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SettingsResetError = SettingsResetErrors[keyof SettingsResetErrors];
@@ -8196,27 +8692,35 @@ export type SettingsSetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SettingsSetManyError = SettingsSetManyErrors[keyof SettingsSetManyErrors];
@@ -8255,27 +8759,35 @@ export type SettingsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SettingsGetError = SettingsGetErrors[keyof SettingsGetErrors];
@@ -8320,27 +8832,35 @@ export type SettingsSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SettingsSetError = SettingsSetErrors[keyof SettingsSetErrors];
@@ -8386,27 +8906,35 @@ export type SettingsEnsureErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SettingsEnsureError = SettingsEnsureErrors[keyof SettingsEnsureErrors];
@@ -8451,27 +8979,35 @@ export type SettingsResetKeyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SettingsResetKeyError = SettingsResetKeyErrors[keyof SettingsResetKeyErrors];
@@ -8505,27 +9041,35 @@ export type SummaryGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type SummaryGetError = SummaryGetErrors[keyof SummaryGetErrors];
@@ -8719,27 +9263,35 @@ export type TagRulesListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesListError = TagRulesListErrors[keyof TagRulesListErrors];
@@ -8832,27 +9384,35 @@ export type TagRulesApplyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesApplyError = TagRulesApplyErrors[keyof TagRulesApplyErrors];
@@ -8920,27 +9480,35 @@ export type TagRulesMatchPreviewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesMatchPreviewError =
@@ -9031,27 +9599,35 @@ export type TagRulesPreviewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesPreviewError = TagRulesPreviewErrors[keyof TagRulesPreviewErrors];
@@ -9127,27 +9703,35 @@ export type TagRulesProposeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesProposeError = TagRulesProposeErrors[keyof TagRulesProposeErrors];
@@ -9288,27 +9872,35 @@ export type TagRulesRejectErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesRejectError = TagRulesRejectErrors[keyof TagRulesRejectErrors];
@@ -9376,27 +9968,35 @@ export type TagRulesResolveAddCollisionsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesResolveAddCollisionsError =
@@ -9457,27 +10057,35 @@ export type TagRulesDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesDeleteError = TagRulesDeleteErrors[keyof TagRulesDeleteErrors];
@@ -9506,27 +10114,35 @@ export type TagRulesGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesGetError = TagRulesGetErrors[keyof TagRulesGetErrors];
@@ -9582,27 +10198,35 @@ export type TagRulesUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesUpdateError = TagRulesUpdateErrors[keyof TagRulesUpdateErrors];
@@ -9649,27 +10273,35 @@ export type TagRulesApplyExistingErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesApplyExistingError =
@@ -9710,27 +10342,35 @@ export type TagRulesDisableErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TagRulesDisableError = TagRulesDisableErrors[keyof TagRulesDisableErrors];
@@ -9788,27 +10428,35 @@ export type TransactionsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TransactionsListError = TransactionsListErrors[keyof TransactionsListErrors];
@@ -9896,27 +10544,35 @@ export type TransactionsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TransactionsCreateError = TransactionsCreateErrors[keyof TransactionsCreateErrors];
@@ -10047,27 +10703,35 @@ export type TransactionsRestoreErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TransactionsRestoreError = TransactionsRestoreErrors[keyof TransactionsRestoreErrors];
@@ -10162,27 +10826,35 @@ export type TransactionsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TransactionsDeleteError = TransactionsDeleteErrors[keyof TransactionsDeleteErrors];
@@ -10258,27 +10930,35 @@ export type TransactionsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TransactionsGetError = TransactionsGetErrors[keyof TransactionsGetErrors];
@@ -10360,27 +11040,35 @@ export type TransactionsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TransactionsUpdateError = TransactionsUpdateErrors[keyof TransactionsUpdateErrors];
@@ -10444,27 +11132,35 @@ export type TransactionsUnlinkTransferErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type TransactionsUnlinkTransferError =
@@ -10571,27 +11267,35 @@ export type WishlistCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type WishlistCreateError = WishlistCreateErrors[keyof WishlistCreateErrors];
@@ -10636,27 +11340,35 @@ export type WishlistDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type WishlistDeleteError = WishlistDeleteErrors[keyof WishlistDeleteErrors];
@@ -10685,27 +11397,35 @@ export type WishlistGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type WishlistGetError = WishlistGetErrors[keyof WishlistGetErrors];
@@ -10754,27 +11474,35 @@ export type WishlistUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type WishlistUpdateError = WishlistUpdateErrors[keyof WishlistUpdateErrors];

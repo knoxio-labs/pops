@@ -1,6 +1,6 @@
 import { CORRECTION_PROPOSAL, CORRECTIONS, GROCER_RULE_ID, TAG_RULES } from '../../fixtures/rules';
 import { PROPOSAL_TRANSACTION_ID, TRANSACTIONS } from '../../fixtures/transactions';
-import { done, notFound, ok, page } from '../respond';
+import { done, financeNotFound, ok, page } from '../respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
@@ -37,19 +37,19 @@ function storedTagRule({
 
 const tagRuleUpdated: MockHandler = ({ params }) => {
   const rule = TAG_RULES.find((r) => r.id === params['id']);
-  if (rule === undefined) return notFound('tag rule');
+  if (rule === undefined) return financeNotFound('tag rule');
   const body: TagRulesUpdateResponses[200] = { data: storedTagRule(rule), message: 'updated' };
   return { body };
 };
 
 const correctionById: MockHandler = ({ params }) => {
   const rule = CORRECTIONS.find((r) => r.id === params['id']);
-  return rule === undefined ? notFound('correction') : { body: { data: rule } };
+  return rule === undefined ? financeNotFound('correction') : { body: { data: rule } };
 };
 
 const tagRuleById: MockHandler = ({ params }) => {
   const rule = TAG_RULES.find((r) => r.id === params['id']);
-  return rule === undefined ? notFound('tag rule') : { body: { data: rule } };
+  return rule === undefined ? financeNotFound('tag rule') : { body: { data: rule } };
 };
 
 const matchRows = TRANSACTIONS.filter((t) => t.entityName === 'Harbour Grocer').map((t) => ({

@@ -25,13 +25,18 @@
  * Up webhook, which carries its own signature check — resolve to no scope and
  * are untouched.
  */
-import { createServiceAccountScopeGate } from '@pops/pillar-express';
+import { createServiceAccountScopeGate, PopsError } from '@pops/pillar-express';
+import {
+  authorizeServiceAccountRequest,
+  resolveContractScope,
+  SERVICE_ACCOUNT_HEADER,
+  type ContractScopeMap,
+  type ServiceAccountVerifier,
+} from '@pops/pillar-sdk/server';
 
 import { financeContract } from '../../contract/rest.js';
 
 import type { RequestHandler } from 'express';
-
-import type { ContractScopeMap, ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 /**
  * Root of finance's scope vocabulary. A grant of `finance.transactions`
@@ -62,5 +67,58 @@ export const financeScopeMap: ContractScopeMap = gate.scopeMap;
 export function createServiceAccountScopeMiddleware(
   verify: ServiceAccountVerifier
 ): RequestHandler {
-  return gate.createMiddleware(verify);
+  return (req, _res, next): void => {
+    void authorizeServiceAccountRequest({
+      requiredScope: resolveContractScope(financeScopeMap, req.method, req.path),
+      apiKey: req.get(SERVICE_ACCOUNT_HEADER),
+      verify,
+    })
+      .then((result) => {
+        if (result.ok) {
+          next();
+          return;
+        }
+        if (result.reason === 'missing-scope') {
+          console.warn(
+            `[finance-api] service account '${result.principal?.name ?? 'unknown'}' is not authorised ` +
+              `for '${result.requiredScope ?? 'unknown'}'`
+          );
+        } else {
+          console.warn(
+            `[finance-api] rejected a credentialled request (${result.reason}) for ` +
+              `'${result.requiredScope ?? 'unknown'}'`
+          );
+        }
+        next(authFailure(result.status));
+      })
+      .catch(next);
+  };
+}
+
+function authFailure(status: number): PopsError {
+  if (status === 401) {
+    return new PopsError({
+      code: 'finance.auth.invalid',
+      status,
+      message: 'Missing or invalid service-account credentials.',
+      retryable: false,
+    });
+  }
+  if (status === 403) {
+    return new PopsError({
+      code: 'finance.auth.forbidden',
+      status,
+      message: 'This service account is not authorised for this operation.',
+      retryable: false,
+    });
+  }
+  if (status === 503) {
+    return new PopsError({
+      code: 'finance.auth.unavailable',
+      status,
+      message: 'Service-account credentials could not be verified.',
+      retryable: true,
+    });
+  }
+  throw new Error(`Unexpected service-account rejection status: ${status}`);
 }

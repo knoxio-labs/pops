@@ -23,6 +23,8 @@ import { readFileSync } from 'node:fs';
 
 import { type Router as ExpressRouter, Router } from 'express';
 
+import { PopsError } from '@pops/pillar-express';
+
 import type { UpWebhookIngest, UpWebhookOutcome } from '../modules/up-bank/webhook-ingest.js';
 
 // Cached after the first successful resolution — the secret is a Docker
@@ -123,14 +125,22 @@ export function createUpBankWebhookRouter(options: UpBankWebhookRouterOptions): 
   router.post('/webhooks/up', (req, res) => {
     const signature = req.headers['x-up-authenticity-signature'];
     if (typeof signature !== 'string') {
-      res.status(401).json({ error: 'Missing signature header' });
-      return;
+      throw new PopsError({
+        code: 'finance.webhook.signature_missing',
+        status: 401,
+        message: 'The webhook signature is missing.',
+        retryable: false,
+      });
     }
 
     const rawBody = req.body as Buffer;
     if (!verifySignature(rawBody, signature)) {
-      res.status(403).json({ error: 'Invalid signature' });
-      return;
+      throw new PopsError({
+        code: 'finance.webhook.signature_invalid',
+        status: 403,
+        message: 'The webhook signature is invalid.',
+        retryable: false,
+      });
     }
 
     const payload = JSON.parse(rawBody.toString('utf-8')) as WebhookPayload;

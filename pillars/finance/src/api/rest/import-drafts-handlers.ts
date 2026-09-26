@@ -29,22 +29,22 @@ import type { ImportDraftRow } from '../../db/services/import-drafts.js';
 
 type Req = ServerInferRequest<typeof financeImportDraftsContract>;
 
+/** A draft write was attempted by a client that does not hold its lease. */
 export class DraftOwnedElsewhereHttpError extends HttpError {
   constructor(cause: DraftOwnedElsewhereError) {
-    super(
-      409,
-      cause.message,
-      { ownerSeenAt: cause.ownerSeenAt },
-      'finance.importDrafts.ownedElsewhere'
-    );
-    this.name = 'DraftOwnedElsewhere';
+    super({
+      statusCode: 409,
+      code: 'finance.import_drafts.owned_elsewhere',
+      message: cause.message,
+      details: { ownerSeenAt: cause.ownerSeenAt },
+    });
   }
 }
 
+/** A persisted draft cannot be resumed by the current application version. */
 export class DraftUnusableHttpError extends HttpError {
   constructor(reason: string) {
-    super(409, reason, undefined, 'finance.importDrafts.unusable');
-    this.name = 'DraftUnusable';
+    super({ statusCode: 409, code: 'finance.import_drafts.unusable', message: reason });
   }
 }
 

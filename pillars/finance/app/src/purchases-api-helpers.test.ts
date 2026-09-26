@@ -39,7 +39,7 @@ describe('unwrap', () => {
       response: { status: 400 },
     });
 
-    expect(err.failure).toBe('api');
+    expect(err.kind).toBe('client');
     expect(err.status).toBe(400);
     expect(err.message).toBe('transactionUri is required');
   });
@@ -47,26 +47,26 @@ describe('unwrap', () => {
   it('falls back to a generic sentence when the error body carries no message', () => {
     const err = thrownBy({ error: { code: 'nope' }, response: { status: 400 } });
 
-    expect(err.failure).toBe('api');
+    expect(err.details).toEqual({ code: 'nope' });
     expect(err.message).toBe('purchases API request failed');
   });
 
   it('does not read a non-JSON body as the pillar refusing something', () => {
     const err = thrownBy({ error: 'nope', response: { status: 400 } });
 
-    expect(err.failure).toBe('transport');
+    expect(err).toMatchObject({ code: 'web.http.400', details: undefined, kind: 'client' });
   });
 
   it('classifies an aborted request as transport, DOMException or not', () => {
     const err = thrownBy({ error: new DOMException('The operation was aborted.', 'AbortError') });
 
-    expect(err.failure).toBe('transport');
+    expect(err.kind).toBe('timeout');
   });
 
   it('classifies a thrown fetch failure as transport, not as the pillar answering', () => {
     const err = thrownBy({ error: new TypeError('Failed to fetch'), response: undefined });
 
-    expect(err.failure).toBe('transport');
+    expect(err.kind).toBe('offline');
     expect(err.status).toBeUndefined();
   });
 
@@ -76,12 +76,15 @@ describe('unwrap', () => {
       response: { status: 200 },
     });
 
-    expect(err.failure).toBe('transport');
+    expect(err).toMatchObject({ code: 'web.http.200', kind: 'client' });
     expect(err.status).toBe(200);
   });
 
   it('treats a result with neither data nor error as transport', () => {
-    expect(thrownBy({ response: { status: 200 } }).failure).toBe('transport');
+    expect(thrownBy({ response: { status: 200 } })).toMatchObject({
+      code: 'web.client.no_data',
+      kind: 'client',
+    });
   });
 
   it('carries none of the wording that would fire the shell’s connection toast', () => {

@@ -28,6 +28,19 @@ export function notFound(what: string) {
   return { status: 404, body: { code: 'NOT_FOUND', message: `No such ${what}` } };
 }
 
+/** ADR-054 not-found response returned by finance's standalone mock. */
+export function financeNotFound(what: string) {
+  return {
+    status: 404,
+    body: {
+      code: 'finance.resource.not_found',
+      message: `No such ${what}`,
+      requestId: 'finance-standalone-mock',
+      retryable: false,
+    },
+  };
+}
+
 function intParam(query: URLSearchParams, name: string, fallback: number): number {
   const raw = Number(query.get(name));
   return Number.isInteger(raw) && raw >= 0 && query.has(name) ? raw : fallback;

@@ -19,6 +19,8 @@ import { join } from 'node:path';
 import express, { type Express } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
+
 import { requestOn } from '../__tests__/test-utils.js';
 import {
   __resetWebhookSecretCacheForTests,
@@ -37,9 +39,14 @@ function buildApp(
   logger?: UpBankWebhookLogger
 ): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'finance' });
+  app.use(errors.requestId);
   app.use('/webhooks/up', express.raw({ type: 'application/json' }));
   app.use(express.json());
+  app.use(errors.bodyParser);
   app.use(createUpBankWebhookRouter({ ingest, logger }));
+  app.use(errors.notFound);
+  app.use(errors.final);
   return app;
 }
 
@@ -87,7 +94,12 @@ describe('POST /webhooks/up', () => {
     );
 
     expect(res.status).toBe(401);
-    expect(res.body).toEqual({ error: 'Missing signature header' });
+    expect(res.body).toMatchObject({
+      code: 'finance.webhook.signature_missing',
+      message: 'The webhook signature is missing.',
+      retryable: false,
+    });
+    expect(res.body.requestId).toBe(res.headers['x-request-id']);
   });
 
   it('rejects a request with an invalid signature (403)', async () => {
@@ -100,7 +112,11 @@ describe('POST /webhooks/up', () => {
     );
 
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Invalid signature' });
+    expect(res.body).toMatchObject({
+      code: 'finance.webhook.signature_invalid',
+      message: 'The webhook signature is invalid.',
+      retryable: false,
+    });
   });
 
   it('rejects a same-length signature that differs only in its last character (403)', async () => {
@@ -118,7 +134,7 @@ describe('POST /webhooks/up', () => {
     );
 
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Invalid signature' });
+    expect(res.body.code).toBe('finance.webhook.signature_invalid');
   });
 
   it('accepts a correctly signed webhook (200)', async () => {
