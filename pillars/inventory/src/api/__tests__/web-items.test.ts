@@ -36,6 +36,10 @@ function client() {
   );
 }
 
+function expectIds(actual: readonly { id: string }[], expected: readonly string[]): void {
+  expect(new Set(actual.map((item) => item.id))).toEqual(new Set(expected));
+}
+
 function setPublishedType(id: string, typeKey: string, isContainer = false): void {
   inventoryDb.raw
     .prepare(
@@ -243,12 +247,16 @@ describe('web.items.list', () => {
     const openFull = await client().items.create({ itemName: 'Open full' });
     const closed = await client().items.create({ itemName: 'Closed' });
     const plain = await client().items.create({ itemName: 'Plain item' });
+    const retired = await client().items.create({ itemName: 'Retired container' });
     setPublishedType(openEmpty.data.id, 'storage_box', true);
     setPublishedType(openFull.data.id, 'storage_box', true);
     setPublishedType(closed.data.id, 'storage_box', true);
     setPublishedType(plain.data.id, 'cable');
+    setPublishedType(retired.data.id, 'storage_box', true);
     inventoryDb.raw.prepare(`UPDATE items SET is_full = 1 WHERE id = ?`).run(openFull.data.id);
     inventoryDb.raw.prepare(`UPDATE items SET access = 'closed' WHERE id = ?`).run(closed.data.id);
+    inventoryDb.raw.prepare(`UPDATE items SET is_full = 1 WHERE id = ?`).run(closed.data.id);
+    setLifecycle(retired.data.id, 'retired');
 
     const page = await client().web.listItems({
       isContainer: 'true',
@@ -257,7 +265,27 @@ describe('web.items.list', () => {
     });
 
     expect(page.items.map((item) => item.id)).toEqual([openEmpty.data.id]);
-    expect(page).toMatchObject({ total: 1, unfilteredTotal: 1, hiddenInactiveCount: 0 });
+    expect(page).toMatchObject({ total: 1, unfilteredTotal: 1, hiddenInactiveCount: 1 });
+
+    expectIds((await client().web.listItems({ isContainer: 'true' })).items, [
+      openEmpty.data.id,
+      openFull.data.id,
+      closed.data.id,
+    ]);
+    expectIds((await client().web.listItems({ isContainer: 'true', access: 'open' })).items, [
+      openEmpty.data.id,
+      openFull.data.id,
+    ]);
+    expectIds((await client().web.listItems({ isContainer: 'true', access: 'closed' })).items, [
+      closed.data.id,
+    ]);
+    expectIds((await client().web.listItems({ isContainer: 'true', isFull: 'true' })).items, [
+      openFull.data.id,
+      closed.data.id,
+    ]);
+    expectIds((await client().web.listItems({ isContainer: 'true', lifecycle: 'retired' })).items, [
+      retired.data.id,
+    ]);
   });
 
   it('uses lifecycle as an explicit override and never lists tombstones', async () => {
@@ -273,7 +301,10 @@ describe('web.items.list', () => {
     expect(defaultPage.items.map((item) => item.id)).toEqual([active.data.id]);
     expect(defaultPage).toMatchObject({ total: 1, unfilteredTotal: 1, hiddenInactiveCount: 2 });
 
-    const lifecyclePage = await client().web.listItems({ lifecycle: 'retired' });
+    const lifecyclePage = await client().web.listItems({
+      lifecycle: 'retired',
+      includeInactive: 'false',
+    });
     expect(lifecyclePage.items.map((item) => item.id)).toEqual([retired.data.id]);
     expect(lifecyclePage).toMatchObject({
       total: 1,
@@ -300,26 +331,67 @@ describe('web.items.list', () => {
     const labelPage = await client().web.listItems({ legacyLabelOf: legacyLabel.toUpperCase() });
     expect(labelPage.items.map((item) => item.id)).toEqual([legacy.data.id]);
 
+    const unmatched = await client().items.create({ itemName: 'Unmatched legacy label' });
+    inventoryDb.raw
+      .prepare('UPDATE items SET legacy_type = ? WHERE id = ?')
+      .run('not a cable', unmatched.data.id);
+    expect(
+      (await client().web.listItems({ legacyLabelOf: legacyLabel })).items.map((item) => item.id)
+    ).toEqual([legacy.data.id]);
+    expect(await client().web.listItems({ legacyLabelOf: 'does-not-exist' })).toMatchObject({
+      items: [],
+      total: 0,
+    });
+
     await expect(
       client().web.listItems({ typeKey: 'cable', untyped: 'true' })
     ).rejects.toMatchObject({
       status: 400,
-      body: { message: 'typeKey cannot be combined with untyped=true' },
+      body: {
+        code: 'ValidationError',
+        message: 'typeKey cannot be combined with untyped=true',
+      },
     });
     await expect(
       client().web.listItems({ typeKey: 'cable', legacyLabelOf: legacyLabel })
     ).rejects.toMatchObject({
       status: 400,
-      body: { message: 'typeKey cannot be combined with legacyLabelOf' },
+      body: {
+        code: 'ValidationError',
+        message: 'typeKey cannot be combined with legacyLabelOf',
+      },
     });
   });
 
   it('rejects non-strict boolean values for the new query filters', async () => {
-    for (const field of ['untyped', 'isContainer', 'isFull']) {
-      await expect(client().web.listItems({ [field]: 'yes' })).rejects.toMatchObject({
-        status: 400,
-      });
+    for (const value of ['1', 'yes', ''] as const) {
+      for (const field of ['untyped', 'isContainer', 'isFull'] as const) {
+        await expect(client().web.listItems({ [field]: value })).rejects.toMatchObject({
+          status: 400,
+        });
+      }
     }
+  });
+
+  it('filters typed and untyped items in either direction', async () => {
+    const untyped = await client().items.create({ itemName: 'Untyped' });
+    const typed = await client().items.create({ itemName: 'Typed' });
+    setPublishedType(typed.data.id, 'cable');
+
+    expectIds((await client().web.listItems({ untyped: 'true' })).items, [untyped.data.id]);
+    expectIds((await client().web.listItems({ untyped: 'false' })).items, [typed.data.id]);
+  });
+
+  it('rejects invalid enum values and empty placement scopes', async () => {
+    await expect(client().web.listItems({ access: 'ajar' })).rejects.toMatchObject({ status: 400 });
+    await expect(client().web.listItems({ lifecycle: 'gone' })).rejects.toMatchObject({
+      status: 400,
+    });
+    await expect(client().web.listItems({ sort: 'random' })).rejects.toMatchObject({ status: 400 });
+    await expect(client().web.listItems({ within: '' })).rejects.toMatchObject({ status: 400 });
+    await expect(client().web.listItems({ effectiveLocationId: '' })).rejects.toMatchObject({
+      status: 400,
+    });
   });
 
   it('uses the existing placement helpers for within and effective location filters', async () => {
@@ -345,6 +417,99 @@ describe('web.items.list', () => {
     expect(new Set(homeItems.items.map((item) => item.id))).toEqual(
       new Set([box.data.id, inside.data.id, atHome.data.id])
     );
+  });
+
+  it('excludes a within container itself and follows nested contents', async () => {
+    const outer = await client().items.create({ itemName: 'Outer box' });
+    setPublishedType(outer.data.id, 'storage_box', true);
+    const inner = await client().items.create({
+      itemName: 'Inner box',
+      containerId: outer.data.id,
+    });
+    setPublishedType(inner.data.id, 'storage_box', true);
+    const nested = await client().items.create({
+      itemName: 'Nested item',
+      containerId: inner.data.id,
+    });
+
+    const page = await client().web.listItems({ within: outer.data.id });
+
+    expectIds(page.items, [inner.data.id, nested.data.id]);
+    expect(page.items.map((item) => item.id)).not.toContain(outer.data.id);
+  });
+
+  it('matches an exact effective location without including child locations', async () => {
+    const home = await client().locations.create({ name: 'Home' });
+    const shelf = await client().locations.create({ name: 'Shelf', parentId: home.data.id });
+    const homeItem = await client().items.create({
+      itemName: 'Home item',
+      locationId: home.data.id,
+    });
+    const shelfItem = await client().items.create({
+      itemName: 'Shelf item',
+      locationId: shelf.data.id,
+    });
+    const box = await client().items.create({ itemName: 'Shelf box', locationId: shelf.data.id });
+    setPublishedType(box.data.id, 'storage_box', true);
+    const boxed = await client().items.create({
+      itemName: 'Boxed item',
+      containerId: box.data.id,
+    });
+
+    const page = await client().web.listItems({ effectiveLocationId: home.data.id });
+    const containerPage = await client().web.listItems({
+      effectiveLocationId: shelf.data.id,
+      placementKind: 'container',
+    });
+
+    expectIds(page.items, [homeItem.data.id]);
+    expectIds(containerPage.items, [boxed.data.id]);
+    expect(page.items.map((item) => item.id)).not.toEqual(
+      expect.arrayContaining([shelfItem.data.id, boxed.data.id])
+    );
+  });
+
+  it('sorts names case-insensitively and uses id for equal names', async () => {
+    const lower = await client().items.create({ itemName: 'alpha' });
+    const upper = await client().items.create({ itemName: 'ALPHA' });
+    const bravo = await client().items.create({ itemName: 'Bravo' });
+    const ids = [lower.data.id, upper.data.id, bravo.data.id].join(',');
+    const alphaIds = [lower.data.id, upper.data.id].toSorted();
+
+    const first = await client().web.listItems({ sort: 'name', ids, limit: 2 });
+    const second = await client().web.listItems({
+      sort: 'name',
+      ids,
+      limit: 2,
+      cursor: first.nextCursor!,
+    });
+
+    expect(first.items.map((item) => item.id)).toEqual(alphaIds);
+    expect(second.items.map((item) => item.id)).toEqual([bravo.data.id]);
+  });
+
+  it('sorts updated items newest first and pages equal timestamps by id', async () => {
+    const firstUpdated = await client().items.create({ itemName: 'First updated' });
+    const secondUpdated = await client().items.create({ itemName: 'Second updated' });
+    const oldest = await client().items.create({ itemName: 'Oldest' });
+    const sameUpdatedAt = '2026-09-26T00:00:02.000Z';
+    setUpdatedAt(firstUpdated.data.id, sameUpdatedAt);
+    setUpdatedAt(secondUpdated.data.id, sameUpdatedAt);
+    setUpdatedAt(oldest.data.id, '2026-09-26T00:00:01.000Z');
+    const ids = [firstUpdated.data.id, secondUpdated.data.id, oldest.data.id].join(',');
+
+    const first = await client().web.listItems({ sort: 'updated', ids, limit: 2 });
+    const second = await client().web.listItems({
+      sort: 'updated',
+      ids,
+      limit: 2,
+      cursor: first.nextCursor!,
+    });
+
+    expect(first.items.map((item) => item.id)).toEqual(
+      [firstUpdated.data.id, secondUpdated.data.id].toSorted()
+    );
+    expect(second.items.map((item) => item.id)).toEqual([oldest.data.id]);
   });
 
   it('orders named sorts with keyset cursors and rejects a cursor used with another sort', async () => {
@@ -455,13 +620,61 @@ describe('web.items.list', () => {
     const packing = await client().web.listItems({
       sort: 'packing',
       ids: [loose.data.id, openBox.data.id, fullBox.data.id, closedBox.data.id].join(','),
+      limit: 2,
     });
-    expect(packing.items.map((item) => item.id)).toEqual([
-      loose.data.id,
-      openBox.data.id,
-      fullBox.data.id,
-      closedBox.data.id,
-    ]);
+    expect(packing.items.map((item) => item.id)).toEqual([loose.data.id, openBox.data.id]);
+    const packed = await client().web.listItems({
+      sort: 'packing',
+      ids: [loose.data.id, openBox.data.id, fullBox.data.id, closedBox.data.id].join(','),
+      limit: 2,
+      cursor: packing.nextCursor!,
+    });
+    expect(packed.items.map((item) => item.id)).toEqual([fullBox.data.id, closedBox.data.id]);
+  });
+
+  it('does not repeat or skip a row inserted before a sorted cursor', async () => {
+    const first = await client().items.create({ itemName: 'Bravo' });
+    const cursorRow = await client().items.create({ itemName: 'Delta' });
+    const last = await client().items.create({ itemName: 'Echo' });
+
+    const page = await client().web.listItems({ sort: 'name', limit: 2 });
+    expect(page.items.map((item) => item.id)).toEqual([first.data.id, cursorRow.data.id]);
+    const inserted = await client().items.create({ itemName: 'Alpha' });
+
+    const rest = await client().web.listItems({
+      sort: 'name',
+      limit: 10,
+      cursor: page.nextCursor!,
+    });
+
+    expect(rest.items.map((item) => item.id)).toEqual([last.data.id]);
+    expect(rest.items.map((item) => item.id)).not.toContain(inserted.data.id);
+  });
+
+  it('keeps totals independent of the page cursor and excludes unrelated filters from the baseline', async () => {
+    const first = await client().items.create({ itemName: 'First match' });
+    const second = await client().items.create({ itemName: 'Second match' });
+    const retired = await client().items.create({ itemName: 'Retired match' });
+    await client().items.create({ itemName: 'Unselected active' });
+    setLifecycle(retired.data.id, 'retired');
+    const ids = [first.data.id, second.data.id, retired.data.id].join(',');
+
+    const page1 = await client().web.listItems({ ids, limit: 1 });
+    const page2 = await client().web.listItems({ ids, limit: 1, cursor: page1.nextCursor! });
+
+    expect(page1).toMatchObject({ total: 2, unfilteredTotal: 3, hiddenInactiveCount: 1 });
+    expect(page2).toMatchObject({ total: 2, unfilteredTotal: 3, hiddenInactiveCount: 1 });
+  });
+
+  it('reports an empty filtered result with a positive unfiltered baseline', async () => {
+    await client().items.create({ itemName: 'Existing active item' });
+
+    await expect(client().web.listItems({ ids: 'does-not-exist' })).resolves.toMatchObject({
+      items: [],
+      total: 0,
+      unfilteredTotal: 1,
+      hiddenInactiveCount: 0,
+    });
   });
 
   it('narrows by locationId', async () => {
