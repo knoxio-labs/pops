@@ -8,7 +8,7 @@ import { useRef } from 'react';
 import { cn } from '@pops/ui';
 
 import { useEdgeDrag } from '../shared/use-edge-drag';
-import { moveRail, RAIL_DEFAULT, RAIL_STEP } from './rail-width';
+import { moveRail, RAIL_DEFAULT, RAIL_MAX, RAIL_MIN, RAIL_STEP } from './rail-width';
 
 import type { KeyboardEvent, PointerEvent } from 'react';
 
@@ -43,6 +43,8 @@ export function RailSplitter({ width, onWidth }: RailSplitterProps) {
       aria-orientation="vertical"
       aria-label="Resize the facts rail. Double-click or Enter restores its width."
       aria-valuenow={width}
+      aria-valuemin={RAIL_MIN}
+      aria-valuemax={RAIL_MAX}
       tabIndex={0}
       title="Drag to resize. Double-click to reset."
       onPointerDown={onPointerDown}

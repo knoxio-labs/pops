@@ -8,7 +8,14 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import { cn } from '@pops/ui';
 
 import { useEdgeDrag } from '../shared/use-edge-drag';
-import { clampWidth, columnStyle, dragWidth, fitWidth, nudgeWidth } from './column-widths';
+import {
+  clampWidth,
+  COLUMN_LIMITS,
+  columnStyle,
+  dragWidth,
+  fitWidth,
+  nudgeWidth,
+} from './column-widths';
 import { COLUMN } from './table-columns';
 
 import type { KeyboardEvent, PointerEvent, ReactNode, RefObject } from 'react';
@@ -133,6 +140,8 @@ export function ColumnResizeHandle({
       aria-orientation="vertical"
       aria-label={`Resize ${label}. Double-click or Enter fits the widest value.`}
       aria-valuenow={width ?? api.widthOf(id)}
+      aria-valuemin={COLUMN_LIMITS[id].min}
+      aria-valuemax={COLUMN_LIMITS[id].max}
       tabIndex={0}
       title="Drag to resize. Double-click to fit."
       onPointerDown={onPointerDown}
