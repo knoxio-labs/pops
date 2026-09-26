@@ -2,8 +2,6 @@
 import { lazy } from 'react';
 import { Navigate, useLocation } from 'react-router';
 
-import { InventoryLayout } from './layout/InventoryLayout';
-
 import type { ComponentType } from 'react';
 import type { RouteObject } from 'react-router';
 
@@ -113,7 +111,6 @@ export { navConfig } from './nav';
 
 /** Resolves every manifest page slot to the component mounted by that route. */
 export const PAGE_COMPONENTS = {
-  'inventory-layout': InventoryLayout,
   'inventory-overview': OverviewPage,
   'inventory-items': ItemsPage,
   'inventory-item-form': ItemFormPage,
@@ -142,37 +139,31 @@ export const PAGE_COMPONENTS = {
 } satisfies Record<InventoryPageSlot, ComponentType>;
 
 export const routes: RouteObject[] = [
-  {
-    path: '',
-    element: <InventoryLayout />,
-    children: [
-      { index: true, element: <OverviewPage /> },
-      { path: 'items', element: <ItemsPage /> },
-      { path: 'items/new', element: <ItemFormPage /> },
-      { path: 'items/bulk-new', element: <BulkEntryPage /> },
-      { path: 'items/:id', element: <ItemDetailPage /> },
-      { path: 'items/:id/edit', element: <ItemFormPage /> },
-      { path: 'items/:id/history', element: <ItemHistoryPage /> },
-      { path: 'containers', element: <ContainersPage /> },
-      { path: 'moving-day', element: <MovingDayPage /> },
-      { path: 'in-hand', element: <InHandPage /> },
-      { path: 'locations', element: <LocationTreePage /> },
-      { path: 'locations/:id', element: <LocationPage /> },
-      { path: 'search', element: <SearchPage /> },
-      { path: 'connections', element: <ConnectionsPage /> },
-      { path: 'connections/fixtures', element: <FixturesPage /> },
-      { path: 'fixtures/:id', element: <FixtureDetailPage /> },
-      { path: 'types', element: <TypeCataloguePage /> },
-      { path: 'types/:id/arrived', element: <TypeArrivedPage /> },
-      { path: 'reports', element: <ReportsPage /> },
-      { path: 'labels', element: <LabelsPage /> },
-      { path: 'sync', element: <SyncPage /> },
-      { path: 'import', element: <ImportPage /> },
-      { path: 'warranties', element: <WarrantiesRedirect /> },
-      { path: 'activity', element: <ActivityRedirect /> },
-      { path: 'reports/insurance', element: <InsuranceReportRedirect /> },
-      { path: 'report', element: <ReportRedirect /> },
-      { path: 'report/insurance', element: <InsuranceReportRedirect /> },
-    ],
-  },
+  { index: true, element: <OverviewPage /> },
+  { path: 'items', element: <ItemsPage /> },
+  { path: 'items/new', element: <ItemFormPage /> },
+  { path: 'items/bulk-new', element: <BulkEntryPage /> },
+  { path: 'items/:id', element: <ItemDetailPage /> },
+  { path: 'items/:id/edit', element: <ItemFormPage /> },
+  { path: 'items/:id/history', element: <ItemHistoryPage /> },
+  { path: 'containers', element: <ContainersPage /> },
+  { path: 'moving-day', element: <MovingDayPage /> },
+  { path: 'in-hand', element: <InHandPage /> },
+  { path: 'locations', element: <LocationTreePage /> },
+  { path: 'locations/:id', element: <LocationPage /> },
+  { path: 'search', element: <SearchPage /> },
+  { path: 'connections', element: <ConnectionsPage /> },
+  { path: 'connections/fixtures', element: <FixturesPage /> },
+  { path: 'fixtures/:id', element: <FixtureDetailPage /> },
+  { path: 'types', element: <TypeCataloguePage /> },
+  { path: 'types/:id/arrived', element: <TypeArrivedPage /> },
+  { path: 'reports', element: <ReportsPage /> },
+  { path: 'labels', element: <LabelsPage /> },
+  { path: 'sync', element: <SyncPage /> },
+  { path: 'import', element: <ImportPage /> },
+  { path: 'warranties', element: <WarrantiesRedirect /> },
+  { path: 'activity', element: <ActivityRedirect /> },
+  { path: 'reports/insurance', element: <InsuranceReportRedirect /> },
+  { path: 'report', element: <ReportRedirect /> },
+  { path: 'report/insurance', element: <InsuranceReportRedirect /> },
 ];

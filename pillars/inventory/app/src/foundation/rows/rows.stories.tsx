@@ -1,4 +1,4 @@
-import { coreItem, coreWorld } from '../fixtures/core';
+import { coreItem, coreWorld } from '../test-fixtures/core';
 import { ItemList, ItemRow } from './item-row';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';

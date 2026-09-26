@@ -159,6 +159,15 @@ function addressIds(): string[] {
 }
 
 describe('LabelsPage', () => {
+  it('returns to the items page instead of the overview placeholder', () => {
+    renderPage(`?ids=${GRINDER}`);
+    expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute(
+      'href',
+      '/inventory/items'
+    );
+    expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/inventory');
+  });
+
   it('loads the listed items by id and gives a box two labels, a thing one', async () => {
     renderPage(`?ids=${BOX},${GRINDER}`);
     expect(await screen.findByRole('button', { name: 'Print 3 labels' })).toBeEnabled();

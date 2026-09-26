@@ -57,6 +57,18 @@ describe('groupByMonth', () => {
     expect(groups.map((group) => group.key)).toEqual(['2026-09', '2026-08']);
   });
 
+  it('uses the UTC month when an offset crosses a calendar boundary', () => {
+    const groups = groupByMonth([
+      event('late-august-local', 'created', '2026-08-31T23:30:00-02:00'),
+      event('early-september-local', 'created', '2026-09-01T00:30:00+02:00'),
+    ]);
+
+    expect(groups.map((group) => [group.key, group.label])).toEqual([
+      ['2026-09', 'September 2026'],
+      ['2026-08', 'August 2026'],
+    ]);
+  });
+
   it('returns no groups for no events', () => {
     expect(groupByMonth([])).toEqual([]);
   });

@@ -1,5 +1,5 @@
-import { coreWorld } from '../fixtures/core';
-import { recentPlacements } from '../fixtures/recents';
+import { coreWorld } from '../test-fixtures/core';
+import { recentPlacements } from '../test-fixtures/recents';
 import { PlacementPickerPanel } from './placement-picker';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';

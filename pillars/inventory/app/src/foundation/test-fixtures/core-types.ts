@@ -1,10 +1,11 @@
 /**
- * Published item types used by the inventory foundation fixtures. Electronics
- * includes one field for every catalogue field kind.
+ * Published item types the foundation fixtures use. Electronics carries one
+ * field of each of the 11 primitive kinds, so a form or detail design has a
+ * real type to exercise every editor against.
  */
 import type { FieldKind } from '../../catalogue-editor/FieldFormContext';
 
-/** One field of a published type as a form or detail surface reads it. */
+/** One field of a published type, as a form or detail reads it. */
 export interface CoreFieldModel {
   key: string;
   label: string;
@@ -14,7 +15,7 @@ export interface CoreFieldModel {
   computed?: boolean;
 }
 
-/** One published type and the fields it exposes. */
+/** One published type: its label, whether it grants containment, and its fields. */
 export interface CoreTypeModel {
   id: string;
   label: string;
@@ -87,7 +88,7 @@ export const coreTypes: readonly CoreTypeModel[] = [
   { id: 'type-linen', label: 'Linen', containment: false, fields: [] },
 ];
 
-/** Returns the fixture label for a type ID, or null for an untyped item. */
+/** The label for a type id, or null for an untyped item. */
 export function typeLabel(typeId: string | null): string | null {
   if (typeId === null) return null;
   return coreTypes.find((type) => type.id === typeId)?.label ?? null;

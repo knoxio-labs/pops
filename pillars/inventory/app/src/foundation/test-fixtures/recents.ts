@@ -1,15 +1,17 @@
 /**
- * Recent queries, records, and placement targets used by foundation fixtures.
+ * What "recent" means on this pillar: the last queries typed, the records
+ * last opened, and the places things were last put. The palette, the TopBar
+ * dropdown and the placement picker all read from here.
  */
 import type { PlacementTarget } from '../model/model';
 
-/** Queries in newest-first order. */
+/** A query someone ran, newest first. */
 export const recentQueries: readonly string[] = ['hdmi', 'kitchen 12', 'drill bits', 'K13'];
 
-/** Recently opened record IDs in newest-first order. */
+/** Records opened recently, newest first, by id. */
 export const recentRecordIds: readonly string[] = ['box-k12', 'itm-tv', 'loc-garage', 'itm-drill'];
 
-/** Recently used placement targets in newest-first order. */
+/** Places things were last put, newest first. The picker shows the first four. */
 export const recentPlacements: readonly PlacementTarget[] = [
   { kind: 'container', containerId: 'box-k13' },
   { kind: 'location', locationId: 'loc-desk' },

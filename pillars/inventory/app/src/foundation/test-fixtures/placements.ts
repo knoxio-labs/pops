@@ -1,10 +1,11 @@
 /**
- * Ready-made placement questions and targets used by picker and move tests.
+ * Placement scenarios the picker, move plan and drag states open on: who is
+ * being placed, and what the picker should be showing when the state loads.
  */
 import type { PickerSubject } from '../model/contracts';
 import type { PlacementTarget } from '../model/model';
 
-/** One placement question opened by a fixture state. */
+/** One ready-made placement question. */
 export interface PlacementScenario {
   subject: PickerSubject;
   query?: string;
@@ -22,29 +23,29 @@ export const previousDeleted: PlacementScenario = {
   subject: { kind: 'items', ids: ['itm-headphones'] },
 };
 
-/** A container being moved; its own contents must be refused as targets. */
+/** A container being moved: its own contents must be refused as targets. */
 export const moveContainer: PlacementScenario = { subject: { kind: 'items', ids: ['box-cables'] } };
 
-/** Browsing one level down inside the garage. */
+/** Browsing one level down, inside the garage. */
 export const drilledIntoGarage: PlacementScenario = {
   subject: { kind: 'items', ids: ['itm-lamp'] },
   drillId: 'loc-garage',
 };
 
-/** Typing a place that does not exist yet so the picker offers to create it. */
+/** Typing a place that does not exist yet, so the picker offers to create it. */
 export const creatingPlace: PlacementScenario = {
   subject: { kind: 'items', ids: ['itm-lamp'] },
   query: 'Linen press',
   drillId: 'loc-hall',
 };
 
-/** Moving a place; only locations outside its subtree are valid targets. */
+/** Moving a place: only locations, never itself or anything under it. */
 export const moveGaragePlace: PlacementScenario = {
   subject: { kind: 'place', locationId: 'loc-workbench' },
   drillId: 'loc-garage',
 };
 
-/** A bulk move of five mixed rows for the move plan. */
+/** A bulk move of five mixed rows, for the move plan. */
 export const bulkMoveIds: readonly string[] = [
   'box-cables',
   'itm-lamp',
@@ -53,17 +54,9 @@ export const bulkMoveIds: readonly string[] = [
   'itm-printer',
 ];
 
-/** A target on the garage shelving. */
+/** Targets the move plan states aim at. */
 export const shelvingTarget: PlacementTarget = { kind: 'location', locationId: 'loc-shelving' };
-
-/** A target on the study desk. */
 export const deskTarget: PlacementTarget = { kind: 'location', locationId: 'loc-desk' };
-
-/** A closed box target. */
 export const closedBoxTarget: PlacementTarget = { kind: 'container', containerId: 'box-o04' };
-
-/** A full box target. */
 export const fullBoxTarget: PlacementTarget = { kind: 'container', containerId: 'box-k12' };
-
-/** A container's own contents target. */
 export const ownContentsTarget: PlacementTarget = { kind: 'container', containerId: 'box-parts' };

@@ -40,14 +40,21 @@ const MONTH = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 });
 
+function monthKey(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
 /** Groups events by UTC month, newest month first and newest event first. */
 export function groupByMonth(events: readonly EventModel[]): MonthGroup[] {
   const groups = new Map<string, MonthGroup>();
-  for (const entry of events.toSorted((a, b) => b.at.localeCompare(a.at))) {
-    const key = entry.at.slice(0, 7);
+  for (const entry of events.toSorted(
+    (left, right) => new Date(right.at).getTime() - new Date(left.at).getTime()
+  )) {
+    const date = new Date(entry.at);
+    const key = monthKey(date);
     const group = groups.get(key) ?? {
       key,
-      label: MONTH.format(new Date(entry.at)),
+      label: MONTH.format(date),
       events: [],
     };
     group.events.push(entry);

@@ -1,6 +1,6 @@
 /**
- * Named container fixtures cover open, closed, full, nested, retired, and
- * in-hand states.
+ * The named containers: open, closed, full, nested, retired and one carried
+ * in hand, which is every container state a screen has to draw.
  */
 import { at, box, inBox, inHand, wasAt } from './core-factory';
 
