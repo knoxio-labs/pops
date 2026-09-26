@@ -30,6 +30,7 @@ function catalogueType(
 ): CatalogueType {
   return {
     id: `type-${key}`,
+    parentTypeId: null,
     key,
     label,
     sortOrder,
