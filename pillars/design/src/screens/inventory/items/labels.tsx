@@ -18,6 +18,7 @@ import { PrintLabelsLoading, PrintLabelsPage } from '@/kit/inventory/print/print
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 import type { LabelContent, LabelPart } from '@/kit/inventory/print/label-content';
+import type { LabelDetails } from '@/kit/inventory/print/label-content';
 import type { PrintCatalogueEntry } from '@/kit/inventory/print/print-add-dialog';
 import type { TakenCode } from '@/kit/inventory/print/print-code-field';
 import type { PrintLabelsPageProps } from '@/kit/inventory/print/print-labels-page';
@@ -85,6 +86,19 @@ function showing(
 const ROOM_AND_PACKED = ['moving-box.room', 'moving-box.packed', 'moving-box.fragile'];
 const BRAND_AND_MODEL = ['appliance.brand', 'appliance.model', 'power-tool.brand', 'network.brand'];
 
+const treeDetails: Readonly<Record<string, LabelDetails>> = {
+  ...printDetails,
+  [television.id]: {
+    typeName: 'Sheet',
+    fields: [
+      { id: 'bedding.material', label: 'Material', value: 'Cotton', typeName: 'Bedding' },
+      { id: 'bedding.colour', label: 'Colour', value: 'White', typeName: 'Bedding' },
+      { id: 'sheet.fitted', label: 'Fitted', value: 'Yes' },
+    ],
+    contents: [],
+  },
+};
+
 /**
  * What a label shows, one state per kind and a few mixes. The first set is
  * the presets; the `shows-*-and-*` states are custom mixes from the ticks.
@@ -97,6 +111,16 @@ const labelShowsStates: ScreenStates = {
     seed: {
       ...handful.seed,
       content: shows(['qr', 'code'], ['appliance.brand', 'appliance.model']),
+    },
+  }),
+  'label-fields-tree': page({
+    ...handful,
+    labelShowsOpen: true,
+    seed: {
+      ...handful.seed,
+      subjects: [television],
+      details: treeDetails,
+      content: shows([], ['bedding.material', 'bedding.colour', 'sheet.fitted']),
     },
   }),
   'shows-qr-only': showing(shows(['qr'])),

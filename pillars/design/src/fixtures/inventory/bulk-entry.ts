@@ -6,6 +6,7 @@
  */
 import { parsePaste } from '@/kit/inventory/bulk-entry/paste-parser';
 
+import { inventoryCatalogueTypes } from '../inventory-type-catalogue';
 import { coreLocations, coreTypes } from './core';
 import { browseInventory } from './items-browse';
 
@@ -21,11 +22,21 @@ const placeNames = new Set(
 
 /** What bulk entry validates against. */
 export const bulkContext: BulkContext = {
-  types: coreTypes.map((type) => ({
-    id: type.id,
-    label: type.label,
-    containment: type.containment,
-  })),
+  types: [
+    ...coreTypes.map((type) => ({
+      id: type.id,
+      label: type.label,
+      containment: type.containment,
+      parentTypeId: type.parentTypeId,
+    })),
+    ...inventoryCatalogueTypes.map((type) => ({
+      id: type.id,
+      label: type.label,
+      containment: false,
+      parentTypeId: type.parentTypeId,
+      pathLabel: type.label,
+    })),
+  ],
   codes: new Map(
     browseInventory.flatMap((entry) =>
       entry.code === null ? [] : [[entry.code.toUpperCase(), entry.name] as const]
@@ -46,6 +57,26 @@ export const typedRows: readonly BulkDraft[] = [
     note: '',
   },
   { name: 'Measuring cups', type: '', quantity: '4', code: '', where: '', note: 'set of 4' },
+];
+
+/** A type-tree row set used by the review state for the Type cell. */
+export const treeTypedRows: readonly BulkDraft[] = [
+  {
+    name: 'Guest fitted sheet',
+    type: 'Sheet',
+    quantity: '1',
+    code: '',
+    where: 'Bedroom',
+    note: '',
+  },
+  {
+    name: 'Blue quilt cover',
+    type: 'Bedding',
+    quantity: '1',
+    code: '',
+    where: 'Bedroom',
+    note: '',
+  },
 ];
 
 /** A spreadsheet paste, as the clipboard carries it. */

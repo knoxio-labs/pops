@@ -1,3 +1,5 @@
+import { inventoryFormTypes } from './form-types-tree';
+
 /**
  * The published types the item form offers, with every field the form has
  * to draw. Electronics carries one field of each primitive kind in its
@@ -36,6 +38,7 @@ export const connectorOptions = [
 export const electronicsForm: FormTypeDef = {
   id: 'type-electronics',
   label: 'Electronics',
+  parentTypeId: null,
   containment: false,
   codeStem: 'E',
   fields: [
@@ -78,6 +81,7 @@ export const electronicsForm: FormTypeDef = {
 export const cameraKitForm: FormTypeDef = {
   id: 'type-camera',
   label: 'Camera kit',
+  parentTypeId: null,
   containment: false,
   codeStem: 'C',
   fields: [
@@ -109,6 +113,7 @@ export const cameraKitForm: FormTypeDef = {
 export const movingBoxForm: FormTypeDef = {
   id: 'type-box',
   label: 'Moving box',
+  parentTypeId: null,
   containment: true,
   codeStem: 'K',
   fields: [one('room', 'For room', 'short_text'), one('packed_on', 'Packed on', 'date')],
@@ -117,6 +122,7 @@ export const movingBoxForm: FormTypeDef = {
 const plain = (id: string, label: string, codeStem: string): FormTypeDef => ({
   id,
   label,
+  parentTypeId: null,
   containment: false,
   codeStem,
   fields: [],
@@ -127,10 +133,18 @@ export const formTypes: readonly FormTypeDef[] = [
   electronicsForm,
   cameraKitForm,
   movingBoxForm,
-  { id: 'type-tub', label: 'Storage tub', containment: true, codeStem: 'T', fields: [] },
+  {
+    id: 'type-tub',
+    label: 'Storage tub',
+    parentTypeId: null,
+    containment: true,
+    codeStem: 'T',
+    fields: [],
+  },
   {
     id: 'type-cable',
     label: 'Cable',
+    parentTypeId: null,
     containment: false,
     codeStem: 'CB',
     fields: [{ ...one('length', 'Length', 'measurement'), unit: 'm' }],
@@ -140,6 +154,7 @@ export const formTypes: readonly FormTypeDef[] = [
   plain('type-furniture', 'Furniture', 'F'),
   plain('type-books', 'Books', 'B'),
   plain('type-linen', 'Linen', 'L'),
+  ...inventoryFormTypes,
 ];
 
 /** A type's label by id, for reference refusals. */

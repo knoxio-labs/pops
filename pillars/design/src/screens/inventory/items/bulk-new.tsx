@@ -1,4 +1,10 @@
-import { bulkContext, cleanRows, pasted, typedRows } from '@/fixtures/inventory/bulk-entry';
+import {
+  bulkContext,
+  cleanRows,
+  pasted,
+  treeTypedRows,
+  typedRows,
+} from '@/fixtures/inventory/bulk-entry';
 import { coreWorld } from '@/fixtures/inventory/core';
 import { typeOptions } from '@/fixtures/inventory/items-browse';
 import { BulkPage } from '@/kit/inventory/bulk-entry/bulk-page';
@@ -38,6 +44,7 @@ export const states: ScreenStates = {
   pasted: () => <Bulk phase="pasted" rows={cleanRows} />,
   validating: () => <Bulk phase="validating" rows={pasted.rows} />,
   'has-errors': () => <Bulk phase="has-errors" rows={pasted.rows} />,
+  'type-cell-tree': () => <Bulk rows={treeTypedRows} typeTreeOpen typeTreeQuery="sheet" />,
   submitting: () => <Bulk phase="submitting" rows={cleanRows} />,
   'partial-created': () => (
     <Bulk

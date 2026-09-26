@@ -18,6 +18,7 @@ import {
   cn,
 } from '@pops/ui';
 
+import { descendantIds, typeTreeOptions } from '../type-tree/model';
 import { activeFilterCount } from './browse-model';
 
 import type { ItemsFilters } from './browse-model';
@@ -26,6 +27,7 @@ import type { ItemsFilters } from './browse-model';
 export interface FilterOption {
   value: string;
   label: string;
+  parentTypeId?: string | null;
 }
 
 /** Props for {@link FilterPopover}. */
@@ -41,6 +43,17 @@ export interface FilterPopoverProps {
 }
 
 function TypeFields({ filters, types, onChange, scope }: FilterPopoverProps) {
+  const typeRecords = types.map((type) => ({
+    id: type.value,
+    label: type.label,
+    parentTypeId: type.parentTypeId ?? null,
+  }));
+  const treeOptions = typeTreeOptions(typeRecords, '', true);
+  const typeOptions = types.map((type) => ({
+    value: type.value,
+    label: treeOptions.find((option) => option.value === type.value)?.pathLabel ?? type.label,
+  }));
+  const descendants = filters.typeId === null ? [] : descendantIds(typeRecords, filters.typeId);
   return (
     <div className="space-y-2">
       <Label htmlFor="items-filter-type">Type</Label>
@@ -50,11 +63,16 @@ function TypeFields({ filters, types, onChange, scope }: FilterPopoverProps) {
         value={filters.untyped ? '' : (filters.typeId ?? '')}
         disabled={filters.untyped}
         placeholder="Any type"
-        options={[...types]}
+        options={typeOptions}
         onChange={(event) =>
           onChange({ typeId: event.target.value === '' ? null : event.target.value })
         }
       />
+      {descendants.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Includes this type and {descendants.length} subtype{descendants.length === 1 ? '' : 's'}.
+        </p>
+      ) : null}
       <div className={cn('flex items-center gap-2', scope === 'containers' && 'hidden')}>
         <Checkbox
           id="items-filter-untyped"

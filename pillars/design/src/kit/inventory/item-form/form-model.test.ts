@@ -9,6 +9,7 @@ import type { DraftAction, ItemDraft } from './form-draft';
 const gadget: FormTypeDef = {
   id: 'gadget',
   label: 'Gadget',
+  parentTypeId: null,
   containment: false,
   codeStem: 'G',
   fields: [
@@ -26,11 +27,28 @@ const gadget: FormTypeDef = {
 const crate: FormTypeDef = {
   id: 'crate',
   label: 'Crate',
+  parentTypeId: null,
   containment: true,
   codeStem: 'C',
   fields: [{ id: 'room', label: 'For room', kind: 'short_text', cardinality: 'one' }],
 };
 const types = [gadget, crate];
+const parent: FormTypeDef = {
+  id: 'parent',
+  label: 'Parent',
+  parentTypeId: null,
+  containment: false,
+  codeStem: 'P',
+  fields: [{ id: 'shared', label: 'Shared', kind: 'short_text', cardinality: 'one' }],
+};
+const child: FormTypeDef = {
+  id: 'child',
+  label: 'Child',
+  parentTypeId: 'parent',
+  containment: false,
+  codeStem: 'C',
+  fields: [{ id: 'local', label: 'Local', kind: 'short_text', cardinality: 'one' }],
+};
 const takenP01 = new Map([['p01', { id: 'itm-printer', name: 'Label printer' }]]);
 
 function apply(draft: ItemDraft, ...actions: DraftAction[]): ItemDraft {
@@ -38,6 +56,10 @@ function apply(draft: ItemDraft, ...actions: DraftAction[]): ItemDraft {
 }
 
 describe('deriveForm', () => {
+  it('shows inherited fields once before local fields on a child type', () => {
+    const view = deriveForm({ ...blankDraft(undefined, 'child'), name: 'Thing' }, [parent, child]);
+    expect(view.type?.fields.map((field) => field.id)).toEqual(['shared', 'local']);
+  });
   it('needs only a name: a blank named draft can be saved', () => {
     const view = deriveForm(apply(blankDraft(), { type: 'name', value: 'Torch' }), types);
     expect(view.blockers).toEqual([]);

@@ -8,9 +8,11 @@ import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { cn } from '@pops/ui';
 
 import { ListBody } from '../items-list/list-page';
+import { typeTreeOptions } from '../type-tree/model';
 
 import type { BulkDraft } from '../bulk-entry/paste-parser';
 import type { BulkIssue } from '../bulk-entry/row-validation';
+import type { TypeTreeRecord } from '../type-tree/model';
 
 const COLS = [
   ['name', 'Name', 'min-w-32 flex-1'],
@@ -20,6 +22,7 @@ const COLS = [
   ['where', 'Where', 'w-32 lg:w-40'],
   ['note', 'Note', 'hidden w-40 lg:block'],
 ] as const;
+const EMPTY_TYPE_TREE: readonly TypeTreeRecord[] = [];
 
 /** Props for {@link PreviewStep}. */
 export interface PreviewStepProps {
@@ -27,18 +30,26 @@ export interface PreviewStepProps {
   issues: readonly BulkIssue[];
   /** Show only the rows that will be skipped. */
   onlyProblems?: boolean;
+  /** Show the type column resolving leaf and parent labels through the type tree. */
+  typeTree?: readonly TypeTreeRecord[];
 }
 
 function PreviewRow({
   row,
   index,
   own,
+  typeTree,
 }: {
   row: BulkDraft;
   index: number;
   own: readonly BulkIssue[];
+  typeTree: readonly TypeTreeRecord[];
 }) {
   const bad = new Set(own.map((issue) => issue.column));
+  const treeOptions = typeTreeOptions(typeTree, '', true);
+  const resolvedType = treeOptions.find(
+    (option) => option.label.toLowerCase() === row.type.trim().toLowerCase()
+  );
   return (
     <div role="row" className={cn('border-b last:border-b-0', own.length > 0 && 'bg-warning/5')}>
       <div className="flex h-9 items-center gap-3 pr-4 text-sm">
@@ -59,8 +70,17 @@ function PreviewRow({
               bad.has(key) && 'rounded-sm bg-warning/15 px-1 font-medium'
             )}
           >
-            {row[key] ||
-              (key === 'type' ? <span className="text-muted-foreground">Untyped</span> : '')}
+            {key === 'type' && resolvedType !== undefined ? (
+              <span className="block">
+                <span>{resolvedType.label}</span>
+                <span className="block text-2xs text-muted-foreground">
+                  {resolvedType.pathLabel}
+                </span>
+              </span>
+            ) : (
+              row[key] ||
+              (key === 'type' ? <span className="text-muted-foreground">Untyped</span> : '')
+            )}
           </span>
         ))}
       </div>
@@ -72,7 +92,12 @@ function PreviewRow({
 }
 
 /** The preview step. */
-export function PreviewStep({ rows, issues, onlyProblems = false }: PreviewStepProps) {
+export function PreviewStep({
+  rows,
+  issues,
+  onlyProblems = false,
+  typeTree = EMPTY_TYPE_TREE,
+}: PreviewStepProps) {
   const shown = rows
     .map((row, index) => ({ row, index, own: issues.filter((issue) => issue.row === index) }))
     .filter((entry) => !onlyProblems || entry.own.length > 0);
@@ -91,7 +116,13 @@ export function PreviewStep({ rows, issues, onlyProblems = false }: PreviewStepP
           ))}
         </div>
         {shown.map(({ row, index, own }) => (
-          <PreviewRow key={`row-${String(index)}`} row={row} index={index} own={own} />
+          <PreviewRow
+            key={`row-${String(index)}`}
+            row={row}
+            index={index}
+            own={own}
+            typeTree={typeTree}
+          />
         ))}
       </div>
     </ListBody>

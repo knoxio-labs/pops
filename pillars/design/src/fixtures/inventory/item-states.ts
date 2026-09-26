@@ -70,6 +70,21 @@ export const richTelevision: ItemDetailModel = detailFor('itm-tv', {
   eventCount: televisionHistory.length,
 });
 
+/** A leaf-typed item: the header shows its path while the facts stay ordinary facts. */
+export const subtypeItem: ItemDetailModel = detailFor('itm-tv', {
+  item: {
+    ...coreItem('itm-tv'),
+    name: 'Guest fitted sheet',
+    typeId: 'type-sheet',
+    typeName: 'Bedding › Sheet',
+  },
+  facts: [
+    entered('material', 'Material', 'Cotton'),
+    entered('colour', 'Colour', 'White'),
+    entered('fitted', 'Fitted', 'Yes'),
+  ],
+});
+
 /** Only a name and a place: untyped, no code, nothing else. */
 export const sparseLadder: ItemDetailModel = detailFor('itm-ladder');
 

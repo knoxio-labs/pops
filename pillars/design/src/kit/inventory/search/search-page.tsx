@@ -115,7 +115,7 @@ function NarrowPreview({ page, props }: { page: SearchPageState; props: SearchPa
 /** The search page. */
 export function SearchPage(props: SearchPageProps) {
   const { world } = props;
-  const page = useSearchPage(world, props.purchases, props.seed);
+  const page = useSearchPage(world, props.purchases, props.seed, props.types);
   return (
     <InventoryPage
       title="Search"
