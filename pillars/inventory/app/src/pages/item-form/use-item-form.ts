@@ -13,15 +13,10 @@ import type { Dispatch } from 'react';
 import type { DraftAction, ItemDraft } from './form-draft';
 import type { ItemFormOpening } from './form-opening';
 import type { FormView } from './form-view';
-import type { SaveRefusal } from './save-item';
+import type { JustCreated, SaveRefusal } from './save-types';
 import type { FormSources } from './use-form-sources';
 
-/** The successful item identity shown after Save and start another. */
-export interface JustCreated {
-  readonly name: string;
-  readonly place: string;
-  readonly itemId: string;
-}
+export type { JustCreated } from './save-types';
 
 /** The live state and actions consumed by item-form page sections. */
 export interface ItemFormApi {

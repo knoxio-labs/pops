@@ -29,6 +29,23 @@ function unavailableCopy(offline: boolean): string {
   return 'No code can be suggested right now. Type one or leave it empty.';
 }
 
+function OfferedCode({ code, onAccept }: { code: string; onAccept: () => void }): ReactElement {
+  return (
+    <>
+      <Button
+        type="button"
+        variant="link"
+        size="sm"
+        className="h-auto min-h-0 p-0 text-app-accent"
+        onClick={onAccept}
+      >
+        Use {code}
+      </Button>{' '}
+      <span>(press Enter)</span>
+    </>
+  );
+}
+
 function CodeStatus({
   entry,
   offline,
@@ -43,17 +60,11 @@ function CodeStatus({
   id: string;
 }): ReactElement {
   const loading = entry.status === 'suggesting' || entry.status === 'checking';
-  const offered = entry.status === 'offered' && entry.offered !== null;
   return (
     <p id={id} className="min-h-5 text-sm text-muted-foreground" aria-live="polite">
       {loading ? <LoaderCircle className="mr-1 inline size-3 animate-spin" aria-hidden /> : null}
-      {offered ? (
-        <>
-          <button type="button" className="text-app-accent underline" onClick={onAcceptOffered}>
-            Use {entry.offered}
-          </button>{' '}
-          <span>(press Enter)</span>
-        </>
+      {entry.status === 'offered' && entry.offered !== null ? (
+        <OfferedCode code={entry.offered} onAccept={onAcceptOffered} />
       ) : null}
       {entry.status === 'free' ? (
         <>

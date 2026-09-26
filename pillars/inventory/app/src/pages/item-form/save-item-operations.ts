@@ -6,7 +6,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { Placement } from '../../foundation/model/model';
 import type { InventoryCommand, InventoryPlacementTarget } from '../../inventory-web/commands.js';
 import type { ItemDraft } from './form-draft';
-import type { SaveResult } from './save-item';
+import type { SaveResult } from './save-types';
 
 /** Sends one inventory mutation command and returns the normalized save result. */
 export type SendCommand = (command: InventoryCommand, entityId: string) => Promise<SaveResult>;

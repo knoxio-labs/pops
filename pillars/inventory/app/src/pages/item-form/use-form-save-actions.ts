@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router';
 
 import { draftAfterSaveAndNew } from './form-draft';
 import { deriveForm, placementTargetName } from './form-view';
-import { useItemSave, type ItemSaveApi, type SaveRefusal, type SaveResult } from './save-item';
+import { useItemSave, type ItemSaveApi } from './save-item';
 
 import type { Dispatch } from 'react';
 
 import type { DraftAction, ItemDraft } from './form-draft';
 import type { ItemFormOpening } from './form-opening';
+import type { JustCreated, SaveRefusal, SaveResult } from './save-types';
 import type { FormSources } from './use-form-sources';
-import type { JustCreated } from './use-item-form';
 
 /** Inputs for the form's create, edit and save-and-new actions. */
 export interface FormSaveActionsOptions {
