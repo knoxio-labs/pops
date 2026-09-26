@@ -1085,9 +1085,10 @@ jobs:
           pnpm --filter @pops/app-food generate:lists-client
           pnpm --filter @pops/app-finance generate:contacts-client
           pnpm --filter @pops/app-finance generate:purchases-client
+          pnpm --filter @pops/app-inventory generate:purchases-client
       - name: Verify generated clients are up to date
         run: |
-          if ! git diff --exit-code -- pillars/food/app/src/lists-api pillars/finance/app/src/contacts-api pillars/finance/app/src/purchases-api; then
+          if ! git diff --exit-code -- pillars/food/app/src/lists-api pillars/finance/app/src/contacts-api pillars/finance/app/src/purchases-api pillars/inventory/app/src/purchases-api; then
             echo ""
             echo "::error::A cross-pillar generated FE client is out of date."
             echo "Run the owning app's generate:*-client script locally and commit the result."
@@ -1294,4 +1295,3 @@ jobs:
         run: node scripts/check-title-icon-consistency.mjs --self-test
       - name: Every app is all-or-none on PageHeader icons, and icons match nav
         run: node scripts/check-title-icon-consistency.mjs
-

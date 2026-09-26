@@ -14,7 +14,8 @@
     "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "generate:inventory-client": "openapi-ts && oxfmt --write src/inventory-api"
+    "generate:inventory-client": "openapi-ts && oxfmt --write src/inventory-api",
+    "generate:purchases-client": "openapi-ts -f openapi-ts.purchases.config.ts && oxfmt --write src/purchases-api"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
