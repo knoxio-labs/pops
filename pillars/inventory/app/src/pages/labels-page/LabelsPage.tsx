@@ -33,8 +33,8 @@ function Header({ count, onPrint }: { count: number; onPrint?: () => void }) {
   return (
     <PageHeader
       title="Print labels"
-      backHref="/inventory"
-      breadcrumbs={[{ label: 'Inventory', href: '/inventory' }, { label: 'Print labels' }]}
+      backHref="/inventory/items"
+      breadcrumbs={[{ label: 'Items', href: '/inventory/items' }, { label: 'Print labels' }]}
       renderLink={Link}
       actions={
         <Button

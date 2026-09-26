@@ -12,10 +12,13 @@ import { PAGE_COMPONENTS, routes } from '../routes';
  * or a slot bound to the wrong page would still compile (POPS-3256).
  */
 describe('inventory page tree', () => {
-  it('places every page beneath the inventory layout', () => {
+  it('describes the flat route table the app mounts', () => {
     expect(pageTreeMismatches(INVENTORY_PAGES, routes, PAGE_COMPONENTS)).toEqual([]);
-    expect(INVENTORY_PAGES).toHaveLength(1);
-    expect(INVENTORY_PAGES[0]?.bundleSlot).toBe('inventory-layout');
-    expect(INVENTORY_PAGES[0]?.children).toHaveLength(27);
+    expect(INVENTORY_PAGES).toHaveLength(27);
+    expect(INVENTORY_PAGES[0]).toEqual({
+      path: '',
+      index: true,
+      bundleSlot: 'inventory-overview',
+    });
   });
 });

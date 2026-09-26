@@ -586,6 +586,21 @@ describe('ItemFormPage — Form gaps (#1851)', () => {
   });
 });
 
+describe('ItemFormPage — route targets', () => {
+  it('links new-item navigation back to the items page', () => {
+    renderCreate();
+
+    expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute(
+      'href',
+      '/inventory/items'
+    );
+    expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute(
+      'href',
+      '/inventory/items'
+    );
+  });
+});
+
 describe('ItemFormPage — Navigation order on save (#2157)', () => {
   it('navigates to detail page on update', async () => {
     mockItemGetSuccess(buildItem({ id: 'item-1', itemName: 'MacBook', condition: 'good' }));
