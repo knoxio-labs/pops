@@ -115,6 +115,22 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
         touched.insert(field.id)
     }
 
+    internal mutating func fillIfEmpty(
+        _ values: [InventoryPrimitiveValue], for field: InventoryCatalogueField
+    ) {
+        guard field.storage == .stored, field.archivedAt == nil, !values.isEmpty,
+            isEmpty(field),
+            draftEntries(for: field).allSatisfy({ entry in
+                entry.id == Self.startingEntryId(for: field)
+                    || entry.id.hasPrefix("\(field.id):default:")
+            })
+        else { return }
+        entries[field.id] = values.enumerated().map { index, value in
+            InventoryProtocol2DraftEntry(id: "\(field.id):prefill:\(index)", value: value)
+        }
+        touched.insert(field.id)
+    }
+
     internal mutating func removeEntry(id: String, for field: InventoryCatalogueField) {
         entries[field.id]?.removeAll { $0.id == id }
         touched.insert(field.id)
