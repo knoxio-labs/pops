@@ -162,7 +162,7 @@ targets:
         INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_NSCameraUsageDescription: Pops uses the camera to scan pairing QR codes, item and location labels, to photograph receipts, and to photograph inventory items.
+        INFOPLIST_KEY_NSCameraUsageDescription: Pops uses the camera to scan pairing QR codes, item and location labels, scan product barcodes and labels, photograph receipts, and photograph inventory items.
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Pops uses your photo library to attach an existing picture to an inventory item.
         # Export compliance (POPS-4137): the only encryption is the OS's own —
         # HTTPS and Secure Enclave signing for device auth — which is exempt.

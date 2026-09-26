@@ -184,3 +184,14 @@ public struct UnboundInventoryCodeSuggestionService: InventoryCodeSuggestionServ
         throw InventorySyncTransportError.suggestionsUnavailable
     }
 }
+
+/// The unavailable barcode lookup used until a composition root binds one.
+public struct UnboundInventoryBarcodeLookupService: InventoryBarcodeLookupService {
+    /// Creates an unbound lookup that always answers unavailable.
+    public init() {}
+
+    /// Returns unavailable without attempting a network lookup.
+    public func lookUp(code: String) async throws -> InventoryBarcodeLookup {
+        .unavailable
+    }
+}

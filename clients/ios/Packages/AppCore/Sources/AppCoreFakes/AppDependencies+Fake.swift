@@ -13,13 +13,16 @@ extension AppDependencies {
         accounts: any AccountsRepository = InMemoryAccountsRepository(),
         inventory: any InventoryStore = InMemoryInventoryStore(),
         codeSuggestions: any InventoryCodeSuggestionService =
-            UnboundInventoryCodeSuggestionService()
+            UnboundInventoryCodeSuggestionService(),
+        barcodeLookup: any InventoryBarcodeLookupService =
+            FakeInventoryBarcodeLookupService()
     ) -> AppDependencies {
         AppDependencies(
             transactions: transactions, pairing: pairing, reachability: reachability,
             receiptCapture: receiptCapture, purchases: purchases, merchants: merchants,
             accounts: accounts,
             inventory: inventory,
-            codeSuggestions: codeSuggestions)
+            codeSuggestions: codeSuggestions,
+            barcodeLookup: barcodeLookup)
     }
 }

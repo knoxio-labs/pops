@@ -14,6 +14,8 @@ public struct AppDependencies: Sendable {
     public let accounts: any AccountsRepository
     public let inventory: any InventoryStore
     public let codeSuggestions: any InventoryCodeSuggestionService
+    /// Product-fact lookup used by Inventory's barcode scan flow.
+    public let barcodeLookup: any InventoryBarcodeLookupService
 
     public init(
         transactions: any TransactionsRepository,
@@ -34,7 +36,12 @@ public struct AppDependencies: Sendable {
         // (POPS-4107): most callers building an `AppDependencies` by hand
         // have no BFM to suggest a code from either.
         codeSuggestions: any InventoryCodeSuggestionService =
-            UnboundInventoryCodeSuggestionService()
+            UnboundInventoryCodeSuggestionService(),
+        // A barcode scan is an optional assist like code suggestions. Callers
+        // built before POPS-4920 receive the ordinary unavailable result until
+        // their composition root binds the BFM transport.
+        barcodeLookup: any InventoryBarcodeLookupService =
+            UnboundInventoryBarcodeLookupService()
     ) {
         self.transactions = transactions
         self.pairing = pairing
@@ -45,6 +52,7 @@ public struct AppDependencies: Sendable {
         self.accounts = accounts
         self.inventory = inventory
         self.codeSuggestions = codeSuggestions
+        self.barcodeLookup = barcodeLookup
     }
 
     /// What the environment holds until something binds it. Every call fails
@@ -61,7 +69,8 @@ public struct AppDependencies: Sendable {
         merchants: UnboundMerchantDirectoryRepository(),
         accounts: UnboundAccountsRepository(),
         inventory: UnboundInventoryStore(),
-        codeSuggestions: UnboundInventoryCodeSuggestionService()
+        codeSuggestions: UnboundInventoryCodeSuggestionService(),
+        barcodeLookup: UnboundInventoryBarcodeLookupService()
     )
 }
 

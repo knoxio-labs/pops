@@ -46,7 +46,8 @@ internal struct AppSearchTab: View {
             )
             .inventorySearchDestinations(store: dependencies.inventory, entityRouter: entityRouter)
             .inventorySearchChrome(
-                session, records: inventoryResults, store: dependencies.inventory
+                session, records: inventoryResults, store: dependencies.inventory,
+                barcodeLookup: dependencies.barcodeLookup
             )
             .purchasesDestinations(dependencies: dependencies)
         }

@@ -24,6 +24,40 @@ internal struct InventoryCodeSuggester: Sendable {
     }
 }
 
+internal struct InventoryScanPrefill: Sendable {
+    internal let lookUp: @Sendable (String) async throws -> InventoryBarcodeLookup
+    internal let engine: InventoryPrefillEngine
+    internal let availability: InventoryPrefillAvailability
+
+    @MainActor internal static let unbound = InventoryScanPrefill(
+        lookUp: { _ in .unavailable },
+        engine: InventoryPrefillEngine(generator: UnboundInventoryPrefillGenerator()),
+        availability: InventoryPrefillAvailability { false })
+
+    @MainActor
+    internal static func system(lookup: any InventoryBarcodeLookupService) -> Self {
+        var engine = unbound.engine
+        #if canImport(FoundationModels)
+            if #available(iOS 26.4, macOS 26.4, *) {
+                engine = InventoryPrefillEngine(generator: FoundationModelsPrefillGenerator())
+            }
+        #endif
+        return Self(
+            lookUp: { try await lookup.lookUp(code: $0) }, engine: engine,
+            availability: .system())
+    }
+}
+
+private struct UnboundInventoryPrefillGenerator: InventoryPrefillGenerator {
+    var tokenBudget: Int { 0 }
+
+    func tokenCount(_ text: String) async -> Int { 0 }
+
+    func generate(
+        source: InventoryPrefillSource, fields: [InventoryCatalogueField]
+    ) async throws -> [String: InventoryPrefillRawValue] { [:] }
+}
+
 /// Where a placement picker was asked to put something, and where it chose.
 internal struct InventoryPlacementChoice: Hashable, Sendable {
     internal let placement: InventoryPlacement
@@ -95,6 +129,8 @@ internal struct InventoryItemFormPresenter: Sendable {
 }
 
 extension EnvironmentValues {
+    @Entry internal var inventoryScanPrefill: InventoryScanPrefill?
+
     /// The shared destination picker, when the screen that owns it has
     /// installed one.
     @Entry internal var inventoryPlacementPicker: InventoryPlacementPicker?

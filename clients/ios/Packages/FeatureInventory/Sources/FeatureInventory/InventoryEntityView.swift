@@ -13,6 +13,7 @@ public struct InventoryEntityView: View {
     private let entity: InventoryEntity
     private let store: any InventoryStore
     private let suggester: InventoryCodeSuggester
+    private let scan: InventoryScanPrefill
     private let entityRouter: any EntityRouter
 
     /// Reads and writes through `dependencies.inventory`, and nothing else.
@@ -30,6 +31,7 @@ public struct InventoryEntityView: View {
                 name: name, typeKey: typeKey, stem: stem)
         }
         self.entityRouter = entityRouter
+        scan = .system(lookup: dependencies.barcodeLookup)
     }
 
     public var body: some View {
@@ -39,7 +41,7 @@ public struct InventoryEntityView: View {
                     InventoryDestinationView(route: route, store: store, entityRouter: entityRouter)
                 }
         }
-        .inventoryItemFormPresentation(store: store, suggester: suggester)
+        .inventoryItemFormPresentation(store: store, suggester: suggester, scan: scan)
         .inventorySyncInterruptions(store: store)
     }
 }
