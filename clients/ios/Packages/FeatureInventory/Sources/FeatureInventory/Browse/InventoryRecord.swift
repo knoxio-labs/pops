@@ -102,7 +102,6 @@ internal struct InventoryRecordReader {
     internal var typeNames: [InventoryTypeName] {
         if let protocol2Catalogue {
             return protocol2Catalogue.types
-                .filter { $0.archivedAt == nil }
                 .map { type in
                     let ancestry = protocol2Catalogue.ancestry(ofType: type.id)
                     return InventoryTypeName(
