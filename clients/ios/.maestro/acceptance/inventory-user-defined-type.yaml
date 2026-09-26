@@ -62,10 +62,9 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
 # explicitly before editing its generic fields.
 - assertVisible: 'Type, No type yet'
 
-# The Type choice is driven through the menu the design keeps (a SwiftUI
-# `Picker` in menu style, so a `UIMenu`). The option is waited for rather than
-# tapped straight away because the menu animates in and a tap aimed at a
-# hierarchy read mid-presentation can land on nothing (POPS-4556).
+# The Type choice is a pushed, searchable tree. The option is waited for
+# rather than tapped straight away because the destination animates in and a
+# tap aimed at a hierarchy read mid-presentation can land on nothing.
 - tapOn:
     id: 'inventory-item-type'
 - extendedWaitUntil:
@@ -73,7 +72,7 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
       id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}
     timeout: 10000
 - tapOn:
-    text: 'Phone gadget'
+    id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}
 - extendedWaitUntil:
     notVisible:
       id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}
