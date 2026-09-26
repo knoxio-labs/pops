@@ -179,6 +179,7 @@ internal struct InventoryScanOutcomeTests {
         await gate.open()
 
         #expect(await handling.value == .miss)
+        #expect(opened.form.draft.name.isEmpty)
         #expect(await generator.requests.isEmpty)
     }
 

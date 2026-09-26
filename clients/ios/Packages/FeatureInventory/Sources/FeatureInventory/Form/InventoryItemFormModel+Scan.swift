@@ -63,12 +63,12 @@ extension InventoryItemFormModel {
     }
 
     private func fillFromProduct(_ product: InventoryBarcodeProduct) -> InventoryScanOutcome {
-        if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            draft.name = product.title
-        }
         guard let currentDraft = protocol2Draft, let type = protocol2Type else {
             prefillStatus = .nothingFound
             return .miss
+        }
+        if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            draft.name = product.title
         }
         let typeId = currentDraft.typeId
         let source = InventoryPrefillSource.product(InventoryBarcodeFacts.facts(product))
