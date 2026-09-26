@@ -3,7 +3,7 @@
  *
  * Composes the module sub-routers (items, locations, connections,
  * fixtures, photos, documents, documentFiles, reports, paperless, search,
- * web search, settings, and the sync protocol's sync, types and codes) into the public
+ * web search, web batch, settings, and the sync protocol's sync, types and codes) into the public
  * wire surface.
  * `generateOpenApi(inventoryContract, …)`
  * projects this to `openapi/inventory.openapi.json`; `openapi-typescript`
@@ -30,6 +30,7 @@ import {
   inventorySyncContract,
   inventoryTypesContract,
 } from './rest-sync.js';
+import { inventoryWebBatchContract } from './rest-web-batch.js';
 import { inventoryWebChangesContract } from './rest-web-changes.js';
 import { inventoryWebEventsContract } from './rest-web-events.js';
 import { inventoryWebSearchContract } from './rest-web-search.js';
@@ -51,6 +52,7 @@ export const inventoryContract = c.router(
     paperless: inventoryPaperlessContract,
     search: inventorySearchContract,
     web: inventoryWebContract,
+    webBatch: inventoryWebBatchContract,
     webChanges: inventoryWebChangesContract,
     webEvents: inventoryWebEventsContract,
     webSearch: inventoryWebSearchContract,

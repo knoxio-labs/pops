@@ -1108,6 +1108,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/items/batch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Partially create inventory items from typed web grid rows */
+    post: operations['webBatch.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/items/{id}': {
     parameters: {
       query?: never;
@@ -9094,6 +9111,111 @@ export interface operations {
             nextCursor: string | null;
             total: number;
             unfilteredTotal: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webBatch.create': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          /**
+           * @default {
+           *       "kind": "hand"
+           *     }
+           */
+          destination:
+            | {
+                /** @enum {string} */
+                kind: 'location';
+                locationId: string;
+              }
+            | {
+                itemId: string;
+                /** @enum {string} */
+                kind: 'container';
+              }
+            | {
+                /** @enum {string} */
+                kind: 'hand';
+              };
+          /** @default false */
+          dryRun: boolean;
+          rows: {
+            /** @default  */
+            code: string;
+            /** @default  */
+            name: string;
+            /** @default  */
+            note: string;
+            /** @default  */
+            quantity: string;
+            /** @default  */
+            type: string;
+            /** @default  */
+            where: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            outcomes: (
+              | {
+                  itemId: string;
+                  row: number;
+                  /** @enum {string} */
+                  status: 'created';
+                }
+              | {
+                  row: number;
+                  /** @enum {string} */
+                  status: 'valid';
+                }
+              | {
+                  issues: {
+                    code: string;
+                    /** @enum {string} */
+                    column: 'name' | 'type' | 'quantity' | 'code' | 'where' | 'note';
+                    message: string;
+                  }[];
+                  row: number;
+                  /** @enum {string} */
+                  status: 'invalid';
+                }
+              | {
+                  row: number;
+                  /** @enum {string} */
+                  status: 'blank';
+                }
+            )[];
           };
         };
       };

@@ -20600,6 +20600,250 @@
         "tags": ["web"]
       }
     },
+    "/web/items/batch": {
+      "post": {
+        "operationId": "webBatch.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "destination": {
+                    "default": {
+                      "kind": "hand"
+                    },
+                    "oneOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": ["location"],
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": ["kind", "locationId"],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "itemId": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["container"],
+                            "type": "string"
+                          }
+                        },
+                        "required": ["kind", "itemId"],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": ["hand"],
+                            "type": "string"
+                          }
+                        },
+                        "required": ["kind"],
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "dryRun": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "rows": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "name": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "note": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "where": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "type", "quantity", "code", "where", "note"],
+                      "type": "object"
+                    },
+                    "maxItems": 200,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["rows", "destination", "dryRun"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "outcomes": {
+                      "items": {
+                        "oneOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "itemId": {
+                                "type": "string"
+                              },
+                              "row": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "status": {
+                                "enum": ["created"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["status", "row", "itemId"],
+                            "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "row": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "status": {
+                                "enum": ["valid"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["status", "row"],
+                            "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "issues": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "column": {
+                                      "enum": ["name", "type", "quantity", "code", "where", "note"],
+                                      "type": "string"
+                                    },
+                                    "message": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["column", "code", "message"],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "row": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "status": {
+                                "enum": ["invalid"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["status", "row", "issues"],
+                            "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "row": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "status": {
+                                "enum": ["blank"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["status", "row"],
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["outcomes"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Partially create inventory items from typed web grid rows",
+        "tags": ["webBatch"]
+      }
+    },
     "/web/items/{id}": {
       "get": {
         "operationId": "web.get",
