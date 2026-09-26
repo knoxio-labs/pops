@@ -110,7 +110,7 @@ generated projections, drift-checked in CI. Redis is required to run the worker
 All REST failures use the ADR-054 envelope from `@pops/types`:
 `{ code, message, requestId, retryable, details? }`. Codes are dotted lowercase
 values under `food.*`; the API echoes an incoming `X-Request-Id` or mints one,
-and unknown failures are logged with that ID while returning `food.internal`
+and unknown failures are logged with that ID while returning `food.internal.failure`
 without implementation details.
 
 `db:seed:food` wipes twenty-one tables before it seeds, so it is guarded twice.

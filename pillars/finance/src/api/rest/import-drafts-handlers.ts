@@ -1,3 +1,5 @@
+import { defineErrors } from '@pops/pillar-express';
+
 /**
  * Handlers for the `importDrafts.*` sub-router (POPS-3329, finance ADR-005).
  *
@@ -28,6 +30,22 @@ import type { financeImportDraftsContract } from '../../contract/rest-import-dra
 import type { ImportDraftRow } from '../../db/services/import-drafts.js';
 
 type Req = ServerInferRequest<typeof financeImportDraftsContract>;
+
+/** Registered import-draft lease failures. */
+export const importDraftErrors = defineErrors('finance', {
+  owned_elsewhere: {
+    area: 'import_drafts',
+    status: 409,
+    message: 'The import draft is owned by another session.',
+    retryable: false,
+  },
+  unusable: {
+    area: 'import_drafts',
+    status: 409,
+    message: 'The import draft cannot be resumed.',
+    retryable: false,
+  },
+});
 
 /** A draft write was attempted by a client that does not hold its lease. */
 export class DraftOwnedElsewhereHttpError extends HttpError {

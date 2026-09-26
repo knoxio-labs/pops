@@ -13,7 +13,7 @@
  */
 import { type Router as ExpressRouter, type Request, type Response, Router } from 'express';
 
-import { PopsError } from '@pops/pillar-express';
+import { defineErrors, PopsError } from '@pops/pillar-express';
 
 import { moviesService, tvShowsService, type MediaDb } from '../../db/index.js';
 import { downloadAndServe, fetchPosterPathFromTmdb } from './images-fallback.js';
@@ -30,6 +30,22 @@ export interface ImagesRouterDeps {
   /** Open drizzle handle to the media pillar's SQLite. */
   mediaDb: MediaDb;
 }
+
+/** Registered failures for the media image route. */
+export const mediaImageRouteErrors = defineErrors('media', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The image request is invalid.',
+    retryable: false,
+  },
+  not_found: {
+    area: 'image',
+    status: 404,
+    message: 'The image was not found.',
+    retryable: false,
+  },
+});
 
 async function tryOverrideOrCached(
   resolvedDir: string,

@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { open, stat, unlink } from 'node:fs/promises';
 import { basename, extname, resolve } from 'node:path';
 
-import { PopsError } from '@pops/pillar-express';
+import { defineErrors, PopsError } from '@pops/pillar-express';
 
 import type { Response } from 'express';
 
@@ -28,6 +28,16 @@ const CONTENT_TYPES: Record<string, string> = {
 
 /** Cache for 7 days, revalidate via ETag after that. */
 const CACHE_CONTROL = 'public, max-age=604800';
+
+/** Registered failures for serving a cached image. */
+export const mediaImageErrors = defineErrors('media', {
+  send_failed: {
+    area: 'image',
+    status: 500,
+    message: 'The image could not be served.',
+    retryable: true,
+  },
+});
 
 const TMDB_CDN_SIZES: Record<string, string> = {
   poster: 'w780',

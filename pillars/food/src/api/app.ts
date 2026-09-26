@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
-import { createPillarErrorHandlers, PopsError } from '@pops/pillar-express';
+import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
 import {
   INTERNAL_CREDENTIAL_HEADER,
   type InternalCallerSpec,
@@ -69,6 +69,15 @@ const INGEST_COMPLETE_SCOPE = 'food.ingest.worker-complete';
  */
 const INTERNAL_PATH_SCOPES = new Map([['/ingest/worker-complete', INGEST_COMPLETE_SCOPE]]);
 
+const foodAuthErrors = defineErrors('food', {
+  unauthorized: {
+    area: 'auth',
+    status: 401,
+    message: 'The request is not authorized.',
+    retryable: false,
+  },
+});
+
 /**
  * The callers this pillar accepts for its internal paths (ADR-039 E22). The
  * food worker is the sole caller of the completion callback; its secret comes
@@ -92,14 +101,11 @@ function requireInternalToken(req: Request, res: Response, next: NextFunction): 
     },
   });
   if (!result.ok) {
-    next(
-      new PopsError({
-        code: 'food.auth.unauthorized',
-        status: 401,
-        message: 'The request is not authorized.',
-        retryable: false,
-      })
-    );
+    try {
+      foodAuthErrors.unauthorized();
+    } catch (error) {
+      next(error);
+    }
     return;
   }
   next();

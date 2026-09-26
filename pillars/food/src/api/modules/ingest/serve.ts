@@ -19,7 +19,7 @@ import { extname, join } from 'node:path';
 
 import { eq } from 'drizzle-orm';
 
-import { PopsError } from '@pops/pillar-express';
+import { defineErrors } from '@pops/pillar-express';
 
 import { type FoodDb, ingestSources } from '../../../db/index.js';
 import { ingestDirFor } from './ingest-storage.js';
@@ -42,15 +42,25 @@ const CONTENT_TYPE: Readonly<Record<string, string>> = {
   '.m4v': 'video/x-m4v',
 };
 
+const ingestErrors = defineErrors('food', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The source ID is invalid.',
+    retryable: false,
+  },
+  not_found: {
+    area: 'ingest_media',
+    status: 404,
+    message: 'Ingest media was not found.',
+    retryable: false,
+  },
+});
+
 function parseSourceId(req: Request): number {
   const raw = String(req.params['sourceId'] ?? '');
   if (!SOURCE_ID_RE.test(raw)) {
-    throw new PopsError({
-      code: 'food.request.invalid',
-      status: 400,
-      message: 'The source ID is invalid.',
-      retryable: false,
-    });
+    ingestErrors.invalid();
   }
   return Number(raw);
 }
@@ -117,13 +127,8 @@ function serveMedia(db: FoodDb, spec: MediaSpec, req: Request, res: Response): v
   res.sendFile(filePath);
 }
 
-function mediaNotFound(): PopsError {
-  return new PopsError({
-    code: 'food.ingest_media.not_found',
-    status: 404,
-    message: 'Ingest media was not found.',
-    retryable: false,
-  });
+function mediaNotFound(): never {
+  return ingestErrors.not_found();
 }
 
 export function makeServeIngestScreenshot(db: FoodDb) {

@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
-import { createPillarErrorHandlers, defineErrors, PopsError } from '@pops/pillar-express';
+import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
 import {
   LEGACY_REGISTRY_PATHS,
   REGISTRY_PATHS,
@@ -74,6 +74,15 @@ const registryErrors = defineErrors('registry', {
     area: 'uri',
     status: 400,
     message: 'The URI resolution request is invalid.',
+    retryable: false,
+  },
+});
+
+const registryRequestErrors = defineErrors('registry', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The request is invalid.',
     retryable: false,
   },
 });
@@ -184,15 +193,11 @@ export function createCoreApiApp(deps: CoreApiDeps): Express {
   // tRPC.
   createExpressEndpoints(coreContract, makeCoreRestHandlers(deps), app, {
     requestValidationErrorHandler: (error, _req, _res, next) => {
-      next(
-        new PopsError({
-          code: 'registry.request.invalid',
-          status: 400,
-          message: 'The request is invalid.',
-          retryable: false,
-          details: { issues: validationIssues(error) },
-        })
-      );
+      try {
+        registryRequestErrors.invalid({ issues: validationIssues(error) });
+      } catch (failure) {
+        next(failure);
+      }
     },
   });
 

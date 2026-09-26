@@ -11,7 +11,7 @@
 import { existsSync } from 'node:fs';
 import { extname } from 'node:path';
 
-import { PopsError } from '@pops/pillar-express';
+import { defineErrors } from '@pops/pillar-express';
 
 import { isValidHeroFilename, resolveServablePath } from './paths.js';
 
@@ -24,6 +24,15 @@ const CONTENT_TYPE: Readonly<Record<string, string>> = {
   '.png': 'image/png',
 };
 
+const heroImageErrors = defineErrors('food', {
+  not_found: {
+    area: 'hero_image',
+    status: 404,
+    message: 'Hero image not found.',
+    retryable: false,
+  },
+});
+
 export function serveHeroImage(req: Request, res: Response, next: NextFunction): void {
   const rawId = req.params['recipeId'];
   const rawName = req.params['filename'];
@@ -35,12 +44,7 @@ export function serveHeroImage(req: Request, res: Response, next: NextFunction):
   }
   const absPath = resolveServablePath(recipeId, filename);
   if (absPath === null || !existsSync(absPath)) {
-    throw new PopsError({
-      code: 'food.hero_image.not_found',
-      status: 404,
-      message: 'Hero image not found.',
-      retryable: false,
-    });
+    return heroImageErrors.not_found();
   }
   const contentType = CONTENT_TYPE[extname(absPath).toLowerCase()];
   if (contentType !== undefined) res.type(contentType);

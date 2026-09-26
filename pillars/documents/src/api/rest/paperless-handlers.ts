@@ -1,3 +1,4 @@
+import { defineErrors } from '@pops/pillar-express';
 import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 
 import { getPaperlessClient } from '../modules/paperless/index.js';
@@ -12,6 +13,22 @@ import type { PaperlessClient } from '../modules/paperless/client.js';
 import type { PaperlessDocument } from '../modules/paperless/types.js';
 
 type Req = ServerInferRequest<typeof documentsPaperlessContract>;
+
+/** Registered paperless failures returned by the typed handler surface. */
+export const paperlessErrors = defineErrors('documents', {
+  not_configured: {
+    area: 'paperless',
+    status: 412,
+    message: 'Paperless-ngx is not configured.',
+    retryable: false,
+  },
+  not_found: {
+    area: 'paperless',
+    status: 404,
+    message: 'The requested Paperless document was not found.',
+    retryable: false,
+  },
+});
 
 interface WireDocument {
   id: number;

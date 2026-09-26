@@ -4,7 +4,41 @@
  * Each error is a registered ADR-054 failure. Express's shared final handler
  * adds the current request ID and serializes the flat envelope.
  */
-import { PopsError } from '@pops/pillar-express';
+import { defineErrors, PopsError } from '@pops/pillar-express';
+
+/** Registered finance domain failures used by REST handlers. */
+export const financeDomainErrors = defineErrors('finance', {
+  not_found: {
+    area: 'resource',
+    status: 404,
+    message: 'The requested resource was not found.',
+    retryable: false,
+  },
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The request is invalid.',
+    retryable: false,
+  },
+  conflict: {
+    area: 'resource',
+    status: 409,
+    message: 'The request conflicts with existing state.',
+    retryable: false,
+  },
+  unprocessable: {
+    area: 'resource',
+    status: 422,
+    message: 'The request cannot be processed for this resource.',
+    retryable: false,
+  },
+  precondition_failed: {
+    area: 'request',
+    status: 412,
+    message: 'The request cannot be applied in the current state.',
+    retryable: false,
+  },
+});
 
 interface HttpErrorOptions {
   readonly statusCode: number;

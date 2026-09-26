@@ -46,7 +46,7 @@ function streamError(err: unknown, requestId: string | undefined): Record<string
   console.error('[cerebrum] query stream failure', { requestId, error: err });
   return {
     type: 'error',
-    code: 'cerebrum.internal',
+    code: 'cerebrum.internal.failure',
     message: 'The service could not complete the request.',
     requestId,
     retryable: false,

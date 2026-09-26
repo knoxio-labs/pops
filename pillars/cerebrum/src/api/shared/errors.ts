@@ -1,10 +1,38 @@
-import { PopsError } from '@pops/pillar-express';
+import { defineErrors, PopsError } from '@pops/pillar-express';
+
+/** Registered error metadata for the cerebrum REST and streaming surfaces. */
+export const cerebrumErrors = defineErrors('cerebrum', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The request is invalid.',
+    retryable: false,
+  },
+  not_found: {
+    area: 'resource',
+    status: 404,
+    message: 'The requested resource was not found.',
+    retryable: false,
+  },
+  conflict: {
+    area: 'resource',
+    status: 409,
+    message: 'The request conflicts with existing state.',
+    retryable: false,
+  },
+  failure: {
+    area: 'internal',
+    status: 500,
+    message: 'The service could not complete the request.',
+    retryable: false,
+  },
+});
 
 function codeForStatus(status: number): string {
   if (status === 400) return 'cerebrum.request.invalid';
   if (status === 404) return 'cerebrum.resource.not_found';
   if (status === 409) return 'cerebrum.resource.conflict';
-  return 'cerebrum.internal';
+  return 'cerebrum.internal.failure';
 }
 
 /** A cerebrum domain failure serialized by the shared ADR-054 middleware. */

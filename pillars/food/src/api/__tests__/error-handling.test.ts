@@ -68,7 +68,7 @@ describe('ADR-054 errors', () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
-      code: 'food.internal',
+      code: 'food.internal.failure',
       message: 'The service could not complete the request.',
       requestId: response.headers['x-request-id'],
       retryable: false,

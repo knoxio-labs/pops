@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
-import { createPillarErrorHandlers, PopsError } from '@pops/pillar-express';
+import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
 
 import { documentsContract } from '../contract/rest.js';
 import { createDocumentsFilesRouter } from './files/router.js';
@@ -44,6 +44,15 @@ const openapiDocument: unknown = JSON.parse(
     'utf8'
   )
 );
+
+const documentsErrors = defineErrors('documents', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The request is invalid.',
+    retryable: false,
+  },
+});
 
 export function createDocumentsApiApp(deps: DocumentsApiDeps): Express {
   const app = express();
@@ -73,15 +82,11 @@ export function createDocumentsApiApp(deps: DocumentsApiDeps): Express {
 
   createExpressEndpoints(documentsContract, makeDocumentsRestHandlers(), app, {
     requestValidationErrorHandler: (error, _req, _res, next) => {
-      next(
-        new PopsError({
-          code: 'documents.request.invalid',
-          status: 400,
-          message: 'The request is invalid.',
-          retryable: false,
-          details: { issues: validationIssues(error) },
-        })
-      );
+      try {
+        documentsErrors.invalid({ issues: validationIssues(error) });
+      } catch (failure) {
+        next(failure);
+      }
     },
   });
 

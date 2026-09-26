@@ -67,7 +67,7 @@ gateway in front authenticates.
 All REST failures use the ADR-054 envelope from `@pops/types`:
 `{ code, message, requestId, retryable, details? }`. Codes are dotted lowercase
 values under `media.*`; the API echoes an incoming `X-Request-Id` or mints one.
-Unknown failures return the redacted `media.internal` response, while retryable
+Unknown failures return the redacted `media.internal.failure` response, while retryable
 provider failures use `media.upstream.unavailable`.
 
 ## Schedulers

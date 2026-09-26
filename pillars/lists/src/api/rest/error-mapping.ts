@@ -1,3 +1,4 @@
+import { defineErrors } from '@pops/pillar-express';
 import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 
 /**
@@ -9,6 +10,28 @@ import { ListItemNotFoundError, ListNotFoundError } from '../../db/index.js';
 import { isForeignKeyConstraintError, isUniqueConstraintError } from '../shared/sqlite-errors.js';
 
 import type { ErrorBody } from '@pops/types';
+
+/** Registered service failures returned by the lists error mapper. */
+export const listServiceErrors = defineErrors('lists', {
+  not_found: {
+    area: 'resource',
+    status: 404,
+    message: 'The requested list was not found.',
+    retryable: false,
+  },
+  conflict_unique: {
+    area: 'resource',
+    status: 409,
+    message: 'A list with that identity already exists.',
+    retryable: false,
+  },
+  conflict_foreign_key: {
+    area: 'resource',
+    status: 409,
+    message: 'The operation conflicts with a related record.',
+    retryable: false,
+  },
+});
 
 export interface MappedHttpError {
   status: 404 | 409;
