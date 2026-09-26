@@ -1,9 +1,7 @@
-import { and, eq, isNotNull, isNull, or } from 'drizzle-orm';
-
 import { loadPublishedCatalogue } from '../../catalogue/index.js';
-import { items, type ItemRow } from '../../db/index.js';
 import { loadItemExtras } from '../sync/wire.js';
 import { readEffectiveLocations, readRooms } from './placement-scope.js';
+import { readValueReportRows } from './value-report-rows.js';
 
 import type { z } from 'zod';
 
@@ -11,6 +9,7 @@ import type {
   VALUE_REPORT_BASES,
   WebValueReportResponseSchema,
 } from '../../contract/rest-web-reports.js';
+import type { ItemRow } from '../../db/index.js';
 import type { CommandDb } from '../../domain/commands/index.js';
 
 type ValueReportResponse = z.infer<typeof WebValueReportResponseSchema>;
@@ -85,20 +84,6 @@ function compareEntries(left: ReportEntry, right: ReportEntry): number {
     return (right.value ?? 0) - (left.value ?? 0);
   }
   return left.name.localeCompare(right.name);
-}
-
-function readReportRows(db: CommandDb): ReportRow[] {
-  return db
-    .select()
-    .from(items)
-    .where(
-      and(
-        isNull(items.deletedAt),
-        eq(items.lifecycle, 'active'),
-        or(eq(items.isContainer, 0), isNotNull(items.replacementValue))
-      )
-    )
-    .all();
 }
 
 function prepareReportEntries(db: CommandDb, rows: readonly ReportRow[]): PreparedEntry[] {
@@ -218,7 +203,7 @@ export function readValueReport(
   db: CommandDb,
   query: { by: 'room' | 'type'; basis: 'replacement' | 'purchase' }
 ): z.infer<typeof WebValueReportResponseSchema> {
-  const entries = prepareReportEntries(db, readReportRows(db));
+  const entries = prepareReportEntries(db, readValueReportRows(db, query.basis));
   return {
     totals: readReportTotals(entries),
     groups: readReportGroups(entries, query.by, query.basis),

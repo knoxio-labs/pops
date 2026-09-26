@@ -171,6 +171,13 @@ describe('GET /web/reports/values', () => {
 
     expect(result.totals.records).toBe(1);
     expect(result.groups[0]?.entries.map((entry) => entry.itemId)).toEqual([valuedBoxId]);
+
+    const purchaseResult = await report({ basis: 'purchase' });
+
+    expect(purchaseResult.totals.records).toBe(1);
+    expect(purchaseResult.groups[0]?.entries).toEqual([
+      expect.objectContaining({ itemId: emptyBoxId, unitValue: 9, value: 9 }),
+    ]);
   });
 
   it('inactive and deleted items are excluded', async () => {
