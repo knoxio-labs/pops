@@ -7031,6 +7031,46 @@ export type WebGetResponses = {
 
 export type WebGetResponse = WebGetResponses[keyof WebGetResponses];
 
+export type WebLocationsGoneData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/web/locations/{id}/gone';
+};
+
+export type WebLocationsGoneErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebLocationsGoneError = WebLocationsGoneErrors[keyof WebLocationsGoneErrors];
+
+export type WebLocationsGoneResponses = {
+  /**
+   * 200
+   */
+  200: {
+    deletedAt: string;
+    deletedBy: {
+      kind: string;
+      label: string;
+    } | null;
+    id: string;
+    inHandCount: number;
+    name: string;
+  };
+};
+
+export type WebLocationsGoneResponse = WebLocationsGoneResponses[keyof WebLocationsGoneResponses];
+
 export type WebSearchListData = {
   body?: never;
   path?: never;

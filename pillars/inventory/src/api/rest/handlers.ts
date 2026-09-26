@@ -28,6 +28,7 @@ import { makeWebBatchHandlers } from './web-batch-handlers.js';
 import { makeWebChangesHandlers } from './web-changes-handlers.js';
 import { makeWebEventsHandlers } from './web-events-handlers.js';
 import { makeWebHandlers } from './web-handlers.js';
+import { makeWebLocationsHandlers } from './web-locations-handlers.js';
 import { makeWebSearchHandlers } from './web-search-handlers.js';
 import { makeWebSummaryHandlers } from './web-summary-handlers.js';
 
@@ -76,6 +77,7 @@ export function makeInventoryRestHandlers(deps: {
     webBatch: makeWebBatchHandlers(db),
     webChanges: makeWebChangesHandlers(db),
     webEvents: makeWebEventsHandlers(db),
+    webLocations: makeWebLocationsHandlers(db),
     webSearch: makeWebSearchHandlers({ db, documents }),
     webSummary: makeWebSummaryHandlers(db),
     settings: makeSettingsHandlers(db),

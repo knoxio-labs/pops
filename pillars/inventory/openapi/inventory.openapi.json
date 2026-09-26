@@ -22404,6 +22404,91 @@
         "tags": ["web"]
       }
     },
+    "/web/locations/{id}/gone": {
+      "get": {
+        "operationId": "webLocations.gone",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "deletedAt": {
+                      "type": "string"
+                    },
+                    "deletedBy": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["kind", "label"],
+                      "type": "object"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "inHandCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "name", "deletedAt", "deletedBy", "inHandCount"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Read the summary of a deleted inventory location",
+        "tags": ["webLocations"]
+      }
+    },
     "/web/search": {
       "get": {
         "operationId": "webSearch.list",
