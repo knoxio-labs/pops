@@ -78,7 +78,10 @@ function ItemsHead({ browser, props }: { browser: ItemsBrowser; props: ItemsPage
 /** The Items page. */
 export function ItemsPage(props: ItemsPageProps) {
   const { items, world, status = 'ready' } = props;
-  const browser = useItemsBrowser(items, world, props.seed);
+  const browser = useItemsBrowser(items, world, props.seed, {
+    path: '/inventory/items',
+    typeOptions: props.types,
+  });
   return (
     <InventoryPage
       title="Items"

@@ -18,6 +18,7 @@ import { PreviewStep } from './preview-step';
 import { UploadStep } from './upload-step';
 
 import type { BulkContext } from '../bulk-entry/row-validation';
+import type { TypeTreeRecord } from '../type-tree/model';
 import type { ColumnMapping } from './import-model';
 
 /** Where the import is. */
@@ -33,6 +34,7 @@ export interface ImportPageProps {
   context: BulkContext;
   onlyProblems?: boolean;
   refused?: string;
+  typeTreePreview?: boolean;
 }
 
 function FileLine({ file }: Pick<ImportPageProps, 'file'>) {
@@ -105,6 +107,11 @@ export function ImportPage(props: ImportPageProps) {
   const issues = validateRows(drafts, props.context);
   const skipped = new Set(issues.map((issue) => issue.row)).size;
   const ready = drafts.length - skipped;
+  const typeTree: readonly TypeTreeRecord[] = props.context.types.map((type) => ({
+    id: type.id,
+    label: type.label,
+    parentTypeId: type.parentTypeId ?? null,
+  }));
   const guessed = new Set(
     guessMapping(props.headers)
       .filter((column) => column.target !== 'skip')
@@ -141,7 +148,12 @@ export function ImportPage(props: ImportPageProps) {
         <MappingStep mapping={props.mapping} rows={props.rows} guessed={guessed} />
       ) : null}
       {phase === 'preview' || phase === 'committing' ? (
-        <PreviewStep rows={drafts} issues={issues} onlyProblems={props.onlyProblems} />
+        <PreviewStep
+          rows={drafts}
+          issues={issues}
+          onlyProblems={props.onlyProblems}
+          typeTree={props.typeTreePreview ? typeTree : undefined}
+        />
       ) : null}
       {phase === 'done' ? (
         <ImportDone imported={ready} skipped={skipped} file={props.file.name} />

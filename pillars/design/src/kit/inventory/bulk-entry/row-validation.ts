@@ -18,6 +18,8 @@ export interface BulkType {
   id: string;
   label: string;
   containment: boolean;
+  parentTypeId?: string | null;
+  pathLabel?: string;
 }
 
 /** What validation checks rows against. */
@@ -37,7 +39,9 @@ export function isBlank(draft: BulkDraft): boolean {
 function typeOf(draft: BulkDraft, context: BulkContext): BulkType | null | undefined {
   const label = draft.type.trim().toLowerCase();
   if (label === '') return null;
-  return context.types.find((type) => type.label.toLowerCase() === label);
+  return context.types.find(
+    (type) => type.label.toLowerCase() === label || type.pathLabel?.toLowerCase() === label
+  );
 }
 
 function quantityIssue(draft: BulkDraft, type: BulkType | null | undefined): string | null {

@@ -22,6 +22,7 @@ import {
   richTelevision,
   routerConflicted,
   sparseLadder,
+  subtypeItem,
   tapeInHand,
 } from '@/fixtures/inventory/item-states';
 import { recentPlacements } from '@/fixtures/inventory/recents';
@@ -130,6 +131,7 @@ function editsAndData(s: Maker): Record<string, ComponentType> {
     'more-menu': s(tv, { menuOpen: true }),
     'move-picker': s(tv, { pickerOpen: true }),
     'moved-undo': s(tv, { toast: { concept: 'move', message: 'Moved Television to Garage' } }),
+    'subtype-item': s(subtypeItem),
   };
 }
 

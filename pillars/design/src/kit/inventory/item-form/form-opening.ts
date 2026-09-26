@@ -17,6 +17,12 @@ export type FormOverlay =
   | { kind: 'place-picker' }
   | { kind: 'reference'; fieldId: string; query?: string };
 
+/** A chooser state the playground opens over the item form. */
+export interface TypePickerState {
+  open: boolean;
+  query?: string;
+}
+
 /** The item a save-and-new just created, for the confirmation line. */
 export interface JustCreated {
   name: string;
@@ -38,6 +44,7 @@ export interface ItemFormOpening {
   banner?: 'offline' | 'stale';
   justCreated?: JustCreated;
   overlay?: FormOverlay;
+  typePicker?: TypePickerState;
 }
 
 /** The published catalogue and the house the form works against. */

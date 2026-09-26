@@ -1,4 +1,5 @@
 import { coreInventory, coreItem, coreWorld } from '@/fixtures/inventory/core';
+import { browseInventory, browseWorld, typeOptions } from '@/fixtures/inventory/items-browse';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -17,6 +18,22 @@ const run = (patch: Partial<ItemsFilters>) =>
   applyFilters(coreInventory, coreWorld, { ...DEFAULT_FILTERS, ...patch }).map((item) => item.id);
 
 describe('applyFilters', () => {
+  it('includes descendant items when a parent type is selected', () => {
+    const rows = applyFilters(
+      browseInventory,
+      browseWorld,
+      { ...DEFAULT_FILTERS, typeId: 'type-bedding' },
+      typeOptions.map((type) => ({
+        id: type.value,
+        label: type.label,
+        parentTypeId: type.parentTypeId,
+      }))
+    );
+    expect(rows.map((row) => row.id)).toEqual(
+      expect.arrayContaining(['tree-sheet-1', 'tree-quilt-cover-1'])
+    );
+    expect(rows.some((row) => row.typeId === 'type-pillows-cushions')).toBe(false);
+  });
   it('hides inactive items unless asked', () => {
     expect(run({})).not.toContain('itm-speaker');
     expect(run({})).not.toContain('itm-phone');

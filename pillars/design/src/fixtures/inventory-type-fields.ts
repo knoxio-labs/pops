@@ -140,6 +140,59 @@ export const electronicsFields: readonly CatalogueFieldSummary[] = [
   }),
 ];
 
+const beddingBaseFields: readonly CatalogueFieldSummary[] = [
+  field(['destination', 'Destination', 'Where this item is usually stored.', 'reference'], {
+    reference: { kinds: ['location'], typeIds: [] },
+  }),
+  field(['material', 'Material', 'The primary material or filling.', 'enum'], {
+    cardinality: 'many',
+  }),
+  field(['colour', 'Colour', 'The visible colours.', 'enum'], { cardinality: 'many' }),
+  field(['pattern', 'Pattern', 'The visible pattern or finish.', 'short_text']),
+  field(['weather', 'Weather', 'The weather range this item suits.', 'enum']),
+  field(['bed_size', 'Bed size', 'The bed size this item fits.', 'enum']),
+];
+
+const catalogueFieldsByType: Readonly<Record<string, readonly CatalogueFieldSummary[]>> = {
+  'type-electronics': electronicsFields,
+  'type-bedding': beddingBaseFields,
+  'type-sheet': [field(['fitted', 'Fitted', 'Whether the sheet has elastic corners.', 'boolean'])],
+  'type-quilt': [field(['fill', 'Fill', 'The quilt filling.', 'short_text'])],
+  'type-quilt-cover': [field(['closure', 'Closure', 'How the cover closes.', 'enum'])],
+  'type-blanket': [
+    field(['weight', 'Weight', 'The blanket weight.', 'measurement'], {
+      unit: { symbol: 'kg', dimension: 'mass' },
+    }),
+    field(['waterproof', 'Waterproof', 'Whether the blanket repels water.', 'boolean']),
+    field(['decorative', 'Decorative', 'Whether the blanket is primarily decorative.', 'boolean']),
+  ],
+  'type-mattress-protector': [
+    field(['waterproof', 'Waterproof', 'Whether the protector repels water.', 'boolean']),
+  ],
+  'type-pillows-cushions': [],
+  'type-pillows': [field(['pillow_size', 'Pillow size', 'The pillow size.', 'enum'])],
+  'type-pillow': [field(['fill', 'Fill', 'The pillow filling.', 'short_text'])],
+  'type-pillowcase': [field(['closure', 'Closure', 'How the pillowcase closes.', 'enum'])],
+  'type-pillow-protector': [
+    field(['waterproof', 'Waterproof', 'Whether the protector repels water.', 'boolean']),
+  ],
+  'type-cushions': [
+    field(['width_cm', 'Width cm', 'The cushion width.', 'measurement'], {
+      unit: { symbol: 'cm', dimension: 'length' },
+    }),
+    field(['length_cm', 'Length cm', 'The cushion length.', 'measurement'], {
+      unit: { symbol: 'cm', dimension: 'length' },
+    }),
+  ],
+  'type-cushion': [field(['fill', 'Fill', 'The cushion filling.', 'short_text'])],
+  'type-cushion-cover': [field(['closure', 'Closure', 'How the cushion cover closes.', 'enum'])],
+};
+
+/** Returns the fields defined directly on a catalogue type. */
+export function catalogueFieldsForType(typeId: string): readonly CatalogueFieldSummary[] {
+  return catalogueFieldsByType[typeId] ?? electronicsFields;
+}
+
 /** Looks up a fictional Electronics field by key, failing loudly on a typo in a state. */
 export function electronicsField(key: string): CatalogueFieldSummary {
   const found = electronicsFields.find((candidate) => candidate.key === key);
