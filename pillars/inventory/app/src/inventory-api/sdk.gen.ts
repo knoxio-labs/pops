@@ -225,6 +225,9 @@ import type {
   WebChangesHeadData,
   WebChangesHeadErrors,
   WebChangesHeadResponses,
+  WebConnectionsListData,
+  WebConnectionsListErrors,
+  WebConnectionsListResponses,
   WebEventsListData,
   WebEventsListErrors,
   WebEventsListResponses,
@@ -1370,6 +1373,18 @@ export const webChangesHead = <ThrowOnError extends boolean = false>(
     url: '/web/changes/head',
     ...options,
   });
+
+/**
+ * List resolved inventory item and fixture connections
+ */
+export const webConnectionsList = <ThrowOnError extends boolean = false>(
+  options: Options<WebConnectionsListData, ThrowOnError>
+): RequestResult<WebConnectionsListResponses, WebConnectionsListErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    WebConnectionsListResponses,
+    WebConnectionsListErrors,
+    ThrowOnError
+  >({ url: '/web/connections', ...options });
 
 /**
  * List the inventory activity and item-history events

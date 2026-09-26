@@ -6442,6 +6442,78 @@ export type WebChangesHeadResponses = {
 
 export type WebChangesHeadResponse = WebChangesHeadResponses[keyof WebChangesHeadResponses];
 
+export type WebConnectionsListData = {
+  body?: never;
+  path?: never;
+  query: {
+    kind: 'all' | 'item' | 'fixture';
+    q?: string;
+    cursor?: string;
+    limit: number;
+  };
+  url: '/web/connections';
+};
+
+export type WebConnectionsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebConnectionsListError = WebConnectionsListErrors[keyof WebConnectionsListErrors];
+
+export type WebConnectionsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    nextCursor: string | null;
+    rows: Array<{
+      createdAt: string;
+      far:
+        | {
+            code: string | null;
+            id: string;
+            isContainer: boolean;
+            kind: 'item';
+            lifecycle: string;
+            name: string;
+            typeKey: string | null;
+          }
+        | {
+            id: string;
+            kind: 'fixture';
+            locationId: string | null;
+            name: string;
+            type: string;
+          };
+      id: string;
+      item: {
+        code: string | null;
+        id: string;
+        isContainer: boolean;
+        kind: 'item';
+        lifecycle: string;
+        name: string;
+        typeKey: string | null;
+      };
+    }>;
+    summary: {
+      connections: number;
+      fixtures: number;
+      items: number;
+    };
+  };
+};
+
+export type WebConnectionsListResponse =
+  WebConnectionsListResponses[keyof WebConnectionsListResponses];
+
 export type WebEventsListData = {
   body?: never;
   path?: never;
