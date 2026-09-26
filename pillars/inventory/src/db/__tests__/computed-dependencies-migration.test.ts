@@ -106,6 +106,7 @@ function rewindToBeforeMigration(): void {
     DROP TABLE computed_dependency_index_state;
     DROP TABLE device_sync_ledgers;
     ALTER TABLE item_types DROP COLUMN replaced_by;
+    ALTER TABLE item_types DROP COLUMN parent_type_id;
     ALTER TABLE item_type_fields DROP COLUMN replaced_by;
     ALTER TABLE item_type_fields DROP COLUMN default_values_json;
   `);
