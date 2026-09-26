@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import SwiftUI
 import Testing
 
@@ -56,18 +57,13 @@ internal struct InventoryFormTypeOptionsTests {
                 == ["Pillowcase"])
     }
 
-    @Test("Choose Pillows sets typeId to Pillows")
-    @MainActor
-    func chooseParentSetsTypeId() {
-        var typeId: String?
-        var navigationPath = NavigationPath()
-        let selection = Binding<String?>(get: { typeId }, set: { typeId = $0 })
+    @Test("the pushed type picker uses its caller's navigation stack")
+    func typePickerLeavesNavigationOwnershipWithCaller() throws {
+        let source = try pickerSource()
 
-        InventoryFormTypePicker.choose(
-            "pillows", selection: selection, navigationPath: &navigationPath)
-
-        #expect(typeId == "pillows")
-        #expect(navigationPath.isEmpty)
+        #expect(source.contains(".navigationDestination(for: String.self)"))
+        #expect(!source.contains("NavigationStack"))
+        #expect(!source.contains("NavigationPath"))
     }
 
     @Test("search \"pillowcase\" returns its path")
@@ -115,5 +111,15 @@ internal struct InventoryFormTypeOptionsTests {
                     "inventory-item-type-option-charger",
                     "inventory-item-type-option-storage_box",
                 ])
+    }
+
+    private func pickerSource() throws -> String {
+        let packageRoot = URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let file = packageRoot.appending(
+            path: "Sources/FeatureInventory/Form/InventoryFormTypePicker.swift")
+        return try String(contentsOf: file, encoding: .utf8)
     }
 }
