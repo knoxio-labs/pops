@@ -10,6 +10,40 @@
  */
 export { codeFitsOneLine, fitCodePt } from './code-fit.js';
 export {
+  autoParts,
+  DEFAULT_LABEL_CONTENT,
+  describeContent,
+  fieldChoices,
+  LABEL_PARTS,
+  LABEL_PRESETS,
+  matchingPreset,
+  NO_DETAILS,
+  presetById,
+  resolveLabel,
+  tickedParts,
+  toggleField,
+  togglePart,
+  type LabelContent,
+  type LabelDetails,
+  type LabelFieldChoice,
+  type LabelFieldValue,
+  type LabelPart,
+  type LabelPreset,
+  type LabelPresetId,
+  type ResolvedLabel,
+} from './label-content.js';
+export {
+  estimateLines,
+  fillQrMm,
+  fitList,
+  fitNamePt,
+  fitToSheet,
+  planLabel,
+  type FittedList,
+  type LabelArrangement,
+  type LabelPlan,
+} from './label-layout.js';
+export {
   DEFAULT_COPIES,
   itemUri,
   resolveTemplate,
