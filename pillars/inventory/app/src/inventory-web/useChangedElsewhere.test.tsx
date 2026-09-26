@@ -171,6 +171,36 @@ describe('useChangedElsewhere', () => {
     expect(result.current.stale).toBe(false);
   });
 
+  it('continues polling after reload establishes a new baseline', async () => {
+    mocks.webChangesHead
+      .mockResolvedValueOnce(ok(head(10)))
+      .mockResolvedValueOnce(ok(head(11, [group()])))
+      .mockResolvedValueOnce(ok(head(20)))
+      .mockResolvedValueOnce(ok(head(21, [group(2)])));
+    const { result } = renderHook(
+      () => useChangedElsewhere({ queryKeys: [['inventory', 'web', 'items']] }),
+      { wrapper: withQueryClient(createTestQueryClient()) }
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(CHANGES_POLL_MS);
+    });
+    await flushPromises();
+    expect(result.current.stale).toBe(true);
+
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.groups).toEqual([]);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(CHANGES_POLL_MS);
+    });
+    await flushPromises();
+    expect(result.current.groups).toEqual([group(2)]);
+    expect(mocks.webChangesHead).toHaveBeenLastCalledWith({ query: { since: 20 } });
+  });
+
   it('waits for enabled before reading a baseline and passes entityId', async () => {
     const client = createTestQueryClient();
     const { result, rerender } = renderHook(

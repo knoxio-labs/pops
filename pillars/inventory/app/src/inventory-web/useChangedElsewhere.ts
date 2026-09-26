@@ -118,19 +118,20 @@ function useVisibilityPolling(
   }, []);
 
   useEffect(() => {
-    const currentGeneration = generation.current + 1;
-    generation.current = currentGeneration;
+    const initialGeneration = generation.current + 1;
+    generation.current = initialGeneration;
     baseline.current = null;
     let active = true;
 
-    const isCurrent = (): boolean =>
-      active && mounted.current && generation.current === currentGeneration;
+    const isCurrent = (expectedGeneration: number): boolean =>
+      active && mounted.current && generation.current === expectedGeneration;
     const poll = (): void => {
-      void pollChanges(readHead, baseline, isCurrent, setGroups);
+      const pollGeneration = generation.current;
+      void pollChanges(readHead, baseline, () => isCurrent(pollGeneration), setGroups);
     };
 
     void Promise.resolve().then(() => {
-      if (isCurrent()) setGroups([]);
+      if (isCurrent(initialGeneration)) setGroups([]);
     });
     if (!enabled) {
       return () => {
@@ -140,7 +141,7 @@ function useVisibilityPolling(
 
     void readHead()
       .then((head) => {
-        if (isCurrent()) baseline.current = head.headSeq;
+        if (isCurrent(initialGeneration)) baseline.current = head.headSeq;
       })
       .catch(() => undefined);
 
