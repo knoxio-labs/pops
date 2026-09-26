@@ -1,2 +1,2 @@
-/** Canonical inventory fixture population, builders, and catalogue types. */
+/** DEPRECATED: use the typed fixtures under ../test-fixtures for new model tests. */
 export * from './core';
