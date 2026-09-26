@@ -56,7 +56,10 @@ export const inventoryDocumentsContract = c.router({
       offset: z.coerce.number().nonnegative().optional(),
     }),
     responses: {
-      200: z.object({ data: z.array(ItemDocumentSchema), pagination: PaginationMetaSchema }),
+      200: z.object({
+        data: z.array(ItemDocumentSchema.extend({ missing: z.boolean().nullable() })),
+        pagination: PaginationMetaSchema,
+      }),
     },
     summary: 'List documents linked to an item',
   },

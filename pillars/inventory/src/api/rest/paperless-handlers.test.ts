@@ -18,6 +18,7 @@ function stubClient(overrides: Partial<DocumentsClient> = {}): DocumentsClient {
   return {
     getPaperlessStatus: vi.fn(async () => ({ configured: false, available: false, baseUrl: null })),
     searchPaperlessDocuments: vi.fn(async () => null),
+    paperlessDocumentMissing: vi.fn(async () => null),
     ...overrides,
   };
 }

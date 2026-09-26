@@ -605,6 +605,7 @@ describe('ItemDetailPage', () => {
               documentType: 'receipt',
               title: 'MacBook Receipt',
               createdAt: '2026-01-15T00:00:00Z',
+              missing: false,
             },
           ])
         )
@@ -638,6 +639,7 @@ describe('ItemDetailPage', () => {
               documentType: 'receipt',
               title: 'Receipt',
               createdAt: '2026-01-15T00:00:00Z',
+              missing: false,
             },
           ])
         )

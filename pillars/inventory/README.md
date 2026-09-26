@@ -47,7 +47,9 @@ Two supported call paths:
    `openapi/inventory.openapi.json` and call HTTP directly.
 
 OpenAPI is the canonical wire contract; the TS types are a downstream view for
-ergonomics.
+ergonomics. `GET /items/:itemId/documents` adds a nullable `missing` flag to
+each link: `true` means Paperless returned 404, `false` means it resolved, and
+`null` means the documents bridge could not establish the state.
 
 ## Layout
 

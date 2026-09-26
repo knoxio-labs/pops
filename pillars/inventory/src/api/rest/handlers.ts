@@ -70,7 +70,7 @@ export function makeInventoryRestHandlers(deps: {
     connections: makeConnectionsHandlers(db),
     fixtures: makeFixturesHandlers(db),
     photos: makePhotosHandlers(db),
-    documents: makeDocumentsHandlers(db),
+    documents: makeDocumentsHandlers(db, documents),
     documentFiles: makeDocumentFilesHandlers(db),
     reports: makeReportsHandlers(db),
     paperless: makePaperlessHandlers(documents),

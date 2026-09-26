@@ -46,6 +46,7 @@ export type DocumentsRouter = {
   paperless: {
     status: () => Promise<{ data: PaperlessStatus }>;
     search: (input: { query: string }) => Promise<{ data: PaperlessSearchDocument[] }>;
+    get: (input: { id: number }) => Promise<{ data: PaperlessSearchDocument }>;
   };
 };
 
@@ -66,6 +67,12 @@ export interface DocumentsClient {
    * 412 the pre-move embedded-client path returned for "not configured".
    */
   searchPaperlessDocuments(query: string): Promise<PaperlessSearchDocument[] | null>;
+  /**
+   * Whether a linked Paperless document still exists. Returns `false` for a
+   * successful resolve, `true` for a producer 404 and `null` when the
+   * documents pillar cannot establish either result.
+   */
+  paperlessDocumentMissing(id: number): Promise<boolean | null>;
 }
 
 function warnDegraded(operation: string, result: CallResult<unknown>): void {
@@ -101,6 +108,14 @@ export function createDocumentsClient(
         return null;
       }
       return result.value.data;
+    },
+
+    async paperlessDocumentMissing(id: number): Promise<boolean | null> {
+      const result = await handleFactory().paperless.get({ id });
+      if (isOk(result)) return false;
+      if (result.kind === 'not-found') return true;
+      warnDegraded('paperless.get', result);
+      return null;
     },
   };
 }
