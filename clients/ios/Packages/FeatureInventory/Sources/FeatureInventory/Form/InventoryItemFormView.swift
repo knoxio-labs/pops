@@ -42,6 +42,7 @@ internal struct InventoryItemFormView: View {
         .tint(.popsInventory)
         .interactiveDismissDisabled(model.hasStagedWork)
         .task(id: generation) { await model.load() }
+        .onDisappear { model.cancelScanPrefill() }
         .inventoryPhotoPickerSheet(source: $pickingPhoto) { data in
             if let sha256 = retakingSha256 {
                 retakingSha256 = nil
@@ -91,22 +92,31 @@ internal struct InventoryItemFormView: View {
     private var form: some View {
         Form {
             Section {
-                InventoryPhotoStrip(
-                    photos: model.draft.photos,
-                    capture: { pickingPhoto = $0 },
-                    retry: { sha256 in Task { await model.retryUpload(sha256: sha256) } },
-                    remove: { sha256 in Task { await model.removePhoto(sha256: sha256) } },
-                    retake: { sha256, source in
-                        retakingSha256 = sha256
-                        pickingPhoto = source
-                    },
-                    reorder: { sha256, direction in
-                        Task { await model.movePhoto(sha256, direction) }
-                    },
-                    thumbnail: { await model.thumbnail($0) }
-                )
+                HStack(spacing: PopsSpacing.sm) {
+                    InventoryPhotoStrip(
+                        photos: model.draft.photos,
+                        capture: { pickingPhoto = $0 },
+                        retry: { sha256 in Task { await model.retryUpload(sha256: sha256) } },
+                        remove: { sha256 in Task { await model.removePhoto(sha256: sha256) } },
+                        retake: { sha256, source in
+                            retakingSha256 = sha256
+                            pickingPhoto = source
+                        },
+                        reorder: { sha256, direction in
+                            Task { await model.movePhoto(sha256, direction) }
+                        },
+                        thumbnail: { await model.thumbnail($0) }
+                    )
+                    .background(
+                        Color.popsBackground, in: RoundedRectangle(cornerRadius: PopsRadius.card))
+                    if model.showsScanButton {
+                        InventoryItemScanButton(model: model)
+                            .transition(.opacity.combined(with: .scale))
+                    }
+                }
+                .popsMotion(value: model.showsScanButton)
                 .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.popsBackground)
+                .listRowBackground(EmptyView())
             }
             typeSection
             identity

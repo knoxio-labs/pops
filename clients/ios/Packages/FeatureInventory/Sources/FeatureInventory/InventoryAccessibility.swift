@@ -10,6 +10,7 @@ internal enum InventoryAccessibility {
     /// "Name".
     internal static let itemNameField = "inventory-item-name-field"
     internal static let useFreeCode = "inventory-item-use-free-code"
+    internal static let itemScan = "inventory-item-scan"
 
     /// The item form's Type picker. Its label reads "Type, <current type>",
     /// which changes with every choice, so a driver addresses it by this.

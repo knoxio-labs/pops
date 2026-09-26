@@ -6,25 +6,32 @@ extension View {
     /// `inventoryItemForm` in the environment so any screen below can open
     /// it with an `InventoryItemFormRequest`.
     internal func inventoryItemFormPresentation(
-        store: any InventoryStore, suggester: InventoryCodeSuggester = .unbound
+        store: any InventoryStore, suggester: InventoryCodeSuggester = .unbound,
+        scan: InventoryScanPrefill? = nil
     ) -> some View {
-        modifier(InventoryItemFormPresentation(store: store, suggester: suggester))
+        modifier(InventoryItemFormPresentation(store: store, suggester: suggester, scan: scan))
     }
 }
 
 private struct InventoryItemFormPresentation: ViewModifier {
     let store: any InventoryStore
     let suggester: InventoryCodeSuggester
+    let scan: InventoryScanPrefill?
     @State private var request: InventoryItemFormRequest?
     @Environment(\.inventoryPlacementPicker) private var picker
+    @Environment(\.inventoryScanPrefill) private var inheritedScan
 
     func body(content: Content) -> some View {
+        let resolvedScan = scan ?? inheritedScan ?? .unbound
         content
             .environment(\.inventoryItemForm, InventoryItemFormPresenter { request = $0 })
+            .environment(\.inventoryScanPrefill, resolvedScan)
             .sheet(item: $request) { request in
-                InventoryItemFormSheet(request: request, store: store, suggester: suggester)
-                    .environment(\.inventoryPlacementPicker, picker)
-                    .presentationDetents([.large])
+                InventoryItemFormSheet(
+                    request: request, store: store, suggester: suggester, scan: resolvedScan
+                )
+                .environment(\.inventoryPlacementPicker, picker)
+                .presentationDetents([.large])
             }
     }
 }
@@ -36,11 +43,11 @@ private struct InventoryItemFormSheet: View {
 
     init(
         request: InventoryItemFormRequest, store: any InventoryStore,
-        suggester: InventoryCodeSuggester
+        suggester: InventoryCodeSuggester, scan: InventoryScanPrefill
     ) {
         _model = State(
             wrappedValue: InventoryItemFormModel(
-                request: request, store: store, suggester: suggester))
+                request: request, store: store, suggester: suggester, scan: scan))
     }
 
     var body: some View {
