@@ -552,9 +552,8 @@ that exist:
   fixture is, who calls it, and what it deliberately does not do.
 - [`src/api/modules/reports/`](src/api/modules/reports/README.md) — the
   read-only report surface and the warranty window it does not own.
-- [`app/src/pages/items-page/`](app/src/pages/items-page/README.md),
   [`app/src/pages/item-detail/`](app/src/pages/item-detail/README.md),
-  [`item-form-page/`](app/src/pages/item-form-page/README.md),
+  [`app/src/pages/item-form/`](app/src/pages/item-form/README.md),
   [`location-tree-page/`](app/src/pages/location-tree-page/README.md).
 
 Everything else is documented by the file header comments in the directory

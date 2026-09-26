@@ -14,7 +14,7 @@ import { makeClient } from './test-utils.js';
 import type { Express } from 'express';
 import type { z } from 'zod';
 
-type SearchQuery = Record<string, string | number>;
+type SearchQuery = Record<string, string | number | undefined>;
 type SearchResponse = z.infer<typeof WebSearchResponseSchema>;
 
 let tmpDir: string;
@@ -103,6 +103,18 @@ describe('GET /web/search', () => {
     expect(page.total).toBe(2);
   });
 
+  it('does not return an inactive exact code hit when activeOnly is true', async () => {
+    const retired = await client().items.create({
+      itemName: 'Retired exact',
+      assetId: 'RETIRED-001',
+    });
+    setLifecycle(retired.data.id, 'retired');
+
+    const page = await search({ q: 'retired-001', activeOnly: 'true' });
+
+    expect(page).toEqual({ exact: null, items: [], places: [], nextCursor: null, total: 0 });
+  });
+
   it('ranks names before other fields and reports the explaining field', async () => {
     const namePrefix = await client().items.create({ itemName: 'Able adapter' });
     const wordPrefix = await client().items.create({ itemName: 'Red able adapter' });
@@ -153,6 +165,19 @@ describe('GET /web/search', () => {
     );
   });
 
+  it('keeps active prefix hits ahead of inactive prefix hits', async () => {
+    const inactiveNamePrefix = await client().items.create({ itemName: 'Alpha retired' });
+    setLifecycle(inactiveNamePrefix.data.id, 'retired');
+    const activeWordPrefix = await client().items.create({ itemName: 'Shelf alpha' });
+
+    const page = await search({ q: 'alpha' });
+
+    expect(page.items.map((hit) => hit.item.id)).toEqual([
+      activeWordPrefix.data.id,
+      inactiveNamePrefix.data.id,
+    ]);
+  });
+
   it('orders active rows before inactive rows and supports activeOnly', async () => {
     const activeAlpha = await client().items.create({ itemName: 'Sorted alpha' });
     const activeZulu = await client().items.create({ itemName: 'Sorted zulu' });
@@ -171,8 +196,9 @@ describe('GET /web/search', () => {
       activeAlpha.data.id,
       activeZulu.data.id,
     ]);
-    await expectBadQuery({ q: 'sorted', activeOnly: 'yes' });
-    await expectBadQuery({ q: 'sorted', activeOnly: 'TRUE' });
+    for (const activeOnly of ['1', 'yes', '']) {
+      await expectBadQuery({ q: 'sorted', activeOnly });
+    }
   });
 
   it('applies type and within filters to exact and ranked item matches', async () => {
@@ -241,20 +267,50 @@ describe('GET /web/search', () => {
     const page = await search({ q: 'ABLE', limit: 50 });
 
     expect(page.places).toEqual([
-      { location: { id: prefixPlace.data.id }, tier: 'prefix' },
-      { location: { id: containsPlace.data.id }, tier: 'contains' },
+      {
+        location: {
+          id: prefixPlace.data.id,
+          revision: expect.any(Number),
+          seq: expect.any(Number),
+          name: 'Able room',
+          parentId: null,
+          sortOrder: expect.any(Number),
+          deletedAt: null,
+        },
+        tier: 'prefix',
+      },
+      {
+        location: {
+          id: containsPlace.data.id,
+          revision: expect.any(Number),
+          seq: expect.any(Number),
+          name: 'Table room',
+          parentId: null,
+          sortOrder: expect.any(Number),
+          deletedAt: null,
+        },
+        tier: 'contains',
+      },
     ]);
     expect(page.places.map((hit) => hit.location.id)).not.toContain(deletedPlace.data.id);
     expect(page.items.map((hit) => hit.item.id)).toContain(liveItem.data.id);
     expect(page.items.map((hit) => hit.item.id)).not.toContain(deletedItem.data.id);
     expect(page.items.find((hit) => hit.item.id === liveItem.data.id)?.field).toBe('place');
     expect((await search({ q: 'able', typeKey: 'cable' })).places).toEqual([]);
+    expect((await search({ q: 'able', within: containsPlace.data.id })).places).toEqual(
+      page.places
+    );
   });
 
   it('returns empty results for a query with no matches', async () => {
-    const page = await search({ q: 'does-not-exist' });
-
-    expect(page).toEqual({ exact: null, items: [], places: [], nextCursor: null, total: 0 });
+    for (const query of [
+      { q: 'does-not-exist' },
+      { q: 'does-not-exist', typeKey: 'unknown-type' },
+      { q: 'does-not-exist', within: 'unknown-location' },
+    ]) {
+      const page = await search(query);
+      expect(page).toEqual({ exact: null, items: [], places: [], nextCursor: null, total: 0 });
+    }
   });
 
   it('pages by keyset without repeats, keeps totals stable, and rejects foreign cursors', async () => {
@@ -267,7 +323,7 @@ describe('GET /web/search', () => {
     const place = await client().locations.create({ name: 'Cursor place' });
 
     const first = await search({ q: 'cursor', limit: 2 });
-    expect(first.total).toBe(6);
+    expect(first.total).toBe(7);
     expect(first.exact?.id).toBe(exact.data.id);
     expect(first.places.map((hit) => hit.location.id)).toContain(place.data.id);
     expect(first.nextCursor).not.toBeNull();
@@ -279,7 +335,7 @@ describe('GET /web/search', () => {
       lastPage = await search({ q: 'cursor', limit: 2, cursor });
       expect(lastPage.exact).toBeNull();
       expect(lastPage.places).toEqual([]);
-      expect(lastPage.total).toBe(6);
+      expect(lastPage.total).toBe(7);
       seen.push(...lastPage.items.map((hit) => hit.item.id));
       cursor = lastPage.nextCursor;
     }

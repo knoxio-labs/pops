@@ -17,6 +17,7 @@ import { createTestTransport } from './test-http.js';
 import type { Express } from 'express';
 
 import type { LocationTreeNodeShape } from '../../contract/rest-locations.js';
+import type { WebItemContentCounts } from '../../contract/rest-web.js';
 import type { InventoryItem } from '../modules/items/types.js';
 import type { Location } from '../modules/locations/types.js';
 import type { SyncEvent } from '../sync/events.js';
@@ -131,7 +132,11 @@ export function makeClient(app: Express) {
     },
     web: {
       listItems: (query: Record<string, unknown> = {}) =>
-        send<{ items: SyncItem[]; nextCursor: string | null }>(r.get('/web/items').query(query)),
+        send<{
+          items: SyncItem[];
+          contentCounts: WebItemContentCounts;
+          nextCursor: string | null;
+        }>(r.get('/web/items').query(query)),
       getItem: (id: string, query: Record<string, unknown> = {}) =>
         send<{ item: SyncItem; history: { events: SyncEvent[]; nextCursor: string | null } }>(
           r.get(`/web/items/${id}`).query(query)

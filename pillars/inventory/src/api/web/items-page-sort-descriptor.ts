@@ -132,3 +132,31 @@ export function sortDescriptor(sort: WebItemsSort): SortDescriptor {
       return packingDescriptor();
   }
 }
+
+/** Create the SQL order and key metadata for a ranked web item search. */
+export function rankedDescriptor(
+  sort: WebItemsSort | undefined,
+  rank: SQL<number>
+): SortDescriptor {
+  const rankKey: SortKeySpec = {
+    expression: rank,
+    direction: 'desc',
+    nullsLast: false,
+    caseInsensitive: false,
+  };
+  if (sort === undefined) {
+    const name = sql`${items.name} COLLATE NOCASE`;
+    return {
+      orderBy: [sql`${rank} DESC`, asc(name), asc(items.id)],
+      keys: [
+        rankKey,
+        { expression: items.name, direction: 'asc', nullsLast: false, caseInsensitive: true },
+      ],
+    };
+  }
+  const descriptor = sortDescriptor(sort);
+  return {
+    orderBy: [sql`${rank} DESC`, ...descriptor.orderBy],
+    keys: [rankKey, ...descriptor.keys],
+  };
+}

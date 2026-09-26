@@ -9491,6 +9491,12 @@ export interface operations {
         };
         content: {
           'application/json': {
+            contentCounts: {
+              [key: string]: {
+                deep: number;
+                direct: number;
+              };
+            };
             hiddenInactiveCount: number;
             items: {
               /** @enum {string|null} */
@@ -10182,11 +10188,11 @@ export interface operations {
     parameters: {
       query: {
         q: string;
-        cursor?: string;
-        limit: number;
-        activeOnly?: 'true' | 'false';
         typeKey?: string;
         within?: string;
+        activeOnly?: 'true' | 'false';
+        limit: number;
+        cursor?: string;
       };
       header?: never;
       path?: never;
@@ -10500,7 +10506,13 @@ export interface operations {
             nextCursor: string | null;
             places: {
               location: {
+                deletedAt: string | null;
                 id: string;
+                name: string;
+                parentId: string | null;
+                revision: number;
+                seq: number;
+                sortOrder: number;
               };
               /** @enum {string} */
               tier: 'prefix' | 'contains';

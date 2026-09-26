@@ -310,7 +310,7 @@ describe('ValueByTypeCard', () => {
     renderWithProviders(<ValueByTypeCard />);
     fireEvent.click(await screen.findByTestId('bar'));
     await waitFor(() =>
-      expect(mockNavigate).toHaveBeenCalledWith('/inventory/items?type=Electronics')
+      expect(mockNavigate).toHaveBeenCalledWith('/inventory/items?q=Electronics')
     );
   });
 });
@@ -367,7 +367,7 @@ describe('ValueByLocationCard', () => {
     renderWithProviders(<ValueByLocationCard />);
     fireEvent.click(await screen.findByTestId('bar'));
     await waitFor(() =>
-      expect(mockNavigate).toHaveBeenCalledWith('/inventory/items?locationId=loc-1')
+      expect(mockNavigate).toHaveBeenCalledWith('/inventory/items?placement=loc-1')
     );
   });
 });

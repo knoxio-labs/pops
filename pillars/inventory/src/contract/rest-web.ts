@@ -68,8 +68,24 @@ export const WebItemsQuerySchema = z.object({
   sort: z.enum(WEB_ITEMS_SORTS).optional(),
 });
 
+/** Direct and recursive live content counts for one returned container. */
+export const WebItemContentCountSchema = z.object({
+  direct: z.number().int().nonnegative(),
+  deep: z.number().int().nonnegative(),
+});
+
+/** Content counts keyed by the returned container item id. */
+export const WebItemContentCountsSchema = z.record(z.string(), WebItemContentCountSchema);
+
+/** The direct and recursive live row counts for one container. */
+export type WebItemContentCount = z.infer<typeof WebItemContentCountSchema>;
+
+/** Direct and recursive live row counts keyed by returned container id. */
+export type WebItemContentCounts = z.infer<typeof WebItemContentCountsSchema>;
+
 export const WebItemsResponseSchema = z.object({
   items: z.array(SyncItemSchema),
+  contentCounts: WebItemContentCountsSchema,
   nextCursor: z.string().nullable(),
   total: z.number().int().nonnegative(),
   unfilteredTotal: z.number().int().nonnegative(),

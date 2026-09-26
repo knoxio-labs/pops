@@ -8,6 +8,7 @@ import { collectDescendantIds, useLocationItems } from './location-contents-pane
 
 import type { InventoryItem, LocationTreeNode } from './location-contents-panel-data';
 
+/** Inputs for the location contents summary and its item-form destination. */
 export interface LocationContentsPanelProps {
   locationId: string;
   locationName: string;
@@ -54,8 +55,8 @@ function ItemsBody({
   if (isLoading) {
     return (
       <div className="space-y-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
+        {['one', 'two', 'three', 'four'].map((key) => (
+          <Skeleton key={key} className="h-10 w-full" />
         ))}
       </div>
     );
@@ -89,6 +90,7 @@ function PanelSummary({
   );
 }
 
+/** Shows the items in one location and opens the item form at that location. */
 export function LocationContentsPanel({
   locationId,
   locationName,
@@ -131,9 +133,7 @@ export function LocationContentsPanel({
           variant="outline"
           size="sm"
           className="w-full"
-          onClick={() =>
-            navigate(`/inventory/items/new?locationId=${encodeURIComponent(locationId)}`)
-          }
+          onClick={() => navigate(`/inventory/items/new?in=${encodeURIComponent(locationId)}`)}
         >
           <Plus className="h-4 w-4 mr-1.5" />
           Add Item Here

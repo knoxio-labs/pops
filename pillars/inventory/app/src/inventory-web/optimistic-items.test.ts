@@ -58,6 +58,7 @@ function item(id: string, overrides: Partial<WebItem> = {}): WebItem {
 
 function listPage(items: readonly WebItem[]): WebListPage {
   return {
+    contentCounts: {},
     hiddenInactiveCount: 0,
     items: [...items],
     nextCursor: null,

@@ -71,6 +71,7 @@ export function makeWebHandlers({ db, documents }: WebHandlerDeps) {
           status: 200 as const,
           body: {
             items: await projectItems({ items: page.rows, extras }, documents),
+            contentCounts: page.contentCounts,
             nextCursor: page.nextCursor,
             total: page.total,
             unfilteredTotal: page.unfilteredTotal,

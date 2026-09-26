@@ -10,9 +10,9 @@ import { WEB_ITEMS_SORTS } from '../../contract/rest-web.js';
 import { items, type ItemRow } from '../../db/index.js';
 import { ValidationError } from '../shared/errors.js';
 import { decodeCursor, encodeCursor } from '../sync/cursor.js';
+import { hiddenInactiveCount, readWebItemContentCounts } from './items-page-counts.js';
 import {
   countRows,
-  hiddenInactiveConditions,
   matchConditions,
   textSearchFor,
   unfilteredConditions,
@@ -23,21 +23,22 @@ import {
   nextCursorFor,
   sortedCursorAfter,
 } from './items-page-sort-cursor.js';
-import { sortDescriptor } from './items-page-sort-descriptor.js';
+import { rankedDescriptor, sortDescriptor } from './items-page-sort-descriptor.js';
 
 import type { SQL } from 'drizzle-orm';
 
-import type { WebItemsSort } from '../../contract/rest-web.js';
+import type { WebItemContentCounts, WebItemsSort } from '../../contract/rest-web.js';
 import type { CommandDb } from '../../domain/commands/index.js';
 import type { WebItemsFilter } from './items-page-filters.js';
 import type { CursorValue } from './items-page-sort-cursor.js';
-import type { SortDescriptor, SortKeySpec } from './items-page-sort-descriptor.js';
+import type { SortDescriptor } from './items-page-sort-descriptor.js';
 
 export type { WebItemsFilter } from './items-page-filters.js';
 
 /** One page of `GET /web/items`, including counts for the current view. */
 export interface WebItemsPage {
   readonly rows: ItemRow[];
+  readonly contentCounts: WebItemContentCounts;
   readonly nextCursor: string | null;
   readonly total: number;
   readonly unfilteredTotal: number;
@@ -95,37 +96,6 @@ function textCursorFor(
   }
 }
 
-function rankedDescriptor(sort: WebItemsSort | undefined, rank: SQL<number>): SortDescriptor {
-  const rankKey: SortKeySpec = {
-    expression: rank,
-    direction: 'desc',
-    nullsLast: false,
-    caseInsensitive: false,
-  };
-  if (sort === undefined) {
-    const name = sql`${items.name} COLLATE NOCASE`;
-    return {
-      orderBy: [sql`${rank} DESC`, asc(name), asc(items.id)],
-      keys: [
-        rankKey,
-        { expression: items.name, direction: 'asc', nullsLast: false, caseInsensitive: true },
-      ],
-    };
-  }
-  const descriptor = sortDescriptor(sort);
-  return {
-    orderBy: [sql`${rank} DESC`, ...descriptor.orderBy],
-    keys: [rankKey, ...descriptor.keys],
-  };
-}
-
-function textCursorCondition(
-  cursor: WebItemsTextCursor | null,
-  descriptor: SortDescriptor
-): SQL | undefined {
-  return cursor === null ? undefined : sortedCursorAfter(descriptor, cursor.key, cursor.after);
-}
-
 function textTierForRow(db: CommandDb, rank: SQL<number>, id: string): number {
   const tier = db
     .select({ tier: rank })
@@ -165,18 +135,6 @@ function nextTextCursorFor(
   });
 }
 
-function hiddenInactiveCount(
-  db: CommandDb,
-  filter: WebItemsFilter,
-  total: number,
-  textMatch: SQL | undefined
-): number {
-  if (filter.lifecycle !== undefined || filter.includeInactive === true) return 0;
-  const conditions = hiddenInactiveConditions(db, filter);
-  if (textMatch !== undefined) conditions.push(textMatch);
-  return Math.max(0, countRows(db, conditions) - total);
-}
-
 /**
  * Read one page of live items matching `filter`, ordered by the requested
  * sort, in the caller's (read) transaction. Counts ignore the cursor.
@@ -198,7 +156,11 @@ export function readWebItemsPage(
     after = cursorCondition(cursorFor(request.cursor, request.sort), descriptor);
   } else {
     descriptor = rankedDescriptor(request.sort, textSearch.rank);
-    after = textCursorCondition(textCursorFor(request.cursor, request.sort), descriptor);
+    const textCursor = textCursorFor(request.cursor, request.sort);
+    after =
+      textCursor === null
+        ? undefined
+        : sortedCursorAfter(descriptor, textCursor.key, textCursor.after);
   }
   const rows = db
     .select()
@@ -218,6 +180,7 @@ export function readWebItemsPage(
   }
   return {
     rows: page,
+    contentCounts: readWebItemContentCounts(db, page),
     nextCursor,
     total,
     unfilteredTotal,
