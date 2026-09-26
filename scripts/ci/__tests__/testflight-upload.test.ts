@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  assertSourceIdentity,
   bundleIdForScheme,
   isKnownDuplicateBuildResponse,
   verifyDuplicateBuild,
@@ -12,6 +15,19 @@ const duplicateResponse =
 const sourceCommit = '0123456789abcdef0123456789abcdef01234567';
 const marketingVersion = '2026.9.26';
 const buildNumber = '3492';
+const testflightScript = readFileSync(
+  resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    '..',
+    'clients',
+    'ios',
+    'scripts',
+    'testflight.sh'
+  ),
+  'utf8'
+);
 
 function response(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
@@ -145,13 +161,14 @@ describe('TestFlight duplicate upload verification', () => {
   );
 
   it('requires the build number to prove the full source commit identity', () => {
-    expect(() =>
-      assertSourceIdentity({
-        sourceCommit,
-        sourceCommitCount: '3491',
-        buildNumber,
-      })
-    ).toThrow('does not match build number');
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(appResponse(bundleIdForScheme('Pops'), 'pops-app'))
+      .mockResolvedValueOnce(uploadResponse({ uploadId: 'upload' }));
+
+    return expect(
+      verifyDuplicateBuild(input('Pops', request, { sourceCommitCount: '3491' }))
+    ).rejects.toThrow('does not match build number');
   });
 
   it('does not query Apple for a different export failure', async () => {
@@ -167,5 +184,10 @@ describe('TestFlight duplicate upload verification', () => {
     expect(isKnownDuplicateBuildResponse(duplicateResponse)).toBe(true);
     expect(isKnownDuplicateBuildResponse('Redundant Binary Upload')).toBe(false);
     expect(isKnownDuplicateBuildResponse('The bundle version is invalid')).toBe(false);
+  });
+
+  it('routes export failures through the guarded verifier', () => {
+    expect(testflightScript).toContain('testflight-upload.mjs');
+    expect(testflightScript).toContain('--export-log');
   });
 });
