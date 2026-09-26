@@ -9,11 +9,13 @@ internal enum Protocol2CatalogueRows {
         if let stored = try read(revision: catalogue.revision.revision, in: db) {
             let incoming = catalogue.inStoredOrder
             if stored == incoming { return false }
-            guard stored.withLineage(from: incoming) == incoming else {
+            guard stored.withLineage(from: incoming).withDefaults(from: incoming) == incoming
+            else {
                 throw InventoryReplicaError.corruptValue(
                     "catalogue revision \(catalogue.revision.revision) changed")
             }
             try CatalogueLineageRows.fill(stored, from: incoming, in: db)
+            try CatalogueFieldDefaultRows.fill(stored, from: incoming, in: db)
             return false
         }
         let revision = catalogue.revision
@@ -103,9 +105,9 @@ internal enum Protocol2CatalogueRows {
                 INSERT INTO catalogue_field
                     (revision, id, type_id, key, label, help, sort_order, kind, cardinality,
                      required, storage, fixed_unit, reference_kinds, reference_type_ids,
-                     expression_version, expression, allow_override, presentation, archived_at,
-                     replaced_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     expression_version, expression, allow_override, default_values,
+                     presentation, archived_at, replaced_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: [
                 revision, field.id, field.typeId, field.key, field.label, field.help,
@@ -114,8 +116,8 @@ internal enum Protocol2CatalogueRows {
                 try StoredJSON.encode(field.references.targetKinds.map(\.rawValue).sorted()),
                 try StoredJSON.encode(field.references.targetTypeIds.sorted()),
                 field.expressionVersion, try field.expression.map(StoredJSON.encode),
-                field.allowOverride, try StoredJSON.encode(field.presentation), field.archivedAt,
-                field.replacedBy,
+                field.allowOverride, try CatalogueFieldDefaultRows.encode(field.defaultValues),
+                try StoredJSON.encode(field.presentation), field.archivedAt, field.replacedBy,
             ])
         for option in field.enumOptions {
             try db.execute(

@@ -31,8 +31,8 @@ extension InventoryCatalogueField {
             id: id, typeId: typeId, key: key, label: label, help: help, sortOrder: sortOrder,
             kind: kind, cardinality: cardinality, required: required, storage: storage,
             fixedUnit: fixedUnit, references: references, expressionVersion: expressionVersion,
-            expression: expression, allowOverride: allowOverride, presentation: presentation,
-            archivedAt: archivedAt, replacedBy: replacedBy,
+            expression: expression, allowOverride: allowOverride, defaultValues: defaultValues,
+            presentation: presentation, archivedAt: archivedAt, replacedBy: replacedBy,
             enumOptions: enumOptions.sorted {
                 storedOrder(($0.sortOrder, $0.key), ($1.sortOrder, $1.key))
             })

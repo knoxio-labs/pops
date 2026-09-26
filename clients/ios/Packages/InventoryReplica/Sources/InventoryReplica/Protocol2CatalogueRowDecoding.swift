@@ -64,6 +64,8 @@ extension Protocol2CatalogueRows {
             expression: try expression.map {
                 try StoredJSON.decode(InventoryJSON.self, from: $0)
             }, allowOverride: try row.decode(forColumn: "allow_override"),
+            defaultValues: try CatalogueFieldDefaultRows.decode(
+                try row.decode(forColumn: "default_values"), kind: kinds.primitive),
             presentation: try StoredJSON.decode(
                 InventoryJSON.self, from: try row.decode(forColumn: "presentation")),
             archivedAt: try row.decode(forColumn: "archived_at"),

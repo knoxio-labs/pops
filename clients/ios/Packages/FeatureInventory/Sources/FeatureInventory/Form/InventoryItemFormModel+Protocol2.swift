@@ -23,9 +23,11 @@ extension InventoryItemFormModel {
                 $0.id == typeId && $0.archivedAt == nil
             })
         else { return }
-        protocol2Draft = InventoryProtocol2Draft(
+        var selected = InventoryProtocol2Draft(
             type: type, catalogueRevision: draft.catalogueRevision)
-        protocol2Draft?.typeSelectionChanged = true
+        if case .create = request { selected.prefillDefaults(for: type) }
+        selected.typeSelectionChanged = true
+        protocol2Draft = selected
         if type.isContainer { self.draft.quantity = 1 }
     }
 

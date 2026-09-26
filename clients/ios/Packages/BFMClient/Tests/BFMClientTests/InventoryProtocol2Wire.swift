@@ -14,13 +14,14 @@ internal enum Protocol2Wire {
 
     /// One catalogue field. `kind` is a string so a test can send one this
     /// build has never heard of. An option with no entry in
-    /// `enumOptionLabels` is labelled `Option <index>`.
+    /// `enumOptionLabels` is labelled `Option <index>`. `defaultValues` is the
+    /// key's raw JSON; nil leaves the key out, as a server predating it does.
     internal static func field(
         id: String, key: String, label: String, kind: String = "measurement",
         storage: String = "stored", required: Bool = false, archivedAt: String? = nil,
         replacedBy: String? = nil, sortOrder: Int = 0, cardinality: String = "one",
         fixedUnit: String? = nil, referenceKinds: [String] = [], enumOptionIds: [String] = [],
-        enumOptionLabels: [String] = []
+        enumOptionLabels: [String] = [], defaultValues: String? = nil
     ) -> String {
         let kinds = referenceKinds.map { "\"\($0)\"" }.joined(separator: ",")
         let options = enumOptionIds.enumerated().map { index, optionId -> String in
@@ -38,7 +39,8 @@ internal enum Protocol2Wire {
             "required":\(required),"storage":"\(storage)",\
             "fixedUnit":\(fixedUnit.map { "\"\($0)\"" } ?? "null"),\
             "referenceKinds":[\(kinds)],"referenceTypeIds":[],\
-            "expressionVersion":null,"expression":null,"allowOverride":false,"presentation":{},\
+            "expressionVersion":null,"expression":null,"allowOverride":false,\
+            \(defaultValues.map { "\"defaultValues\":\($0)," } ?? "")"presentation":{},\
             "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),\
             "replacedBy":\(replacedBy.map { "\"\($0)\"" } ?? "null"),"enumOptions":[\(options)]}
             """

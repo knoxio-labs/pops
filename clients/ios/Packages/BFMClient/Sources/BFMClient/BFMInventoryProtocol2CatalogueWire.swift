@@ -56,6 +56,9 @@ private func protocol2Field(from wire: Protocol2FieldPayload) throws -> Inventor
         expressionVersion: wire.expressionVersion,
         expression: try wire.expression.map(protocol2JSON(from:)),
         allowOverride: wire.allowOverride,
+        defaultValues: try protocol2DefaultValues(
+            wire.defaultValues ?? [], kind: kind, cardinality: cardinality, storage: storage,
+            fixedUnit: wire.fixedUnit),
         presentation: try protocol2JSON(object: wire.presentation.additionalProperties),
         archivedAt: wire.archivedAt, replacedBy: wire.replacedBy,
         enumOptions: wire.enumOptions.map {
@@ -64,6 +67,29 @@ private func protocol2Field(from wire: Protocol2FieldPayload) throws -> Inventor
                 archivedAt: $0.archivedAt)
         }
     )
+}
+
+/// A field's defaults, typed by its kind as an item's stored values are. A
+/// default the contract rules out (on a computed or reference field, more
+/// than one on a one-value field, or not a value of the field's kind and
+/// unit) is a contract mismatch, never dropped.
+private func protocol2DefaultValues(
+    _ wire: [OpenAPIValueContainer], kind: InventoryPrimitiveKind,
+    cardinality: InventoryFieldCardinality, storage: InventoryFieldStorage, fixedUnit: String?
+) throws -> [InventoryPrimitiveValue] {
+    guard !wire.isEmpty else { return [] }
+    guard storage == .stored, kind != .reference, cardinality == .many || wire.count == 1 else {
+        throw RepositoryError.contractMismatch
+    }
+    return try wire.map { container in
+        guard let value = try protocol2Value(from: container).conformed(to: kind) else {
+            throw RepositoryError.contractMismatch
+        }
+        if case .measurement(_, let unit) = value, unit != fixedUnit {
+            throw RepositoryError.contractMismatch
+        }
+        return value
+    }
 }
 
 private func protocol2JSON(object: [String: OpenAPIValueContainer]) throws -> InventoryJSON {

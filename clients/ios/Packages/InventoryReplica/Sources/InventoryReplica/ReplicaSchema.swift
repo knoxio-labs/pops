@@ -100,7 +100,9 @@ internal enum ReplicaSchema {
             try db.execute(sql: "DETACH DATABASE fallback_backup")
         }
     }
+}
 
+extension ReplicaSchema {
     static func migrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1_replica") { db in
@@ -133,6 +135,7 @@ internal enum ReplicaSchema {
         registerNullableCatalogueRevision(in: &migrator)
         registerCatalogueHoldReason(in: &migrator)
         registerCatalogueLineage(in: &migrator)
+        registerCatalogueFieldDefaults(in: &migrator)
         return migrator
     }
 
