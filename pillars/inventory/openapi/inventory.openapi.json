@@ -1474,20 +1474,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
@@ -1497,20 +1484,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
@@ -1520,20 +1494,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
@@ -19805,20 +19766,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },

@@ -1921,11 +1921,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1934,11 +1930,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1947,11 +1939,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9206,11 +9194,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
