@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 
 @testable import DesignPlayground
@@ -74,5 +75,20 @@ internal struct InventoryTypeTreeTests {
         #expect(formIDs.contains("type-change-in-tree"))
         #expect(searchIDs.contains("type-filter-tree"))
         #expect(detailIDs.contains("subtype-detail"))
+    }
+
+    @Test("choosing a nested type clears the picker navigation path")
+    func nestedTypeChoiceClearsPickerNavigation() {
+        var selection: String?
+        var navigationPath = NavigationPath()
+        navigationPath.append("pillows")
+        let binding = Binding<String?>(
+            get: { selection }, set: { selection = $0 })
+
+        InventoryFormTypePicker.choose(
+            "Pillowcase", selection: binding, navigationPath: &navigationPath)
+
+        #expect(selection == "Pillowcase")
+        #expect(navigationPath.isEmpty)
     }
 }
