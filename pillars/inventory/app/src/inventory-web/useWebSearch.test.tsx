@@ -143,6 +143,23 @@ function ok<T>(data: T) {
   return { data, error: undefined, response: { status: 200 } };
 }
 
+type OkResponse<T> = ReturnType<typeof ok<T>>;
+
+function deferred<T>() {
+  let resolvePromise: ((value: T | PromiseLike<T>) => void) | undefined;
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+
+  return {
+    promise,
+    resolve(value: T) {
+      if (resolvePromise === undefined) throw new Error('Promise resolver is not ready');
+      resolvePromise(value);
+    },
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   focusManager.setFocused(undefined);
@@ -255,6 +272,7 @@ describe('useWebSearch', () => {
     await waitFor(() => expect(result.current.status).toBe('success'));
     expect(mocks.webSearchList).toHaveBeenCalledWith({
       query: { q: 'cable', typeKey: 'cable', within: 'room', limit: 8, cursor: undefined },
+      signal: expect.any(AbortSignal),
     });
 
     rerender({
@@ -277,7 +295,52 @@ describe('useWebSearch', () => {
         limit: 8,
         cursor: undefined,
       },
+      signal: expect.any(AbortSignal),
     });
+  });
+
+  it('aborts a stale in-flight request when the query changes', async () => {
+    const first = deferred<OkResponse<SearchPage>>();
+    const second = deferred<OkResponse<SearchPage>>();
+    const requests: Array<{
+      query: { q: string; limit: number; cursor?: string };
+      signal: AbortSignal;
+    }> = [];
+    mocks.webSearchList.mockImplementation(
+      ({
+        query,
+        signal,
+      }: {
+        query: { q: string; limit: number; cursor?: string };
+        signal: AbortSignal;
+      }) => {
+        requests.push({ query, signal });
+        return requests.length === 1 ? first.promise : second.promise;
+      }
+    );
+    const client = createTestQueryClient();
+    const { result, rerender } = renderHook(({ q }: { q: string }) => useWebSearch({ q }), {
+      initialProps: { q: 'cable' },
+      wrapper: withQueryClient(client),
+    });
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.signal.aborted).toBe(false);
+
+    rerender({ q: 'lamp' });
+
+    await waitFor(() => expect(requests).toHaveLength(2));
+    expect(requests[0]?.signal.aborted).toBe(true);
+    expect(requests[1]).toMatchObject({
+      query: { q: 'lamp', limit: 20, cursor: undefined },
+      signal: expect.any(AbortSignal),
+    });
+
+    await act(async () => {
+      first.resolve(ok(searchPage()));
+      second.resolve(ok(searchPage()));
+    });
+    await waitFor(() => expect(result.current.status).toBe('success'));
   });
 
   it('keeps exact and places from the first page and appends items from later pages', async () => {
@@ -322,6 +385,7 @@ describe('useWebSearch', () => {
     expect(result.current.results.total).toBe(3);
     expect(mocks.webSearchList).toHaveBeenLastCalledWith({
       query: { q: 'item', limit: 20, cursor: 'next' },
+      signal: expect.any(AbortSignal),
     });
   });
 

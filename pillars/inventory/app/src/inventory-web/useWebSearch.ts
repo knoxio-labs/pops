@@ -102,7 +102,8 @@ type WebSearchRequestResult = {
   error?: unknown;
   response?: Response;
 };
-type WebSearchList = (options: { query: WebSearchQuery }) => Promise<WebSearchRequestResult>;
+type WebSearchRequestOptions = { query: WebSearchQuery; signal: AbortSignal };
+type WebSearchList = (options: WebSearchRequestOptions) => Promise<WebSearchRequestResult>;
 type InventoryApiWithWebSearch = typeof inventoryApi & { webSearchList: WebSearchList };
 
 const DEFAULT_LIMIT = 20;
@@ -118,12 +119,13 @@ function hasWebSearchList(api: typeof inventoryApi): api is InventoryApiWithWebS
   return 'webSearchList' in api && typeof api.webSearchList === 'function';
 }
 
-function requestWebSearch(options: { query: WebSearchQuery }): Promise<WebSearchRequestResult> {
+function requestWebSearch(options: WebSearchRequestOptions): Promise<WebSearchRequestResult> {
   if (hasWebSearchList(inventoryApi)) return inventoryApi.webSearchList(options);
 
   return client.get<WebSearchListResponses, WebSearchListErrors>({
     url: '/web/search',
     query: { ...options.query },
+    signal: options.signal,
   });
 }
 
@@ -179,7 +181,7 @@ function useWebSearchQuery(q: string, params: WebSearchParams) {
   } as const;
   return useInfiniteQuery({
     queryKey: [...WEB_SEARCH_QUERY_KEY, queryParams] as const,
-    queryFn: async ({ pageParam }) =>
+    queryFn: async ({ pageParam, signal }) =>
       unwrap(
         await requestWebSearch({
           query: {
@@ -190,6 +192,7 @@ function useWebSearchQuery(q: string, params: WebSearchParams) {
             limit,
             cursor: pageParam,
           },
+          signal,
         })
       ),
     initialPageParam: undefined as string | undefined,
