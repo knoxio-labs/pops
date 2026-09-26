@@ -66,8 +66,8 @@ function PlanLine({ line }: { line: Line }) {
   return (
     <li
       className={cn(
-        'flex items-center gap-2 px-3 py-1.5 text-sm',
-        line.tone === 'carried' && 'pl-8',
+        'flex items-center gap-2 pr-3 py-1.5 text-sm',
+        line.tone === 'carried' ? 'pl-8' : 'pl-3',
         line.tone !== 'moves' && 'text-muted-foreground'
       )}
     >
