@@ -27,11 +27,13 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
+# Pairing starts the first download on its own (POPS-4354's sync on
+# pairing), so there is no setup prompt to press: the dashboard's counts are
+# what appear once the replica holds a download.
 - tapOn: 'Inventory'
-- assertVisible: 'Set up inventory on this phone'
-- tapOn: 'Start synchronization'
-- tapOn: 'Download'
-- assertVisible: 'Synced'
+- extendedWaitUntil:
+    visible: 'Items, \d+'
+    timeout: 60000
 
 # Create an item of the synced type, through the form's generic protocol-2
 # fields rather than any code written for this type.
@@ -66,6 +68,34 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
 # here, where it is obvious what went wrong.
 - assertVisible: 'Type, Phone gadget'
 
+# The Type choice itself, driven through the menu the design keeps (a
+# SwiftUI `Picker` in menu style, so a `UIMenu`). By id, not by the words on
+# it: the row's label changes with every choice and a type's label is
+# owner-authored. The option is waited for rather than tapped straight
+# away, because the menu animates in and a tap aimed at a hierarchy read
+# mid-presentation lands on nothing (POPS-4556); and the menu is waited
+# out again before the next tap, which would otherwise only dismiss it.
+#
+# The tap goes to the current value inside the row, not to the row: the
+# row's element spans the whole cell, but only its trailing value is the
+# button that opens the menu, and a tap at the row's centre lands on the
+# "Type" label and opens nothing (observed on a simulator run, POPS-4556).
+- tapOn:
+    text: 'Phone gadget'
+    childOf:
+      id: 'inventory-item-type'
+- extendedWaitUntil:
+    visible:
+      id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}
+    timeout: 10000
+- tapOn:
+    id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}
+- extendedWaitUntil:
+    notVisible:
+      id: inventory-item-type-option-${output.userDefinedType.state.userDefinedType.typeId}
+    timeout: 10000
+- assertVisible: 'Type, Phone gadget'
+
 # By id, not by the word "Price": `InventoryProtocol2ValueEditor`'s scalar
 # editor is a `LabeledContent` whose label and field are two elements.
 # `InventoryAccessibility.protocol2Field(id:)` names the field's own TextField
@@ -80,24 +110,40 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
 - assertVisible:
     id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
     text: '21'
+# The keyboard Price raised covers the rows below it, and a tap aimed at one
+# of them lands on a key instead (observed on a simulator run: Price read
+# "21E" after the tap meant for Tags' Add). The same drag as after Name takes
+# the keyboard down before every tap below a field just typed into.
+- swipe:
+    start: 50%, 25%
+    end: 50%, 85%
+    duration: 600
 
 # `Tags` is the seeded type's many-valued field (POPS-4359's many-cardinality
 # gap): add two values, reorder them, remove one, and confirm the survivor is
 # read back from Item detail once saved. Every entry's editor and its
 # move/remove buttons are plain rows and icon buttons, addressed by
 # `InventoryAccessibility.protocol2FieldEntry(id:index:)` and its
-# `...MoveEarlier`/`...MoveLater`/`...Remove` siblings — never the `Menu` class
-# of control POPS-4556 already rules out for the Type picker.
+# `...MoveEarlier`/`...MoveLater`/`...Remove` siblings, so unlike the Type
+# menu above there is no presentation to wait for.
 - tapOn:
     id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-add
 - tapOn:
     id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-0
 - inputText: 'blue'
+- swipe:
+    start: 50%, 25%
+    end: 50%, 85%
+    duration: 600
 - tapOn:
     id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-add
 - tapOn:
     id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-1
 - inputText: 'red'
+- swipe:
+    start: 50%, 25%
+    end: 50%, 85%
+    duration: 600
 # Moving the second entry earlier swaps the two positions: the identifier
 # that now reads "red" is index 0, not index 1, because the id is the row's
 # position, not the entry's own.
@@ -138,59 +184,31 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
     env:
       SYNC: down
 - assertTrue: ${output.syncOutage.state.inventorySyncOutage == true}
-# The whole edit is retried as one unit, re-entering from Items rather than
-# just re-tapping the field: a tap on a loaded machine has landed on the
-# wrong control before in this exact form (POPS-4508's Type and Name races
-# above), and once that happens here there is no cheaper recovery than
-# starting the edit over — Edit's own sheet may no longer be the front
-# screen, so retrying only the tap inside it has nothing to retry against.
-- retry:
-    maxRetries: 2
-    commands:
-      # A stray "Edit item" sheet from a previous attempt blocks the tab bar
-      # underneath it, so `tapOn: 'Inventory'` alone has nothing to tap on a
-      # retry — Cancel first, optionally, so this recovers whichever screen
-      # the last attempt actually left.
-      - tapOn:
-          text: 'Cancel'
-          optional: true
-      - tapOn: 'Inventory'
-      - tapOn: 'Items, \d+'
-      - tapOn: Gadget ${output.inventory.run}
-      - tapOn: 'Edit'
-      # The sheet's presentation is still animating in when the next tap is
-      # aimed — Maestro's own log calls the hierarchy it aimed at "pre-wait" —
-      # and a tap fired mid-animation has landed on nothing at all (observed
-      # on a simulator run, POPS-4508: the Price field held its untouched
-      # "21" afterwards, meaning neither the tap, the erase, nor the retype
-      # reached it). `assertVisible` is the one command here that waits;
-      # settling on the sheet's own title is what the tap right after it can
-      # then actually trust.
-      - assertVisible: 'Edit item'
-      # Not a tap-then-erase: a plain tap on this field, by id, with or
-      # without a trailing-edge `point` offset, has placed the cursor before
-      # the existing "21" every time it was tried — deterministically, not
-      # occasionally — observed on a simulator run, POPS-4508: five straight
-      # retries of tap-erase-type each prepended another "30", compounding to
-      # "30303021" without the field ever once reading as cleared.
-      # `eraseText` backspaces from wherever the cursor already sits, so an
-      # erase after a tap that never reaches the far side of the text can
-      # never remove it. A long press does something a plain tap does not: it
-      # raises iOS's own text-selection UI, whose "Select All" surfaces
-      # exactly because the field already holds text, and typing over a
-      # selection replaces it regardless of where within the field that
-      # selection sits — sidestepping cursor position entirely rather than
-      # aiming for the one spot a tap here has never landed on.
-      - retry:
-          maxRetries: 3
-          commands:
-            - longPressOn:
-                id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
-            - tapOn: 'Select All'
-            - inputText: '30'
-            - assertVisible:
-                id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
-                text: '30'
+- tapOn: 'Inventory'
+- tapOn: 'Items, \d+'
+- tapOn: Gadget ${output.inventory.run}
+- tapOn: 'Edit'
+# The sheet animates in, and a tap aimed at a hierarchy read before it
+# settles lands on nothing (POPS-4508). `assertVisible` waits; settling on
+# the sheet's own title is what the tap after it can trust.
+- assertVisible: 'Edit item'
+# A plain tap puts the cursor before the existing "21" (POPS-4508), so an
+# erase after it removes nothing. Typing over "Select All" replaces the value
+# wherever the cursor sat. The field is focused first: a long press on a field
+# that is not yet editing only focuses it and raises no menu (observed on a
+# simulator run), while on a focused one it raises the edit menu every time.
+- tapOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
+- longPressOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
+- extendedWaitUntil:
+    visible: 'Select All'
+    timeout: 10000
+- tapOn: 'Select All'
+- inputText: '30'
+- assertVisible:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
+    text: '30'
 - tapOn: 'Save'
 - tapOn: 'Inventory'
 - tapOn: 'Sync status: .*'
