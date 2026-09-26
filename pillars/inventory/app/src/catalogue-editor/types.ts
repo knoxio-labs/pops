@@ -1,3 +1,4 @@
+import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type {
   TypesManagePatchDraftData,
   TypesManagePatchDraftResponses,
@@ -16,6 +17,17 @@ export type CatalogueEnumOption = CatalogueField['enumOptions'][number];
 export type CatalogueOperation = NonNullable<
   NonNullable<TypesManagePatchDraftData['body']>['operations']
 >[number];
+/** Validation issues and the operation batch that produced them. */
+export type CatalogueIssueSource = {
+  readonly issues: readonly InventoryApiIssue[];
+  readonly operations: readonly CatalogueOperation[] | null;
+};
+/** Validation issue sources currently shown by the editor. */
+export type CatalogueIssueSources = readonly CatalogueIssueSource[];
+/** Handles a catalogue operation; returning false keeps a confirmation surface open. */
+export type CatalogueOperationHandler = (
+  operation: CatalogueOperation
+) => boolean | void | Promise<boolean | void>;
 /** Compatibility proof returned after a draft edit. */
 export type CatalogueCompatibility = TypesManagePatchDraftResponses[200]['compatibility'];
 

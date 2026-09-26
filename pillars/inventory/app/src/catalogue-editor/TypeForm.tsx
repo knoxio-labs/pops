@@ -6,7 +6,7 @@ import { catalogueKeyFromLabel } from './types';
 import { useOperationPreview } from './useOperationPreview';
 
 import type { InventoryApiIssue } from '../inventory-api-helpers';
-import type { CatalogueOperation, CatalogueType } from './types';
+import type { CatalogueIssueSources, CatalogueOperation, CatalogueType } from './types';
 
 interface TypeFormProps {
   readonly isPending: boolean;
@@ -14,6 +14,7 @@ interface TypeFormProps {
   readonly onRestore?: () => void;
   readonly onPreview?: (operation: CatalogueOperation) => void;
   readonly onSave: (operation: CatalogueOperation) => void;
+  readonly issueSources?: CatalogueIssueSources;
   readonly issues?: readonly InventoryApiIssue[];
   readonly published?: boolean;
   readonly types?: readonly CatalogueType[];
@@ -21,6 +22,7 @@ interface TypeFormProps {
 }
 
 const EMPTY_ISSUES: readonly InventoryApiIssue[] = [];
+const EMPTY_ISSUE_SOURCES: CatalogueIssueSources = [];
 const EMPTY_TYPES: readonly CatalogueType[] = [];
 
 function typeOperation({
@@ -59,6 +61,7 @@ export function TypeForm({
   onPreview,
   onRestore,
   onSave,
+  issueSources = EMPTY_ISSUE_SOURCES,
   issues = EMPTY_ISSUES,
   published = false,
   types = EMPTY_TYPES,
@@ -82,6 +85,8 @@ export function TypeForm({
         parentEditable={!published}
         type={type}
         types={types}
+        issueSources={issueSources}
+        operation={formState.operation}
         validationIssues={issues}
         onContainmentChange={formState.setContainment}
         onDescriptionChange={formState.setDescription}

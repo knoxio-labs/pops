@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { testType } from './type-tree-test-utils';
 import { TypeForm } from './TypeForm';
 
+import type { InventoryApiIssue } from '../inventory-api-helpers';
+import type { CatalogueIssueSource, CatalogueOperation } from './types';
+
 const bedding = testType('bedding', 'Bedding', null);
 const pillows = testType('pillows', 'Pillows', 'bedding');
 const pillowcase = testType('pillowcase', 'Pillowcase', 'pillows');
@@ -14,12 +17,19 @@ const archived = testType('archived', 'Archived', null, {
 const types = [bedding, pillows, pillowcase, sheet, archived];
 
 function renderForm(
-  options: { readonly published?: boolean; readonly type?: typeof pillows } = {}
+  options: {
+    readonly issueSources?: readonly CatalogueIssueSource[];
+    readonly issues?: readonly InventoryApiIssue[];
+    readonly published?: boolean;
+    readonly type?: typeof pillows;
+  } = {}
 ) {
   const onSave = vi.fn();
   render(
     <TypeForm
       isPending={false}
+      issueSources={options.issueSources}
+      issues={options.issues}
       onSave={onSave}
       published={options.published}
       type={options.type}
@@ -83,6 +93,16 @@ describe('TypeForm parent chooser', () => {
     );
   });
 
+  it('writes null when the explicit Top level parent option is selected', () => {
+    const onSave = renderForm({ type: pillows });
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Parent' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Top level' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ parentTypeId: null }));
+  });
+
   it('renders a published parent as a refusal instead of an editable chooser', () => {
     renderForm({ published: true, type: pillows });
 
@@ -112,5 +132,44 @@ describe('TypeForm parent chooser', () => {
     );
 
     for (const issue of issues) expect(screen.getByText(issue.message)).toBeInTheDocument();
+  });
+
+  it('anchors a minted new-type parent issue to the parent control', () => {
+    const operation = {
+      kind: 'put_type',
+      key: 'blanket',
+      label: 'Blanket',
+      description: null,
+      capabilities: [],
+      parentTypeId: 'bedding',
+    } satisfies CatalogueOperation;
+    const issue: InventoryApiIssue = {
+      code: 'type_parent_unknown',
+      definitionId: 'minted-type-id',
+      message: 'Parent type could not be found.',
+      path: 'parentTypeId',
+    };
+    const unrelatedIssue: InventoryApiIssue = {
+      ...issue,
+      message: 'Unrelated parent issue',
+    };
+    const unrelatedOperation: CatalogueOperation = { ...operation, key: 'other', label: 'Other' };
+    renderForm({
+      issues: [issue, unrelatedIssue],
+      issueSources: [
+        {
+          issues: [issue],
+          operations: [operation],
+        },
+        { issues: [unrelatedIssue], operations: [unrelatedOperation] },
+      ],
+    });
+
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Blanket' } });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Parent' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Bedding' }));
+
+    expect(screen.getByText('Parent type could not be found.')).toBeInTheDocument();
+    expect(screen.queryByText('Unrelated parent issue')).not.toBeInTheDocument();
   });
 });
