@@ -37,6 +37,26 @@ internal enum PurchaseEditFailure: Hashable, Sendable {
         case .invalidDraft: "Check the edited values and try again."
         }
     }
+
+    internal var popsError: PopsError {
+        PopsError(
+            code: "ios.purchases.edit_\(code)",
+            message: message,
+            retryable: self == .unavailable,
+            kind: self == .unavailable ? .server : .client)
+    }
+
+    private var code: String {
+        switch self {
+        case .unavailable: "unavailable"
+        case .unauthorized: "unauthorized"
+        case .contractMismatch: "contract_mismatch"
+        case .notFound: "not_found"
+        case .invalidDraft: "invalid_draft"
+        case .purchaseLocked: "purchase_locked"
+        case .purchaseStale: "purchase_stale"
+        }
+    }
 }
 
 @MainActor @Observable

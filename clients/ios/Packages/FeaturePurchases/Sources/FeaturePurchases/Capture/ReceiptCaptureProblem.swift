@@ -15,3 +15,13 @@ public enum ReceiptCaptureProblem: Hashable, Sendable {
     /// the reading that came back would be wrong in a way nobody could see.
     case unpreparedPages
 }
+
+extension ReceiptCaptureProblem {
+    internal var code: String {
+        switch self {
+        case .cameraFailed: "camera_failed"
+        case .noPages: "no_pages"
+        case .unpreparedPages: "unprepared_pages"
+        }
+    }
+}

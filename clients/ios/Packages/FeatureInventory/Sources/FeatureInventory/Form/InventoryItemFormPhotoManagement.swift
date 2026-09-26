@@ -155,7 +155,7 @@ extension InventoryItemFormModel {
         }
     }
 
-    /// Shows `photoRunner`'s failure through the form's own alert, so a
+    /// Shows `photoRunner`'s failure through the shared presenter, so a
     /// photo removal or reorder failure reads no differently from any other
     /// write in this form.
     private func adoptPhotoRunnerFailure() {

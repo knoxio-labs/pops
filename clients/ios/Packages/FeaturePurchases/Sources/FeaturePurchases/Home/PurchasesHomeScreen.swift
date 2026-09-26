@@ -7,6 +7,7 @@ internal struct PurchasesHomeScreen: View {
     @State private var list: PurchasesHomeList = .recent
     @Environment(\.purchaseCapture) private var purchaseCapture
     @Environment(\.startRePairing) private var startRePairing
+    @Environment(\.errorPresenter) private var errorPresenter
 
     internal init(model: PurchasesHomeModel) {
         _model = State(wrappedValue: model)
@@ -35,7 +36,24 @@ internal struct PurchasesHomeScreen: View {
         }
         .navigationTitle(FeaturePurchases.displayName)
         .task { await model.load() }
+        .onChange(of: refreshFailure) { _, failure in
+            guard failure != nil else { return }
+            errorPresenter.present(
+                PopsError(
+                    code: "ios.purchases.refresh_failed",
+                    message: "Purchases could not be updated. Try again.",
+                    retryable: true,
+                    kind: .server),
+                operation: "Refresh purchases",
+                context: .foreground)
+        }
+        .errorDiagnosticsMenu()
         .accessibilityIdentifier(PurchasesAccessibility.homeRoot)
+    }
+
+    private var refreshFailure: String? {
+        guard case .loaded(_, .failed(let updated)) = model.phase else { return nil }
+        return updated
     }
 
     private func loaded(_ digest: PurchasesHomeDigest, refresh: PurchasesHomeRefresh) -> some View {

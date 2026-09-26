@@ -86,7 +86,7 @@ internal enum TransactionsCopy {
         "\(loadMoreFailed) \(message(for: error))"
     }
 
-    /// The same, for the banner over rows that survived a failed refresh.
+    /// The same, for the root banner shown after a failed refresh.
     internal static func refreshFailure(_ error: RepositoryError) -> String {
         "\(refreshFailed) \(message(for: error))"
     }

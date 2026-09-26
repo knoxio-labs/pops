@@ -105,17 +105,8 @@ internal struct PurchasesRefreshCapsule: View {
             )
             .accessibilityLabel("Updating purchases")
             .transition(.opacity)
-        case .failed(let updated):
-            Button(action: onRetry) {
-                capsule(
-                    PurchasesHomeCopy.refreshFailure(updated),
-                    symbol: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90",
-                    tone: .popsWarning,
-                    turning: false)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Not updated since \(updated). Try again.")
-            .transition(.opacity)
+        case .failed:
+            EmptyView()
         }
     }
 

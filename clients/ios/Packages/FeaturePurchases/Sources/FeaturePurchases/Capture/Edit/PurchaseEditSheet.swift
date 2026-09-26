@@ -25,6 +25,7 @@ public struct PurchaseEditRequest: Sendable {
 public struct PurchaseEditSheet: View {
     @State private var model: PurchaseEditModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.errorPresenter) private var errorPresenter
     private let request: PurchaseEditRequest
 
     /// Creates the edit sheet for a loaded purchase request.
@@ -66,15 +67,13 @@ public struct PurchaseEditSheet: View {
         } message: {
             Text("The purchase stays as it was.")
         }
-        .alert(
-            "Couldn't save",
-            isPresented: failurePresented,
-            presenting: model.failure
-        ) { _ in
-            Button("Keep editing", role: .cancel) { model.dismissFailure() }
-            Button("Retry") { Task { await save() } }
-        } message: { failure in
-            Text(failure.message)
+        .onChange(of: model.failure) { _, failure in
+            guard let failure else { return }
+            errorPresenter.present(
+                failure.popsError,
+                operation: "Save purchase",
+                context: .foreground)
+            model.dismissFailure()
         }
         .tint(.popsPurchases)
     }
@@ -90,12 +89,6 @@ public struct PurchaseEditSheet: View {
         Binding(
             get: { model.confirmingDiscard },
             set: { presented in if !presented { model.keepEditing() } })
-    }
-
-    private var failurePresented: Binding<Bool> {
-        Binding(
-            get: { model.failure != nil },
-            set: { presented in if !presented { model.dismissFailure() } })
     }
 
     private func removalNotice(for lineID: String) -> String? {

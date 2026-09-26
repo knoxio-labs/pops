@@ -15,6 +15,7 @@ import SwiftUI
 /// have to be untitled again by whoever embeds it.
 public struct TransactionsListView: View {
     @State private var model: TransactionsListViewModel
+    @Environment(\.errorPresenter) private var errorPresenter
 
     private let presentation: TransactionPresentation
 
@@ -33,12 +34,25 @@ public struct TransactionsListView: View {
             // without this a failed refresh reads as the gesture having done
             // nothing at all.
             .onChange(of: model.refreshFailure) { _, failure in
-                announce(failure.map(TransactionsCopy.refreshFailure))
+                guard let failure else { return }
+                errorPresenter.present(
+                    PopsError(
+                        repositoryError: failure,
+                        fallbackMessage: TransactionsCopy.refreshFailure(failure)),
+                    operation: "Refresh transactions",
+                    context: .foreground)
             }
             .onChange(of: model.paging) { _, paging in
                 guard case .failed(let error) = paging else { return }
+                errorPresenter.present(
+                    PopsError(
+                        repositoryError: error,
+                        fallbackMessage: TransactionsCopy.loadMoreFailure(error)),
+                    operation: "Load more transactions",
+                    context: .background)
                 announce(TransactionsCopy.loadMoreFailure(error))
             }
+            .errorDiagnosticsMenu()
     }
 
     @ViewBuilder private var content: some View {
@@ -73,7 +87,6 @@ extension TransactionsListView {
     private var scrollingContent: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
-                refreshBanner
                 rows
                 pagingFooter
             }
@@ -108,24 +121,6 @@ extension TransactionsListView {
             }
         } else {
             EmptyStateView(message: TransactionsCopy.empty)
-        }
-    }
-
-    /// The rows that are still on screen after a refresh failed, with the
-    /// reason above them. Keeping them is the point: a refresh is an offer to
-    /// re-check, and answering a failed one by deleting what someone was
-    /// reading costs them everything and tells them nothing.
-    @ViewBuilder private var refreshBanner: some View {
-        if let failure = model.refreshFailure {
-            PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text(TransactionsCopy.refreshFailure(failure))
-                        .font(.popsBody)
-                        .foregroundStyle(Color.popsDestructive)
-                    PopsButton(TransactionsCopy.retry) { Task { await model.refresh() } }
-                }
-            }
-            .padding(.bottom, PopsSpacing.lg)
         }
     }
 }

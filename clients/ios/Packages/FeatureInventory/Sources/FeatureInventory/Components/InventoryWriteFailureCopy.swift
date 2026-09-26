@@ -5,7 +5,7 @@ extension InventoryCopy {
     /// taken, or what the server refused, in one short sentence. Never the
     /// server's own diagnostic `message`, which is written for a log.
     ///
-    /// `.storageFull` answers with the Storage full alert's own message. No
+    /// `.storageFull` answers with the shared Storage full message. No
     /// screen shows it through the one-line alert: `inventoryWriteFailureAlerts`
     /// routes it to `inventoryStorageFullAlert`, the same approved alert the
     /// Sync page shows, before this function is ever called.

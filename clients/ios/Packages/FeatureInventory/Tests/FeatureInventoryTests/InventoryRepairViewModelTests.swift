@@ -101,7 +101,6 @@ internal struct InventoryRepairViewModelTests {
         await model.commit(keepingMine: true, code: nil)
 
         #expect(model.failure == .storageFull)
-        #expect(InventoryWriteFailureAlerts.storageFullFailure(model.failure) == .storageFull)
         #expect(model.outcome == nil)
     }
 

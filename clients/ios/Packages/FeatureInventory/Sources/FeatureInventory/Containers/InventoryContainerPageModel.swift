@@ -34,7 +34,7 @@ internal final class InventoryContainerPageModel {
     }
 
     /// Writes through `runner`, so the page's verbs and the item page it sits
-    /// on share one Undo capsule and one failure alert.
+    /// on share one Undo capsule and one failure presentation.
     internal init(id: InventoryItem.ID, runner: InventoryCommandRunner) {
         self.id = id
         self.runner = runner

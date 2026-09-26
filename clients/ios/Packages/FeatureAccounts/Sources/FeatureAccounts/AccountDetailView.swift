@@ -14,6 +14,7 @@ import SwiftUI
 /// this read-only build. See this ticket's report.
 public struct AccountDetailView: View {
     @State private var model: AccountDetailViewModel
+    @Environment(\.errorPresenter) private var errorPresenter
 
     public init(model: AccountDetailViewModel) {
         _model = State(wrappedValue: model)
@@ -26,7 +27,12 @@ public struct AccountDetailView: View {
             .task { await model.load() }
             .onChange(of: model.failure) { _, failure in
                 guard let failure else { return }
-                AccessibilityNotification.Announcement(AccountsCopy.detailFailure(failure)).post()
+                errorPresenter.present(
+                    PopsError(
+                        repositoryError: failure,
+                        fallbackMessage: AccountsCopy.detailFailure(failure)),
+                    operation: "Load account details",
+                    context: .foreground)
             }
     }
 
@@ -54,7 +60,6 @@ public struct AccountDetailView: View {
     private func record(header account: Account, detail: AccountDetail?) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                failureBanner
                 AccountDetailHeaderView(account: account)
                 if let detail {
                     AccountTrendCardView(account: account, history: detail.history)
@@ -65,18 +70,5 @@ public struct AccountDetailView: View {
             .padding(PopsSpacing.lg)
         }
         .accessibilityIdentifier(AccountsAccessibility.detail)
-    }
-
-    @ViewBuilder private var failureBanner: some View {
-        if let failure = model.failure {
-            PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text(AccountsCopy.detailFailure(failure))
-                        .font(.popsBody)
-                        .foregroundStyle(Color.popsDestructive)
-                    PopsButton(AccountsCopy.retry) { Task { await model.load() } }
-                }
-            }
-        }
     }
 }
