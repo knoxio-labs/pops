@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import Testing
 
@@ -77,18 +78,24 @@ internal struct InventoryTypeTreeTests {
         #expect(detailIDs.contains("subtype-detail"))
     }
 
-    @Test("choosing a nested type clears the picker navigation path")
-    func nestedTypeChoiceClearsPickerNavigation() {
-        var selection: String?
-        var navigationPath = NavigationPath()
-        navigationPath.append("pillows")
-        let binding = Binding<String?>(
-            get: { selection }, set: { selection = $0 })
+    @Test("the pushed type picker uses its caller's navigation stack")
+    func typePickerLeavesNavigationOwnershipWithCaller() throws {
+        let source = try pickerSource()
 
-        InventoryFormTypePicker.choose(
-            "Pillowcase", selection: binding, navigationPath: &navigationPath)
+        #expect(source.contains(".navigationDestination(for: String.self)"))
+        #expect(!source.contains("NavigationStack"))
+        #expect(!source.contains("NavigationPath"))
+    }
 
-        #expect(selection == "Pillowcase")
-        #expect(navigationPath.isEmpty)
+    private func pickerSource() throws -> String {
+        let packageRoot = URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let file = packageRoot.appending(
+            path:
+                "Sources/DesignPlayground/Surfaces/Inventory/Creation/InventoryFormTypePicker.swift"
+        )
+        return try String(contentsOf: file, encoding: .utf8)
     }
 }
