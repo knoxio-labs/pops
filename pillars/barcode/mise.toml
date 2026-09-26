@@ -6,7 +6,7 @@ outputs = ["dist/**", "openapi/*.json"]
 
 [tasks.typecheck]
 depends = ["build"]
-run = "tsc --noEmit"
+run = ["tsc --noEmit", "tsc --noEmit -p scripts/tsconfig.json"]
 
 [tasks.test]
 depends = ["build"]
