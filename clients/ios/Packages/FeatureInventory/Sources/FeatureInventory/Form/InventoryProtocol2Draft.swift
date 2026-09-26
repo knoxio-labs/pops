@@ -67,6 +67,12 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
         entries[field.id, default: []].compactMap(\.value)
     }
 
+    /// A field is empty when the person has not touched it, including when a
+    /// catalogue default or a required flag's starting `false` is present.
+    internal func isEmpty(_ field: InventoryCatalogueField) -> Bool {
+        !touched.contains(field.id)
+    }
+
     internal func draftEntries(
         for field: InventoryCatalogueField
     ) -> [InventoryProtocol2DraftEntry] {

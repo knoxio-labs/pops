@@ -35,6 +35,8 @@ Everything the dashboard links to has its own screen: item detail (POPS-4062), c
 
 New item and Edit item are one sheet (`Form/`), installed once over the whole stack by `InventoryFlowView`. A screen opens it through the `inventoryItemForm` environment value with an `InventoryItemFormRequest`; nothing pushes it as a route. Protocol 2 fields are drawn from the cached catalogue by stable type, field and option IDs, so a type the server adds renders without an app release. Stored primitive fields support one or ordered-many values; reference choices come from the replica and obey the catalogue's kind and item-type constraints. The same cached catalogue validates online and offline writes. Retired options remain readable but cannot be newly selected, computed values stay read-only, and catalogue rejections in Sync identify the queued item that must be edited or discarded. A protocol 1 catalogue keeps the existing keyed form path.
 
+The form's future fact-prefill path is isolated under `Prefill/`. It passes descriptive product or captured-text facts to `SystemLanguageModel.default` on-device, lets the model choose field mappings, validates every answer through the existing protocol-2 parser, and never replaces a field already touched in the draft. Barcode identifiers stay outside the engine.
+
 Two things it reaches for belong to other screens, and it asks for them rather than owning them:
 
 - **Where it goes.** The destination row opens the same `inventoryPlacementPicker` the containers and locations screens install (POPS-4064).
