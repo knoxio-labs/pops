@@ -125,6 +125,7 @@ export function fieldIn(
 const UPDATE_CHANGE_KINDS: Readonly<Record<string, CatalogueChangeKind>> = {
   field_became_required: 'now_required',
   primitive_kind_added: 'needs_newer_app',
+  type_parent_set: 'needs_newer_app',
 };
 
 function updateChangeKind(

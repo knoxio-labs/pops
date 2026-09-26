@@ -56,6 +56,20 @@ function type(fields: readonly UnresolvedItemTypeField[]): UnresolvedItemType {
   };
 }
 
+function namedType(
+  id: string,
+  key: string,
+  fields: readonly UnresolvedItemTypeField[],
+  parentTypeId: string | null = null
+): UnresolvedItemType {
+  return {
+    ...type(fields.map((entry) => ({ ...entry, typeId: id }))),
+    id,
+    key,
+    parentTypeId,
+  };
+}
+
 function catalogue(
   revision: number,
   types: readonly UnresolvedItemType[],
@@ -123,6 +137,85 @@ describe('classifyCatalogueCompatibility', () => {
     );
 
     expect(classifyCatalogueCompatibility(base, candidate).classification).toBe('protocol_gated');
+  });
+
+  it('protocol-gates a new subtype', () => {
+    const base = catalogue(1, [type([field()])]);
+    const candidate = catalogue(2, [type([field()]), namedType('type-b', 'type-b', [], 'type-a')]);
+
+    expect(classifyCatalogueCompatibility(base, candidate).changes).toContainEqual({
+      classification: 'protocol_gated',
+      definitionId: 'type-b',
+      code: 'type_parent_set',
+    });
+  });
+
+  it('forbids changing the parent of a published type', () => {
+    const base = catalogue(1, [type([field()]), namedType('type-b', 'type-b', [])]);
+    const candidate = catalogue(2, [type([field()]), namedType('type-b', 'type-b', [], 'type-a')]);
+
+    expect(classifyCatalogueCompatibility(base, candidate).changes).toContainEqual({
+      classification: 'forbidden',
+      definitionId: 'type-b',
+      code: 'published_type_parent_changed',
+    });
+  });
+
+  it('keeps an optional field added to a parent compatible', () => {
+    const child = namedType('type-b', 'type-b', [], 'type-a');
+    const base = catalogue(1, [type([field()]), child]);
+    const candidate = catalogue(2, [
+      type([field(), field({ id: 'field-b', key: 'field-b' })]),
+      child,
+    ]);
+
+    expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
+      classification: 'compatible',
+      changes: [
+        {
+          classification: 'compatible',
+          definitionId: 'field-b',
+          code: 'optional_field_added',
+        },
+      ],
+    });
+  });
+
+  it('forbids a required-field migration through a subtype', () => {
+    const child = namedType('type-b', 'type-b', [], 'type-a');
+    const base = catalogue(1, [type([field()]), child]);
+    const candidate = catalogue(2, [type([field({ required: true })]), child]);
+
+    expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
+      classification: 'forbidden',
+      changes: [
+        {
+          classification: 'migration_required',
+          definitionId: 'field-a',
+          code: 'field_became_required',
+        },
+        {
+          classification: 'forbidden',
+          definitionId: 'field-a',
+          code: 'migration_through_subtypes_unsupported',
+        },
+      ],
+    });
+  });
+
+  it('counts archived descendants when forbidding a required-field migration', () => {
+    const child = namedType('type-b', 'type-b', [], 'type-a');
+    const base = catalogue(1, [type([field()]), child]);
+    const candidate = catalogue(2, [
+      type([field({ required: true })]),
+      { ...child, archivedAt: '2026-09-27T00:00:00.000Z' },
+    ]);
+
+    expect(classifyCatalogueCompatibility(base, candidate).changes).toContainEqual({
+      classification: 'forbidden',
+      definitionId: 'field-a',
+      code: 'migration_through_subtypes_unsupported',
+    });
   });
 
   describe('a new type', () => {

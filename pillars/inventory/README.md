@@ -106,6 +106,14 @@ pass the field's own value rules (at most one on a `one` field) and never name
 an archived enum option. Clients pre-fill them on item create; the server never
 applies them, and changing one is compatible with no migration or re-send.
 
+Types may name one parent type. Each type authors its own fields and capabilities;
+the catalogue resolves effective fields and de-duplicated capabilities from the
+root through the type, while a type's descriptor still carries only its own
+definitions. Parent trees are validated for missing parents, cycles, archived
+parents, duplicate effective field keys and a maximum depth of three. A draft
+that introduces a parent requires protocol 3 to publish; the server's supported
+inventory protocol remains 2 until runtime item resolution is available.
+
 Generic field writes validate the complete stable-ID field set against its
 exact catalogue revision: kind, cardinality, required fields, storage authority,
 archived selections and live reference constraints are one atomic check.
@@ -523,6 +531,9 @@ The same tasks are exposed through `mise.toml` (`mise run build`, `mise run test
   the OpenAPI projection. CI gates on drift.
 - `generate:manifest` — regenerates `src/contract/manifest.generated.ts`;
   `verify:manifest` (run first in `build`) fails the build on drift.
+- `generate:value-vectors` — regenerates `contracts/value-vectors-v1.json`;
+  copy it byte-for-byte to `pillars/bfm/contracts/value-vectors-v1.json` and
+  `clients/ios/Contracts/value-vectors-v1.json`.
 
 The contract (zod) is the single source of truth; OpenAPI, api-types, and the
 generated manifest are downstream projections. No hand-authored OpenAPI, no

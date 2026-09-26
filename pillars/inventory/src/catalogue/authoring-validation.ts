@@ -1,5 +1,6 @@
 import { validateCatalogueReplacements } from './authoring-replacements.js';
 import { failIssues, issue } from './authoring-shared.js';
+import { validateTypeTree } from './authoring-type-tree-validation.js';
 import { ExpressionValidationError } from './expression-types.js';
 import { validateCatalogueExpressions } from './expression-validator.js';
 import { checkFieldDefaultValues } from './field-default-values.js';
@@ -193,6 +194,7 @@ export function validateCatalogue(catalogue: PersistedCatalogue, base: Persisted
     duplicateKey(typeKeys, { id: type.id, key: type.key, path: 'key', label: 'Type key' }, issues);
     validateType(type, typeIds, issues);
   }
+  issues.push(...validateTypeTree(catalogue));
   if (issues.length === 0) {
     try {
       validateCatalogueExpressions(catalogue);

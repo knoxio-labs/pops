@@ -2,7 +2,11 @@ import { eq } from 'drizzle-orm';
 
 import { catalogueRevisions } from '../db/schema.js';
 import { DEFAULT_COMPUTED_DEPENDENT_LIMIT } from '../domain/commands/computed-dependents.js';
-import { PERSISTED_CATALOGUE_PROTOCOL, readMinimumProtocol } from '../protocol/rollout.js';
+import {
+  PERSISTED_CATALOGUE_PROTOCOL,
+  readMinimumProtocol,
+  TYPE_TREE_PROTOCOL,
+} from '../protocol/rollout.js';
 import { claimCurrentDraft } from './authoring-draft-version.js';
 import { migrationInput } from './authoring-migration.js';
 import { writePublication } from './authoring-publication-write.js';
@@ -41,11 +45,16 @@ function assessPublication(
   return { base, candidate, compatibility: assessCatalogueCompatibility(db, base, candidate) };
 }
 
-function gatesVocabulary(compatibility: CatalogueCompatibilityAssessment): boolean {
-  return compatibility.changes.some(
-    (change) =>
-      change.classification === 'protocol_gated' && change.code !== 'minimum_protocol_increased'
-  );
+function gatesVocabulary(compatibility: CatalogueCompatibilityAssessment): number | undefined {
+  const requiredProtocols = compatibility.changes
+    .filter(
+      (change) =>
+        change.classification === 'protocol_gated' && change.code !== 'minimum_protocol_increased'
+    )
+    .map((change) =>
+      change.code === 'type_parent_set' ? TYPE_TREE_PROTOCOL : PERSISTED_CATALOGUE_PROTOCOL
+    );
+  return requiredProtocols.length === 0 ? undefined : Math.max(...requiredProtocols);
 }
 
 function setDraftMinimumProtocol(db: CommandDb, revision: number, minimumProtocol: number): void {
@@ -76,11 +85,12 @@ function applyProtocolGate(
     setDraftMinimumProtocol(db, revision, input.minimumProtocol);
   }
   let publication = assessPublication(db, revision, input);
+  const vocabularyProtocol = gatesVocabulary(publication.compatibility);
   if (
-    gatesVocabulary(publication.compatibility) &&
-    publication.candidate.revision.minimumProtocol < PERSISTED_CATALOGUE_PROTOCOL
+    vocabularyProtocol !== undefined &&
+    publication.candidate.revision.minimumProtocol < vocabularyProtocol
   ) {
-    setDraftMinimumProtocol(db, revision, PERSISTED_CATALOGUE_PROTOCOL);
+    setDraftMinimumProtocol(db, revision, vocabularyProtocol);
     publication = assessPublication(db, revision, input);
   }
   const required = publication.candidate.revision.minimumProtocol;
