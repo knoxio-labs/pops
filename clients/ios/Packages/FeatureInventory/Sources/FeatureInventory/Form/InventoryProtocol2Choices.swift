@@ -4,7 +4,14 @@ import AppCore
 /// shows, and blank when the field has none.
 internal enum InventoryProtocol2FieldHint {
     internal static func placeholder(for field: InventoryCatalogueField) -> String {
-        field.help ?? InventoryFormBlank.placeholder
+        placeholder(for: field, showsLabel: true)
+    }
+
+    internal static func placeholder(
+        for field: InventoryCatalogueField, showsLabel: Bool
+    ) -> String {
+        guard showsLabel else { return InventoryFormBlank.placeholder }
+        return field.help ?? InventoryFormBlank.placeholder
     }
 }
 

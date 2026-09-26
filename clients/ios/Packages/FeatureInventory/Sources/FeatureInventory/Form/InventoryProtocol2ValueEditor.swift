@@ -11,6 +11,7 @@ internal struct InventoryProtocol2ValueEditor: View {
     let field: InventoryCatalogueField
     let entry: InventoryProtocol2DraftEntry
     let label: String
+    let showsLabel: Bool
     /// The identifier a driver script addresses this entry's editor by.
     /// `InventoryAccessibility.protocol2Field(id:)` for a single-valued
     /// field's one entry, `protocol2FieldEntry(id:index:)` for one of a
@@ -22,14 +23,32 @@ internal struct InventoryProtocol2ValueEditor: View {
     let setValue: (InventoryPrimitiveValue?) -> Void
     let setReferenceKind: (InventoryReferenceTargetKind) -> Void
 
+    internal init(
+        field: InventoryCatalogueField, entry: InventoryProtocol2DraftEntry, label: String,
+        showsLabel: Bool = true, identifier: String,
+        referenceTargets: [InventoryProtocol2ReferenceTarget], setText: @escaping (String) -> Void,
+        setValue: @escaping (InventoryPrimitiveValue?) -> Void,
+        setReferenceKind: @escaping (InventoryReferenceTargetKind) -> Void
+    ) {
+        self.field = field
+        self.entry = entry
+        self.label = label
+        self.showsLabel = showsLabel
+        self.identifier = identifier
+        self.referenceTargets = referenceTargets
+        self.setText = setText
+        self.setValue = setValue
+        self.setReferenceKind = setReferenceKind
+    }
+
     @ViewBuilder var body: some View {
         switch field.kind {
         case .boolean:
-            Toggle(label, isOn: flagBinding)
-                .accessibilityIdentifier(identifier)
+            booleanEditor
         case .enumeration:
             InventoryFormChoiceRow(
                 label: label, fieldId: field.id, identifier: identifier,
+                showsLabel: showsLabel,
                 options: InventoryProtocol2EnumOptions.choices(
                     for: field, retaining: chosenOptionId),
                 chosenId: chosenOptionId,
@@ -47,7 +66,7 @@ internal struct InventoryProtocol2ValueEditor: View {
         default:
             InventoryFormTextRow(
                 label, placeholder: placeholder, text: textBinding,
-                identifier: identifier)
+                identifier: identifier, showsLabel: showsLabel)
         }
         if let issue = entry.issue {
             Text(issue)
@@ -57,74 +76,117 @@ internal struct InventoryProtocol2ValueEditor: View {
         }
     }
 
+    @ViewBuilder private var booleanEditor: some View {
+        if showsLabel {
+            Toggle(label, isOn: flagBinding)
+                .accessibilityIdentifier(identifier)
+        } else {
+            Toggle(label, isOn: flagBinding)
+                .labelsHidden()
+                .accessibilityLabel(label)
+                .accessibilityIdentifier(identifier)
+        }
+    }
+
     private var longTextEditor: some View {
         InventoryFormFocusableRow { focus in
-            LabeledContent(label) {
-                TextField(
-                    placeholder, text: textBinding, axis: .vertical
-                )
-                .focused(focus)
-                .lineLimit(1...8)
-                .multilineTextAlignment(.leading)
-                .accessibilityIdentifier(identifier)
+            if showsLabel {
+                LabeledContent(label) {
+                    longTextField(focus: focus)
+                }
+            } else {
+                longTextField(focus: focus)
             }
         }
+    }
+
+    private func longTextField(focus: FocusState<Bool>.Binding) -> some View {
+        TextField(placeholder, text: textBinding, axis: .vertical)
+            .focused(focus)
+            .lineLimit(1...8)
+            .multilineTextAlignment(.leading)
+            .accessibilityLabel(label)
+            .accessibilityIdentifier(identifier)
     }
 
     private var measurementEditor: some View {
         InventoryFormFocusableRow { focus in
-            LabeledContent(label) {
-                HStack(spacing: PopsSpacing.sm) {
-                    TextField(placeholder, text: textBinding)
-                        .focused(focus)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(1)
-                        .inventoryDecimalKeyboard()
-                        .accessibilityIdentifier(identifier)
-                    if let unit = field.fixedUnit {
-                        Text(unit).foregroundStyle(Color.popsMutedForeground)
-                    }
+            if showsLabel {
+                LabeledContent(label) {
+                    measurementFields(focus: focus)
                 }
+            } else {
+                measurementFields(focus: focus)
             }
         }
     }
 
-    private var referenceEditor: some View {
+    private func measurementFields(focus: FocusState<Bool>.Binding) -> some View {
+        HStack(spacing: PopsSpacing.sm) {
+            TextField(placeholder, text: textBinding)
+                .focused(focus)
+                .multilineTextAlignment(.leading)
+                .lineLimit(1)
+                .inventoryDecimalKeyboard()
+                .accessibilityLabel(label)
+                .accessibilityIdentifier(identifier)
+            if let unit = field.fixedUnit {
+                Text(unit).foregroundStyle(Color.popsMutedForeground)
+            }
+        }
+    }
+
+    @ViewBuilder private var referenceEditor: some View {
         let allowed = InventoryProtocol2ReferenceTargets.allowed(
             for: field, among: referenceTargets)
         let current = referenceValue
         let kinds = field.references.targetKinds.sorted { $0.rawValue < $1.rawValue }
         let selectedKind = entry.referenceKind ?? current?.targetKind ?? kinds.first ?? .item
-        return LabeledContent(label) {
-            HStack(spacing: PopsSpacing.sm) {
-                if kinds.count > 1 {
-                    Picker(
-                        "Kind",
-                        selection: Binding(get: { selectedKind }, set: { setReferenceKind($0) })
-                    ) {
-                        ForEach(kinds, id: \.self) { Text($0.label).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                }
+        if showsLabel {
+            LabeledContent(label) {
+                referenceFields(
+                    allowed: allowed, current: current, kinds: kinds, selectedKind: selectedKind)
+            }
+        } else {
+            referenceFields(
+                allowed: allowed, current: current, kinds: kinds, selectedKind: selectedKind
+            )
+            .accessibilityLabel(label)
+        }
+    }
+
+    private func referenceFields(
+        allowed: [InventoryProtocol2ReferenceTarget], current: InventoryReferenceValue?,
+        kinds: [InventoryReferenceTargetKind], selectedKind: InventoryReferenceTargetKind
+    ) -> some View {
+        HStack(spacing: PopsSpacing.sm) {
+            if kinds.count > 1 {
                 Picker(
-                    "Record",
-                    selection: referenceSelection(allowed: allowed, selectedKind: selectedKind)
+                    "Kind",
+                    selection: Binding(get: { selectedKind }, set: { setReferenceKind($0) })
                 ) {
-                    Text(InventoryFormBlank.placeholder).tag("")
-                    if let current,
-                        !allowed.contains(where: {
-                            $0.kind == current.targetKind && $0.id == current.targetId
-                        })
-                    {
-                        Text(readOnlyReference(current)).tag(current.targetId)
-                    }
-                    ForEach(allowed.filter { $0.kind == selectedKind }) { target in
-                        Text(target.label).tag(target.id)
-                    }
+                    ForEach(kinds, id: \.self) { Text($0.label).tag($0) }
                 }
                 .pickerStyle(.menu)
-                .accessibilityIdentifier(identifier)
             }
+            Picker(
+                "Record",
+                selection: referenceSelection(allowed: allowed, selectedKind: selectedKind)
+            ) {
+                Text(InventoryFormBlank.placeholder).tag("")
+                if let current,
+                    !allowed.contains(where: {
+                        $0.kind == current.targetKind && $0.id == current.targetId
+                    })
+                {
+                    Text(readOnlyReference(current)).tag(current.targetId)
+                }
+                ForEach(allowed.filter { $0.kind == selectedKind }) { target in
+                    Text(target.label).tag(target.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .accessibilityIdentifier(identifier)
         }
     }
 
@@ -140,7 +202,7 @@ internal struct InventoryProtocol2ValueEditor: View {
     }
 
     private var placeholder: String {
-        InventoryProtocol2FieldHint.placeholder(for: field)
+        InventoryProtocol2FieldHint.placeholder(for: field, showsLabel: showsLabel)
     }
 
     private var textBinding: Binding<String> {

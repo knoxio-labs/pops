@@ -49,6 +49,7 @@ internal struct InventorySymbol: Hashable, Sendable {
     internal static let storeHere = InventorySymbol(system: "square.and.arrow.down")
     internal static let rename = InventorySymbol(system: "pencil")
     internal static let manage = InventorySymbol(system: "ellipsis.circle")
+    internal static let reorder = InventorySymbol(system: "line.3.horizontal")
     internal static let offline = InventorySymbol(system: "wifi.slash")
     internal static let torch = InventorySymbol(system: "flashlight.off.fill")
     internal static let library = InventorySymbol(system: "photo.on.rectangle")
