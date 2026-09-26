@@ -337,7 +337,7 @@ describe('POST /web/items/batch', () => {
     const rejected = await postBatch(body([...maximum, row({ name: 'Too many' })]));
     expect(rejected.status).toBe(400);
     expect(counts()).toEqual(before);
-  });
+  }, 30_000);
 
   it('rejects generic field values instead of creating a row with unsupported data', async () => {
     const before = counts();

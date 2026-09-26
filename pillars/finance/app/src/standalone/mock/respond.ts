@@ -24,8 +24,17 @@ export const done: MockHandler = () => ({ body: { message: 'ok' } });
 /** `{ ok: true }`, purchases' answer for the same. */
 export const acknowledged: MockHandler = () => ({ body: { ok: true } });
 
-export function notFound(what: string) {
-  return { status: 404, body: { code: 'NOT_FOUND', message: `No such ${what}` } };
+/** Return a contract-shaped 404 fixture for a consumer-owned mock layer. */
+export function notFound(what: string, code: string) {
+  return {
+    status: 404,
+    body: {
+      code,
+      message: `No such ${what}`,
+      requestId: 'finance-standalone-mock',
+      retryable: false,
+    },
+  };
 }
 
 /** ADR-054 not-found response returned by finance's standalone mock. */
