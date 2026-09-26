@@ -121,11 +121,12 @@ internal enum Protocol2Wire {
 
     /// A protocol-2 lamp with a stored lumens value and a computed efficacy.
     internal static func lamp(
-        id: String = lampId, revision: Int = 1, seq: Int = 1, catalogueRevision: Int = 2,
+        id: String = lampId, typeId: String = bulbType, revision: Int = 1, seq: Int = 1,
+        catalogueRevision: Int = 2,
         amount: String = "800", name: String = "Lamp"
     ) -> String {
         InventoryWire.item(
-            id: id, revision: revision, seq: seq, name: name, typeId: bulbType,
+            id: id, revision: revision, seq: seq, name: name, typeId: typeId,
             catalogueRevision: catalogueRevision,
             fieldValues: """
                 [{"fieldId":"\(lumens)","source":"stored","catalogueRevision":\(catalogueRevision),\
