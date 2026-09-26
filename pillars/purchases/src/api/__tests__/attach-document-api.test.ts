@@ -77,7 +77,7 @@ it('refuses the same invoice twice with a 409 rather than writing a twin', async
     409
   );
 
-  expect(repeat.body.code).toBe('DOCUMENT_ALREADY_ATTACHED');
+  expect(repeat.body.code).toBe('purchases.document.already_attached');
   expect(documentsOn(purchaseId)).toHaveLength(1);
 });
 
@@ -120,7 +120,7 @@ it('answers 404 for an order that is not here, and writes nothing', async () => 
     kind: 'tax_invoice',
   }).expect(404);
 
-  expect(res.body.code).toBe('NOT_FOUND');
+  expect(res.body.code).toBe('purchases.resource.not_found');
   expect(documentsOn(purchaseId)).toHaveLength(0);
 });
 
@@ -138,7 +138,7 @@ it('refuses a kind outside the vocabulary', async () => {
 
 it('reaches an order the create path would now refuse at the checksum', async () => {
   const duplicate = await requestOn(app).post('/purchases').send(amazonOrder()).expect(409);
-  expect(duplicate.body.code).toBe('DUPLICATE_PURCHASE');
+  expect(duplicate.body.code).toBe('purchases.purchase.duplicate');
 
   await attach(purchaseId, { documentUri: INVOICE_URI, kind: 'tax_invoice' }).expect(201);
 

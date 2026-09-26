@@ -37,6 +37,7 @@ import {
   InventoryProposalConflictError,
   listInventoryProposals,
 } from '../../db/index.js';
+import { purchaseErrorBody, type PurchaseErrorReason } from '../errors.js';
 import { createInventoryAssetCreator, type InventoryAssetCreator } from '../inventory/client.js';
 import { proposalNotFound } from './purchase-inventory-handlers.js';
 
@@ -49,12 +50,12 @@ import type { InventoryAssetCreateResult } from '../inventory/client.js';
 type AssetRequestBody = z.infer<typeof InventoryAssetRequestSchema>;
 
 /** Why no asset was created, in the vocabulary a caller acts on. */
-const FAILURE_CODES = {
-  unauthorized: 'INVENTORY_UNAUTHORIZED',
-  unavailable: 'INVENTORY_UNAVAILABLE',
-  refused: 'INVENTORY_REFUSED',
-  unreadable: 'INVENTORY_RESPONSE_UNREADABLE',
-} as const;
+const FAILURE_REASONS = {
+  unauthorized: 'unauthorized',
+  unavailable: 'unavailable',
+  refused: 'refused',
+  unreadable: 'response_unreadable',
+} as const satisfies Readonly<Record<string, PurchaseErrorReason>>;
 
 /**
  * The offer this request answers.
@@ -77,8 +78,11 @@ function findOffer(
   );
 }
 
-function badGateway(message: string, code: string, inventoryItemUri: string | null) {
-  return { status: 502 as const, body: { message, code, inventoryItemUri } };
+function badGateway(message: string, reason: PurchaseErrorReason, inventoryItemUri: string | null) {
+  return {
+    status: 502 as const,
+    body: purchaseErrorBody(reason, { message, details: { inventoryItemUri } }),
+  };
 }
 
 /**
@@ -99,7 +103,7 @@ function nothingRecorded(result: Exclude<InventoryAssetCreateResult, { kind: 'cr
       : 'nothing was created and nothing was recorded; the offer still stands';
   return badGateway(
     `The inventory asset was not created (${result.kind}: ${result.reason}): ${detail}`,
-    FAILURE_CODES[result.kind],
+    FAILURE_REASONS[result.kind],
     null
   );
 }
@@ -141,7 +145,7 @@ function assetOrphaned(inventoryItemUri: string, reason: string) {
     `Inventory created ${inventoryItemUri}, but the accept could not be recorded (${reason}). ` +
       'That asset exists and purchases holds no reference to it: delete it in inventory, or ' +
       'keep it and reconcile by hand. Do not repeat this request — it would create a second one',
-    'ACCEPT_NOT_RECORDED',
+    'accept_not_recorded',
     inventoryItemUri
   );
 }

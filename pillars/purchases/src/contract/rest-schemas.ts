@@ -9,6 +9,8 @@
  */
 import { z } from 'zod';
 
+import { ErrorBodySchema } from '@pops/types';
+
 import {
   AutoLinkPolicySchema,
   CaptureSourceSchema,
@@ -35,10 +37,7 @@ import {
 
 export { CreateItemBodySchema, CreateItemUnitBodySchema, PatchItemBodySchema };
 
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
-});
+export { ErrorBodySchema };
 
 export const OkSchema = z.object({ ok: z.literal(true) });
 

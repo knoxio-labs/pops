@@ -8,8 +8,9 @@
  * types already draw.
  */
 import { canonicalInstant } from '../../db/index.js';
+import { purchaseErrorBody } from '../errors.js';
 
-import type { ErrorBody } from './error-mapping.js';
+import type { ErrorBody } from '@pops/types';
 
 /** The two keyset-anchor query parameters, however `ListQuery` spells them. */
 export interface PurchaseListKeysetQuery {
@@ -41,10 +42,9 @@ export function resolvePurchaseListKeyset(
     const missing = query.beforeOrderedAt === undefined ? 'beforeOrderedAt' : 'beforeId';
     return {
       ok: false,
-      body: {
+      body: purchaseErrorBody('keyset_anchor_incomplete', {
         message: `beforeOrderedAt and beforeId must be supplied together; ${missing} is missing`,
-        code: 'KEYSET_ANCHOR_INCOMPLETE',
-      },
+      }),
     };
   }
 
@@ -54,10 +54,9 @@ export function resolvePurchaseListKeyset(
   if (beforeOrderedAt === null) {
     return {
       ok: false,
-      body: {
+      body: purchaseErrorBody('unreadable_timestamp', {
         message: `Keyset anchor 'beforeOrderedAt' value '${query.beforeOrderedAt}' names no instant`,
-        code: 'UNREADABLE_TIMESTAMP',
-      },
+      }),
     };
   }
 

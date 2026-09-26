@@ -12,6 +12,7 @@ import {
   nameMerchant,
   type MerchantResolver,
 } from '../contacts/merchant.js';
+import { purchaseErrorBody } from '../errors.js';
 import { findDraftInconsistency, toCreatePurchaseInput } from './draft-mapping.js';
 import {
   ensureDraftSource,
@@ -58,7 +59,7 @@ export function makePurchaseManualHandlers(
       if (inconsistency !== null) {
         return {
           status: 400 as const,
-          body: { message: inconsistency.message, code: 'INCONSISTENT_TOTAL' },
+          body: purchaseErrorBody('inconsistent_total', { message: inconsistency.message }),
         };
       }
 

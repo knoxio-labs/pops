@@ -12,11 +12,16 @@ import express from 'express';
 import { describe, expect, it } from 'vitest';
 
 import {
+  createRequestValidationErrorHandler,
+  createRequestIdMiddleware,
+} from '@pops/pillar-express';
+
+import {
   DuplicatePurchaseError,
   PurchaseNotFoundError,
   PurchaseSourceNotFoundError,
 } from '../../db/index.js';
-import { createRequestValidationErrorHandler, tryMapServiceError } from '../rest/error-mapping.js';
+import { tryMapServiceError } from '../rest/error-mapping.js';
 import {
   isCheckConstraintError,
   isForeignKeyConstraintError,
@@ -35,7 +40,7 @@ describe('tryMapServiceError', () => {
   it('maps both not-found errors to 404', () => {
     expect(tryMapServiceError(new PurchaseNotFoundError('p1'))).toMatchObject({
       status: 404,
-      body: { code: 'NOT_FOUND' },
+      body: { code: 'purchases.resource.not_found', retryable: false },
     });
     expect(tryMapServiceError(new PurchaseSourceNotFoundError('s1'))).toMatchObject({
       status: 404,
@@ -45,28 +50,28 @@ describe('tryMapServiceError', () => {
   it('maps a duplicate purchase to 409 with a code an adapter can branch on', () => {
     expect(tryMapServiceError(new DuplicatePurchaseError('c1'))).toMatchObject({
       status: 409,
-      body: { code: 'DUPLICATE_PURCHASE' },
+      body: { code: 'purchases.purchase.duplicate', retryable: false },
     });
   });
 
   it('maps a UNIQUE violation to 409', () => {
     expect(tryMapServiceError(sqliteError('SQLITE_CONSTRAINT_UNIQUE'))).toMatchObject({
       status: 409,
-      body: { code: 'CONFLICT_UNIQUE' },
+      body: { code: 'purchases.storage.unique_conflict', retryable: false },
     });
   });
 
   it('maps a FOREIGN KEY violation to 409', () => {
     expect(tryMapServiceError(sqliteError('SQLITE_CONSTRAINT_FOREIGNKEY'))).toMatchObject({
       status: 409,
-      body: { code: 'CONFLICT_FK' },
+      body: { code: 'purchases.storage.foreign_key_conflict', retryable: false },
     });
   });
 
   it('maps a CHECK violation to 400, because the payload is wrong rather than conflicting', () => {
     expect(tryMapServiceError(sqliteError('SQLITE_CONSTRAINT_CHECK'))).toMatchObject({
       status: 400,
-      body: { code: 'CONSTRAINT_CHECK' },
+      body: { code: 'purchases.storage.check_failed', retryable: false },
     });
   });
 
@@ -79,28 +84,33 @@ describe('tryMapServiceError', () => {
 });
 
 describe('createRequestValidationErrorHandler', () => {
-  it('answers a RequestValidationError with the contract-shaped 400, dropping the issues', async () => {
+  it('answers a RequestValidationError with the contract-shaped 400 and request id', async () => {
     const app = express();
+    app.use(createRequestIdMiddleware());
     app.get('/boom', (_req, _res, next) => {
       next(new RequestValidationError(null, null, null, null));
     });
-    app.use(createRequestValidationErrorHandler());
+    app.use(createRequestValidationErrorHandler({ pillar: 'purchases' }));
 
     const res = await requestOn(app).get('/boom');
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({
-      message: 'Request does not match the contract schema',
-      code: 'VALIDATION_ERROR',
+    expect(res.body).toMatchObject({
+      message: 'The request is invalid.',
+      code: 'purchases.request.invalid',
+      requestId: expect.any(String),
+      retryable: false,
+      details: { issues: [] },
     });
   });
 
   it('forwards anything else to the next handler unmapped', async () => {
     const app = express();
+    app.use(createRequestIdMiddleware());
     app.get('/boom', (_req, _res, next) => {
       next(new Error('unrelated failure'));
     });
-    app.use(createRequestValidationErrorHandler());
+    app.use(createRequestValidationErrorHandler({ pillar: 'purchases' }));
     app.use(passThroughErrorReporter);
 
     const res = await requestOn(app).get('/boom');

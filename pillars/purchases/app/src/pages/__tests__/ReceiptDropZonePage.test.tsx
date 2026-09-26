@@ -461,7 +461,10 @@ describe('ReceiptDropZonePage — created', () => {
   // same hazard the created case clears for, reached by a different answer.
   it('clears the staged parts when the receipt was already recorded', async () => {
     await uploadOne({
-      error: { code: 'ALREADY_IMPORTED', message: 'already read as purchase purchase-77' },
+      error: {
+        code: 'purchases.receipt.already_imported',
+        message: 'already read as purchase purchase-77',
+      },
     });
 
     expect(await screen.findByText(enAUPurchases['receipts.duplicate.title'])).toBeVisible();
@@ -685,13 +688,13 @@ describe('ReceiptDropZonePage — the other answers', () => {
   //
   // Both codes are asserted because they arrive from different places and only
   // one of them is reachable by uploading the same file twice in a row:
-  // DUPLICATE_PURCHASE comes from the write rejecting a checksum it already
+  // purchases.purchase.duplicate comes from the write rejecting a checksum it already
   // holds, which a second upload reaches only while the first is still in
-  // flight. Testing ALREADY_IMPORTED alone left that path rendering the
+  // flight. Testing the receipt-level code alone left that path rendering the
   // destructive refusal panel for a receipt that had in fact been recorded.
   it.each([
-    { code: 'ALREADY_IMPORTED', from: 'the checks before the model call' },
-    { code: 'DUPLICATE_PURCHASE', from: 'the write itself, on a concurrent upload' },
+    { code: 'purchases.receipt.already_imported', from: 'the checks before the model call' },
+    { code: 'purchases.purchase.duplicate', from: 'the write itself, on a concurrent upload' },
   ] as const)(
     'reads a 409 from $from as already recorded rather than as an error',
     async ({ code }) => {
@@ -711,7 +714,7 @@ describe('ReceiptDropZonePage — the other answers', () => {
   it("surfaces a refusal in the server's own words", async () => {
     await uploadOne({
       error: {
-        code: 'NOT_THE_STATED_TYPE',
+        code: 'purchases.receipt.invalid_media_type',
         message: 'The upload is not a valid image/jpeg file',
       },
     });
@@ -724,7 +727,7 @@ describe('ReceiptDropZonePage — the other answers', () => {
   it('surfaces a declined upload when no vision model is configured', async () => {
     await uploadOne({
       error: {
-        code: 'VISION_UNAVAILABLE',
+        code: 'purchases.receipt.vision_unavailable',
         message: 'No vision model is configured; set ANTHROPIC_API_KEY',
       },
     });
@@ -747,12 +750,22 @@ describe('ReceiptDropZonePage — the other answers', () => {
     { label: 'nothing readable', response: unreadable(), settles: 'receipts.unreadable.title' },
     {
       label: 'a duplicate',
-      response: { error: { code: 'ALREADY_IMPORTED', message: 'already read as purchase-1' } },
+      response: {
+        error: {
+          code: 'purchases.receipt.already_imported',
+          message: 'already read as purchase-1',
+        },
+      },
       settles: 'receipts.duplicate.title',
     },
     {
       label: 'a refusal',
-      response: { error: { code: 'NOT_THE_STATED_TYPE', message: 'not a valid image/jpeg file' } },
+      response: {
+        error: {
+          code: 'purchases.receipt.invalid_media_type',
+          message: 'not a valid image/jpeg file',
+        },
+      },
       settles: 'receipts.refused.title',
     },
   ] as const)('never renders a raw catalog key for $label', async ({ response, settles }) => {

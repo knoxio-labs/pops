@@ -12,7 +12,7 @@
  * That narrows the duplicate window; it does not close it. The create is a
  * network call, so two accepts of the same slot in flight together both see
  * it offered and both create — one records, one is answered
- * `ACCEPT_NOT_RECORDED` with the URI of the asset nothing references. There
+ * `purchases.inventory.accept_not_recorded` with the URI of the asset nothing references. There
  * is no repair on this side: a decision cannot be retracted, and inventory
  * offers no create keyed on where a row came from, so nothing here can ask
  * for "the asset for this line, if it exists". The food pillar's write into

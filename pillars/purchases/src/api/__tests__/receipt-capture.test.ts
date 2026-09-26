@@ -259,7 +259,7 @@ describe('a location is sensitive data', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.code).toBe('purchases.request.invalid');
     expect(JSON.stringify(response.body)).not.toContain('931.95');
     expect(captureRows()).toHaveLength(0);
   });

@@ -15,7 +15,7 @@ describe('resolvePurchaseScope with a bound that names no instant', () => {
 
     expect(resolution.ok).toBe(false);
     if (resolution.ok) return;
-    expect(resolution.body.code).toBe('UNREADABLE_TIMESTAMP');
+    expect(resolution.body.code).toBe('purchases.request.unreadable_timestamp');
     expect(resolution.body.message).toContain(parameter);
     expect(resolution.body.message).toContain(unreadable);
   });

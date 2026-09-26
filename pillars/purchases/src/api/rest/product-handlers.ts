@@ -15,6 +15,7 @@ import {
   renameProduct,
   updateAlias,
 } from '../../db/index.js';
+import { purchaseErrorBody } from '../errors.js';
 import { tryMapServiceError } from './error-mapping.js';
 
 import type { z } from 'zod';
@@ -31,7 +32,7 @@ type RenameBody = z.infer<typeof RenameProductBodySchema>;
 type UpdateAliasBody = z.infer<typeof UpdateProductAliasBodySchema>;
 
 function notFound(message: string) {
-  return { status: 404 as const, body: { message, code: 'NOT_FOUND' } };
+  return { status: 404 as const, body: purchaseErrorBody('not_found', { message }) };
 }
 
 /** Re-throw anything that is not a service error this contract declares. */

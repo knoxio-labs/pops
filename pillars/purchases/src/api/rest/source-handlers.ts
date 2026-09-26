@@ -2,6 +2,7 @@
  * Handlers for the `source.*` ts-rest sub-router.
  */
 import { deleteSource, getSource, listSources, upsertSource } from '../../db/index.js';
+import { purchaseErrorBody } from '../errors.js';
 import { tryMapServiceError } from './error-mapping.js';
 
 import type { z } from 'zod';
@@ -23,7 +24,9 @@ export function makeSourceHandlers(db: PurchasesDb) {
       if (source === undefined) {
         return {
           status: 404 as const,
-          body: { message: `Purchase source '${params.id}' not found`, code: 'NOT_FOUND' },
+          body: purchaseErrorBody('not_found', {
+            message: `Purchase source '${params.id}' not found`,
+          }),
         };
       }
       return { status: 200 as const, body: source };
@@ -47,7 +50,9 @@ export function makeSourceHandlers(db: PurchasesDb) {
         if (!deleteSource(db, params.id)) {
           return {
             status: 404 as const,
-            body: { message: `Purchase source '${params.id}' not found`, code: 'NOT_FOUND' },
+            body: purchaseErrorBody('not_found', {
+              message: `Purchase source '${params.id}' not found`,
+            }),
           };
         }
       } catch (err) {

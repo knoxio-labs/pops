@@ -154,6 +154,4 @@ export const InventoryAssetRequestSchema = z.object({
  * `code` names which failure this is, so a consumer branches on a value
  * rather than on the presence of a field it might forget to read.
  */
-export const InventoryAssetFailureSchema = ErrorBodySchema.extend({
-  inventoryItemUri: InventoryItemUriSchema.nullable(),
-});
+export const InventoryAssetFailureSchema = ErrorBodySchema;

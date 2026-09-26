@@ -25,12 +25,14 @@ import {
   resolveMerchantFilter,
 } from '../../contract/merchant-filter.js';
 import { canonicalInstant } from '../../db/index.js';
+import { purchaseErrorBody } from '../errors.js';
 
 import type { z } from 'zod';
 
+import type { ErrorBody } from '@pops/types';
+
 import type { ListPurchasesQuerySchema } from '../../contract/rest-schemas.js';
 import type { PurchaseScopeFilter } from '../../db/index.js';
-import type { ErrorBody } from './error-mapping.js';
 
 export type PurchaseScopeQuery = Omit<
   z.infer<typeof ListPurchasesQuerySchema>,
@@ -51,10 +53,9 @@ function readBound(parameter: 'from' | 'to', value: string | undefined): BoundRe
   if (bound === null) {
     return {
       ok: false,
-      body: {
+      body: purchaseErrorBody('unreadable_timestamp', {
         message: `Scope parameter '${parameter}' value '${value}' names no instant`,
-        code: 'UNREADABLE_TIMESTAMP',
-      },
+      }),
     };
   }
   return { ok: true, bound };
@@ -70,12 +71,11 @@ export function resolvePurchaseScope(query: PurchaseScopeQuery): PurchaseScopeRe
   if (!merchant.ok) {
     return {
       ok: false,
-      body: {
+      body: purchaseErrorBody('merchant_filter_conflict', {
         message: `A read is scoped to at most one merchant, but ${merchant.conflicting.join(
           ' and '
         )} were both sent. Send one of ${MERCHANT_FILTER_PARAMETERS.join(', ')}.`,
-        code: 'MERCHANT_FILTER_CONFLICT',
-      },
+      }),
     };
   }
 

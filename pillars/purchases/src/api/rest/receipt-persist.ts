@@ -15,9 +15,10 @@ import { CURRENCY_UNCERTAIN } from '../../ingest/receipt/currency.js';
 import { DATE_UNCERTAIN, RECEIPT_SOURCE_ID } from '../../ingest/receipt/purchase.js';
 import { tryMapServiceError } from './error-mapping.js';
 
+import type { ErrorBody } from '@pops/types';
+
 import type { PurchaseDetail, PurchasesDb } from '../../db/index.js';
 import type { CreatePurchaseInput } from '../../db/services/purchase-input.js';
-import type { ErrorBody } from './error-mapping.js';
 
 /**
  * Register the drop-zone's own source, on first use.

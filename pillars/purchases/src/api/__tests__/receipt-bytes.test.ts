@@ -176,7 +176,7 @@ describe('GET /receipts/:sha256', () => {
     const response = await requestOn(app).get(`/receipts/${ABSENT_SHA}`);
 
     expect(response.status).toBe(404);
-    expect(response.body.code).toBe('RECEIPT_NOT_STORED');
+    expect(response.body.code).toBe('purchases.receipt.not_stored');
   });
 
   it('refuses a hash that is not one, distinctly from a hash that names nothing', async () => {
@@ -271,7 +271,7 @@ describe('GET /receipts/:sha256/thumbnail', () => {
     const response = await requestOn(app).get(`/receipts/${stored.sha256}/thumbnail`);
 
     expect(response.status).toBe(415);
-    expect(response.body.code).toBe('RECEIPT_NOT_AN_IMAGE');
+    expect(response.body.code).toBe('purchases.receipt.not_an_image');
   });
 
   it('says a pasted body is not a photograph either', async () => {
@@ -284,7 +284,7 @@ describe('GET /receipts/:sha256/thumbnail', () => {
     const response = await requestOn(app).get(`/receipts/${stored.sha256}/thumbnail`);
 
     expect(response.status).toBe(415);
-    expect(response.body.code).toBe('RECEIPT_NOT_AN_IMAGE');
+    expect(response.body.code).toBe('purchases.receipt.not_an_image');
   });
 
   it('reports an image it cannot decode as this receipt’s problem, not as a fault', async () => {
@@ -293,7 +293,7 @@ describe('GET /receipts/:sha256/thumbnail', () => {
     const response = await requestOn(app).get(`/receipts/${stored.sha256}/thumbnail`);
 
     expect(response.status).toBe(415);
-    expect(response.body.code).toBe('RECEIPT_UNDECODABLE');
+    expect(response.body.code).toBe('purchases.receipt.undecodable');
     // The receipt itself is still reachable. Refusing to draw it must not
     // make the evidence unavailable — that is the whole reason it is stored.
     const full = await requestOn(app).get(`/receipts/${stored.sha256}`);
@@ -305,7 +305,7 @@ describe('GET /receipts/:sha256/thumbnail', () => {
     const response = await requestOn(app).get(`/receipts/${ABSENT_SHA}/thumbnail`);
 
     expect(response.status).toBe(404);
-    expect(response.body.code).toBe('RECEIPT_NOT_STORED');
+    expect(response.body.code).toBe('purchases.receipt.not_stored');
   });
 
   it('refuses a hash that is not one', async () => {

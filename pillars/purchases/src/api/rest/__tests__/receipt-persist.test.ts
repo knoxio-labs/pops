@@ -141,12 +141,14 @@ describe('persistReceiptPurchase', () => {
         receiptPurchase({ orderedAt: 'not-an-instant' })
       );
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         kind: 'refused',
         status: 400,
         body: {
-          message: "Invalid ingest payload: orderedAt 'not-an-instant' names no instant",
-          code: 'INVALID_INGEST_PAYLOAD',
+          message: 'The purchase payload is inconsistent.',
+          code: 'purchases.purchase.invalid_ingest_payload',
+          requestId: expect.any(String),
+          retryable: false,
         },
       });
     } finally {

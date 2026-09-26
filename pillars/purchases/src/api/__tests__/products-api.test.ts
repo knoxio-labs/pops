@@ -229,7 +229,7 @@ describe('refusals', () => {
     const res = await requestOn(app).patch('/products/aliases/nope').send({ confirmed: true });
 
     expect(res.status).toBe(404);
-    expect(res.body).toMatchObject({ code: 'NOT_FOUND' });
+    expect(res.body).toMatchObject({ code: 'purchases.resource.not_found' });
   });
 
   it('refuses to point a wording at a product that does not exist', async () => {
