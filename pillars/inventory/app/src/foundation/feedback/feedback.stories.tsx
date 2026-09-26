@@ -1,4 +1,4 @@
-import { OFFLINE_TITLE, StateBanner } from './state-banner';
+import { OFFLINE_REASON, OFFLINE_TITLE, StateBanner } from './state-banner';
 import { UndoToast } from './undo-toast';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
@@ -12,11 +12,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** The reversible action toast in its offered, resolved, and conflict states. */
 export const Toasts: Story = {
   render: () => (
     <div className="grid gap-4 lg:grid-cols-2">
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <h2 className="text-sm font-semibold">Undo toast</h2>
+        <p className="text-xs text-muted-foreground">Undo is available for 8 seconds.</p>
         <UndoToast concept="move" message="Moved 5 items to Shelving" />
         <UndoToast concept="pickUp" message="Picked up Tape measure" />
         <UndoToast concept="retired" message="Retired Film camera" />
@@ -24,12 +26,18 @@ export const Toasts: Story = {
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <h2 className="text-sm font-semibold">After Undo</h2>
         <UndoToast concept="move" message="Moved 5 items to Shelving" state="undone" />
-        <UndoToast concept="move" message="Moved Kitchen 12 to Garage" state="conflict" />
+        <UndoToast
+          concept="move"
+          message="Moved Kitchen 12 to Garage"
+          state="conflict"
+          onOpenHistory={() => undefined}
+        />
       </section>
     </div>
   ),
 };
 
+/** The five inventory data states, each with no more than one recovery action. */
 export const Banners: Story = {
   render: () => (
     <div className="max-w-3xl space-y-2">
@@ -39,11 +47,7 @@ export const Banners: Story = {
         detail="Your selection stays until you reload."
         actionLabel="Reload"
       />
-      <StateBanner
-        kind="offline"
-        title={OFFLINE_TITLE}
-        detail="Changes are off until it is back."
-      />
+      <StateBanner kind="offline" title={OFFLINE_TITLE} detail={OFFLINE_REASON} />
       <StateBanner
         kind="conflict"
         title="Two edits to Manufacturer disagree."

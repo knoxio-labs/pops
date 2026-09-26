@@ -5,9 +5,10 @@ import { getActiveUndoOffer, runActiveUndo } from './undo-toast';
 
 import type { KeyInput } from '@pops/ui';
 
-import type { UndoOffer } from './undo-toast';
+import type { UndoOffer as UndoOfferType } from './undo-toast';
 
-export type { UndoOffer } from './undo-toast';
+/** The snapshot consumed by the global Undo shortcut. */
+export type UndoOffer = UndoOfferType;
 
 /** Whether Cmd/Ctrl-Z can use the current undo offer. */
 export function undoKeyApplies(
@@ -20,6 +21,7 @@ export function undoKeyApplies(
 
 /** Handles the global Undo shortcut and reports whether it consumed the key. */
 export function undoActiveToast(event: KeyboardEvent): boolean {
+  if (event.defaultPrevented) return false;
   if (
     !undoKeyApplies(
       event,
