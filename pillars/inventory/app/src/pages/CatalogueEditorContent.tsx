@@ -38,7 +38,13 @@ export function CatalogueEditorContent({
 }) {
   if (page.mode === 'new-type')
     return (
-      <TypeForm isPending={page.isPending} onPreview={page.previewOperation} onSave={onOperation} />
+      <TypeForm
+        isPending={page.isPending}
+        issues={[...page.issues.saved, ...page.issues.live]}
+        onPreview={page.previewOperation}
+        onSave={onOperation}
+        types={page.types}
+      />
     );
   if (page.mode === 'type') return <TypeEditor page={page} onOperation={onOperation} />;
   return <FieldEditor page={page} onOperation={onOperation} />;
@@ -59,8 +65,11 @@ function TypeEditor({
         key={`${type.id}-${page.editorEpoch}`}
         type={type}
         isPending={page.isPending}
+        issues={[...page.issues.saved, ...page.issues.live]}
         onPreview={page.previewOperation}
         onSave={onOperation}
+        published={page.published?.types.some((candidate) => candidate.id === type.id) ?? false}
+        types={page.types}
         onArchive={() =>
           page.setArchiveTarget({
             kind: 'type',
@@ -94,6 +103,9 @@ function FieldEditor({
           onAdd={page.createField}
           onMove={page.moveField}
           onSelect={page.selectField}
+          onSelectType={page.selectType}
+          type={type}
+          types={page.types}
         />
       </div>
       <div className="lg:col-span-3">
@@ -109,8 +121,7 @@ function FieldFormContent({
   readonly onOperation: (operation: CatalogueOperation) => void;
   readonly page: Page;
 }) {
-  const type = page.selectedType;
-  const field = page.selectedField;
+  const { selectedField: field, selectedType: type } = page;
   if (type === null) return null;
   if (page.mode === 'new-field')
     return (
@@ -121,6 +132,7 @@ function FieldFormContent({
         types={page.types}
         published={false}
         isPending={page.isPending}
+        issues={pageIssues(page)}
         onOperation={onOperation}
         onPreview={page.previewOperation}
       />
@@ -141,6 +153,7 @@ function FieldFormContent({
       types={page.types}
       published={page.selectedFieldIsPublished}
       isPending={page.isPending}
+      issues={pageIssues(page)}
       onOperation={onOperation}
       onPreview={page.previewOperation}
       onArchive={() =>
@@ -160,4 +173,8 @@ function FieldFormContent({
       }
     />
   );
+}
+
+function pageIssues(page: Page) {
+  return [...page.issues.saved, ...page.issues.live];
 }

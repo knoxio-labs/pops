@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { FieldForm } from './FieldForm';
 
+import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type { CatalogueField, CatalogueType } from './types';
 
 const TYPE_ID = '11111111-1111-4111-8111-111111111111';
@@ -66,7 +67,12 @@ function type(fields: CatalogueField[]): CatalogueType {
   };
 }
 
-function renderField(target: CatalogueField, siblings: CatalogueField[] = [], published = false) {
+function renderField(
+  target: CatalogueField,
+  siblings: CatalogueField[] = [],
+  published = false,
+  issues: readonly InventoryApiIssue[] = []
+) {
   const itemType = type([target, ...siblings]);
   const onOperation = vi.fn();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -75,6 +81,7 @@ function renderField(target: CatalogueField, siblings: CatalogueField[] = [], pu
       <FieldForm
         field={target}
         isPending={false}
+        issues={issues}
         onOperation={onOperation}
         published={published}
         type={itemType}
@@ -259,6 +266,20 @@ describe('FieldForm configuration branches', () => {
     expect(screen.getByLabelText('Many')).toBeDisabled();
     expect(screen.getByLabelText('Fixed unit')).toBeDisabled();
     expect(screen.getByText('Published shape is locked')).toBeInTheDocument();
+  });
+
+  it('renders inherited key duplicates beside the field key control', () => {
+    const target = field();
+    renderField(target, [], false, [
+      {
+        code: 'inherited_key_duplicate',
+        definitionId: target.id,
+        message: 'Key already belongs to an inherited field',
+        path: 'key',
+      },
+    ]);
+
+    expect(screen.getByText('Key already belongs to an inherited field')).toBeInTheDocument();
   });
 
   it('blocks saving a computed field while its expression is empty', () => {

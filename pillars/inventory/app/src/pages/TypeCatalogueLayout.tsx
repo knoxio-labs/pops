@@ -67,9 +67,11 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
       </div>
       <AuditDialog open={page.auditOpen} onOpenChange={page.setAuditOpen} />
       <ArchiveCatalogueDialog
+        issues={[...page.issues.saved, ...page.issues.live]}
         target={page.archiveTarget}
         onOpenChange={(open) => !open && page.setArchiveTarget(null)}
         onOperation={onOperation}
+        types={page.types}
       />
     </div>
   );

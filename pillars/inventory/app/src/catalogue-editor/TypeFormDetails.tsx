@@ -2,6 +2,9 @@ import { Archive } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle, Input, Label, Switch, Textarea } from '@pops/ui';
 
+import { ParentTypeChooser } from './ParentTypeChooser';
+
+import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type { CatalogueType } from './types';
 
 interface TypeFormDetailsProps {
@@ -9,6 +12,11 @@ interface TypeFormDetailsProps {
   readonly description: string;
   readonly keyValue: string;
   readonly label: string;
+  readonly onParentChange: (value: string | null) => void;
+  readonly parentEditable: boolean;
+  readonly parentTypeId: string | null;
+  readonly types: readonly CatalogueType[];
+  readonly validationIssues: readonly InventoryApiIssue[];
   readonly onContainmentChange: (value: boolean) => void;
   readonly onDescriptionChange: (value: string) => void;
   readonly onKeyChange: (value: string) => void;
@@ -43,22 +51,15 @@ export function TypeFormDetails(props: TypeFormDetailsProps) {
             onChange={(event) => props.onDescriptionChange(event.target.value)}
           />
         </div>
-        <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:col-span-2">
-          <div>
-            <Label htmlFor="catalogue-containment" className="text-sm font-medium">
-              Containment capability
-            </Label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Items of this type can contain other items. Changing a published capability may
-              require a migration.
-            </p>
-          </div>
-          <Switch
-            id="catalogue-containment"
-            checked={containment}
-            onCheckedChange={props.onContainmentChange}
-          />
-        </div>
+        <ParentTypeChooser
+          editedType={type}
+          editable={props.parentEditable}
+          issues={props.validationIssues}
+          onChange={props.onParentChange}
+          types={props.types}
+          value={props.parentTypeId}
+        />
+        <TypeCapability checked={containment} onChange={props.onContainmentChange} />
       </div>
       {type?.archivedAt !== null && type?.archivedAt !== undefined && (
         <Alert>
@@ -107,5 +108,28 @@ function TypeIdentity({
         </p>
       </div>
     </>
+  );
+}
+
+function TypeCapability({
+  checked,
+  onChange,
+}: {
+  readonly checked: boolean;
+  readonly onChange: (value: boolean) => void;
+}) {
+  return (
+    <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:col-span-2">
+      <div>
+        <Label htmlFor="catalogue-containment" className="text-sm font-medium">
+          Containment capability
+        </Label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Items of this type can contain other items. Changing a published capability may require a
+          migration.
+        </p>
+      </div>
+      <Switch id="catalogue-containment" checked={checked} onCheckedChange={onChange} />
+    </div>
   );
 }
