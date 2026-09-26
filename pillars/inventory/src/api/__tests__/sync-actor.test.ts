@@ -162,6 +162,7 @@ describe('scopes derived for the sync surface', () => {
       'GET /sync/snapshot inventory.sync.snapshot',
       'GET /types inventory.types.catalogue',
       'POST /codes/suggest inventory.codes.suggest',
+      'POST /sync/ledger inventory.sync.reportLedger',
       'POST /sync/mutations inventory.sync.mutations',
     ]);
   });

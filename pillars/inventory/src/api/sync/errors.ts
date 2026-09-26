@@ -5,13 +5,22 @@
  */
 export class SyncRequestError extends Error {
   constructor(
-    readonly status: 400 | 401 | 404 | 409 | 426 | 503,
+    readonly status: 400 | 401 | 403 | 404 | 409 | 426 | 503,
     readonly code: string,
     message: string
   ) {
     super(message);
     this.name = 'SyncRequestError';
   }
+}
+
+/** A ledger report sent by anything other than a device actor. */
+export function deviceActorRequired(): SyncRequestError {
+  return new SyncRequestError(
+    403,
+    'device_actor_required',
+    'A ledger report must come from a device'
+  );
 }
 
 /** A cursor this server did not issue, or one issued for another route or item. */

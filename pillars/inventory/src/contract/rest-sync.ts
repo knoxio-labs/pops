@@ -24,6 +24,7 @@ import { z } from 'zod';
 
 import { inventoryCatalogueContract } from './rest-catalogue.js';
 import { ErrorBodySchema, NonEmptyString } from './rest-schemas.js';
+import { SyncLedgerReportBodySchema, SyncLedgerReportResponseSchema } from './rest-sync-ledger.js';
 import {
   SyncEventSchema,
   SyncItemSchema,
@@ -135,6 +136,14 @@ export const inventorySyncContract = c.router({
     body: SyncMutationsBodySchema,
     responses: { 200: SyncMutationsResponseSchema, ...SYNC_ERRORS },
     summary: 'Apply up to 50 mutations in order, each in its own transaction, idempotently',
+  },
+  reportLedger: {
+    method: 'POST',
+    path: '/sync/ledger',
+    headers: MutationHeaders,
+    body: SyncLedgerReportBodySchema,
+    responses: { 200: SyncLedgerReportResponseSchema, 403: ErrorBodySchema, ...SYNC_ERRORS },
+    summary: "Store a device's latest sync ledger report",
   },
 });
 

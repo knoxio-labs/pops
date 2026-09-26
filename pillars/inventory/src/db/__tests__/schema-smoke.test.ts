@@ -9,6 +9,7 @@ import { getTableName } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
+  deviceSyncLedgers,
   events,
   fixtures,
   itemConnections,
@@ -26,6 +27,7 @@ import {
 
 describe('inventory schema table names', () => {
   it.each([
+    [deviceSyncLedgers, 'device_sync_ledgers'],
     [events, 'events'],
     [fixtures, 'fixtures'],
     [items, 'items'],
