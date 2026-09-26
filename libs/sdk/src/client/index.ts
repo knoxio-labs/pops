@@ -28,3 +28,12 @@ export {
 } from './openapi-route-map.js';
 export { performRestCall, type RestCallContext, type RestRouteSource } from './rest-call.js';
 export { getRouteMap, OpenApiSourceCache, __resetSharedOpenApiCache } from './openapi-source.js';
+export {
+  ApiError,
+  unwrap,
+  type ApiErrorInit,
+  type ApiErrorIssue,
+  type ApiErrorKind,
+  type ApiResult,
+  type UnwrapOptions,
+} from '../api-error.js';
