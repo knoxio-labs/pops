@@ -37,7 +37,7 @@ async function lookupBarcode(
   gateway: PillarGateway,
   code: string
 ): Promise<GatewayOutcome<MobileBarcodeLookupOutcome>> {
-  const call = gateway.call<BarcodeRouter, unknown>('barcode', (handle) =>
+  const call = gateway.call<BarcodeRouter, unknown>(BARCODE_PILLAR_ID, (handle) =>
     handle.lookup.get({ code })
   );
   const outcome = await raceTimeout(call, BARCODE_LOOKUP_TIMEOUT_MS);
