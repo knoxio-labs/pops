@@ -19,6 +19,7 @@ const putType = {
     id: uuid,
     key: { type: 'string', minLength: 1, maxLength: 100 },
     label: { type: 'string', minLength: 1, maxLength: 200 },
+    parentTypeId: { type: ['string', 'null'], format: 'uuid', description: 'Parent type ID.' },
     description: { type: ['string', 'null'], maxLength: 2_000 },
     sortOrder: { type: 'integer', minimum: 0 },
     capabilities: {

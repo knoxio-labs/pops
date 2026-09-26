@@ -77,7 +77,11 @@ though nothing enforces it mechanically.
   full v1 computed-field grammar (literal, same-item or bounded reference
   `read`, unary/binary ops, `if`) mirrored from
   `pillars/inventory/src/catalogue/expression-types.ts`, checked for drift by
-  `inventory-contract-fidelity.test.ts` — not an unconstrained blob.
+  `inventory-contract-fidelity.test.ts` — not an unconstrained blob. A subtype's
+  items take its ancestors' fields and capabilities. Create the parent, read its
+  id from `.draft.types[]` in the response, then create the child in a second
+  patch: ids are server-minted. Changing the parent of a published type is
+  refused.
 - `inventory.items.*` uses the protocol-2 generic item contract. Reads expose
   stable `typeId`, `catalogueRevision` and field IDs. Create, edit and type
   changes require the caller's observed catalogue revision; edit, type change
