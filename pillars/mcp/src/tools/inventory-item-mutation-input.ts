@@ -28,9 +28,16 @@ export interface UpdateItemMutationInput {
   readonly itemRevision: number;
   readonly catalogueRevision: number;
   readonly fieldValues?: readonly FieldValuePatchInput[];
+  readonly externalIds?: readonly ExternalIdInput[];
   readonly mutationId?: string;
   readonly itemName?: string;
   readonly note?: string | null;
+}
+
+/** One non-empty external identifier sent as part of an item-edit replacement. */
+export interface ExternalIdInput {
+  readonly kind: string;
+  readonly value: string;
 }
 
 /** Parses and validates the complete item-create argument bag. */
@@ -85,6 +92,67 @@ function parseUpdateText(
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function parseExternalIds(
+  args: Record<string, unknown>
+): Parsed<readonly ExternalIdInput[] | undefined> {
+  if (args['externalIds'] === undefined) return { ok: true, value: undefined };
+  const externalIds = args['externalIds'];
+  if (!Array.isArray(externalIds)) return { ok: false, error: 'externalIds must be an array' };
+
+  const parsed: ExternalIdInput[] = [];
+  for (const [index, entry] of externalIds.entries()) {
+    const path = `externalIds[${String(index)}]`;
+    if (!isRecord(entry)) return { ok: false, error: `${path} must be an object` };
+    for (const key of Object.keys(entry)) {
+      if (key !== 'kind' && key !== 'value') {
+        return { ok: false, error: `${path}.${key} is not allowed` };
+      }
+    }
+    const kind = entry['kind'];
+    if (typeof kind !== 'string' || kind.length === 0) {
+      return { ok: false, error: `${path}.kind must be a non-empty string` };
+    }
+    const value = entry['value'];
+    if (typeof value !== 'string' || value.length === 0) {
+      return { ok: false, error: `${path}.value must be a non-empty string` };
+    }
+    parsed.push({ kind, value });
+  }
+  return { ok: true, value: parsed };
+}
+
+function parseUpdateFields(
+  args: Record<string, unknown>
+): Parsed<Pick<UpdateItemMutationInput, 'fieldValues' | 'externalIds'>> {
+  const fieldValues = optionalFieldValuePatches(args);
+  if (!fieldValues.ok) return fieldValues;
+  const externalIds = parseExternalIds(args);
+  if (!externalIds.ok) return externalIds;
+  return {
+    ok: true,
+    value: {
+      ...(fieldValues.value === undefined ? {} : { fieldValues: fieldValues.value }),
+      ...(externalIds.value === undefined ? {} : { externalIds: externalIds.value }),
+    },
+  };
+}
+
+function hasUpdateChange(
+  text: Pick<UpdateItemMutationInput, 'itemName' | 'note'>,
+  fields: Pick<UpdateItemMutationInput, 'fieldValues' | 'externalIds'>
+): boolean {
+  return (
+    text.itemName !== undefined ||
+    text.note !== undefined ||
+    fields.fieldValues !== undefined ||
+    fields.externalIds !== undefined
+  );
+}
+
 /** Parses and validates an optimistic item-edit argument bag. */
 export function parseUpdateItemMutationInput(
   args: Record<string, unknown>
@@ -95,18 +163,17 @@ export function parseUpdateItemMutationInput(
   if (!itemRevision.ok) return itemRevision;
   const catalogueRevision = requiredPositiveInteger(args, 'catalogueRevision');
   if (!catalogueRevision.ok) return catalogueRevision;
-  const fieldValues = optionalFieldValuePatches(args);
-  if (!fieldValues.ok) return fieldValues;
+  const fields = parseUpdateFields(args);
+  if (!fields.ok) return fields;
   const mutationId = optionalUuid(args, 'mutationId');
   if (!mutationId.ok) return mutationId;
   const text = parseUpdateText(args);
   if (!text.ok) return text;
-  if (
-    text.value.itemName === undefined &&
-    text.value.note === undefined &&
-    fieldValues.value === undefined
-  ) {
-    return { ok: false, error: 'At least one of itemName, note, or fieldValues is required' };
+  if (!hasUpdateChange(text.value, fields.value)) {
+    return {
+      ok: false,
+      error: 'At least one of itemName, note, fieldValues, or externalIds is required',
+    };
   }
   return {
     ok: true,
@@ -115,7 +182,7 @@ export function parseUpdateItemMutationInput(
       itemRevision: itemRevision.value,
       catalogueRevision: catalogueRevision.value,
       ...text.value,
-      ...(fieldValues.value === undefined ? {} : { fieldValues: fieldValues.value }),
+      ...fields.value,
       ...(mutationId.value === undefined ? {} : { mutationId: mutationId.value }),
     },
   };

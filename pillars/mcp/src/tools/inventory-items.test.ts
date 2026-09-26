@@ -233,6 +233,112 @@ describe('protocol-2 inventory writes', () => {
     });
   });
 
+  it('replaces external identifiers and omits them when absent', async () => {
+    await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      itemName: 'With ISBN',
+      externalIds: [
+        { kind: 'isbn13', value: '9780306406157' },
+        { kind: 'serial', value: 'ABC-123' },
+      ],
+    });
+
+    expect(inventory.sync.mutations.mock.calls[0]?.[0].mutations[0]).toMatchObject({
+      args: {
+        name: 'With ISBN',
+        externalIds: [
+          { kind: 'isbn13', value: '9780306406157' },
+          { kind: 'serial', value: 'ABC-123' },
+        ],
+      },
+    });
+
+    await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      itemName: 'Without external IDs',
+    });
+
+    expect(inventory.sync.mutations.mock.calls[1]?.[0].mutations[0].args).not.toHaveProperty(
+      'externalIds'
+    );
+  });
+
+  it('forwards an empty external-identifier list to clear it', async () => {
+    await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      externalIds: [],
+    });
+
+    expect(inventory.sync.mutations.mock.calls[0]?.[0].mutations[0]).toMatchObject({
+      args: { externalIds: [] },
+    });
+  });
+
+  it.each([
+    ['not an array', { externalIds: 'isbn13' }, 'externalIds must be an array'],
+    [
+      'missing kind',
+      { externalIds: [{ kind: 'isbn13', value: '9780306406157' }, { value: 'ABC-123' }] },
+      'externalIds[1].kind must be a non-empty string',
+    ],
+    [
+      'empty value',
+      { externalIds: [{ kind: 'isbn13', value: '' }] },
+      'externalIds[0].value must be a non-empty string',
+    ],
+    [
+      'extra property',
+      { externalIds: [{ kind: 'isbn13', value: '9780306406157', source: 'scan' }] },
+      'externalIds[0].source is not allowed',
+    ],
+  ])('rejects invalid external identifiers: %s', async (_case, input, error) => {
+    const result = await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      itemName: 'Invalid external ID',
+      ...input,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]).toEqual({ type: 'text', text: error });
+    expect(inventory.sync.mutations).not.toHaveBeenCalled();
+  });
+
+  it('accepts an update containing only external identifiers', async () => {
+    await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      externalIds: [{ kind: 'isbn13', value: '9780306406157' }],
+    });
+
+    expect(inventory.sync.mutations.mock.calls[0]?.[0].mutations[0].args).toEqual({
+      externalIds: [{ kind: 'isbn13', value: '9780306406157' }],
+    });
+  });
+
+  it('rejects an update with no changes using the complete error', async () => {
+    const result = await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]).toEqual({
+      type: 'text',
+      text: 'At least one of itemName, note, fieldValues, or externalIds is required',
+    });
+    expect(inventory.sync.mutations).not.toHaveBeenCalled();
+  });
+
   it('changes type with a complete replacement value set', async () => {
     await tool('inventory.items.changeType').handler({
       id: ITEM_ID,
