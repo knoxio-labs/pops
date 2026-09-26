@@ -9,41 +9,47 @@
  *
  * **Every route, not only the rail-reachable ones.** The shell mounts exactly
  * the pages listed here and nothing else — so a route missing from this list
- * does not exist (POPS-3223). This is intentionally flat; the inventory
- * route table owns the page paths directly.
+ * does not exist (POPS-3223). The layout route owns the page paths directly
+ * beneath it.
  *
  * `items/new` and `items/:id/edit` share `inventory-item-form`, while the two
  * insurance redirects share `inventory-insurance-report-redirect`. A slot
  * maps to one component, so two paths may name the same slot.
  */
 export const INVENTORY_PAGES = [
-  { path: '', index: true, bundleSlot: 'inventory-overview' },
-  { path: 'items', bundleSlot: 'inventory-items' },
-  { path: 'items/new', bundleSlot: 'inventory-item-form' },
-  { path: 'items/bulk-new', bundleSlot: 'inventory-bulk-entry' },
-  { path: 'items/:id', bundleSlot: 'inventory-item-detail' },
-  { path: 'items/:id/edit', bundleSlot: 'inventory-item-form' },
-  { path: 'items/:id/history', bundleSlot: 'inventory-item-history' },
-  { path: 'containers', bundleSlot: 'inventory-containers' },
-  { path: 'moving-day', bundleSlot: 'inventory-moving-day' },
-  { path: 'in-hand', bundleSlot: 'inventory-in-hand' },
-  { path: 'locations', bundleSlot: 'inventory-location-tree' },
-  { path: 'locations/:id', bundleSlot: 'inventory-location' },
-  { path: 'search', bundleSlot: 'inventory-search' },
-  { path: 'connections', bundleSlot: 'inventory-connections' },
-  { path: 'connections/fixtures', bundleSlot: 'inventory-fixtures' },
-  { path: 'fixtures/:id', bundleSlot: 'inventory-fixture' },
-  { path: 'types', bundleSlot: 'inventory-type-catalogue' },
-  { path: 'types/:id/arrived', bundleSlot: 'inventory-type-arrived' },
-  { path: 'reports', bundleSlot: 'inventory-reports' },
-  { path: 'labels', bundleSlot: 'inventory-labels' },
-  { path: 'sync', bundleSlot: 'inventory-sync' },
-  { path: 'import', bundleSlot: 'inventory-import' },
-  { path: 'warranties', bundleSlot: 'inventory-warranties-redirect' },
-  { path: 'activity', bundleSlot: 'inventory-activity-redirect' },
-  { path: 'reports/insurance', bundleSlot: 'inventory-insurance-report-redirect' },
-  { path: 'report', bundleSlot: 'inventory-report-redirect' },
-  { path: 'report/insurance', bundleSlot: 'inventory-insurance-report-redirect' },
+  {
+    path: '',
+    bundleSlot: 'inventory-layout',
+    children: [
+      { path: '', index: true, bundleSlot: 'inventory-overview' },
+      { path: 'items', bundleSlot: 'inventory-items' },
+      { path: 'items/new', bundleSlot: 'inventory-item-form' },
+      { path: 'items/bulk-new', bundleSlot: 'inventory-bulk-entry' },
+      { path: 'items/:id', bundleSlot: 'inventory-item-detail' },
+      { path: 'items/:id/edit', bundleSlot: 'inventory-item-form' },
+      { path: 'items/:id/history', bundleSlot: 'inventory-item-history' },
+      { path: 'containers', bundleSlot: 'inventory-containers' },
+      { path: 'moving-day', bundleSlot: 'inventory-moving-day' },
+      { path: 'in-hand', bundleSlot: 'inventory-in-hand' },
+      { path: 'locations', bundleSlot: 'inventory-location-tree' },
+      { path: 'locations/:id', bundleSlot: 'inventory-location' },
+      { path: 'search', bundleSlot: 'inventory-search' },
+      { path: 'connections', bundleSlot: 'inventory-connections' },
+      { path: 'connections/fixtures', bundleSlot: 'inventory-fixtures' },
+      { path: 'fixtures/:id', bundleSlot: 'inventory-fixture' },
+      { path: 'types', bundleSlot: 'inventory-type-catalogue' },
+      { path: 'types/:id/arrived', bundleSlot: 'inventory-type-arrived' },
+      { path: 'reports', bundleSlot: 'inventory-reports' },
+      { path: 'labels', bundleSlot: 'inventory-labels' },
+      { path: 'sync', bundleSlot: 'inventory-sync' },
+      { path: 'import', bundleSlot: 'inventory-import' },
+      { path: 'warranties', bundleSlot: 'inventory-warranties-redirect' },
+      { path: 'activity', bundleSlot: 'inventory-activity-redirect' },
+      { path: 'reports/insurance', bundleSlot: 'inventory-insurance-report-redirect' },
+      { path: 'report', bundleSlot: 'inventory-report-redirect' },
+      { path: 'report/insurance', bundleSlot: 'inventory-insurance-report-redirect' },
+    ],
+  },
 ] as const;
 
 /**

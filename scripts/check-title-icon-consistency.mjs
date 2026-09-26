@@ -575,6 +575,28 @@ function selfTest() {
 
   const noPageHeaderAnywhere = analyzeApp('x', routesSource, () => '<div>no header here</div>');
 
+  const pathlessLayoutSources = [
+    `
+      export const routes = [{
+        path: '',
+        element: <Layout />,
+        children: [
+          { index: true, element: <HomePage /> },
+          { path: 'list', element: <ListPage /> },
+        ],
+      }];
+    `,
+    `
+      export const routes = [{
+        element: <Layout />,
+        children: [
+          { index: true, element: <HomePage /> },
+          { path: 'list', element: <ListPage /> },
+        ],
+      }];
+    `,
+  ];
+
   const checks = {
     'flags a mixed app (some icons, some none)': consistentMismatch.some(
       (v) => v.kind === 'inconsistent' && v.app === 'x'
@@ -600,17 +622,14 @@ function selfTest() {
       parseRouteComponents(routesSource).get('list') === 'ListPage',
     'parses the index route as the empty path':
       parseRouteComponents(routesSource).get('') === 'HomePage',
-    'resolves routes through a pathless layout route':
-      parseRouteComponents(`
-        export const routes = [{
-          path: '',
-          element: <Layout />,
-          children: [
-            { index: true, element: <HomePage /> },
-            { path: 'list', element: <ListPage /> },
-          ],
-        }];
-      `).get('list') === 'ListPage',
+    'resolves nav items through a path-less layout route': pathlessLayoutSources.every((source) => {
+      const components = parseRouteComponents(source);
+      return (
+        components.size === 2 &&
+        components.get('') === 'HomePage' &&
+        components.get('list') === 'ListPage'
+      );
+    }),
     'parses lazy import paths':
       parseLazyImports(routesSource).get('HomePage') === './pages/HomePage',
     'resolves an icon tag nested inside a wrapper element':

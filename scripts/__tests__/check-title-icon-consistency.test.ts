@@ -90,26 +90,41 @@ describe('parseRouteComponents', () => {
   });
 
   it('resolves nav items through a pathless layout route', () => {
-    const source = `
-      const HomePage = lazy(() => import('./pages/HomePage'));
-      const ListPage = lazy(() => import('./pages/ListPage'));
-      export const routes = [
-        {
-          path: '',
-          element: <Layout />,
-          children: [
-            { index: true, element: <HomePage /> },
-            { path: 'list', element: <ListPage /> },
-          ],
-        },
-      ];
-    `;
-    expect(parseRouteComponents(source)).toEqual(
-      new Map([
-        ['', 'HomePage'],
-        ['list', 'ListPage'],
-      ])
-    );
+    const expected = new Map([
+      ['', 'HomePage'],
+      ['list', 'ListPage'],
+    ]);
+    for (const source of [
+      `
+        const HomePage = lazy(() => import('./pages/HomePage'));
+        const ListPage = lazy(() => import('./pages/ListPage'));
+        export const routes = [
+          {
+            path: '',
+            element: <Layout />,
+            children: [
+              { index: true, element: <HomePage /> },
+              { path: 'list', element: <ListPage /> },
+            ],
+          },
+        ];
+      `,
+      `
+        const HomePage = lazy(() => import('./pages/HomePage'));
+        const ListPage = lazy(() => import('./pages/ListPage'));
+        export const routes = [
+          {
+            element: <Layout />,
+            children: [
+              { index: true, element: <HomePage /> },
+              { path: 'list', element: <ListPage /> },
+            ],
+          },
+        ];
+      `,
+    ]) {
+      expect(parseRouteComponents(source)).toEqual(expected);
+    }
   });
 
   it('keeps parsing past an apostrophe inside a // comment', () => {
