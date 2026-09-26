@@ -20619,6 +20619,26 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "contentCounts": {
+                      "additionalProperties": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "deep": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "direct": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["direct", "deep"],
+                        "type": "object"
+                      },
+                      "type": "object"
+                    },
                     "hiddenInactiveCount": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -21203,6 +21223,7 @@
                   },
                   "required": [
                     "items",
+                    "contentCounts",
                     "nextCursor",
                     "total",
                     "unfilteredTotal",

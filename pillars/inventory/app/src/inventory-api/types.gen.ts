@@ -6593,6 +6593,12 @@ export type WebListResponses = {
    * 200
    */
   200: {
+    contentCounts: {
+      [key: string]: {
+        deep: number;
+        direct: number;
+      };
+    };
     hiddenInactiveCount: number;
     items: Array<{
       access: 'open' | 'closed' | null;

@@ -167,6 +167,77 @@ describe('web.items.list', () => {
     });
   });
 
+  it('returns live direct and deep counts only for containers on the page', async () => {
+    const outer = await client().items.create({ itemName: 'Outer box' });
+    setPublishedType(outer.data.id, 'storage_box', true);
+    const inner = await client().items.create({
+      itemName: 'Inner box',
+      containerId: outer.data.id,
+    });
+    setPublishedType(inner.data.id, 'storage_box', true);
+    const direct = await client().items.create({
+      itemName: 'Direct item',
+      containerId: outer.data.id,
+    });
+    const nested = await client().items.create({
+      itemName: 'Nested item',
+      containerId: inner.data.id,
+    });
+    const retired = await client().items.create({
+      itemName: 'Retired item',
+      containerId: outer.data.id,
+    });
+    const tombstone = await client().items.create({
+      itemName: 'Tombstoned item',
+      containerId: outer.data.id,
+    });
+    const loose = await client().items.create({ itemName: 'Loose item' });
+    setLifecycle(retired.data.id, 'retired');
+    setLifecycle(tombstone.data.id, 'destroyed', '2026-09-26T00:00:00.000Z');
+
+    const page = await client().web.listItems({
+      ids: [outer.data.id, inner.data.id, direct.data.id, nested.data.id, loose.data.id].join(','),
+      limit: 50,
+    });
+
+    expect(page.contentCounts).toEqual({
+      [outer.data.id]: { direct: 2, deep: 3 },
+      [inner.data.id]: { direct: 1, deep: 1 },
+    });
+    expect(page.contentCounts).not.toHaveProperty(direct.data.id);
+    expect(page.contentCounts).not.toHaveProperty(loose.data.id);
+  });
+
+  it('bounds content counts to the filtered page across pagination', async () => {
+    const alpha = await client().items.create({ itemName: 'Alpha box' });
+    const beta = await client().items.create({ itemName: 'Beta box' });
+    setPublishedType(alpha.data.id, 'storage_box', true);
+    setPublishedType(beta.data.id, 'storage_box', true);
+    await client().items.create({ itemName: 'Alpha content', containerId: alpha.data.id });
+    await client().items.create({ itemName: 'Beta content', containerId: beta.data.id });
+
+    const first = await client().web.listItems({ isContainer: 'true', limit: 1, sort: 'name' });
+    expect(first.items.map((item) => item.id)).toEqual([alpha.data.id]);
+    expect(first.contentCounts).toEqual({ [alpha.data.id]: { direct: 1, deep: 1 } });
+
+    const second = await client().web.listItems({
+      isContainer: 'true',
+      limit: 1,
+      sort: 'name',
+      cursor: first.nextCursor!,
+    });
+    expect(second.items.map((item) => item.id)).toEqual([beta.data.id]);
+    expect(second.contentCounts).toEqual({ [beta.data.id]: { direct: 1, deep: 1 } });
+  });
+
+  it('returns an empty content count map when the page has no containers', async () => {
+    await client().items.create({ itemName: 'Plain item' });
+
+    const page = await client().web.listItems({ isContainer: 'false' });
+
+    expect(page.contentCounts).toEqual({});
+  });
+
   it('applies container, access, and fullness filters together', async () => {
     const openEmpty = await client().items.create({ itemName: 'Open empty' });
     const openFull = await client().items.create({ itemName: 'Open full' });

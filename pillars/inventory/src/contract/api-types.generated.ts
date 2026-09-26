@@ -9164,6 +9164,12 @@ export interface operations {
         };
         content: {
           'application/json': {
+            contentCounts: {
+              [key: string]: {
+                deep: number;
+                direct: number;
+              };
+            };
             hiddenInactiveCount: number;
             items: {
               /** @enum {string|null} */

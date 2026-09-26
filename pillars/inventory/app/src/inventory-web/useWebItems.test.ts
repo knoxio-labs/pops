@@ -23,9 +23,6 @@ import type {
 type WebItem = WebListResponses['200']['items'][number];
 type Catalogue = TypesReadCatalogueResponses[200];
 type WebListPage = WebListResponses['200'] & {
-  readonly contentCounts?: Readonly<
-    Record<string, { readonly direct: number; readonly deep: number }>
-  >;
   readonly deletedPreviousPlaces?: Readonly<
     Record<string, { readonly kind: 'location' | 'container'; readonly name: string }>
   >;
@@ -105,6 +102,7 @@ function item(id: string, overrides: Partial<WebItem> = {}): WebItem {
 
 function page(overrides: Partial<WebListPage> = {}): WebListPage {
   return {
+    contentCounts: {},
     hiddenInactiveCount: 0,
     items: [],
     nextCursor: null,
@@ -255,6 +253,58 @@ describe('useWebItems', () => {
     expect(result.current.hiddenInactiveCount).toBe(2);
     expect(result.current.baseline).toBe(3);
     expect(result.current.hidden).toBe(2);
+  });
+
+  it('merges content counts from each loaded page', async () => {
+    mocks.webList
+      .mockResolvedValueOnce(
+        ok(
+          page({
+            contentCounts: { 'box-a': { direct: 2, deep: 3 } },
+            items: [item('box-a', { isContainer: true })],
+            nextCursor: 'cursor-1',
+          })
+        )
+      )
+      .mockResolvedValueOnce(
+        ok(
+          page({
+            contentCounts: { 'box-b': { direct: 1, deep: 1 } },
+            items: [item('box-b', { isContainer: true })],
+          })
+        )
+      );
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useItemRows({ isContainer: 'true' }), {
+      wrapper: withQueryClient(client),
+    });
+
+    await waitFor(() =>
+      expect(result.current.contentCounts).toEqual({
+        'box-a': { direct: 2, deep: 3 },
+      })
+    );
+
+    await result.current.fetchNextPage();
+
+    await waitFor(() =>
+      expect(result.current.contentCounts).toEqual({
+        'box-a': { direct: 2, deep: 3 },
+        'box-b': { direct: 1, deep: 1 },
+      })
+    );
+  });
+
+  it('exposes an empty content count map for an empty page', async () => {
+    mocks.webList.mockResolvedValue(ok(page()));
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useItemRows({}), {
+      wrapper: withQueryClient(client),
+    });
+
+    await waitFor(() => expect(result.current.status).toBe('success'));
+
+    expect(result.current.contentCounts).toEqual({});
   });
 
   it('aborts an in-flight request when its filters change', async () => {
