@@ -3,7 +3,6 @@ import {
   replaceValidatedItemFieldValues,
   resolveProtocol1Type,
 } from '../../catalogue/index.js';
-import { storedFieldValues } from './active-catalogue-values.js';
 import { moveOntoReplacements } from './catalogue-replacement-move.js';
 import {
   assertCommandFieldValues,
@@ -15,7 +14,7 @@ import { CommandRejected } from './errors.js';
 import { assertProtocol1Fields } from './protocol-1-fields.js';
 
 import type { ItemFieldValueInput, PersistedItemType } from '../../catalogue/index.js';
-import type { ActiveFieldValue } from './active-catalogue-values.js';
+import type { ActiveCreateFieldValue } from './active-catalogue-values.js';
 import type { CommandDb } from './entities.js';
 
 /** Catalogue-bearing subset of an item create input. */
@@ -23,7 +22,7 @@ export interface CreateCatalogueInput {
   readonly typeKey?: string | null;
   readonly typeId?: string | null;
   readonly fields: Readonly<Record<string, unknown>>;
-  readonly values?: readonly ActiveFieldValue[];
+  readonly values?: readonly ActiveCreateFieldValue[];
 }
 
 /** Resolved legacy or stable-ID catalogue data for one item create. */
@@ -77,7 +76,7 @@ export function resolveCreateCatalogue(
   if (Object.keys(input.fields).length > 0) {
     throw new CommandRejected('invalid', 'named fields are only supported by protocol 1');
   }
-  const values = storedFieldValues(input.values ?? []);
+  const values: ItemFieldValueInput[] = [...(input.values ?? [])];
   if (input.typeId === null || input.typeId === undefined) {
     if (values.length > 0)
       throw new CommandRejected('invalid', 'an untyped item cannot carry values');

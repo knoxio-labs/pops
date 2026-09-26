@@ -9,10 +9,6 @@ internal struct InventoryProtocol2FieldRow: View {
     /// when the field has never been evaluated (an item still being created)
     /// or the field is not computed.
     let computedDisplay: InventoryComputedDisplay?
-    /// Whether an override can be set or cleared right now: only once the
-    /// item exists, since the reducer requires it (there is nothing to
-    /// override before Create has run).
-    let overridesEnabled: Bool
     let referenceTargets: [InventoryProtocol2ReferenceTarget]
     /// What a computed field is waiting on while it is unavailable, named.
     let missingInputs: [InventoryMissingInput]
@@ -134,8 +130,7 @@ internal struct InventoryProtocol2FieldRow: View {
 extension InventoryProtocol2FieldRow {
     private var computedFieldRow: InventoryProtocol2ComputedFieldRow {
         InventoryProtocol2ComputedFieldRow(
-            field: field, display: computedDisplay, overridesEnabled: overridesEnabled,
-            missingInputs: missingInputs)
+            field: field, display: computedDisplay, missingInputs: missingInputs)
     }
 
     @ViewBuilder private var computedRow: some View {

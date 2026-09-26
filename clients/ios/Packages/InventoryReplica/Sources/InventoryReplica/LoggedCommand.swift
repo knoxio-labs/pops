@@ -31,11 +31,13 @@ internal enum StoredCommand: Codable, Equatable {
         id: String, name: String, typeKey: String?, fields: [String: StoredFieldValue],
         note: String?, externalIds: [StoredExternalIdentifier], quantity: Int,
         placement: StoredPlacement, code: String?)
+    /// `overrides` is absent from rows logged before a create could carry
+    /// one, which decode as a create holding none.
     case createProtocol2Item(
         id: String, name: String, catalogueRevision: Int, typeId: String,
         values: [InventoryProtocol2FieldValue], note: String?,
         externalIds: [StoredExternalIdentifier], quantity: Int, placement: StoredPlacement,
-        code: String?)
+        code: String?, overrides: [InventoryProtocol2FieldValue]?)
     case editItem(
         id: String, name: String?, note: StoredNoteUpdate, fields: [String: StoredFieldPatch],
         externalIds: [StoredExternalIdentifier]?)

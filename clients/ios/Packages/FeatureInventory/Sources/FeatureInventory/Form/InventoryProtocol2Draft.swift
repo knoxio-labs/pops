@@ -9,6 +9,10 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
     internal var entries: [String: [InventoryProtocol2DraftEntry]]
     internal var touched: Set<String>
     internal var typeSelectionChanged = false
+    /// Computed-field overrides a new item is created holding, by field ID.
+    /// An existing item's overrides are written at once instead, so this
+    /// stays empty while editing.
+    internal var overrides: [String: InventoryPrimitiveValue] = [:]
 
     internal init(
         type: InventoryCatalogueType, catalogueRevision: Int, item: InventoryItem? = nil
@@ -52,7 +56,7 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
     }
 
     internal var hasStagedWork: Bool {
-        typeSelectionChanged || !touched.isEmpty
+        typeSelectionChanged || !touched.isEmpty || !overrides.isEmpty
     }
 
     internal func values(for field: InventoryCatalogueField) -> [InventoryPrimitiveValue] {
@@ -152,6 +156,18 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
                 return nil
             }
             return .init(fieldId: field.id, values: values)
+        }
+    }
+
+    /// The staged overrides `type` still allows, in its field order.
+    internal func overrideValues(
+        for type: InventoryCatalogueType
+    ) -> [InventoryProtocol2FieldValue] {
+        type.fields.compactMap { field in
+            guard field.storage == .computed, field.allowOverride, field.archivedAt == nil,
+                let value = overrides[field.id]
+            else { return nil }
+            return .init(fieldId: field.id, values: [value])
         }
     }
 

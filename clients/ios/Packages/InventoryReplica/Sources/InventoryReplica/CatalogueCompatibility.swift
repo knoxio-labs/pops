@@ -18,6 +18,8 @@ internal struct CatalogueCompatibility {
             return incompatibility(
                 typeId: new.typeId, fieldIds: new.values.map(\.fieldId),
                 values: new.values.flatMap(\.values), requiresAll: true)
+                ?? overrideIncompatibility(
+                    typeId: new.typeId, fieldIds: new.overrides.map(\.fieldId))
         case .editProtocol2Item(let id, _, let patches):
             guard let itemTypeId else {
                 return InventoryCatalogueChange(
@@ -84,6 +86,30 @@ internal struct CatalogueCompatibility {
             let shapeChanged = before?[fieldId].map { !CatalogueReplacement.sameShape($0, field) }
             if field.storage != .stored || shapeChanged == true {
                 return change(.field, fieldId, typeId: type.id, fieldId: fieldId, .redefined)
+            }
+        }
+        return nil
+    }
+
+    /// A new item's overrides still fit when each names a live computed field
+    /// of the type that still allows overriding and kept its shape: the
+    /// server validates them as `item.setOverride` would.
+    private func overrideIncompatibility(
+        typeId: String, fieldIds: [String]
+    ) -> InventoryCatalogueChange? {
+        guard let type = target.types.first(where: { $0.id == typeId }) else { return nil }
+        let before = authored?.types.first { $0.id == typeId }
+        for fieldId in fieldIds {
+            guard let field = type.fields.first(where: { $0.id == fieldId }) else {
+                return change(.field, fieldId, typeId: typeId, fieldId: fieldId, .notInRevision)
+            }
+            if field.archivedAt != nil {
+                return change(.field, fieldId, typeId: typeId, fieldId: fieldId, .archived)
+            }
+            let authoredField = before?.fields.first { $0.id == fieldId }
+            let shapeChanged = authoredField.map { !CatalogueReplacement.sameShape($0, field) }
+            if field.storage != .computed || !field.allowOverride || shapeChanged == true {
+                return change(.field, fieldId, typeId: typeId, fieldId: fieldId, .redefined)
             }
         }
         return nil
