@@ -12,11 +12,39 @@ import {
 } from 'drizzle-orm';
 
 import { resolvePublishedType } from '../../catalogue/index.js';
-import { items } from '../../db/index.js';
+import { catalogueRevisions, itemTypes, items } from '../../db/index.js';
 import { atEffectiveLocationSql, withinSql } from './placement-scope.js';
 
+import type { WEB_LIFECYCLES, WEB_PLACEMENT_KINDS } from '../../contract/rest-web.js';
 import type { CommandDb } from '../../domain/commands/index.js';
-import type { WebItemsFilter } from './items-page.js';
+
+/** The filters `GET /web/items` accepts, already parsed off the query string. */
+export interface WebItemsFilter {
+  readonly typeKey?: string;
+  readonly placementKind?: (typeof WEB_PLACEMENT_KINDS)[number];
+  readonly locationId?: string;
+  readonly containingItemId?: string;
+  /** Only these item ids; an empty list matches nothing. */
+  readonly ids?: readonly string[];
+  /** Active items only when falsy (ADR-002: excluded from listings unless asked for). */
+  readonly includeInactive?: boolean;
+  /** Case-insensitive text matching across the web catalogue's approved fields. */
+  readonly q?: string;
+  readonly untyped?: boolean;
+  readonly isContainer?: boolean;
+  readonly access?: 'open' | 'closed';
+  readonly isFull?: boolean;
+  readonly lifecycle?: (typeof WEB_LIFECYCLES)[number];
+  readonly legacyLabelOf?: string;
+  readonly within?: string;
+  readonly effectiveLocationId?: string;
+}
+
+/** SQL predicates used to filter and rank one web item text query. */
+export interface WebItemsTextSearch {
+  readonly match: SQL;
+  readonly rank: SQL<number>;
+}
 
 function andConditions(conditions: readonly SQL[]): SQL {
   return and(...conditions) ?? sql`1`;
@@ -140,4 +168,53 @@ export function countRows(db: CommandDb, conditions: readonly SQL[]): number {
     .where(andConditions(conditions))
     .get();
   return row?.count ?? 0;
+}
+
+function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/gu, (character) => `\\${character}`);
+}
+
+function like(expression: SQLWrapper, pattern: string): SQL {
+  return sql`lower(${expression}) LIKE lower(${pattern}) ESCAPE '\\'`;
+}
+
+function publishedTypeLabelSql(): SQL<string | null> {
+  return sql<string | null>`(
+    SELECT ${itemTypes.label}
+    FROM ${itemTypes}
+    WHERE ${itemTypes.revision} = (
+      SELECT MAX(${catalogueRevisions.revision})
+      FROM ${catalogueRevisions}
+      WHERE ${catalogueRevisions.status} = 'published'
+    )
+      AND ${itemTypes.id} = ${items.typeId}
+    LIMIT 1
+  )`;
+}
+
+/** Build the case-insensitive match and tier expressions for `q`. */
+export function textSearchFor(q: string): WebItemsTextSearch {
+  const escaped = escapeLike(q);
+  const prefix = like(items.name, `${escaped}%`);
+  const contains = like(items.name, `%${escaped}%`);
+  const wordPrefix = orConditions(
+    [' ', '\t', '\n', '\r', '\v', '\f'].map((separator) =>
+      like(items.name, `%${separator}${escaped}%`)
+    )
+  );
+  const nameTier = orConditions([prefix, wordPrefix]);
+  const otherTier = orConditions([
+    like(items.code, `%${escaped}%`),
+    like(items.note, `%${escaped}%`),
+    like(publishedTypeLabelSql(), `%${escaped}%`),
+  ]);
+  return {
+    match: orConditions([nameTier, contains, otherTier]),
+    rank: sql<number>`CASE
+      WHEN ${nameTier} THEN 3
+      WHEN ${contains} THEN 2
+      WHEN ${otherTier} THEN 1
+      ELSE 0
+    END`,
+  };
 }

@@ -445,6 +445,163 @@ describe('web.items.list', () => {
     const page = await client().web.listItems({ limit: 50, placementKind: 'location' });
     expect(page.items.map((item) => item.id)).toEqual([placed.data.id]);
   });
+
+  it('ranks name prefixes, name contains, and approved other fields', async () => {
+    const prefix = await client().items.create({ itemName: 'Box lid' });
+    const wordPrefix = await client().items.create({ itemName: 'Red box' });
+    const contains = await client().items.create({ itemName: 'Toolbox' });
+    const code = await client().items.create({ itemName: 'Code marker', assetId: 'BOX-001' });
+    const note = await client().items.create({ itemName: 'Note marker', notes: 'Keep by box' });
+    const type = await client().items.create({ itemName: 'Type marker' });
+    setPublishedType(type.data.id, 'storage_box');
+
+    const page = await client().web.listItems({ q: 'BOX', sort: 'name', limit: 50 });
+
+    expect(page.items.map((item) => item.id)).toEqual([
+      prefix.data.id,
+      wordPrefix.data.id,
+      contains.data.id,
+      code.data.id,
+      note.data.id,
+      type.data.id,
+    ]);
+  });
+
+  it('excludes rows that do not match q and trims the query', async () => {
+    const match = await client().items.create({ itemName: 'Needle case' });
+    await client().items.create({ itemName: 'Unrelated' });
+
+    const page = await client().web.listItems({ q: '  NEEDLE  ' });
+    expect(page.items.map((item) => item.id)).toEqual([match.data.id]);
+    expect(page).toMatchObject({ total: 1, unfilteredTotal: 2 });
+
+    await expect(client().web.listItems({ q: '   ' })).rejects.toMatchObject({ status: 400 });
+    await expect(client().web.listItems({ q: 'x'.repeat(201) })).rejects.toMatchObject({
+      status: 400,
+    });
+  });
+
+  it('treats LIKE wildcards and backslashes as literal q text', async () => {
+    const percent = await client().items.create({ itemName: 'Percent 100%' });
+    const underscore = await client().items.create({ itemName: 'Underscore _' });
+    const backslash = String.fromCharCode(92);
+    const slashItem = await client().items.create({ itemName: `Backslash ${backslash}` });
+    await client().items.create({ itemName: 'Ordinary' });
+
+    await expect(client().web.listItems({ q: '%' })).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: percent.data.id })],
+    });
+    await expect(client().web.listItems({ q: '_' })).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: underscore.data.id })],
+    });
+    await expect(client().web.listItems({ q: backslash })).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: slashItem.data.id })],
+    });
+  });
+
+  it('ranks q before the requested sort and uses id to break sort ties', async () => {
+    const first = await client().items.create({ itemName: 'Needle zulu' });
+    const second = await client().items.create({ itemName: 'Needle alpha' });
+    const contains = await client().items.create({ itemName: 'Long needle' });
+    const sameUpdatedAt = '2026-09-26T00:00:00.000Z';
+    setUpdatedAt(first.data.id, sameUpdatedAt);
+    setUpdatedAt(second.data.id, sameUpdatedAt);
+    setUpdatedAt(contains.data.id, sameUpdatedAt);
+
+    const page = await client().web.listItems({ q: 'needle', sort: 'updated', limit: 50 });
+    const prefixIds = [first.data.id, second.data.id].toSorted();
+
+    expect(page.items.map((item) => item.id)).toEqual([...prefixIds, contains.data.id]);
+  });
+
+  it('paginates q results without repeats or gaps with and without a sort', async () => {
+    const created = await Promise.all(
+      ['Box alpha', 'Box beta', 'Red box', 'Box gamma', 'Code marker'].map((itemName, index) =>
+        client().items.create({
+          itemName,
+          ...(index === 4 ? { assetId: 'BOX-004' } : {}),
+        })
+      )
+    );
+    const expected = new Set(created.map((item) => item.data.id));
+
+    const collect = async (sort?: 'name') => {
+      const seen: string[] = [];
+      let cursor: string | undefined;
+      for (let guard = 0; guard < 10; guard += 1) {
+        const page = await client().web.listItems({
+          q: 'box',
+          limit: 2,
+          ...(sort === undefined ? {} : { sort }),
+          ...(cursor === undefined ? {} : { cursor }),
+        });
+        seen.push(...page.items.map((item) => item.id));
+        if (page.nextCursor === null) return seen;
+        cursor = page.nextCursor;
+      }
+      throw new Error('q pagination did not terminate');
+    };
+
+    expect(new Set(await collect())).toEqual(expected);
+    expect(new Set(await collect('name'))).toEqual(expected);
+  });
+
+  it('counts only q matches while retaining the unfiltered baseline', async () => {
+    const active = await client().items.create({ itemName: 'Needle active' });
+    const retired = await client().items.create({ itemName: 'Needle retired' });
+    await client().items.create({ itemName: 'Other active' });
+    setLifecycle(retired.data.id, 'retired');
+
+    const page = await client().web.listItems({ q: 'needle' });
+
+    expect(page.items.map((item) => item.id)).toEqual([active.data.id]);
+    expect(page).toMatchObject({ total: 1, unfilteredTotal: 2, hiddenInactiveCount: 1 });
+  });
+
+  it('combines q with container filters even when q has no container match', async () => {
+    const container = await client().items.create({ itemName: 'Storage bin' });
+    setPublishedType(container.data.id, 'storage_box', true);
+
+    const matched = await client().web.listItems({
+      q: 'storage',
+      isContainer: 'true',
+      access: 'open',
+      isFull: 'false',
+    });
+    expect(matched.items.map((item) => item.id)).toEqual([container.data.id]);
+
+    const missing = await client().web.listItems({
+      q: 'wardrobe',
+      isContainer: 'true',
+      access: 'open',
+      isFull: 'false',
+    });
+    expect(missing).toMatchObject({ items: [], total: 0, unfilteredTotal: 1 });
+  });
+
+  it('rejects q cursors without q, with another sort, and rejects old cursors with q', async () => {
+    await client().items.create({ itemName: 'Box one' });
+    await client().items.create({ itemName: 'Box two' });
+    const qPage = await client().web.listItems({ q: 'box', sort: 'name', limit: 1 });
+    const oldPage = await client().web.listItems({ sort: 'name', limit: 1 });
+
+    await expect(client().web.listItems({ cursor: qPage.nextCursor! })).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'The cursor was not issued by this route' },
+    });
+    await expect(
+      client().web.listItems({ q: 'box', sort: 'updated', cursor: qPage.nextCursor! })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'The cursor was not issued by this route' },
+    });
+    await expect(
+      client().web.listItems({ q: 'box', sort: 'name', cursor: oldPage.nextCursor! })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'The cursor was not issued by this route' },
+    });
+  });
 });
 
 describe('web.items.get', () => {

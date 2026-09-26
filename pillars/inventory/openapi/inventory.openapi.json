@@ -19397,6 +19397,15 @@
           },
           {
             "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "untyped",
             "schema": {
               "enum": ["true", "false"],

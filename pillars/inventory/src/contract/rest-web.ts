@@ -55,6 +55,8 @@ export const WebItemsQuerySchema = z.object({
   ids: IdList.optional(),
   /** Active items only unless `true` (Inventory ADR-002: "excluded from … search unless Include inactive is on"). */
   includeInactive: QueryBool.optional(),
+  /** Case-insensitive text filter, trimmed to a non-empty string of at most 200 characters. */
+  q: z.string().trim().min(1).max(200).optional(),
   untyped: StrictQueryBool.optional(),
   isContainer: StrictQueryBool.optional(),
   access: z.enum(['open', 'closed']).optional(),

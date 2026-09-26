@@ -49,6 +49,7 @@ export function makeWebHandlers({ db, documents }: WebHandlerDeps) {
               containingItemId: query.containingItemId,
               ids: query.ids?.split(','),
               includeInactive: query.includeInactive,
+              q: query.q,
               untyped: query.untyped === undefined ? undefined : query.untyped === 'true',
               isContainer:
                 query.isContainer === undefined ? undefined : query.isContainer === 'true',
