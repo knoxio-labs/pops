@@ -142,11 +142,13 @@ export function createUpBankWebhookRouter(options: UpBankWebhookRouterOptions): 
     const signature = req.headers['x-up-authenticity-signature'];
     if (typeof signature !== 'string') {
       webhookErrors.signature_missing();
+      return;
     }
 
     const rawBody = req.body as Buffer;
     if (!verifySignature(rawBody, signature)) {
       webhookErrors.signature_invalid();
+      return;
     }
 
     const payload = JSON.parse(rawBody.toString('utf-8')) as WebhookPayload;
