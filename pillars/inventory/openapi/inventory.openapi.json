@@ -22495,6 +22495,205 @@
         "tags": ["webLocations"]
       }
     },
+    "/web/reports/values": {
+      "get": {
+        "operationId": "webReports.values",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "by",
+            "required": true,
+            "schema": {
+              "default": "room",
+              "enum": ["room", "type"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "basis",
+            "required": true,
+            "schema": {
+              "default": "replacement",
+              "enum": ["replacement", "purchase"],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "groups": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "entries": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "code": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "isContainer": {
+                                  "type": "boolean"
+                                },
+                                "itemId": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "quantity": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "typeKey": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "unitValue": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "nullable": true,
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "itemId",
+                                "name",
+                                "code",
+                                "typeKey",
+                                "isContainer",
+                                "quantity",
+                                "unitValue",
+                                "value"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "records": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "share": {
+                            "maximum": 1,
+                            "minimum": 0,
+                            "type": "number"
+                          },
+                          "unvalued": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "value": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "value",
+                          "records",
+                          "unvalued",
+                          "share",
+                          "entries"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "totals": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "purchase": {
+                          "type": "number"
+                        },
+                        "records": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "replacement": {
+                          "type": "number"
+                        },
+                        "units": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "unvalued": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "withoutPhoto": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "records",
+                        "units",
+                        "replacement",
+                        "purchase",
+                        "unvalued",
+                        "withoutPhoto"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["totals", "groups"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Replacement and purchase values grouped by room or catalogue type",
+        "tags": ["webReports"]
+      }
+    },
     "/web/search": {
       "get": {
         "operationId": "webSearch.list",
