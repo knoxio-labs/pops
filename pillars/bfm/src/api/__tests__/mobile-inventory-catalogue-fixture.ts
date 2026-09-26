@@ -19,6 +19,15 @@ function normalizeField(field: z.infer<typeof JsonObject>): z.infer<typeof JsonO
   return withoutDefaultValues;
 }
 
+function normalizeType(type: z.infer<typeof JsonObject>): z.infer<typeof JsonObject> {
+  const { parentTypeId, ...withoutParentTypeId } = type;
+  const normalized = {
+    ...withoutParentTypeId,
+    fields: z.array(JsonObject).parse(type['fields']).map(normalizeField),
+  };
+  return parentTypeId == null ? normalized : { ...normalized, parentTypeId };
+}
+
 /** Converts a value-vector catalogue into the shape bfm serves to phones. */
 export function normalizeCatalogueFixture(
   catalogue: Record<string, unknown>
@@ -28,9 +37,6 @@ export function normalizeCatalogueFixture(
   return {
     ...parsed,
     revision,
-    types: parsed.types.map((type) => ({
-      ...type,
-      fields: type.fields.map(normalizeField),
-    })),
+    types: parsed.types.map(normalizeType),
   };
 }

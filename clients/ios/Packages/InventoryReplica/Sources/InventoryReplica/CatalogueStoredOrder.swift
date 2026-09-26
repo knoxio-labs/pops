@@ -21,7 +21,7 @@ extension InventoryCatalogueType {
             fields: fields.sorted { storedOrder(($0.sortOrder, $0.key), ($1.sortOrder, $1.key)) }
                 .map(\.inStoredOrder),
             capabilities: capabilities, legacyLabels: legacyLabels, presentation: presentation,
-            archivedAt: archivedAt, replacedBy: replacedBy)
+            archivedAt: archivedAt, replacedBy: replacedBy, parentTypeId: parentTypeId)
     }
 }
 

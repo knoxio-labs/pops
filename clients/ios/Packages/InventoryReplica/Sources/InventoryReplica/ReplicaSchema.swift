@@ -136,6 +136,7 @@ extension ReplicaSchema {
         registerCatalogueHoldReason(in: &migrator)
         registerCatalogueLineage(in: &migrator)
         registerCatalogueFieldDefaults(in: &migrator)
+        registerCatalogueTypeParent(in: &migrator)
         return migrator
     }
 
