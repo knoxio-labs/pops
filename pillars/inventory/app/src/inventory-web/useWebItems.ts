@@ -18,9 +18,6 @@ import type { WebListData, WebListResponses } from '../inventory-api/types.gen.j
 export type WebItemsFilters = Omit<WebListData['query'], 'cursor' | 'limit'>;
 
 type WebItemsPage = WebListResponses['200'] & {
-  readonly contentCounts?: Readonly<
-    Record<string, { readonly direct: number; readonly deep: number }>
-  >;
   readonly deletedPreviousPlaces?: Readonly<
     Record<string, { readonly kind: 'location' | 'container'; readonly name: string }>
   >;

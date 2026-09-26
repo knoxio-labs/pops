@@ -1,5 +1,5 @@
 /** Handlers for the ranked `webSearch.*` inventory REST sub-router. */
-import { loadItemExtras, projectItems } from '../sync/wire.js';
+import { loadItemExtras, projectItems, toSyncLocation } from '../sync/wire.js';
 import { readWebSearchPage } from '../web/search.js';
 import { runHttp } from './error-mapping.js';
 
@@ -23,14 +23,19 @@ export function makeWebSearchHandlers({ db, documents }: WebSearchHandlerDeps) {
     list: ({ query }: Req['list']) =>
       runHttp(async () => {
         const page = db.transaction((tx) =>
-          readWebSearchPage(tx, {
-            q: query.q,
-            cursor: query.cursor,
-            limit: query.limit,
-            activeOnly: query.activeOnly === 'true',
-            typeKey: query.typeKey ?? null,
-            within: query.within ?? null,
-          })
+          readWebSearchPage(
+            tx,
+            {
+              q: query.q,
+              activeOnly: query.activeOnly === 'true',
+              typeKey: query.typeKey,
+              within: query.within,
+            },
+            {
+              cursor: query.cursor,
+              limit: query.limit,
+            }
+          )
         );
         const rows = [
           ...(page.exact === null ? [] : [page.exact]),
@@ -51,7 +56,7 @@ export function makeWebSearchHandlers({ db, documents }: WebSearchHandlerDeps) {
               return item === undefined ? [] : [{ item, tier: hit.tier, field: hit.field }];
             }),
             places: page.places.map((hit) => ({
-              location: { id: hit.row.id },
+              location: toSyncLocation(hit.row),
               tier: hit.tier,
             })),
             nextCursor: page.nextCursor,

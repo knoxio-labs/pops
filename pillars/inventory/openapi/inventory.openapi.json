@@ -21230,6 +21230,26 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "contentCounts": {
+                      "additionalProperties": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "deep": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "direct": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["direct", "deep"],
+                        "type": "object"
+                      },
+                      "type": "object"
+                    },
                     "hiddenInactiveCount": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -21814,6 +21834,7 @@
                   },
                   "required": [
                     "items",
+                    "contentCounts",
                     "nextCursor",
                     "total",
                     "unfilteredTotal",
@@ -23172,8 +23193,25 @@
           },
           {
             "in": "query",
-            "name": "cursor",
+            "name": "typeKey",
             "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "within",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "activeOnly",
+            "schema": {
+              "enum": ["true", "false"],
               "type": "string"
             }
           },
@@ -23190,25 +23228,8 @@
           },
           {
             "in": "query",
-            "name": "activeOnly",
+            "name": "cursor",
             "schema": {
-              "enum": ["true", "false"],
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "typeKey",
-            "schema": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "within",
-            "schema": {
-              "minLength": 1,
               "type": "string"
             }
           }
@@ -24369,11 +24390,45 @@
                           "location": {
                             "additionalProperties": false,
                             "properties": {
+                              "deletedAt": {
+                                "nullable": true,
+                                "type": "string"
+                              },
                               "id": {
                                 "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "parentId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "revision": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "seq": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "sortOrder": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               }
                             },
-                            "required": ["id"],
+                            "required": [
+                              "id",
+                              "revision",
+                              "seq",
+                              "name",
+                              "parentId",
+                              "sortOrder",
+                              "deletedAt"
+                            ],
                             "type": "object"
                           },
                           "tier": {
@@ -24392,7 +24447,7 @@
                       "type": "integer"
                     }
                   },
-                  "required": ["exact", "items", "places", "nextCursor", "total"],
+                  "required": ["exact", "places", "items", "nextCursor", "total"],
                   "type": "object"
                 }
               }
