@@ -41,6 +41,7 @@ internal enum InventoryItemDetailStaging {
             state(
                 "large-values", "Long text and many values",
                 InventoryItemDetailFixtures.largeValues),
+            state("subtype-detail", "A subtype item", subtype),
             state(
                 "conflicting-change", "Conflicting change",
                 InventoryItemDetailFixtures.conflicting),
@@ -54,6 +55,20 @@ internal enum InventoryItemDetailStaging {
     {
         DesignState(id, title) { InventoryItemDetailView(detail: detail) }
     }
+
+    private static let subtype = InventoryItemDetail(
+        item: InventoryFoundationItem(
+            id: "pillowcase", name: "Linen pillowcase", typeName: "Pillowcase",
+            placement: .direct(location: "Guest room")),
+        fields: [
+            InventoryDetailField(key: "Destination", value: "Guest room"),
+            InventoryDetailField(key: "Material", value: "Cotton"),
+            InventoryDetailField(key: "Colour", value: "White"),
+            InventoryDetailField(key: "Pattern", value: "Plain"),
+            InventoryDetailField(key: "Pillow size", value: "Standard"),
+            InventoryDetailField(key: "Closure", value: "Envelope"),
+        ]
+    )
 }
 
 internal enum InventoryItemDetailSurfaces {

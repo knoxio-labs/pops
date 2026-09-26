@@ -15,6 +15,14 @@ internal enum InventorySearchSurfaces {
             DesignState("filtered", "Filtered to untyped") {
                 InventoryItemsBrowserView(filter: InventorySearchFilter(missing: .type))
             },
+            DesignState("type-filter-tree", "Type filter tree") {
+                InventoryItemsBrowserView()
+                    .sheet(isPresented: .constant(true)) {
+                        InventorySearchFilterSheet(
+                            filter: .constant(InventorySearchFilter()), sort: nil,
+                            types: InventorySearchFixtures.types)
+                    }
+            },
             DesignState("inactive", "Including inactive") {
                 InventoryItemsBrowserView(
                     filter: InventorySearchFilter(includesInactive: true), sort: .name)
