@@ -1,4 +1,4 @@
-import { Button, ComboboxSelect, Input, Textarea } from '@pops/ui';
+import { Button, Checkbox, ComboboxSelect, Input, Textarea } from '@pops/ui';
 
 import { ComputedField } from './computed-field';
 import { ReferenceField } from './reference-field';
@@ -169,14 +169,13 @@ export function FieldEditor(props: FieldEditorProps): ReactElement {
   if (field.kind === 'boolean') {
     return (
       <label className="flex min-h-11 items-center gap-3">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={props.draft.fields.booleans[field.id] ?? false}
-          onChange={(event) =>
+          onCheckedChange={(checked) =>
             props.dispatch({
               type: 'field-boolean',
               fieldId: field.id,
-              value: event.target.checked,
+              value: checked === true,
             })
           }
         />{' '}
