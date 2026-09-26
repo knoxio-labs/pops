@@ -28,6 +28,8 @@ export const WebChangeGroupSchema = z.object({
 export const WebChangesHeadResponseSchema = z.object({
   headSeq: z.number().int().nonnegative(),
   groups: z.array(WebChangeGroupSchema),
+  /** ISO time of the latest connection or fixture write; null when none exists. */
+  connectionsChangedAt: z.string().nullable(),
 });
 
 /** The changed-elsewhere cursor router for inventory web pages. */

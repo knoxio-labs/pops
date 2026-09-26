@@ -6568,6 +6568,7 @@ export type WebChangesHeadResponses = {
    * 200
    */
   200: {
+    connectionsChangedAt: string | null;
     groups: Array<{
       actorId: string | null;
       actorKind: 'device' | 'service' | 'migration';
