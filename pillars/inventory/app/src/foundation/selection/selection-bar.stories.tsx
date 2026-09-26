@@ -1,8 +1,8 @@
 import { ClipboardCopy, Download, SquarePen } from 'lucide-react';
 
-import { coreItem, coreWorld } from '../fixtures/core';
 import { INVENTORY_ICONS } from '../model';
 import { ItemList, ItemRow } from '../rows/item-row';
+import { coreItem, coreWorld } from '../test-fixtures/core';
 import { SelectionBar } from './selection-bar';
 import { useSelection } from './use-selection';
 
