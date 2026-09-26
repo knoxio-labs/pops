@@ -38,7 +38,7 @@ New item and Edit item are one sheet (`Form/`), installed once over the whole st
 Two things it reaches for belong to other screens, and it asks for them rather than owning them:
 
 - **Where it goes.** The destination row opens the same `inventoryPlacementPicker` the containers and locations screens install (POPS-4064).
-- **A suggested code.** Suggestions are the server's alone (`POST /codes/suggest`), and `InventoryStore` carries no call for them, so the form takes an `InventoryCodeSuggester`. Until the app binds one it answers as a server that cannot suggest, which the form shows as the approved unavailable state. A typed code is always checked against the replica, online or not.
+- **A suggested code.** Suggestions are the server's alone (`POST /codes/suggest`), and `InventoryStore` carries no call for them, so the form takes an `InventoryCodeSuggester`. Failures show a persistent, dismissible toast with a readable reason, a selectable error identifier, Share error, and Retry. Identifiers describe the error category available to the form; raw transport diagnostics and credentials are never displayed. Empty responses are failures too; cancellation is not. A typed code is always checked against the replica, online or not.
 
 ## Search, the items browser and In hand
 

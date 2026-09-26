@@ -6,7 +6,7 @@ Accepted — 2026-06-14
 
 ## Context
 
-Three regexes in the manifest schema (`libs/sdk/src/manifest-schema/schema.ts`) jointly determine how identifiers flow across the federation:
+Three regexes jointly determine how identifiers flow across the federation. `PILLAR_ID` and `CAMEL_IDENTIFIER` are declared in `libs/types/src/manifest-primitives.ts` as `PillarIdSchema` and `CamelIdentifierSchema` (moved there under [ADR-049](adr-049-manifest-shapes-declared-once.md); `libs/sdk/src/manifest-schema/schema.ts` imports them). `SINK_EVENT_TYPE` still lives in `schema.ts`:
 
 - `PILLAR_ID` — `^[a-z][a-z0-9-]*$` (lowercase kebab-case)
 - `CAMEL_IDENTIFIER` — `^[a-z][a-zA-Z0-9]*$` (camelCase; no dots, no hyphens). Used for `ai.tools[].name` and `search.adapters[].name`.
@@ -58,7 +58,7 @@ Concretely, draft and ship like this:
 ## Consequences
 
 - **Enables:** new pillar authors have one place to read why the regexes are what they are. PR review for naming becomes a citation, not a rediscovery.
-- **Enables:** the manifest-schema source carries a JSDoc pointer to this ADR next to the `CAMEL_IDENTIFIER` and `SINK_EVENT_TYPE` regexes, so an agent grepping for the constraint finds the rationale in one hop.
+- **Enables:** `manifest-primitives.ts` (at `CamelIdentifierSchema`) and `schema.ts` (at `SINK_EVENT_TYPE`) each carry a JSDoc pointer to this ADR, so an agent grepping for the constraint finds the rationale in one hop.
 - **Prevents:** the recurring "draft as dotted, rewrite as camel, re-review" cycle from PRs #3179 / #3184 / #3189.
 - **Constrains:** none — the regexes are unchanged and no existing identifier is renamed. This ADR is documentation-only.
 - **Trade-off accepted:** the rules are written down but not auto-enforced beyond the existing regex. A future author who ignores the ADR still gets a clean validator rejection at registration; the ADR exists so the rejection reads as "I know why this fails" instead of "I have to go read the schema source."
