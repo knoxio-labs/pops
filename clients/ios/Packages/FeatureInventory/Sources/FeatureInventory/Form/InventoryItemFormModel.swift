@@ -274,7 +274,7 @@ extension InventoryItemFormModel {
             }
             draft = InventoryItemDraft(editing: item, placementName: context.placementName)
             if let catalogue = context.protocol2Catalogue, let typeId = item.typeId {
-                guard let type = catalogue.types.first(where: { $0.id == typeId }) else {
+                guard let type = catalogue.effectiveType(id: typeId) else {
                     phase = .unavailable
                     return
                 }

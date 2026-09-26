@@ -3,7 +3,7 @@ import AppCore
 extension InventoryItemFormModel {
     internal var protocol2Type: InventoryCatalogueType? {
         guard let draft = protocol2Draft else { return nil }
-        return protocol2Catalogue?.types.first(where: { $0.id == draft.typeId })
+        return protocol2Catalogue?.effectiveType(id: draft.typeId)
     }
 
     internal var protocol2Issues: [InventoryProtocol2DraftIssue] {
@@ -14,7 +14,8 @@ extension InventoryItemFormModel {
     internal func referenceTargets(
         for field: InventoryCatalogueField
     ) -> [InventoryProtocol2ReferenceTarget] {
-        InventoryProtocol2ReferenceTargets.allowed(for: field, among: protocol2ReferenceTargets)
+        InventoryProtocol2ReferenceTargets.allowed(
+            for: field, among: protocol2ReferenceTargets, catalogue: protocol2Catalogue)
     }
 
     internal func selectProtocol2Type(_ typeId: String?) {
@@ -24,13 +25,22 @@ extension InventoryItemFormModel {
             return
         }
         guard let catalogue = protocol2Catalogue,
-            let type = catalogue.types.first(where: {
+            let found = catalogue.types.first(where: {
                 $0.id == typeId && $0.archivedAt == nil
-            })
+            }),
+            let type = catalogue.effectiveType(id: found.id)
         else { return }
         let catalogueRevision = catalogue.revision.revision
         guard protocol2Draft?.typeId != typeId else { return }
         var selected = InventoryProtocol2Draft(type: type, catalogueRevision: catalogueRevision)
+        if let current = protocol2Draft {
+            let fieldIds = Set(type.fields.map(\.id))
+            selected.entries = Dictionary(
+                uniqueKeysWithValues: current.entries.filter { fieldIds.contains($0.key) })
+            selected.touched = current.touched.intersection(fieldIds)
+            selected.overrides = Dictionary(
+                uniqueKeysWithValues: current.overrides.filter { fieldIds.contains($0.key) })
+        }
         if case .create = request { selected.prefillDefaults(for: type) }
         selected.typeSelectionChanged = true
         protocol2Draft = selected

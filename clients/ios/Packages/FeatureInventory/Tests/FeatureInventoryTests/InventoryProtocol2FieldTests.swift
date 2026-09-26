@@ -123,7 +123,8 @@ internal struct InventoryProtocol2FieldTests {
         ]
 
         #expect(
-            InventoryProtocol2ReferenceTargets.allowed(for: field, among: targets).map(\.id)
+            InventoryProtocol2ReferenceTargets.allowed(for: field, among: targets, catalogue: nil)
+                .map(\.id)
                 == ["cable-1", "garage"])
     }
 

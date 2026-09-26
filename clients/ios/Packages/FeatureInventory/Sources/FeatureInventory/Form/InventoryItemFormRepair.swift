@@ -100,7 +100,7 @@ extension InventoryItemFormModel {
         typeId: String, values: [(String, [InventoryPrimitiveValue])],
         catalogue: InventoryCatalogueSnapshot, item: InventoryItem? = nil
     ) {
-        guard let type = catalogue.types.first(where: { $0.id == typeId }) else { return }
+        guard let type = catalogue.effectiveType(id: typeId) else { return }
         var seeded = InventoryProtocol2Draft(
             type: type, catalogueRevision: catalogue.revision.revision, item: item)
         seeded.typeSelectionChanged = item == nil && original?.typeId != typeId
