@@ -107,7 +107,7 @@ internal struct InventorySearchFilter: Equatable {
         return (includesInactive || item.lifecycle == .active)
             && matchesPlacement(item.placement)
             && matchesContainer(item.access)
-            && (typeName == nil || item.typeName == typeName)
+            && InventoryFormType.includes(item.typeName, in: typeName)
             && matchesQuantity(item.quantity.count)
             && matchesMissing(record)
             && matchesSync(item.sync)
