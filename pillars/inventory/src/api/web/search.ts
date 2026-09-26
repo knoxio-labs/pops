@@ -1,47 +1,37 @@
 /** Query and rank the inventory web search surface. */
-import { and, asc, desc, eq, getTableColumns, gt, isNull, ne, or, sql } from 'drizzle-orm';
-import { z } from 'zod';
+import { and, asc, desc, eq, getTableColumns, isNull, ne, or, sql } from 'drizzle-orm';
 
 import { resolvePublishedType } from '../../catalogue/index.js';
-import {
-  catalogueRevisions,
-  itemTypes,
-  items,
-  locations,
-  type ItemRow,
-  type LocationRow,
-} from '../../db/index.js';
+import { catalogueRevisions, itemTypes, items, type ItemRow } from '../../db/index.js';
 import { MAX_CONTAINMENT_DEPTH } from '../../domain/commands/index.js';
-import { ValidationError } from '../shared/errors.js';
-import { decodeCursor, encodeCursor } from '../sync/cursor.js';
 import { countRows } from './items-page-filters.js';
 import { withinSql } from './placement-scope.js';
+import {
+  readWebSearchCursor,
+  webSearchAfterCursor,
+  webSearchNextCursor,
+  type WebSearchCursorQuery,
+  type WebSearchTier,
+} from './search-cursor.js';
+import { readWebSearchPlaces, type WebSearchPlaceHit } from './search-places.js';
 
 import type { SQL, SQLWrapper } from 'drizzle-orm';
 
 import type { CommandDb } from '../../domain/commands/index.js';
 
-const cursorSchema = z.object({
-  v: z.literal(1),
-  t: z.literal('web-search'),
-  q: z.string(),
-  activeOnly: z.boolean(),
-  typeKey: z.string().nullable(),
-  within: z.string().nullable(),
-  key: z.tuple([z.number().int().min(1).max(4), z.union([z.literal(0), z.literal(1)]), z.string()]),
-  after: z.string(),
-});
-type SearchCursor = z.infer<typeof cursorSchema>;
-type WebSearchTier = 'prefix' | 'contains' | 'other';
 type WebSearchField = 'code' | 'note' | 'type' | 'place';
-type WebSearchQuery = Pick<SearchCursor, 'q' | 'activeOnly' | 'typeKey' | 'within'> & {
+type WebSearchQuery = {
+  readonly q: string;
+  readonly activeOnly?: boolean;
+  readonly typeKey?: string;
+  readonly within?: string;
+};
+type NormalizedWebSearchQuery = WebSearchCursorQuery;
+type WebSearchRequest = {
   readonly cursor?: string;
   readonly limit: number;
 };
-type WebSearchItemHit = { row: ItemRow; tier: WebSearchTier; field: WebSearchField | null } & {
-  rank: number;
-};
-type WebSearchPlaceHit = { row: LocationRow; tier: 'prefix' | 'contains' };
+type WebSearchItemHit = { row: ItemRow; tier: WebSearchTier; field: WebSearchField | null };
 type WebSearchPage = Record<'exact', ItemRow | null> &
   Record<'items', WebSearchItemHit[]> &
   Record<'places', WebSearchPlaceHit[]> &
@@ -78,12 +68,21 @@ function searchExpressions(q: string): SearchExpressions {
   const other = anyOf([code, note, type, place]);
   return {
     match: anyOf([namePrefix, nameContains, other]),
-    rank: sql<number>`CASE WHEN ${like(items.name, `${escaped}%`)} THEN 4 WHEN ${namePrefix} THEN 3 WHEN ${nameContains} THEN 2 WHEN ${other} THEN 1 ELSE 0 END`,
+    rank: sql<number>`CASE WHEN ${namePrefix} THEN 3 WHEN ${nameContains} THEN 2 WHEN ${other} THEN 1 ELSE 0 END`,
     field: sql<WebSearchField | null>`CASE WHEN ${namePrefix} OR ${nameContains} THEN NULL WHEN ${code} THEN 'code' WHEN ${note} THEN 'note' WHEN ${type} THEN 'type' WHEN ${place} THEN 'place' ELSE NULL END`,
   };
 }
 
-function baseConditions(db: CommandDb, query: WebSearchQuery): SQL[] {
+function normalizeQuery(query: WebSearchQuery): NormalizedWebSearchQuery {
+  return {
+    q: query.q,
+    activeOnly: query.activeOnly === true,
+    typeKey: query.typeKey ?? null,
+    within: query.within ?? null,
+  };
+}
+
+function baseConditions(db: CommandDb, query: NormalizedWebSearchQuery): SQL[] {
   const conditions: SQL[] = [isNull(items.deletedAt)];
   if (query.activeOnly) conditions.push(eq(items.lifecycle, 'active'));
   if (query.typeKey !== null) {
@@ -94,99 +93,47 @@ function baseConditions(db: CommandDb, query: WebSearchQuery): SQL[] {
   return conditions;
 }
 
-function cursorFor(raw: string | undefined, query: WebSearchQuery): SearchCursor | null {
-  if (raw === undefined) return null;
-  try {
-    const cursor = decodeCursor(cursorSchema, raw);
-    const sameQuery =
-      cursor.q !== query.q ||
-      cursor.activeOnly !== query.activeOnly ||
-      cursor.typeKey !== query.typeKey ||
-      cursor.within !== query.within;
-    if (sameQuery) {
-      throw new Error('cursor query mismatch');
-    }
-    return cursor;
-  } catch {
-    throw new ValidationError('The cursor was not issued by this route', { cursor: raw });
-  }
-}
-
-type CursorArgs = [cursor: SearchCursor | null, rank: SQL<number>, active: SQL<number>];
-
-function afterCursor(...[cursor, rank, active]: CursorArgs): SQL | undefined {
-  if (cursor === null) return undefined;
-  const [tier, activeValue, name] = cursor.key;
-  const sameRank = eq(rank, tier);
-  const sameActive = eq(active, activeValue);
-  const nameKey = sql`${items.name} COLLATE NOCASE`;
-  return anyOf([
-    sql`${rank} < ${tier}`,
-    and(sameRank, sql`${active} > ${activeValue}`) ?? sql`0`,
-    and(sameRank, sameActive, sql`${nameKey} > ${name}`) ?? sql`0`,
-    and(sameRank, sameActive, sql`${nameKey} = ${name}`, gt(items.id, cursor.after)) ?? sql`0`,
-  ]);
-}
-
 function tierFor(value: number): WebSearchTier {
-  if (value === 4 || value === 3) return 'prefix';
+  if (value === 3) return 'prefix';
   if (value === 2) return 'contains';
   if (value === 1) return 'other';
   throw new Error(`unexpected web search tier ${String(value)}`);
 }
 
-function placeHits(db: CommandDb, q: string, typeKey: string | null): WebSearchPlaceHit[] {
-  if (typeKey !== null) return [];
-  const escaped = escapeLike(q);
-  const prefix = anyOf([like(locations.name, `${escaped}%`), wordPrefix(locations.name, escaped)]);
-  const tier = sql<'prefix' | 'contains'>`CASE WHEN ${prefix} THEN 'prefix' ELSE 'contains' END`;
-  const rows = db
-    .select({ ...getTableColumns(locations), tier })
-    .from(locations)
-    .where(and(isNull(locations.deletedAt), like(locations.name, `%${escaped}%`)))
-    .orderBy(
-      desc(sql`CASE WHEN ${prefix} THEN 1 ELSE 0 END`),
-      asc(sql`${locations.name} COLLATE NOCASE`),
-      asc(locations.id)
-    )
-    .all();
-  return rows.map(({ tier: rowTier, ...row }) => ({ row, tier: rowTier }));
-}
-
-function nextCursor(query: WebSearchQuery, hit: WebSearchItemHit): string {
-  return encodeCursor({
-    v: 1,
-    t: 'web-search',
-    q: query.q,
-    activeOnly: query.activeOnly,
-    typeKey: query.typeKey ?? null,
-    within: query.within ?? null,
-    key: [hit.rank, hit.row.lifecycle === 'active' ? 0 : 1, hit.row.name],
-    after: hit.row.id,
-  });
-}
-
-/** Read one ranked, filtered page of live web-search results. */
-export function readWebSearchPage(db: CommandDb, query: WebSearchQuery): WebSearchPage {
-  const conditions = baseConditions(db, query);
-  const expressions = searchExpressions(query.q);
-  const exact =
+function readExactCode(db: CommandDb, q: string, activeOnly: boolean): ItemRow | null {
+  const conditions: SQL[] = [isNull(items.deletedAt)];
+  if (activeOnly) conditions.push(eq(items.lifecycle, 'active'));
+  return (
     db
       .select()
       .from(items)
-      .where(and(isNull(items.deletedAt), sql`lower(${items.code}) = lower(${query.q})`))
-      .get() ?? null;
-  const total =
-    countRows(
-      db,
-      [...conditions, expressions.match].concat(exact ? [ne(items.id, exact.id)] : [])
-    ) + Number(exact !== null);
+      .where(and(...conditions, sql`lower(${items.code}) = lower(${q})`))
+      .get() ?? null
+  );
+}
+
+function readItemPage(
+  db: CommandDb,
+  {
+    conditions,
+    expressions,
+    exact,
+    query,
+    request,
+  }: {
+    readonly conditions: readonly SQL[];
+    readonly expressions: SearchExpressions;
+    readonly exact: ItemRow | null;
+    readonly query: NormalizedWebSearchQuery;
+    readonly request: WebSearchRequest;
+  }
+): { hits: WebSearchItemHit[]; nextCursor: string | null } {
   const active = sql<number>`CASE WHEN ${items.lifecycle} = 'active' THEN 0 ELSE 1 END`;
   const itemWhere = and(
     ...conditions,
     expressions.match,
     exact ? ne(items.id, exact.id) : undefined,
-    afterCursor(cursorFor(query.cursor, query), expressions.rank, active)
+    webSearchAfterCursor(readWebSearchCursor(request.cursor, query), expressions.rank, active)
   );
   const itemRows = db
     .select({ ...getTableColumns(items), tier: expressions.rank, field: expressions.field })
@@ -198,20 +145,53 @@ export function readWebSearchPage(db: CommandDb, query: WebSearchQuery): WebSear
       asc(sql`${items.name} COLLATE NOCASE`),
       asc(items.id)
     )
-    .limit(query.limit + 1)
+    .limit(request.limit + 1)
     .all();
-  const hits = itemRows.slice(0, query.limit).map(({ tier, field, ...row }) => ({
+  const hits = itemRows.slice(0, request.limit).map(({ tier, field, ...row }) => ({
     row,
     tier: tierFor(tier),
     field,
-    rank: tier,
   }));
   const last = hits.at(-1);
   return {
-    exact: query.cursor === undefined ? exact : null,
-    items: hits,
-    places: query.cursor === undefined ? placeHits(db, query.q, query.typeKey) : [],
-    nextCursor: itemRows.length > query.limit && last ? nextCursor(query, last) : null,
+    hits,
+    nextCursor:
+      itemRows.length > request.limit && last
+        ? webSearchNextCursor(query, { ...last.row, tier: last.tier })
+        : null,
+  };
+}
+
+/** Read one ranked, filtered page of live web-search results. */
+export function readWebSearchPage(
+  db: CommandDb,
+  query: WebSearchQuery,
+  request: WebSearchRequest
+): WebSearchPage {
+  const normalizedQuery = normalizeQuery(query);
+  const conditions = baseConditions(db, normalizedQuery);
+  const expressions = searchExpressions(normalizedQuery.q);
+  const places = readWebSearchPlaces(db, normalizedQuery.q, normalizedQuery.typeKey);
+  const exact = readExactCode(db, normalizedQuery.q, normalizedQuery.activeOnly);
+  const total =
+    countRows(
+      db,
+      [...conditions, expressions.match].concat(exact ? [ne(items.id, exact.id)] : [])
+    ) +
+    Number(exact !== null) +
+    places.length;
+  const page = readItemPage(db, {
+    conditions,
+    expressions,
+    exact,
+    query: normalizedQuery,
+    request,
+  });
+  return {
+    exact: request.cursor === undefined ? exact : null,
+    items: page.hits,
+    places: request.cursor === undefined ? places : [],
+    nextCursor: page.nextCursor,
     total,
   };
 }

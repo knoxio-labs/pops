@@ -7042,11 +7042,11 @@ export type WebSearchListData = {
   path?: never;
   query: {
     q: string;
-    cursor?: string;
-    limit: number;
-    activeOnly?: 'true' | 'false';
     typeKey?: string;
     within?: string;
+    activeOnly?: 'true' | 'false';
+    limit: number;
+    cursor?: string;
   };
   url: '/web/search';
 };
@@ -7314,7 +7314,13 @@ export type WebSearchListResponses = {
     nextCursor: string | null;
     places: Array<{
       location: {
+        deletedAt: string | null;
         id: string;
+        name: string;
+        parentId: string | null;
+        revision: number;
+        seq: number;
+        sortOrder: number;
       };
       tier: 'prefix' | 'contains';
     }>;
