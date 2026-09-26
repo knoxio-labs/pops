@@ -4,7 +4,14 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { WebMovingResponseSchema } from '../../contract/rest-web-moving.js';
-import { itemFieldValues, items } from '../../db/index.js';
+import {
+  catalogueRevisions,
+  fieldEnumOptions,
+  itemFieldValues,
+  itemTypeFields,
+  itemTypes,
+  items,
+} from '../../db/index.js';
 import {
   createItem,
   createLocation,
@@ -61,42 +68,69 @@ function installDestinationCatalogue(fieldKey = 'Destination'): DestinationFixtu
   const fieldId = randomUUID();
   const storage = randomUUID();
   const parents = randomUUID();
-  harness.db.raw
-    .prepare(
-      `INSERT INTO catalogue_revisions
-         (revision, base_revision, status, minimum_protocol, created_actor_kind, created_at)
-       VALUES (2, 1, 'draft', 2, 'web', '2026-09-19T00:00:00.000Z')`
-    )
+  const createdAt = '2026-09-19T00:00:00.000Z';
+
+  harness.db.db
+    .insert(catalogueRevisions)
+    .values({
+      revision: 2,
+      baseRevision: 1,
+      status: 'draft',
+      minimumProtocol: 2,
+      createdActorKind: 'web',
+      createdAt,
+    })
     .run();
-  harness.db.raw
-    .prepare(
-      `INSERT INTO item_types
-         (revision, id, key, label, sort_order, capabilities_json, legacy_labels_json, presentation_json)
-       VALUES (2, ?, 'moving-box', 'Moving box', 0, '["containment"]', '[]', '{}')`
-    )
-    .run(typeId);
-  harness.db.raw
-    .prepare(
-      `INSERT INTO item_type_fields
-         (revision, id, type_id, key, label, sort_order, kind, cardinality, required,
-          storage, fixed_unit, reference_kinds_json, reference_type_ids_json, allow_override,
-          presentation_json)
-       VALUES (2, ?, ?, ?, ?, 0, 'enum', 'one', 0, 'stored', NULL, '[]', '[]', 0, '{}')`
-    )
-    .run(fieldId, typeId, fieldKey, fieldKey);
-  const insertOption = harness.db.raw.prepare(
-    `INSERT INTO field_enum_options
-       (revision, id, field_id, key, label, sort_order)
-     VALUES (2, ?, ?, ?, ?, ?)`
-  );
-  insertOption.run(storage, fieldId, 'storage', 'Storage', 0);
-  insertOption.run(parents, fieldId, 'parents', "Parents' house", 1);
-  harness.db.raw
-    .prepare(
-      `UPDATE catalogue_revisions
-       SET status = 'published', published_actor_kind = 'web', published_at = '2026-09-19T00:00:00.000Z'
-       WHERE revision = 2`
-    )
+  harness.db.db
+    .insert(itemTypes)
+    .values({
+      revision: 2,
+      id: typeId,
+      key: 'moving-box',
+      label: 'Moving box',
+      sortOrder: 0,
+      capabilitiesJson: JSON.stringify(['containment']),
+      legacyLabelsJson: JSON.stringify([]),
+      presentationJson: JSON.stringify({}),
+    })
+    .run();
+  harness.db.db
+    .insert(itemTypeFields)
+    .values({
+      revision: 2,
+      id: fieldId,
+      typeId,
+      key: fieldKey,
+      label: fieldKey,
+      sortOrder: 0,
+      kind: 'enum',
+      cardinality: 'one',
+      required: 0,
+      storage: 'stored',
+      referenceKindsJson: JSON.stringify([]),
+      referenceTypeIdsJson: JSON.stringify([]),
+      allowOverride: 0,
+      presentationJson: JSON.stringify({}),
+    })
+    .run();
+  harness.db.db
+    .insert(fieldEnumOptions)
+    .values([
+      { revision: 2, id: storage, fieldId, key: 'storage', label: 'Storage', sortOrder: 0 },
+      {
+        revision: 2,
+        id: parents,
+        fieldId,
+        key: 'parents',
+        label: "Parents' house",
+        sortOrder: 1,
+      },
+    ])
+    .run();
+  harness.db.db
+    .update(catalogueRevisions)
+    .set({ status: 'published', publishedActorKind: 'web', publishedAt: createdAt })
+    .where(eq(catalogueRevisions.revision, 2))
     .run();
   return { typeId, fieldId, options: { storage, parents } };
 }
@@ -241,6 +275,29 @@ describe('GET /web/moving-day', () => {
     expect(result.inHand).toEqual([]);
   });
 
+  it('in-hand things are counted separately from loose and packed things', async () => {
+    const room = randomUUID();
+    const boxId = randomUUID();
+    const packedId = randomUUID();
+    const looseId = randomUUID();
+    const inHandId = randomUUID();
+    await apply(
+      createLocation(room, 'Kitchen'),
+      createItem(boxId, 'Kitchen box', { kind: 'location', locationId: room }),
+      createItem(packedId, 'Packed thing'),
+      createItem(looseId, 'Loose thing', { kind: 'location', locationId: room }),
+      createItem(inHandId, 'Thing in hand', { kind: 'hand' })
+    );
+    setBoxState(boxId, 'open');
+    setContainerPlacement(packedId, boxId);
+
+    const result = await moving();
+
+    expect(result.packed).toBe(1);
+    expect(result.looseCount).toBe(1);
+    expect(result.inHand).toEqual([{ id: inHandId, name: 'Thing in hand', code: null }]);
+  });
+
   it('loose groups by room under the home and leaves out other places', async () => {
     const home = randomUUID();
     const kitchen = randomUUID();
@@ -363,5 +420,12 @@ describe('GET /web/moving-day', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({ code: 'ValidationError' });
+  });
+
+  it('an empty destinationField is a 400', async () => {
+    const response = await harness.api.get('/web/moving-day').query({ destinationField: '   ' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ name: 'ValidationError' });
   });
 });
