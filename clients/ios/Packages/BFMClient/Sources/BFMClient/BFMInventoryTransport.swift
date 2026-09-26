@@ -147,7 +147,9 @@ public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSugges
         let statusCode = BFMRepositoryFailure.statusCode(in: error)
         let code = BFMRepositoryFailure.code(in: error)
 
-        if code == "resync_required" || (operation == "mobileInventory.mutations" && statusCode == 409) {
+        if code == "resync_required"
+            || (operation == "mobileInventory.mutations" && statusCode == 409)
+        {
             return InventorySyncTransportError.resyncRequired
         }
         if code == "client_too_old" || statusCode == 426 {

@@ -45,7 +45,14 @@ internal struct RuntimeErrorDecodingTests {
             return (
                 HTTPResponse(status: .serviceUnavailable, headerFields: fields),
                 HTTPBody(
-                    #"{"code":"gateway.upstream_unavailable","message":"Inventory is unavailable.","requestId":"body-request","retryable":true}"#
+                    #"""
+                    {
+                      "code":"gateway.upstream_unavailable",
+                      "message":"Inventory is unavailable.",
+                      "requestId":"body-request",
+                      "retryable":true
+                    }
+                    """#
                 )
             )
         }
@@ -110,7 +117,9 @@ internal struct RuntimeErrorDecodingTests {
             middlewares: [TokenMiddleware(token: token)]
         )
 
-        let encoded = try String(decoding: JSONEncoder().encode(error), as: UTF8.self)
+        let encoded = try #require(
+            String(data: try JSONEncoder().encode(error), encoding: .utf8)
+        )
         #expect(!encoded.contains(token))
         #expect(!String(describing: error).contains(token))
         #expect(!error.localizedDescription.contains(token))

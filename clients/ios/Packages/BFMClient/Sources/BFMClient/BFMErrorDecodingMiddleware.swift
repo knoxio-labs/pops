@@ -35,7 +35,9 @@ internal struct BFMErrorDecodingMiddleware: ClientMiddleware {
                     code: envelope.code,
                     message: envelope.message,
                     requestID: envelope.requestID ?? requestID,
-                    retryable: envelope.retryable ?? Self.defaultRetryable(status: response.status.code),
+                    retryable: envelope.hasRetryable
+                        ? envelope.retryable
+                        : Self.defaultRetryable(status: response.status.code),
                     kind: PopsError.kind(forHTTPStatus: response.status.code)
                 ),
                 statusCode: response.status.code,
@@ -80,8 +82,23 @@ private struct BFMErrorEnvelope: Decodable {
     let code: String
     let message: String
     let requestID: String?
-    let retryable: Bool?
+    let retryable: Bool
+    let hasRetryable: Bool
     let retryAfterSeconds: Int?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decode(String.self, forKey: .code)
+        message = try container.decode(String.self, forKey: .message)
+        requestID = try container.decodeIfPresent(String.self, forKey: .requestID)
+        hasRetryable = container.contains(.retryable)
+        if hasRetryable {
+            retryable = try container.decode(Bool.self, forKey: .retryable)
+        } else {
+            retryable = false
+        }
+        retryAfterSeconds = try container.decodeIfPresent(Int.self, forKey: .retryAfterSeconds)
+    }
 
     private enum CodingKeys: String, CodingKey {
         case code
