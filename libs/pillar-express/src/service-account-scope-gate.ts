@@ -25,6 +25,9 @@ import {
   type ServiceAccountVerifier,
 } from '@pops/pillar-sdk/server';
 
+import { PopsError } from './errors.js';
+import { sendPopsError } from './middleware.js';
+
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
 /** A route a pillar serves outside its ts-rest contract, by method and Express path. */
@@ -80,6 +83,15 @@ export interface ServiceAccountScopeGateOptions {
    * apply.
    */
   readonly rawRoutes?: RawRouteTree;
+  /** Optional registered failures used when a scoped request is rejected. */
+  readonly errors?: ServiceAccountErrorHandlers;
+}
+
+/** Registered failures a service-account gate can throw into the final handler. */
+export interface ServiceAccountErrorHandlers {
+  readonly invalid: (details?: unknown) => never;
+  readonly forbidden: (details?: unknown) => never;
+  readonly unavailable: (details?: unknown) => never;
 }
 
 /** A pillar's gate: the scope table it derived, and the middleware over it. */
@@ -105,12 +117,6 @@ export interface ServiceAccountScopeGate {
    */
   readonly createMiddleware: (verify: ServiceAccountVerifier) => RequestHandler;
 }
-
-const MESSAGES: Record<number, string> = {
-  401: 'Missing or invalid service-account credentials.',
-  403: 'This service account is not authorised for this operation.',
-  503: 'Service-account credentials could not be verified: the registry is unreachable.',
-};
 
 function readApiKey(req: Request): string | undefined {
   // `req.get` collapses a repeated header to one string, so a client sending
@@ -141,6 +147,64 @@ function logRejection(logPrefix: string, result: ServiceAccountAuthResult): void
       ? 'an uncredentialled request'
       : `a credentialled request (${result.reason})`;
   console.warn(`[${logPrefix}] rejected ${subject} for '${result.requiredScope ?? 'unknown'}'`);
+}
+
+interface SendAuthFailureOptions {
+  readonly options: ServiceAccountScopeGateOptions;
+  readonly result: ServiceAccountAuthResult;
+  readonly req: Request;
+  readonly res: Response;
+  readonly next: NextFunction;
+}
+
+function sendAuthFailure({ options, result, req, res, next }: SendAuthFailureOptions): void {
+  const details =
+    result.requiredScope === undefined ? undefined : { requiredScope: result.requiredScope };
+  if (options.errors !== undefined) {
+    try {
+      if (result.status === 401) options.errors.invalid(details);
+      if (result.status === 403) options.errors.forbidden(details);
+      if (result.status === 503) options.errors.unavailable(details);
+      throw new Error(`Unexpected service-account rejection status: ${result.status}`);
+    } catch (error) {
+      next(error);
+    }
+    return;
+  }
+
+  const failure = authFailure(options.rootScope, result.status, details);
+  sendPopsError(req, res, failure);
+}
+
+function authFailure(rootScope: string, status: number, details?: unknown): PopsError {
+  if (status === 401) {
+    return new PopsError({
+      code: `${rootScope}.auth.invalid`,
+      status,
+      message: 'Missing or invalid service-account credentials.',
+      retryable: false,
+      details,
+    });
+  }
+  if (status === 403) {
+    return new PopsError({
+      code: `${rootScope}.auth.forbidden`,
+      status,
+      message: 'This service account is not authorised for this operation.',
+      retryable: false,
+      details,
+    });
+  }
+  if (status === 503) {
+    return new PopsError({
+      code: `${rootScope}.auth.unavailable`,
+      status,
+      message: 'Service-account credentials could not be verified.',
+      retryable: true,
+      details,
+    });
+  }
+  throw new Error(`Unexpected service-account rejection status: ${status}`);
 }
 
 function projectRawRoutes(
@@ -216,7 +280,7 @@ export function createServiceAccountScopeGate(
             return;
           }
           logRejection(logPrefix, result);
-          res.status(result.status).json({ message: MESSAGES[result.status] ?? 'Forbidden' });
+          sendAuthFailure({ options, result, req, res, next });
         })
         .catch(next);
     };

@@ -150,7 +150,8 @@ export function createPillarErrorHandlers(options: ErrorMiddlewareOptions): Erro
   };
 }
 
-function sendPopsError(req: Request, res: Response, error: PopsError): void {
+/** Serialize a known failure with the request id attached to the response. */
+export function sendPopsError(req: Request, res: Response, error: PopsError): void {
   if (res.headersSent) return;
   const requestId = ensureRequestId(req, res);
   const body: ErrorBody = {

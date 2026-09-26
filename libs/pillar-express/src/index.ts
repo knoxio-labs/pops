@@ -21,6 +21,7 @@ export type {
 export type {
   RawRouteDeclaration,
   RawRouteTree,
+  ServiceAccountErrorHandlers,
   ServiceAccountScopeGate,
   ServiceAccountScopeGateOptions,
 } from './service-account-scope-gate.js';
