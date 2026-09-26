@@ -20100,6 +20100,239 @@
         "tags": ["webChanges"]
       }
     },
+    "/web/connections": {
+      "get": {
+        "operationId": "webConnections.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "default": "all",
+              "enum": ["all", "item", "fixture"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "rows": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "far": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "code": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "isContainer": {
+                                    "type": "boolean"
+                                  },
+                                  "kind": {
+                                    "enum": ["item"],
+                                    "type": "string"
+                                  },
+                                  "lifecycle": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "typeKey": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "name",
+                                  "code",
+                                  "typeKey",
+                                  "isContainer",
+                                  "lifecycle"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["fixture"],
+                                    "type": "string"
+                                  },
+                                  "locationId": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "id", "name", "type", "locationId"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "item": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "code": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "isContainer": {
+                                "type": "boolean"
+                              },
+                              "kind": {
+                                "enum": ["item"],
+                                "type": "string"
+                              },
+                              "lifecycle": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "typeKey": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "name",
+                              "code",
+                              "typeKey",
+                              "isContainer",
+                              "lifecycle"
+                            ],
+                            "type": "object"
+                          }
+                        },
+                        "required": ["id", "createdAt", "item", "far"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "summary": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "connections": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "fixtures": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "items": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["connections", "items", "fixtures"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["rows", "nextCursor", "summary"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "List resolved inventory item and fixture connections",
+        "tags": ["webConnections"]
+      }
+    },
     "/web/events": {
       "get": {
         "operationId": "webEvents.list",
@@ -21259,9 +21492,6 @@
                 "additionalProperties": false,
                 "properties": {
                   "destination": {
-                    "default": {
-                      "kind": "hand"
-                    },
                     "oneOf": [
                       {
                         "additionalProperties": false,
@@ -21347,7 +21577,7 @@
                     "type": "array"
                   }
                 },
-                "required": ["rows", "destination", "dryRun"],
+                "required": ["rows", "dryRun"],
                 "type": "object"
               }
             }
