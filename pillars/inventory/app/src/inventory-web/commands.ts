@@ -30,6 +30,10 @@ interface NewLocationInput {
   parentId: string | null;
 }
 
+type ItemEditInput = Partial<Pick<NewItemInput, 'name' | 'fields' | 'quantity'>> & {
+  note?: string | null;
+};
+
 /** One command and its arguments, keyed by `op` exactly as the server expects. */
 export type InventoryCommand =
   | {
@@ -42,9 +46,9 @@ export type InventoryCommand =
   | { op: 'item.restoreDeleted'; args: Record<string, never> }
   | { op: 'event.revert'; args: { seq: number } }
   | { op: 'item.create'; args: { item: NewItemInput } }
-  | { op: 'item.edit'; args: Partial<Pick<NewItemInput, 'name' | 'fields' | 'note' | 'quantity'>> }
+  | { op: 'item.edit'; args: ItemEditInput }
   | { op: 'item.changeType'; args: { typeKey: string; fields?: Record<string, unknown> } }
-  | { op: 'item.setCode'; args: { code: string } }
+  | { op: 'item.setCode'; args: { code: string | null } }
   | { op: 'item.setQuantity'; args: { quantity: number } }
   | { op: 'item.split'; args: { newItemId: string; quantity: number } }
   | { op: 'item.attachPhoto'; args: { sha256: string; position: number } }
