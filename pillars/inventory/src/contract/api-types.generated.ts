@@ -8690,6 +8690,15 @@ export interface operations {
         containingItemId?: string;
         ids?: string;
         includeInactive?: boolean;
+        untyped?: 'true' | 'false';
+        isContainer?: 'true' | 'false';
+        access?: 'open' | 'closed';
+        isFull?: 'true' | 'false';
+        lifecycle?: 'active' | 'retired' | 'discarded' | 'lost' | 'destroyed';
+        legacyLabelOf?: string;
+        within?: string;
+        effectiveLocationId?: string;
+        sort?: 'name' | 'updated' | 'type' | 'where' | 'packing';
       };
       header?: never;
       path?: never;
@@ -8704,6 +8713,7 @@ export interface operations {
         };
         content: {
           'application/json': {
+            hiddenInactiveCount: number;
             items: {
               /** @enum {string|null} */
               access: 'open' | 'closed' | null;
@@ -8850,6 +8860,8 @@ export interface operations {
               updatedAt: string;
             }[];
             nextCursor: string | null;
+            total: number;
+            unfilteredTotal: number;
           };
         };
       };

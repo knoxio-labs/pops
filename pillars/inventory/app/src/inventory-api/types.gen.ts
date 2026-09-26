@@ -6219,6 +6219,15 @@ export type WebListData = {
     containingItemId?: string;
     ids?: string;
     includeInactive?: boolean;
+    untyped?: 'true' | 'false';
+    isContainer?: 'true' | 'false';
+    access?: 'open' | 'closed';
+    isFull?: 'true' | 'false';
+    lifecycle?: 'active' | 'retired' | 'discarded' | 'lost' | 'destroyed';
+    legacyLabelOf?: string;
+    within?: string;
+    effectiveLocationId?: string;
+    sort?: 'name' | 'updated' | 'type' | 'where' | 'packing';
   };
   url: '/web/items';
 };
@@ -6241,6 +6250,7 @@ export type WebListResponses = {
    * 200
    */
   200: {
+    hiddenInactiveCount: number;
     items: Array<{
       access: 'open' | 'closed' | null;
       catalogueRevision: number | null;
@@ -6361,6 +6371,8 @@ export type WebListResponses = {
       updatedAt: string;
     }>;
     nextCursor: string | null;
+    total: number;
+    unfilteredTotal: number;
   };
 };
 

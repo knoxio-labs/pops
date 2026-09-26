@@ -19394,6 +19394,78 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "in": "query",
+            "name": "untyped",
+            "schema": {
+              "enum": ["true", "false"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "isContainer",
+            "schema": {
+              "enum": ["true", "false"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "access",
+            "schema": {
+              "enum": ["open", "closed"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "isFull",
+            "schema": {
+              "enum": ["true", "false"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lifecycle",
+            "schema": {
+              "enum": ["active", "retired", "discarded", "lost", "destroyed"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "legacyLabelOf",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "within",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "effectiveLocationId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "enum": ["name", "updated", "type", "where", "packing"],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -19403,6 +19475,11 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "hiddenInactiveCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "items": {
                       "items": {
                         "additionalProperties": false,
@@ -19968,9 +20045,25 @@
                     "nextCursor": {
                       "nullable": true,
                       "type": "string"
+                    },
+                    "total": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "unfilteredTotal": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     }
                   },
-                  "required": ["items", "nextCursor"],
+                  "required": [
+                    "items",
+                    "nextCursor",
+                    "total",
+                    "unfilteredTotal",
+                    "hiddenInactiveCount"
+                  ],
                   "type": "object"
                 }
               }

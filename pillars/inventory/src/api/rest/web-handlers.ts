@@ -6,7 +6,7 @@
 import { eq } from 'drizzle-orm';
 
 import { items, type InventoryDb } from '../../db/index.js';
-import { NotFoundError } from '../shared/errors.js';
+import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { toSyncEvents } from '../sync/events.js';
 import { readItemHistory } from '../sync/history.js';
 import { loadItemExtras, projectItems, toSyncItem } from '../sync/wire.js';
@@ -32,6 +32,13 @@ export function makeWebHandlers({ db, documents }: WebHandlerDeps) {
   return {
     list: ({ query }: Req['list']) =>
       runHttp(async () => {
+        if (query.typeKey !== undefined && query.untyped === 'true') {
+          throw new ValidationError('typeKey cannot be combined with untyped=true');
+        }
+        if (query.typeKey !== undefined && query.legacyLabelOf !== undefined) {
+          throw new ValidationError('typeKey cannot be combined with legacyLabelOf');
+        }
+
         const page = db.transaction((tx) =>
           readWebItemsPage(
             tx,
@@ -42,8 +49,17 @@ export function makeWebHandlers({ db, documents }: WebHandlerDeps) {
               containingItemId: query.containingItemId,
               ids: query.ids?.split(','),
               includeInactive: query.includeInactive,
+              untyped: query.untyped === undefined ? undefined : query.untyped === 'true',
+              isContainer:
+                query.isContainer === undefined ? undefined : query.isContainer === 'true',
+              access: query.access,
+              isFull: query.isFull === undefined ? undefined : query.isFull === 'true',
+              lifecycle: query.lifecycle,
+              legacyLabelOf: query.legacyLabelOf,
+              within: query.within,
+              effectiveLocationId: query.effectiveLocationId,
             },
-            query
+            { cursor: query.cursor, limit: query.limit, sort: query.sort }
           )
         );
         const extras = loadItemExtras(
@@ -55,6 +71,9 @@ export function makeWebHandlers({ db, documents }: WebHandlerDeps) {
           body: {
             items: await projectItems({ items: page.rows, extras }, documents),
             nextCursor: page.nextCursor,
+            total: page.total,
+            unfilteredTotal: page.unfilteredTotal,
+            hiddenInactiveCount: page.hiddenInactiveCount,
           },
         };
       }),
