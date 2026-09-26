@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { MAX_MUTATION_BATCH } from '@pops/inventory';
+
 import { InventoryApiError } from '../inventory-api-helpers.js';
 
 const mocks = vi.hoisted(() => ({ syncMutations: vi.fn() }));
@@ -11,10 +13,11 @@ vi.mock('../inventory-api/index.js', () => ({
 import {
   buildMutationEnvelope,
   INVENTORY_SYNC_PROTOCOL,
+  sendInventoryMutations,
   sendInventoryMutation,
 } from './mutation-client';
 
-import type { InventoryCommand } from './commands';
+import type { InventoryCommand, InventoryPlacementTarget } from './commands';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -76,6 +79,26 @@ describe('buildMutationEnvelope', () => {
     const b = buildMutationEnvelope({ command: { op: 'item.delete', args: {} }, entityId: 'x' });
     expect(a.mutationId).not.toBe(b.mutationId);
     expect(() => new Date(a.clientTime).toISOString()).not.toThrow();
+  });
+
+  it('carries catalogueRevision only for stable typed commands', () => {
+    const target: InventoryPlacementTarget = { kind: 'hand' };
+    const typed = buildMutationEnvelope({
+      command: { op: 'item.changeType', args: { typeId: 'type-cable', values: [] } },
+      entityId: 'item-1',
+      catalogueRevision: 7,
+      mutationId: '30000000-0000-4000-8000-000000000008',
+      clientTime: '2026-09-19T00:00:00.000Z',
+    });
+    const untyped = buildMutationEnvelope({
+      command: { op: 'item.move', args: { to: target, verb: 'move' } },
+      entityId: 'item-1',
+      mutationId: '30000000-0000-4000-8000-000000000009',
+      clientTime: '2026-09-19T00:00:00.000Z',
+    });
+
+    expect(typed.catalogueRevision).toBe(7);
+    expect(untyped).not.toHaveProperty('catalogueRevision');
   });
 });
 
@@ -152,5 +175,62 @@ describe('sendInventoryMutation', () => {
     await expect(
       sendInventoryMutation({ command: { op: 'item.delete', args: {} }, entityId: 'item-1' })
     ).rejects.toBeInstanceOf(InventoryApiError);
+  });
+
+  it('sends one batch and returns outcomes in input order', async () => {
+    mocks.syncMutations.mockResolvedValue(
+      ok([
+        { mutationId: 'm1', status: 'deferred', waitingOn: 'm2' },
+        { mutationId: 'm2', status: 'applied', revision: 3, seq: 12, converged: false },
+      ])
+    );
+    const inputs = [
+      {
+        command: { op: 'item.setFull', args: { full: true } },
+        entityId: 'item-1',
+        mutationId: 'm1',
+        clientTime: '2026-09-19T00:00:00.000Z',
+      },
+      {
+        command: { op: 'item.setAccess', args: { access: 'open' } },
+        entityId: 'item-2',
+        mutationId: 'm2',
+        clientTime: '2026-09-19T00:00:00.000Z',
+      },
+    ] as const;
+
+    await expect(sendInventoryMutations(inputs)).resolves.toEqual([
+      { mutationId: 'm1', status: 'deferred', waitingOn: 'm2' },
+      { mutationId: 'm2', status: 'applied', revision: 3, seq: 12, converged: false },
+    ]);
+    expect(mocks.syncMutations).toHaveBeenCalledTimes(1);
+    expect(mocks.syncMutations.mock.calls[0]?.[0].body.mutations).toHaveLength(2);
+  });
+
+  it('refuses empty or over-capacity batches without sending', async () => {
+    const input = {
+      command: { op: 'item.delete', args: {} },
+      entityId: 'item-1',
+    } as const;
+
+    await expect(sendInventoryMutations([])).rejects.toBeInstanceOf(RangeError);
+    await expect(
+      sendInventoryMutations(Array.from({ length: MAX_MUTATION_BATCH + 1 }, () => input))
+    ).rejects.toBeInstanceOf(RangeError);
+    expect(mocks.syncMutations).not.toHaveBeenCalled();
+  });
+
+  it('throws when the outcome count differs from the input count', async () => {
+    mocks.syncMutations.mockResolvedValue(ok([]));
+    const input = {
+      command: { op: 'item.delete', args: {} },
+      entityId: 'item-1',
+    } as const;
+
+    await expect(sendInventoryMutations([input])).rejects.toMatchObject({
+      name: 'InventoryApiError',
+      message: 'inventory mutation returned 0 outcomes for 1 mutations',
+      status: 200,
+    });
   });
 });

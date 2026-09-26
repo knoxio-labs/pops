@@ -30,8 +30,30 @@ interface NewLocationInput {
   parentId: string | null;
 }
 
+/** One primitive value in the stable catalogue-value wire format. */
+export type FieldWireValue =
+  | string
+  | number
+  | boolean
+  | { optionId: string }
+  | { amount: string; unit: string }
+  | { targetKind: 'item' | 'location'; targetId: string };
+
+/** One stable field patch; `null` clears an optional stored value. */
+export interface FieldValuePatch {
+  fieldId: string;
+  values: readonly FieldWireValue[] | null;
+}
+
+/** One complete stable field value used when changing an item's type. */
+export interface FieldValueEntry {
+  fieldId: string;
+  values: readonly FieldWireValue[];
+}
+
 type ItemEditInput = Partial<Pick<NewItemInput, 'name' | 'fields' | 'quantity'>> & {
   note?: string | null;
+  values?: readonly FieldValuePatch[];
 };
 
 /** One command and its arguments, keyed by `op` exactly as the server expects. */
@@ -47,7 +69,12 @@ export type InventoryCommand =
   | { op: 'event.revert'; args: { seq: number } }
   | { op: 'item.create'; args: { item: NewItemInput } }
   | { op: 'item.edit'; args: ItemEditInput }
-  | { op: 'item.changeType'; args: { typeKey: string; fields?: Record<string, unknown> } }
+  | {
+      op: 'item.changeType';
+      args:
+        | { typeKey: string; fields?: Record<string, unknown> }
+        | { typeId: string; values: readonly FieldValueEntry[] };
+    }
   | { op: 'item.setCode'; args: { code: string | null } }
   | { op: 'item.setQuantity'; args: { quantity: number } }
   | { op: 'item.split'; args: { newItemId: string; quantity: number } }
