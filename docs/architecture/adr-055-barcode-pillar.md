@@ -30,7 +30,7 @@ Every valid request returns HTTP 200 with this discriminated union:
 { "outcome": "unavailable" }
 ```
 
-An invalid code returns HTTP 400 with the `invalid_code` error. Validation happens before cache access or source requests. The health endpoint remains open; the lookup route is credentialled as described below.
+An invalid code returns HTTP 400 with the `barcode.lookup.invalid_code` error. Validation happens before cache access or source requests. The health endpoint remains open; the lookup route is credentialled as described below.
 
 The normalised product is:
 
@@ -62,7 +62,7 @@ Identifiers never appear in `attributes`. Open Library's `isbn_10`, `isbn_13`, `
 
 ### Validation and normalisation
 
-The pillar first removes spaces and hyphens from the path value. It returns `invalid_code` with HTTP 400 if the resulting value:
+The pillar first removes spaces and hyphens from the path value. It returns `barcode.lookup.invalid_code` with HTTP 400 if the resulting value:
 
 - contains a non-digit, except a trailing `X` in a ten-character ISBN-10;
 - is not 8, 10, 12 or 13 characters long; or
