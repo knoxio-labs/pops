@@ -1,18 +1,8 @@
-export type CatalogueTypeStatus = 'published' | 'draft' | 'archived';
-
 import { legacyCatalogueTypes } from './legacy-catalogue-types';
 
-export interface CatalogueTypeSummary {
-  id: string;
-  key: string;
-  label: string;
-  parentTypeId: string | null;
-  description: string;
-  status: CatalogueTypeStatus;
-  itemCount: number;
-  fieldCount: number;
-  capabilities: readonly string[];
-}
+import type { CatalogueTypeSummary } from './catalogue-type-model';
+
+export type { CatalogueTypeStatus, CatalogueTypeSummary } from './catalogue-type-model';
 
 export interface CatalogueEnumOption {
   id: string;

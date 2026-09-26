@@ -1,4 +1,4 @@
-import type { CatalogueTypeSummary } from './inventory-type-catalogue';
+import type { CatalogueTypeSummary } from './catalogue-type-model';
 
 /** Existing flat catalogue types retained beside the inventory type tree. */
 export const legacyCatalogueTypes: readonly CatalogueTypeSummary[] = [
