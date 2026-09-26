@@ -219,6 +219,9 @@ import type {
   TypesReadValidateItemData,
   TypesReadValidateItemErrors,
   TypesReadValidateItemResponses,
+  WebChangesHeadData,
+  WebChangesHeadErrors,
+  WebChangesHeadResponses,
   WebEventsListData,
   WebEventsListErrors,
   WebEventsListResponses,
@@ -1349,6 +1352,17 @@ export const documentFilesRemoveUpload = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * Read the inventory web change head and changed-elsewhere groups
+ */
+export const webChangesHead = <ThrowOnError extends boolean = false>(
+  options?: Options<WebChangesHeadData, ThrowOnError>
+): RequestResult<WebChangesHeadResponses, WebChangesHeadErrors, ThrowOnError> =>
+  (options?.client ?? client).get<WebChangesHeadResponses, WebChangesHeadErrors, ThrowOnError>({
+    url: '/web/changes/head',
+    ...options,
   });
 
 /**

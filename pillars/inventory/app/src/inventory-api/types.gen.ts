@@ -6207,6 +6207,51 @@ export type DocumentFilesRemoveUploadResponses = {
 export type DocumentFilesRemoveUploadResponse =
   DocumentFilesRemoveUploadResponses[keyof DocumentFilesRemoveUploadResponses];
 
+export type WebChangesHeadData = {
+  body?: never;
+  path?: never;
+  query?: {
+    since?: number;
+    entityId?: string;
+  };
+  url: '/web/changes/head';
+};
+
+export type WebChangesHeadErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebChangesHeadError = WebChangesHeadErrors[keyof WebChangesHeadErrors];
+
+export type WebChangesHeadResponses = {
+  /**
+   * 200
+   */
+  200: {
+    groups: Array<{
+      actorId: string | null;
+      actorKind: 'device' | 'service' | 'migration';
+      actorLabel: string;
+      entityCount: number;
+      eventCount: number;
+      kindCounts: {
+        [key: string]: number;
+      };
+      latestServerTime: string;
+    }>;
+    headSeq: number;
+  };
+};
+
+export type WebChangesHeadResponse = WebChangesHeadResponses[keyof WebChangesHeadResponses];
+
 export type WebEventsListData = {
   body?: never;
   path?: never;

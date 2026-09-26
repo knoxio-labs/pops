@@ -1057,6 +1057,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/changes/head': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the inventory web change head and changed-elsewhere groups */
+    get: operations['webChanges.head'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/events': {
     parameters: {
       query?: never;
@@ -8700,6 +8717,56 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'webChanges.head': {
+    parameters: {
+      query?: {
+        since?: number;
+        entityId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            groups: {
+              actorId: string | null;
+              /** @enum {string} */
+              actorKind: 'device' | 'service' | 'migration';
+              actorLabel: string;
+              entityCount: number;
+              eventCount: number;
+              kindCounts: {
+                [key: string]: number;
+              };
+              latestServerTime: string;
+            }[];
+            headSeq: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
         headers: {
           [name: string]: unknown;
         };

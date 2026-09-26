@@ -19329,6 +19329,129 @@
         "tags": ["documentFiles"]
       }
     },
+    "/web/changes/head": {
+      "get": {
+        "operationId": "webChanges.head",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "since",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entityId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "groups": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "actorId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "actorKind": {
+                            "enum": ["device", "service", "migration"],
+                            "type": "string"
+                          },
+                          "actorLabel": {
+                            "type": "string"
+                          },
+                          "entityCount": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "eventCount": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "kindCounts": {
+                            "additionalProperties": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "type": "object"
+                          },
+                          "latestServerTime": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "actorKind",
+                          "actorId",
+                          "actorLabel",
+                          "eventCount",
+                          "entityCount",
+                          "kindCounts",
+                          "latestServerTime"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "headSeq": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["headSeq", "groups"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Read the inventory web change head and changed-elsewhere groups",
+        "tags": ["webChanges"]
+      }
+    },
     "/web/events": {
       "get": {
         "operationId": "webEvents.list",
