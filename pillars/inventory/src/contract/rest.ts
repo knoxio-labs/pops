@@ -33,6 +33,7 @@ import {
 import { inventoryWebBatchContract } from './rest-web-batch.js';
 import { inventoryWebChangesContract } from './rest-web-changes.js';
 import { inventoryWebEventsContract } from './rest-web-events.js';
+import { inventoryWebLocationsContract } from './rest-web-locations.js';
 import { inventoryWebSearchContract } from './rest-web-search.js';
 import { inventoryWebSummaryContract } from './rest-web-summary.js';
 import { inventoryWebContract } from './rest-web.js';
@@ -55,6 +56,7 @@ export const inventoryContract = c.router(
     webBatch: inventoryWebBatchContract,
     webChanges: inventoryWebChangesContract,
     webEvents: inventoryWebEventsContract,
+    webLocations: inventoryWebLocationsContract,
     webSearch: inventoryWebSearchContract,
     webSummary: inventoryWebSummaryContract,
     settings: inventorySettingsContract,
