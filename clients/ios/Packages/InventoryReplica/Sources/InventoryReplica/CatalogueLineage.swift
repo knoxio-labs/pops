@@ -16,7 +16,9 @@ extension InventoryCatalogueSnapshot {
                     id: type.id, key: type.key, label: type.label, description: type.description,
                     sortOrder: type.sortOrder,
                     fields: type.fields.map {
-                        $0.replacing(lineage: $0.replacedBy ?? fields[$0.id]?.replacedBy)
+                        $0.backfilled(
+                            replacedBy: $0.replacedBy ?? fields[$0.id]?.replacedBy,
+                            defaultValues: $0.defaultValues)
                     },
                     capabilities: type.capabilities, legacyLabels: type.legacyLabels,
                     presentation: type.presentation, archivedAt: type.archivedAt,
@@ -55,13 +57,18 @@ extension InventoryCatalogueSnapshot {
 }
 
 extension InventoryCatalogueField {
-    fileprivate func replacing(lineage: String?) -> InventoryCatalogueField {
+    /// This field with the two columns a revision stored by an older app may
+    /// lack, lineage and defaults, set to the given values.
+    func backfilled(replacedBy: String?, defaultValues: [InventoryPrimitiveValue])
+        -> InventoryCatalogueField
+    {
         InventoryCatalogueField(
             id: id, typeId: typeId, key: key, label: label, help: help, sortOrder: sortOrder,
             kind: kind, cardinality: cardinality, required: required, storage: storage,
             fixedUnit: fixedUnit, references: references, expressionVersion: expressionVersion,
-            expression: expression, allowOverride: allowOverride, presentation: presentation,
-            archivedAt: archivedAt, replacedBy: lineage, enumOptions: enumOptions)
+            expression: expression, allowOverride: allowOverride, defaultValues: defaultValues,
+            presentation: presentation, archivedAt: archivedAt, replacedBy: replacedBy,
+            enumOptions: enumOptions)
     }
 }
 

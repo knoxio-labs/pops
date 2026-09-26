@@ -37,12 +37,16 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
                 }
                 if values.isEmpty, field.cardinality == .one, field.archivedAt == nil {
                     let empty = InventoryProtocol2DraftEntry(
-                        id: "\(field.id):empty", value: Self.startingValue(for: field))
+                        id: Self.startingEntryId(for: field), value: Self.startingValue(for: field))
                     return (field.id, [empty])
                 }
                 return values.isEmpty ? nil : (field.id, values)
             })
         touched = []
+    }
+
+    private static func startingEntryId(for field: InventoryCatalogueField) -> String {
+        "\(field.id):empty"
     }
 
     /// The value an empty one-value entry starts from. A required flag is
@@ -73,6 +77,24 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
         guard field.storage == .stored, field.cardinality == .many else { return }
         entries[field.id, default: []].append(InventoryProtocol2DraftEntry(id: id))
         touched.insert(field.id)
+    }
+
+    /// Fills each live stored field of `type` that the person has not
+    /// touched, and that holds nothing but the entry it starts from, with its
+    /// catalogue default. A default is not the person's own change, so nothing
+    /// is marked touched.
+    internal mutating func prefillDefaults(for type: InventoryCatalogueType) {
+        for field in type.fields
+        where field.storage == .stored && field.archivedAt == nil && !field.defaultValues.isEmpty
+            && !touched.contains(field.id)
+            && entries[field.id, default: []].allSatisfy({
+                $0.id == Self.startingEntryId(for: field)
+            })
+        {
+            entries[field.id] = field.defaultValues.enumerated().map { index, value in
+                InventoryProtocol2DraftEntry(id: "\(field.id):default:\(index)", value: value)
+            }
+        }
     }
 
     /// Fills `field` with `values`, as a change of the person's own: a

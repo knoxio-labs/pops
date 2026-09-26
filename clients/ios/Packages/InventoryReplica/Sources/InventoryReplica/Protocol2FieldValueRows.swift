@@ -113,7 +113,9 @@ internal enum Protocol2FieldValueRows {
                 """, arguments: [itemId])
     }
 
-    private static func encode(_ value: InventoryPrimitiveValue) throws -> String {
+    /// One value as its `value_json` column holds it; the catalogue's field
+    /// defaults are kept the same way.
+    static func encode(_ value: InventoryPrimitiveValue) throws -> String {
         switch value {
         case .string(let value): return try StoredJSON.encode(value)
         case .integer(let value): return try StoredJSON.encode(value.value)
@@ -136,6 +138,23 @@ internal enum Protocol2FieldValueRows {
     private static func decode(
         kind: InventoryPrimitiveKind, text: String, table: String, in db: Database
     ) throws -> InventoryPrimitiveValue {
+        guard kind == .reference else { return try decode(kind: kind, text: text) }
+        let value = try StoredJSON.decode(StoredReferenceValue.self, from: text)
+        guard let targetKind = InventoryReferenceTargetKind(rawValue: value.targetKind) else {
+            throw InventoryReplicaError.corruptValue("reference kind \(value.targetKind)")
+        }
+        return .reference(
+            InventoryReferenceValue(
+                targetKind: targetKind, targetId: value.targetId,
+                targetState: try referenceState(
+                    kind: targetKind, id: value.targetId, table: table, in: db)))
+    }
+
+    /// ``encode(_:)`` read back as `kind`, for a value no item holds: a
+    /// reference has no target state outside an item, so one is corrupt here.
+    static func decode(kind: InventoryPrimitiveKind, text: String) throws
+        -> InventoryPrimitiveValue
+    {
         switch kind {
         case .shortText, .longText:
             return .string(try StoredJSON.decode(String.self, from: text))
@@ -159,15 +178,7 @@ internal enum Protocol2FieldValueRows {
         case .url:
             return .url(try InventoryCanonicalURL(StoredJSON.decode(String.self, from: text)))
         case .reference:
-            let value = try StoredJSON.decode(StoredReferenceValue.self, from: text)
-            guard let targetKind = InventoryReferenceTargetKind(rawValue: value.targetKind) else {
-                throw InventoryReplicaError.corruptValue("reference kind \(value.targetKind)")
-            }
-            return .reference(
-                InventoryReferenceValue(
-                    targetKind: targetKind, targetId: value.targetId,
-                    targetState: try referenceState(
-                        kind: targetKind, id: value.targetId, table: table, in: db)))
+            throw InventoryReplicaError.corruptValue("reference value outside an item")
         }
     }
 

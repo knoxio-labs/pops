@@ -34,6 +34,11 @@ public struct InventoryCatalogueField: Codable, Identifiable, Hashable, Sendable
     public let expressionVersion: Int?
     public let expression: InventoryJSON?
     public let allowOverride: Bool
+    /// The canonical values a client pre-fills this field with when a new
+    /// item is created, typed by ``kind``; empty when the field has none. Only
+    /// a stored, non-reference field carries any, and a one-value field at
+    /// most one. The server never applies them.
+    public let defaultValues: [InventoryPrimitiveValue]
     public let presentation: InventoryJSON
     public let archivedAt: String?
     /// The field that took over this archived field's values, when the
@@ -47,6 +52,7 @@ public struct InventoryCatalogueField: Codable, Identifiable, Hashable, Sendable
         required: Bool, storage: InventoryFieldStorage, fixedUnit: String? = nil,
         references: InventoryReferenceConstraint = .init(), expressionVersion: Int? = nil,
         expression: InventoryJSON? = nil, allowOverride: Bool = false,
+        defaultValues: [InventoryPrimitiveValue] = [],
         presentation: InventoryJSON = .object([:]), archivedAt: String? = nil,
         replacedBy: String? = nil, enumOptions: [InventoryCatalogueOption] = []
     ) {
@@ -65,6 +71,7 @@ public struct InventoryCatalogueField: Codable, Identifiable, Hashable, Sendable
         self.expressionVersion = expressionVersion
         self.expression = expression
         self.allowOverride = allowOverride
+        self.defaultValues = defaultValues
         self.presentation = presentation
         self.archivedAt = archivedAt
         self.replacedBy = replacedBy

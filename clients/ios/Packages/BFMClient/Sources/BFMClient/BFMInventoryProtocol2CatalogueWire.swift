@@ -56,6 +56,8 @@ private func protocol2Field(from wire: Protocol2FieldPayload) throws -> Inventor
         expressionVersion: wire.expressionVersion,
         expression: try wire.expression.map(protocol2JSON(from:)),
         allowOverride: wire.allowOverride,
+        defaultValues: try protocol2DefaultValues(
+            of: wire, kind: kind, cardinality: cardinality, storage: storage),
         presentation: try protocol2JSON(object: wire.presentation.additionalProperties),
         archivedAt: wire.archivedAt, replacedBy: wire.replacedBy,
         enumOptions: wire.enumOptions.map {
@@ -64,6 +66,35 @@ private func protocol2Field(from wire: Protocol2FieldPayload) throws -> Inventor
                 archivedAt: $0.archivedAt)
         }
     )
+}
+
+/// A field's defaults, typed by its kind as an item's stored values are. A
+/// default the contract rules out (on a computed or reference field, more
+/// than one on a one-value field, not a value of the field's kind and unit,
+/// or an option the field does not offer unarchived) is a contract mismatch,
+/// never dropped.
+private func protocol2DefaultValues(
+    of field: Protocol2FieldPayload, kind: InventoryPrimitiveKind,
+    cardinality: InventoryFieldCardinality, storage: InventoryFieldStorage
+) throws -> [InventoryPrimitiveValue] {
+    let wire = field.defaultValues ?? []
+    guard !wire.isEmpty else { return [] }
+    let activeOptionIds = Set(field.enumOptions.filter { $0.archivedAt == nil }.map(\.id))
+    guard storage == .stored, kind != .reference, cardinality == .many || wire.count == 1 else {
+        throw RepositoryError.contractMismatch
+    }
+    return try wire.map { container in
+        guard let value = try protocol2Value(from: container).conformed(to: kind) else {
+            throw RepositoryError.contractMismatch
+        }
+        if case .measurement(_, let unit) = value, unit != field.fixedUnit {
+            throw RepositoryError.contractMismatch
+        }
+        if case .enumeration(let optionId) = value, !activeOptionIds.contains(optionId) {
+            throw RepositoryError.contractMismatch
+        }
+        return value
+    }
 }
 
 private func protocol2JSON(object: [String: OpenAPIValueContainer]) throws -> InventoryJSON {

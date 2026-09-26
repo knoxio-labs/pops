@@ -250,8 +250,10 @@ extension InventoryItemFormModel {
                     phase = .unavailable
                     return
                 }
-                protocol2Draft = .init(
+                var created = InventoryProtocol2Draft(
                     type: type, catalogueRevision: catalogue.revision.revision)
+                created.prefillDefaults(for: type)
+                protocol2Draft = created
             }
             phase = .ready
         case .edit, .labelling:
