@@ -31,6 +31,7 @@ import { makeWebConnectionsHandlers } from './web-connections-handlers.js';
 import { makeWebEventsHandlers } from './web-events-handlers.js';
 import { makeWebHandlers } from './web-handlers.js';
 import { makeWebLocationsHandlers } from './web-locations-handlers.js';
+import { makeWebMovingHandlers } from './web-moving-handlers.js';
 import { makeWebReportsHandlers } from './web-reports-handlers.js';
 import { makeWebSearchHandlers } from './web-search-handlers.js';
 import { makeWebSummaryHandlers } from './web-summary-handlers.js';
@@ -83,6 +84,7 @@ export function makeInventoryRestHandlers(deps: {
     webEvents: makeWebEventsHandlers(db),
     webLocations: makeWebLocationsHandlers(db),
     webReports: makeWebReportsHandlers(db),
+    webMoving: makeWebMovingHandlers(db),
     webSearch: makeWebSearchHandlers({ db, documents }),
     webSummary: makeWebSummaryHandlers(db),
     webSyncLedger: makeWebSyncLedgerHandlers(db),

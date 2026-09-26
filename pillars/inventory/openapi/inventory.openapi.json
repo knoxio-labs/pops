@@ -23190,6 +23190,317 @@
         "tags": ["webLocations"]
       }
     },
+    "/web/moving-day": {
+      "get": {
+        "operationId": "webMoving.get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "destinationField",
+            "required": true,
+            "schema": {
+              "default": "Destination",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "homeLocationId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "boxes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "contents": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "code": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "containerId": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "name", "code", "containerId"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "count": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "destination": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "label": {
+                                "type": "string"
+                              },
+                              "optionKey": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["optionKey", "label"],
+                            "type": "object"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "placement": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["location"],
+                                    "type": "string"
+                                  },
+                                  "locationId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "locationId"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "itemId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["container"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "itemId"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["hand"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "stage": {
+                            "enum": ["packing", "full", "closed"],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "code",
+                          "stage",
+                          "count",
+                          "destination",
+                          "placement",
+                          "contents"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "destinationOptions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "optionKey": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["optionKey", "label"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "inHand": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "name", "code"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "loose": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "items": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "code": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "name", "code"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "room": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["id", "name"],
+                            "type": "object"
+                          }
+                        },
+                        "required": ["room", "items"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "looseCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "packed": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "stages": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "closed": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "full": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "packing": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["packing", "full", "closed"],
+                      "type": "object"
+                    },
+                    "unlabelledClosed": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "boxes",
+                    "stages",
+                    "packed",
+                    "loose",
+                    "looseCount",
+                    "inHand",
+                    "unlabelledClosed",
+                    "destinationOptions"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Read the moving-day boxes, placements and progress aggregate",
+        "tags": ["webMoving"]
+      }
+    },
     "/web/reports/values": {
       "get": {
         "operationId": "webReports.values",

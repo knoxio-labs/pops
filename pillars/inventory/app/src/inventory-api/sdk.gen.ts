@@ -245,6 +245,9 @@ import type {
   WebLocationsGoneResponses,
   WebLocationsTalliesData,
   WebLocationsTalliesResponses,
+  WebMovingGetData,
+  WebMovingGetErrors,
+  WebMovingGetResponses,
   WebReportsValuesData,
   WebReportsValuesErrors,
   WebReportsValuesResponses,
@@ -1480,6 +1483,17 @@ export const webLocationsGone = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebLocationsGoneResponses, WebLocationsGoneErrors, ThrowOnError> =>
   (options.client ?? client).get<WebLocationsGoneResponses, WebLocationsGoneErrors, ThrowOnError>({
     url: '/web/locations/{id}/gone',
+    ...options,
+  });
+
+/**
+ * Read the moving-day boxes, placements and progress aggregate
+ */
+export const webMovingGet = <ThrowOnError extends boolean = false>(
+  options: Options<WebMovingGetData, ThrowOnError>
+): RequestResult<WebMovingGetResponses, WebMovingGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebMovingGetResponses, WebMovingGetErrors, ThrowOnError>({
+    url: '/web/moving-day',
     ...options,
   });
 

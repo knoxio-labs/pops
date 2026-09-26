@@ -36,6 +36,7 @@ import { inventoryWebChangesContract } from './rest-web-changes.js';
 import { inventoryWebConnectionsContract } from './rest-web-connections.js';
 import { inventoryWebEventsContract } from './rest-web-events.js';
 import { inventoryWebLocationsContract } from './rest-web-locations.js';
+import { inventoryWebMovingContract } from './rest-web-moving.js';
 import { inventoryWebReportsContract } from './rest-web-reports.js';
 import { inventoryWebSearchContract } from './rest-web-search.js';
 import { inventoryWebSummaryContract } from './rest-web-summary.js';
@@ -62,6 +63,7 @@ export const inventoryContract = c.router(
     webEvents: inventoryWebEventsContract,
     webLocations: inventoryWebLocationsContract,
     webReports: inventoryWebReportsContract,
+    webMoving: inventoryWebMovingContract,
     webSearch: inventoryWebSearchContract,
     webSummary: inventoryWebSummaryContract,
     webSyncLedger: inventoryWebSyncLedgerContract,
