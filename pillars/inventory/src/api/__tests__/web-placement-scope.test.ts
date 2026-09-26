@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { asc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { items } from '../../db/index.js';
+import { items, locations } from '../../db/index.js';
+import { MAX_CONTAINMENT_DEPTH } from '../../domain/commands/index.js';
 import {
   atEffectiveLocationSql,
   directlyInsideSql,
@@ -200,6 +201,25 @@ describe('web placement scope SQL', () => {
     expect(ordered).toEqual(expected);
   });
 
+  it('placement walks follow stored rows without lifecycle or deletion filters', async () => {
+    const graph = await placementGraph();
+    harness.db.db
+      .update(items)
+      .set({ lifecycle: 'retired', deletedAt: '2026-09-19T11:00:00.000Z' })
+      .where(eq(items.id, graph.inner))
+      .run();
+
+    expect(new Set(idsWhere(insideContainerSql(graph.outer)))).toEqual(
+      new Set([graph.inner, graph.nested])
+    );
+    expect(new Set(idsWhere(withinLocationSql(graph.shelf)))).toEqual(
+      new Set([graph.outer, graph.inner, graph.nested])
+    );
+    expect(readEffectiveLocations(harness.db.db, [graph.nested])).toEqual(
+      new Map([[graph.nested, graph.shelf]])
+    );
+  });
+
   it('withinSql resolves a location, a container, and returns null for a non-container item or unknown id', async () => {
     const graph = await placementGraph();
 
@@ -214,6 +234,31 @@ describe('web placement scope SQL', () => {
     expect(new Set(idsWhere(containerScope))).toEqual(new Set([graph.inner, graph.nested]));
     expect(withinSql(harness.db.db, graph.nested)).toBeNull();
     expect(withinSql(harness.db.db, randomUUID())).toBeNull();
+  });
+
+  it('withinSql resolves only live locations and active containers', async () => {
+    const graph = await placementGraph();
+
+    harness.db.db
+      .update(items)
+      .set({ lifecycle: 'retired' })
+      .where(eq(items.id, graph.outer))
+      .run();
+    expect(withinSql(harness.db.db, graph.outer)).toBeNull();
+
+    harness.db.db
+      .update(items)
+      .set({ lifecycle: 'active', deletedAt: '2026-09-19T11:00:00.000Z' })
+      .where(eq(items.id, graph.outer))
+      .run();
+    expect(withinSql(harness.db.db, graph.outer)).toBeNull();
+
+    harness.db.db
+      .update(locations)
+      .set({ deletedAt: '2026-09-19T11:00:00.000Z' })
+      .where(eq(locations.id, graph.garage))
+      .run();
+    expect(withinSql(harness.db.db, graph.garage)).toBeNull();
   });
 
   it('readEffectiveLocations is null for an item in a box that is in hand', async () => {
@@ -251,6 +296,75 @@ describe('web placement scope SQL', () => {
 
     const withHome = readRooms(harness.db.db, [shelf], kitchen);
     expect(withHome.get(shelf)).toEqual({ id: pantry, name: 'Pantry' });
+    expect(readRooms(harness.db.db, [kitchen]).get(kitchen)).toEqual({
+      id: kitchen,
+      name: 'Kitchen',
+    });
+    expect(readRooms(harness.db.db, [housePantry], kitchen)).toEqual(new Map());
+  });
+
+  it(`caps containment walks at ${MAX_CONTAINMENT_DEPTH} hops`, async () => {
+    const root = randomUUID();
+    const descendants = Array.from({ length: MAX_CONTAINMENT_DEPTH + 1 }, () => randomUUID());
+    await apply(
+      createItem(root, 'Root box'),
+      ...descendants.map((id, index) => createItem(id, `Nested box ${index + 1}`))
+    );
+
+    harness.db.db
+      .update(items)
+      .set({ isContainer: 1, access: 'open' })
+      .where(inArray(items.id, [root, ...descendants]))
+      .run();
+    for (const [index, id] of descendants.entries()) {
+      const containingItemId = index === 0 ? root : descendants[index - 1];
+      if (containingItemId === undefined) throw new Error('missing containment parent');
+      harness.db.db
+        .update(items)
+        .set({ placementKind: 'container', locationId: null, containingItemId })
+        .where(eq(items.id, id))
+        .run();
+    }
+
+    expect(new Set(idsWhere(insideContainerSql(root)))).toEqual(
+      new Set(descendants.slice(0, MAX_CONTAINMENT_DEPTH))
+    );
+  });
+
+  it(`caps location walks at ${MAX_CONTAINMENT_DEPTH} hops`, async () => {
+    const root = randomUUID();
+    const descendants = Array.from({ length: MAX_CONTAINMENT_DEPTH + 1 }, () => randomUUID());
+    const atCap = descendants.at(MAX_CONTAINMENT_DEPTH - 1);
+    const beyondCap = descendants.at(MAX_CONTAINMENT_DEPTH);
+    if (atCap === undefined || beyondCap === undefined) {
+      throw new Error('missing location depth boundary');
+    }
+    const visible = randomUUID();
+    const hidden = randomUUID();
+    await apply(
+      createLocation(root, 'Root'),
+      ...descendants.map((id, index) => {
+        const parentId = index === 0 ? root : descendants[index - 1];
+        if (parentId === undefined) throw new Error('missing location parent');
+        return createLocation(id, `Level ${index + 1}`, parentId);
+      }),
+      createItem(visible, 'At the cap'),
+      createItem(hidden, 'Beyond the cap')
+    );
+
+    harness.db.db
+      .update(items)
+      .set({ placementKind: 'location', locationId: atCap, containingItemId: null })
+      .where(eq(items.id, visible))
+      .run();
+    harness.db.db
+      .update(items)
+      .set({ placementKind: 'location', locationId: beyondCap, containingItemId: null })
+      .where(eq(items.id, hidden))
+      .run();
+
+    expect(idsWhere(withinLocationSql(root))).toContain(visible);
+    expect(idsWhere(withinLocationSql(root))).not.toContain(hidden);
   });
 
   it('a containment cycle in the data terminates', async () => {
