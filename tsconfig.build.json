@@ -11,6 +11,7 @@
     { "path": "libs/module-registry/tsconfig.build.json" },
     { "path": "pillars/registry/tsconfig.build.json" },
     { "path": "pillars/ai/tsconfig.build.json" },
+    { "path": "pillars/barcode/tsconfig.build.json" },
     { "path": "pillars/bfm/tsconfig.build.json" },
     { "path": "pillars/cerebrum/tsconfig.build.json" },
     { "path": "pillars/design/tsconfig.build.json" },

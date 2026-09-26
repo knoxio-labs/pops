@@ -40,6 +40,7 @@ export const PILLARS = [
   'ai',
   'purchases',
   'bfm',
+  'barcode',
   'design',
 ] as const;
 

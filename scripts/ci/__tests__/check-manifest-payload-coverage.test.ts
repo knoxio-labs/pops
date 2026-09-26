@@ -57,6 +57,7 @@ const guard = join(repoRoot, 'scripts', 'ci', 'check-manifest-payload-coverage.m
  */
 const EXPECTED_BUILDERS = [
   'ai:buildAiManifest',
+  'barcode:buildBarcodeManifest',
   'bfm:buildBfmManifest',
   'cerebrum:buildCerebrumManifest',
   'design:buildDesignManifest',

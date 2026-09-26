@@ -569,6 +569,47 @@ services:
       timeout: 5s
       retries: 3
 
+  # Books-only barcode lookup pillar (ADR-055). It owns a small cache of
+  # normalised ISBN products and is reached by server-to-server callers on
+  # the backend network; the lookup route requires a service-account key.
+  barcode-api:
+    build:
+      context: ..
+      dockerfile: pillars/barcode/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-barcode:${POPS_IMAGE_TAG:-main}
+    container_name: pops-barcode
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - backend
+    volumes:
+      - pops-barcode-data:/data/sqlite
+    environment:
+      NODE_ENV: production
+      PORT: '3016'
+      BARCODE_SQLITE_PATH: /data/sqlite/barcode.db
+      BARCODE_SELF_BASE_URL: http://barcode-api:3016
+      POPS_REGISTRY_ENABLED: 'true'
+    expose:
+      - '3016'
+    depends_on:
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3016/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # AI Ops pillar API (PRD-055). Hosts ai.db reads/writes for the AI-ops
   # telemetry slice — observability, providers, model pricing, budgets,
   # alerts — and the cross-pillar ingest `POST /ai-usage/record`
@@ -852,12 +893,12 @@ services:
   #   docker compose --profile litestream up -d registry-litestream
   #
   # Each sidecar replicates its own `pops-<id>-data` volume — a NEW,
-  # per-pillar volume distinct from the `sqlite-data` volume the pillar API
-  # containers above actually write to today. No API container mounts
-  # `pops-<id>-data` yet, so these sidecars have nothing to replicate until
-  # the per-pillar volume split lands; that split is the ADR-039 rollout's
-  # hard-gated prod migration (behind a working restore drill), not this
-  # issue. This section is the in-repo half of that future wiring. The
+  # per-pillar volume distinct from the `sqlite-data` volume most pillar API
+  # containers above still write to today. The greenfield bfm and barcode
+  # pillars, plus the design API, already mount their own volumes. The other
+  # sidecars are the in-repo half of the future per-pillar volume split,
+  # which is the ADR-039 rollout's hard-gated prod migration (behind a
+  # working restore drill), not this issue. The
   # replication config for each sidecar is the canonical reference file at
   # `infra/litestream/<id>.yml`; the replica URL comes from the deployer's
   # environment.
@@ -1011,10 +1052,10 @@ services:
       PURCHASES_LITESTREAM_REPLICA_URL: ${PURCHASES_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
-  # The exception to the section header above: `pops-bfm-data` IS mounted by an
-  # API container (`bfm-api`), so this sidecar replicates a live database
-  # rather than an empty volume. Still profile-gated like its siblings —
-  # enabling it needs a replica URL, and the restore drill is unexercised.
+  # `pops-bfm-data` IS mounted by an API container (`bfm-api`), so this sidecar
+  # replicates a live database rather than an empty volume. Still
+  # profile-gated like its siblings — enabling it needs a replica URL, and the
+  # restore drill is unexercised.
   bfm-litestream:
     image: litestream/litestream:0.3.13
     container_name: pops-bfm-litestream
@@ -1028,6 +1069,21 @@ services:
       - ./litestream/bfm.yml:/etc/litestream.yml:ro
     environment:
       BFM_LITESTREAM_REPLICA_URL: ${BFM_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  barcode-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-barcode-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-barcode-data:/data/sqlite:ro
+      - ./litestream/barcode.yml:/etc/litestream.yml:ro
+    environment:
+      BARCODE_LITESTREAM_REPLICA_URL: ${BARCODE_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
   # `pops-design-data` is mounted by `design-api`, so this sidecar replicates a
@@ -1634,6 +1690,9 @@ volumes:
   # greenfield and so was never on the shared `sqlite-data` to be migrated off.
   pops-bfm-data:
     name: pops-bfm-data
+
+  pops-barcode-data:
+    name: pops-barcode-data
 
   pops-design-data:
     name: pops-design-data
