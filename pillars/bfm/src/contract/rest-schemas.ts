@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ErrorBodySchema } from '@pops/types';
+
 import { MobileCaptureMetadataSchema } from './capture.js';
 import { MobileReceiptPartSchema } from './receipt.js';
 
@@ -75,7 +77,7 @@ export type HealthResponse = z.infer<typeof HealthResponseSchema>;
  *
  * They are TWO schemas rather than one with a two-member enum precisely
  * because `code` restates the status. One schema would let the document
- * promise a `401 device_revoked` — a combination the guard cannot produce and
+ * promise a `401 bfm.auth.device_revoked` — a combination the guard cannot produce and
  * a generated client would still have to branch on. A literal per status
  * removes the impossible half from every consumer's type.
  *
@@ -84,20 +86,18 @@ export type HealthResponse = z.infer<typeof HealthResponseSchema>;
  * responses, and two definitions of one wire shape drift.
  *
  * Only one of them is `Mobile`-prefixed, and the asymmetry is the point.
- * `invalid_token` is a statement about a bearer token, which exists only on
+ * `bfm.auth.invalid_token` is a statement about a bearer token, which exists only on
  * this perimeter. "This handset is revoked" is a statement about the device,
  * and `POST /devices/refresh` has to make exactly the same one — same shape,
  * same code, same recovery — so the unprefixed name is shared rather than
  * copied, on the same reasoning as {@link RateLimitErrorSchema} below.
  */
-export const MobileInvalidTokenErrorSchema = z.object({
-  code: z.literal('invalid_token'),
-  message: z.string(),
+export const MobileInvalidTokenErrorSchema = ErrorBodySchema.extend({
+  code: z.literal('bfm.auth.invalid_token'),
 });
 
-export const DeviceRevokedErrorSchema = z.object({
-  code: z.literal('device_revoked'),
-  message: z.string(),
+export const DeviceRevokedErrorSchema = ErrorBodySchema.extend({
+  code: z.literal('bfm.auth.device_revoked'),
 });
 
 /**
@@ -120,7 +120,7 @@ export type MobileAuthError = z.infer<typeof MobileAuthErrorSchema>;
  *
  * The token verified and the handset is trusted; this device's grant simply
  * does not cover the route it asked for. That makes it a `403` alongside
- * `device_revoked` and a completely different instruction: refreshing changes
+ * `bfm.auth.device_revoked` and a completely different instruction: refreshing changes
  * nothing, and returning to pairing would destroy a working credential over a
  * screen the device was never entitled to open. The app's recovery is to stop
  * offering the feature, not to end the session.
@@ -166,11 +166,6 @@ export type MobileForbiddenError = z.infer<typeof MobileForbiddenErrorSchema>;
  * It lives beside the schema rather than beside either caller for the same
  * reason the schema does: neither of them owns it.
  */
-export const DEVICE_REVOKED_ERROR: DeviceRevokedError = {
-  code: 'device_revoked',
-  message: 'This device has been revoked. Pair again.',
-};
-
 /**
  * What an internet-facing surface answers when a caller exceeds its request
  * budget. Shared by the `/mobile` perimeter (POPS-1468) and the pairing
@@ -205,7 +200,7 @@ export type RateLimitError = z.infer<typeof RateLimitErrorSchema>;
  *
  * Two codes because the app can act on one of them and not the other.
  * `invalid_cursor` means restart the list from the top — a recovery the app
- * can perform. `invalid_request` means it built a request this server does not
+ * can perform. `bfm.request.invalid` means it built a request this server does not
  * accept, which no retry fixes.
  *
  * Both arrive here even though only one comes from a handler: contract-level
@@ -214,9 +209,8 @@ export type RateLimitError = z.infer<typeof RateLimitErrorSchema>;
  * reshapes those, because a 400 that does not match the one the route declares
  * is a 400 the generated client cannot decode.
  */
-export const MobileRequestErrorSchema = z.object({
-  code: z.enum(['invalid_cursor', 'invalid_request']),
-  message: z.string(),
+export const MobileRequestErrorSchema = ErrorBodySchema.extend({
+  code: z.enum(['invalid_cursor', 'bfm.request.invalid']),
 });
 
 export type MobileRequestError = z.infer<typeof MobileRequestErrorSchema>;
@@ -230,49 +224,20 @@ export type MobileRequestError = z.infer<typeof MobileRequestErrorSchema>;
  * transactions", which is a lie the user cannot distinguish from the truth;
  * a bare 500 tells it nothing it can act on.
  *
- * `code` preserves the gateway's distinctions all the way to the app —
- * "nobody answered" and "answered, but not with a contract we can call" are
- * different operational facts and stay different values. `retryable` is the
- * one decision the app actually makes, carried explicitly rather than
- * re-derived from the status code in a second, drifting table on the client.
+ * Producer ADR-054 envelopes retain their code, message, request id and retry
+ * decision. BFM-originated transport and contract faults use registered
+ * gateway/BFM codes. Every answer adds the failed pillar and its original HTTP
+ * status under `details.upstream`.
  */
-export const MobileUpstreamErrorSchema = z.object({
-  code: z.enum([
-    'upstream_unavailable',
-    'upstream_degraded',
-    'upstream_contract_mismatch',
-    'upstream_misconfigured',
-    'upstream_invalid_request',
-    'upstream_conflict',
-    /**
-     * `PATCH /mobile/purchases/:id` refused because the edit targets a
-     * field `purchases` has locked for this purchase's reconciliation
-     * state (merchant, date or total on a matched or part-matched order).
-     * Distinct from `purchase_stale` so the app can draw two different
-     * recoveries: re-opening the edit does not help here.
-     */
-    'purchase_locked',
-    /**
-     * `PATCH /mobile/purchases/:id` refused because the purchase changed
-     * since this edit was opened (`expectedUpdatedAt` no longer matches).
-     * The app's recovery is to re-fetch the detail and let the person
-     * re-apply their edit, unlike `purchase_locked`.
-     */
-    'purchase_stale',
-    /**
-     * The producer holds the record and will not give it in the form asked
-     * for — a receipt that is a PDF, asked for as an image. Settled: the app
-     * draws its placeholder and does not ask again. Only routes that request
-     * a particular representation declare the 415 this rides on.
-     */
-    'upstream_unsupported_media',
-    'not_found',
-  ]),
-  /** The pillar that could not serve it, by registered id. Operator-facing. */
-  pillar: z.string(),
-  /** Whether trying the same request again can plausibly succeed. */
-  retryable: z.boolean(),
-  message: z.string(),
+export const MobileUpstreamErrorSchema = ErrorBodySchema.extend({
+  details: z
+    .object({
+      upstream: z.object({
+        pillar: z.string(),
+        status: z.number().int().min(100).max(599),
+      }),
+    })
+    .catchall(z.unknown()),
 });
 
 export type MobileUpstreamError = z.infer<typeof MobileUpstreamErrorSchema>;

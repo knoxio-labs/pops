@@ -15,7 +15,10 @@ import { generateKeyPairSync } from 'node:crypto';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { PairedDeviceSchema } from '../../contract/rest-device-schemas.js';
+import {
+  DeviceInvalidRequestErrorSchema,
+  PairedDeviceSchema,
+} from '../../contract/rest-device-schemas.js';
 import { spkiPublicKeyBase64 } from '../../db/__tests__/helpers.js';
 import {
   DEFAULT_REFRESH_TOKEN_TTL_MS,
@@ -394,7 +397,7 @@ describe('the public key', () => {
     const res = await pair(created, pairBody({ code, publicKey: makeKey() }));
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('invalid_request');
+    expect(res.body.code).toBe('bfm.request.invalid');
     expect(deviceRows(created)).toHaveLength(0);
     expect(refreshTokenRows(created)).toHaveLength(0);
   });
@@ -418,7 +421,13 @@ describe('the public key', () => {
     const withInventedCode = await pair(created, pairBody({ publicKey: 'not a key' }));
 
     expect(withInventedCode.status).toBe(withRealCode.status);
-    expect(withInventedCode.text).toBe(withRealCode.text);
+    const realBody = DeviceInvalidRequestErrorSchema.parse(withRealCode.body);
+    const inventedBody = DeviceInvalidRequestErrorSchema.parse(withInventedCode.body);
+    expect({ ...inventedBody, requestId: undefined }).toEqual({
+      ...realBody,
+      requestId: undefined,
+    });
+    expect(inventedBody.requestId).not.toBe(realBody.requestId);
   });
 });
 
@@ -440,8 +449,10 @@ describe('a malformed request', () => {
     // The declared shape, and only it. ts-rest's default would have shipped
     // the issue list, which describes the schema to whoever provoked it.
     expect(res.body).toEqual({
-      code: 'invalid_request',
+      code: 'bfm.request.invalid',
       message: expect.any(String),
+      requestId: expect.any(String),
+      retryable: false,
     });
     expect(res.text).not.toMatch(/publicKey|deviceName|zod|issues/iu);
   });

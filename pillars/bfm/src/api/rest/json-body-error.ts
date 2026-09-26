@@ -8,7 +8,7 @@
  * reaches Express's own default handler, which answers a `400` with an EMPTY
  * body rather than anything a generated client has a case for: every declared
  * error schema on these routes requires a `code`, so the phone decodes this as
- * a failure to decode at all rather than the `invalid_request` the route
+ * a failure to decode at all rather than the `bfm.request.invalid` the route
  * means.
  *
  * `../request-validation.ts` already reshapes ts-rest's OWN validation
@@ -24,7 +24,8 @@
  * body-parser failure of a different `type` (`payload-too-large.ts` handles
  * `entity.too.large` on its own), falls through unchanged.
  */
-import { INVALID_REQUEST, isDeviceFacingPath } from './invalid-request-scope.js';
+import { invalidRequestBody } from '../errors.js';
+import { isDeviceFacingPath } from './invalid-request-scope.js';
 
 import type { PathOnlyRequest } from './invalid-request-scope.js';
 
@@ -62,6 +63,6 @@ export function createJsonBodyErrorHandler() {
       return;
     }
 
-    res.status(400).json(INVALID_REQUEST);
+    res.status(400).json(invalidRequestBody());
   };
 }

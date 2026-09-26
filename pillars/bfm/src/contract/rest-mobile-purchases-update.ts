@@ -25,7 +25,7 @@ export const mobilePurchasesUpdateRoute = {
    * Edit a purchase that is already saved (POPS-2458). Its own capability
    * (`purchases.edit`) apart from `purchases.write`: changing a record the
    * pillar already holds is not the same authority as creating one.
-   * `409 upstream_conflict` covers both `purchase_locked` and
+   * The producer's ADR-054 code distinguishes `purchase_locked` from
    * `purchase_stale`, and the pillar's own code — not the HTTP status alone
    * — is what tells them apart; a device without the capability never
    * reaches the pillar at all.

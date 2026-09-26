@@ -1,15 +1,14 @@
 import { z } from 'zod';
 
+import { ErrorBodySchema as SharedErrorBodySchema } from '@pops/types';
+
 /**
  * Wire schemas for the operator surface — the routes behind Cloudflare Access,
  * reached through the shell's nginx at `/bfm-api/`.
  */
 
-/** Uniform error envelope. `code` is the thrown error's class name. */
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string(),
-});
+/** Uniform ADR-054 envelope returned by operator routes. */
+export const ErrorBodySchema = SharedErrorBodySchema;
 
 /**
  * Responses every operator route can produce. `401` is on all of them because

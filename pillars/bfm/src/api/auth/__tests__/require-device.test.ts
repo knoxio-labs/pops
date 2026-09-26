@@ -119,7 +119,12 @@ describe('401 — the app should refresh', () => {
     const res = await requestOn(h.app, (r) => r.get('/mobile/whoami'));
 
     expect(res.status).toBe(401);
-    expect(res.body).toEqual({ code: 'invalid_token', message: expect.any(String) });
+    expect(res.body).toEqual({
+      code: 'bfm.auth.invalid_token',
+      message: expect.any(String),
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it.each([
@@ -177,7 +182,7 @@ describe('401 — the app should refresh', () => {
     );
 
     expect(res.status).toBe(401);
-    expect(res.body.code).toBe('invalid_token');
+    expect(res.body.code).toBe('bfm.auth.invalid_token');
   });
 
   it('sends a Bearer challenge, so the client knows what it failed to present', async () => {
@@ -200,7 +205,12 @@ describe('403 — the app should re-pair', () => {
     );
 
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ code: 'device_revoked', message: expect.any(String) });
+    expect(res.body).toEqual({
+      code: 'bfm.auth.device_revoked',
+      message: expect.any(String),
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it('does not send a Bearer challenge — a fresh token would not help', async () => {

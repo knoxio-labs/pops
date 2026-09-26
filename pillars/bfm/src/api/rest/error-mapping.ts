@@ -7,12 +7,10 @@
  * 500-class `HttpError`, or a non-`HttpError` — is re-thrown so Express's
  * error pipeline surfaces the real stack rather than a swallowed 500.
  */
-import { HttpError } from '../shared/errors.js';
+import { bfmErrorBody } from '../errors.js';
+import { NotFoundError, TooManyRequestsError, UnauthorizedError } from '../shared/errors.js';
 
-export interface ErrorBody {
-  message: string;
-  code: string;
-}
+import type { ErrorBody } from '@pops/types';
 
 export type ErrorStatus = 401 | 404 | 429;
 
@@ -21,13 +19,20 @@ export interface MappedHttpError {
   body: ErrorBody;
 }
 
-function isMappedStatus(status: number): status is ErrorStatus {
-  return status === 401 || status === 404 || status === 429;
-}
-
 export function mapHttpError(err: unknown): MappedHttpError | null {
-  if (err instanceof HttpError && isMappedStatus(err.statusCode)) {
-    return { status: err.statusCode, body: { message: err.message, code: err.name } };
+  if (err instanceof UnauthorizedError) {
+    return { status: 401, body: bfmErrorBody('operator_unauthorized') };
+  }
+  if (err instanceof NotFoundError) {
+    return { status: 404, body: bfmErrorBody('not_found') };
+  }
+  if (err instanceof TooManyRequestsError) {
+    return {
+      status: 429,
+      body: bfmErrorBody('rate_limited', {
+        details: { retryAfterSeconds: err.retryAfterSeconds },
+      }),
+    };
   }
   return null;
 }

@@ -59,6 +59,16 @@ type GatewayFailureBase = {
    * split.
    */
   readonly code?: string;
+  /** The producer's user-safe message, when it returned an ADR-054 envelope. */
+  readonly message?: string;
+  /** The producer's structured diagnostics, when present. */
+  readonly details?: Readonly<Record<string, unknown>>;
+  /** The producer's request id, preserved across the relay. */
+  readonly requestId?: string;
+  /** The producer's retry decision, preserved across the relay. */
+  readonly retryable?: boolean;
+  /** The producer status before BFM maps it to a status declared by its mobile route. */
+  readonly upstreamStatus?: number;
 };
 
 /**
@@ -152,7 +162,13 @@ export function toGatewayFailure(failure: CallFailure): GatewayFailure {
   const target = failure.pillar;
   switch (failure.kind) {
     case 'unavailable':
-      return { kind: 'unavailable', pillar: target, status: 503 };
+      return {
+        kind: 'unavailable',
+        pillar: target,
+        status: 503,
+        upstreamStatus: 503,
+        ...producerEnvelopeFields(failure),
+      };
     case 'degraded':
       return { kind: 'degraded', pillar: target, reason: failure.reason, status: 503 };
     case 'contract-mismatch':
@@ -163,39 +179,47 @@ export function toGatewayFailure(failure: CallFailure): GatewayFailure {
         detail: describeMismatch(failure),
       };
     case 'not-found':
-      return { kind: 'not-found', pillar: target, status: 404, detail: failure.message };
+      return {
+        kind: 'not-found',
+        pillar: target,
+        status: 404,
+        upstreamStatus: 404,
+        ...producerEnvelopeFields(failure),
+      };
     case 'conflict':
       return {
         kind: 'conflict',
         pillar: target,
         status: 409,
-        detail: failure.message,
-        code: failure.code,
+        upstreamStatus: 409,
+        ...producerEnvelopeFields(failure),
       };
     case 'bad-request':
-      return { kind: 'invalid-request', pillar: target, status: 400, detail: failure.message };
+      return {
+        kind: 'invalid-request',
+        pillar: target,
+        status: 400,
+        upstreamStatus: 400,
+        ...producerEnvelopeFields(failure),
+      };
     case 'refused':
       return mapRefused(failure, target);
     case 'rate-limited':
-      // Retryable, same as `unavailable` — but NOT the same fact: this
-      // producer answered and said "later", not "nobody answered". See
-      // `toGatewayFailure`'s header. `retryAfterSeconds`, when the producer
-      // sent one, survives in `detail`.
       return {
         kind: 'unavailable',
         pillar: target,
         status: 503,
+        upstreamStatus: 429,
         detail: withRetryAfter(failure.retryAfterSeconds, failure.message),
+        ...producerEnvelopeFields(failure),
       };
     case 'unauthorized':
-      // A sibling rejected THIS pillar's service-account key. Deliberately not
-      // a 401: the phone's own credential is fine, and saying otherwise sends
-      // it into a token-refresh loop against a fault only an operator can fix.
       return {
         kind: 'gateway-misconfigured',
         pillar: target,
         status: 502,
-        detail: failure.message,
+        upstreamStatus: 401,
+        ...producerEnvelopeFields(failure),
       };
   }
 }
@@ -218,7 +242,9 @@ function mapRefused(
       kind: 'unsupported-media',
       pillar: target,
       status: 415,
+      upstreamStatus: failure.status,
       detail: withUpstreamStatus(failure.status, failure.message),
+      ...producerEnvelopeFields(failure),
     };
   }
   if (failure.status === 426) {
@@ -226,7 +252,9 @@ function mapRefused(
       kind: 'protocol-too-old',
       pillar: target,
       status: 426,
+      upstreamStatus: failure.status,
       detail: withUpstreamStatus(failure.status, failure.message),
+      ...producerEnvelopeFields(failure),
     };
   }
   // A permanent 4xx the SDK did not otherwise recognise (413 body too large,
@@ -238,7 +266,26 @@ function mapRefused(
     kind: 'invalid-request',
     pillar: target,
     status: 400,
+    upstreamStatus: failure.status,
     detail: withUpstreamStatus(failure.status, failure.message),
+    ...producerEnvelopeFields(failure),
+  };
+}
+
+function producerEnvelopeFields(failure: CallFailure): {
+  readonly code?: string;
+  readonly details?: Readonly<Record<string, unknown>>;
+  readonly message?: string;
+  readonly requestId?: string;
+  readonly retryable?: boolean;
+} {
+  if (failure.kind === 'degraded' || failure.kind === 'contract-mismatch') return {};
+  return {
+    ...(failure.code === undefined ? {} : { code: failure.code }),
+    ...(failure.details === undefined ? {} : { details: failure.details }),
+    ...(failure.message === undefined ? {} : { message: failure.message }),
+    ...(failure.requestId === undefined ? {} : { requestId: failure.requestId }),
+    ...(failure.retryable === undefined ? {} : { retryable: failure.retryable }),
   };
 }
 

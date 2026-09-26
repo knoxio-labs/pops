@@ -138,7 +138,7 @@ describe('POST /devices/challenge', () => {
     );
 
     expect(res.status).toBe(400);
-    expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('invalid_request');
+    expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('bfm.request.invalid');
   });
 
   it('is refused once the shared budget is spent', async () => {
@@ -284,7 +284,7 @@ describe('POST /devices/refresh', () => {
     // 403, not 401. The app wipes its keychain on one of these and not the
     // other, and `SessionReducer` has no way to guess which.
     expect(res.status).toBe(403);
-    expect(DeviceRevokedErrorSchema.parse(res.body).code).toBe('device_revoked');
+    expect(DeviceRevokedErrorSchema.parse(res.body).code).toBe('bfm.auth.device_revoked');
   });
 
   it('answers 400 without naming the fields it rejected', async () => {
@@ -295,7 +295,7 @@ describe('POST /devices/refresh', () => {
     );
 
     expect(res.status).toBe(400);
-    expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('invalid_request');
+    expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('bfm.request.invalid');
     // ts-rest's native body names this server's schema fields, on a route
     // reachable from the public internet. `rest/request-validation.ts` is what
     // stops that reaching the wire.
@@ -378,7 +378,7 @@ describe('two requests racing one refresh token', () => {
       )
     );
 
-    const statuses = results.map((res) => res.status).sort((a, b) => a - b);
+    const statuses = results.map((res) => res.status).toSorted((a, b) => a - b);
     expect(statuses).toEqual([200, 401]);
   });
 

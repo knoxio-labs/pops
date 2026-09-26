@@ -22,7 +22,7 @@ import {
 export const MOBILE_PERIMETER_RESPONSES = {
   // A literal `code` per status rather than one enum across them. The code
   // restates the status by design, so sharing a schema would have the document
-  // promise a `401 device_revoked` the guard cannot produce and make every
+  // promise a `401 bfm.auth.device_revoked` the guard cannot produce and make every
   // generated client branch on it. The 403 is a union rather than one schema
   // for the opposite reason: two refusals genuinely share that status and do
   // not share a shape. `require-device.ts` and `require-capability.ts` pair

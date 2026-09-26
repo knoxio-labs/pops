@@ -58,6 +58,7 @@ export type {
   DeviceRefreshErrors,
   DeviceRefreshResponse,
   DeviceRefreshResponses,
+  ErrorBody,
   HealthData,
   HealthResponse,
   HealthResponses,

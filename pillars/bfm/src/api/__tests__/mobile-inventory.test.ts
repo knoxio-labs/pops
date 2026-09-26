@@ -426,7 +426,7 @@ describe('the snapshot', () => {
     const res = await get(app, token, '/mobile/inventory/sync/snapshot');
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('reports a producer answer that does not match the wire contract as a mismatch, not as data', async () => {
@@ -444,7 +444,7 @@ describe('the snapshot', () => {
     const res = await get(app, token, '/mobile/inventory/sync/snapshot');
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('refuses a device that never held inventory.read', async () => {
@@ -730,7 +730,7 @@ describe('mutations', () => {
     });
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('sends the paired device as Pops-Actor, never anything the phone could set', async () => {
@@ -922,7 +922,7 @@ describe('media', () => {
     });
 
     expect(res.status).toBe(415);
-    expect(res.body.code).toBe('upstream_unsupported_media');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('answers 400 when the claimed hash does not match the bytes, without reaching 502', async () => {
@@ -943,7 +943,7 @@ describe('media', () => {
     });
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('invalid_request');
+    expect(res.body.code).toBe('bfm.request.invalid');
   });
 
   it('refuses a device without inventory.write', async () => {
@@ -991,7 +991,7 @@ describe('media', () => {
     const res = await get(app, token, `/mobile/inventory/media/${SHA256}`);
 
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('not_found');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('refuses a device without inventory.read', async () => {

@@ -68,7 +68,7 @@ describe('the /mobile perimeter', () => {
     const res = await requestOn(app, (r) => r.get('/mobile/transactions'));
 
     expect(res.status).toBe(401);
-    expect(res.body.code).toBe('invalid_token');
+    expect(res.body.code).toBe('bfm.auth.invalid_token');
   });
 
   it.each(['get', 'post', 'put', 'patch', 'delete'] as const)(

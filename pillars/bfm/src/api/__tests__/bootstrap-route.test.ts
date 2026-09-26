@@ -125,7 +125,7 @@ describe('the perimeter in front of the route', () => {
     const res = await requestOn(app.app, (r) => r.get('/mobile/bootstrap'));
 
     expect(res.status).toBe(401);
-    expect(res.body.code).toBe('invalid_token');
+    expect(res.body.code).toBe('bfm.auth.invalid_token');
     expect(res.body.pillars).toBeUndefined();
   });
 
@@ -147,7 +147,7 @@ describe('the perimeter in front of the route', () => {
     const res = await bootstrapAs(app, device);
 
     expect(res.status).toBe(403);
-    expect(res.body.code).toBe('device_revoked');
+    expect(res.body.code).toBe('bfm.auth.device_revoked');
   });
 
   it('does not advance lastSeenAt for a device it just refused', async () => {

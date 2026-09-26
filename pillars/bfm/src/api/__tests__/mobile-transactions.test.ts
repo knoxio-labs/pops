@@ -332,8 +332,8 @@ describe('cursor pagination', () => {
 
     const res = await get(app, token, `${LIST_PATH}?limit=500`);
 
-    expect(Object.keys(res.body).toSorted()).toEqual(['code', 'message']);
-    expect(res.body.code).toBe('invalid_request');
+    expect(Object.keys(res.body).toSorted()).toEqual(['code', 'message', 'requestId', 'retryable']);
+    expect(res.body.code).toBe('bfm.request.invalid');
   });
 
   it('keeps a bad cursor distinguishable from a bad query', async () => {
@@ -345,7 +345,7 @@ describe('cursor pagination', () => {
     const badQuery = await get(app, token, `${LIST_PATH}?limit=500`);
 
     expect(badCursor.body.code).toBe('invalid_cursor');
-    expect(badQuery.body.code).toBe('invalid_request');
+    expect(badQuery.body.code).toBe('bfm.request.invalid');
   });
 
   it('rejects a cursor it did not issue instead of silently restarting the list', async () => {
@@ -462,7 +462,7 @@ describe('the detail record', () => {
     const res = await get(app, token, `${LIST_PATH}/nope`);
 
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('not_found');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
     expect(res.body.retryable).toBe(false);
   });
 });
@@ -477,9 +477,9 @@ describe('finance being unreachable', () => {
 
     expect(res.status).toBe(503);
     expect(res.body).toMatchObject({
-      code: 'upstream_unavailable',
-      pillar: 'finance',
+      code: 'gateway.upstream_unavailable',
       retryable: true,
+      details: { upstream: { pillar: 'finance', status: 503 } },
     });
     expect(res.body.data).toBeUndefined();
   });
@@ -492,7 +492,7 @@ describe('finance being unreachable', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(503);
-    expect(res.body.code).toBe('upstream_degraded');
+    expect(res.body.code).toBe('gateway.upstream_unavailable');
     expect(res.body.retryable).toBe(true);
   });
 
@@ -504,7 +504,7 @@ describe('finance being unreachable', () => {
     const res = await get(app, token, `${LIST_PATH}/txn-1`);
 
     expect(res.status).toBe(503);
-    expect(res.body.code).toBe('upstream_unavailable');
+    expect(res.body.code).toBe('gateway.upstream_unavailable');
   });
 });
 
@@ -515,7 +515,7 @@ describe('finance answering with something bfm cannot read', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
     expect(res.body.retryable).toBe(false);
   });
 
@@ -529,7 +529,7 @@ describe('finance answering with something bfm cannot read', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('rejects a full timestamp where finance promised a date-only value', async () => {
@@ -556,7 +556,7 @@ describe('finance answering with something bfm cannot read', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('an outage and a mismatch never collapse to the same answer', async () => {
@@ -583,7 +583,7 @@ describe("a sibling rejecting bfm's own credential", () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_misconfigured');
+    expect(res.body.code).toBe('bfm.upstream.misconfigured');
     expect(res.body.retryable).toBe(false);
   });
 });

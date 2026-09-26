@@ -239,7 +239,7 @@ describe('PATCH /mobile/purchases/:id', () => {
     expect(res.body.message).toContain('changed since');
   });
 
-  it('falls back to upstream_conflict for a 409 that carries no known code', async () => {
+  it('falls back to BFM contract mismatch for a 409 that carries no producer code', async () => {
     const fake = fakeUpdate({
       kind: 'conflict',
       pillar: 'purchases',
@@ -250,7 +250,7 @@ describe('PATCH /mobile/purchases/:id', () => {
     const res = await patch(app, token, 'pur-1', BODY);
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('upstream_conflict');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('passes a 404 through', async () => {
@@ -264,6 +264,6 @@ describe('PATCH /mobile/purchases/:id', () => {
     const res = await patch(app, token, 'pur-1', BODY);
 
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('not_found');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 });
