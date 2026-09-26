@@ -1,3 +1,5 @@
+import { MAX_MUTATION_BATCH } from '@pops/inventory';
+
 import { InventoryApiError } from '../inventory-api-helpers.js';
 /**
  * A mutation client over `POST /sync/mutations` (Inventory ADR-002 D9/D10):
@@ -31,6 +33,8 @@ export interface InventoryCommandInput {
   entityId: string;
   /** The revision this client last saw, omitted for a create or a self-checking op. */
   baseRevision?: number;
+  /** The published catalogue revision for stable typed-value commands. */
+  catalogueRevision?: number;
   /** Mutation ids that must apply first, in this same or an earlier batch. */
   dependsOn?: string[];
   /** Overrides `crypto.randomUUID()`, for tests wanting a stable id. */
@@ -51,10 +55,56 @@ export function buildMutationEnvelope(input: InventoryCommandInput): InventoryMu
     op: input.command.op,
     entityId: input.entityId,
     baseRevision: input.baseRevision ?? null,
+    ...(input.catalogueRevision === undefined
+      ? {}
+      : { catalogueRevision: input.catalogueRevision }),
     dependsOn: input.dependsOn ?? [],
     clientTime: input.clientTime ?? new Date().toISOString(),
     args: input.command.args,
   };
+}
+
+function mutationError(result: { error?: unknown; response?: Response }): InventoryApiError | null {
+  if (result.error === undefined) return null;
+  const body = result.error as { message?: unknown };
+  const message =
+    typeof body.message === 'string' && body.message.length > 0
+      ? body.message
+      : 'inventory mutation failed';
+  return new InventoryApiError(message, result.response?.status);
+}
+
+/**
+ * Send one to {@link MAX_MUTATION_BATCH} commands in one request and return
+ * outcomes in the order supplied. The server still applies each command
+ * independently, so a non-applied outcome remains data for the caller.
+ */
+export async function sendInventoryMutations(
+  inputs: readonly InventoryCommandInput[]
+): Promise<InventoryMutationOutcome[]> {
+  if (inputs.length === 0 || inputs.length > MAX_MUTATION_BATCH) {
+    throw new RangeError(
+      `inventory mutation batch must contain 1 to ${String(MAX_MUTATION_BATCH)} mutations`
+    );
+  }
+
+  const result = await syncMutations({
+    body: { mutations: inputs.map((input) => buildMutationEnvelope(input)) },
+    headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
+  });
+  const failure = mutationError(result);
+  if (failure !== null) throw failure;
+  const outcomes = result.data?.outcomes;
+  if (outcomes === undefined) {
+    throw new InventoryApiError('inventory mutation returned no outcomes', result.response?.status);
+  }
+  if (outcomes.length !== inputs.length) {
+    throw new InventoryApiError(
+      `inventory mutation returned ${String(outcomes.length)} outcomes for ${String(inputs.length)} mutations`,
+      result.response?.status
+    );
+  }
+  return outcomes;
 }
 
 /**
@@ -73,14 +123,8 @@ export async function sendInventoryMutation(
     body: { mutations: [envelope] },
     headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
   });
-  if (result.error !== undefined) {
-    const body = result.error as { message?: unknown };
-    const message =
-      typeof body.message === 'string' && body.message.length > 0
-        ? body.message
-        : 'inventory mutation failed';
-    throw new InventoryApiError(message, result.response?.status);
-  }
+  const failure = mutationError(result);
+  if (failure !== null) throw failure;
   const outcome = result.data?.outcomes[0];
   if (outcome === undefined) {
     throw new InventoryApiError('inventory mutation returned no outcome', result.response?.status);
