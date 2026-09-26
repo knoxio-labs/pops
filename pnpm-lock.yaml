@@ -827,6 +827,70 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
+  pillars/barcode:
+    dependencies:
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
+      '@pops/pillar-sdk':
+        specifier: workspace:*
+        version: link:../../libs/sdk
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../../libs/types
+      '@ts-rest/core':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@types/node@24.13.3)
+      '@ts-rest/express':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.13.3))(express@5.2.1(supports-color@10.2.2))
+      '@ts-rest/open-api':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.13.3))(zod@4.6.5)
+      better-sqlite3:
+        specifier: ^12.10.0
+        version: 12.10.0
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)
+      express:
+        specifier: ^5.1.0
+        version: 5.2.1(supports-color@10.2.2)
+      zod:
+        specifier: ^4.6.2
+        version: 4.6.5
+    devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
+      '@types/better-sqlite3':
+        specifier: ^7.6.12
+        version: 7.6.13
+      '@types/express':
+        specifier: ^5.0.4
+        version: 5.0.6
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      '@types/supertest':
+        specifier: ^7.2.1
+        version: 7.2.1
+      '@vitest/coverage-v8':
+        specifier: ^4.1.10
+        version: 4.1.10(vitest@4.1.11)
+      supertest:
+        specifier: ^7.1.4
+        version: 7.2.2(supports-color@10.2.2)
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+
   pillars/bfm:
     dependencies:
       '@pops/pillar-sdk':
