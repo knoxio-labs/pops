@@ -18,7 +18,7 @@ const fullWorld = buildWorld(
 const fullTarget = { kind: 'container', containerId: 'full' } as const;
 
 describe('MovePlanPanel', () => {
-  it('shows the target, carried contents, real affected count and placement tags', () => {
+  it('the Move button counts carried contents', () => {
     const plan = planMove({
       world: coreWorld,
       selectedIds: ['box-cables'],
@@ -50,7 +50,7 @@ describe('MovePlanPanel', () => {
     expect(carriedRow).toHaveClass('pr-3', 'pl-8');
   });
 
-  it('shows a full target as a warning without disabling the move', () => {
+  it('a full target warns and still allows the move', () => {
     const plan = planMove({
       world: fullWorld,
       selectedIds: ['itm-lamp'],
@@ -63,7 +63,7 @@ describe('MovePlanPanel', () => {
     expect(screen.getByRole('button', { name: 'Move 1 item' })).toBeEnabled();
   });
 
-  it('shows a target refusal, marks rows as would move, and disables the action', () => {
+  it('a refused target disables Move and names the fix', () => {
     const plan = planMove({
       world: coreWorld,
       selectedIds: ['itm-lamp'],
@@ -75,6 +75,19 @@ describe('MovePlanPanel', () => {
     expect(screen.getByText('Office 04 is closed. Open it first.')).toBeInTheDocument();
     expect(screen.getByText('Nothing moves until the target can take it.')).toBeInTheDocument();
     expect(screen.getByText('Would move')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Move' })).toBeDisabled();
+  });
+
+  it('a plan with nothing to move disables Move', () => {
+    const plan = planMove({
+      world: coreWorld,
+      selectedIds: ['itm-lamp'],
+      target: deskTarget,
+    });
+
+    render(<MovePlanPanel plan={plan} world={coreWorld} />);
+
+    expect(screen.getByText('Already there')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Move' })).toBeDisabled();
   });
 
@@ -122,7 +135,19 @@ describe('MovePlanPanel', () => {
     expect(onApply).toHaveBeenCalledOnce();
   });
 
-  it('disables both actions while busy', () => {
+  it('shows no Change button without onChangeTarget', () => {
+    const plan = planMove({
+      world: coreWorld,
+      selectedIds: ['itm-lamp'],
+      target: shelvingTarget,
+    });
+
+    render(<MovePlanPanel plan={plan} world={coreWorld} />);
+
+    expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+  });
+
+  it('busy disables Cancel and Move', () => {
     const plan = planMove({
       world: coreWorld,
       selectedIds: ['itm-lamp'],
