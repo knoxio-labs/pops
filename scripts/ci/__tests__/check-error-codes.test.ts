@@ -47,6 +47,21 @@ describe('check-error-codes', () => {
     expect(analyzeSources([passingSource]).findings).toEqual([]);
   });
 
+  it('accepts client-owned web and iOS codes without a pillar registry', () => {
+    const result = analyzeSources([
+      {
+        path: 'pillars/shell/src/app/errors.ts',
+        text: "const error = { code: 'web.client.unknown' };",
+      },
+      {
+        path: 'pillars/bfm/src/api/errors.ts',
+        text: "const error = { code: 'ios.decode.failed' };",
+      },
+    ]);
+
+    expect(result.findings).toEqual([]);
+  });
+
   it('reports a thrown code that is not registered', () => {
     const result = analyzeSources([
       passingSource,

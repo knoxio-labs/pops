@@ -30,6 +30,8 @@ const repoRoot = resolve(here, '..', '..');
 /** ADR-054's machine-readable code format. */
 export const ERROR_CODE_PATTERN = /^[a-z]+(\.[a-z_]+){2}$/u;
 
+const CLIENT_CODE_PREFIXES = ['ios.', 'web.'];
+
 /** @typedef {{ path: string, text: string }} SourceFile */
 /** @typedef {{ code: string, path: string, line: number, reason: string }} RegisteredCode */
 /** @typedef {{ rule: string, path: string, line: number, message: string, code?: string }} Finding */
@@ -474,7 +476,8 @@ export function analyzeSources(sources, baselineSources = []) {
         message: `thrown code ${site.code} does not match ${ERROR_CODE_PATTERN}`,
       });
     }
-    if (!registeredCodes.has(site.code)) {
+    const isClientCode = CLIENT_CODE_PREFIXES.some((prefix) => site.code.startsWith(prefix));
+    if (!registeredCodes.has(site.code) && !isClientCode) {
       findings.push({
         rule: 'unregistered',
         path: site.path,
