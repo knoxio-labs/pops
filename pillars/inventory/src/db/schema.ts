@@ -4,7 +4,7 @@
  * Canonical definitions for inventory-owned tables (items, events, mutations,
  * media, sync_meta, locations, fixtures, item_connections,
  * item_fixture_connections, item_documents, item_photos, item_uploaded_files,
- * settings).
+ * settings, device_sync_ledgers).
  */
 export {
   EVENT_ACTOR_KINDS,
@@ -49,4 +49,5 @@ export { locations } from './schema/locations.js';
 export { media } from './schema/media.js';
 export { MUTATION_STATUSES, mutations, type MutationStatus } from './schema/mutations.js';
 export { settings } from './schema/settings.js';
+export { deviceSyncLedgers } from './schema/device-sync-ledgers.js';
 export { SYNC_META_KEYS, syncMeta, type SyncMetaKey } from './schema/sync-meta.js';

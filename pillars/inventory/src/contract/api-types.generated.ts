@@ -767,6 +767,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/sync/ledger': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Store a device's latest sync ledger report */
+    post: operations['sync.reportLedger'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/sync/mutations': {
     parameters: {
       query?: never;
@@ -1185,6 +1202,23 @@ export interface paths {
     };
     /** Overview and container segment counts for the inventory web app */
     get: operations['webSummary.get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/web/sync/ledger': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Every device's latest sync ledger, merged */
+    get: operations['webSyncLedger.get'];
     put?: never;
     post?: never;
     delete?: never;
@@ -5339,6 +5373,145 @@ export interface operations {
       };
       /** @description 404 */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 426 */
+      426: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'sync.reportLedger': {
+    parameters: {
+      query?: never;
+      header?: {
+        'pops-inventory-protocol'?: string;
+        'pops-actor'?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          attention: {
+            code?: {
+              holder: string;
+              suggested: string;
+              wanted: string;
+            };
+            held?: {
+              title: string;
+              values: {
+                field: string;
+                fit: string;
+                replacement?: string;
+                value: string;
+              }[];
+            };
+            id: string;
+            itemId: string;
+            itemName: string;
+            kind: string;
+            mine?: {
+              at: string;
+              source: string;
+              value: string;
+            };
+            openedAt: string;
+            photo?: {
+              limit: string;
+              size: string;
+            };
+            problem: string;
+            refused?: {
+              at: string;
+              reason: string;
+            };
+            theirs?: {
+              at: string;
+              source: string;
+              value: string;
+            };
+          }[];
+          /** Format: date-time */
+          lastSyncAt: string | null;
+          /** Format: date-time */
+          reportedAt: string;
+          resolved: {
+            at: string;
+            dropped?: {
+              field: string;
+              fit: string;
+              replacement?: string;
+              value: string;
+            }[];
+            id: string;
+            itemName: string;
+            outcome: string;
+          }[];
+          waiting: {
+            id: string;
+            itemName: string;
+            reason: {
+              caseId?: string;
+              itemName?: string;
+              kind: string;
+              on?: string;
+              revision?: number;
+            };
+            since: string;
+            summary: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            stored: boolean;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 403 */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -10173,6 +10346,105 @@ export interface operations {
               open: number;
               packedItems: number;
             };
+          };
+        };
+      };
+    };
+  };
+  'webSyncLedger.get': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            attention: {
+              code?: {
+                holder: string;
+                suggested: string;
+                wanted: string;
+              };
+              deviceId: string;
+              held?: {
+                title: string;
+                values: {
+                  field: string;
+                  fit: string;
+                  replacement?: string;
+                  value: string;
+                }[];
+              };
+              id: string;
+              itemId: string;
+              itemName: string;
+              kind: string;
+              mine?: {
+                at: string;
+                source: string;
+                value: string;
+              };
+              openedAt: string;
+              photo?: {
+                limit: string;
+                size: string;
+              };
+              problem: string;
+              refused?: {
+                at: string;
+                reason: string;
+              };
+              theirs?: {
+                at: string;
+                source: string;
+                value: string;
+              };
+            }[];
+            attentionCount: number;
+            devices: {
+              attentionCount: number;
+              id: string;
+              lastSyncAt: string | null;
+              name: string;
+              receivedAt: string;
+              reportedAt: string;
+            }[];
+            receivedHead: string | null;
+            resolved: {
+              at: string;
+              deviceId: string;
+              dropped?: {
+                field: string;
+                fit: string;
+                replacement?: string;
+                value: string;
+              }[];
+              id: string;
+              itemName: string;
+              outcome: string;
+            }[];
+            waiting: {
+              deviceId: string;
+              id: string;
+              itemName: string;
+              reason: {
+                caseId?: string;
+                itemName?: string;
+                kind: string;
+                on?: string;
+                revision?: number;
+              };
+              since: string;
+              summary: string;
+            }[];
           };
         };
       };

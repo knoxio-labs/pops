@@ -8,15 +8,17 @@
 import { SERVICE_ACCOUNT_HEADER, type ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { loadPublishedCatalogue } from '../../catalogue/index.js';
+import { ACTOR_HEADER } from '../../contract/rest-sync.js';
 import { runMutations } from '../../domain/commands/index.js';
 import { createAiClient, isPermutation, type AiClient } from '../ai/client.js';
 import { resolveActor } from '../sync/actor.js';
 import { readProtocol1Catalogue } from '../sync/catalogue.js';
 import { readChanges } from '../sync/changes.js';
 import { suggestCodes } from '../sync/codes.js';
-import { SyncRequestError } from '../sync/errors.js';
+import { deviceActorRequired, SyncRequestError } from '../sync/errors.js';
 import { toSyncEvents } from '../sync/events.js';
 import { readItemHistory } from '../sync/history.js';
+import { storeLedgerReport } from '../sync/ledger.js';
 import { readMinProtocol, readSyncState } from '../sync/meta.js';
 import { readSnapshotPage } from '../sync/snapshot.js';
 import { projectItems, toSyncLocation } from '../sync/wire.js';
@@ -133,13 +135,27 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
       runSync(async () => {
         const actor = await resolveActor({
           apiKey: req.get(SERVICE_ACCOUNT_HEADER),
-          actorHeader: headers['pops-actor'],
+          actorHeader: headers[ACTOR_HEADER],
           verify,
         });
         const outcomes = runMutations(db, body.mutations, actor);
         return {
           status: 200 as const,
           body: { outcomes, highWaterSeq: readSyncState(db).maxSeq },
+        };
+      }),
+
+    reportLedger: ({ body, headers, req }: SyncReq['reportLedger'] & { req: Request }) =>
+      runSync(async () => {
+        const actor = await resolveActor({
+          apiKey: req.get(SERVICE_ACCOUNT_HEADER),
+          actorHeader: headers[ACTOR_HEADER],
+          verify,
+        });
+        if (actor.kind !== 'device') throw deviceActorRequired();
+        return {
+          status: 200 as const,
+          body: storeLedgerReport(db, actor, body, new Date().toISOString()),
         };
       }),
   };

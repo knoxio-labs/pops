@@ -25,6 +25,7 @@ import { inventoryPhotosContract } from './rest-photos.js';
 import { inventoryReportsContract } from './rest-reports.js';
 import { inventorySearchContract } from './rest-search.js';
 import { inventorySettingsContract } from './rest-settings.js';
+import { inventoryWebSyncLedgerContract } from './rest-sync-ledger.js';
 import {
   inventoryCodesContract,
   inventorySyncContract,
@@ -59,6 +60,7 @@ export const inventoryContract = c.router(
     webLocations: inventoryWebLocationsContract,
     webSearch: inventoryWebSearchContract,
     webSummary: inventoryWebSummaryContract,
+    webSyncLedger: inventoryWebSyncLedgerContract,
     settings: inventorySettingsContract,
     sync: inventorySyncContract,
     types: inventoryTypesContract,
