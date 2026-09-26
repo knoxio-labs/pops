@@ -126,6 +126,21 @@ internal struct InventoryTypeTreeTests {
         #expect(!source.contains("NavigationPath"))
     }
 
+    @Test("choosing a nested type clears the picker navigation path")
+    func nestedTypeChoiceClearsPickerNavigation() {
+        var selection: String?
+        var navigationPath = NavigationPath()
+        navigationPath.append("pillows")
+        let binding = Binding<String?>(
+            get: { selection }, set: { selection = $0 })
+
+        InventoryFormTypePicker.choose(
+            "Pillowcase", selection: binding, navigationPath: &navigationPath)
+
+        #expect(selection == "Pillowcase")
+        #expect(navigationPath.isEmpty)
+    }
+
     private func pickerSource() throws -> String {
         try source(
             at:
