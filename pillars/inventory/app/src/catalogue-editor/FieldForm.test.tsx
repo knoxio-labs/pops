@@ -26,6 +26,7 @@ function field(overrides: Partial<CatalogueField> = {}): CatalogueField {
     allowOverride: false,
     archivedAt: null,
     cardinality: 'one',
+    defaultValues: [],
     enumOptions: [],
     expression: null,
     expressionVersion: null,

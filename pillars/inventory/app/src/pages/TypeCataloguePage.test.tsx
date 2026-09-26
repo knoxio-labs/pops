@@ -70,6 +70,7 @@ const published: Catalogue = {
           allowOverride: false,
           archivedAt: null,
           cardinality: 'one',
+          defaultValues: [],
           enumOptions: [],
           expression: null,
           expressionVersion: null,
