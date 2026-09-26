@@ -101,6 +101,7 @@ export * from './components/ErrorBoundary';
 export * from './components/FieldError';
 export * from './components/FieldLabel';
 export * from './components/InfiniteScrollTable';
+export * from './components/Kbd';
 export * from './components/NumberInput';
 export * from './components/RadioInput';
 export * from './components/Select';
