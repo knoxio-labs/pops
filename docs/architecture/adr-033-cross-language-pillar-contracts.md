@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-06-13
+Accepted — 2026-06-13. Error body superseded by [ADR-054](adr-054-error-envelope-and-codes.md).
 
 ## Context
 
