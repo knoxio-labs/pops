@@ -251,6 +251,20 @@ describe('GET /web/events', () => {
     expect(page.events.every((event) => event.entityName === 'Snorkel')).toBe(true);
   });
 
+  it('keeps a deleted location name available to the event feed', async () => {
+    createLocation('garage', 'Garage');
+    apply('location.delete', 'garage', {}, { kind: 'web' }, 1);
+
+    const page = await eventsPage({ kind: 'deleted', q: 'garage' });
+
+    expect(page.events).toHaveLength(1);
+    expect(page.events[0]).toMatchObject({
+      entityKind: 'location',
+      entityId: idFor('garage'),
+      entityName: 'Garage',
+    });
+  });
+
   it('q matches a touched field name and a text value in before or after', async () => {
     createItem('lamp', 'Lamp');
     apply('item.setCode', 'lamp', { code: 'SKU-123' }, { kind: 'web' }, 1);
