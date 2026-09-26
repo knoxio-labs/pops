@@ -59,7 +59,7 @@ internal struct InventorySearchFilterFields<Header: View>: View {
             }
             NavigationLink {
                 InventoryFormTypePicker(
-                    selection: $filter.typeName, additionalNames: types)
+                    selection: $filter.typeName, additionalNames: types, showsNoneOption: false)
             } label: {
                 HStack {
                     Text("Type")

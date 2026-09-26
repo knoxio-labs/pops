@@ -66,6 +66,22 @@ internal struct InventoryTypeTreeTests {
         )
     }
 
+    @Test("the search filter hides the form-only no-type option")
+    func searchFilterHidesFormOnlyNoneOption() throws {
+        let picker = try source(
+            at:
+                "Sources/DesignPlayground/Surfaces/Inventory/Creation/InventoryFormTypePicker.swift"
+        )
+        let filterSheet = try source(
+            at:
+                "Sources/DesignPlayground/Surfaces/Inventory/Search/InventorySearchFilterSheet.swift"
+        )
+
+        #expect(picker.contains("showsNoneOption: Bool = true"))
+        #expect(picker.contains("if showsNoneOption"))
+        #expect(filterSheet.contains("showsNoneOption: false"))
+    }
+
     @Test("the ticket states are registered on their required surfaces")
     func ticketStatesAreRegistered() {
         let formIDs = Set(InventoryItemFormCase.all.map(\.id))
@@ -88,14 +104,18 @@ internal struct InventoryTypeTreeTests {
     }
 
     private func pickerSource() throws -> String {
+        try source(
+            at:
+                "Sources/DesignPlayground/Surfaces/Inventory/Creation/InventoryFormTypePicker.swift"
+        )
+    }
+
+    private func source(at relativePath: String) throws -> String {
         let packageRoot = URL(filePath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let file = packageRoot.appending(
-            path:
-                "Sources/DesignPlayground/Surfaces/Inventory/Creation/InventoryFormTypePicker.swift"
-        )
+        let file = packageRoot.appending(path: relativePath)
         return try String(contentsOf: file, encoding: .utf8)
     }
 }

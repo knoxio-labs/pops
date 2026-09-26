@@ -147,14 +147,6 @@ internal struct InventoryItemDetail: Identifiable {
 
     internal var id: String { item.id }
 
-    /// The line under the name: what kind of thing it is, and how many the
-    /// record stands for when that is not one.
-    internal var subtitle: String {
-        var parts = [item.typeName ?? "No type yet"]
-        if item.quantity.count != 1 { parts.append("\(item.quantity.count) in this group") }
-        return parts.joined(separator: " · ")
-    }
-
     /// The fields the item's type marks as highlighted, which sit beside the
     /// placement. An item whose type has no shipped template highlights none.
     internal var highlightedFields: [InventoryDetailField] {

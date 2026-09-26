@@ -4,15 +4,18 @@ import SwiftUI
 internal struct InventoryFormTypePicker: View {
     @Binding internal var selection: String?
     internal let additionalNames: [String]
+    internal let showsNoneOption: Bool
     private let initialQuery: String
     @Environment(\.dismiss) private var dismiss
     @State private var query: String
 
     internal init(
-        selection: Binding<String?>, additionalNames: [String] = [], query: String = ""
+        selection: Binding<String?>, additionalNames: [String] = [], query: String = "",
+        showsNoneOption: Bool = true
     ) {
         _selection = selection
         self.additionalNames = additionalNames
+        self.showsNoneOption = showsNoneOption
         initialQuery = query
         _query = State(initialValue: query)
     }
@@ -36,10 +39,12 @@ internal struct InventoryFormTypePicker: View {
 
     @ViewBuilder private var rootRows: some View {
         Section {
-            Button {
-                choose(nil)
-            } label: {
-                optionLabel(name: InventoryFormType.none, isSelected: selection == nil)
+            if showsNoneOption {
+                Button {
+                    choose(nil)
+                } label: {
+                    optionLabel(name: InventoryFormType.none, isSelected: selection == nil)
+                }
             }
             ForEach(InventoryFormType.children(of: nil)) { node in
                 nodeRow(node)
