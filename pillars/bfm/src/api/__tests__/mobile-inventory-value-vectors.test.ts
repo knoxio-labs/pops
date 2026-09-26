@@ -20,6 +20,18 @@ const JsonObject = z.record(z.string(), z.unknown());
 
 const RowSchema = JsonObject.and(z.object({ id: z.string() }));
 
+const NegativeVectorSchema = z.discriminatedUnion('category', [
+  z.object({ category: z.literal('malformed_value'), fieldValue: JsonObject }),
+  z.object({
+    category: z.literal('missing_required_field'),
+    name: z.string(),
+    command: JsonObject,
+    producerRejection: z.literal('invalid'),
+  }),
+  z.object({ category: z.literal('unknown_kind'), field: JsonObject }),
+  z.object({ category: z.literal('protocol_above_supported'), minimumProtocol: z.number() }),
+]);
+
 const FixtureSchema = z.object({
   liveRevision: z.number(),
   currentRevision: z.number(),
@@ -43,14 +55,7 @@ const FixtureSchema = z.object({
         .optional(),
     })
   ),
-  negativeVectors: z.array(
-    z.discriminatedUnion('category', [
-      z.object({ category: z.literal('malformed_value'), fieldValue: JsonObject }),
-      z.object({ category: z.literal('missing_required_field'), command: JsonObject }),
-      z.object({ category: z.literal('unknown_kind'), field: JsonObject }),
-      z.object({ category: z.literal('protocol_above_supported'), minimumProtocol: z.number() }),
-    ])
-  ),
+  negativeVectors: z.array(NegativeVectorSchema),
 });
 
 const fixture = FixtureSchema.parse(
@@ -170,6 +175,26 @@ describe('protocol-2 value vectors through bfm', () => {
     );
 
     expect(res.status).toBe(502);
+  });
+
+  it('requires and retains metadata for the missing-required-field vector', () => {
+    const vector = negative('missing_required_field');
+
+    expect(vector).toMatchObject({
+      category: 'missing_required_field',
+      name: 'child type missing inherited required field',
+      producerRejection: 'invalid',
+    });
+    expect(
+      NegativeVectorSchema.safeParse(
+        Object.fromEntries(Object.entries(vector).filter(([key]) => key !== 'name'))
+      ).success
+    ).toBe(false);
+    expect(
+      NegativeVectorSchema.safeParse(
+        Object.fromEntries(Object.entries(vector).filter(([key]) => key !== 'producerRejection'))
+      ).success
+    ).toBe(false);
   });
 
   it('forwards a malformed value opaquely: the phone checks it against its field kind', async () => {
