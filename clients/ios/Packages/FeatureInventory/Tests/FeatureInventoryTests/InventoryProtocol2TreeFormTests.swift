@@ -39,7 +39,7 @@ internal struct InventoryProtocol2TreeFormTests {
         #expect(form.protocol2Issues.first?.message == "Size is required.")
     }
 
-    @Test("changing from sheet to quilt cover keeps Size and drops Fitted")
+    @Test("changing from sheet to quilt cover keeps Size, drops Fitted, and seeds Closure")
     func typeChangeKeepsOnlyCommonFields() async throws {
         let store = RecordingFormStore(FormFixtureSource(protocol2Catalogue: Fixture.catalogue()))
         let form = InventoryItemFormModel(
@@ -58,6 +58,12 @@ internal struct InventoryProtocol2TreeFormTests {
         #expect(form.protocol2Type?.fields.map(\.id) == [Fixture.size.id, Fixture.closure.id])
         #expect(form.protocol2Draft?.values(for: Fixture.size) == [.string("Queen")])
         #expect(form.protocol2Draft?.draftEntries(for: Fixture.fitted).isEmpty == true)
+
+        let closureEntry = try #require(
+            form.protocol2Draft?.draftEntries(for: Fixture.closure).first)
+        #expect(form.protocol2Draft?.values(for: Fixture.closure).isEmpty == true)
+        form.protocol2Draft?.setText("Buttons", entryId: closureEntry.id, for: Fixture.closure)
+        #expect(form.protocol2Draft?.values(for: Fixture.closure) == [.string("Buttons")])
     }
 
     @Test("a type change command includes the retained inherited Size value")
