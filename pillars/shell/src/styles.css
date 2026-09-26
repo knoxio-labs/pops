@@ -9,3 +9,21 @@
 @import '@pops/ui/theme';
 
 @source '.';
+
+/*
+ * The top bar's height, safe area included. With `viewport-fit=cover` (and
+ * always, when launched from the home screen with the translucent status bar)
+ * the page draws under the notch, so the bar pads itself down by the inset and
+ * everything that clears the bar — the content offset, the sticky rail, the
+ * tablet page-nav overlay — clears this instead of a bare 3.5rem / 4rem.
+ */
+@layer base {
+  :root {
+    --shell-top-bar-height: calc(3.5rem + env(safe-area-inset-top));
+  }
+  @media (width >= 48rem) {
+    :root {
+      --shell-top-bar-height: calc(4rem + env(safe-area-inset-top));
+    }
+  }
+}

@@ -111,6 +111,32 @@ internal struct StaleReferenceReplayTests {
         #expect(try harness.ledger.repairs.isEmpty)
         #expect(try harness.ledger.resolved.first?.outcome == "Let go")
     }
+
+    @Test("an incoming reference on another item stays Let go, even with an own reference value")
+    func incomingReferenceOnAnotherItemStaysUnrecognised() async throws {
+        let harness = try LocalFirstHarness()
+        try await harness.downloadLamp(
+            fields: StaleReference.fields, locations: StaleReference.locations)
+        await harness.server.onMutations {
+            LocalFirstHarness.rejected(
+                $0, reason: "reference_type_mismatch",
+                incomingReference: (
+                    itemId: StaleReference.otherItemId, fieldId: StaleReference.otherFieldId
+                ))
+        }
+
+        let queued = StaleReference.edit(to: StaleReference.hallway)
+        _ = try await harness.store.perform(queued)
+        await harness.store.synchronize()
+
+        let repair = try #require(try harness.ledger.repairs.first)
+        #expect(repair.kind == .unrecognised("reference_type_mismatch"))
+        #expect(repair.catalogue == nil)
+
+        try await harness.store.resolve(repair.id, with: .keepMine())
+        #expect(try harness.ledger.repairs.isEmpty)
+        #expect(try harness.ledger.resolved.first?.outcome == "Let go")
+    }
 }
 
 /// The lamp with a `Socket` field referencing a place, and the two places it
@@ -119,6 +145,11 @@ internal enum StaleReference {
     static let socketField = "8b1e6f0a-2c3d-4e5f-9a7b-0c1d2e3f4a51"
     static let hallway = "8b1e6f0a-2c3d-4e5f-9a7b-0c1d2e3f4a61"
     static let study = "8b1e6f0a-2c3d-4e5f-9a7b-0c1d2e3f4a62"
+    /// Some OTHER item and field a `reference_type_mismatch` names as the
+    /// one actually broken by a type change, distinct from the lamp and its
+    /// own `socketField` (POPS-4617).
+    static let otherItemId = "8b1e6f0a-2c3d-4e5f-9a7b-0c1d2e3f4a71"
+    static let otherFieldId = "8b1e6f0a-2c3d-4e5f-9a7b-0c1d2e3f4a72"
 
     static let fields =
         Protocol2Wire.bulbFields + [

@@ -60,6 +60,24 @@ export function assertReferenceTarget(
   }
 }
 
+/**
+ * A live OTHER item's reference into the item being retyped no longer
+ * permits the new type (POPS-4617): distinct from {@link ValueValidationError},
+ * whose `fieldId` is always one of the command's own values, so a caller can
+ * tell the two apart and never offer to fix the command's own values for a
+ * refusal one of them cannot cause.
+ */
+export class IncomingReferenceTypeError extends Error {
+  constructor(
+    public readonly itemId: string,
+    public readonly fieldId: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'IncomingReferenceTypeError';
+  }
+}
+
 /** Rejects a type change that would invalidate a live incoming constrained reference. */
 export function assertIncomingReferencesPermitType(
   db: CommandDb,
@@ -81,10 +99,10 @@ export function assertIncomingReferencesPermitType(
       ?.types.flatMap((type) => type.fields)
       .find((candidate) => candidate.id === row.fieldId);
     if (field && field.referenceTypeIds.size > 0 && !field.referenceTypeIds.has(nextTypeId)) {
-      throw new ValueValidationError(
-        'reference_type_mismatch',
+      throw new IncomingReferenceTypeError(
+        row.itemId,
         field.id,
-        `incoming reference does not permit target type ${nextTypeId}`
+        `item ${row.itemId} field ${field.id}: incoming reference does not permit target type ${nextTypeId}`
       );
     }
   }

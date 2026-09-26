@@ -10,7 +10,7 @@ export function NavRegion({ pageNavOpen, onClosePageNav }: NavRegionProps) {
   return (
     <>
       {/* Desktop + Tablet: app rail always visible at md+ */}
-      <div className="hidden md:flex h-[calc(100vh-4rem)] sticky top-16 shrink-0">
+      <div className="hidden md:flex h-[calc(100dvh-var(--shell-top-bar-height))] sticky top-(--shell-top-bar-height) shrink-0">
         <AppRail />
         {/* Desktop only: permanent PageNav (lg+) */}
         <div className="hidden lg:block">
@@ -26,7 +26,7 @@ export function NavRegion({ pageNavOpen, onClosePageNav }: NavRegionProps) {
             onClick={onClosePageNav}
             aria-hidden="true"
           />
-          <aside className="fixed left-16 top-16 bottom-0 z-50 shadow-lg">
+          <aside className="fixed left-16 top-(--shell-top-bar-height) bottom-0 z-50 shadow-lg">
             <PageNav />
           </aside>
         </div>

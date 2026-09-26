@@ -48,7 +48,7 @@ function finalState(db: CommandDb, vector: ValueVector): ValueVector {
     item,
     fieldValue: vector.storage === 'stored' ? fieldValue : null,
     computedValue: vector.storage === 'computed' ? computedValueOf(item, vector.fieldId) : null,
-    ...(vector.kind === 'reference'
+    ...(vector.kind === 'reference' && vector.referenceTargets === undefined
       ? { referenceTargets: referenceTargetsOf(db, referenceValuesOf(fieldValue)) }
       : {}),
   };

@@ -11,6 +11,28 @@ internal enum InventoryAccessibility {
     internal static let itemNameField = "inventory-item-name-field"
     internal static let useFreeCode = "inventory-item-use-free-code"
 
+    /// The item form's Type picker. Its label reads "Type, <current type>",
+    /// which changes with every choice, so a driver addresses it by this.
+    internal static let itemTypePicker = "inventory-item-type"
+
+    /// One option of the Type picker, by the catalogue type's own stable id
+    /// (a protocol-1 catalogue's type key). A type's label is owner-authored
+    /// and two types may share one, so only the id names a single option.
+    internal static func itemTypeOption(id: String) -> String {
+        "inventory-item-type-option-\(id)"
+    }
+
+    /// One option in a choice field's pushed list, by the option's stable id
+    /// (a protocol-1 choice's own value).
+    internal static func choiceOption(fieldId: String, optionId: String) -> String {
+        "inventory-field-\(fieldId)-option-\(optionId)"
+    }
+
+    /// The row in a choice field's pushed list that clears its value.
+    internal static func choiceClear(fieldId: String) -> String {
+        "inventory-field-\(fieldId)-clear"
+    }
+
     /// A protocol-2 field's scalar editor, by the catalogue field's own
     /// stable id. A field's label is user-authored and, for a computed
     /// field's `LabeledContent`, combined with its current value into one
@@ -39,10 +61,9 @@ internal enum InventoryAccessibility {
     }
 
     /// Moves the entry at `index` one place earlier. A plain button, not a
-    /// menu item: `Menu`-hosted actions are the flaky control class
-    /// automation already avoids for the Type picker (POPS-4556), and a
-    /// many-valued field's reorder controls are exactly that same class if
-    /// left inside one.
+    /// menu item: a menu item only exists once its menu has animated in, so
+    /// a driver has to wait for it (POPS-4556), and a button in the row
+    /// needs no such wait.
     internal static func protocol2FieldMoveEarlier(id: String, index: Int) -> String {
         "inventory-field-\(id)-\(index)-move-earlier"
     }

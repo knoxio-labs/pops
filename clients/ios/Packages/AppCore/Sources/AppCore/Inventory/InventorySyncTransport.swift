@@ -82,6 +82,19 @@ public enum InventoryRejectedReason: Hashable, Sendable {
 
 /// One mutation's result, the shape ADR-002's wire contract declares for
 /// `Outcome`.
+/// The other item and field a `referenceTypeMismatch` names when the refusal
+/// is about a reference INTO the item being changed, from another item's
+/// field, rather than one of the changed item's own values (POPS-4617).
+public struct InventoryIncomingReference: Hashable, Sendable {
+    public let itemId: String
+    public let fieldId: String
+
+    public init(itemId: String, fieldId: String) {
+        self.itemId = itemId
+        self.fieldId = fieldId
+    }
+}
+
 public enum InventoryMutationOutcome: Hashable, Sendable {
     case applied(revision: Int, seq: Int, converged: Bool)
     case conflictField(
@@ -92,9 +105,12 @@ public enum InventoryMutationOutcome: Hashable, Sendable {
     /// `catalogueChanges` names what stands in the way of a
     /// `catalogueUpdateRequired` or `catalogueRepairRequired` refusal; empty
     /// for every other reason, and from a server that predates them.
+    /// `incomingReference` is set only when a `referenceTypeMismatch` names a
+    /// reference into this item from another item's field.
     case rejected(
         reason: InventoryRejectedReason, message: String,
-        catalogueChanges: [InventoryCatalogueChange] = [])
+        catalogueChanges: [InventoryCatalogueChange] = [],
+        incomingReference: InventoryIncomingReference? = nil)
     case deferred(waitingOn: String)
 }
 

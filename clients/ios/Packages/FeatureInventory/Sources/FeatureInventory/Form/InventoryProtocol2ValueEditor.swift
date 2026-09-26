@@ -28,15 +28,16 @@ internal struct InventoryProtocol2ValueEditor: View {
             Toggle(label, isOn: flagBinding)
                 .accessibilityIdentifier(identifier)
         case .enumeration:
-            Picker(label, selection: enumSelection) {
-                Text(InventoryFormBlank.placeholder).tag("")
-                ForEach(enumOptions) { option in
-                    Text(option.archivedAt == nil ? option.label : "\(option.label) (Retired)")
-                        .tag(option.id)
-                }
-            }
-            .pickerStyle(.menu)
-            .accessibilityIdentifier(identifier)
+            InventoryFormChoiceRow(
+                label: label, fieldId: field.id, identifier: identifier,
+                options: InventoryProtocol2EnumOptions.choices(
+                    for: field, retaining: chosenOptionId),
+                chosenId: chosenOptionId,
+                chosenLabel: entry.value.map {
+                    InventoryProtocol2Display.text(
+                        for: [$0], field: field, referenceLabel: { _ in nil })
+                },
+                choose: { setValue($0.map { .enumeration(optionId: $0) }) })
         case .reference:
             referenceEditor
         case .longText:
@@ -45,7 +46,7 @@ internal struct InventoryProtocol2ValueEditor: View {
             measurementEditor
         default:
             InventoryFormTextRow(
-                label, placeholder: field.help ?? InventoryFormBlank.placeholder, text: textBinding,
+                label, placeholder: placeholder, text: textBinding,
                 identifier: identifier)
         }
         if let issue = entry.issue {
@@ -59,7 +60,7 @@ internal struct InventoryProtocol2ValueEditor: View {
     private var longTextEditor: some View {
         LabeledContent(label) {
             TextField(
-                field.help ?? InventoryFormBlank.placeholder, text: textBinding, axis: .vertical
+                placeholder, text: textBinding, axis: .vertical
             )
             .lineLimit(1...8)
             .multilineTextAlignment(.trailing)
@@ -70,7 +71,7 @@ internal struct InventoryProtocol2ValueEditor: View {
     private var measurementEditor: some View {
         LabeledContent(label) {
             HStack(spacing: PopsSpacing.sm) {
-                TextField(InventoryFormBlank.placeholder, text: textBinding)
+                TextField(placeholder, text: textBinding)
                     .multilineTextAlignment(.trailing)
                     .inventoryDecimalKeyboard()
                     .accessibilityIdentifier(identifier)
@@ -131,6 +132,10 @@ internal struct InventoryProtocol2ValueEditor: View {
             })
     }
 
+    private var placeholder: String {
+        InventoryProtocol2FieldHint.placeholder(for: field)
+    }
+
     private var textBinding: Binding<String> {
         Binding(get: { entry.input }, set: { setText($0) })
     }
@@ -143,19 +148,9 @@ internal struct InventoryProtocol2ValueEditor: View {
             set: { setValue(.boolean($0)) })
     }
 
-    private var enumSelection: Binding<String> {
-        Binding(
-            get: {
-                guard case .enumeration(let id)? = entry.value else { return "" }
-                return id
-            },
-            set: { setValue($0.isEmpty ? nil : .enumeration(optionId: $0)) })
-    }
-
-    private var enumOptions: [InventoryCatalogueOption] {
-        let selected: String?
-        if case .enumeration(let id)? = entry.value { selected = id } else { selected = nil }
-        return InventoryProtocol2EnumOptions.selectable(for: field, retaining: selected)
+    private var chosenOptionId: String? {
+        guard case .enumeration(let id)? = entry.value else { return nil }
+        return id
     }
 
     private var referenceValue: InventoryReferenceValue? {

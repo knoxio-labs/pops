@@ -72,10 +72,17 @@ internal struct LocalFirstHarness {
     }
 
     /// The server refusing every mutation in `sent` for `reason`.
-    static func rejected(_ sent: [SentMutation], reason: String) -> String {
+    static func rejected(
+        _ sent: [SentMutation], reason: String,
+        incomingReference: (itemId: String, fieldId: String)? = nil
+    ) -> String {
         InventoryWire.mutationsResponse(
-            sent.map { InventoryWire.rejectedOutcome(mutationId: $0.mutationId, reason: reason) }
-                .joined(separator: ","))
+            sent.map {
+                InventoryWire.rejectedOutcome(
+                    mutationId: $0.mutationId, reason: reason,
+                    incomingReference: incomingReference)
+            }
+            .joined(separator: ","))
     }
 
     static func editLumens() throws -> InventoryCommand {

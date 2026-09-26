@@ -27,7 +27,7 @@ internal enum CatalogueUpdates {
         _ outcome: InventoryMutationOutcome, of entry: LogEntry, mint: () -> String,
         in db: Database
     ) throws -> Bool {
-        guard case .rejected(let reason, _, let changes) = outcome,
+        guard case .rejected(let reason, _, let changes, _) = outcome,
             reason == .catalogueUpdateRequired
                 || (reason == .catalogueRepairRequired && changes.contains(where: \.isReplacement))
         else { return false }
@@ -106,7 +106,8 @@ internal enum CatalogueUpdates {
     ) throws {
         let outcome = StoredOutcome.rejected(
             reason: InventoryRejectedReason.catalogueRepairRequired.storageValue,
-            message: changes.summary, catalogueChanges: changes.map(StoredCatalogueChange.init))
+            message: changes.summary, catalogueChanges: changes.map(StoredCatalogueChange.init),
+            incomingReference: nil)
         entry.outcome = outcome
         entry.state = outcome.state
         release(&entry)

@@ -552,6 +552,10 @@ describe('validateItemFieldValues', () => {
           { baseRevision: 1 }
         )
       )
-    ).toMatchObject({ status: 'rejected', reason: 'invalid' });
+    ).toMatchObject({
+      status: 'rejected',
+      reason: 'reference_type_mismatch',
+      incomingReference: { itemId: holderId, fieldId: FIELD_IDS.reference },
+    });
   });
 });

@@ -40,7 +40,8 @@ internal enum BFMInventoryMutationsWire {
                 .rejected(
                     reason: InventoryRejectedReason(wire: rejected.reason),
                     message: rejected.message,
-                    catalogueChanges: (rejected.catalogueChanges ?? []).map(catalogueChange))
+                    catalogueChanges: (rejected.catalogueChanges ?? []).map(catalogueChange),
+                    incomingReference: rejected.incomingReference.map(incomingReference))
             )
         }
         if let deferred = wire.value4 {
@@ -59,6 +60,12 @@ internal enum BFMInventoryMutationsWire {
             typeId: wire.typeId, fieldId: wire.fieldId,
             change: InventoryCatalogueChangeKind(wire: wire.change),
             replacementId: wire.replacementId, revision: wire.revision)
+    }
+
+    private static func incomingReference(
+        _ wire: Outcome.Value3Payload.IncomingReferencePayload
+    ) -> InventoryIncomingReference {
+        InventoryIncomingReference(itemId: wire.itemId, fieldId: wire.fieldId)
     }
 
     private static func conflictId(_ conflict: Outcome.Value2Payload) -> String {

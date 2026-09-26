@@ -65,10 +65,8 @@ internal struct InventoryProtocol2FieldRow: View {
     }
 
     /// One entry of a many-valued field: its scalar editor plus three plain
-    /// icon buttons rather than a `Menu` — a `Menu` is the same flaky
-    /// control class automation already routes around for the Type picker
-    /// (POPS-4556), and iOS 27's own pattern for a row's few actions is
-    /// icon buttons in place, not a disclosure into a popover.
+    /// icon buttons rather than a `Menu`: iOS 27's own pattern for a row's
+    /// few actions is icon buttons in place, not a disclosure into a popover.
     private func manyEntryRow(
         _ entry: InventoryProtocol2DraftEntry, index: Int, count: Int
     ) -> some View {

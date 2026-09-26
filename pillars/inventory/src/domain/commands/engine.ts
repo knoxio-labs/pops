@@ -121,6 +121,7 @@ function decide(d: Dispatch, registry: OpRegistry): StoredOutcome {
         ...(error.catalogueChanges.length > 0
           ? { catalogueChanges: [...error.catalogueChanges] }
           : {}),
+        ...(error.incomingReference ? { incomingReference: error.incomingReference } : {}),
       };
     }
     if (error instanceof CommandConflict) return conflicted(d.mutation, error.conflict);

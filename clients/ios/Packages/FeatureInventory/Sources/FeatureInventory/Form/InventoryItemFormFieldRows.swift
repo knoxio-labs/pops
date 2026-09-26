@@ -39,22 +39,47 @@ internal struct InventoryFormFieldRow: View {
 }
 
 /// A closed list, pushed rather than typed: the row shows the current value
-/// and opens the type's declared values, searchable when there are many.
+/// and opens the field's declared values, searchable when there are many.
+/// The same control for a protocol-1 choice and a protocol-2 enumeration, so
+/// both follow the one approved presentation of a choice field.
 internal struct InventoryFormChoiceRow: View {
-    internal let field: InventoryFieldDefinition
-    internal let chosen: String?
+    internal let label: String
+    internal let fieldId: String
+    /// The row's own handle for a driver, when the caller gives it one.
+    internal let identifier: String?
+    internal let options: [InventoryFormChoiceOption]
+    internal let chosenId: String?
+    /// What the row reads while `chosenId` is set, worked out by the caller:
+    /// only it knows how a value its options no longer list should read.
+    internal let chosenLabel: String?
     internal let choose: (String?) -> Void
 
     internal var body: some View {
         NavigationLink {
-            InventoryFormChoiceList(field: field, chosen: chosen, choose: choose)
+            InventoryFormChoiceList(
+                title: label, fieldId: fieldId, options: options, chosenId: chosenId,
+                choose: choose)
         } label: {
-            LabeledContent(field.label) {
-                Text(InventoryFormBlank.shown(chosen))
+            LabeledContent(label) {
+                Text(InventoryFormBlank.shown(chosenLabel))
                     .foregroundStyle(
-                        chosen == nil ? Color.popsMutedForeground : Color.popsForeground)
+                        chosenLabel == nil ? Color.popsMutedForeground : Color.popsForeground)
             }
         }
+        .accessibilityIdentifier(identifier ?? "")
+    }
+}
+
+extension InventoryFormChoiceRow {
+    internal init(
+        field: InventoryFieldDefinition, chosen: String?, choose: @escaping (String?) -> Void
+    ) {
+        self.init(
+            label: field.label, fieldId: field.key, identifier: nil,
+            options: InventoryFormChoices.options(for: field).map {
+                InventoryFormChoiceOption(id: $0, label: $0)
+            },
+            chosenId: chosen, chosenLabel: chosen, choose: choose)
     }
 }
 
@@ -63,8 +88,10 @@ internal struct InventoryFormChoiceList: View {
     /// The row that clears the value: the one place an empty choice needs a word.
     internal static let clearTitle = "None"
 
-    internal let field: InventoryFieldDefinition
-    internal let chosen: String?
+    internal let title: String
+    internal let fieldId: String
+    internal let options: [InventoryFormChoiceOption]
+    internal let chosenId: String?
     internal let choose: (String?) -> Void
     @State private var query = ""
     @Environment(\.dismiss) private var dismiss
@@ -72,33 +99,29 @@ internal struct InventoryFormChoiceList: View {
     internal var body: some View {
         List {
             if query.isEmpty {
-                option(Self.clearTitle, value: nil)
+                option(Self.clearTitle, id: nil)
             }
-            ForEach(matches, id: \.self) { value in
-                option(value, value: value)
+            ForEach(InventoryFormChoices.matching(options, query: query)) { choice in
+                option(choice.label, id: choice.id)
             }
         }
-        .navigationTitle(field.label)
+        .navigationTitle(title)
         .popsTitleDisplay(large: false)
         .modifier(
             InventoryFormChoiceSearch(
-                isSearchable: InventoryFormChoices.isSearchable(field), query: $query))
+                isSearchable: InventoryFormChoices.isSearchable(options), query: $query))
     }
 
-    private var matches: [String] {
-        InventoryFormChoices.options(for: field, matching: query)
-    }
-
-    private func option(_ title: String, value: String?) -> some View {
+    private func option(_ label: String, id: String?) -> some View {
         Button {
-            choose(value)
+            choose(id)
             dismiss()
         } label: {
             HStack {
-                Text(title)
+                Text(label)
                     .foregroundStyle(Color.popsForeground)
                 Spacer(minLength: PopsSpacing.sm)
-                if value == chosen {
+                if id == chosenId {
                     Image(systemName: "checkmark")
                         .fontWeight(.semibold)
                         .accessibilityHidden(true)
@@ -106,7 +129,10 @@ internal struct InventoryFormChoiceList: View {
             }
             .contentShape(.rect)
         }
-        .accessibilityAddTraits(value == chosen ? .isSelected : [])
+        .accessibilityAddTraits(id == chosenId ? .isSelected : [])
+        .accessibilityIdentifier(
+            id.map { InventoryAccessibility.choiceOption(fieldId: fieldId, optionId: $0) }
+                ?? InventoryAccessibility.choiceClear(fieldId: fieldId))
     }
 }
 

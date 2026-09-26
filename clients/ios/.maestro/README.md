@@ -84,10 +84,9 @@ or on its own through the lane, which runs exactly the flows it is given:
 POPS_E2E_FLOWS=.maestro/acceptance/inventory-user-defined-type.yaml mise run e2e:ios
 ```
 
-It has been driven on a simulator and passed (POPS-4508); the `Tags`
-add/reorder/remove steps are new and still want that same confirmation on a
-simulator this repo's own Xcode 27 CI image can build against (POPS-4359).
-It stays out of
+The whole flow, the `Tags` add/reorder/remove steps and the Type menu
+included, has been driven on a simulator and passed with no retry in it
+(POPS-4556). It stays out of
 the lane's glob on purpose, not only until a run passed: it boots the real
 inventory pillar on top of everything `mise run e2e:ios` already starts, and
 runs a couple of minutes longer than any flow in the glob, for a scenario

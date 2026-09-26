@@ -9,7 +9,9 @@ import { Outlet, useLocation } from 'react-router';
  *
  * Desktop (≥1024px): AppRail (icons) + PageNav (page links) push content.
  * Tablet (768–1023px): AppRail visible, PageNav as overlay on app icon click.
- * Mobile (<768px): Hamburger opens Sidebar overlay with all pages.
+ * Mobile (<768px): Hamburger opens Sidebar overlay with all pages. `main`
+ * keeps `pb-24` below md so the last row of a page can scroll clear of the
+ * floating chat button instead of sitting under it.
  *
  * Overlays are mounted from the module registry via `OverlayHost`; `RootLayout`
  * itself does not import overlay components, so an overlay that is not
@@ -50,18 +52,15 @@ export function RootLayout() {
         <SkipLink />
         <AmbientBackground />
 
-        <div className="relative z-10 pt-14 md:pt-16">
+        <div className="relative z-10 pt-(--shell-top-bar-height)">
           <TopBar />
           <div className="flex">
             <NavRegion pageNavOpen={pageNavOpen} onClosePageNav={() => setPageNavOpen(false)} />
 
-            {/* Mobile: overlay sidebar */}
-            <Sidebar open={sidebarOpen} />
-
             <main
               id="main-content"
               tabIndex={-1}
-              className="flex-1 min-w-0 overflow-x-clip p-4 md:max-lg:p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-200 focus:outline-none"
+              className="flex-1 min-w-0 overflow-x-clip p-4 pb-24 md:max-lg:p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-200 focus:outline-none"
             >
               <ErrorBoundary staleChunkProbeUrl={shellDocumentProbeUrl}>
                 <Outlet />
@@ -71,6 +70,9 @@ export function RootLayout() {
         </div>
 
         {EGO_OVERLAY_INSTALLED && <ChatFab />}
+
+        {/* Mobile drawer. Outside the z-10 content layer so it stacks over the chat button. */}
+        <Sidebar open={sidebarOpen} />
 
         <CaptureHotkeyHost />
 

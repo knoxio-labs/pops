@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface UIState {
+  /**
+   * The mobile (<768px) navigation drawer. Starts closed and is never
+   * persisted: it is a modal overlay, and restoring it open meant a phone
+   * landed on a drawer covering the page on every load.
+   */
   sidebarOpen: boolean;
   railOpen: boolean;
   pageNavOpen: boolean;
@@ -30,7 +35,7 @@ interface UIState {
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      sidebarOpen: true,
+      sidebarOpen: false,
       railOpen: true,
       pageNavOpen: false,
       overlays: {},
@@ -51,10 +56,14 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'pops-ui-storage',
-      partialize: (state) => ({
-        sidebarOpen: state.sidebarOpen,
-        railOpen: state.railOpen,
-      }),
+      partialize: (state) => ({ railOpen: state.railOpen }),
+      // Pick `railOpen` out of what was stored rather than spreading it: an
+      // older build persisted `sidebarOpen: true`, and the default shallow
+      // merge would keep reopening the drawer from that stale entry.
+      merge: (persisted, current) => {
+        const railOpen = (persisted as Partial<UIState> | undefined)?.railOpen;
+        return typeof railOpen === 'boolean' ? { ...current, railOpen } : current;
+      },
     }
   )
 );

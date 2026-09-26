@@ -16,11 +16,19 @@ import GRDB
 /// previous placement can still say its target was deleted, and every query
 /// filters it out.
 internal enum ReplicaApply {
-    static func snapshot(_ page: InventorySnapshotPage, now: Date, in db: Database) throws {
+    /// `resyncing` marks the first page of the snapshot that answers a
+    /// `409 resync_required`: it forgets every server row and where the feed
+    /// stood before storing its own, in the same transaction, so the snapshot
+    /// is the whole truth. Upserting by revision alone would keep a row the
+    /// server no longer has, and ignore one whose revision a restored server
+    /// rewound below the stored one, even within the same epoch.
+    static func snapshot(
+        _ page: InventorySnapshotPage, now: Date, resyncing: Bool = false, in db: Database
+    ) throws {
         try requireCatalogue(page.catalogueRevision, in: db)
         var meta = try SyncMeta.read(db)
         let catalogueMoved = meta.catalogueRevision != page.catalogueRevision
-        if let epoch = meta.epoch, epoch != page.epoch {
+        if resyncing || meta.epoch.map({ $0 != page.epoch }) == true {
             try discardServerState(db)
             meta = meta.startingOver()
         }
@@ -67,18 +75,6 @@ internal enum ReplicaApply {
         try MutationLogReplay.rebase(resetting: changed, in: db)
         if catalogueMoved { try LocalComputedValues.refreshForCatalogueChange(in: db) }
         try RepairSettlement.settleResolvedElsewhere(at: now, in: db)
-    }
-
-    /// Forgets every server row and where the feed stood, keeping only the
-    /// catalogue and the type arrivals, so the snapshot that follows a `409 resync_required` is
-    /// the whole truth. Upserting by revision alone would keep a row the
-    /// server no longer has, and ignore one whose revision a restored server
-    /// rewound below the stored one, even within the same epoch.
-    static func resetForResync(in db: Database) throws {
-        let meta = try SyncMeta.read(db)
-        try discardServerState(db)
-        try meta.startingOver().write(db)
-        try MutationLogReplay.rebase(resetting: [], in: db)
     }
 
     /// Stores `catalogue` over the previous one, queueing a type arrival for
@@ -142,7 +138,8 @@ internal enum ReplicaApply {
 
     /// A new epoch means a restored server whose revisions and `seq` no
     /// longer compare with anything stored, so everything the server owns
-    /// goes. The catalogue stays: it is versioned by content, not by epoch.
+    /// goes, as it does for a resync. The catalogue and the type arrivals
+    /// stay: the catalogue is versioned by content, not by epoch.
     private static func discardServerState(_ db: Database) throws {
         for table in ReplicaSchema.itemLayers + ReplicaSchema.fieldValueLayers
             + ReplicaSchema.locationLayers

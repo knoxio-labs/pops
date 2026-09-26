@@ -5,30 +5,23 @@
  */
 import { eq } from 'drizzle-orm';
 
-import { items, locations } from '../../../db/index.js';
-import { runMutation } from '../../../domain/commands/engine.js';
-import { VALUE_VECTOR_CLOCK } from './deterministic-ids.js';
+import { items } from '../../../db/index.js';
+import {
+  apply,
+  buildMutation,
+  engineClearField,
+  engineCreateLiveLocation,
+  engineDeleteItem,
+  engineDeleteLocation,
+  engineOverrideComputedField,
+  engineRenameItem,
+  run,
+} from './fixture-engine-writes.js';
 
 import type { CommandDb } from '../../../domain/commands/entities.js';
-import type { CommandActor, Mutation } from '../../../domain/commands/envelope.js';
-import type { Outcome } from '../../../domain/commands/outcome.js';
+import type { Mutation } from '../../../domain/commands/envelope.js';
 import type { ValueVectorCatalogue } from './catalogue.js';
-
-const VECTOR_ACTOR: CommandActor = { kind: 'device', id: 'value-vector-fixture', label: 'Fixture' };
-
-interface MutationSpec {
-  readonly revision: number;
-  readonly op: string;
-  readonly entityId: string;
-  readonly baseRevision: number | null;
-  readonly args: unknown;
-}
-
-/** The `(db, nextId)` pair every engine call needs, bundled so call sites stay within max-params. */
-interface EngineContext {
-  readonly db: CommandDb;
-  readonly nextId: () => string;
-}
+import type { EngineContext } from './fixture-engine-writes.js';
 
 /** One `(db, nextId)`-bound set of fixture-writing operations. */
 export interface FixtureEngine {
@@ -46,6 +39,8 @@ export interface FixtureEngine {
   /** Removes one stored field's value with `item.edit`. */
   readonly clearField: (revision: number, itemId: string, fieldId: string) => Mutation;
   readonly deleteItem: (revision: number, itemId: string) => void;
+  /** Renames a live item with `item.edit`, leaving its values untouched. */
+  readonly renameItem: (revision: number, itemId: string, name: string) => Mutation;
   /** Removes an item's row outright — never a real command's job, only a maintenance path's. */
   readonly hardDeleteItem: (itemId: string) => void;
   readonly createLiveLocation: (name: string) => string;
@@ -56,49 +51,6 @@ export interface FixtureEngine {
     fieldId: string,
     values: readonly unknown[]
   ) => Mutation;
-}
-
-/** Builds one `Mutation`, minting its id from `nextId`. */
-function buildMutation(nextId: () => string, spec: MutationSpec): Mutation {
-  return {
-    mutationId: nextId(),
-    op: spec.op,
-    entityId: spec.entityId,
-    baseRevision: spec.baseRevision,
-    dependsOn: [],
-    clientTime: VALUE_VECTOR_CLOCK,
-    catalogueRevision: spec.revision,
-    args: spec.args,
-  };
-}
-
-function run(db: CommandDb, entry: Mutation): Outcome {
-  return runMutation(db, entry, VECTOR_ACTOR, { now: () => VALUE_VECTOR_CLOCK });
-}
-
-function apply(db: CommandDb, entry: Mutation): void {
-  const outcome = run(db, entry);
-  if (outcome.status !== 'applied') {
-    throw new Error(
-      `value-vector fixture mutation ${entry.op} was rejected: ${JSON.stringify(outcome)}`
-    );
-  }
-}
-
-function itemRevision(db: CommandDb, itemId: string): number {
-  const row = db.select({ revision: items.revision }).from(items).where(eq(items.id, itemId)).get();
-  if (!row) throw new Error(`cannot find item ${itemId}`);
-  return row.revision;
-}
-
-function locationRevision(db: CommandDb, locationId: string): number {
-  const row = db
-    .select({ revision: locations.revision })
-    .from(locations)
-    .where(eq(locations.id, locationId))
-    .get();
-  if (!row) throw new Error(`cannot find location ${locationId} to delete`);
-  return row.revision;
 }
 
 interface CreateItemSpec {
@@ -145,68 +97,6 @@ function engineRejectedCreate(ctx: EngineContext, spec: CreateItemSpec): string 
   return outcome.reason;
 }
 
-function engineClearField(
-  ctx: EngineContext,
-  spec: { readonly revision: number; readonly itemId: string; readonly fieldId: string }
-): Mutation {
-  const entry = buildMutation(ctx.nextId, {
-    revision: spec.revision,
-    op: 'item.edit',
-    entityId: spec.itemId,
-    baseRevision: itemRevision(ctx.db, spec.itemId),
-    args: { values: [{ fieldId: spec.fieldId, values: null }] },
-  });
-  apply(ctx.db, entry);
-  return entry;
-}
-
-function engineDeleteItem(ctx: EngineContext, revision: number, itemId: string): void {
-  const entry = buildMutation(ctx.nextId, {
-    revision,
-    op: 'item.delete',
-    entityId: itemId,
-    baseRevision: itemRevision(ctx.db, itemId),
-    args: {},
-  });
-  apply(ctx.db, entry);
-}
-
-function engineCreateLiveLocation(ctx: EngineContext, name: string): string {
-  const id = ctx.nextId();
-  ctx.db.insert(locations).values({ id, name, lastEditedTime: VALUE_VECTOR_CLOCK }).run();
-  return id;
-}
-
-function engineDeleteLocation(ctx: EngineContext, revision: number, locationId: string): void {
-  const entry = buildMutation(ctx.nextId, {
-    revision,
-    op: 'location.delete',
-    entityId: locationId,
-    baseRevision: locationRevision(ctx.db, locationId),
-    args: {},
-  });
-  apply(ctx.db, entry);
-}
-
-interface OverrideSpec {
-  readonly revision: number;
-  readonly itemId: string;
-  readonly fieldId: string;
-  readonly values: readonly unknown[];
-}
-
-function engineOverrideComputedField(ctx: EngineContext, spec: OverrideSpec): Mutation {
-  const entry = buildMutation(ctx.nextId, {
-    revision: spec.revision,
-    op: 'item.setOverride',
-    entityId: spec.itemId,
-    baseRevision: itemRevision(ctx.db, spec.itemId),
-    args: { fieldId: spec.fieldId, values: spec.values },
-  });
-  apply(ctx.db, entry);
-  return entry;
-}
-
 /** Builds one `(db, nextId)`-bound {@link FixtureEngine}. */
 export function createFixtureEngine(db: CommandDb, nextId: () => string): FixtureEngine {
   const ctx: EngineContext = { db, nextId };
@@ -222,6 +112,7 @@ export function createFixtureEngine(db: CommandDb, nextId: () => string): Fixtur
       }),
     clearField: (revision, itemId, fieldId) => engineClearField(ctx, { revision, itemId, fieldId }),
     deleteItem: (revision, itemId) => engineDeleteItem(ctx, revision, itemId),
+    renameItem: (revision, itemId, name) => engineRenameItem(ctx, revision, itemId, name),
     hardDeleteItem: (itemId) => {
       db.delete(items).where(eq(items.id, itemId)).run();
     },

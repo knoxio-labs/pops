@@ -11,21 +11,12 @@ import {
   DROPDOWN_MENU_SUBCONTENT_CLASS,
   DROPDOWN_MENU_SUB_TRIGGER_CLASS,
 } from './dropdown-menu.styles';
-
-function DropdownMenu({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
-}
+import { DropdownMenu, DropdownMenuTrigger } from './dropdown-menu.tap';
 
 function DropdownMenuPortal({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
   return <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />;
-}
-
-function DropdownMenuTrigger({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
 function DropdownMenuContent({

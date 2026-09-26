@@ -118,6 +118,13 @@ internal enum InventoryFormBlank {
     }
 }
 
+/// One value a choice field offers: the id a pick writes, and the words the
+/// list shows for it.
+internal struct InventoryFormChoiceOption: Identifiable, Hashable {
+    internal let id: String
+    internal let label: String
+}
+
 /// The values a choice field offers: exactly the ones its type declares, and
 /// nothing when it declares none. Code-defined like the type itself, so two
 /// people recording the same connector write the same word.
@@ -133,14 +140,25 @@ internal enum InventoryFormChoices {
     internal static func options(
         for field: InventoryFieldDefinition, matching query: String
     ) -> [String] {
-        let query = query.trimmingCharacters(in: .whitespaces)
-        let all = options(for: field)
-        guard !query.isEmpty else { return all }
-        return all.filter { $0.localizedCaseInsensitiveContains(query) }
+        let all = options(for: field).map { InventoryFormChoiceOption(id: $0, label: $0) }
+        return matching(all, query: query).map(\.id)
     }
 
     internal static func isSearchable(_ field: InventoryFieldDefinition) -> Bool {
         options(for: field).count > searchableThreshold
+    }
+
+    /// The options whose words contain `query`, all of them for an empty one.
+    internal static func matching(
+        _ options: [InventoryFormChoiceOption], query: String
+    ) -> [InventoryFormChoiceOption] {
+        let query = query.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return options }
+        return options.filter { $0.label.localizedCaseInsensitiveContains(query) }
+    }
+
+    internal static func isSearchable(_ options: [InventoryFormChoiceOption]) -> Bool {
+        options.count > searchableThreshold
     }
 }
 

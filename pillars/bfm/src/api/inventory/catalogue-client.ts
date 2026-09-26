@@ -17,7 +17,7 @@ export type InventoryCatalogueRouter = {
   types: {
     catalogue: (input: Record<string, never>) => Promise<unknown>;
     read: {
-      catalogue: (input: { query: { revision: number } }) => Promise<unknown>;
+      catalogue: (input: { revision: number }) => Promise<unknown>;
     };
   };
 };
@@ -50,7 +50,7 @@ export function createMobileInventoryCatalogueClient(
     catalogueRevision: async (revision) => {
       const outcome = await gateway.call<InventoryCatalogueRouter, unknown>(
         INVENTORY_PILLAR_ID,
-        (handle) => handle.types.read.catalogue({ query: { revision } })
+        (handle) => handle.types.read.catalogue({ revision })
       );
       return parseOrMismatch(
         INVENTORY_PILLAR_ID,

@@ -15,7 +15,10 @@ import type {
   ReadItemFieldValue,
 } from './item-value-types.js';
 
-export { assertIncomingReferencesPermitType } from './item-value-references.js';
+export {
+  assertIncomingReferencesPermitType,
+  IncomingReferenceTypeError,
+} from './item-value-references.js';
 export { ItemFieldSetError } from './item-value-types.js';
 export {
   validateItemFieldValues,

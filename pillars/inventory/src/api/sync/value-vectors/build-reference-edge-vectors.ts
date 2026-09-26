@@ -2,6 +2,10 @@
  * References whose target is gone or deleted. A new value may only name a
  * live target, so each is written first and its target removed afterwards.
  */
+import {
+  pendingTargetVector,
+  renamedTargetVector,
+} from './build-reference-edge-sync-state-vectors.js';
 import { fieldValueOf, projectItem } from './projection.js';
 import { ref } from './reference-values.js';
 
@@ -15,6 +19,8 @@ export interface ReferenceEdgeTargets {
   readonly deletedTargetItemId: string;
   readonly missingTargetItemId: string;
   readonly deletedLocationId: string;
+  readonly pendingTargetItemId: string;
+  readonly renamedTargetItemId: string;
 }
 
 /** Creates the three targets, live, for {@link buildReferenceEdgeVectors} to archive later. */
@@ -29,6 +35,18 @@ export function createReferenceEdgeTargets(
     missingTargetItemId: engine.createItem(catalogue, revision, 'Soon-missing reference target', [])
       .itemId,
     deletedLocationId: engine.createLiveLocation('Deleted reference location'),
+    pendingTargetItemId: engine.createItem(
+      catalogue,
+      revision,
+      'Not-yet-synced reference target',
+      []
+    ).itemId,
+    renamedTargetItemId: engine.createItem(
+      catalogue,
+      revision,
+      'Reference target before rename',
+      []
+    ).itemId,
   };
 }
 
@@ -119,7 +137,10 @@ function archivedLocationTargetVector(
   };
 }
 
-/** Builds the "missing", "archived item" and "archived location" reference vectors. */
+/**
+ * Builds the "missing", "archived item", "archived location", "pending
+ * (not yet synced)" and "renamed" reference vectors.
+ */
 export function buildReferenceEdgeVectors(
   db: CommandDb,
   engine: FixtureEngine,
@@ -130,5 +151,7 @@ export function buildReferenceEdgeVectors(
     missingTargetVector(db, engine, catalogue, targets.missingTargetItemId),
     archivedItemTargetVector(db, engine, catalogue, targets.deletedTargetItemId),
     archivedLocationTargetVector(db, engine, catalogue, targets.deletedLocationId),
+    pendingTargetVector(db, engine, catalogue, targets.pendingTargetItemId),
+    renamedTargetVector(db, engine, catalogue, targets.renamedTargetItemId),
   ];
 }

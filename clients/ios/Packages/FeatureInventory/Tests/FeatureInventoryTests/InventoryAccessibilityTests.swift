@@ -56,4 +56,41 @@ internal struct InventoryAccessibilityTests {
         ]
         #expect(ids.count == 9)
     }
+
+    @Test("the Type picker and each of its options have pinned identifiers")
+    func typePickerIdentifiers() {
+        #expect(InventoryAccessibility.itemTypePicker == "inventory-item-type")
+        #expect(
+            InventoryAccessibility.itemTypeOption(id: "type-7")
+                == "inventory-item-type-option-type-7")
+    }
+
+    @Test("no Type option collides with the picker, another option, or a field")
+    func typeOptionIdentifiersAreDistinct() {
+        let ids: Set<String> = [
+            InventoryAccessibility.itemTypePicker,
+            InventoryAccessibility.itemTypeOption(id: "a"),
+            InventoryAccessibility.itemTypeOption(id: "b"),
+            InventoryAccessibility.protocol2Field(id: "a"),
+            InventoryAccessibility.itemNameField,
+        ]
+        #expect(ids.count == 5)
+    }
+
+    @Test("a choice list's options and its clear row have pinned, distinct identifiers")
+    func choiceListIdentifiers() {
+        #expect(
+            InventoryAccessibility.choiceOption(fieldId: "f", optionId: "o")
+                == "inventory-field-f-option-o")
+        #expect(InventoryAccessibility.choiceClear(fieldId: "f") == "inventory-field-f-clear")
+        let ids: Set<String> = [
+            InventoryAccessibility.choiceOption(fieldId: "f", optionId: "o"),
+            InventoryAccessibility.choiceOption(fieldId: "f", optionId: "p"),
+            InventoryAccessibility.choiceOption(fieldId: "g", optionId: "o"),
+            InventoryAccessibility.choiceClear(fieldId: "f"),
+            InventoryAccessibility.protocol2Field(id: "f"),
+            InventoryAccessibility.protocol2FieldEntry(id: "f", index: 0),
+        ]
+        #expect(ids.count == 6)
+    }
 }
