@@ -235,7 +235,9 @@ internal struct CatalogueRevisionReplayTests {
     func updateRequiredWhenAppTooOld() async throws {
         let harness = try LocalFirstHarness()
         try await harness.downloadLamp()
-        await harness.publish(revision: 3, fields: Protocol2Wire.renamedFields, minimumProtocol: 3)
+        await harness.publish(
+            revision: 3, fields: Protocol2Wire.renamedFields,
+            minimumProtocol: try ValueVectorFile.load().aboveSupportedProtocol())
         await harness.server.onMutations {
             LocalFirstHarness.rejected($0, reason: "catalogue_update_required")
         }

@@ -35,6 +35,46 @@ internal struct ReplicaSyncThroughTransportTests {
         #expect(try harness.replica.catalogue(revision: 2)?.types.first?.fields.count == 2)
     }
 
+    @Test("a protocol-3 snapshot fetches and stores its pinned parent catalogue")
+    func snapshotWithPinnedParentCatalogue() async throws {
+        let harness = try ReplicaSyncHarness()
+        await harness.server.enqueue(
+            "snapshot",
+            .ok(
+                Protocol2Wire.snapshot(
+                    items: [
+                        Protocol2Wire.lamp(
+                            typeId: Protocol2Wire.lampType, catalogueRevision: 3)
+                    ],
+                    catalogueRevision: 3)))
+        await harness.server.enqueue(
+            "catalogue:3",
+            .ok(
+                Protocol2Wire.catalogueWithTypes(
+                    revision: 3,
+                    minimumProtocol: 3,
+                    types: [
+                        Protocol2Wire.type(
+                            revision: 3, id: Protocol2Wire.bulbType, key: "bulb", label: "Bulb",
+                            fields: Protocol2Wire.bulbFields),
+                        Protocol2Wire.type(
+                            revision: 3, id: Protocol2Wire.lampType, key: "lamp", label: "Lamp",
+                            sortOrder: 1, parentTypeId: Protocol2Wire.bulbType),
+                    ])))
+        await harness.server.set("changes", .ok(Protocol2Wire.changes(catalogueRevision: 3)))
+
+        try await harness.store.download()
+
+        let catalogue = try #require(try harness.replica.catalogue(revision: 3))
+        let child = try #require(catalogue.types.first { $0.id == Protocol2Wire.lampType })
+        #expect(child.parentTypeId == Protocol2Wire.bulbType)
+        #expect(
+            catalogue.effectiveType(id: Protocol2Wire.lampType)?.fields.map(\.id)
+                == [Protocol2Wire.lumens, Protocol2Wire.efficacy])
+        #expect(try harness.lamp?.typeId == Protocol2Wire.lampType)
+        #expect(try harness.replica.syncPosition().storedCatalogueRevision == 3)
+    }
+
     @Test("a feed page that names a newer revision applies its rows against that revision")
     func changesWithNewRevision() async throws {
         let harness = try ReplicaSyncHarness()
