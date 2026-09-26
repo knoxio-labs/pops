@@ -1,12 +1,17 @@
 import { replacingField, replacingType, sameFieldShape } from '../../catalogue/index.js';
 import { fieldIn, typeIn } from './catalogue-change-reasons.js';
 
-import type { PersistedItemType } from '../../catalogue/index.js';
+import type { ItemFieldValueInput, PersistedItemType } from '../../catalogue/index.js';
 import type { CommandCatalogueResolution } from './command-catalogue.js';
 
-/** A value entry a command carries for one field; `null` values clear it. */
+/**
+ * A value entry a command carries for one field; `null` values clear it. Only
+ * `item.create` carries overrides, as `source: 'override'`; every other entry
+ * is a stored value.
+ */
 interface CarriedValue {
   readonly fieldId: string;
+  readonly source?: ItemFieldValueInput['source'];
   readonly values: unknown;
 }
 
@@ -70,8 +75,9 @@ function movedValues<T extends CarriedValue>(
  *   value lands on, has the same shape (`sameFieldShape`), and the command
  *   does not already carry it; a clear is never moved;
  * - a named type moves onto its live replacement when every value, after
- *   the field moves, lands on a stored live field of it; otherwise nothing
- *   moves and the refusal names the type.
+ *   the field moves, lands on a live field of it that accepts the entry: a
+ *   stored field for a stored value, a computed field that allows overrides
+ *   for an override; otherwise nothing moves and the refusal names the type.
  *
  * Whatever does not move is left as it was, so validation refuses it and the
  * `catalogue_repair_required` reason names the replacement.
@@ -86,11 +92,17 @@ export function moveOntoReplacements<T extends CarriedValue>(
   const landing = type?.id ?? subject.typeId ?? subject.itemTypeId;
   const values = movedValues(resolution, subject.values, landing);
   if (type === null) return { typeId: subject.typeId, values };
+  const live = type.fields.filter((field) => field.archivedAt === null);
   const stored = new Set(
-    type.fields
-      .filter((field) => field.storage === 'stored' && field.archivedAt === null)
+    live.filter((field) => field.storage === 'stored').map((field) => field.id)
+  );
+  const overridable = new Set(
+    live
+      .filter((field) => field.storage === 'computed' && field.allowOverride)
       .map((field) => field.id)
   );
-  if (!values.every((entry) => stored.has(entry.fieldId))) return unchanged;
+  const accepts = (entry: T): boolean =>
+    (entry.source === 'override' ? overridable : stored).has(entry.fieldId);
+  if (!values.every(accepts)) return unchanged;
   return { typeId: type.id, values };
 }
