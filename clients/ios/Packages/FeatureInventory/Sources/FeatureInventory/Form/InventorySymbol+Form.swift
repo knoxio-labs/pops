@@ -5,6 +5,7 @@ import AppCore
 extension InventorySymbol {
     internal static let camera = InventorySymbol(system: "camera")
     internal static let scan = InventorySymbol(system: "barcode.viewfinder")
+    internal static let useText = InventorySymbol(system: "text.viewfinder")
     internal static let suggest = InventorySymbol(system: "sparkles")
     internal static let add = InventorySymbol(system: "plus")
 

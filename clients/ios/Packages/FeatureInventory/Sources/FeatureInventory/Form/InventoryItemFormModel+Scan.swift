@@ -11,6 +11,27 @@ extension InventoryItemFormModel {
         mode == .create && protocol2Type != nil && scan.availability.isAvailable
     }
 
+    /// Fills untouched fields for the type selected at capture time, without staging a photo.
+    internal func handleCapturedText(_ lines: [String]) {
+        cancelScanPrefill()
+        guard !lines.isEmpty else {
+            prefillStatus = .noText
+            return
+        }
+        guard let currentDraft = protocol2Draft, let type = protocol2Type else {
+            prefillStatus = .nothingFound
+            return
+        }
+        let typeId = currentDraft.typeId
+        prefillStatus = .running
+        fillTask = Task {
+            let values = await scan.engine.fill(
+                source: .text(lines), type: type, draft: currentDraft)
+            guard !Task.isCancelled else { return }
+            applySuggestions(values, forTypeId: typeId)
+        }
+    }
+
     internal func handleScannedBarcode(_ payload: String) async -> InventoryScanOutcome {
         cancelScanPrefill()
         let identifier = scannedIdentifier(payload)
