@@ -111,8 +111,9 @@ the catalogue resolves effective fields and de-duplicated capabilities from the
 root through the type, while a type's descriptor still carries only its own
 definitions. Parent trees are validated for missing parents, cycles, archived
 parents, duplicate effective field keys and a maximum depth of three. A draft
-that introduces a parent requires protocol 3 to publish; the server's supported
-inventory protocol remains 2 until runtime item resolution is available.
+that introduces a parent requires protocol 3 to publish; this build supports
+protocol 3, but the production minimum remains owner-controlled and is activated
+separately after the dependent clients are ready (POPS-4852).
 
 Generic field writes validate the complete stable-ID field set against its
 exact catalogue revision: kind, cardinality, required fields, storage authority,
