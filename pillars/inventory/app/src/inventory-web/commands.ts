@@ -182,12 +182,7 @@ export function createTypedItemVerbs<TResult>(
     const type = catalogue?.types.find(
       (candidate) => candidate.key === typeReference || candidate.id === typeReference
     );
-    if (type === undefined)
-      throw new Error(
-        catalogue === undefined
-          ? 'the published catalogue is not loaded'
-          : `unknown type ${typeReference}`
-      );
+    if (type === undefined) throw new Error(`unknown type ${typeReference}`);
     return run(
       id,
       (item) => item,

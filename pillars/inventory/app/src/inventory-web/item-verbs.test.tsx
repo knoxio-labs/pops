@@ -575,6 +575,20 @@ describe('item verbs', () => {
     ).toEqual([]);
   });
 
+  it('refuses a typed type change for an unknown catalogue type', async () => {
+    const queryClient = createTestQueryClient();
+    seedItem(queryClient);
+    mocks.useCatalogue.mockReturnValue({ data: publishedCatalogue });
+    const { result } = renderHook(() => useItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+
+    await expect(result.current.changeType('item-1', 'unknown')).rejects.toThrow(
+      'unknown type unknown'
+    );
+    expect(mocks.syncMutations).not.toHaveBeenCalled();
+  });
+
   it('records applied move and put-back targets but not refused or pick-up verbs', async () => {
     const queryClient = createTestQueryClient();
     seedItem(
