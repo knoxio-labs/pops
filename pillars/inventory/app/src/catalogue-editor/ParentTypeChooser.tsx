@@ -7,9 +7,10 @@ import {
   typeHeight,
   typePath,
 } from '../lib/type-tree';
+import { issueBelongsToDefinition } from './validation-issues';
 
 import type { InventoryApiIssue } from '../inventory-api-helpers';
-import type { CatalogueType } from './types';
+import type { CatalogueIssueSources, CatalogueOperation, CatalogueType } from './types';
 
 interface ParentChoice {
   readonly disabled: boolean;
@@ -17,6 +18,9 @@ interface ParentChoice {
   readonly path: string;
   readonly reason?: string;
 }
+
+const TOP_LEVEL_PARENT_VALUE = '__catalogue_top_level__';
+const EMPTY_ISSUE_SOURCES: CatalogueIssueSources = [];
 
 function parentChoices(
   types: readonly CatalogueType[],
@@ -47,15 +51,19 @@ function parentChoices(
 export function ParentTypeChooser({
   editedType,
   editable,
+  issueSources = EMPTY_ISSUE_SOURCES,
   issues,
   onChange,
+  operation,
   types,
   value,
 }: {
   readonly editedType: CatalogueType | undefined;
   readonly editable: boolean;
+  readonly issueSources?: CatalogueIssueSources;
   readonly issues: readonly InventoryApiIssue[];
   readonly onChange: (value: string | null) => void;
+  readonly operation: CatalogueOperation | null;
   readonly types: readonly CatalogueType[];
   readonly value: string | null;
 }) {
@@ -72,42 +80,70 @@ export function ParentTypeChooser({
       </Alert>
     );
   }
-  const choices = parentChoices(types, editedType);
+  const choices = [
+    { disabled: false, id: TOP_LEVEL_PARENT_VALUE, path: 'Top level' },
+    ...parentChoices(types, editedType),
+  ];
   return (
     <div className="space-y-2 sm:col-span-2">
       <Label htmlFor="catalogue-type-parent-picker">Parent</Label>
-      <ComboboxSelect
-        id="catalogue-type-parent-picker"
-        aria-label="Parent"
-        disabled={!editable}
-        options={choices.map((choice) => ({
-          disabled: choice.disabled,
-          label: choice.path,
-          value: choice.id,
-        }))}
-        placeholder="Top level"
-        searchPlaceholder="Search types by name or path"
-        emptyMessage="No type matches this path."
-        value={value ?? ''}
-        onChange={(next) => {
-          if (typeof next === 'string') onChange(next === '' ? null : next);
-        }}
-      />
+      <ParentPicker choices={choices} editable={editable} onChange={onChange} value={value} />
       <p className="text-xs text-muted-foreground">
         Parent and leaf types can both be selected. A parent leaves room for every descendant.
       </p>
       <ParentChoiceReasons choices={choices} />
-      <ParentValidationIssues editedType={editedType} issues={issues} />
+      <ParentValidationIssues
+        editedType={editedType}
+        issueSources={issueSources}
+        issues={issues}
+        operation={operation}
+      />
     </div>
+  );
+}
+
+function ParentPicker({
+  choices,
+  editable,
+  onChange,
+  value,
+}: {
+  readonly choices: readonly ParentChoice[];
+  readonly editable: boolean;
+  readonly onChange: (value: string | null) => void;
+  readonly value: string | null;
+}) {
+  return (
+    <ComboboxSelect
+      id="catalogue-type-parent-picker"
+      aria-label="Parent"
+      disabled={!editable}
+      options={choices.map((choice) => ({
+        disabled: choice.disabled,
+        label: choice.path,
+        value: choice.id,
+      }))}
+      placeholder="Top level"
+      searchPlaceholder="Search types by name or path"
+      emptyMessage="No type matches this path."
+      value={value ?? TOP_LEVEL_PARENT_VALUE}
+      onChange={(next) => {
+        if (typeof next === 'string') onChange(next === TOP_LEVEL_PARENT_VALUE ? null : next);
+      }}
+    />
   );
 }
 
 function ParentValidationIssues({
   editedType,
+  issueSources,
   issues,
+  operation,
 }: {
   readonly editedType: CatalogueType | undefined;
+  readonly issueSources: CatalogueIssueSources;
   readonly issues: readonly InventoryApiIssue[];
+  readonly operation: CatalogueOperation | null;
 }) {
   return (
     <>
@@ -115,7 +151,7 @@ function ParentValidationIssues({
         .filter(
           (issue) =>
             issue.path === 'parentTypeId' &&
-            (issue.definitionId === null || issue.definitionId === editedType?.id)
+            issueBelongsToDefinition(issue, editedType?.id, operation, issueSources)
         )
         .map((issue) => (
           <p

@@ -5,16 +5,18 @@ import { Alert, AlertDescription, AlertTitle, Input, Label, Switch, Textarea } f
 import { ParentTypeChooser } from './ParentTypeChooser';
 
 import type { InventoryApiIssue } from '../inventory-api-helpers';
-import type { CatalogueType } from './types';
+import type { CatalogueIssueSources, CatalogueOperation, CatalogueType } from './types';
 
 interface TypeFormDetailsProps {
   readonly containment: boolean;
   readonly description: string;
   readonly keyValue: string;
   readonly label: string;
+  readonly issueSources: CatalogueIssueSources;
   readonly onParentChange: (value: string | null) => void;
   readonly parentEditable: boolean;
   readonly parentTypeId: string | null;
+  readonly operation: CatalogueOperation | null;
   readonly types: readonly CatalogueType[];
   readonly validationIssues: readonly InventoryApiIssue[];
   readonly onContainmentChange: (value: boolean) => void;
@@ -54,8 +56,10 @@ export function TypeFormDetails(props: TypeFormDetailsProps) {
         <ParentTypeChooser
           editedType={type}
           editable={props.parentEditable}
+          issueSources={props.issueSources}
           issues={props.validationIssues}
           onChange={props.onParentChange}
+          operation={props.operation}
           types={props.types}
           value={props.parentTypeId}
         />

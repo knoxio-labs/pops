@@ -6,7 +6,7 @@ import { InventoryApiError } from '../inventory-api-helpers';
 
 import type { ReactNode } from 'react';
 
-import type { CatalogueCompatibility, CatalogueDescriptor } from './types';
+import type { CatalogueCompatibility, CatalogueDescriptor, CatalogueOperation } from './types';
 
 const api = vi.hoisted(() => ({
   abandonDraft: vi.fn(),
@@ -249,6 +249,41 @@ describe('useCatalogueEditor readiness', () => {
     await waitFor(() => expect(result.current.error).toBeInstanceOf(InventoryApiError));
 
     expect(result.current.readiness).toEqual({ status: 'not_previewed' });
+    expect(result.current.issues.liveOperation).toEqual([
+      { kind: 'put_type', id: TYPE_ID, label: 'Unsaved edit' },
+    ]);
     expect(api.patchDraft).not.toHaveBeenCalled();
+  });
+
+  it('pairs saved validation issues with the submitted operation batch', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(4), error: undefined });
+    const operation: CatalogueOperation = {
+      kind: 'archive_type',
+      id: TYPE_ID,
+    };
+    const issue = {
+      code: 'type_parent_archived',
+      definitionId: 'child-id',
+      message: 'A live child still inherits from this type',
+      path: 'parentTypeId',
+    };
+    api.patchDraft.mockResolvedValue({
+      data: undefined,
+      error: { issues: [issue], message: 'The type has a live child' },
+      response: new Response(null, { status: 422 }),
+    });
+    const { result } = setup();
+    await waitFor(() => expect(result.current.catalogue).toBeDefined());
+
+    await act(async () => {
+      await expect(result.current.patchDraft.mutateAsync([operation])).rejects.toThrow();
+    });
+
+    expect(result.current.issues.saved).toEqual([issue]);
+    expect(result.current.issues.savedOperation).toEqual([operation]);
+    expect(result.current.issues.sources[0]).toEqual({
+      issues: [issue],
+      operations: [operation],
+    });
   });
 });
