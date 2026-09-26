@@ -1,2 +1,2 @@
-/** DEPRECATED: use the typed fixtures under ../test-fixtures for new model tests. */
-export * from './core';
+/** @deprecated Import the canonical fixtures from ../test-fixtures instead. */
+export * from '../test-fixtures';
