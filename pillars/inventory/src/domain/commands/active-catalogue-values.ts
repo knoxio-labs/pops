@@ -21,6 +21,15 @@ export const activeFieldValueSchema = z.object({
   values: z.array(z.json()).min(1),
 });
 
+/**
+ * One value entry an `item.create` accepts: a stored value, or with
+ * `source: 'override'` an override of an overridable computed field, the
+ * shape `/type-catalogue/items/validate` takes. `source` defaults to `stored`.
+ */
+export const activeCreateFieldValueSchema = activeFieldValueSchema.extend({
+  source: z.enum(['stored', 'override']).default('stored'),
+});
+
 /** A stable-ID edit entry; `null` removes the optional stored value. */
 export const activeFieldPatchSchema = z.object({
   fieldId: z.string().min(1),
@@ -29,6 +38,8 @@ export const activeFieldPatchSchema = z.object({
 
 /** Parsed complete stored-value input for a stable-ID command. */
 export type ActiveFieldValue = z.infer<typeof activeFieldValueSchema>;
+/** Parsed `item.create` value entry, stored or override. */
+export type ActiveCreateFieldValue = z.infer<typeof activeCreateFieldValueSchema>;
 /** Parsed per-field stable-ID edit input. */
 export type ActiveFieldPatch = z.infer<typeof activeFieldPatchSchema>;
 
@@ -80,6 +91,17 @@ export function activeStoredChanges(values: readonly ItemFieldValueInput[]): Fie
   for (const entry of values) {
     if (entry.source === 'stored') changes[entry.fieldId] = z.array(z.json()).parse(entry.values);
   }
+  return changes;
+}
+
+/**
+ * Projects a new item's complete value set, overrides included, onto stable
+ * field-ID event keys; `mergeActiveChanges` tells the two apart by the
+ * field's storage, as it does for `item.setOverride`'s changes.
+ */
+export function activeCreatedChanges(values: readonly ItemFieldValueInput[]): FieldValues {
+  const changes: FieldValues = {};
+  for (const entry of values) changes[entry.fieldId] = z.array(z.json()).parse(entry.values);
   return changes;
 }
 

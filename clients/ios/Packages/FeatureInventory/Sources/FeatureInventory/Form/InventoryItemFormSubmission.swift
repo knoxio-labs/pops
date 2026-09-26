@@ -17,7 +17,8 @@ internal enum InventoryItemFormSubmission {
             .init(
                 id: draft.id, name: draft.trimmedName,
                 catalogueRevision: protocol2.catalogueRevision, typeId: protocol2.typeId,
-                values: protocol2.completeValues(for: type), note: note.isEmpty ? nil : note,
+                values: protocol2.completeValues(for: type),
+                overrides: protocol2.overrideValues(for: type), note: note.isEmpty ? nil : note,
                 externalIds: draft.externalIds, quantity: draft.quantity,
                 placement: draft.placement, code: draft.code.normalized))
         return [create] + photoAttachCommands(for: draft.id, in: draft)

@@ -30,7 +30,8 @@ extension BFMInventoryCommandEncoding {
         try [
             "name": item.name,
             "typeId": item.typeId,
-            "values": protocol2Values(item.values),
+            "values": protocol2Values(item.values)
+                + protocol2Values(item.overrides, source: "override"),
             "note": item.note,
             "externalIds": externalIdArgs(item.externalIds),
             "quantity": item.quantity,
@@ -39,14 +40,15 @@ extension BFMInventoryCommandEncoding {
     }
 
     private static func protocol2Values(
-        _ values: [InventoryProtocol2FieldValue]
+        _ values: [InventoryProtocol2FieldValue], source: String? = nil
     ) throws -> [(any Sendable)?] {
         try values.map { value in
             let encodedValues = try value.values.map(protocol2Value)
-            let encoded: [String: (any Sendable)?] = [
+            var encoded: [String: (any Sendable)?] = [
                 "fieldId": value.fieldId,
                 "values": encodedValues,
             ]
+            if let source { encoded["source"] = source }
             return encoded
         }
     }

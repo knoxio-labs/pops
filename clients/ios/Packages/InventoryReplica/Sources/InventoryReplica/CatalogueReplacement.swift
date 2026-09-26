@@ -108,7 +108,7 @@ internal struct CatalogueReplacement {
             return .createProtocol2Item(
                 InventoryNewProtocol2Item(
                     id: item.id, name: item.name, catalogueRevision: item.catalogueRevision,
-                    typeId: new, values: item.values, note: item.note,
+                    typeId: new, values: item.values, overrides: item.overrides, note: item.note,
                     externalIds: item.externalIds, quantity: item.quantity,
                     placement: item.placement, code: item.code))
         case .changeProtocol2ItemType(let id, let revision, _, let values):
@@ -160,7 +160,7 @@ extension InventoryCommand {
     /// Every field a protocol-2 command carries values for.
     var protocol2FieldIds: [String] {
         switch self {
-        case .createProtocol2Item(let item): item.values.map(\.fieldId)
+        case .createProtocol2Item(let item): (item.values + item.overrides).map(\.fieldId)
         case .editProtocol2Item(_, _, let patches): patches.map(\.fieldId)
         case .changeProtocol2ItemType(_, _, _, let values): values.map(\.fieldId)
         default: []
@@ -177,6 +177,9 @@ extension InventoryCommand {
                     id: item.id, name: item.name, catalogueRevision: item.catalogueRevision,
                     typeId: item.typeId,
                     values: item.values.map {
+                        .init(fieldId: rename($0.fieldId), values: $0.values)
+                    },
+                    overrides: item.overrides.map {
                         .init(fieldId: rename($0.fieldId), values: $0.values)
                     },
                     note: item.note, externalIds: item.externalIds, quantity: item.quantity,

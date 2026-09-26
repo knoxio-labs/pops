@@ -59,8 +59,7 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         let opened = await Self.opened(Self.item(computed: [Self.volume: .ok(.string("6 l"))]))
         defer { opened.loading.cancel() }
         let row = InventoryProtocol2ComputedFieldRow(
-            field: Self.volume, display: opened.form.protocol2ComputedDisplays[Self.volume.id],
-            overridesEnabled: opened.form.mode == .edit)
+            field: Self.volume, display: opened.form.protocol2ComputedDisplays[Self.volume.id])
 
         #expect(row.canStartOverride)
         #expect(!row.canClearOverride)
@@ -71,8 +70,7 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         let opened = await Self.opened(Self.item(computed: [Self.sealed: .ok(.boolean(true))]))
         defer { opened.loading.cancel() }
         let row = InventoryProtocol2ComputedFieldRow(
-            field: Self.sealed, display: opened.form.protocol2ComputedDisplays[Self.sealed.id],
-            overridesEnabled: opened.form.mode == .edit)
+            field: Self.sealed, display: opened.form.protocol2ComputedDisplays[Self.sealed.id])
 
         #expect(!row.canStartOverride)
         #expect(!row.canClearOverride)
@@ -90,8 +88,7 @@ internal struct InventoryProtocol2ComputedOverrideTests {
                 ]))
         defer { opened.loading.cancel() }
         let row = InventoryProtocol2ComputedFieldRow(
-            field: Self.sealed, display: opened.form.protocol2ComputedDisplays[Self.sealed.id],
-            overridesEnabled: opened.form.mode == .edit)
+            field: Self.sealed, display: opened.form.protocol2ComputedDisplays[Self.sealed.id])
 
         #expect(row.isOverridden)
         #expect(row.canClearOverride)
@@ -151,7 +148,6 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         defer { opened.loading.cancel() }
         let row = InventoryProtocol2ComputedFieldRow(
             field: Self.volume, display: opened.form.protocol2ComputedDisplays[Self.volume.id],
-            overridesEnabled: opened.form.mode == .edit,
             missingInputs: opened.form.protocol2ComputedMissingInputs[Self.volume.id] ?? [])
 
         #expect(row.text(referenceLabel: { _ in nil }) == "Unavailable until Width is set")

@@ -10,7 +10,7 @@ extension LocalReducer {
         }
         let type = try protocol2Type(id: new.typeId, revision: new.catalogueRevision)
         let values = try protocol2Entries(
-            new.values, type: type, revision: new.catalogueRevision)
+            new.values, overrides: new.overrides, type: type, revision: new.catalogueRevision)
         let isContainer = type.capabilities.contains("containment")
         try assertPlacementAllowed(itemId: new.id, to: new.placement)
         try assertContainerQuantity(isContainer: isContainer, quantity: new.quantity)
@@ -143,15 +143,43 @@ extension LocalReducer {
     }
 
     private func protocol2Entries(
-        _ values: [InventoryProtocol2FieldValue], type: InventoryCatalogueType, revision: Int
+        _ values: [InventoryProtocol2FieldValue], overrides: [InventoryProtocol2FieldValue] = [],
+        type: InventoryCatalogueType, revision: Int
     ) throws -> [InventoryItemFieldEntry] {
-        let entries = values.map {
+        let stored = values.map {
             InventoryItemFieldEntry(
                 fieldId: $0.fieldId, state: .value($0.values), source: .stored,
                 catalogueRevision: revision)
         }
+        let overridden = try overrides.map { override in
+            try validateCreateOverride(override, type: type)
+            return InventoryItemFieldEntry(
+                fieldId: override.fieldId, state: .value(override.values), source: .override,
+                catalogueRevision: revision)
+        }
+        let entries = stored + overridden
         try validateProtocol2Entries(entries, type: type, revision: revision)
         return entries
+    }
+
+    /// `item.create`'s override entries, judged as `item.setOverride` judges
+    /// one: a declared, live computed field that allows overriding, holding
+    /// exactly one value of its kind.
+    private func validateCreateOverride(
+        _ override: InventoryProtocol2FieldValue, type: InventoryCatalogueType
+    ) throws {
+        guard let field = type.fields.first(where: { $0.id == override.fieldId }) else {
+            throw refusal(.invalid, "field \(override.fieldId) is not declared")
+        }
+        guard field.storage == .computed, field.allowOverride, field.archivedAt == nil else {
+            throw refusal(.invalid, "field \(override.fieldId) does not permit an override")
+        }
+        guard override.values.count == 1,
+            override.values.allSatisfy({ primitiveKind(of: $0, matches: field.kind) })
+        else {
+            throw refusal(
+                .invalid, "field \(override.fieldId) does not hold a \(field.kind.rawValue)")
+        }
     }
 
     private func validateProtocol2Entries(

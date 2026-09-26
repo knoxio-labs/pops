@@ -178,6 +178,40 @@ describe('protocol-2 inventory writes', () => {
     }
   });
 
+  it('forwards a computed-field override source on create', async () => {
+    const fieldValues = [
+      { fieldId: FIELD_IDS[0], values: ['short'] },
+      { fieldId: FIELD_IDS[1], source: 'stored', values: [3] },
+      { fieldId: FIELD_IDS[2], source: 'override', values: [9] },
+    ];
+
+    await tool('inventory.items.create').handler({
+      itemName: 'Irregular box',
+      mutationId: MUTATION_ID,
+      catalogueRevision: 2,
+      typeId: TYPE_ID,
+      fieldValues,
+    });
+
+    expect(inventory.sync.mutations.mock.calls[0]?.[0].mutations[0]).toMatchObject({
+      op: 'item.create',
+      args: { item: { values: fieldValues } },
+    });
+  });
+
+  it('refuses a create field-value source other than stored or override', async () => {
+    const result = await tool('inventory.items.create').handler({
+      itemName: 'Irregular box',
+      catalogueRevision: 2,
+      typeId: TYPE_ID,
+      fieldValues: [{ fieldId: FIELD_IDS[2], source: 'computed', values: [9] }],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]).toEqual({ type: 'text', text: 'Invalid fieldValues[0].source' });
+    expect(inventory.sync.mutations).not.toHaveBeenCalled();
+  });
+
   it('patches stable values and preserves null as an explicit clear', async () => {
     await tool('inventory.items.update').handler({
       id: ITEM_ID,

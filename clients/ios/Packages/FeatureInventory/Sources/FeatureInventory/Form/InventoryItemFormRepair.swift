@@ -34,6 +34,9 @@ extension InventoryItemFormModel {
             seedValues(
                 typeId: landingType(new.typeId, in: catalogue, changes: changes),
                 values: new.values.map { ($0.fieldId, $0.values) }, catalogue: catalogue)
+            for override in new.overrides {
+                protocol2Draft?.overrides[override.fieldId] = override.values.first
+            }
         case .editProtocol2Item(_, _, let patches):
             guard let item = seedEditing(context), let typeId = item.typeId else {
                 return .unavailable

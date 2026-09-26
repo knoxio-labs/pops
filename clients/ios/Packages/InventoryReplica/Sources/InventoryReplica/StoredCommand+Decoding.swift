@@ -7,7 +7,9 @@ extension StoredCommand {
     ///   entity kind this build never writes, which only corruption produces.
     func logged() throws -> LoggedCommand {
         if case .undo(let target) = self { return .undo(of: target) }
-        if let command = itemWrite() ?? itemAux() { return .command(command) }
+        if let command = itemWrite() ?? protocol2ItemWrite() ?? itemAux() {
+            return .command(command)
+        }
         return .command(try locationOrEvent())
     }
 
@@ -21,14 +23,6 @@ extension StoredCommand {
                     id: id, name: name, typeKey: typeKey, fields: fields.mapValues(\.domainValue),
                     note: note, externalIds: externalIds.map(\.domainValue), quantity: quantity,
                     placement: to.domainValue, code: code))
-        case .createProtocol2Item(
-            let id, let name, let catalogueRevision, let typeId, let values, let note,
-            let externalIds, let quantity, let placement, let code):
-            .createProtocol2Item(
-                .init(
-                    id: id, name: name, catalogueRevision: catalogueRevision, typeId: typeId,
-                    values: values, note: note, externalIds: externalIds.map(\.domainValue),
-                    quantity: quantity, placement: placement.domainValue, code: code))
         case .editItem(let id, let name, let note, let fields, let externalIds):
             .editItem(
                 id: id, name: name, note: note.domainValue,
@@ -36,11 +30,6 @@ extension StoredCommand {
                 externalIds: externalIds?.map(\.domainValue))
         case .changeItemType(let id, let typeKey, let fields):
             .changeItemType(id: id, typeKey: typeKey, fields: fields.mapValues(\.domainValue))
-        case .editProtocol2Item(let id, let catalogueRevision, let values):
-            .editProtocol2Item(id: id, catalogueRevision: catalogueRevision, values: values)
-        case .changeProtocol2ItemType(let id, let catalogueRevision, let typeId, let values):
-            .changeProtocol2ItemType(
-                id: id, catalogueRevision: catalogueRevision, typeId: typeId, values: values)
         case .setItemCode(let id, let code): .setItemCode(id: id, code: code)
         case .setItemAccess(let id, let access):
             .setItemAccess(id: id, access: InventoryAccess(wire: access))
@@ -50,6 +39,26 @@ extension StoredCommand {
                 id: id, lifecycle: InventoryLifecycle(wire: lifecycle),
                 reason: reason.map(InventoryDiscardReason.init(wire:)))
         case .setItemQuantity(let id, let quantity): .setItemQuantity(id: id, quantity: quantity)
+        default: nil
+        }
+    }
+
+    private func protocol2ItemWrite() -> InventoryCommand? {
+        switch self {
+        case .createProtocol2Item(
+            let id, let name, let catalogueRevision, let typeId, let values, let note,
+            let externalIds, let quantity, let placement, let code, let overrides):
+            .createProtocol2Item(
+                .init(
+                    id: id, name: name, catalogueRevision: catalogueRevision, typeId: typeId,
+                    values: values, overrides: overrides ?? [], note: note,
+                    externalIds: externalIds.map(\.domainValue), quantity: quantity,
+                    placement: placement.domainValue, code: code))
+        case .editProtocol2Item(let id, let catalogueRevision, let values):
+            .editProtocol2Item(id: id, catalogueRevision: catalogueRevision, values: values)
+        case .changeProtocol2ItemType(let id, let catalogueRevision, let typeId, let values):
+            .changeProtocol2ItemType(
+                id: id, catalogueRevision: catalogueRevision, typeId: typeId, values: values)
         default: nil
         }
     }

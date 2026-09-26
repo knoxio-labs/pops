@@ -27,7 +27,9 @@ extension InMemoryInventoryStore {
             id: new.id, revision: 1, seq: state.nextSeq,
             catalogueRevision: new.catalogueRevision, name: new.name, typeId: new.typeId,
             typeKey: nil,
-            fieldValues: protocol2Entries(new.values, revision: new.catalogueRevision),
+            fieldValues: protocol2Entries(new.values, revision: new.catalogueRevision)
+                + protocol2Entries(
+                    new.overrides, revision: new.catalogueRevision, source: .override),
             note: new.note, code: new.code, externalIds: new.externalIds,
             quantity: InventoryQuantity(count: new.quantity), placement: new.placement,
             createdAt: now, updatedAt: now)
@@ -64,11 +66,12 @@ extension InMemoryInventoryStore {
     }
 
     private static func protocol2Entries(
-        _ values: [InventoryProtocol2FieldValue], revision: Int
+        _ values: [InventoryProtocol2FieldValue], revision: Int,
+        source: InventoryValueSource = .stored
     ) -> [InventoryItemFieldEntry] {
         values.map {
             .init(
-                fieldId: $0.fieldId, state: .value($0.values), source: .stored,
+                fieldId: $0.fieldId, state: .value($0.values), source: source,
                 catalogueRevision: revision)
         }
     }
