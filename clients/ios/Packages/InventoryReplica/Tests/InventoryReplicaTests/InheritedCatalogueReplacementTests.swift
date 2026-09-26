@@ -28,7 +28,8 @@ internal struct InheritedCatalogueReplacementTests {
                     id: ancestor, key: "bedding", label: "Bedding", sortOrder: 0),
                 InventoryCatalogueType(
                     id: child, key: "sheet", label: "Sheet", sortOrder: 1,
-                    fields: [field(RebaseFixture.lumens, typeId: child)], parentTypeId: ancestor),
+                    fields: [field(RebaseFixture.lumens, typeId: child, key: "lumens")],
+                    parentTypeId: ancestor),
             ])
     }
 
