@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
   setCode: vi.fn(),
   showUndoToast: vi.fn(),
   useItemVerbs: vi.fn(),
-  usePhotoUploads: vi.fn(),
+  useRepairPhotoUploads: vi.fn(),
   useRevertEvent: vi.fn(),
   useWebItemDetail: vi.fn(),
 }));
@@ -33,8 +33,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../../foundation/feedback/undo-toast.js', () => ({
   showUndoToast: mocks.showUndoToast,
 }));
-vi.mock('../../../foundation/photos/use-photo-uploads.js', () => ({
-  usePhotoUploads: mocks.usePhotoUploads,
+vi.mock('../../../foundation/photos/use-repair-photo-uploads.js', () => ({
+  useRepairPhotoUploads: mocks.useRepairPhotoUploads,
 }));
 vi.mock('../../../inventory-web/item-verbs.js', () => ({ useItemVerbs: mocks.useItemVerbs }));
 vi.mock('../../../inventory-web/mutation-client.js', () => ({
@@ -92,7 +92,7 @@ beforeEach(() => {
   });
   mocks.showUndoToast.mockReturnValue('toast');
   mocks.useItemVerbs.mockReturnValue({ setCode: mocks.setCode });
-  mocks.usePhotoUploads.mockReturnValue({ add: mocks.add, queue: [], refused: [] });
+  mocks.useRepairPhotoUploads.mockReturnValue({ add: mocks.add, queue: [], refused: [] });
   mocks.useRevertEvent.mockReturnValue(mocks.revert);
   mocks.useWebItemDetail.mockReturnValue({ data: undefined, isError: false, isPending: false });
 });
