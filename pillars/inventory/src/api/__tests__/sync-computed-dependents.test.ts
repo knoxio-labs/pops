@@ -11,6 +11,12 @@ import {
   publishReferenceComputedTypes,
   type ReferenceComputedCatalogue,
 } from '../../catalogue/__tests__/computed-reference-fixture.js';
+import { publishItemTypeTree } from '../../catalogue/__tests__/type-tree-fixture.js';
+import {
+  createCatalogueDraft,
+  patchCatalogueDraft,
+  publishCatalogueDraft,
+} from '../../catalogue/authoring.js';
 import { runMutation } from '../../domain/commands/index.js';
 import {
   apply,
@@ -95,6 +101,85 @@ function dependentsOf(target: SyncHarness, itemId: string): string[] {
 }
 
 describe('re-sending computed dependents', () => {
+  it('indexes a dependent whose computed field is inherited from its parent type', () => {
+    h = openSyncHarness(transport);
+    const catalogue = publishItemTypeTree(h.db.db);
+    const beddingId = randomUUID();
+    const sheetId = randomUUID();
+
+    for (const [id, typeId, values] of [
+      [
+        beddingId,
+        catalogue.beddingTypeId,
+        [
+          {
+            fieldId: catalogue.materialFieldId,
+            values: [{ optionId: catalogue.materialCottonOptionId }],
+          },
+          { fieldId: catalogue.brandFieldId, values: ['Acme'] },
+        ] as const,
+      ],
+      [
+        sheetId,
+        catalogue.sheetTypeId,
+        [
+          {
+            fieldId: catalogue.materialFieldId,
+            values: [{ optionId: catalogue.materialCottonOptionId }],
+          },
+          { fieldId: catalogue.partnerFieldId, values: [ref(beddingId)] },
+        ] as const,
+      ],
+    ] as const) {
+      const outcome = runMutation(
+        h.db.db,
+        wireMutation(
+          'item.create',
+          id,
+          { item: { name: id, typeId, values } },
+          { catalogueRevision: catalogue.revision }
+        ),
+        { kind: 'service', id: 'test' }
+      );
+      expect(outcome.status).toBe('applied');
+    }
+
+    const draft = createCatalogueDraft(h.db.db, catalogue.revision, {
+      kind: 'web',
+      id: 'owner',
+      label: 'Owner',
+    });
+    const linen = draft.types.find((type) => type.id === catalogue.linenTypeId);
+    if (linen === undefined) throw new Error('linen type was not created');
+    const patched = patchCatalogueDraft(
+      h.db.db,
+      {
+        revision: draft.revision.revision,
+        baseRevision: catalogue.revision,
+        expectedDraftVersion: draft.revision.draftVersion,
+      },
+      [{ kind: 'put_type', id: linen.id, label: 'Linen updated' }]
+    ).draft;
+    publishCatalogueDraft(
+      h.db.db,
+      patched.revision.revision,
+      {
+        baseRevision: catalogue.revision,
+        expectedDraftVersion: patched.revision.draftVersion,
+        note: null,
+      },
+      { kind: 'web', id: 'owner', label: 'Owner' }
+    );
+
+    expect(
+      h.db.raw
+        .prepare(
+          'SELECT dependency_item_id AS dependency, dependent_item_id AS dependent FROM item_computed_dependencies WHERE dependency_item_id = ? AND dependent_item_id = ?'
+        )
+        .get(beddingId, sheetId)
+    ).toEqual({ dependency: beddingId, dependent: sheetId });
+  });
+
   it('re-sends direct and transitive dependents with a fresh evaluation and unchanged revisions', async () => {
     const f = await setup();
     const since = await highWater(f.target);

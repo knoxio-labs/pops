@@ -29,10 +29,13 @@ export function typesWithChangedComputedDefinitions(
   return published.types
     .filter((type) => {
       const baseFields = new Map(
-        (baseTypes.get(type.id)?.fields ?? []).map((field) => [field.id, field])
+        (baseTypes.get(type.id)?.effectiveFields ?? []).map((field) => [field.id, field])
       );
-      const fieldIds = new Set([...baseFields.keys(), ...type.fields.map((field) => field.id)]);
-      const current = new Map(type.fields.map((field) => [field.id, field]));
+      const fieldIds = new Set([
+        ...baseFields.keys(),
+        ...type.effectiveFields.map((field) => field.id),
+      ]);
+      const current = new Map(type.effectiveFields.map((field) => [field.id, field]));
       return [...fieldIds].some(
         (id) => computedSignature(baseFields.get(id)) !== computedSignature(current.get(id))
       );
