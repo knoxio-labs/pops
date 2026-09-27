@@ -5,6 +5,7 @@ import type { ItemDraft } from './form-draft';
 /** Options accepted by one inventory mutation sender used by the form. */
 export interface SendCommandOptions {
   readonly baseRevision?: number;
+  readonly catalogueRevision?: number;
 }
 
 /** Sends one inventory mutation command and returns the normalized save result. */

@@ -1,8 +1,9 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 
 import { Button, Input } from '@pops/ui';
 
 import { useWebSearch } from '../../inventory-web/useWebSearch.js';
+import { ReferenceSearchStatus } from './reference-search-status';
 
 import type { KeyboardEvent, ReactElement } from 'react';
 
@@ -13,6 +14,7 @@ import type { DraftAction, ItemDraft } from './form-draft';
 export interface ReferenceFieldProps {
   readonly field: FormFieldDef;
   readonly draft: ItemDraft;
+  readonly error?: string;
   readonly dispatch: (action: DraftAction) => void;
   readonly onReferenceQuery: (query: string) => void;
 }
@@ -21,6 +23,7 @@ interface ReferenceCandidate {
   readonly id: string;
   readonly kind: 'item' | 'location';
   readonly label: string;
+  readonly typeId?: string | null;
 }
 
 function candidatesFor(
@@ -34,7 +37,12 @@ function candidatesFor(
         field.referenceTypeIds.length === 0 ||
         (hit.item.typeId !== null && field.referenceTypeIds.includes(hit.item.typeId))
       ) {
-        candidates.push({ id: hit.item.id, kind: 'item', label: hit.item.name });
+        candidates.push({
+          id: hit.item.id,
+          kind: 'item',
+          label: hit.item.name,
+          typeId: hit.item.typeId,
+        });
       }
     }
   }
@@ -95,10 +103,12 @@ function ReferenceMatches({
 function SelectedReferences({
   field,
   refs,
+  error,
   dispatch,
 }: {
   readonly field: FormFieldDef;
   readonly refs: readonly ReferenceChoice[];
+  readonly error?: string;
   readonly dispatch: ReferenceFieldProps['dispatch'];
 }): ReactElement | null {
   if (refs.length === 0) return null;
@@ -110,6 +120,8 @@ function SelectedReferences({
           type="button"
           variant="secondary"
           size="sm"
+          className={error === undefined ? undefined : 'border border-destructive'}
+          aria-invalid={error !== undefined}
           onClick={() =>
             dispatch({
               type: 'field-refs',
@@ -131,10 +143,10 @@ function SelectedReferences({
 export function ReferenceField({
   field,
   draft,
+  error,
   dispatch,
   onReferenceQuery,
 }: ReferenceFieldProps): ReactElement {
-  const queryId = useId();
   const [query, setQuery] = useState('');
   const refs = draft.fields.refs[field.id] ?? [];
   const search = useWebSearch({ q: query, limit: 20 });
@@ -156,13 +168,17 @@ export function ReferenceField({
   return (
     <div className="space-y-2">
       <Input
-        id={queryId}
+        id={`field-${field.id}`}
         value={query}
         placeholder="Search items and places, then press Enter"
         onChange={(event) => setSearch(event.target.value)}
         onKeyDown={addFromQuery}
         aria-label={field.label}
+        aria-invalid={error !== undefined}
+        aria-describedby={error === undefined ? undefined : `field-error-${field.id}`}
+        aria-busy={search.status === 'pending'}
       />
+      <ReferenceSearchStatus search={search} />
       <ReferenceMatches
         field={field}
         candidates={candidates}
@@ -170,7 +186,10 @@ export function ReferenceField({
         dispatch={dispatch}
         clearQuery={() => setSearch('')}
       />
-      <SelectedReferences field={field} refs={refs} dispatch={dispatch} />
+      {query.trim() !== '' && search.status === 'success' && candidates.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No matching references.</p>
+      ) : null}
+      <SelectedReferences field={field} refs={refs} error={error} dispatch={dispatch} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
-import { draftFields } from './form-draft';
+import { draftCreateFieldValues } from './form-draft';
 import { wirePlacement } from './save-item-wire';
 
 import type { QueryClient } from '@tanstack/react-query';
@@ -13,15 +13,15 @@ export type { SendCommand, SendCommandOptions } from './save-types';
 /** Inputs for creating an item through the existing inventory mutation protocol. */
 export interface CreateItemOptions {
   readonly draft: ItemDraft;
-  readonly typeKey: string | null;
   readonly type: FormTypeDef | null;
+  readonly catalogueRevision: number;
   readonly queryClient: QueryClient;
   readonly send: SendCommand;
 }
 
 /** Creates an item through the existing inventory mutation protocol. */
 export async function createItem(options: CreateItemOptions): Promise<SaveResult> {
-  const { draft, queryClient, send, type, typeKey } = options;
+  const { draft, queryClient, send, type } = options;
   const itemId = crypto.randomUUID();
   const code = draft.code.value.trim();
   const command = {
@@ -30,15 +30,15 @@ export async function createItem(options: CreateItemOptions): Promise<SaveResult
       item: {
         name: draft.name.trim(),
         placement: wirePlacement(draft.placement),
-        ...(typeKey === null ? {} : { typeKey }),
-        fields: draftFields(draft, type),
+        ...(type === null ? {} : { typeId: type.id }),
+        values: draftCreateFieldValues(draft, type),
         note: draft.note.trim() || undefined,
         quantity: Number(draft.quantity),
       },
       ...(code === '' ? {} : { code }),
     },
   };
-  const result = await send(command, itemId);
+  const result = await send(command, itemId, { catalogueRevision: options.catalogueRevision });
   if (result.status === 'saved')
     void queryClient.invalidateQueries({ queryKey: WEB_ITEMS_QUERY_KEY });
   return result;

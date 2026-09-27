@@ -1,4 +1,9 @@
 import { formTypesOf } from './field-model';
+import {
+  fieldDraftsFromProtocolFields,
+  fieldDraftsFromStableValues,
+  textValueForField,
+} from './field-opening';
 import { blankDraft } from './form-draft';
 
 import type { Placement, ItemRowModel } from '../../foundation/model/model';
@@ -34,56 +39,28 @@ function placementFromWeb(item: WebItem): Placement {
   return { kind: 'location', locationId: item.placement.locationId };
 }
 
-function fieldValueFor(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return JSON.stringify(value) ?? '';
-}
-
-function rawValues(value: unknown): readonly unknown[] {
-  if (Array.isArray(value)) return value;
-  if (value === undefined || value === null) return [];
-  return [value];
-}
-
-/** Maps a protocol-1 field-key payload into the form's stable field-id drafts. */
-export function fieldDraftsFromProtocolFields(
-  fields: Readonly<Record<string, unknown>>,
-  type: FormTypeDef | null
-): ItemDraft['fields'] {
-  const text: Record<string, readonly string[]> = {};
-  const refs: Record<string, readonly { id: string; kind: 'item' | 'location'; label: string }[]> =
-    {};
-  const booleans: Record<string, boolean> = {};
-  for (const field of type?.fields ?? []) {
-    const raw = fields[field.key];
-    const values = rawValues(raw);
-    if (field.kind === 'boolean') {
-      const value = values[0];
-      if (typeof value === 'boolean') booleans[field.id] = value;
-    } else if (field.kind === 'reference') {
-      refs[field.id] = values.flatMap((value) =>
-        typeof value === 'string'
-          ? [{ id: value, kind: field.referenceKinds[0] ?? 'item', label: value }]
-          : []
-      );
-    } else {
-      text[field.id] = values.map(fieldValueFor);
-    }
-  }
-  return { text, refs, booleans };
-}
+export { fieldDraftsFromProtocolFields, fieldDraftsFromStableValues } from './field-opening';
 
 function fieldValuesFromItem(item: WebItem, type: FormTypeDef | null): ItemDraft['fields'] {
-  return fieldDraftsFromProtocolFields(item.fields, type);
+  const stored = item.fieldValues.filter((value) => value.source === 'stored');
+  return stored.length > 0
+    ? fieldDraftsFromStableValues(stored, type)
+    : fieldDraftsFromProtocolFields(item.fields, type);
 }
 
-function overridesFromItem(item: WebItem): Readonly<Record<string, string>> {
+function overridesFromItem(
+  item: WebItem,
+  type: FormTypeDef | null
+): Readonly<Record<string, string>> {
   const overrides: Record<string, string> = {};
+  const fields = new Map((type?.fields ?? []).map((field) => [field.id, field] as const));
   for (const value of item.fieldValues) {
     if (value.source === 'override') {
       const first = value.values[0];
-      if (first !== undefined) overrides[value.fieldId] = fieldValueFor(first);
+      const field = fields.get(value.fieldId);
+      if (first !== undefined && field !== undefined) {
+        overrides[value.fieldId] = textValueForField(field, first);
+      }
     }
   }
   return overrides;
@@ -106,7 +83,7 @@ function draftFromItem(item: WebItem, types: readonly FormTypeDef[]): ItemDraft 
       freeCode: item.code,
       takenBy: null,
     },
-    overrides: overridesFromItem(item),
+    overrides: overridesFromItem(item, type),
     submitted: false,
   };
 }
