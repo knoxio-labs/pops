@@ -133,6 +133,31 @@ internal struct InventorySearchFilterTests {
         #expect(!filter.matches(Fixture.record("a", type: nil)))
     }
 
+    @Test("a bedding filter matches a phone-created sheet with no type key")
+    func typeFilterUsesProtocol2Lineage() {
+        let catalogue = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
+            types: [
+                InventoryCatalogueType(
+                    id: "bedding", key: "bedding", label: "Bedding", sortOrder: 0),
+                InventoryCatalogueType(
+                    id: "sheet", key: "sheet", label: "Sheet", sortOrder: 1,
+                    parentTypeId: "bedding"),
+            ])
+        let item = InventoryItem(
+            id: "sheet-item", revision: 1, seq: 1, catalogueRevision: 1, name: "Sheet",
+            typeId: "sheet", typeKey: nil, placement: .hand,
+            createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
+        let source = FormFixtureSource(items: [item], protocol2Catalogue: catalogue)
+        let record = InventoryRecordReader(source: source).record(item)
+        var filter = InventorySearchFilter()
+        filter.type = InventoryTypeName(key: "bedding", name: "Bedding")
+
+        #expect(record.typeKey == nil)
+        #expect(record.typeKeys == ["bedding", "sheet"])
+        #expect(filter.matches(record))
+    }
+
     @Test("the summary names every narrowing in order, and is empty with none")
     func summary() {
         #expect(InventorySearchFilter().summary.isEmpty)

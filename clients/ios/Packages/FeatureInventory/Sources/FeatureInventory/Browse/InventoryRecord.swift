@@ -15,6 +15,7 @@ internal struct InventoryRecord: Identifiable, Equatable, Sendable {
     internal let id: InventoryItem.ID
     internal let name: String
     internal let typeKey: String?
+    internal let typeKeys: Set<String>
     /// The catalogue's name for `typeKey`, or the key itself when this
     /// phone's catalogue does not know it yet.
     internal let typeName: String?
@@ -60,11 +61,13 @@ internal struct InventoryRecord: Identifiable, Equatable, Sendable {
 internal struct InventoryRecordReader {
     private let places: InventoryPlaceNames
     private let catalogue: InventoryCatalogue
+    private let protocol2Catalogue: InventoryCatalogueSnapshot?
     private let rowSync: InventoryRowSync
 
     internal init(source: any InventoryQuerySource) {
         places = InventoryPlaceNames(source: source)
         catalogue = source.inventoryCatalogue()
+        protocol2Catalogue = source.inventoryProtocol2Catalogue()
         rowSync = InventoryRowSync(
             status: source.inventoryReplicaStatus(), ledger: source.inventorySyncLedger())
     }
@@ -72,11 +75,27 @@ internal struct InventoryRecordReader {
     internal func record(_ item: InventoryItem) -> InventoryRecord {
         InventoryRecord(
             id: item.id, name: item.name, typeKey: item.typeKey,
+            typeKeys: Self.typeKeys(for: item, in: protocol2Catalogue),
             typeName: item.typeKey.map { catalogue.type(forKey: $0)?.name ?? $0 },
             code: item.code, quantity: item.quantity, lifecycle: item.lifecycle,
             access: item.containment?.access, placement: placement(item.placement),
             path: places.path(of: item.placement), sync: rowSync.sync(of: item.id),
             photo: item.photos.first?.sha256, createdAt: item.createdAt)
+    }
+
+    private static func typeKeys(
+        for item: InventoryItem, in catalogue: InventoryCatalogueSnapshot?
+    ) -> Set<String> {
+        guard let catalogue else { return item.typeKey.map { [$0] } ?? [] }
+        let found =
+            item.typeId.flatMap { typeId in
+                catalogue.types.first { $0.id == typeId }
+            }
+            ?? item.typeKey.flatMap { typeKey in
+                catalogue.types.first { $0.key == typeKey }
+            }
+        guard let found else { return item.typeKey.map { [$0] } ?? [] }
+        return Set(catalogue.ancestry(ofType: found.id).map(\.key))
     }
 
     /// The catalogue's type names, alphabetically, for the filter sheet.

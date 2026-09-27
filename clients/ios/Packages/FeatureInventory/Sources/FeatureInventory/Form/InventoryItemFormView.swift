@@ -238,6 +238,7 @@ extension InventoryItemFormView {
             InventoryProtocol2FieldRow(
                 field: field, entries: draft.draftEntries(for: field),
                 computedDisplay: model.computedDisplay(for: field),
+                catalogue: model.protocol2Catalogue,
                 referenceTargets: model.protocol2ReferenceTargets,
                 missingInputs: model.protocol2ComputedMissingInputs[field.id] ?? [],
                 setText: { value, id in
