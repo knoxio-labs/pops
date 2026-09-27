@@ -406,9 +406,10 @@ jobs:
       # drifts, and the moment it does a green local run stops meaning anything.
 
       # WHERE EACH LANE SPENDS ITS MINUTES. The shared compile is ~2 minutes and
-      # the simulator suite ~3; `swiftlint analyze` over the whole tree is ~19.5
-      # (run 35408330810, 693 files, 2026-09-19). A pull request therefore runs
-      # the suite and not the analyzer (POPS-4149): every macOS job shares
+      # the simulator suite ~3; `swiftlint analyze` over the whole tree was ~19.5
+      # (run 35408330810, 693 files, 2026-09-19), while the current tree has
+      # 1,558 analyzer inputs and scales to roughly 44 minutes. A pull request
+      # therefore runs the suite and not the analyzer (POPS-4149): every macOS job shares
       # GitHub's five-runner pool, and runs were waiting 20-40 minutes for a
       # runner. An unused declaration or unused import is reported as a queue
       # ejection instead of a red PR; `mise run lint:analyze` locally still
@@ -430,7 +431,7 @@ jobs:
         if: >-
           success() &&
           (github.event_name == 'merge_group' || inputs['full-validation'] == true)
-        timeout-minutes: 40
+        timeout-minutes: 60
         run: mise run --skip-deps lint:analyze
 
       - name: Simulator test log and result bundle
