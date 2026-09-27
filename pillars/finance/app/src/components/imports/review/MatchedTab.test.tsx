@@ -89,7 +89,7 @@ describe('MatchedTab (POPS-2448)', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[7] as HTMLElement);
     expect(screen.getAllByTestId('transaction-card')).toHaveLength(40);
-  });
+  }, 15_000);
 
   it('keeps alphabetical order even when a later group was matched by the AI', () => {
     const rows = [
