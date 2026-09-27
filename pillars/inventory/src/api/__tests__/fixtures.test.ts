@@ -106,6 +106,19 @@ describe('fixtures REST', () => {
     ]);
     expect(withinHouse.body.total).toBe(3);
 
+    const exactRoom = await request.get('/fixtures').query({ locationId: room.data.id });
+    expect(exactRoom.status).toBe(200);
+    expect(exactRoom.body.data.map((fixture: { id: string }) => fixture.id)).toEqual([
+      roomFan.id,
+      roomLamp.id,
+    ]);
+    expect(exactRoom.body.total).toBe(2);
+
+    const exactHouse = await request.get('/fixtures').query({ locationId: house.data.id });
+    expect(exactHouse.status).toBe(200);
+    expect(exactHouse.body.data).toEqual([]);
+    expect(exactHouse.body.total).toBe(0);
+
     const combined = await request
       .get('/fixtures')
       .query({ search: 'lamp', withinLocationId: room.data.id, type: 'power' });
