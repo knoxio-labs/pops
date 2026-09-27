@@ -54,6 +54,7 @@ function useWorkspacePlacementActions(
   });
   const move = useContainerMoveAction({
     plan: placement.movePlan,
+    state: resources.state,
     readOnly: props.readOnly,
     bulk: resources.bulk,
     tracked: resources.tracked,
