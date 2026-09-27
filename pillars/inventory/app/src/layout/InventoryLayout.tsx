@@ -4,6 +4,7 @@ import { Outlet, useNavigate } from 'react-router';
 import { ShortcutProvider } from '../foundation/shortcuts/shortcut-provider';
 import { ShortcutSheet } from '../foundation/shortcuts/shortcut-sheet';
 import { globalShortcutHandlers } from './global-shortcuts';
+import { InventoryPalette } from './palette/InventoryPalette';
 
 import type { ReactElement } from 'react';
 
@@ -11,8 +12,14 @@ import type { ReactElement } from 'react';
 export function InventoryLayout(): ReactElement {
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const handlers = useMemo(
-    () => globalShortcutHandlers({ navigate, openShortcutSheet: () => setSheetOpen(true) }),
+    () =>
+      globalShortcutHandlers({
+        navigate,
+        openPalette: () => setPaletteOpen(true),
+        openShortcutSheet: () => setSheetOpen(true),
+      }),
     [navigate]
   );
 
@@ -20,6 +27,7 @@ export function InventoryLayout(): ReactElement {
     <ShortcutProvider globalHandlers={handlers}>
       <Outlet />
       <ShortcutSheet open={sheetOpen} onOpenChange={setSheetOpen} />
+      {paletteOpen ? <InventoryPalette onOpenChange={setPaletteOpen} /> : null}
     </ShortcutProvider>
   );
 }

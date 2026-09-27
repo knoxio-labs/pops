@@ -181,7 +181,14 @@ internal final class AppComposition {
         if let bound, bound.device == device { return bound.dependencies }
 
         var storageFull = false
-        let inventoryTransport = BFMInventoryTransport(client: authenticated(device))
+        let errorPresenter = errorPresenter
+        let inventoryTransport = BFMInventoryTransport(
+            client: authenticated(device),
+            syncReadFailureObserver: { error, operation in
+                await errorPresenter.present(
+                    error, operation: operation, context: .background)
+            }
+        )
         let dependencies = AppDependencies(
             transactions: BFMTransactionsRepository(client: authenticated(device)),
             pairing: BFMDevicePairingService(credentialStore: credentialStore),

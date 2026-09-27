@@ -1,4 +1,30 @@
 {
+  "components": {
+    "schemas": {
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "details": {},
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "requestId", "retryable"],
+        "type": "object"
+      }
+    }
+  },
   "info": {
     "description": "OpenAPI projection of the barcode pillar's REST contract. Authored as a ts-rest contract and consumed by the pillar SDK for operationId route discovery.",
     "title": "@pops/barcode",
@@ -142,6 +168,10 @@
                         "outcome": {
                           "enum": ["not_found"],
                           "type": "string"
+                        },
+                        "reason": {
+                          "enum": ["unsupported"],
+                          "type": "string"
                         }
                       },
                       "required": ["outcome"],
@@ -150,6 +180,13 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "error": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/ErrorBody"
+                            }
+                          ]
+                        },
                         "outcome": {
                           "enum": ["unavailable"],
                           "type": "string"

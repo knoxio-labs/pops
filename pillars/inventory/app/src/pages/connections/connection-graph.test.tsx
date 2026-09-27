@@ -2,6 +2,10 @@ import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
+import { buildWorld } from '../../foundation/model/placement-model.js';
+import { connectionRows } from './connection-model.js';
+
+import type { ItemRowModel } from '../../foundation/model/model.js';
 import type { WebConnectionRow } from '../../inventory-web/useConnectionsRegistry.js';
 
 const mocks = vi.hoisted(() => ({
@@ -51,26 +55,50 @@ const rows: WebConnectionRow[] = [
   },
 ];
 
+function modelItem(id: string): ItemRowModel {
+  return {
+    id,
+    name: id,
+    typeId: null,
+    typeName: null,
+    code: null,
+    quantity: 1,
+    container: null,
+    lifecycle: 'active',
+    placement: { kind: 'in-hand' },
+    previous: null,
+    sync: 'synced',
+    photoUrl: null,
+    note: null,
+    updatedAt: '2026-09-01T00:00:00.000Z',
+  };
+}
+
 describe('ConnectionGraph', () => {
   it('passes all registry rows to the existing simulation', () => {
     render(
       <MemoryRouter>
-        <ConnectionGraph rows={rows} focusItemId="item-a" />
+        <ConnectionGraph
+          rows={connectionRows(rows, buildWorld([modelItem('item-a'), modelItem('item-b')], []))}
+          focusItemId="item-a"
+        />
       </MemoryRouter>
     );
 
     const simulationArgs = mocks.useGraphSimulation.mock.calls.at(-1)?.[0];
     expect(simulationArgs).toMatchObject({
-      itemId: 'item-a',
+      itemId: 'item:item-a',
       rawData: {
         edges: [
-          { source: 'item-a', target: 'item-b' },
-          { source: 'item-a', target: 'fixture:fixture-1' },
+          { source: 'item:item-a', target: 'item:item-b' },
+          { source: 'item:item-a', target: 'fixture:fixture-1' },
         ],
       },
     });
     expect(simulationArgs).toMatchObject({
-      rawData: { nodes: [{ id: 'item-a' }, { id: 'item-b' }, { id: 'fixture:fixture-1' }] },
+      rawData: {
+        nodes: [{ id: 'item:item-a' }, { id: 'item:item-b' }, { id: 'fixture:fixture-1' }],
+      },
     });
   });
 });
