@@ -47,11 +47,15 @@ function isModalTarget(target: EventTarget | null): boolean {
   );
 }
 
+function photoWorkCount(photos: ReturnType<typeof usePhotoUploads>): number {
+  return photos.stagedCount + photos.queue.filter((photo) => photo.status.kind === 'failed').length;
+}
+
 function useNavigation(
   opening: ItemFormOpening,
   draft: ItemDraft,
   initial: ItemDraft,
-  stagedPhotos: number
+  photoWork: number
 ): {
   cancelAsked: boolean;
   setCancelAsked: (open: boolean) => void;
@@ -71,9 +75,9 @@ function useNavigation(
     }
   }, [location.key, navigate, opening.editing]);
   const requestCancel = useCallback((): void => {
-    if (hasStagedWork(draft, initial, stagedPhotos)) setCancelAsked(true);
+    if (hasStagedWork(draft, initial, photoWork)) setCancelAsked(true);
     else leave();
-  }, [draft, initial, leave, stagedPhotos]);
+  }, [draft, initial, leave, photoWork]);
   const discard = useCallback((): void => {
     setCancelAsked(false);
     leave();
@@ -141,7 +145,7 @@ export function useItemForm(opening: ItemFormOpening, sources: FormSources): Ite
     dispatch,
     photos,
   });
-  const navigation = useNavigation(opening, draft, initial, photos.stagedCount);
+  const navigation = useNavigation(opening, draft, initial, photoWorkCount(photos));
   useFormShortcuts(actions.save, actions.saveAndNew, navigation.requestCancel);
   return {
     draft,
