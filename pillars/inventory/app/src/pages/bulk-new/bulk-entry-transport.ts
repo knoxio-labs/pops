@@ -5,7 +5,7 @@ import type { FilterOption } from '../../foundation/list-page/list-filters.js';
 import type { BulkDraft } from '../../foundation/list-page/paste-parser.js';
 import type { PlacementTarget } from '../../foundation/model/model.js';
 import type { BatchDestination, BatchRow } from '../../inventory-web/useBatchCreate.js';
-import type { BulkRowState } from './use-bulk-entry.js';
+import type { BulkRowState } from './bulk-entry-types.js';
 
 /** Maps a placement model target to the batch endpoint's destination shape. */
 export function toBatchDestination(target: PlacementTarget): BatchDestination {

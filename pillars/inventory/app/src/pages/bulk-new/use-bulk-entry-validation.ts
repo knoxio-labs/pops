@@ -10,9 +10,8 @@ import {
 import { asInventoryApiError, rowsToSend, toBatchDestination } from './bulk-entry-transport.js';
 
 import type { BatchCreate } from '../../inventory-web/useBatchCreate.js';
+import type { BulkPhase, BulkRowState } from './bulk-entry-types.js';
 import type { BulkEntryState } from './use-bulk-entry-state.js';
-import type { BulkPhase } from './use-bulk-entry.js';
-import type { BulkRowState } from './use-bulk-entry.js';
 
 const VALIDATION_DELAY_MS = 200;
 

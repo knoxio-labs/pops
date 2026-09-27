@@ -8,7 +8,7 @@ import type { FilterOption } from '../../foundation/list-page/list-filters.js';
 import type { PlacementTarget } from '../../foundation/model/model.js';
 import type { InventoryApiError } from '../../inventory-api-helpers.js';
 import type { BatchProgress } from '../../inventory-web/batch-commit.js';
-import type { BulkCounts, BulkPhase, BulkRowState } from './use-bulk-entry.js';
+import type { BulkCounts, BulkPhase, BulkRowState } from './bulk-entry-types.js';
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 

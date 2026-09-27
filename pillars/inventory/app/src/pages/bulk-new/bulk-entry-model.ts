@@ -2,7 +2,7 @@ import { BLANK_DRAFT, type BulkDraft } from '../../foundation/list-page/paste-pa
 
 import type { InventoryApiError } from '../../inventory-api-helpers.js';
 import type { BatchRowOutcome } from '../../inventory-web/useBatchCreate.js';
-import type { BulkCounts, BulkIssue, BulkRowState, BulkRowStatus } from './use-bulk-entry.js';
+import type { BulkCounts, BulkIssue, BulkRowState, BulkRowStatus } from './bulk-entry-types.js';
 
 const SPARE_ROWS = 3;
 
