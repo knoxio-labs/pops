@@ -61,6 +61,7 @@ describe('item form field rules', () => {
     expect(atomError(field('url', 'url'), 'http://example.test')).toContain('https://');
     expect(atomError(field('enum', 'enum'), 'missing')).toContain('no option');
     expect(atomError(field('boolean', 'boolean'), 'false')).toBeNull();
+    expect(atomError(field('boolean', 'boolean'), 'yes')).toContain("'true' or 'false'");
   });
 
   it('reports cardinality and invalid reference selections', () => {

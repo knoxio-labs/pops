@@ -99,7 +99,8 @@ const valueErrors: Readonly<Record<FormFieldKind, ValueError>> = {
   long_text: (field, value) => lengthError(field.label, value, LONG_TEXT_LIMIT),
   integer: (field, value) => integerError(field.label, value),
   decimal: (field, value) => decimalError(field.label, value),
-  boolean: () => null,
+  boolean: (field, value) =>
+    value === 'true' || value === 'false' ? null : `${field.label} needs 'true' or 'false'.`,
   enum: (field, value) => enumError(field, value),
   measurement: measurementError,
   date: (field, value) => (isCalendarDate(value) ? null : `${field.label} needs a real date.`),
