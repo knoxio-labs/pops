@@ -63,7 +63,7 @@ function assertContainmentQuantityCompatible(
   for (const row of rows) {
     if (row.typeId === null || row.quantity <= 1) continue;
     const type = candidate.types.find((entry) => entry.id === row.typeId);
-    if (!type?.capabilities.includes('containment')) continue;
+    if (!type?.effectiveCapabilities.includes('containment')) continue;
     offendersByType.set(type.id, (offendersByType.get(type.id) ?? 0) + 1);
   }
   for (const [typeId, count] of offendersByType) {
@@ -93,7 +93,7 @@ function dryRunMigration(
   return rows.map((row) => {
     const type = candidate.types.find((entry) => entry.id === row.typeId);
     if (!type) throw new Error(`migration ${migration.name} has no candidate type ${row.typeId}`);
-    const supportsContainment = type.capabilities.includes('containment');
+    const supportsContainment = type.effectiveCapabilities.includes('containment');
     assertContainmentCanChange(db, row, supportsContainment);
     const before = loadMigrationItemValues(db, row.id);
     const after = before.map((entry) => ({ ...entry, values: [...entry.values] }));
