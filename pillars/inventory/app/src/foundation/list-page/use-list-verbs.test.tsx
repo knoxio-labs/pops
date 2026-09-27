@@ -10,9 +10,75 @@ import { SelectionDock } from './selection-dock.js';
 import { useListVerbs, useTrackedWrites } from './use-list-verbs.js';
 
 import type { BulkResult } from '../../inventory-web/item-verbs-bulk.js';
+import type {
+  CatalogueDescriptor,
+  CatalogueType,
+} from '../../inventory-web/useCatalogueLookups.js';
 import type { ItemRowModel, PlacementTarget } from '../model/index.js';
 import type { SelectionApi } from '../selection/use-selection.js';
 import type { ListVerbsInput, TrackedWrites } from './use-list-verbs.js';
+
+type CatalogueField = CatalogueType['fields'][number];
+
+function field(typeId: string, id: string, label: string): CatalogueField {
+  return {
+    allowOverride: false,
+    archivedAt: null,
+    cardinality: 'one',
+    defaultValues: [],
+    enumOptions: [],
+    expression: null,
+    expressionVersion: null,
+    fixedUnit: null,
+    help: null,
+    id,
+    key: id,
+    kind: 'short_text',
+    label,
+    presentation: {},
+    referenceKinds: [],
+    referenceTypeIds: [],
+    replacedBy: null,
+    required: false,
+    sortOrder: 0,
+    storage: 'stored',
+    typeId,
+  };
+}
+
+function type(id: string, label: string, fields: readonly CatalogueField[] = []): CatalogueType {
+  return {
+    archivedAt: null,
+    capabilities: [],
+    description: null,
+    fields: [...fields],
+    id,
+    key: id,
+    label,
+    legacyLabels: [],
+    presentation: {},
+    replacedBy: null,
+    revision: 1,
+    sortOrder: 0,
+  };
+}
+
+function catalogue(types: readonly CatalogueType[]): CatalogueDescriptor {
+  const actor = { id: 'test', kind: 'web' as const, label: 'Test' };
+  return {
+    revision: {
+      abandoned: null,
+      baseRevision: null,
+      created: { actor, at: '2026-09-01T00:00:00.000Z' },
+      draftVersion: 1,
+      minimumProtocol: 2,
+      published: { actor, at: '2026-09-01T00:00:00.000Z', note: null },
+      revision: 1,
+      status: 'published',
+    },
+    types: [...types],
+  };
+}
 
 const mocks = vi.hoisted(() => ({
   useItemVerbs: vi.fn(),
@@ -255,6 +321,54 @@ describe('useListVerbs', () => {
     expect(mocks.showUndoToast).toHaveBeenCalledWith(
       expect.objectContaining({ concept: 'retired', message: 'Retired 1 item' })
     );
+  });
+
+  it('tracks only compatible rows when a bulk field write fails', async () => {
+    const fieldDefinition = field('type-old', 'colour', 'Colour');
+    const rows = [
+      { ...coreItem('itm-lamp'), typeId: 'type-old', typeName: 'Old type' },
+      { ...coreItem('itm-printer'), typeId: 'type-other', typeName: 'Other type' },
+    ];
+    const state = tracked();
+    mocks.bulk.editValues.mockRejectedValueOnce(new Error('offline'));
+
+    render(
+      <BulkActionHarness
+        value={input({
+          rows,
+          selection: selection(rows.map((row) => row.id)),
+          tracked: state,
+          catalogue: catalogue([
+            type('type-old', 'Old type', [fieldDefinition]),
+            type('type-other', 'Other type'),
+          ]),
+        })}
+      />,
+      { wrapper }
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-field' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Colour' }), {
+      target: { value: 'blue' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Set on 1 item' }));
+
+    await waitFor(() =>
+      expect(state.setRejection).toHaveBeenCalledWith(
+        'itm-lamp',
+        'The inventory service did not answer.'
+      )
+    );
+    expect(state.setRejection).not.toHaveBeenCalledWith(
+      'itm-printer',
+      'The inventory service did not answer.'
+    );
+    expect(mocks.bulk.editValues).toHaveBeenCalledWith([
+      {
+        id: 'itm-lamp',
+        patches: [{ fieldId: 'colour', values: ['blue'] }],
+      },
+    ]);
   });
 
   it('runs bulk pick up and offers one undo toast for applied ids', async () => {

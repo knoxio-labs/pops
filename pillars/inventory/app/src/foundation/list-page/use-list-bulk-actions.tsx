@@ -77,7 +77,8 @@ interface BulkHandlerContext {
   readonly runBulk: (
     run: () => Promise<BulkResult>,
     concept: InventoryConcept,
-    message: (count: number) => string
+    message: (count: number) => string,
+    ids?: readonly string[]
   ) => Promise<void>;
 }
 
@@ -114,7 +115,8 @@ function createSetFieldHandler(
     await context.runBulk(
       () => context.bulk.editValues(writes),
       'type',
-      (count) => `Set ${candidate.field.label} on ${bulkItemCount(count)}`
+      (count) => `Set ${candidate.field.label} on ${bulkItemCount(count)}`,
+      writes.map(({ id }) => id)
     );
   };
 }
@@ -153,11 +155,12 @@ export function useListBulkActions(input: ListBulkActionsInput): ListBulkActions
     (
       run: () => Promise<BulkResult>,
       concept: InventoryConcept,
-      message: (count: number) => string
+      message: (count: number) => string,
+      ids?: readonly string[]
     ): Promise<void> => {
       if (bulkAction === null) return Promise.resolve();
       return runSelectionBulk({
-        ids: bulkAction.ids,
+        ids: ids ?? bulkAction.ids,
         tracked: input.tracked,
         run,
         concept,
