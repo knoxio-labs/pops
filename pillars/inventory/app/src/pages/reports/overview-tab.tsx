@@ -11,6 +11,7 @@ import type { ReactElement } from 'react';
 
 import type { WebReportsValuesResponse } from '../../inventory-api/types.gen.js';
 import type { ReportEntry } from '../../inventory-web/useReportEntries.js';
+import type { InsuranceGapReason } from './insurance-model.js';
 import type { ReportTab } from './reports-model.js';
 
 /** Props for the server-backed Reports Overview tab. */
@@ -20,7 +21,7 @@ export interface OverviewTabProps {
   readonly status: 'ready' | 'loading' | 'error';
   readonly now: Date;
   readonly onOpenTab: (tab: ReportTab) => void;
-  readonly onOpenInsuranceGaps: () => void;
+  readonly onOpenInsuranceGaps: (reason: InsuranceGapReason) => void;
   readonly onRetry: () => void;
 }
 

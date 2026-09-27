@@ -22,6 +22,8 @@ import { ValuesTab } from './values-tab.js';
 
 import type { ReactElement, ReactNode } from 'react';
 
+import type { InsuranceGapReason } from './insurance-model.js';
+
 function pageBanner(online: boolean, changed: ReturnType<typeof useChangedElsewhere>): ReactNode {
   if (!online) {
     return (
@@ -52,7 +54,7 @@ interface ValuesReportRouteProps {
   readonly onOpenItem: (id: string) => void;
 }
 
-function withInsuranceGaps(current: URLSearchParams): URLSearchParams {
+function withInsuranceGaps(current: URLSearchParams, reason: InsuranceGapReason): URLSearchParams {
   const next = new URLSearchParams(current);
   next.set('tab', 'insurance');
   next.delete('by');
@@ -61,6 +63,7 @@ function withInsuranceGaps(current: URLSearchParams): URLSearchParams {
   next.delete('locationId');
   next.delete('sort');
   next.set('gaps', '1');
+  next.set('reason', reason);
   return next;
 }
 
@@ -87,7 +90,8 @@ function useReportNavigation(
     [updateUrl, url.tab]
   );
   const onOpenInsuranceGaps = useCallback(
-    () => setSearchParams(withInsuranceGaps, { replace: true }),
+    (reason: InsuranceGapReason) =>
+      setSearchParams((current) => withInsuranceGaps(current, reason), { replace: true }),
     [setSearchParams]
   );
   return { onOpenInsuranceGaps, onTabChange, updateUrl };

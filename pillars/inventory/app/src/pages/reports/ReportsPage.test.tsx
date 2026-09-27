@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -223,7 +223,18 @@ describe('ReportsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /No replacement value/ }));
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('tab=insurance&gaps=1')
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        'tab=insurance&gaps=1&reason=unvalued'
+      )
+    );
+
+    cleanup();
+    renderReports();
+    fireEvent.click(screen.getByRole('button', { name: /No photo/ }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        'tab=insurance&gaps=1&reason=without-photo'
+      )
     );
   });
 

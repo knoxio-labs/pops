@@ -11,6 +11,7 @@ import type { ReactElement } from 'react';
 
 import type { WebReportsValuesResponse } from '../../inventory-api/types.gen.js';
 import type { ReportEntry } from '../../inventory-web/useReportEntries.js';
+import type { InsuranceGapReason } from './insurance-model.js';
 import type { ReportTab } from './reports-model.js';
 
 function OpenLink({ label, onClick }: { readonly label: string; readonly onClick: () => void }) {
@@ -128,7 +129,7 @@ export function OverviewPanels({
   readonly entries: readonly ReportEntry[];
   readonly now: Date;
   readonly onOpenTab: (tab: ReportTab) => void;
-  readonly onOpenInsuranceGaps: () => void;
+  readonly onOpenInsuranceGaps: (reason: InsuranceGapReason) => void;
 }): ReactElement {
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">

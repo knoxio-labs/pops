@@ -10,10 +10,12 @@ import { warrantyRows } from './warranty-model.js';
 
 import type { ReactElement, ReactNode } from 'react';
 
+import type { InsuranceGapReason } from './insurance-model.js';
+
 interface OverviewReportRouteProps {
   readonly banner: ReactNode;
   readonly onTabChange: (tab: ReportTab) => void;
-  readonly onOpenInsuranceGaps: () => void;
+  readonly onOpenInsuranceGaps: (reason: InsuranceGapReason) => void;
 }
 
 function overviewStatus(
