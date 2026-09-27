@@ -43,7 +43,9 @@ public actor DeviceSessionRefresher {
 
     private var rotation: Task<DeviceTokens, any Error>?
     private var revocation: Task<Void, Never>?
-    private var revocationJoinObserver: @Sendable () -> Void = {}
+    #if DEBUG
+        private var revocationJoinObserver: @Sendable () -> Void = {}
+    #endif
 
     /// Bumped every time credentials are destroyed. A rotation that started
     /// before the bump must not write what it obtained — see ``rotateTokens(at:)``.
@@ -170,7 +172,9 @@ public actor DeviceSessionRefresher {
     /// for twenty of them to each wipe a keychain.
     public func deviceWasRevoked() async {
         if let revocation {
-            revocationJoinObserver()
+            #if DEBUG
+                revocationJoinObserver()
+            #endif
             return await revocation.value
         }
         let task = Task { await self.destroyCredentials() }
@@ -179,9 +183,11 @@ public actor DeviceSessionRefresher {
         await task.value
     }
 
-    internal func observeRevocationJoins(_ observer: @escaping @Sendable () -> Void) {
-        revocationJoinObserver = observer
-    }
+    #if DEBUG
+        internal func observeRevocationJoins(_ observer: @escaping @Sendable () -> Void) {
+            revocationJoinObserver = observer
+        }
+    #endif
 }
 
 extension DeviceSessionRefresher {
