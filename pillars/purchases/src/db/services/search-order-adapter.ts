@@ -60,7 +60,7 @@ export function orderRows(db: PurchasesDb, text: string, scope: PurchaseSearchSc
           containsInsensitive(purchases.sourceOrderId, text),
           containsInsensitive(purchases.source, text)
         ),
-        ...purchaseFilterConditions(scope),
+        ...purchaseFilterConditions(db, scope),
         ...tagCondition
       )
     )

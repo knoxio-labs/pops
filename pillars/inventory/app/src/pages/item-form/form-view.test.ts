@@ -53,9 +53,41 @@ describe('item form view', () => {
     expect(view.blockers).toEqual([]);
   });
 
+  it('reports invalid typed values as field errors and save blockers', () => {
+    const baseField = cable.fields.at(0);
+    if (baseField === undefined) throw new Error('expected cable field fixture');
+    const numeric = {
+      ...cable,
+      id: 'numeric',
+      fields: [
+        { ...baseField, id: 'count', key: 'count', label: 'Count', kind: 'integer' as const },
+      ],
+    };
+    const view = deriveForm(
+      {
+        ...blankDraft(),
+        name: 'Item',
+        typeId: 'numeric',
+        fields: { text: { count: ['not a number'] }, refs: {}, booleans: {} },
+      },
+      [numeric]
+    );
+    expect(view.fieldErrors.count).toBe('Count needs a whole number.');
+    expect(view.blockers).toContain('Count needs a whole number.');
+  });
+
   it('detects staged edits and treats an unchanged draft as clean', () => {
     const initial = blankDraft();
     expect(hasStagedWork(initial, initial)).toBe(false);
     expect(hasStagedWork({ ...initial, name: 'Cable' }, initial)).toBe(true);
+    expect(
+      hasStagedWork(
+        {
+          ...initial,
+          fields: { text: { colour: [''] }, refs: {}, booleans: {} },
+        },
+        initial
+      )
+    ).toBe(false);
   });
 });

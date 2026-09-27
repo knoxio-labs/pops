@@ -1,16 +1,22 @@
-# Item detail page
+# Item detail actions
 
-`/inventory/items/:id` is assembled from the web item read and the existing
-item, location, photo, connection, document, and Paperless endpoints. The web
-read supplies lifecycle, dynamic fields, computed values, provenance, and
-history; compatible legacy reads fill fields that are not yet projected there.
+The item detail page keeps placement and lifecycle changes on the current route. Header verbs are
+derived from the item state: `Pick up`, `Put back`, `Move`, `Store here`, container access, `Edit`,
+and the grouped More menu. Successful reversible mutations use the shared inventory Undo toast;
+refusals stay below the header as `Not saved` feedback.
 
-The page keeps the facts rail beside three tabs: Overview, Connections, and
-History. The rail is resizable between 240px and 480px, moves in 16px keyboard
-steps, and resets with Enter or double-click. At smaller widths it becomes the
-Facts tab.
+Stored catalogue facts use the field's stable catalogue key for lookup and edit in place. The
+editor validates the published field definition before sending a protocol-2 value patch. An edit
+is `saving` when it starts immediately, `pending` when another mutation for the item is already in
+flight, and `rejected` when the server refuses it. Computed facts are display-only.
 
-Destroyed items remain visible for audit history but are read-only. Edit,
-delete, connection, photo-reorder, document-link, and document-unlink actions
-are disabled with a short explanation. Paperless outages keep linked
-documents visible and disable Paperless actions with an inline reason.
+The detail route uses one page-shaped skeleton while the item is loading. Once the item exists,
+incomplete independent reads keep the page usable behind a partial banner; unavailable reads use
+the offline banner and retry action, and other read failures use an error banner with the same
+retry action. A lead-read error stays a retryable error state, while a missing item explains that
+its code may belong to something else now.
+
+The detail shortcut scope combines tab navigation with `e` (edit), `p` (placement), `m` (move),
+`o` (open or close), `c` (copy code), `h` (history), `[` (previous), and `]` (next). Item and
+container lists carry the loaded row ids in router state, so the back row and neighbouring detail
+navigation remain tied to the list view that opened the item.

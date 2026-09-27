@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// A universal-search row produced from Inventory's on-device replica.
 public struct InventorySearchResult: Identifiable, Equatable, Sendable {

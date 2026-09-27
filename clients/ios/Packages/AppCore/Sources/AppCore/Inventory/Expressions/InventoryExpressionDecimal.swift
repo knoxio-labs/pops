@@ -1,5 +1,3 @@
-import Foundation
-
 /// Why an expression could not produce a value even though every input was
 /// available. The replica reports each as `evaluation_error`, as the server does.
 public enum InventoryExpressionErrorCode: String, Error, Hashable, Sendable {

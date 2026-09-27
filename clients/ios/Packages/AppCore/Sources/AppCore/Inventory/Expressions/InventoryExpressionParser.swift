@@ -1,5 +1,3 @@
-import Foundation
-
 /// `expression-parser.ts`, node for node: the same checks in the same order,
 /// so a malformed tree fails with the same code at the same path.
 internal struct InventoryExpressionParser {

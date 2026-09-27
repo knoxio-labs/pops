@@ -78,7 +78,7 @@ export function itemRows(
           containsInsensitive(purchaseItems.sku, text),
           ...(taggedItemIds.size > 0 ? [inArray(purchaseItems.id, [...taggedItemIds.keys()])] : [])
         ),
-        ...purchaseFilterConditions(scope),
+        ...purchaseFilterConditions(db, scope),
         ...filterCondition
       )
     )

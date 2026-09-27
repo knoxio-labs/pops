@@ -41,6 +41,8 @@ export interface PersistedItemTypeField extends ValueFieldDefinition {
   /** The field that took over this archived field's values, when authoring named one. */
   readonly replacedBy: string | null;
   readonly enumOptions: readonly PersistedEnumOption[];
+  /** Reference type ids admitted by this field, including all their descendants. */
+  readonly admittedReferenceTypeIds: ReadonlySet<string>;
 }
 
 /** One full persisted type definition, including its field and option rows. */
@@ -57,8 +59,25 @@ export interface PersistedItemType {
   readonly archivedAt: string | null;
   /** The type that took over this archived type's items, when authoring named one. */
   readonly replacedBy: string | null;
+  /** The type whose fields and capabilities this type inherits, when present. */
+  readonly parentTypeId: string | null;
   readonly fields: readonly PersistedItemTypeField[];
+  /** The type's own and inherited fields, ordered from the oldest ancestor to this type. */
+  readonly effectiveFields: readonly PersistedItemTypeField[];
+  /** The de-duplicated capabilities inherited from ancestors and declared by this type. */
+  readonly effectiveCapabilities: readonly string[];
 }
+
+/** A persisted field before descendant reference ids are resolved. */
+export type UnresolvedItemTypeField = Omit<PersistedItemTypeField, 'admittedReferenceTypeIds'>;
+
+/** A persisted type before its own and inherited fields and capabilities are resolved. */
+export type UnresolvedItemType = Omit<
+  PersistedItemType,
+  'fields' | 'effectiveFields' | 'effectiveCapabilities'
+> & {
+  readonly fields: readonly UnresolvedItemTypeField[];
+};
 
 /** A complete immutable catalogue descriptor loaded from SQLite. */
 export interface PersistedCatalogue {

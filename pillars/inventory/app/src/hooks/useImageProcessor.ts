@@ -43,6 +43,7 @@ async function processSingle(file: File): Promise<ProcessedFile> {
     maxWidthOrHeight: MAX_DIMENSION,
     initialQuality: QUALITY,
     useWebWorker: true,
+    fileType: 'image/jpeg',
     exifOrientation: undefined,
   });
   return {
@@ -54,6 +55,7 @@ async function processSingle(file: File): Promise<ProcessedFile> {
   };
 }
 
+/** Provides JPEG compression and HEIC/HEIF conversion for selected images. */
 export function useImageProcessor() {
   const [processing, setProcessing] = useState(false);
 

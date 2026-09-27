@@ -42,10 +42,35 @@ export const LEDGER_WAIT_REASONS = ['depends', 'catalogue', 'app-update', 'behin
 export const LEDGER_RESOLVED_DAYS = 7;
 
 /** One side of a reported device/server conflict. */
+export const LEDGER_TARGET_KINDS = [
+  'location',
+  'container',
+  'hand',
+  'name',
+  'note',
+  'field',
+] as const;
+
+/** Kinds of records that a stale reference may name. */
+export const LEDGER_RECORD_KINDS = ['item', 'location'] as const;
+
+/** The optional stable target details reported alongside a conflict value. */
+export const LedgerTargetSchema = z.object({
+  kind: z.string(),
+  locationId: z.string().optional(),
+  containerId: z.string().optional(),
+  name: z.string().optional(),
+  note: z.string().nullable().optional(),
+  fieldId: z.string().optional(),
+  values: z.array(z.unknown()).nullable().optional(),
+});
+
+/** One side of a reported device/server conflict. */
 export const LedgerConflictSideSchema = z.object({
   value: z.string(),
   source: z.string(),
   at: z.iso.datetime(),
+  target: LedgerTargetSchema.optional(),
 });
 
 /** One value held by a device and its fit against the current catalogue. */
@@ -54,6 +79,11 @@ export const LedgerHeldValueSchema = z.object({
   value: z.string(),
   fit: z.string(),
   replacement: z.string().optional(),
+  fieldId: z.string().optional(),
+  values: z.array(z.unknown()).optional(),
+  replacementTypeId: z.string().optional(),
+  recordId: z.string().optional(),
+  recordKind: z.string().optional(),
 });
 
 /** One repair case currently requiring attention on a device. */
@@ -64,6 +94,7 @@ export const LedgerRepairCaseSchema = z.object({
   itemName: z.string(),
   openedAt: z.iso.datetime(),
   problem: z.string(),
+  typeId: z.string().optional(),
   mine: LedgerConflictSideSchema.optional(),
   theirs: LedgerConflictSideSchema.optional(),
   code: z.object({ wanted: z.string(), holder: z.string(), suggested: z.string() }).optional(),
@@ -97,6 +128,7 @@ export const LedgerResolvedEntrySchema = z.object({
   outcome: z.string(),
   at: z.iso.datetime(),
   dropped: z.array(LedgerHeldValueSchema).optional(),
+  itemId: z.string().optional(),
 });
 
 /** The complete latest ledger report sent by one device. */

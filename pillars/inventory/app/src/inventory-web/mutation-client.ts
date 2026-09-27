@@ -3,6 +3,11 @@ import { type QueryClient } from '@tanstack/react-query';
 import { MAX_MUTATION_BATCH } from '@pops/inventory';
 import { unwrap } from '@pops/pillar-sdk/client';
 
+import {
+  RELOAD_REQUIRED_REASON,
+  reloadRequired,
+  reportResponse,
+} from '../foundation/interruptions/interruption-store.js';
 import { InventoryApiError } from '../inventory-api-helpers.js';
 /**
  * A mutation client over `POST /sync/mutations` (Inventory ADR-002 D9/D10):
@@ -65,6 +70,17 @@ export interface InventoryCommandInput {
   clientTime?: string;
 }
 
+function reportMutationResponse<
+  T extends { readonly response?: { readonly status: number; readonly url: string } },
+>(result: T): T {
+  reportResponse(result.response);
+  return result;
+}
+
+function refuseWhenReloadRequired(): void {
+  if (reloadRequired()) throw new InventoryApiError(RELOAD_REQUIRED_REASON, 426);
+}
+
 /**
  * Build the wire envelope for one command. `mutationId` is the idempotency
  * key the server deduplicates a retried send against, so a caller that
@@ -94,6 +110,7 @@ export function buildMutationEnvelope(input: InventoryCommandInput): InventoryMu
 export async function sendInventoryMutations(
   inputs: readonly InventoryCommandInput[]
 ): Promise<InventoryMutationOutcome[]> {
+  refuseWhenReloadRequired();
   if (inputs.length === 0 || inputs.length > MAX_MUTATION_BATCH) {
     throw new RangeError(
       `inventory mutation batch must contain 1 to ${String(MAX_MUTATION_BATCH)} mutations`
@@ -101,10 +118,12 @@ export async function sendInventoryMutations(
   }
 
   const data = await unwrap(
-    syncMutations({
-      body: { mutations: inputs.map((input) => buildMutationEnvelope(input)) },
-      headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
-    }),
+    Promise.resolve(
+      syncMutations({
+        body: { mutations: inputs.map((input) => buildMutationEnvelope(input)) },
+        headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
+      })
+    ).then((result) => reportMutationResponse(result)),
     {
       fallbackMessage: 'inventory mutation failed',
       noDataMessage: 'inventory mutation returned no data',
@@ -134,12 +153,15 @@ export async function sendInventoryMutations(
 export async function sendInventoryMutation(
   input: InventoryCommandInput
 ): Promise<InventoryMutationOutcome> {
+  refuseWhenReloadRequired();
   const envelope = buildMutationEnvelope(input);
   const data = await unwrap(
-    syncMutations({
-      body: { mutations: [envelope] },
-      headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
-    }),
+    Promise.resolve(
+      syncMutations({
+        body: { mutations: [envelope] },
+        headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
+      })
+    ).then((result) => reportMutationResponse(result)),
     {
       fallbackMessage: 'inventory mutation failed',
       noDataMessage: 'inventory mutation returned no data',

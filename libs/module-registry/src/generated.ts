@@ -912,16 +912,137 @@ export const MODULES = [
         order: 150,
         groups: [
           {
-            id: 'inventoryPagination',
-            title: 'Pagination',
-            description: 'Default page sizes for inventory list endpoints.',
+            id: 'paperless',
+            title: 'Paperless',
+            description: 'Receipts, manuals and warranties live in Paperless; items link to them.',
+            widget: {
+              bundleSlot: 'inventory-paperless',
+            },
+            fields: [],
+          },
+          {
+            id: 'labels',
+            title: 'Labels',
+            description: 'What the label page starts with. Each print can still change it.',
             fields: [
               {
+                key: 'inventory.labelSheet',
+                label: 'Sheet',
+                type: 'select',
+                default: 'L7160',
+                options: [
+                  {
+                    value: 'L7159',
+                    label: 'L7159 · 24 per sheet, 63.5 × 33.9 mm',
+                  },
+                  {
+                    value: 'L7160',
+                    label: 'L7160 · 21 per sheet, 63.5 × 38.1 mm',
+                  },
+                  {
+                    value: 'L7161',
+                    label: 'L7161 · 18 per sheet, 63.5 × 46.6 mm',
+                  },
+                  {
+                    value: 'L7162',
+                    label: 'L7162 · 16 per sheet, 99.1 × 33.9 mm',
+                  },
+                  {
+                    value: 'L7163',
+                    label: 'L7163 · 14 per sheet, 99.1 × 38.1 mm',
+                  },
+                  {
+                    value: 'L7173',
+                    label: 'L7173 · 10 per sheet, 99.1 × 57 mm',
+                  },
+                  {
+                    value: 'L7165',
+                    label: 'L7165 · 8 per sheet, 99.1 × 67.7 mm',
+                  },
+                  {
+                    value: 'L7166',
+                    label: 'L7166 · 6 per sheet, 99.1 × 93.1 mm',
+                  },
+                  {
+                    value: 'L7169',
+                    label: 'L7169 · 4 per sheet, 99.1 × 139 mm',
+                  },
+                  {
+                    value: 'L7168',
+                    label: 'L7168 · 2 per sheet, 199.6 × 143.5 mm',
+                  },
+                  {
+                    value: 'L7167',
+                    label: 'L7167 · 1 per sheet, 199.6 × 289.1 mm',
+                  },
+                ],
+              },
+              {
+                key: 'inventory.labelShows',
+                label: 'Label shows',
+                type: 'select',
+                default: 'auto',
+                options: [
+                  {
+                    value: 'auto',
+                    label: 'Auto',
+                  },
+                  {
+                    value: 'qr-name-code',
+                    label: 'QR, name and code',
+                  },
+                  {
+                    value: 'qr-code',
+                    label: 'QR and code',
+                  },
+                  {
+                    value: 'qr',
+                    label: 'QR only',
+                  },
+                  {
+                    value: 'code',
+                    label: 'Code only',
+                  },
+                  {
+                    value: 'name',
+                    label: 'Name only',
+                  },
+                  {
+                    value: 'contents',
+                    label: 'Contents only',
+                  },
+                ],
+                description: 'Auto gives boxes their name as well as the QR and code.',
+              },
+            ],
+          },
+          {
+            id: 'lists',
+            title: 'Lists',
+            description: 'Items, Containers, search and every other inventory list.',
+            fields: [
+              {
+                key: 'inventory.density',
+                label: 'Row density',
+                type: 'select',
+                default: 'compact',
+                options: [
+                  {
+                    value: 'compact',
+                    label: 'Compact, 36 px rows',
+                  },
+                  {
+                    value: 'comfortable',
+                    label: 'Comfortable, 44 px rows',
+                  },
+                ],
+              },
+              {
                 key: 'inventory.defaultLimit',
-                label: 'Default Page Size',
+                label: 'Rows per page',
                 type: 'number',
                 default: '50',
-                description: 'Default page size for items, connections, documents, and photos.',
+                description: 'How many rows a list loads at a time, 1 to 200.',
                 validation: {
                   min: 1,
                   max: 200,
@@ -929,10 +1050,9 @@ export const MODULES = [
               },
               {
                 key: 'inventory.searchDefaultLimit',
-                label: 'Search Default Limit',
+                label: 'Search results per page',
                 type: 'number',
                 default: '20',
-                description: 'Default result limit for inventory search.',
                 validation: {
                   min: 1,
                   max: 100,
@@ -969,15 +1089,15 @@ export const MODULES = [
           },
           {
             id: 'documentFiles',
-            title: 'Document Files',
-            description: 'Upload constraints for inventory document attachments.',
+            title: 'Document files',
+            description: 'Upload limits for documents attached to items.',
             fields: [
               {
                 key: 'inventory.maxFileSizeBytes',
-                label: 'Max File Size (bytes)',
+                label: 'Largest upload, in bytes',
                 type: 'number',
                 default: '10485760',
-                description: 'Maximum upload file size in bytes (default 10 MB).',
+                description: '10485760 is 10 MB.',
                 validation: {
                   min: 1048576,
                 },

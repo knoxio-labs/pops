@@ -93,6 +93,17 @@ describe('ActivitySegment', () => {
     expect(screen.queryByRole('button', { name: /Undo/u })).not.toBeInTheDocument();
   });
 
+  it('keeps the detail sheet width variants exclusive across the xl breakpoint', () => {
+    renderActivity('/inventory/sync?segment=activity&event=1');
+
+    const detail = screen.getByRole('region', { name: 'Renamed to New name' });
+    const wrapper = detail.parentElement;
+
+    expect(wrapper).not.toBeNull();
+    expect(wrapper).toHaveClass('max-xl:[&>section]:w-120');
+    expect(wrapper).not.toHaveClass('[&>section]:w-120');
+  });
+
   it('renders empty and filtered-empty states with a clear action', () => {
     mocks.useWebEvents.mockReturnValue(feed([]));
     renderActivity();

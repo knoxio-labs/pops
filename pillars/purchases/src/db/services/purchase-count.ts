@@ -19,7 +19,7 @@ import type { PurchasesDb } from './internal.js';
  * enforces that; this function has no opinion about when it is called.
  */
 export function countPurchases(db: PurchasesDb, filter: PurchaseScopeFilter = {}): number {
-  const conditions = [...purchaseFilterConditions(filter)];
+  const conditions = [...purchaseFilterConditions(db, filter)];
   const base = db.select({ value: count() }).from(purchases);
   const filtered = conditions.length > 0 ? base.where(and(...conditions)) : base;
   return filtered.all()[0]?.value ?? 0;

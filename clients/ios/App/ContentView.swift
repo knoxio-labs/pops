@@ -119,7 +119,7 @@ internal struct ContentView: View {
     /// instead of the form. Nothing above this view was rebuilt when it
     /// happened; the implicit selection was simply lost.
     /// `purchases-hand-entry.yaml` is the flow that catches it.
-    @ViewBuilder private var features: some View {
+    @ViewBuilder internal var features: some View {
         switch (surface.available.count, hasSearch) {
         case (0, _):
             unavailableExplanation

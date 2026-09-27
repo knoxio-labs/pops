@@ -2625,12 +2625,23 @@ internal enum Operations {
             internal var path: Operations.MobileBarcode_lookup.Input.Path
             /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/header`.
             internal struct Headers: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/header/x-pops-barcode-diagnostics`.
+                internal enum XPopsBarcodeDiagnosticsPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case _1 = "1"
+                }
+                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/header/x-pops-barcode-diagnostics`.
+                internal var xPopsBarcodeDiagnostics: Operations.MobileBarcode_lookup.Input.Headers.XPopsBarcodeDiagnosticsPayload?
                 internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileBarcode_lookup.AcceptableContentType>]
                 /// Creates a new `Headers`.
                 ///
                 /// - Parameters:
+                ///   - xPopsBarcodeDiagnostics:
                 ///   - accept:
-                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileBarcode_lookup.AcceptableContentType>] = .defaultValues()) {
+                internal init(
+                    xPopsBarcodeDiagnostics: Operations.MobileBarcode_lookup.Input.Headers.XPopsBarcodeDiagnosticsPayload? = nil,
+                    accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileBarcode_lookup.AcceptableContentType>] = .defaultValues()
+                ) {
+                    self.xPopsBarcodeDiagnostics = xPopsBarcodeDiagnostics
                     self.accept = accept
                 }
             }
@@ -2954,15 +2965,27 @@ internal enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case2/outcome`.
                             internal var outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.OutcomePayload
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case2/reason`.
+                            internal enum ReasonPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case unsupported = "unsupported"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case2/reason`.
+                            internal var reason: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.ReasonPayload?
                             /// Creates a new `Case2Payload`.
                             ///
                             /// - Parameters:
                             ///   - outcome:
-                            internal init(outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.OutcomePayload) {
+                            ///   - reason:
+                            internal init(
+                                outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.OutcomePayload,
+                                reason: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.ReasonPayload? = nil
+                            ) {
                                 self.outcome = outcome
+                                self.reason = reason
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case outcome
+                                case reason
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -2970,8 +2993,13 @@ internal enum Operations {
                                     Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.OutcomePayload.self,
                                     forKey: .outcome
                                 )
+                                self.reason = try container.decodeIfPresent(
+                                    Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload.ReasonPayload.self,
+                                    forKey: .reason
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                    "outcome"
+                                    "outcome",
+                                    "reason"
                                 ])
                             }
                         }
@@ -2979,6 +3007,26 @@ internal enum Operations {
                         case case2(Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case2Payload)
                         /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3`.
                         internal struct Case3Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3/error`.
+                            internal struct _ErrorPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3/error/value1`.
+                                internal var value1: Components.Schemas.ErrorBody
+                                /// Creates a new `_ErrorPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - value1:
+                                internal init(value1: Components.Schemas.ErrorBody) {
+                                    self.value1 = value1
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    self.value1 = try .init(from: decoder)
+                                }
+                                internal func encode(to encoder: any Swift.Encoder) throws {
+                                    try self.value1.encode(to: encoder)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3/error`.
+                            internal var error: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload._ErrorPayload?
                             /// - Remark: Generated from `#/paths/mobile/barcode/lookup/{code}/GET/responses/200/content/json/case3/outcome`.
                             internal enum OutcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
                                 case unavailable = "unavailable"
@@ -2988,20 +3036,31 @@ internal enum Operations {
                             /// Creates a new `Case3Payload`.
                             ///
                             /// - Parameters:
+                            ///   - error:
                             ///   - outcome:
-                            internal init(outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload.OutcomePayload) {
+                            internal init(
+                                error: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload._ErrorPayload? = nil,
+                                outcome: Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload.OutcomePayload
+                            ) {
+                                self.error = error
                                 self.outcome = outcome
                             }
                             internal enum CodingKeys: String, CodingKey {
+                                case error
                                 case outcome
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.error = try container.decodeIfPresent(
+                                    Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload._ErrorPayload.self,
+                                    forKey: .error
+                                )
                                 self.outcome = try container.decode(
                                     Operations.MobileBarcode_lookup.Output.Ok.Body.JsonPayload.Case3Payload.OutcomePayload.self,
                                     forKey: .outcome
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "error",
                                     "outcome"
                                 ])
                             }
@@ -29287,35 +29346,65 @@ internal enum Operations {
                             internal struct ValuesPayloadPayload: Codable, Hashable, Sendable {
                                 /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/field`.
                                 internal var field: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/fieldId`.
+                                internal var fieldId: Swift.String?
                                 /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/fit`.
                                 internal var fit: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/recordId`.
+                                internal var recordId: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/recordKind`.
+                                internal var recordKind: Swift.String?
                                 /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/replacement`.
                                 internal var replacement: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/replacementTypeId`.
+                                internal var replacementTypeId: Swift.String?
                                 /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/value`.
                                 internal var value: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/values`.
+                                internal var values: [OpenAPIRuntime.OpenAPIValueContainer]?
                                 /// Creates a new `ValuesPayloadPayload`.
                                 ///
                                 /// - Parameters:
                                 ///   - field:
+                                ///   - fieldId:
                                 ///   - fit:
+                                ///   - recordId:
+                                ///   - recordKind:
                                 ///   - replacement:
+                                ///   - replacementTypeId:
                                 ///   - value:
+                                ///   - values:
                                 internal init(
                                     field: Swift.String,
+                                    fieldId: Swift.String? = nil,
                                     fit: Swift.String,
+                                    recordId: Swift.String? = nil,
+                                    recordKind: Swift.String? = nil,
                                     replacement: Swift.String? = nil,
-                                    value: Swift.String
+                                    replacementTypeId: Swift.String? = nil,
+                                    value: Swift.String,
+                                    values: [OpenAPIRuntime.OpenAPIValueContainer]? = nil
                                 ) {
                                     self.field = field
+                                    self.fieldId = fieldId
                                     self.fit = fit
+                                    self.recordId = recordId
+                                    self.recordKind = recordKind
                                     self.replacement = replacement
+                                    self.replacementTypeId = replacementTypeId
                                     self.value = value
+                                    self.values = values
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case field
+                                    case fieldId
                                     case fit
+                                    case recordId
+                                    case recordKind
                                     case replacement
+                                    case replacementTypeId
                                     case value
+                                    case values
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -29323,23 +29412,48 @@ internal enum Operations {
                                         Swift.String.self,
                                         forKey: .field
                                     )
+                                    self.fieldId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .fieldId
+                                    )
                                     self.fit = try container.decode(
                                         Swift.String.self,
                                         forKey: .fit
+                                    )
+                                    self.recordId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .recordId
+                                    )
+                                    self.recordKind = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .recordKind
                                     )
                                     self.replacement = try container.decodeIfPresent(
                                         Swift.String.self,
                                         forKey: .replacement
                                     )
+                                    self.replacementTypeId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .replacementTypeId
+                                    )
                                     self.value = try container.decode(
                                         Swift.String.self,
                                         forKey: .value
                                     )
+                                    self.values = try container.decodeIfPresent(
+                                        [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                        forKey: .values
+                                    )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "field",
+                                        "fieldId",
                                         "fit",
+                                        "recordId",
+                                        "recordKind",
                                         "replacement",
-                                        "value"
+                                        "replacementTypeId",
+                                        "value",
+                                        "values"
                                     ])
                                 }
                             }
@@ -29395,6 +29509,101 @@ internal enum Operations {
                             internal var at: Foundation.Date
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/source`.
                             internal var source: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target`.
+                            internal struct TargetPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target/containerId`.
+                                internal var containerId: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target/fieldId`.
+                                internal var fieldId: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target/kind`.
+                                internal var kind: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target/locationId`.
+                                internal var locationId: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target/name`.
+                                internal var name: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target/note`.
+                                internal var note: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target/values`.
+                                internal var values: [OpenAPIRuntime.OpenAPIValueContainer]?
+                                /// Creates a new `TargetPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - containerId:
+                                ///   - fieldId:
+                                ///   - kind:
+                                ///   - locationId:
+                                ///   - name:
+                                ///   - note:
+                                ///   - values:
+                                internal init(
+                                    containerId: Swift.String? = nil,
+                                    fieldId: Swift.String? = nil,
+                                    kind: Swift.String,
+                                    locationId: Swift.String? = nil,
+                                    name: Swift.String? = nil,
+                                    note: Swift.String? = nil,
+                                    values: [OpenAPIRuntime.OpenAPIValueContainer]? = nil
+                                ) {
+                                    self.containerId = containerId
+                                    self.fieldId = fieldId
+                                    self.kind = kind
+                                    self.locationId = locationId
+                                    self.name = name
+                                    self.note = note
+                                    self.values = values
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case containerId
+                                    case fieldId
+                                    case kind
+                                    case locationId
+                                    case name
+                                    case note
+                                    case values
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.containerId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .containerId
+                                    )
+                                    self.fieldId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .fieldId
+                                    )
+                                    self.kind = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .kind
+                                    )
+                                    self.locationId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .locationId
+                                    )
+                                    self.name = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .name
+                                    )
+                                    self.note = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .note
+                                    )
+                                    self.values = try container.decodeIfPresent(
+                                        [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                        forKey: .values
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "containerId",
+                                        "fieldId",
+                                        "kind",
+                                        "locationId",
+                                        "name",
+                                        "note",
+                                        "values"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/target`.
+                            internal var target: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.MinePayload.TargetPayload?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/value`.
                             internal var value: Swift.String
                             /// Creates a new `MinePayload`.
@@ -29402,19 +29611,23 @@ internal enum Operations {
                             /// - Parameters:
                             ///   - at:
                             ///   - source:
+                            ///   - target:
                             ///   - value:
                             internal init(
                                 at: Foundation.Date,
                                 source: Swift.String,
+                                target: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.MinePayload.TargetPayload? = nil,
                                 value: Swift.String
                             ) {
                                 self.at = at
                                 self.source = source
+                                self.target = target
                                 self.value = value
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case at
                                 case source
+                                case target
                                 case value
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
@@ -29427,6 +29640,10 @@ internal enum Operations {
                                     Swift.String.self,
                                     forKey: .source
                                 )
+                                self.target = try container.decodeIfPresent(
+                                    Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.MinePayload.TargetPayload.self,
+                                    forKey: .target
+                                )
                                 self.value = try container.decode(
                                     Swift.String.self,
                                     forKey: .value
@@ -29434,6 +29651,7 @@ internal enum Operations {
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "at",
                                     "source",
+                                    "target",
                                     "value"
                                 ])
                             }
@@ -29530,6 +29748,101 @@ internal enum Operations {
                             internal var at: Foundation.Date
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/source`.
                             internal var source: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target`.
+                            internal struct TargetPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target/containerId`.
+                                internal var containerId: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target/fieldId`.
+                                internal var fieldId: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target/kind`.
+                                internal var kind: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target/locationId`.
+                                internal var locationId: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target/name`.
+                                internal var name: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target/note`.
+                                internal var note: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target/values`.
+                                internal var values: [OpenAPIRuntime.OpenAPIValueContainer]?
+                                /// Creates a new `TargetPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - containerId:
+                                ///   - fieldId:
+                                ///   - kind:
+                                ///   - locationId:
+                                ///   - name:
+                                ///   - note:
+                                ///   - values:
+                                internal init(
+                                    containerId: Swift.String? = nil,
+                                    fieldId: Swift.String? = nil,
+                                    kind: Swift.String,
+                                    locationId: Swift.String? = nil,
+                                    name: Swift.String? = nil,
+                                    note: Swift.String? = nil,
+                                    values: [OpenAPIRuntime.OpenAPIValueContainer]? = nil
+                                ) {
+                                    self.containerId = containerId
+                                    self.fieldId = fieldId
+                                    self.kind = kind
+                                    self.locationId = locationId
+                                    self.name = name
+                                    self.note = note
+                                    self.values = values
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case containerId
+                                    case fieldId
+                                    case kind
+                                    case locationId
+                                    case name
+                                    case note
+                                    case values
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.containerId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .containerId
+                                    )
+                                    self.fieldId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .fieldId
+                                    )
+                                    self.kind = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .kind
+                                    )
+                                    self.locationId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .locationId
+                                    )
+                                    self.name = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .name
+                                    )
+                                    self.note = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .note
+                                    )
+                                    self.values = try container.decodeIfPresent(
+                                        [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                        forKey: .values
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "containerId",
+                                        "fieldId",
+                                        "kind",
+                                        "locationId",
+                                        "name",
+                                        "note",
+                                        "values"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/target`.
+                            internal var target: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload.TargetPayload?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/value`.
                             internal var value: Swift.String
                             /// Creates a new `TheirsPayload`.
@@ -29537,19 +29850,23 @@ internal enum Operations {
                             /// - Parameters:
                             ///   - at:
                             ///   - source:
+                            ///   - target:
                             ///   - value:
                             internal init(
                                 at: Foundation.Date,
                                 source: Swift.String,
+                                target: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload.TargetPayload? = nil,
                                 value: Swift.String
                             ) {
                                 self.at = at
                                 self.source = source
+                                self.target = target
                                 self.value = value
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case at
                                 case source
+                                case target
                                 case value
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
@@ -29562,6 +29879,10 @@ internal enum Operations {
                                     Swift.String.self,
                                     forKey: .source
                                 )
+                                self.target = try container.decodeIfPresent(
+                                    Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload.TargetPayload.self,
+                                    forKey: .target
+                                )
                                 self.value = try container.decode(
                                     Swift.String.self,
                                     forKey: .value
@@ -29569,12 +29890,15 @@ internal enum Operations {
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "at",
                                     "source",
+                                    "target",
                                     "value"
                                 ])
                             }
                         }
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs`.
                         internal var theirs: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/typeId`.
+                        internal var typeId: Swift.String?
                         /// Creates a new `AttentionPayloadPayload`.
                         ///
                         /// - Parameters:
@@ -29590,6 +29914,7 @@ internal enum Operations {
                         ///   - problem:
                         ///   - refused:
                         ///   - theirs:
+                        ///   - typeId:
                         internal init(
                             code: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.CodePayload? = nil,
                             held: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.HeldPayload? = nil,
@@ -29602,7 +29927,8 @@ internal enum Operations {
                             photo: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.PhotoPayload? = nil,
                             problem: Swift.String,
                             refused: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.RefusedPayload? = nil,
-                            theirs: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload? = nil
+                            theirs: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload? = nil,
+                            typeId: Swift.String? = nil
                         ) {
                             self.code = code
                             self.held = held
@@ -29616,6 +29942,7 @@ internal enum Operations {
                             self.problem = problem
                             self.refused = refused
                             self.theirs = theirs
+                            self.typeId = typeId
                         }
                         internal enum CodingKeys: String, CodingKey {
                             case code
@@ -29630,6 +29957,7 @@ internal enum Operations {
                             case problem
                             case refused
                             case theirs
+                            case typeId
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -29681,6 +30009,10 @@ internal enum Operations {
                                 Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload.self,
                                 forKey: .theirs
                             )
+                            self.typeId = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .typeId
+                            )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "code",
                                 "held",
@@ -29693,7 +30025,8 @@ internal enum Operations {
                                 "photo",
                                 "problem",
                                 "refused",
-                                "theirs"
+                                "theirs",
+                                "typeId"
                             ])
                         }
                     }
@@ -29713,35 +30046,65 @@ internal enum Operations {
                         internal struct DroppedPayloadPayload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/field`.
                             internal var field: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/fieldId`.
+                            internal var fieldId: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/fit`.
                             internal var fit: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/recordId`.
+                            internal var recordId: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/recordKind`.
+                            internal var recordKind: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/replacement`.
                             internal var replacement: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/replacementTypeId`.
+                            internal var replacementTypeId: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/value`.
                             internal var value: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/values`.
+                            internal var values: [OpenAPIRuntime.OpenAPIValueContainer]?
                             /// Creates a new `DroppedPayloadPayload`.
                             ///
                             /// - Parameters:
                             ///   - field:
+                            ///   - fieldId:
                             ///   - fit:
+                            ///   - recordId:
+                            ///   - recordKind:
                             ///   - replacement:
+                            ///   - replacementTypeId:
                             ///   - value:
+                            ///   - values:
                             internal init(
                                 field: Swift.String,
+                                fieldId: Swift.String? = nil,
                                 fit: Swift.String,
+                                recordId: Swift.String? = nil,
+                                recordKind: Swift.String? = nil,
                                 replacement: Swift.String? = nil,
-                                value: Swift.String
+                                replacementTypeId: Swift.String? = nil,
+                                value: Swift.String,
+                                values: [OpenAPIRuntime.OpenAPIValueContainer]? = nil
                             ) {
                                 self.field = field
+                                self.fieldId = fieldId
                                 self.fit = fit
+                                self.recordId = recordId
+                                self.recordKind = recordKind
                                 self.replacement = replacement
+                                self.replacementTypeId = replacementTypeId
                                 self.value = value
+                                self.values = values
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case field
+                                case fieldId
                                 case fit
+                                case recordId
+                                case recordKind
                                 case replacement
+                                case replacementTypeId
                                 case value
+                                case values
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -29749,23 +30112,48 @@ internal enum Operations {
                                     Swift.String.self,
                                     forKey: .field
                                 )
+                                self.fieldId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .fieldId
+                                )
                                 self.fit = try container.decode(
                                     Swift.String.self,
                                     forKey: .fit
+                                )
+                                self.recordId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .recordId
+                                )
+                                self.recordKind = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .recordKind
                                 )
                                 self.replacement = try container.decodeIfPresent(
                                     Swift.String.self,
                                     forKey: .replacement
                                 )
+                                self.replacementTypeId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .replacementTypeId
+                                )
                                 self.value = try container.decode(
                                     Swift.String.self,
                                     forKey: .value
                                 )
+                                self.values = try container.decodeIfPresent(
+                                    [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                    forKey: .values
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "field",
+                                    "fieldId",
                                     "fit",
+                                    "recordId",
+                                    "recordKind",
                                     "replacement",
-                                    "value"
+                                    "replacementTypeId",
+                                    "value",
+                                    "values"
                                 ])
                             }
                         }
@@ -29775,6 +30163,8 @@ internal enum Operations {
                         internal var dropped: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayloadPayload.DroppedPayload?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/id`.
                         internal var id: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/itemId`.
+                        internal var itemId: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/itemName`.
                         internal var itemName: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/outcome`.
@@ -29785,18 +30175,21 @@ internal enum Operations {
                         ///   - at:
                         ///   - dropped:
                         ///   - id:
+                        ///   - itemId:
                         ///   - itemName:
                         ///   - outcome:
                         internal init(
                             at: Foundation.Date,
                             dropped: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayloadPayload.DroppedPayload? = nil,
                             id: Swift.String,
+                            itemId: Swift.String? = nil,
                             itemName: Swift.String,
                             outcome: Swift.String
                         ) {
                             self.at = at
                             self.dropped = dropped
                             self.id = id
+                            self.itemId = itemId
                             self.itemName = itemName
                             self.outcome = outcome
                         }
@@ -29804,6 +30197,7 @@ internal enum Operations {
                             case at
                             case dropped
                             case id
+                            case itemId
                             case itemName
                             case outcome
                         }
@@ -29821,6 +30215,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .id
                             )
+                            self.itemId = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .itemId
+                            )
                             self.itemName = try container.decode(
                                 Swift.String.self,
                                 forKey: .itemName
@@ -29833,6 +30231,7 @@ internal enum Operations {
                                 "at",
                                 "dropped",
                                 "id",
+                                "itemId",
                                 "itemName",
                                 "outcome"
                             ])

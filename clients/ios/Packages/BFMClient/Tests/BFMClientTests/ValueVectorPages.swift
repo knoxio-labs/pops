@@ -1,5 +1,3 @@
-import Foundation
-
 /// The value vectors served the way the BFM would: live rows on a snapshot
 /// page, deleted reference targets as tombstones on the feed page after it,
 /// and both catalogue revisions the values name.

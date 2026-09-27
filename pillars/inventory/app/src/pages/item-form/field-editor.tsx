@@ -1,7 +1,8 @@
-import { Button, Checkbox, ComboboxSelect, Input, Textarea } from '@pops/ui';
+import { Checkbox, ComboboxSelect } from '@pops/ui';
 
 import { ComputedField } from './computed-field';
 import { ReferenceField } from './reference-field';
+import { TextFieldEditor } from './text-field-editor';
 
 import type { ReactElement } from 'react';
 
@@ -14,124 +15,25 @@ export interface FieldEditorProps {
   readonly field: FormFieldDef;
   readonly draft: ItemDraft;
   readonly computed: ComputedDisplay | undefined;
+  readonly error?: string;
   readonly dispatch: (action: DraftAction) => void;
   readonly onReferenceQuery: (query: string) => void;
-}
-
-function inputType(field: FormFieldDef): 'text' | 'number' | 'date' | 'datetime-local' | 'url' {
-  if (field.kind === 'integer' || field.kind === 'decimal' || field.kind === 'measurement')
-    return 'number';
-  if (field.kind === 'date') return 'date';
-  if (field.kind === 'date_time') return 'datetime-local';
-  if (field.kind === 'url') return 'url';
-  return 'text';
-}
-
-function textValues(draft: ItemDraft, field: FormFieldDef): readonly string[] {
-  const values = draft.fields.text[field.id];
-  if (values === undefined || values.length === 0) return [''];
-  return values;
-}
-
-function setText({
-  dispatch,
-  field,
-  valueIndex,
-  value,
-  current,
-}: {
-  dispatch: FieldEditorProps['dispatch'];
-  field: FormFieldDef;
-  valueIndex: number;
-  value: string;
-  current: readonly string[];
-}): void {
-  const values = [...current];
-  values[valueIndex] = value;
-  dispatch({ type: 'field-text', fieldId: field.id, values });
-}
-
-function TextValue({
-  field,
-  value,
-  index,
-  values,
-  dispatch,
-}: {
-  readonly field: FormFieldDef;
-  readonly value: string;
-  readonly index: number;
-  readonly values: readonly string[];
-  readonly dispatch: FieldEditorProps['dispatch'];
-}): ReactElement {
-  const onChange = (nextValue: string): void =>
-    setText({ dispatch, field, valueIndex: index, value: nextValue, current: values });
-  const remove = (): void =>
-    dispatch({
-      type: 'field-text',
-      fieldId: field.id,
-      values: values.filter((_, valueIndex) => valueIndex !== index),
-    });
-  const label = `${field.label} ${index + 1}`;
-  return (
-    <div className="flex gap-2">
-      {field.kind === 'long_text' ? (
-        <Textarea
-          value={value}
-          rows={2}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={label}
-        />
-      ) : (
-        <Input
-          type={inputType(field)}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={label}
-        />
-      )}
-      {field.cardinality === 'many' && values.length > 1 ? (
-        <Button type="button" variant="ghost" size="sm" onClick={remove}>
-          Remove
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function TextEditor({ field, draft, dispatch }: FieldEditorProps): ReactElement {
-  const values = textValues(draft, field);
-  return (
-    <div className="space-y-2">
-      {values.map((value, index) => (
-        <TextValue
-          key={`${field.id}-${value}`}
-          field={field}
-          value={value}
-          index={index}
-          values={values}
-          dispatch={dispatch}
-        />
-      ))}
-      {field.cardinality === 'many' ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            dispatch({ type: 'field-text', fieldId: field.id, values: [...values, ''] })
-          }
-        >
-          Add value
-        </Button>
-      ) : null}
-    </div>
-  );
 }
 
 function EnumEditor({ field, draft, dispatch }: FieldEditorProps): ReactElement {
   const selected = draft.fields.text[field.id] ?? [];
   const selectedValue = field.cardinality === 'many' ? [...selected] : (selected[0] ?? '');
+  const declaredOptions = field.enumOptions.map((option) => ({
+    value: option.id,
+    label: option.archivedAt === null ? option.label : `${option.label} (archived)`,
+    disabled: option.archivedAt !== null,
+  }));
+  const invalidOptions = selected
+    .filter((value) => !field.enumOptions.some((option) => option.id === value))
+    .map((value) => ({ value, label: `Invalid option (${value})`, disabled: true }));
+  const options = [...declaredOptions, ...invalidOptions].filter(
+    (option, index, all) => all.findIndex((candidate) => candidate.value === option.value) === index
+  );
   const setValue = (value: string | string[]): void => {
     if (Array.isArray(value)) {
       dispatch({ type: 'field-text', fieldId: field.id, values: value });
@@ -141,15 +43,14 @@ function EnumEditor({ field, draft, dispatch }: FieldEditorProps): ReactElement 
   };
   return (
     <ComboboxSelect
-      options={field.enumOptions
-        .filter((option) => option.archivedAt === null)
-        .map((option) => ({ value: option.key, label: option.label }))}
+      options={options}
       value={selectedValue}
       multiple={field.cardinality === 'many'}
       onChange={setValue}
       placeholder="Choose an option"
       searchPlaceholder={`Search ${field.label.toLocaleLowerCase()}`}
       aria-label={field.label}
+      id={`field-${field.id}`}
     />
   );
 }
@@ -163,6 +64,7 @@ export function FieldEditor(props: FieldEditorProps): ReactElement {
         field={field}
         draft={props.draft}
         computed={props.computed}
+        error={props.error}
         dispatch={props.dispatch}
       />
     );
@@ -185,5 +87,12 @@ export function FieldEditor(props: FieldEditorProps): ReactElement {
   }
   if (field.kind === 'enum') return <EnumEditor {...props} />;
   if (field.kind === 'reference') return <ReferenceField {...props} />;
-  return <TextEditor {...props} />;
+  return (
+    <TextFieldEditor
+      field={props.field}
+      draft={props.draft}
+      error={props.error}
+      dispatch={props.dispatch}
+    />
+  );
 }

@@ -1,75 +1,79 @@
 import { useMemo } from 'react';
+import { useParams } from 'react-router';
 
-import { buildItemDetailAggregate } from '../../foundation/item-page';
-import { isNotFoundError } from '../../inventory-api-helpers.js';
-import { DetailHeader, LifecycleNotice } from './detail-header';
-import { ItemDetailProblem, ItemDetailSkeleton } from './detail-states';
-import { DetailTabs } from './detail-tabs';
-import { HeaderActions } from './header-actions';
-import { useItemDetailPageModel } from './useItemDetailPageModel';
+import { useSetPageContext } from '@pops/navigation';
 
-type DetailModel = ReturnType<typeof useItemDetailPageModel>;
+import { ItemDetailProblem, ItemDetailSkeleton } from '../../foundation/item-page/detail-fallbacks';
+import { isUnavailableError } from '../../inventory-api-helpers.js';
+import { useOnline } from '../../inventory-web/useOnline';
+import { DetailReadyView } from './detail-ready-view';
+import { useDetailReadyState, type DetailReadyState } from './use-detail-ready-state';
+import { useItemDetailModel } from './use-item-detail-model';
 
-function DetailContent({ model, itemId }: { model: DetailModel; itemId: string }) {
-  const item = model.item;
-  const detail = useMemo(
-    () =>
-      item === undefined
-        ? null
-        : buildItemDetailAggregate({
-            legacyItem: item,
-            webItem: model.webItem,
-            locationPath: model.locationPath,
-            photos: model.photosData?.data ?? [],
-            history: model.history,
-          }),
-    [item, model.history, model.locationPath, model.photosData?.data, model.webItem]
-  );
-  if (!item || !detail) return null;
-  const connections = model.connectionsData?.data ?? [];
-  const photos = model.photosData?.data ?? [];
+import type { ReactElement } from 'react';
 
+import type { ItemDetailModel } from './detail-model';
+import type { ItemDetailBannerState } from './use-item-detail-state';
+
+function DetailReady({
+  itemId,
+  model,
+  offline,
+  banner,
+  onRetry,
+}: {
+  itemId: string;
+  model: ItemDetailModel;
+  offline: boolean;
+  banner: ItemDetailBannerState | null;
+  onRetry: () => void;
+}): ReactElement {
+  const ready: DetailReadyState = useDetailReadyState({ itemId, model, offline });
   return (
-    <div className="flex max-w-7xl flex-col gap-4">
-      <DetailHeader
-        detail={detail}
-        locationPath={model.locationPath}
-        actions={
-          <HeaderActions
-            id={itemId}
-            itemName={detail.name}
-            connectionsCount={connections.length}
-            photosCount={model.photosData?.pagination?.total ?? photos.length}
-            readOnly={detail.readOnly}
-            onDelete={() => model.deleteMutation.mutate({ id: itemId })}
-          />
-        }
-      />
-      <LifecycleNotice detail={detail} />
-      <DetailTabs
-        detail={detail}
-        connections={connections}
-        connectionsLoading={model.connectionsLoading}
-        photos={photos}
-        photosLoading={model.photosLoading}
-        history={detail.history}
-        model={model}
-        itemId={itemId}
-      />
-    </div>
+    <DetailReadyView
+      itemId={itemId}
+      model={model}
+      ready={ready}
+      offline={offline}
+      banner={offline ? 'unavailable' : banner}
+      onRetry={onRetry}
+    />
   );
 }
 
-/** Renders the split item-detail page while preserving the existing route contract. */
-export function ItemDetailPage() {
-  const model = useItemDetailPageModel();
-  if (!model.id || isNotFoundError(model.error)) return <ItemDetailProblem variant="not-found" />;
-  const itemId = model.id;
-  if (model.isLoading) return <ItemDetailSkeleton />;
-  if (model.error) {
+/** Renders the item detail split view at `/inventory/items/:id`. */
+export function ItemDetailPage(): ReactElement {
+  const { id } = useParams<{ id: string }>();
+  const itemId = id ?? '';
+  const state = useItemDetailModel(itemId);
+  const offline = !useOnline();
+  const entity = useMemo(
+    () => ({
+      uri: `pops:inventory/item/${itemId}`,
+      type: 'item' as const,
+      title: state.model?.item.name ?? '',
+    }),
+    [itemId, state.model?.item.name]
+  );
+  useSetPageContext({ page: 'item-detail', pageType: 'drill-down', entity });
+
+  if (state.status === 'not-found') return <ItemDetailProblem variant="not-found" />;
+  if (state.status === 'loading') return <ItemDetailSkeleton />;
+  if (state.status === 'error' || state.model === null) {
     return (
-      <ItemDetailProblem variant="error" error={model.error} onRetry={() => void model.refetch()} />
+      <ItemDetailProblem
+        variant={isUnavailableError(state.error) ? 'unavailable' : 'error'}
+        onRetry={state.retry}
+      />
     );
   }
-  return <DetailContent model={model} itemId={itemId} />;
+  return (
+    <DetailReady
+      itemId={itemId}
+      model={state.model}
+      offline={offline}
+      banner={state.banner}
+      onRetry={state.retry}
+    />
+  );
 }

@@ -1,9 +1,6 @@
 import AppCore
-import Foundation
 import InventoryReplica
 import Testing
-
-@testable import BFMClient
 
 /// A server that moved past this build (POPS-4404): a page, or the pinned
 /// catalogue it names, that this build cannot read is refused before

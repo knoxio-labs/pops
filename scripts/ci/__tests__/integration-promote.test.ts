@@ -11,7 +11,7 @@ function fixture(overrides: Record<string, string> = {}, failure?: string) {
     'git rev-parse HEAD': sha,
     'gh repo view --json nameWithOwner --jq .nameWithOwner': 'knoxio-labs/pops',
     'gh api user --jq .login': 'knoxio',
-    'gh api repos/knoxio-labs/pops/rules/branches/main --jq [.[] | select(.type == "required_status_checks") | .parameters | select(.strict_required_status_checks_policy == true) | .required_status_checks[] | select(.context == "Promotion validation")] | length':
+    'gh api repos/knoxio-labs/pops/rules/branches/main --jq [.[] | select(.type == "required_status_checks") | .parameters | .required_status_checks[] | select(.context == "Promotion validation")] | length':
       '1',
     'git rev-parse origin/integration/inventory': sha,
     'git diff --name-only origin/main...HEAD': 'pillars/inventory/src/index.ts',
@@ -52,7 +52,7 @@ describe('integration promotion', () => {
     { 'gh api user --jq .login': 'someone-else' },
     { 'gh repo view --json nameWithOwner --jq .nameWithOwner': 'other/repo' },
     {
-      'gh api repos/knoxio-labs/pops/rules/branches/main --jq [.[] | select(.type == "required_status_checks") | .parameters | select(.strict_required_status_checks_policy == true) | .required_status_checks[] | select(.context == "Promotion validation")] | length':
+      'gh api repos/knoxio-labs/pops/rules/branches/main --jq [.[] | select(.type == "required_status_checks") | .parameters | .required_status_checks[] | select(.context == "Promotion validation")] | length':
         '0',
     },
   ])('refuses unsafe promotion before mutating refs: %j', (overrides) => {
@@ -75,7 +75,7 @@ describe('integration promotion', () => {
     expect(f.calls.some((call) => call.startsWith('git push'))).toBe(false);
   });
 
-  it('runs both checks before publishing and returns to integration', () => {
+  it('accepts a required promotion gate without strict freshness and validates before publishing', () => {
     const f = fixture();
     promoteIntegration(f.run);
     const push = f.calls.indexOf(`git push -u origin promotion/inventory/${sha}`);

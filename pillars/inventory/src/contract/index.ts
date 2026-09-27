@@ -24,5 +24,11 @@ export {
 export type { CombinedUnit, UnitDimension, UnitFactor, UnitTerm } from './measurement-units.js';
 export type { InventoryContract } from './manifest.js';
 export { MAX_MUTATION_BATCH } from './rest-sync-schemas.js';
+export {
+  LEDGER_REPAIR_KINDS,
+  LEDGER_RESOLVED_DAYS,
+  LEDGER_VALUE_FITS,
+  LEDGER_WAIT_REASONS,
+} from './rest-sync-ledger.js';
 export { WEB_BATCH_MAX_ROWS } from './rest-web-batch.js';
 export { WEB_ITEMS_MAX_IDS } from './rest-web.js';

@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 
-@testable import FeatureInventory
-
 @Suite("Protocol 2 value editor")
 internal struct InventoryProtocol2ValueEditorTests {
     private static let source: String = {

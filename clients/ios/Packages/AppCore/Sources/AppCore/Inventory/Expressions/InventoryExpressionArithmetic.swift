@@ -1,5 +1,3 @@
-import Foundation
-
 /// `expression-arithmetic.ts` over ``InventoryExpressionValue``: identical
 /// numeric kinds, exact decimals, a fixed-unit measurement scaled by a decimal,
 /// and integers bounded to the server's safe range.

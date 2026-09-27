@@ -14,6 +14,8 @@ interface UseSearchInputSelectionArgs {
   orderedHits: SearchResultHit[];
   onSelectHit: (uri: string, data: SearchHitData) => void;
   onClose: () => void;
+  /** Default true. False disables built-in keyboard selection. */
+  enabled?: boolean;
 }
 
 interface UseSearchInputSelectionResult {
@@ -36,6 +38,7 @@ export function useSearchInputSelection({
   orderedHits,
   onSelectHit,
   onClose,
+  enabled = true,
 }: UseSearchInputSelectionArgs): UseSearchInputSelectionResult {
   const setQuery = useSearchStore((s) => s.setQuery);
 
@@ -62,6 +65,7 @@ export function useSearchInputSelection({
       if (hit !== undefined) onSelectHit(hit.uri, hit.data);
     },
     onClose,
+    enabled,
   });
 
   return {

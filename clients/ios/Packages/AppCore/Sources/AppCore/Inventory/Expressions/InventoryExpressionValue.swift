@@ -1,5 +1,3 @@
-import Foundation
-
 /// A primitive as expressions see it: the wire form, before a declared kind
 /// decides what it means. A decimal, date, URL and text are all `text` here,
 /// exactly as the server's evaluator treats them (`equal("1.0", "1.00")` is
