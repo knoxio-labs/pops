@@ -118,7 +118,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     }
 
     private func sections(_ shown: InventoryItemDetail) -> some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+        VStack(alignment: .leading, spacing: PopsSpacing.xl) {
             InventoryItemDetailSyncBanner(detail: shown)
             InventoryItemDetailConnectionsSection(connections: shown.connections)
             InventoryItemDetailContentsSection(summary: shown.containerSummary)

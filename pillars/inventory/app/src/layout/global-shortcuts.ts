@@ -1,5 +1,6 @@
 import { undoActiveToast } from '../foundation/feedback/undo-shortcut';
 import { isTypingTarget } from '../foundation/shortcuts/shortcuts';
+import { INVENTORY_NAVIGATION_PATHS } from '../navigation-paths';
 
 import type { ShortcutHandlers } from '../foundation/shortcuts/shortcut-provider';
 
@@ -18,16 +19,16 @@ export type GlobalDestinationId =
 
 /** Routes owned by each global inventory navigation shortcut. */
 export const GLOBAL_DESTINATIONS: Readonly<Record<GlobalDestinationId, string>> = {
-  'go-overview': '/inventory',
-  'go-items': '/inventory/items',
-  'go-containers': '/inventory/containers',
-  'go-locations': '/inventory/locations',
-  'go-in-hand': '/inventory/in-hand',
-  'go-activity': '/inventory/sync?segment=activity',
-  'go-sync': '/inventory/sync',
-  'go-types': '/inventory/types',
-  'new-item': '/inventory/items/new',
-  'bulk-entry': '/inventory/items/bulk-new',
+  'go-overview': INVENTORY_NAVIGATION_PATHS.overview,
+  'go-items': INVENTORY_NAVIGATION_PATHS.items,
+  'go-containers': INVENTORY_NAVIGATION_PATHS.containers,
+  'go-locations': INVENTORY_NAVIGATION_PATHS.locations,
+  'go-in-hand': INVENTORY_NAVIGATION_PATHS.inHand,
+  'go-activity': INVENTORY_NAVIGATION_PATHS.activity,
+  'go-sync': INVENTORY_NAVIGATION_PATHS.sync,
+  'go-types': INVENTORY_NAVIGATION_PATHS.types,
+  'new-item': INVENTORY_NAVIGATION_PATHS.newItem,
+  'bulk-entry': INVENTORY_NAVIGATION_PATHS.bulkEntry,
 };
 
 const DESTINATION_IDS: readonly GlobalDestinationId[] = [

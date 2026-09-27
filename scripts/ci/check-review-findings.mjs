@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Required-check guard: blocks a merge while `pr-review.yml`'s own sticky
- * comment still carries an open finding for the PR's head commit.
+ * comment still carries an open blocking finding for the PR's head commit.
  *
  * See POPS-2661. Before this guard, `pr-review.yml` found real defects and
  * wrote them into a comment nothing checked: `Review` was not a required
@@ -34,11 +34,12 @@
  * because we waited — so it fails immediately without spending the poll
  * budget.
  *
- * An open finding also fails immediately: there is nothing to wait for, the
- * review is current and it found something. "Open" here is fail-closed on the
- * status value — anything not the literal string `'resolved'` counts, the
- * same convention `pr-review-state.mjs`'s own writer uses, so a status this
- * guard does not yet recognise blocks rather than silently passing.
+ * An open HIGH or MEDIUM finding also fails immediately: there is nothing to
+ * wait for, the review is current and it found a substantive defect. LOW is
+ * advisory. Both status and severity fail closed: anything not the literal
+ * status `'resolved'` counts as open, and only the literal severity `'low'`
+ * is advisory. Legacy state with no severity and malformed or future severity
+ * values therefore block rather than silently passing.
  *
  * Two sticky-looking comments should not happen — the reviewer edits one
  * rather than posting a new one — but if it does, the LAST one wins, matching
@@ -114,14 +115,14 @@
  *     --head <sha> [--max-wait-seconds <n>] [--poll-interval-seconds <n>]
  *   node scripts/ci/check-review-findings.mjs --self-test
  *
- * Exit 0 = clean and current. Exit 1 = open findings, stuck stale/absent past
- * the wait budget, malformed state, or self-test failure. Exit 2 = usage
- * error.
+ * Exit 0 = no blocking findings and current. Exit 1 = open blocking findings,
+ * stuck stale/absent past the wait budget, malformed state, or self-test
+ * failure. Exit 2 = usage error.
  */
 
 import { execFileSync } from 'node:child_process';
 
-import { STATE_MARKER } from './pr-review-state.mjs';
+import { isBlockingSeverity, STATE_MARKER } from './pr-review-state.mjs';
 
 const STATE_RE = new RegExp(`<!--\\s*${STATE_MARKER}:\\s*([A-Za-z0-9+/=]+)\\s*-->`, 'u');
 
@@ -330,9 +331,9 @@ function describeError(error) {
 }
 
 /**
- * @typedef {{ outcome: 'pass', dismissed?: DecodedFinding[] }} PassResult
+ * @typedef {{ outcome: 'pass', advisories?: DecodedFinding[], dismissed?: DecodedFinding[] }} PassResult
  * @typedef {{ outcome: 'retry', reason: string }} RetryResult
- * @typedef {{ outcome: 'fail', reason: string, findings?: DecodedFinding[], dismissed?: DecodedFinding[] }} FailResult
+ * @typedef {{ outcome: 'fail', reason: string, findings?: DecodedFinding[], advisories?: DecodedFinding[], dismissed?: DecodedFinding[] }} FailResult
  */
 
 /**
@@ -386,18 +387,25 @@ export function evaluateReviewState({ comments, headSha }) {
 
   const dismissedIds = collectDismissedFindingIds(comments);
   const dismissed = everOpen.filter((f) => f.id !== undefined && dismissedIds.has(f.id));
-  const open = everOpen.filter((f) => !(f.id !== undefined && dismissedIds.has(f.id)));
+  const active = everOpen.filter((f) => !(f.id !== undefined && dismissedIds.has(f.id)));
+  const open = active.filter((finding) => isBlockingSeverity(finding.severity));
+  const advisories = active.filter((finding) => !isBlockingSeverity(finding.severity));
 
   if (open.length > 0) {
     return {
       outcome: 'fail',
-      reason: 'the reviewer has open findings against this head',
+      reason: 'the reviewer has open blocking findings against this head',
       findings: open,
+      ...(advisories.length > 0 ? { advisories } : {}),
       ...(dismissed.length > 0 ? { dismissed } : {}),
     };
   }
 
-  return { outcome: 'pass', ...(dismissed.length > 0 ? { dismissed } : {}) };
+  return {
+    outcome: 'pass',
+    ...(advisories.length > 0 ? { advisories } : {}),
+    ...(dismissed.length > 0 ? { dismissed } : {}),
+  };
 }
 
 /**
@@ -468,12 +476,12 @@ export async function selfTest() {
     user: { login: REVIEWER_LOGIN },
   });
 
-  // Ticket test 1: one open finding fails, and names the finding.
+  // Ticket test 1: one open substantive finding fails, and names the finding.
   const openResult = evaluateReviewState({
     comments: [
       stateComment({
         last_reviewed_sha: HEAD,
-        findings: [{ id: 'f1', status: 'open', title: 'bad' }],
+        findings: [{ id: 'f1', status: 'open', title: 'bad', severity: 'high' }],
       }),
     ],
     headSha: HEAD,
@@ -483,6 +491,39 @@ export async function selfTest() {
     'a failure names the finding',
     openResult.outcome === 'fail' && (openResult.findings ?? []).some((f) => f.id === 'f1')
   );
+
+  const advisoryResult = evaluateReviewState({
+    comments: [
+      stateComment({
+        last_reviewed_sha: HEAD,
+        findings: [{ id: 'f2', status: 'open', title: 'suggestion', severity: 'low' }],
+      }),
+    ],
+    headSha: HEAD,
+  });
+  check('a low-only review passes', advisoryResult.outcome === 'pass');
+
+  const mediumResult = evaluateReviewState({
+    comments: [
+      stateComment({
+        last_reviewed_sha: HEAD,
+        findings: [{ id: 'f3', status: 'open', title: 'contained defect', severity: 'medium' }],
+      }),
+    ],
+    headSha: HEAD,
+  });
+  check('an open medium finding fails', mediumResult.outcome === 'fail');
+
+  const legacyResult = evaluateReviewState({
+    comments: [
+      stateComment({
+        last_reviewed_sha: HEAD,
+        findings: [{ id: 'f4', status: 'open', title: 'legacy finding' }],
+      }),
+    ],
+    headSha: HEAD,
+  });
+  check('an open finding with no severity fails closed', legacyResult.outcome === 'fail');
 
   // Ticket test 2: every finding resolved passes.
   const resolvedResult = evaluateReviewState({
@@ -1105,11 +1146,16 @@ async function main() {
   }
 
   if (result.outcome === 'pass') {
-    console.log('No open findings; the reviewer is current with the PR head.');
+    const advisoryCount = result.advisories?.length ?? 0;
+    console.log(
+      advisoryCount === 0
+        ? 'No open findings; the reviewer is current with the PR head.'
+        : `${advisoryCount} advisory review ${advisoryCount === 1 ? 'suggestion' : 'suggestions'}; no blocking findings against the PR head.`
+    );
     return;
   }
 
-  console.error('::error::Open review findings block this merge.');
+  console.error('::error::Open blocking review findings block this merge.');
   console.error(result.reason);
   for (const finding of result.findings ?? []) {
     console.error(

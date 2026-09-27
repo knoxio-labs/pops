@@ -169,7 +169,11 @@ describe('useConnectionsRegistry', () => {
       Promise.resolve(
         ok(
           query.cursor === undefined
-            ? page({ nextCursor: 'next', rows: [row(1)] })
+            ? page({
+                nextCursor: 'next',
+                rows: [row(1)],
+                summary: { connections: 2, fixtures: 0, items: 2 },
+              })
             : page({ rows: [row(2)] })
         )
       )
@@ -180,6 +184,7 @@ describe('useConnectionsRegistry', () => {
 
     await waitFor(() => expect(result.current.rows).toHaveLength(2));
     expect(result.current.status).toBe('success');
+    expect(result.current.summary).toEqual({ connections: 2, fixtures: 0, items: 2 });
     expect(mocks.webConnectionsList).toHaveBeenLastCalledWith(
       expect.objectContaining({ query: { cursor: 'next', kind: 'all', limit: 200 } })
     );

@@ -77,3 +77,5 @@ An equality between two renders gets the same demand and only one of the two ans
 ## Building and testing it
 
 `swift build` and `swift test` compile for the **host**, not for iOS — which is why `Package.swift` lists `.macOS` alongside `.iOS`. The module ships in an iOS app and nothing else. An iOS-only regression is therefore not caught here; it is caught by building the app (`mise run build` in `clients/ios`), and running these tests against the iOS SDK is part of the iOS CI job (POPS-1376).
+
+`PopsQuietDisclosure` starts collapsed and uses a muted Show/Hide header with accessible expansion state. `PopsQuietDetailLine` supplies caret-free caption rows with a full touch target.
