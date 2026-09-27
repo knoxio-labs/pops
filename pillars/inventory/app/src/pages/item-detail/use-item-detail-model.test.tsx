@@ -118,8 +118,11 @@ let primaryError: Error | null;
 let detailItem: WebGetResponse['item'] | null;
 let detailError: unknown;
 let detailRefetch: ReturnType<typeof vi.fn>;
+type Refetch = () => Promise<unknown>;
+let primarySubjectRefetch: Refetch;
+let relatedSubjectRefetch: Refetch;
 
-function source(world: PlacementWorld, error: Error | null) {
+function source(world: PlacementWorld, error: Error | null, subjectItemsRefetch: Refetch) {
   const refetch = vi.fn().mockResolvedValue({});
   return {
     world,
@@ -129,7 +132,7 @@ function source(world: PlacementWorld, error: Error | null) {
     locationsQuery: { refetch },
     openContainersQuery: { refetch },
     closedContainersQuery: { refetch },
-    subjectItemsQuery: { refetch },
+    subjectItemsQuery: { refetch: subjectItemsRefetch },
   };
 }
 
@@ -146,6 +149,8 @@ beforeEach(() => {
   detailItem = webItem;
   detailError = null;
   detailRefetch = vi.fn().mockResolvedValue({});
+  primarySubjectRefetch = vi.fn<Refetch>().mockResolvedValue({});
+  relatedSubjectRefetch = vi.fn<Refetch>().mockResolvedValue({});
 
   mocks.useCatalogueLookups.mockReturnValue({
     catalogue: undefined,
@@ -160,7 +165,11 @@ beforeEach(() => {
   mocks.usePendingItemIds.mockReturnValue(new Set<string>());
   mocks.usePlacementSources.mockImplementation((subject: PickerSubject) => {
     const ids = subject.kind === 'items' ? subject.ids : [];
-    return source(ids.includes('item-1') ? primaryWorld : emptyWorld, primaryError);
+    return source(
+      ids.includes('item-1') ? primaryWorld : emptyWorld,
+      primaryError,
+      ids.includes('item-1') ? primarySubjectRefetch : relatedSubjectRefetch
+    );
   });
   mocks.useWebEvents.mockReturnValue({
     events: [],
@@ -228,6 +237,7 @@ describe('useItemDetailModel', () => {
     hook.result.current.retry();
 
     await waitFor(() => expect(detailRefetch).toHaveBeenCalledOnce());
+    expect(relatedSubjectRefetch).toHaveBeenCalledOnce();
     expect(mocks.connectionsGraph).toHaveBeenCalledWith(
       expect.objectContaining({ query: { maxDepth: 10 } })
     );
