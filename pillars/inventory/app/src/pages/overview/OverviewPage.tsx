@@ -9,11 +9,13 @@ import { InventoryPage } from '../../foundation/frame/page-frame.js';
 import { FirstRunCard } from './first-run.js';
 import { MovingDayStrip } from './moving-day-strip.js';
 import { type OverviewPageModel, useOverviewPageModel } from './overview-page-model.js';
-import { InHandPanel, OpenContainersPanel, type PanelContext } from './overview-panels.js';
+import { InHandPanel, OpenContainersPanel } from './overview-panels.js';
 import { RecentWorkPanel } from './recent-work-panel.js';
 import { StatTiles } from './stat-tiles.js';
 
 import type { ReactElement } from 'react';
+
+import type { PanelContext } from './overview-panel-types.js';
 
 function LoadingBody(): ReactElement {
   return (

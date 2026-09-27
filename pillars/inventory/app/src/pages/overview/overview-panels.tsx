@@ -5,14 +5,7 @@ import { OverviewPanel, PanelEmpty } from './panel.js';
 import type { ReactElement } from 'react';
 
 import type { ItemRowModel } from '../../foundation/model/model.js';
-import type { PlacementWorld } from '../../foundation/model/placement-model.js';
-
-/** Context shared by the Overview panels' row verbs. */
-export interface PanelContext {
-  world: PlacementWorld;
-  disabledReason?: string;
-  onNavigate: (path: string) => void;
-}
+import type { PanelContext } from './overview-panel-types.js';
 
 /** Renders open containers with an optimistic Close action. */
 export function OpenContainersPanel({

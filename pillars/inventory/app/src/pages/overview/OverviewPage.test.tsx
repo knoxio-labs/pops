@@ -478,7 +478,7 @@ describe('OverviewPage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Put back Lamp' }));
-    expect(await screen.findByText('Not saved. The box is closed.')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Not saved. The box is closed.');
   });
 
   it('shows the pending Saving badge only while a row is in flight', () => {

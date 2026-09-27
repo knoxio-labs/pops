@@ -9,12 +9,12 @@ import { PanelRow } from './panel.js';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { ItemRowModel } from '../../foundation/model/model.js';
-import type { PanelContext } from './overview-panels.js';
+import type { PanelContext } from './overview-panel-types.js';
 
 function savedDetail(detail: ReactNode, rejection: string | undefined): ReactNode {
   if (rejection === undefined) return detail;
   return (
-    <span className="text-foreground">
+    <span className="text-foreground" role="alert">
       <span className="font-medium">Not saved.</span> {rejection}
     </span>
   );
