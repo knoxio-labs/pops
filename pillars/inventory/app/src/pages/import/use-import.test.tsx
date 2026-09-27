@@ -44,6 +44,19 @@ function csvFile(text: string, name = 'garage.csv'): File {
   return new File([text], name, { type: 'text/csv' });
 }
 
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolvePromise: (value: T) => void = () => {
+    throw new Error('Deferred promise was not initialized');
+  };
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return { promise, resolve: resolvePromise };
+}
+
 function validOutcomes(rows: readonly BatchRow[]): BatchRun {
   return { outcomes: rows.map((_, row) => ({ status: 'valid' as const, row })) };
 }
@@ -120,6 +133,55 @@ describe('useImport', () => {
     expect(mocks.validate).toHaveBeenCalledWith([
       { name: 'Lamp', type: '', quantity: '', code: '', where: 'second', note: 'first' },
     ]);
+  });
+
+  it('keeps guessed status tied to the original repeated-header column', async () => {
+    const { result } = renderHook(() => useImport());
+    await act(async () => {
+      await result.current.load(csvFile('Name,Name\r\nLamp,Desk'));
+    });
+
+    expect(result.current.guessed).toEqual(new Set(['0:name']));
+    act(() => result.current.setTarget(0, 'skip'));
+    act(() => result.current.setTarget(1, 'name'));
+
+    expect(result.current.mapping).toEqual([
+      { header: 'Name', target: 'skip' },
+      { header: 'Name', target: 'name' },
+    ]);
+    expect(result.current.guessed.has('1:name')).toBe(false);
+  });
+
+  it('keeps a newer file load from being overwritten by an older read', async () => {
+    const first = csvFile('Name\r\nFirst', 'first.csv');
+    const second = csvFile('Name\r\nSecond', 'second.csv');
+    const firstText = deferred<string>();
+    const secondText = deferred<string>();
+    vi.spyOn(first, 'text').mockReturnValue(firstText.promise);
+    vi.spyOn(second, 'text').mockReturnValue(secondText.promise);
+    const { result } = renderHook(() => useImport());
+
+    let firstLoad: Promise<void> | undefined;
+    let secondLoad: Promise<void> | undefined;
+    act(() => {
+      firstLoad = result.current.load(first);
+      secondLoad = result.current.load(second);
+    });
+    if (secondLoad === undefined || firstLoad === undefined)
+      throw new Error('Expected both file loads to start');
+
+    await act(async () => {
+      secondText.resolve('Name\r\nSecond');
+      await secondLoad;
+    });
+    expect(result.current.file?.name).toBe('second.csv');
+
+    await act(async () => {
+      firstText.resolve('Name\r\nFirst');
+      await firstLoad;
+    });
+    expect(result.current.file?.name).toBe('second.csv');
+    expect(result.current.rows[0]).toEqual(['Second']);
   });
 
   it('commits valid rows and reports invalid rows as skipped', async () => {

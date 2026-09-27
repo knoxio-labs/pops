@@ -18,3 +18,11 @@ Catalogue values are translated between stable form field IDs and protocol-1
 field keys; edit patches include explicit clears so an emptied field is removed
 from the item. Edit mutations start at the opening revision and advance their
 base revision after each applied command.
+
+Photos selected while creating are staged until the item save succeeds. Photos
+selected while editing upload immediately through the content-addressed media
+route, then attach through `item.attachPhoto`. The form keeps failed uploads in
+the queue with their refusal reason and lets the user retry them; a photo
+failure never rolls back an otherwise successful item save. Save and start
+another waits for the queue, reports the number of attached photos, and then
+clears the queue for the next item.
