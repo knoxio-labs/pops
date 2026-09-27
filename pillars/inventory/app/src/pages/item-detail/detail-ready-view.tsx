@@ -6,7 +6,8 @@ import { ItemDetailView } from './item-detail-view';
 
 import type { ReactElement } from 'react';
 
-import type { DetailReadyState, ItemDetailModel } from './item-detail-page';
+import type { ItemDetailModel } from './detail-model';
+import type { DetailReadyState } from './use-detail-ready-state';
 
 function ReadyHeader({
   model,
