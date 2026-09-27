@@ -119,9 +119,17 @@ function locationPathEnvelope(nodes: LocationNode[]): LocationsGetPathResponses[
 }
 
 function paperlessEnvelope(
-  status: PaperlessStatusResponses[200]['data']
+  status: Partial<PaperlessStatusResponses[200]['data']>
 ): PaperlessStatusResponses[200] {
-  return { data: status };
+  return {
+    data: {
+      configured: false,
+      available: false,
+      baseUrl: null,
+      documentCount: null,
+      ...status,
+    },
+  };
 }
 
 function documentsEnvelope(docs: InventoryDocument[]): DocumentsListForItemResponses[200] {

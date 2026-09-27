@@ -32,6 +32,7 @@ export interface LocationTabBodyProps {
   initialSelection?: SelectionState;
   onStoreHere: () => void;
   onClearQuery: () => void;
+  onEdit?: (id: string) => void;
 }
 
 function rowIds(contents: PlaceContents, tab: PlaceTab): string[] {
@@ -121,6 +122,7 @@ export function LocationTabBody(props: LocationTabBodyProps) {
     onPickUp: (id) => props.verbs.pickUp([id]),
     onMove: (id) => props.verbs.startMove([id]),
     onTakeOut: (id) => props.verbs.takeOut([id]),
+    onEdit: props.onEdit,
   };
   const creating = tab === 'places' && api.edits.creatingUnder === place.id;
   const empty = listLength(contents, tab) === 0 && !creating;

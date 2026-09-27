@@ -19,6 +19,12 @@ export const FixtureSchema = z.object({
   lastEditedTime: z.string(),
 });
 
+/** One fixture row returned by the list endpoint, including its wiring summary. */
+export const FixtureListRowSchema = FixtureSchema.extend({
+  wiredCount: z.number().int().nonnegative(),
+  wiredNames: z.array(z.string()),
+});
+
 export const ItemFixtureConnectionSchema = z.object({
   id: z.number(),
   itemId: z.string(),
@@ -51,12 +57,13 @@ export const inventoryFixturesContract = c.router({
     path: '/fixtures',
     query: z.object({
       search: z.string().trim().min(1).max(200).optional(),
+      withinLocationId: z.string().optional(),
       locationId: z.string().optional(),
       type: z.string().optional(),
       limit: z.coerce.number().positive().max(500).optional(),
       offset: z.coerce.number().nonnegative().optional(),
     }),
-    responses: { 200: z.object({ data: z.array(FixtureSchema), total: z.number() }) },
+    responses: { 200: z.object({ data: z.array(FixtureListRowSchema), total: z.number() }) },
     summary: 'List fixtures with optional filters',
   },
   get: {

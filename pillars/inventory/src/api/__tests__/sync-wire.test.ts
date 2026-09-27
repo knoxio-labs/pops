@@ -228,7 +228,12 @@ describe('item rows on the wire', () => {
       ...paperless(),
       getPaperlessStatus: () => {
         asked += 1;
-        return Promise.resolve({ configured: false, available: false, baseUrl: null });
+        return Promise.resolve({
+          configured: false,
+          available: false,
+          baseUrl: null,
+          documentCount: null,
+        });
       },
     };
     const target = harness(counting);

@@ -1,9 +1,10 @@
 /**
- * The verbs one place takes, as a menu on its tree row and in its panel:
- * open its page, add a place inside, rename, move and delete. Delete is last
- * and set apart, and says whether it will ask first.
+ * The secondary verbs one place takes, as a menu on its tree row and in its
+ * panel: open its page, add a place inside, move and delete. Rename is a
+ * visible quick action beside the menu. Delete is last and set apart, and
+ * says whether it will ask first.
  */
-import { ArrowUpRight, FolderPlus, MoreHorizontal, SquarePen, Trash2 } from 'lucide-react';
+import { ArrowUpRight, FolderPlus, MoreHorizontal, Trash2 } from 'lucide-react';
 
 import {
   ButtonPrimitive,
@@ -23,7 +24,6 @@ import type { LucideIcon } from 'lucide-react';
 export interface PlaceMenuHandlers {
   onOpen?: () => void;
   onNewInside?: () => void;
-  onRename?: () => void;
   onMove?: () => void;
   onDelete?: () => void;
 }
@@ -60,7 +60,6 @@ export function PlaceMenuItems({ handlers }: { handlers: PlaceMenuHandlers }) {
         onSelect={handlers.onOpen}
       />
       <Item icon={FolderPlus} label="New place inside" onSelect={handlers.onNewInside} />
-      <Item icon={SquarePen} label="Rename" shortcutId="list-edit" onSelect={handlers.onRename} />
       <Item icon={INVENTORY_ICONS.move} label="Move" shortcutId="move" onSelect={handlers.onMove} />
       {handlers.onDelete ? <DropdownMenuSeparator /> : null}
       <Item icon={Trash2} label="Delete" onSelect={handlers.onDelete} />

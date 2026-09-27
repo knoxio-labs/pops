@@ -93,19 +93,35 @@ export function makePaperlessHandlers() {
       if (!client) {
         return {
           status: 200 as const,
-          body: { data: { configured: false, available: false, baseUrl: null } },
+          body: {
+            data: { configured: false, available: false, baseUrl: null, documentCount: null },
+          },
         };
       }
       try {
-        await client.getDocumentTypes();
+        const documentCount = await client.getDocumentCount();
         return {
           status: 200 as const,
-          body: { data: { configured: true, available: true, baseUrl: client.getBaseUrl() } },
+          body: {
+            data: {
+              configured: true,
+              available: true,
+              baseUrl: client.getBaseUrl(),
+              documentCount,
+            },
+          },
         };
       } catch {
         return {
           status: 200 as const,
-          body: { data: { configured: true, available: false, baseUrl: client.getBaseUrl() } },
+          body: {
+            data: {
+              configured: true,
+              available: false,
+              baseUrl: client.getBaseUrl(),
+              documentCount: null,
+            },
+          },
         };
       }
     },

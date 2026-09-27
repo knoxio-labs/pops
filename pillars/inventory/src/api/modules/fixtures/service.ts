@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull } from 'drizzle-orm';
 
 import {
   fixtures,
@@ -20,54 +20,14 @@ import type {
   ItemFixtureConnection,
   UpdateFixtureInput,
 } from './types.js';
+export { listFixtures } from './list-service.js';
+export type { FixtureListResult } from './list-service.js';
 
 const NOW = (): string => new Date().toISOString();
-
-function escapeSearch(value: string): string {
-  return value.replace(/[\\%_]/gu, (character) => `\\${character}`);
-}
-
-export interface FixtureListResult {
-  rows: Fixture[];
-  total: number;
-}
 
 export interface FixtureConnectionListResult {
   rows: ItemFixtureConnection[];
   total: number;
-}
-
-export function listFixtures(
-  db: InventoryDb,
-  opts: {
-    search?: string;
-    locationId?: string;
-    type?: string;
-    limit: number;
-    offset: number;
-  }
-): FixtureListResult {
-  const conditions = [];
-  const search = opts.search?.trim();
-  if (search !== undefined && search.length > 0) {
-    conditions.push(
-      sql`lower(${fixtures.name}) LIKE lower(${`%${escapeSearch(search)}%`}) ESCAPE '\\'`
-    );
-  }
-  if (opts.locationId) conditions.push(eq(fixtures.locationId, opts.locationId));
-  if (opts.type) conditions.push(eq(fixtures.type, opts.type));
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-  const rows = db
-    .select()
-    .from(fixtures)
-    .where(where)
-    .orderBy(asc(fixtures.createdAt), asc(fixtures.id))
-    .limit(opts.limit)
-    .offset(opts.offset)
-    .all();
-  const [countResult] = db.select({ total: count() }).from(fixtures).where(where).all();
-  return { rows, total: countResult?.total ?? 0 };
 }
 
 export function getFixture(db: InventoryDb, id: string): Fixture {

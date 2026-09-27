@@ -126,6 +126,21 @@ describe('PaperlessClient.searchDocuments', () => {
   });
 });
 
+describe('PaperlessClient.getDocumentCount', () => {
+  it('returns the total count from the paginated documents endpoint', async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockJsonResponse({ count: 123, next: null, previous: null, results: [] })
+    );
+
+    const client = new PaperlessClient('https://paperless.example', 'token');
+
+    await expect(client.getDocumentCount()).resolves.toBe(123);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://paperless.example/api/documents/?page_size=1');
+    expect((init.headers as Record<string, string>)['Authorization']).toBe('Token token');
+  });
+});
+
 describe('PaperlessClient thumbnail + download URLs', () => {
   it('builds the thumbnail URL against the base URL', () => {
     const client = new PaperlessClient('https://paperless.example', 'token');

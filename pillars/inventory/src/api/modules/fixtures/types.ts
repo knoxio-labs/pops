@@ -17,6 +17,13 @@ export const FixtureSchema = z.object({
 });
 export type Fixture = z.infer<typeof FixtureSchema>;
 
+/** One fixture row returned by the list service, including its wiring summary. */
+export const FixtureListRowSchema = FixtureSchema.extend({
+  wiredCount: z.number().int().nonnegative(),
+  wiredNames: z.array(z.string()),
+});
+export type FixtureListRow = z.infer<typeof FixtureListRowSchema>;
+
 export const ItemFixtureConnectionSchema = z.object({
   id: z.number(),
   itemId: z.string(),
@@ -45,6 +52,7 @@ export type UpdateFixtureInput = z.infer<typeof UpdateFixtureSchema>;
 
 export const FixtureQuerySchema = z.object({
   search: z.string().trim().min(1).max(200).optional(),
+  withinLocationId: z.string().optional(),
   locationId: z.string().optional(),
   type: z.string().optional(),
   limit: z.coerce.number().positive().max(500).optional(),

@@ -93,9 +93,17 @@ function mockWarrantiesPending(): void {
   );
 }
 
-function mockPaperless(status: PaperlessPayload['data']): void {
+function mockPaperless(status: Partial<PaperlessPayload['data']>): void {
   paperlessStatusMock.mockImplementation(async () => ({
-    data: { data: status } satisfies PaperlessPayload,
+    data: {
+      data: {
+        configured: false,
+        available: false,
+        baseUrl: null,
+        documentCount: null,
+        ...status,
+      },
+    } satisfies PaperlessPayload,
     error: undefined,
   }));
 }

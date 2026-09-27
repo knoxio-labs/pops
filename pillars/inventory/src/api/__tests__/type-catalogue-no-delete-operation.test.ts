@@ -46,7 +46,12 @@ function apiFor(): BoundAgent {
     identityResolver,
     documents: {
       getPaperlessStatus: () =>
-        Promise.resolve({ configured: false, available: false, baseUrl: null }),
+        Promise.resolve({
+          configured: false,
+          available: false,
+          baseUrl: null,
+          documentCount: null,
+        }),
       searchPaperlessDocuments: () => Promise.resolve([]),
       paperlessDocumentMissing: () => Promise.resolve(null),
     },

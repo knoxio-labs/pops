@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   useCatalogueLookups: vi.fn(),
   usePlacementSources: vi.fn(),
   usePendingItemIds: vi.fn(),
+  useItemVerbs: vi.fn(),
+  useBulkItemVerbs: vi.fn(),
   useChangedElsewhere: vi.fn(),
   useOnline: vi.fn(),
 }));
@@ -28,7 +30,13 @@ vi.mock('../../inventory-web/useCatalogueLookups', () => ({
 vi.mock('../../inventory-web/usePlacementSources', () => ({
   usePlacementSources: mocks.usePlacementSources,
 }));
-vi.mock('../../inventory-web/item-verbs', () => ({ usePendingItemIds: mocks.usePendingItemIds }));
+vi.mock('../../inventory-web/item-verbs', () => ({
+  usePendingItemIds: mocks.usePendingItemIds,
+  useItemVerbs: mocks.useItemVerbs,
+}));
+vi.mock('../../inventory-web/item-verbs-bulk', () => ({
+  useBulkItemVerbs: mocks.useBulkItemVerbs,
+}));
 vi.mock('../../inventory-web/useChangedElsewhere', () => ({
   useChangedElsewhere: mocks.useChangedElsewhere,
 }));
@@ -155,6 +163,15 @@ function renderPage(initialEntry = '/inventory/items'): void {
   mocks.useOnline.mockImplementation(() => currentOnline);
   mocks.useChangedElsewhere.mockImplementation(() => currentChanged);
   mocks.usePendingItemIds.mockImplementation(() => new Set<string>());
+  mocks.useItemVerbs.mockImplementation(() => ({
+    pickUp: vi.fn(),
+    move: vi.fn(),
+    putBack: vi.fn(),
+  }));
+  mocks.useBulkItemVerbs.mockImplementation(() => ({
+    pickUp: vi.fn(),
+    move: vi.fn(),
+  }));
   mocks.useCatalogueLookups.mockImplementation(() => ({
     catalogue: undefined,
     types: [catalogueType('cable', 'Cable')],
@@ -167,6 +184,8 @@ function renderPage(initialEntry = '/inventory/items'): void {
   }));
   mocks.usePlacementSources.mockImplementation(() => ({
     world: buildWorld([activeRow], [location]),
+    recents: [],
+    createLocation: { mutate: vi.fn() },
   }));
 
   render(
@@ -321,6 +340,8 @@ describe('ItemsPage', () => {
     currentRows = rowsResult({ rows: duplicateRows });
     mocks.usePlacementSources.mockImplementation(() => ({
       world: buildWorld(duplicateRows, [location]),
+      recents: [],
+      createLocation: { mutate: vi.fn() },
     }));
     renderPage();
 

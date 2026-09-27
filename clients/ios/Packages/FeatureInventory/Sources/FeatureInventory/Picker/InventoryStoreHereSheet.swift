@@ -43,6 +43,7 @@ internal struct InventoryStoreHereSheet: View {
     internal let runner: InventoryCommandRunner
     private let firstStep: InventoryStoreHereStep
     @State private var detent: PresentationDetent
+    @Environment(\.dismiss) private var dismiss
 
     internal init(
         target: InventoryStoreTarget, runner: InventoryCommandRunner,
@@ -61,7 +62,7 @@ internal struct InventoryStoreHereSheet: View {
         }
         .presentationDetents(firstStep.detents, selection: $detent)
         .tint(.popsInventory)
-        .inventoryItemFormPresentation(store: runner.store)
+        .inventoryItemFormPresentation(store: runner.store, onCreated: { dismiss() })
     }
 }
 

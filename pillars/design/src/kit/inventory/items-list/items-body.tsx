@@ -24,6 +24,7 @@ export interface ItemsBodyProps {
   rejections?: Readonly<Record<string, string>>;
   /** Replaces the Type column: Containers shows what each box holds. */
   secondColumn?: SecondColumn;
+  onEdit?: (id: string) => void;
 }
 
 /** The list body. */
@@ -57,6 +58,7 @@ export function ItemsBody({ browser, world, status, population, ...rest }: Items
       pendingIds={rest.pendingIds}
       rejections={rest.rejections}
       secondColumn={rest.secondColumn}
+      onEdit={rest.onEdit}
     />
   );
 }
