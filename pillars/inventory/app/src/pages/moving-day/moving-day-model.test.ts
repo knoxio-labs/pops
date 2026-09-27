@@ -74,6 +74,12 @@ describe('moving-day-model', () => {
       boxes: [box('closed', 'Closed', 'closed')],
     });
     expect(isMoveDone(done)).toBe(true);
+    expect(
+      isMoveDone({
+        ...done,
+        inHand: [{ id: 'carried', name: 'Carried item', code: null, quantity: 1 }],
+      })
+    ).toBe(false);
   });
 
   it('maps every API placement variant into the shared target model', () => {

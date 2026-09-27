@@ -88,11 +88,12 @@ export function packedPercent(summary: MovingSummary): number {
   return total === 0 ? 0 : Math.floor((summary.packed * 100) / total);
 }
 
-/** Returns whether every box is closed and no item remains loose in a room. */
+/** Returns whether every box is closed and no item remains loose or in hand. */
 export function isMoveDone(summary: MovingSummary): boolean {
   return (
     summary.boxes.length > 0 &&
     summary.looseCount === 0 &&
+    summary.inHand.length === 0 &&
     summary.stages.closed === summary.boxes.length
   );
 }
