@@ -1,5 +1,5 @@
 name: E2E Tests
-run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Playwright against the shell and the app bundles it mounts. No pillar
 # backend is started: every spec fulfils the REST surface it exercises at the
@@ -31,6 +31,11 @@ run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.h
 # `ci-gate.yml`'s PATH_FILTERS mirror carries the same exclusion, and
 # `scripts/ci/check-ci-gate-wiring.mjs` fails if the two drift.
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        required: true
   push:
     branches: [main]
   pull_request:

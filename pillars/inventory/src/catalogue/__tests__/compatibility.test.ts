@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
+import { resolveTypeTree } from '../catalogue-tree.js';
 import { classifyCatalogueCompatibility } from '../compatibility.js';
 
 import type {
   PersistedCatalogue,
-  PersistedItemType,
-  PersistedItemTypeField,
+  UnresolvedItemType,
+  UnresolvedItemTypeField,
 } from '../catalogue-types.js';
 
-function field(overrides: Partial<PersistedItemTypeField> = {}): PersistedItemTypeField {
+function field(overrides: Partial<UnresolvedItemTypeField> = {}): UnresolvedItemTypeField {
   return {
     id: 'field-a',
     typeId: 'type-a',
@@ -37,7 +38,7 @@ function field(overrides: Partial<PersistedItemTypeField> = {}): PersistedItemTy
   };
 }
 
-function type(fields: readonly PersistedItemTypeField[]): PersistedItemType {
+function type(fields: readonly UnresolvedItemTypeField[]): UnresolvedItemType {
   return {
     revision: 1,
     id: 'type-a',
@@ -50,13 +51,14 @@ function type(fields: readonly PersistedItemTypeField[]): PersistedItemType {
     presentation: {},
     archivedAt: null,
     replacedBy: null,
+    parentTypeId: null,
     fields,
   };
 }
 
 function catalogue(
   revision: number,
-  types: readonly PersistedItemType[],
+  types: readonly UnresolvedItemType[],
   minimumProtocol = 1
 ): PersistedCatalogue {
   return {
@@ -66,7 +68,7 @@ function catalogue(
       status: revision === 1 ? 'published' : 'draft',
       minimumProtocol,
     },
-    types: types.map((entry) => ({ ...entry, revision })),
+    types: resolveTypeTree(types.map((entry) => ({ ...entry, revision }))),
   };
 }
 
@@ -124,7 +126,7 @@ describe('classifyCatalogueCompatibility', () => {
   });
 
   describe('a new type', () => {
-    function newType(fields: readonly PersistedItemTypeField[]): PersistedItemType {
+    function newType(fields: readonly UnresolvedItemTypeField[]): UnresolvedItemType {
       return {
         ...type(fields.map((entry) => ({ ...entry, typeId: 'type-b' }))),
         id: 'type-b',
@@ -150,12 +152,12 @@ describe('classifyCatalogueCompatibility', () => {
         { classification: 'compatible', definitionId: 'type-b', code: 'type_added' },
         {
           classification: 'protocol_gated',
-          definitionId: 'field-when',
+          definitionId: 'field-link',
           code: 'primitive_kind_added',
         },
         {
           classification: 'protocol_gated',
-          definitionId: 'field-link',
+          definitionId: 'field-when',
           code: 'primitive_kind_added',
         },
       ]);

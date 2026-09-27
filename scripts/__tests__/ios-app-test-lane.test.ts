@@ -22,7 +22,7 @@ function fakeTool(directory: string, name: string, source: string): void {
   chmodSync(path, 0o755);
 }
 
-function fixture(): { bin: string; argumentsFile: string } {
+function fixture(): { bin: string; argumentsFile: string; artifacts: string } {
   const tempRoot = join(repoRoot, 'tmp');
   mkdirSync(tempRoot, { recursive: true });
   const root = mkdtempSync(join(tempRoot, 'ios-app-test-lane-'));
@@ -30,6 +30,7 @@ function fixture(): { bin: string; argumentsFile: string } {
   const bin = join(root, 'bin');
   mkdirSync(bin);
   const argumentsFile = join(root, 'xcodebuild-arguments');
+  const artifacts = join(root, 'artifacts');
 
   fakeTool(
     bin,
@@ -37,6 +38,8 @@ function fixture(): { bin: string; argumentsFile: string } {
     `#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$@" > "$POPS_TEST_XCODEBUILD_ARGUMENTS"
+printf 'xcodebuild stdout marker\n'
+printf 'xcodebuild stderr marker\n' >&2
 while [ "$#" -gt 0 ]; do
   if [ "$1" = '-resultBundlePath' ]; then
     mkdir -p "$2"
@@ -44,6 +47,7 @@ while [ "$#" -gt 0 ]; do
   fi
   shift
 done
+exit "\${POPS_TEST_XCODEBUILD_STATUS:-0}"
 `
   );
   fakeTool(
@@ -59,7 +63,7 @@ esac
 `
   );
 
-  return { bin, argumentsFile };
+  return { bin, argumentsFile, artifacts };
 }
 
 describe('the iOS app test lane diagnostic policy', () => {
@@ -68,21 +72,56 @@ describe('the iOS app test lane diagnostic policy', () => {
     () => {
       const { bin, argumentsFile } = fixture();
 
-      execFileSync('bash', [lane, 'platform=iOS Simulator,name=iPhone 17,OS=latest'], {
-        cwd: iosRoot,
-        timeout: TEST_TIMEOUT_MS,
-        env: {
-          ...process.env,
-          PATH: `${bin}:${process.env.PATH ?? ''}`,
-          POPS_IOS_TEST_DIAGNOSTICS: 'never',
-          POPS_TEST_XCODEBUILD_ARGUMENTS: argumentsFile,
-        },
-      });
+      const output = execFileSync(
+        'bash',
+        [lane, 'platform=iOS Simulator,name=iPhone 17,OS=latest'],
+        {
+          cwd: iosRoot,
+          encoding: 'utf8',
+          timeout: TEST_TIMEOUT_MS,
+          env: {
+            ...process.env,
+            PATH: `${bin}:${process.env.PATH ?? ''}`,
+            POPS_IOS_TEST_DIAGNOSTICS: 'never',
+            POPS_TEST_XCODEBUILD_ARGUMENTS: argumentsFile,
+          },
+        }
+      );
 
       const args = readFileSync(argumentsFile, 'utf8').trim().split('\n');
       const policy = args.indexOf('-collect-test-diagnostics');
       expect(policy).toBeGreaterThanOrEqual(0);
       expect(args[policy + 1]).toBe('never');
+      expect(output).toContain('xcodebuild stdout marker');
+      expect(output).toContain('xcodebuild stderr marker');
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    'streams a failing xcodebuild and preserves its CI artifacts',
+    () => {
+      const { artifacts, bin, argumentsFile } = fixture();
+
+      const result = spawnSync('bash', [lane, 'platform=iOS Simulator,name=iPhone 17,OS=latest'], {
+        cwd: iosRoot,
+        encoding: 'utf8',
+        timeout: TEST_TIMEOUT_MS,
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH ?? ''}`,
+          POPS_IOS_TEST_ARTIFACTS: artifacts,
+          POPS_TEST_XCODEBUILD_ARGUMENTS: argumentsFile,
+          POPS_TEST_XCODEBUILD_STATUS: '7',
+        },
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('xcodebuild stdout marker');
+      expect(result.stdout).toContain('xcodebuild stderr marker');
+      expect(readFileSync(join(artifacts, 'test.log'), 'utf8')).toContain(
+        'xcodebuild stderr marker'
+      );
     },
     TEST_TIMEOUT_MS
   );
