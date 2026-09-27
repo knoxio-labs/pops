@@ -125,9 +125,10 @@ internal enum InventoryBarcodeFacts {
     private static func normalized(_ value: String) -> String {
         value.folding(
             options: [.caseInsensitive, .diacriticInsensitive],
-            locale: Locale(identifier: "en_US_POSIX"))
-            .lowercased()
-            .filter { $0.isLetter || $0.isNumber }
+            locale: Locale(identifier: "en_US_POSIX")
+        )
+        .lowercased()
+        .filter { $0.isLetter || $0.isNumber }
     }
 
     private static func nonempty(_ value: String?) -> String? {
