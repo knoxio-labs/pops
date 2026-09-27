@@ -34,7 +34,7 @@ describe('local validation push evidence', { timeout: 60_000 }, () => {
         writeFileSync(join(root, 'bin/pnpm'), '#!/bin/sh\nexit 0\n');
         writeFileSync(
           join(root, 'bin/mise'),
-          `#!/bin/sh\ncase "$PATH" in node_modules/.bin:*) exit 9 ;; esac\n${mutate === 'none' ? 'true' : `if [ "$2" = "${mutate}" ]; then printf changed > source.txt; fi`}\n`
+          `#!/bin/sh\ncase "$PATH" in node_modules/.bin:*|*git-core:*) exit 9 ;; esac\n[ -z "$GIT_EXEC_PATH" ] || exit 9\n${mutate === 'none' ? 'true' : `if [ "$2" = "${mutate}" ]; then printf changed > source.txt; fi`}\n`
         );
         chmodSync(join(root, 'bin/pnpm'), 0o755);
         chmodSync(join(root, 'bin/mise'), 0o755);
@@ -45,7 +45,11 @@ describe('local validation push evidence', { timeout: 60_000 }, () => {
         git('commit', '-qm', 'test: fixture');
         const result = spawnSync('sh', ['-e', 'hook'], {
           cwd: root,
-          env: { ...env, PATH: `node_modules/.bin:${join(root, 'bin')}:${process.env.PATH}` },
+          env: {
+            ...env,
+            GIT_EXEC_PATH: join(root, 'git-core'),
+            PATH: `node_modules/.bin:${join(root, 'git-core')}:${join(root, 'bin')}:${process.env.PATH}`,
+          },
           encoding: 'utf8',
           input: '',
         });

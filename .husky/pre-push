@@ -23,8 +23,12 @@ scripts_decision=$(printf '%s\n' "$output" | sed -n '2p')
 [ -n "$scripts_decision" ] || scripts_decision=run
 
 without_repo_locating_git_env() {
-  # Remove Husky's relative prefix; mise restores the absolute workspace bin
-  # path, keeping validation's environment identical to the preceding check.
+  # Git and Husky inject helper paths before invoking hooks. Restore the
+  # caller's path so identical manual and hook checks can share evidence.
+  validation_task_path=${PATH#node_modules/.bin:}
+  if [ -n "${GIT_EXEC_PATH:-}" ]; then
+    validation_task_path=${validation_task_path#"$GIT_EXEC_PATH":}
+  fi
   env \
     -u GIT_DIR \
     -u GIT_WORK_TREE \
@@ -35,7 +39,8 @@ without_repo_locating_git_env() {
     -u GIT_PREFIX \
     -u GIT_QUARANTINE_PATH \
     -u GIT_NAMESPACE \
-    PATH="${PATH#node_modules/.bin:}" \
+    -u GIT_EXEC_PATH \
+    PATH="$validation_task_path" \
     "$@"
 }
 
