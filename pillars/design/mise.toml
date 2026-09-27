@@ -25,7 +25,7 @@ run = "node dist/api/server.js"
 run = "vite"
 
 [tasks.typecheck]
-run = "tsc --noEmit"
+run = "node ../../scripts/local-dev/typecheck.mjs"
 
 [tasks.test]
 run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]

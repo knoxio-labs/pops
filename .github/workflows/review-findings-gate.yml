@@ -31,7 +31,7 @@ name: Review Findings Gate
 #     and draft handling stays at STEP level, exactly like `agent-review.yml`.
 #   - `agent-review.yml`'s guards answer in the time of one `pnpm install`.
 #     This job can legitimately take minutes — it waits out
-#     `pr-review.yml`'s own ~60s debounce plus however long the model call
+#     `pr-review.yml`'s own ~15s debounce plus however long the model call
 #     takes — and folding that wait into `agent-review`'s job would add that
 #     latency to every PR's fast structural guards, including ones this job
 #     itself skips (drafts, merge groups).
@@ -40,7 +40,7 @@ name: Review Findings Gate
 # than here — see that file's header for the reasoning:
 #   1. no sticky comment at all (the reviewer never ran, or is still mid-run)
 #   2. a sticky comment whose `last_reviewed_sha` is behind the PR head (the
-#      reviewer debounces ~60s before it even starts, so this is the ORDINARY
+#      reviewer debounces ~15s before it even starts, so this is the ORDINARY
 #      state for the first minute or so after every push)
 #   3. a state block that is missing, not valid base64, or decodes to JSON
 #      that is not the expected shape

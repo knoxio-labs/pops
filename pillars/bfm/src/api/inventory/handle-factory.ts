@@ -35,7 +35,7 @@ export const INVENTORY_PROTOCOL_HEADER = 'pops-inventory-protocol';
 export const INVENTORY_SYNC_PROTOCOL_VERSION = 2;
 
 /**
- * The acting-device header inventory's `POST /sync/mutations` honours
+ * The acting-device header inventory's sync write routes honour
  * (`pillars/inventory/src/api/sync/actor.ts`'s `ACTOR_HEADER`) — not
  * imported, for the same reason {@link INVENTORY_PROTOCOL_HEADER} is not.
  */
@@ -58,10 +58,10 @@ const actorHeaderStorage = new AsyncLocalStorage<string>();
 
 /**
  * Run `send` with `actorHeader` visible to every inventory call it makes,
- * so `POST /sync/mutations` is recorded against the device the caller
- * resolved rather than as an anonymous service call. Every other inventory
- * route ignores the header entirely, so calling this around a read is
- * harmless — nothing outside `client.ts`'s `mutations` call reads the store.
+ * so sync writes are recorded against the device the caller resolved rather
+ * than as an anonymous service call. Every other inventory route ignores the
+ * header entirely, so calling this around a read is harmless — nothing
+ * outside `client.ts`'s sync writes reads the store.
  */
 export function withInventoryActor<T>(actorHeader: string, send: () => Promise<T>): Promise<T> {
   return actorHeaderStorage.run(actorHeader, send);

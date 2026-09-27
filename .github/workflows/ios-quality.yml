@@ -1,4 +1,5 @@
 name: iOS Quality
+run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
 
 # The only workflow in this repo that does not run on `ubuntu-latest`, because
 # Swift does not build anywhere else. `knoxio-labs/pops` is public, so
@@ -41,18 +42,13 @@ name: iOS Quality
 # too. `scripts/ios-e2e/**` is in for the same reason: it is the harness that
 # boots it.
 #
-# `pillars/inventory/**` is in on exactly that second ground and no other
-# (POPS-4206). Since POPS-4066 the UI flow boots a real inventory pillar
-# alongside the BFM (`scripts/ios-e2e/inventory-pillar.mjs`, and the install
-# step below resolves `@pops/inventory...` as well), so its source is an input
-# to the flow the same way the BFM's is, and until this was listed an
-# inventory-only change drove that flow on neither the PR nor the queue lane.
-# It is not free: of the last 100 commits to `main`, 14 touched
-# `pillars/inventory/**` and nothing else already in this filter, so that is
-# how often the macOS lane is newly selected in both places. Paid anyway,
-# because the alternative is a flow that boots a process no change to it is
-# ever tested against — the same argument that put `pillars/bfm/**` here, not
-# the transitive one that keeps `libs/*` out below.
+# The inventory entries cover exactly the real pillar that flow builds and
+# boots (POPS-4206): its source, migrations, build scripts and build config.
+# The sibling `app/**`, docs, snapshots and Dockerfile are not inputs to that
+# process. Fifteen recent web-only inventory PRs paid for this macOS lane even
+# though they changed none of those inputs. A server change still selects both
+# the PR and queue lane; a web-only change is covered by the frontend and unit
+# workflows that execute that code.
 #
 # TWO MORE INPUTS FEED THE PROCESS THE UI FLOW TALKS TO: `pnpm-lock.yaml` and
 # the BFM's transitive workspace dependencies. The merge-queue lane used to
@@ -113,19 +109,32 @@ name: iOS Quality
 # stopped being compiled — the app-does-not-compile signal now comes from the
 # step below, about a minute later than it used to.
 
-# NO `push` TRIGGER, and that is a decision (POPS-4152). The merge queue's
-# head commit IS the commit that lands on `main`, and the queue lane below runs
-# the whole job on it — suite, analyzer, Release check, UI flow. A push run
-# built that same commit a second time on the five-runner macOS pool, after
-# the fact, where a red result could no longer stop anything. TestFlight reads
-# the queue lane's verdict instead (`ios-testflight.yml`), and CI Gate reads an
-# absent run on a push as filtered out.
+# NO `push` TRIGGER, and that is a decision (POPS-4152). Relevant pull requests
+# run the native lane before merge, while a frozen promotion can call the full
+# lane below against current main — suite, analyzer, Release check and UI flow.
+# A reusable call does not suppress the native pull-request run; an iOS-relevant
+# promotion therefore gets the quick native verdict as well as the full caller
+# verdict.
+# A push run would build a commit only after it landed, where a red result could
+# no longer stop anything. CI Gate reads an absent run on a push as filtered out.
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        description: Run the simulator tests with analyzer rules and the Maestro flow
+        required: true
+        type: boolean
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "clients/ios/**"
       - "pillars/bfm/**"
-      - "pillars/inventory/**"
+      - "pillars/inventory/src/**"
+      - "pillars/inventory/migrations/**"
+      - "pillars/inventory/scripts/**"
+      - "pillars/inventory/package.json"
+      - "pillars/inventory/mise.toml"
+      - "pillars/inventory/tsconfig*.json"
       - "scripts/ios-e2e/**"
       - "pnpm-lock.yaml"
       - ".github/workflows/ios-quality.yml"
@@ -153,19 +162,8 @@ on:
   # nothing compiled, which is the failure the queue exists to prevent.
   merge_group:
 
-# cancel-in-progress is deliberately OFF. Cancelling the still-running run for
-# a superseded commit and admitting the new push's run is not atomic on
-# GitHub's side, and the two can race: the old run keeps completing normally
-# as if nothing happened, and the new commit's run never gets created at all
-# — not queued, not cancelled, just absent, forever, until an unrelated event
-# forces a fresh trigger. `ci-gate.yml`'s CONVERGENCE comment documents a
-# historical reproduction of exactly that on this workflow. Since this repo
-# is public (no Actions-minutes cost, see the runner note above), letting a
-# superseded run finish costs wall-clock, not budget, and `queue: single`
-# (the default) still caps this group at one pending run, so pushes don't
-# pile up unbounded.
 concurrency:
-  group: ios-quality-${{ github.workflow }}-${{ github.ref }}
+  group: ios-quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 permissions:
@@ -223,26 +221,26 @@ jobs:
   quality:
     name: build + test + lint + UI flow
     needs: [scope]
-    # On a pull request the event's `paths:` filter already
-    # decided and `scope` is skipped, so this must not inherit that skip. On a
-    # merge group it runs only on an explicit `selected=true`: a `scope` job that
-    # FAILED leaves the output empty, so this stays skipped and the workflow goes
-    # red on the scope job — never green over an unbuilt tree.
+    # A reusable full-validation call always runs. On a native pull request the
+    # event's `paths:` filter already decided and `scope` is skipped, so this
+    # must not inherit that skip. On a merge group it runs only on an explicit
+    # `selected=true`: a `scope` job that FAILED leaves the output empty, so this
+    # stays skipped and the workflow goes red on the scope job — never green
+    # over an unbuilt tree.
     #
     # A pull request runs it only when its base is the default branch. A PR
     # stacked on another branch skips it: a stack of eight iOS PRs otherwise
     # starts eight macOS jobs on every rebase and holds the whole five-runner
     # pool for an hour (POPS-4150). It gets the lane once it is rebased onto
     # main, and the merge queue runs it regardless, so nothing reaches main
-    # uncompiled. Deliberately NOT extended with `labeled`/`edited` triggers to
-    # opt a stacked PR back in: CI Gate keeps only the newest run per workflow
-    # at a SHA, and a later skipped run would hide an earlier red one.
+    # uncompiled. Retargeting triggers a fresh run through the edited event;
+    # CI Gate accepts only runs associated with the current base branch.
     if: >-
       ${{ !cancelled() && (
+        inputs['full-validation'] == true ||
         (github.event_name == 'merge_group' && needs.scope.outputs.selected == 'true') ||
-        (github.event_name != 'merge_group' &&
-          (github.event_name != 'pull_request' ||
-            github.event.pull_request.base.ref == github.event.repository.default_branch))
+        (github.event_name == 'pull_request' &&
+          github.event.pull_request.base.ref == github.event.repository.default_branch)
       ) }}
     runs-on: xcode-27
     # A wedged simulator is the classic macOS-CI failure and it does not fail —
@@ -269,6 +267,15 @@ jobs:
       # twenty seconds to install; Rust costs minutes.
       MISE_DISABLE_TOOLS: rust
 
+      # Xcode 27 spends ten minutes asking a failed simulator for a sysdiagnose
+      # before it returns the failure it already has. Five sampled red runs all
+      # contained real compile or assertion failures; the three that reached a
+      # failing test each then logged the same 600-second diagnostic timeout.
+      # The result bundle still carries the failing test and assertion, which is
+      # what app-test-lane.sh prints. Local runs leave this unset and retain
+      # Xcode's normal diagnostic collection.
+      POPS_IOS_TEST_DIAGNOSTICS: never
+
     steps:
       - uses: actions/checkout@v7
 
@@ -277,6 +284,26 @@ jobs:
       - uses: ./.github/actions/setup-mise
         with:
           working_directory: clients/ios
+
+      # First because it needs no build and recent failures otherwise waited
+      # 10–17 minutes for the host package compile before reporting formatting.
+      - name: Lint (swift-format + SwiftLint)
+        run: mise run lint
+
+      # `swift test --package-path` writes one host-toolchain build directory per
+      # package. Those are independent from the private iOS DerivedData tree
+      # below, which remains cold so the analyzer sees every source file. An
+      # exact hit reuses products for unchanged iOS sources; a manifest-only
+      # restore gives SwiftPM an incremental starting point and SwiftPM still
+      # validates every input before executing the tests.
+      - name: Cache host-toolchain package builds
+        uses: actions/cache@v6
+        with:
+          path: clients/ios/Packages/*/.build
+          key: host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved', 'clients/ios/Packages/*/Sources/**', 'clients/ios/Packages/*/Tests/**') }}
+          restore-keys: |
+            host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved') }}-
+            host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-
 
       # The host-toolchain loop every package README documents (`swift test
       # --package-path Packages/<name>`), run for real rather than assumed to
@@ -378,12 +405,6 @@ jobs:
       # never a hand-copied command. A second copy of the command is a copy that
       # drifts, and the moment it does a green local run stops meaning anything.
 
-      # First, because it needs no build at all and answers in seconds. A
-      # formatting or SwiftLint violation used to be reported only after the
-      # whole tree had been compiled.
-      - name: Lint (swift-format + SwiftLint)
-        run: mise run lint
-
       # WHERE EACH LANE SPENDS ITS MINUTES. The shared compile is ~2 minutes and
       # the simulator suite ~3; `swiftlint analyze` over the whole tree is ~19.5
       # (run 35408330810, 693 files, 2026-09-19). A pull request therefore runs
@@ -393,20 +414,19 @@ jobs:
       # ejection instead of a red PR; `mise run lint:analyze` locally still
       # answers it before a push.
       #
-      # The merge queue runs both, off one compile, because its commit is the
-      # one that lands and ships (`ios-testflight.yml` ships only what this lane
-      # passed). `-j 1` is mandatory: mise runs the two concurrently by default,
+      # A reusable full-validation call and the merge queue run both, off one
+      # compile. `-j 1` is mandatory: mise runs the two concurrently by default,
       # `swiftlint analyze` then saturates the runner's three cores while the
       # simulator suite is running, and the Auth concurrency tests poll for a
       # condition with a timeout. `twentyConcurrentRejectionsRefreshOnce` failed
       # with "a request never reached the refresher" on one run in three that
       # way.
       - name: Test (iOS Simulator)
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && inputs['full-validation'] != true
         run: mise run test
 
       - name: Test + SwiftLint analyzer rules (one shared compile)
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' || inputs['full-validation'] == true
         run: "mise run -j 1 test ::: lint:analyze"
 
       # THE ONE INVARIANT HERE THAT BUILDING, TESTING AND LINTING DO NOT COVER:
@@ -439,7 +459,7 @@ jobs:
       # it so. The pillar is a Node process: install its subgraph, build it,
       # run it. `scripts/ios-e2e/run.mjs` does the last two.
       - name: Expose bundled node-gyp on PATH
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' || inputs['full-validation'] == true
         # mise-installed node bundles node-gyp under npm but does not put it on
         # PATH, so better-sqlite3 — which the BFM opens its database with —
         # fails its pnpm lifecycle build with `node-gyp: not found` on any
@@ -453,7 +473,7 @@ jobs:
           echo "$gyp_bin" >> "$GITHUB_PATH"
 
       - name: Install the BFM's and inventory's subgraphs
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' || inputs['full-validation'] == true
         # Not the whole workspace: this job runs two pillars, the BFM and the
         # inventory pillar the Inventory flow drives for real
         # (`scripts/ios-e2e/inventory-pillar.mjs`), and each `...` filter pulls
@@ -466,7 +486,7 @@ jobs:
       # simulator `test` booted. Its own task rebuilds when those are missing,
       # so a reordering degrades into a second compile rather than into a lie.
       - name: UI flow (Maestro, against a real BFM)
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' || inputs['full-validation'] == true
         working-directory: .
         run: mise run e2e:ios
 
