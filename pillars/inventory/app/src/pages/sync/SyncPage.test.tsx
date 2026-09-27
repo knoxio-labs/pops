@@ -232,4 +232,19 @@ describe('SyncPage', () => {
 
     expect(screen.getByText('No recently resolved cases')).toBeInTheDocument();
   });
+
+  it('opens the dropped values outcome for a resolved case', async () => {
+    renderSync('/inventory/sync?segment=resolved');
+
+    fireEvent.click(screen.getByRole('button', { name: 'See what was dropped' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/inventory/sync?segment=resolved&case=res-cable-let-go'
+      )
+    );
+    expect(screen.getByRole('region', { name: 'HDMI cable 2 m' })).toBeInTheDocument();
+    expect(screen.getByText('The dropped change')).toBeInTheDocument();
+    expect(screen.getByText('Shielding')).toBeInTheDocument();
+    expect(screen.getByText(/Let go on Joao's iPhone/)).toBeInTheDocument();
+  });
 });
