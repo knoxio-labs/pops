@@ -52,8 +52,8 @@ function HeaderActions({
 }: {
   data: InHandPageData;
   actions: InHandPageActions;
-}): ReactElement | undefined {
-  if (data.body !== 'list' || data.items.length === 0) return undefined;
+}): ReactElement | null {
+  if (data.body !== 'list' || data.items.length === 0) return null;
   return (
     <div className="flex items-center gap-2">
       <span className="hidden items-center gap-1 text-xs text-muted-foreground xl:inline-flex">
