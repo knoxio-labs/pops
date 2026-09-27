@@ -654,6 +654,14 @@ description = "The pre-upload camera purpose-string check still rejects what App
 hide = true
 run = "scripts/check-camera-purpose.sh self-test"
 
+[tasks."verify:app-package-pin"]
+description = "The generated app graph keeps Swift Collections on the Xcode-compatible exact version"
+hide = true
+run = '''
+scripts/check-app-package-pin.sh self-test
+scripts/check-app-package-pin.sh check project.yml
+'''
+
 [tasks."verify:feature-repository-errors"]
 description = "Feature packages do not discard awaited repository failures with try?"
 hide = true
@@ -707,6 +715,7 @@ mise run verify:feature-repository-errors || status=1
 mise run verify:release-version || status=1
 mise run verify:install-on-phone || status=1
 mise run verify:camera-purpose || status=1
+mise run verify:app-package-pin || status=1
 
 if mise run verify:xcode-version; then
   mise run swift-format lint || status=1
