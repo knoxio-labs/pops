@@ -124,7 +124,7 @@ function ContentsRows({
   rejections,
 }: ContentsRowsProps): ReactElement {
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-20">
+    <div className="min-h-0 flex-1 overflow-y-auto px-3 pt-3 pb-20">
       <ItemList
         label={`Inside ${name}`}
         onKeyDown={(event) => {
