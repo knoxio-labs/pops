@@ -111,7 +111,7 @@ internal enum InventoryPrefillValidator {
         case .product(let facts):
             facts.map { tokens($0.value) }
         case .text(let lines):
-            lines.map(tokens)
+            [lines.flatMap(tokens)]
         }
     }
 
