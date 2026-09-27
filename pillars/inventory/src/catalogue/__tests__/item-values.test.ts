@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { itemFieldValues } from '../../db/schema.js';
 import { mutation, openHarness, seedItem } from '../../domain/commands/__tests__/test-utils.js';
+import { assertIncomingReferencesPermitType } from '../item-value-references.js';
 import { ItemFieldSetError, readItemFieldValues, validateItemFieldValues } from '../item-values.js';
 import { ValueValidationError } from '../value-codec.js';
 
 const TYPE_ID = '10000000-0000-5000-8000-000000000001';
 const CABLE_TYPE_ID = 'b5ea5cd3-73b3-56dc-92e1-374eac720990';
+const CABLE_CHILD_TYPE_ID = 'b5ea5cd3-73b3-56dc-92e1-374eac720991';
 const OPTION_ID = '20000000-0000-5000-8000-000000000001';
 const ACTIVE_OPTION_ID = '20000000-0000-5000-8000-000000000002';
 const FIELD_IDS = {
@@ -38,6 +40,20 @@ function publishRevisionTwo(harness: ReturnType<typeof openHarness>): void {
        VALUES (2, ?, 'dynamic', 'Dynamic', 0, '[]', '[]', '{}')`
     )
     .run(TYPE_ID);
+  harness.raw
+    .prepare(
+      `INSERT INTO item_types
+         (revision, id, key, label, sort_order, capabilities_json, legacy_labels_json, presentation_json)
+       VALUES (2, ?, 'cable', 'Cable', 1, '[]', '[]', '{}')`
+    )
+    .run(CABLE_TYPE_ID);
+  harness.raw
+    .prepare(
+      `INSERT INTO item_types
+         (revision, id, key, label, sort_order, capabilities_json, legacy_labels_json, presentation_json, parent_type_id)
+       VALUES (2, ?, 'special-cable', 'Special cable', 2, '[]', '[]', '{}', ?)`
+    )
+    .run(CABLE_CHILD_TYPE_ID, CABLE_TYPE_ID);
   const insertField = harness.raw.prepare(
     `INSERT INTO item_type_fields
        (revision, id, type_id, key, label, sort_order, kind, cardinality, required,
@@ -240,6 +256,50 @@ describe('validateItemFieldValues', () => {
         ],
       })
     ).toThrow(/not permitted/u);
+  });
+
+  it('admits descendant types for both incoming and outgoing references', () => {
+    const harness = openHarness();
+    const outgoingTargetId = '40000000-0000-4000-8000-000000000016';
+    const incomingTargetId = '40000000-0000-4000-8000-000000000017';
+    const holderId = '40000000-0000-4000-8000-000000000018';
+    seedItem(harness, { id: outgoingTargetId });
+    seedItem(harness, { id: incomingTargetId, typeKey: 'cable' });
+    seedItem(harness, { id: holderId });
+    publishRevisionTwo(harness);
+    harness.raw
+      .prepare(`UPDATE items SET type_id = ? WHERE id = ?`)
+      .run(CABLE_CHILD_TYPE_ID, outgoingTargetId);
+    harness.db
+      .insert(itemFieldValues)
+      .values({
+        itemId: holderId,
+        fieldId: FIELD_IDS.reference,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: JSON.stringify({ targetKind: 'item', targetId: incomingTargetId }),
+        catalogueRevision: 2,
+        createdAt: 'now',
+        updatedAt: 'now',
+      })
+      .run();
+
+    expect(
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 2,
+        fields: [
+          {
+            fieldId: FIELD_IDS.reference,
+            source: 'stored',
+            values: [{ targetKind: 'item', targetId: outgoingTargetId }],
+          },
+        ],
+      })
+    ).toHaveLength(1);
+    expect(() =>
+      assertIncomingReferencesPermitType(harness.db, incomingTargetId, CABLE_CHILD_TYPE_ID)
+    ).not.toThrow();
   });
 
   it('retains an existing archived enum choice but rejects a new selection', () => {
