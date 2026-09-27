@@ -140,6 +140,67 @@ internal struct InventorySyncReadDiagnosticsTests {
 
         #expect((await diagnostics.entries).isEmpty)
     }
+
+    @Test("a cancelled URL request does not record a diagnostic")
+    func URLCancellationIsSilent() async throws {
+        let diagnostics = SyncReadDiagnostics()
+        let transport = try BFMInventoryTransport.stubbed(
+            StubTransport { _, _ in throw URLError(.cancelled) },
+            syncReadFailureObserver: { error, operation in
+                await diagnostics.record(error, operation: operation)
+            }
+        )
+
+        await #expect(throws: RepositoryError.self) {
+            _ = try await transport.fetchChanges(since: 40, epoch: "epoch-1", limit: 250)
+        }
+
+        #expect((await diagnostics.entries).isEmpty)
+    }
+
+    @Test("resync control flow does not record a diagnostic")
+    func resyncControlFlowIsSilent() async throws {
+        let diagnostics = SyncReadDiagnostics()
+        let transport = try BFMInventoryTransport.stubbed(
+            StubTransport(status: .ok, json: "{}"),
+            syncReadFailureObserver: { error, operation in
+                await diagnostics.record(error, operation: operation)
+            }
+        )
+        let clientError = ClientError(
+            operationID: "mobileInventory.changes",
+            operationInput: (),
+            response: HTTPResponse(status: .conflict),
+            causeDescription: "Unexpected response status",
+            underlyingError: BFMRuntimePopsError(
+                PopsError(
+                    code: "resync_required", message: "Resync required", retryable: true,
+                    kind: .client),
+                statusCode: 409
+            )
+        )
+
+        await #expect(throws: InventorySyncTransportError.resyncRequired) {
+            _ = try await transport.observedSyncRead(
+                operation: "mobileInventory.changes",
+                mapClientError: {
+                    BFMInventoryTransport.syncReadFailure($0, operation: "mobileInventory.changes")
+                },
+                read: { throw clientError }
+            )
+        }
+        await #expect(throws: InventorySyncTransportError.resyncRequired) {
+            _ = try await transport.observedSyncRead(
+                operation: "mobileInventory.changes",
+                mapClientError: {
+                    BFMInventoryTransport.syncReadFailure($0, operation: "mobileInventory.changes")
+                },
+                read: { throw InventorySyncTransportError.resyncRequired }
+            )
+        }
+
+        #expect((await diagnostics.entries).isEmpty)
+    }
 }
 
 private actor SyncReadDiagnostics {

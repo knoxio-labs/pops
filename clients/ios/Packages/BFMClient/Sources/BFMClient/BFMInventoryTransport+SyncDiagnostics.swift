@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import OpenAPIRuntime
 
 extension BFMInventoryTransport {
@@ -10,10 +11,15 @@ extension BFMInventoryTransport {
         do {
             return try await read()
         } catch let error as ClientError {
-            await recordSyncReadFailure(error, operation: operation)
-            throw mapClientError(error)
+            let mappedError = mapClientError(error)
+            if !isResyncRequired(mappedError) {
+                await recordSyncReadFailure(error, operation: operation)
+            }
+            throw mappedError
         } catch {
-            await recordSyncReadFailure(error, operation: operation)
+            if !isResyncRequired(error) {
+                await recordSyncReadFailure(error, operation: operation)
+            }
             throw error
         }
     }
@@ -21,11 +27,23 @@ extension BFMInventoryTransport {
     private func recordSyncReadFailure(_ error: Error, operation: String) async {
         guard !Task.isCancelled, !(error is CancellationError) else { return }
         if let clientError = error as? ClientError,
-            clientError.underlyingError is CancellationError
+            isCancellation(clientError.underlyingError)
         {
             return
         }
         await syncReadFailureObserver(Self.syncDiagnostic(for: error), operation)
+    }
+
+    private func isResyncRequired(_ error: Error) -> Bool {
+        guard let error = error as? InventorySyncTransportError else { return false }
+        if case .resyncRequired = error { return true }
+        return false
+    }
+
+    private func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        guard let error = error as? URLError else { return false }
+        return error.code == .cancelled
     }
 
     private static func syncDiagnostic(for error: Error) -> PopsError {
