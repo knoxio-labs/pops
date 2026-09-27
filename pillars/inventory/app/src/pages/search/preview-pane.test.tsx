@@ -10,16 +10,12 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 const mocks = vi.hoisted(() => ({
   useItemRows: vi.fn(),
   useWebItemDetail: vi.fn(),
-  usePlacementSources: vi.fn(),
   usePurchasePreview: vi.fn(),
 }));
 
 vi.mock('../../inventory-web/useWebItems.js', () => ({ useItemRows: mocks.useItemRows }));
 vi.mock('../../inventory-web/useWebItemDetail.js', () => ({
   useWebItemDetail: mocks.useWebItemDetail,
-}));
-vi.mock('../../inventory-web/usePlacementSources.js', () => ({
-  usePlacementSources: mocks.usePlacementSources,
 }));
 vi.mock('../../inventory-web/usePurchasePreview.js', () => ({
   usePurchasePreview: mocks.usePurchasePreview,
@@ -126,7 +122,6 @@ beforeEach(() => {
   mocks.useWebItemDetail.mockReturnValue(
     detailResult({ merchant: 'Kmart', purchasedOn: '2026-09-12' })
   );
-  mocks.usePlacementSources.mockReturnValue({ world });
   mocks.usePurchasePreview.mockReturnValue({
     status: 'success',
     purchase: purchase(),
@@ -289,8 +284,7 @@ describe('search preview pane', () => {
 
   it('a purchase preview is read only, names the item a line became and calls onOpenInPurchases', () => {
     const tracked = item('hdmi-1', 'HDMI cable');
-    world = buildWorld([tracked], [garage, shelf]);
-    mocks.usePlacementSources.mockReturnValue({ world });
+    mocks.useItemRows.mockReturnValue(rowsResult([tracked]));
     const onOpenInPurchases = vi.fn();
 
     render(
@@ -304,6 +298,7 @@ describe('search preview pane', () => {
     expect(screen.getByText('2 × HDMI cable')).toBeInTheDocument();
     expect(screen.getByText('Tracked as HDMI cable')).toBeInTheDocument();
     expect(screen.getByText('$10.00')).toBeInTheDocument();
+    expect(mocks.useItemRows).toHaveBeenCalledWith({ ids: 'hdmi-1', includeInactive: true }, 1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open in Purchases' }));
     expect(onOpenInPurchases).toHaveBeenCalledOnce();
