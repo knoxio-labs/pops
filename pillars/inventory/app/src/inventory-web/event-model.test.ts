@@ -14,9 +14,13 @@ import type { WebEvent } from './useWebEvents.js';
 
 const mocks = vi.hoisted(() => ({ sendInventoryMutation: vi.fn() }));
 
-vi.mock('./mutation-client.js', () => ({
-  sendInventoryMutation: (...args: unknown[]) => mocks.sendInventoryMutation(...args),
-}));
+vi.mock('./mutation-client.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./mutation-client.js')>();
+  return {
+    ...original,
+    sendInventoryMutation: (...args: unknown[]) => mocks.sendInventoryMutation(...args),
+  };
+});
 
 const baseEvent: WebEvent = {
   actor: { kind: 'web', label: 'Joao on the web' },
