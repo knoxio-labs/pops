@@ -68,6 +68,13 @@ It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's un
 
 `BFMTransactionsRepository`, `BFMReceiptCaptureRepository` and `BFMBootstrapService` conform to `AppCore`'s `TransactionsRepository`, `ReceiptCaptureRepository` and `BootstrapService`. They are the reason this package depends on `AppCore` at all, and the reason `ModuleBoundaryTests` names it — with `Auth` — as one of the two packages allowed to hold a concrete implementation of a seam.
 
+Inventory sync reads (`snapshot`, `changes`, and both catalogue reads) accept a
+default-no-op `SyncReadFailureObserver`. The app composition binds it to Recent
+errors in the background context, so a failed automatic refresh retains only a
+safe POPS error code, request id when supplied, and classification without
+showing a banner or recording request or response contents. Cancellation is
+silent and a failed read emits one record after its normal error mapping.
+
 ### Bootstrap
 
 `GET /mobile/bootstrap` is the app's first authenticated call and the thing that keeps a phone from ever holding a list of what the federation contains. It asks.

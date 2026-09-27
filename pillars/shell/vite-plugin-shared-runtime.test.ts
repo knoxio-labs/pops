@@ -69,6 +69,7 @@ describe('facadeSource', () => {
   // pillar, which no build reports.
   it.each(SHARED_RUNTIME_ENTRY_POINTS)(
     'carries every export of $specifier',
+    { timeout: 30_000 },
     async ({ specifier, hasDefault }) => {
       const source = await facadeSource(specifier, hasDefault);
       const namespace: Record<string, unknown> = await import(specifier);

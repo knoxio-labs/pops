@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createPurchase, listRejectedPairings, tearDownUnconfirmedLinks } from '../index.js';
 import {
   amazonOrder,
+  ARRANGEMENT_TIMEOUT_MS,
   measureSqliteMaxVariableNumber,
   openTempDb,
   seedAmazonSource,
@@ -40,14 +41,19 @@ function insertCharges(raw: Database.Database, purchaseId: string, count: number
   return ids;
 }
 
-function insertUnconfirmedLink(raw: Database.Database, chargeId: string, linkId: string): void {
-  raw
-    .prepare(
-      `INSERT INTO purchase_charge_links
-         (id, charge_id, transaction_uri, amount_cents, link_type, confirmed_at)
-       VALUES (?, ?, ?, 100, 'exact', NULL)`
-    )
-    .run(linkId, chargeId, `pops://finance/transaction/${linkId}`);
+function insertUnconfirmedLinks(raw: Database.Database, chargeIds: readonly string[]): void {
+  const insert = raw.prepare(
+    `INSERT INTO purchase_charge_links
+       (id, charge_id, transaction_uri, amount_cents, link_type, confirmed_at)
+     VALUES (?, ?, ?, 100, 'exact', NULL)`
+  );
+  const insertMany = raw.transaction((ids: readonly string[]) => {
+    ids.forEach((chargeId) => {
+      const linkId = `unconfirmed-${chargeId}`;
+      insert.run(linkId, chargeId, `pops://finance/transaction/${linkId}`);
+    });
+  });
+  insertMany(chargeIds);
 }
 
 function insertConfirmedLink(raw: Database.Database, chargeId: string, linkId: string): void {
@@ -58,6 +64,18 @@ function insertConfirmedLink(raw: Database.Database, chargeId: string, linkId: s
        VALUES (?, ?, ?, 100, 'exact', '2026-01-01T00:00:00.000Z')`
     )
     .run(linkId, chargeId, `pops://finance/transaction/${linkId}`);
+}
+
+function insertRejections(raw: Database.Database, chargeIds: readonly string[]): void {
+  const insert = raw.prepare(
+    `INSERT INTO purchase_link_rejections (charge_id, transaction_uri) VALUES (?, ?)`
+  );
+  const insertMany = raw.transaction((ids: readonly string[]) => {
+    ids.forEach((chargeId) => {
+      insert.run(chargeId, `pops://finance/transaction/${chargeId}`);
+    });
+  });
+  insertMany(chargeIds);
 }
 
 function insertRejection(raw: Database.Database, chargeId: string, transactionUri: string): void {
@@ -82,59 +100,65 @@ describe('sweep charge-scoped queries at real SQLite scale', () => {
     temp.cleanup();
   });
 
-  it('tears down every unconfirmed link across a charge list past the bound-parameter cap, leaving a confirmed one untouched', () => {
-    const purchaseId = createPurchase(
-      opened.db,
-      amazonOrder({ checksum: 'amazon:chunk-write', sourceOrderId: 'amazon-chunk-write' })
-    );
-    const chargeIds = insertCharges(opened.raw, purchaseId, overLimitCount);
+  it(
+    'tears down every unconfirmed link across a charge list past the bound-parameter cap, leaving a confirmed one untouched',
+    () => {
+      const purchaseId = createPurchase(
+        opened.db,
+        amazonOrder({ checksum: 'amazon:chunk-write', sourceOrderId: 'amazon-chunk-write' })
+      );
+      const chargeIds = insertCharges(opened.raw, purchaseId, overLimitCount);
 
-    // One confirmed link, deliberately placed mid-list so it lands in a
-    // chunk surrounded by unconfirmed ones — a chunking bug that dropped
-    // the `confirmedAt IS NULL` predicate on some chunks would still pass
-    // a test where the confirmed row was the first or last id.
-    const pinnedChargeId = chargeIds[Math.floor(chargeIds.length / 2)];
-    if (pinnedChargeId === undefined) throw new Error('expected a mid-list charge id');
-    insertConfirmedLink(opened.raw, pinnedChargeId, 'pinned-link');
+      // One confirmed link, deliberately placed mid-list so it lands in a
+      // chunk surrounded by unconfirmed ones — a chunking bug that dropped
+      // the `confirmedAt IS NULL` predicate on some chunks would still pass
+      // a test where the confirmed row was the first or last id.
+      const pinnedChargeId = chargeIds[Math.floor(chargeIds.length / 2)];
+      if (pinnedChargeId === undefined) throw new Error('expected a mid-list charge id');
+      insertConfirmedLink(opened.raw, pinnedChargeId, 'pinned-link');
 
-    for (const chargeId of chargeIds) {
-      if (chargeId === pinnedChargeId) continue;
-      insertUnconfirmedLink(opened.raw, chargeId, `unconfirmed-${chargeId}`);
-    }
+      insertUnconfirmedLinks(
+        opened.raw,
+        chargeIds.filter((chargeId) => chargeId !== pinnedChargeId)
+      );
 
-    const removed = tearDownUnconfirmedLinks(opened.db, chargeIds);
+      const removed = tearDownUnconfirmedLinks(opened.db, chargeIds);
 
-    expect(removed).toBe(chargeIds.length - 1);
-    const remaining = opened.raw
-      .prepare('SELECT charge_id AS chargeId FROM purchase_charge_links')
-      .all() as { chargeId: string }[];
-    expect(remaining).toEqual([{ chargeId: pinnedChargeId }]);
-  }, 60_000);
+      expect(removed).toBe(chargeIds.length - 1);
+      const remaining = opened.raw
+        .prepare('SELECT charge_id AS chargeId FROM purchase_charge_links')
+        .all() as { chargeId: string }[];
+      expect(remaining).toEqual([{ chargeId: pinnedChargeId }]);
+    },
+    ARRANGEMENT_TIMEOUT_MS
+  );
 
-  it('returns every rejection for a charge list past the bound-parameter cap, and none for an id outside it', () => {
-    const purchaseId = createPurchase(
-      opened.db,
-      amazonOrder({ checksum: 'amazon:chunk-read', sourceOrderId: 'amazon-chunk-read' })
-    );
-    const chargeIds = insertCharges(opened.raw, purchaseId, overLimitCount);
+  it(
+    'returns every rejection for a charge list past the bound-parameter cap, and none for an id outside it',
+    () => {
+      const purchaseId = createPurchase(
+        opened.db,
+        amazonOrder({ checksum: 'amazon:chunk-read', sourceOrderId: 'amazon-chunk-read' })
+      );
+      const chargeIds = insertCharges(opened.raw, purchaseId, overLimitCount);
 
-    for (const chargeId of chargeIds) {
-      insertRejection(opened.raw, chargeId, `pops://finance/transaction/${chargeId}`);
-    }
+      insertRejections(opened.raw, chargeIds);
 
-    // A charge outside the swept list: its rejection must never appear
-    // among results scoped to `chargeIds`, chunked or not.
-    const outsideCharge = insertCharges(opened.raw, purchaseId, 1)[0];
-    if (outsideCharge === undefined) throw new Error('expected an out-of-scope charge id');
-    insertRejection(opened.raw, outsideCharge, 'pops://finance/transaction/outside');
+      // A charge outside the swept list: its rejection must never appear
+      // among results scoped to `chargeIds`, chunked or not.
+      const outsideCharge = insertCharges(opened.raw, purchaseId, 1)[0];
+      if (outsideCharge === undefined) throw new Error('expected an out-of-scope charge id');
+      insertRejection(opened.raw, outsideCharge, 'pops://finance/transaction/outside');
 
-    const rejections = listRejectedPairings(opened.db, chargeIds);
+      const rejections = listRejectedPairings(opened.db, chargeIds);
 
-    expect(rejections).toHaveLength(chargeIds.length);
-    const byChargeId = new Map(rejections.map((r) => [r.chargeId, r.transactionUri]));
-    for (const chargeId of chargeIds) {
-      expect(byChargeId.get(chargeId)).toBe(`pops://finance/transaction/${chargeId}`);
-    }
-    expect(byChargeId.has(outsideCharge)).toBe(false);
-  }, 60_000);
+      expect(rejections).toHaveLength(chargeIds.length);
+      const byChargeId = new Map(rejections.map((r) => [r.chargeId, r.transactionUri]));
+      for (const chargeId of chargeIds) {
+        expect(byChargeId.get(chargeId)).toBe(`pops://finance/transaction/${chargeId}`);
+      }
+      expect(byChargeId.has(outsideCharge)).toBe(false);
+    },
+    ARRANGEMENT_TIMEOUT_MS
+  );
 });
