@@ -1,6 +1,16 @@
-import { PagePlaceholder } from '../PagePlaceholder';
+import { useInHandPageModel } from './in-hand-page-model.js';
+import { InHandPageView } from './in-hand-page-parts.js';
 
-/** Inventory in-hand page until its implementation ticket lands. */
-export function InHandPage() {
-  return <PagePlaceholder title="In hand" />;
+import type { ReactElement } from 'react';
+
+/** Renders the inventory In hand page. */
+export function InHandPage(): ReactElement {
+  const model = useInHandPageModel();
+  return (
+    <InHandPageView
+      data={model.data}
+      actions={model.actions}
+      selectionActions={model.selectionActions}
+    />
+  );
 }
