@@ -53,13 +53,22 @@ internal struct PopsQuietDisclosureTests {
     @Test("the disclosure exposes its expansion state and keeps a touch target")
     func accessibilityAndTouchTarget() throws {
         #if canImport(UIKit)
+            let scene = try #require(
+                UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .first
+            )
+            let window = UIWindow(windowScene: scene)
+            window.frame = CGRect(origin: .zero, size: Self.canvas)
             let controller = UIHostingController(
                 rootView: PopsQuietDisclosure("History") {
                     Color.popsAccent.frame(height: 96)
                 }
                 .frame(width: Self.canvas.width, height: Self.canvas.height, alignment: .top)
             )
-            controller.view.frame = CGRect(origin: .zero, size: Self.canvas)
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            controller.view.frame = window.bounds
             controller.view.layoutIfNeeded()
 
             let element = try #require(
