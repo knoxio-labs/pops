@@ -89,14 +89,16 @@ function FactRowValue({
   return (
     <span className="flex w-full min-w-0 items-baseline gap-1.5 text-sm">
       {editable ? (
-        <button
+        <Button
           type="button"
-          className="min-w-0 truncate text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          variant="ghost"
+          size="sm"
+          className="min-w-0 truncate text-left hover:underline"
           aria-label={`Edit ${fact.label}`}
           onClick={() => onEdit?.(fact.key)}
         >
           <FactValue fact={fact} />
-        </button>
+        </Button>
       ) : (
         <FactValue fact={fact} />
       )}
