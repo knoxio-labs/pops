@@ -7,7 +7,7 @@ import type { Dispatch, ReactElement, SetStateAction } from 'react';
 
 import type { PlacementTarget } from '../../foundation/model/model.js';
 import type { InHandPageCommands } from './in-hand-page-commands.js';
-import type { InHandPageData } from './in-hand-page-model.js';
+import type { InHandPageData } from './in-hand-page-types.js';
 
 /** The mutation and picker commands exposed to the in-hand view. */
 export interface InHandPageActions extends InHandPageCommands {

@@ -269,9 +269,12 @@ describe('InHandPage', () => {
     expect(screen.getAllByRole('row')[0]).toHaveTextContent('Loose cable');
     expect(screen.getByText('Old shed was deleted. Choose a new place')).toBeInTheDocument();
     expect(screen.getByText('Found loose, never placed. Choose a place')).toBeInTheDocument();
-    expect(
-      within(screen.getAllByRole('row')[0]).getByRole('button', { name: 'Put back' })
-    ).toHaveAttribute('aria-disabled', 'true');
+    const firstRow = screen.getAllByRole('row')[0];
+    if (firstRow === undefined) throw new Error('expected a rendered in-hand row');
+    expect(within(firstRow).getByRole('button', { name: 'Put back' })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
   });
 
   it('fetches every page before replacing the loading state with rows', async () => {

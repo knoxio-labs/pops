@@ -10,7 +10,7 @@ import { labelsHref, MAX_LABEL_IDS } from '../labels-page/label-params.js';
 import type { SelectionBarAction } from '../../foundation/model/contracts.js';
 import type { ShortcutHandlers } from '../../foundation/shortcuts/shortcut-provider.js';
 import type { InHandPageActions } from './in-hand-page-actions.js';
-import type { InHandPageData } from './in-hand-page-model.js';
+import type { InHandPageData } from './in-hand-page-types.js';
 
 function selectedOrFocusedIds(data: InHandPageData): string[] {
   if (data.selection.count > 0) return data.selection.selectedIds;

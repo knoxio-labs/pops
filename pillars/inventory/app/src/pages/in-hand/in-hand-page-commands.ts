@@ -10,7 +10,7 @@ import { useItemVerbs } from '../../inventory-web/item-verbs.js';
 import type { PlacementTarget } from '../../foundation/model/model.js';
 import type { BulkItemVerbs, BulkResult } from '../../inventory-web/item-verbs-bulk.js';
 import type { ItemVerbs } from '../../inventory-web/item-verbs.js';
-import type { InHandPageData, InHandRejections } from './in-hand-page-model.js';
+import type { InHandPageData, InHandRejections } from './in-hand-page-types.js';
 
 /** The mutation commands available to the in-hand page. */
 export interface InHandPageCommands {
