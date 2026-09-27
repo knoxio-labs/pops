@@ -58,6 +58,17 @@ describe('PhotosSection', () => {
     expect(screen.getAllByAltText('Desk lamp photo 2')[0]).toHaveAttribute('src', photos[1]?.url);
   });
 
+  it('explains when a photo cannot be loaded', () => {
+    renderSection([photos[0]!]);
+
+    fireEvent.error(screen.getByAltText('Front view'));
+
+    expect(screen.getByText('Photo did not load')).toBeInTheDocument();
+    expect(
+      screen.getByText('The file is missing or damaged. Replace it or remove it.')
+    ).toBeInTheDocument();
+  });
+
   it('disables the add action for a read-only item', () => {
     renderSection([], 'Nothing can change on this item.');
 
