@@ -1,13 +1,20 @@
 import { ExternalLink, Receipt } from 'lucide-react';
-import { Link } from 'react-router';
 
-import { EmptyState } from '@pops/ui';
+import { EmptyLine } from '../../foundation/item-page/section-parts';
 
-import type { DetailProvenance } from '../../foundation/item-page';
+import type { ReactElement } from 'react';
+
+import type { DetailProvenance } from './detail-model';
 
 /** Returns whether at least one provenance value is available. */
 export function hasProvenance(provenance: DetailProvenance): boolean {
-  return Object.values(provenance).some((value) => value !== null);
+  return (
+    provenance.purchasedOn !== null ||
+    provenance.pricePaid !== null ||
+    provenance.merchant !== null ||
+    provenance.warrantyUntil !== null ||
+    provenance.purchase !== null
+  );
 }
 
 /** Creates the one-line Overview summary for provenance. */
@@ -18,21 +25,14 @@ export function provenanceSummary(provenance: DetailProvenance): string {
     provenance.merchant && `at ${provenance.merchant}`,
     provenance.purchasedOn,
   ]
-    .filter(Boolean)
+    .filter((value): value is string => value !== null && value.length > 0)
     .join(' ');
 }
 
 /** Renders purchase, merchant, warranty, and transaction provenance. */
-export function ProvenanceSection({ provenance }: { provenance: DetailProvenance }) {
+export function ProvenanceSection({ provenance }: { provenance: DetailProvenance }): ReactElement {
   if (!hasProvenance(provenance)) {
-    return (
-      <EmptyState
-        icon={Receipt}
-        title="No purchase details recorded"
-        description="Add purchase details when this item has a known origin."
-        size="sm"
-      />
-    );
+    return <EmptyLine icon={Receipt} text="No purchase details recorded." />;
   }
   return (
     <div className="flex flex-col gap-3">
@@ -54,15 +54,15 @@ export function ProvenanceSection({ provenance }: { provenance: DetailProvenance
           <dd className="truncate text-sm">{provenance.warrantyUntil ?? 'Not recorded'}</dd>
         </div>
       </dl>
-      {provenance.purchaseTransactionId ? (
-        <Link
-          to={`/finance/transactions/${provenance.purchaseTransactionId}`}
-          className="flex min-h-11 items-center gap-2 rounded-md bg-muted/50 px-2 text-sm text-app-accent hover:underline"
+      {provenance.purchase ? (
+        <a
+          href={provenance.purchase.href}
+          className="flex min-h-11 min-w-11 items-center gap-2 rounded-md bg-muted/50 px-2 text-sm text-app-accent hover:underline"
         >
           <Receipt className="size-4 shrink-0" aria-hidden />
-          <span className="min-w-0 flex-1 truncate">View transaction</span>
+          <span className="min-w-0 flex-1 truncate">{provenance.purchase.label}</span>
           <ExternalLink className="size-4 shrink-0" aria-hidden />
-        </Link>
+        </a>
       ) : null}
     </div>
   );

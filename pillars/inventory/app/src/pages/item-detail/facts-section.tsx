@@ -1,75 +1,64 @@
-import { Calculator, Info } from 'lucide-react';
+import { cn } from '@pops/ui';
 
-import { EmptyState } from '@pops/ui';
+import { EmptyLine } from '../../foundation/item-page/section-parts';
+import { INVENTORY_ICONS } from '../../foundation/model/icons';
+import { FactRow } from './fact-row';
 
-import type { DetailFact } from '../../foundation/item-page';
+import type { ReactElement } from 'react';
 
-function FactValue({ fact }: { fact: DetailFact }) {
-  if (fact.origin === 'missing-inputs') {
-    return (
-      <span className="truncate text-muted-foreground">
-        Needs {(fact.missingInputs ?? []).join(', ')}
-      </span>
-    );
-  }
-  if (fact.value === null) return <span className="text-muted-foreground">Not set</span>;
-  return <span className={fact.mono ? 'truncate font-mono' : 'truncate'}>{fact.value}</span>;
-}
+import type { DetailFact } from './detail-model';
 
-function FactOrigin({ fact }: { fact: DetailFact }) {
-  if (fact.origin === 'entered') return null;
-  return (
-    <span className="inline-flex shrink-0 items-center gap-1 text-2xs text-muted-foreground">
-      <Calculator className="size-3" aria-hidden />
-      {fact.origin === 'overridden' ? 'Overridden' : 'Calculated'}
-    </span>
-  );
-}
-
-/** Renders one read-only fact row in the facts rail. */
-export function FactRow({ fact, readOnly }: { fact: DetailFact; readOnly: boolean }) {
-  return (
-    <div
-      className="flex min-h-11 items-center gap-2 rounded-md border-l-2 border-transparent px-2 py-1"
-      data-fact-key={fact.key}
-      data-read-only={readOnly ? 'true' : 'false'}
-    >
-      <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="truncate text-xs text-muted-foreground">{fact.label}</span>
-        <span className="flex w-full min-w-0 items-baseline gap-1.5 text-sm">
-          <FactValue fact={fact} />
-          <FactOrigin fact={fact} />
-        </span>
-      </span>
-      {readOnly ? (
-        <Info className="size-3.5 shrink-0 text-muted-foreground" aria-label="Read only" />
-      ) : null}
-    </div>
-  );
-}
-
-/** Renders the mapped facts, including the intentionally quiet empty state. */
-export function FactsSection({
-  facts,
-  readOnly = false,
-}: {
+/** Props for the read-only facts block. */
+export interface FactsSectionProps {
   facts: readonly DetailFact[];
+  typeName: string | null;
+  layout?: 'grid' | 'list';
   readOnly?: boolean;
-}) {
-  if (facts.length === 0) {
+  onSetType?: () => void;
+  onQuantity?: (action: 'split' | 'change') => void;
+}
+
+function NoFacts({
+  typeName,
+  readOnly,
+  onSetType,
+}: Pick<FactsSectionProps, 'typeName' | 'readOnly' | 'onSetType'>): ReactElement {
+  if (typeName === null) {
     return (
-      <EmptyState
-        icon={Info}
-        title="No facts recorded"
-        description="This item has no additional fields yet."
-        size="sm"
+      <EmptyLine
+        icon={INVENTORY_ICONS.type}
+        text="Untyped, so it has no fields yet."
+        actionLabel={readOnly ? undefined : 'Set type'}
+        onAction={readOnly ? undefined : onSetType}
       />
     );
   }
   return (
-    <div role="group" aria-label="Facts" className="grid min-w-0 grid-cols-1 gap-0.5">
+    <EmptyLine icon={INVENTORY_ICONS.type} text={`${typeName} has no fields beyond the name.`} />
+  );
+}
+
+/** Renders the facts rail in list or wider grid form. */
+export function FactsSection({
+  facts,
+  typeName,
+  layout = 'grid',
+  readOnly = false,
+  onSetType,
+}: FactsSectionProps): ReactElement {
+  if (facts.length === 0)
+    return <NoFacts typeName={typeName} readOnly={readOnly} onSetType={onSetType} />;
+  return (
+    <div
+      role="group"
+      aria-label="Facts"
+      className={cn(
+        'grid min-w-0 content-start gap-x-2 gap-y-0.5',
+        layout === 'grid' ? 'grid-cols-1 @xs:max-lg:grid-cols-2 @lg:grid-cols-3' : 'grid-cols-1'
+      )}
+    >
       {facts.map((fact) => (
-        <FactRow key={fact.key} fact={fact} readOnly={readOnly} />
+        <FactRow key={fact.key} fact={fact} readOnly={readOnly} inlineLabel={layout === 'list'} />
       ))}
     </div>
   );

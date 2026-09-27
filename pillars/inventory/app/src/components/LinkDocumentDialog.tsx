@@ -8,7 +8,7 @@ import { Button, formatDate, SearchPickerDialog, Select } from '@pops/ui';
 import { unwrap } from '../inventory-api-helpers.js';
 import { documentsLink, paperlessSearch } from '../inventory-api/index.js';
 
-import type { ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 
 interface PaperlessDocResult {
   id: number;
@@ -23,6 +23,7 @@ const DOCUMENT_TYPES = ['receipt', 'warranty', 'manual', 'invoice', 'other'] as 
 interface LinkDocumentDialogProps {
   itemId: string;
   onLinked: () => void;
+  trigger?: ReactElement;
   /** Explains why Paperless actions are unavailable and disables the trigger. */
   disabledReason?: string;
 }
@@ -153,7 +154,12 @@ function DocumentLinkTrigger({
 }
 
 /** Opens Paperless search and links a selected document to an item. */
-export function LinkDocumentDialog({ itemId, onLinked, disabledReason }: LinkDocumentDialogProps) {
+export function LinkDocumentDialog({
+  itemId,
+  onLinked,
+  trigger,
+  disabledReason,
+}: LinkDocumentDialogProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [docType, setDocType] = useState<DocType>('receipt');
@@ -180,7 +186,7 @@ export function LinkDocumentDialog({ itemId, onLinked, disabledReason }: LinkDoc
     <SearchPickerDialog
       open={open}
       onOpenChange={handleOpenChange}
-      trigger={<DocumentLinkTrigger disabledReason={disabledReason} />}
+      trigger={trigger ?? <DocumentLinkTrigger disabledReason={disabledReason} />}
       title="Link Document"
       description="Search Paperless-ngx for a document to link to this item."
       searchPlaceholder="Search documents..."

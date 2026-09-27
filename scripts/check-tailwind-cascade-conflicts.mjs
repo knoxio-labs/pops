@@ -406,9 +406,11 @@ const BREAKPOINTS = ['sm', 'md', 'lg', 'xl', '2xl'];
  * @param {string} breakpoint
  */
 function rangeEndsBy(rangeEnd, breakpoint) {
-  const end = BREAKPOINTS.indexOf(rangeEnd.replace(/^max-/, ''));
-  const start = BREAKPOINTS.indexOf(breakpoint);
-  return rangeEnd.startsWith('max-') && end !== -1 && start !== -1 && end <= start;
+  const normalizedRangeEnd = rangeEnd.replace(/^@/, '');
+  const normalizedBreakpoint = breakpoint.replace(/^@/, '');
+  const end = BREAKPOINTS.indexOf(normalizedRangeEnd.replace(/^max-/, ''));
+  const start = BREAKPOINTS.indexOf(normalizedBreakpoint);
+  return normalizedRangeEnd.startsWith('max-') && end !== -1 && start !== -1 && end <= start;
 }
 
 /**
@@ -1283,6 +1285,12 @@ function selfTest() {
     [
       'a grid ladder of closed ranges is exclusive',
       '<a className="sm:max-lg:grid-cols-2 lg:max-xl:grid-cols-3 xl:grid-cols-4" />',
+      pillar,
+      [],
+    ],
+    [
+      'a container range and breakpoint are exclusive',
+      '<a className="@xs:max-lg:grid-cols-2 @lg:grid-cols-3" />',
       pillar,
       [],
     ],
