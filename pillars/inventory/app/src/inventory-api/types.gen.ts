@@ -3188,9 +3188,14 @@ export type SyncReportLedgerData = {
         title: string;
         values: Array<{
           field: string;
+          fieldId?: string;
           fit: string;
+          recordId?: string;
+          recordKind?: string;
           replacement?: string;
+          replacementTypeId?: string;
           value: string;
+          values?: Array<unknown>;
         }>;
       };
       id: string;
@@ -3200,6 +3205,15 @@ export type SyncReportLedgerData = {
       mine?: {
         at: string;
         source: string;
+        target?: {
+          containerId?: string;
+          fieldId?: string;
+          kind: string;
+          locationId?: string;
+          name?: string;
+          note?: string | null;
+          values?: Array<unknown> | null;
+        };
         value: string;
       };
       openedAt: string;
@@ -3215,8 +3229,18 @@ export type SyncReportLedgerData = {
       theirs?: {
         at: string;
         source: string;
+        target?: {
+          containerId?: string;
+          fieldId?: string;
+          kind: string;
+          locationId?: string;
+          name?: string;
+          note?: string | null;
+          values?: Array<unknown> | null;
+        };
         value: string;
       };
+      typeId?: string;
     }>;
     lastSyncAt: string | null;
     reportedAt: string;
@@ -3224,11 +3248,17 @@ export type SyncReportLedgerData = {
       at: string;
       dropped?: Array<{
         field: string;
+        fieldId?: string;
         fit: string;
+        recordId?: string;
+        recordKind?: string;
         replacement?: string;
+        replacementTypeId?: string;
         value: string;
+        values?: Array<unknown>;
       }>;
       id: string;
+      itemId?: string;
       itemName: string;
       outcome: string;
     }>;
@@ -6887,9 +6917,14 @@ export type WebSyncLedgerGetResponses = {
         title: string;
         values: Array<{
           field: string;
+          fieldId?: string;
           fit: string;
+          recordId?: string;
+          recordKind?: string;
           replacement?: string;
+          replacementTypeId?: string;
           value: string;
+          values?: Array<unknown>;
         }>;
       };
       id: string;
@@ -6899,6 +6934,15 @@ export type WebSyncLedgerGetResponses = {
       mine?: {
         at: string;
         source: string;
+        target?: {
+          containerId?: string;
+          fieldId?: string;
+          kind: string;
+          locationId?: string;
+          name?: string;
+          note?: string | null;
+          values?: Array<unknown> | null;
+        };
         value: string;
       };
       openedAt: string;
@@ -6914,8 +6958,18 @@ export type WebSyncLedgerGetResponses = {
       theirs?: {
         at: string;
         source: string;
+        target?: {
+          containerId?: string;
+          fieldId?: string;
+          kind: string;
+          locationId?: string;
+          name?: string;
+          note?: string | null;
+          values?: Array<unknown> | null;
+        };
         value: string;
       };
+      typeId?: string;
     }>;
     attentionCount: number;
     devices: Array<{
@@ -6932,11 +6986,17 @@ export type WebSyncLedgerGetResponses = {
       deviceId: string;
       dropped?: Array<{
         field: string;
+        fieldId?: string;
         fit: string;
+        recordId?: string;
+        recordKind?: string;
         replacement?: string;
+        replacementTypeId?: string;
         value: string;
+        values?: Array<unknown>;
       }>;
       id: string;
+      itemId?: string;
       itemName: string;
       outcome: string;
     }>;
