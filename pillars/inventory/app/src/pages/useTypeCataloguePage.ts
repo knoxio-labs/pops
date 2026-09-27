@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useParams } from 'react-router';
 
 import { useCatalogueEditor } from '../catalogue-editor/useCatalogueEditor';
 import {
@@ -9,10 +10,20 @@ import {
 
 import type { ArchiveTarget, EditorMode } from './cataloguePageTypes';
 
-/** Provides catalogue page selection and mutation behaviour independently from its layout. */
+/**
+ * Provides catalogue page selection and mutation behaviour independently from its layout.
+ * A `:id` route parameter selects the matching type and is reconciled during render when
+ * navigation changes the parameter without remounting the page.
+ */
 export function useTypeCataloguePage() {
+  const { id } = useParams<{ id?: string }>();
   const model = useCatalogueEditor();
-  const [storedTypeId, setStoredTypeId] = useState<string | null>(null);
+  const [lastSeenId, setLastSeenId] = useState(id);
+  const [storedTypeId, setStoredTypeId] = useState<string | null>(id ?? null);
+  if (id !== lastSeenId) {
+    setLastSeenId(id);
+    setStoredTypeId(id ?? null);
+  }
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [mode, setMode] = useState<EditorMode>('type');
   const [auditOpen, setAuditOpen] = useState(false);

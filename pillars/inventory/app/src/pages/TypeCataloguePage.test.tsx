@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { InventoryApiError } from '../inventory-api-helpers';
-
-import type { ReactNode } from 'react';
 
 import type { TypesReadCatalogueResponses } from '../inventory-api/types.gen';
 
@@ -41,6 +40,11 @@ type Catalogue = TypesReadCatalogueResponses[200];
 
 const TYPE_ID = '11111111-1111-4111-8111-111111111111';
 const FIELD_ID = '22222222-2222-4222-8222-222222222222';
+const ROUTER_TYPE_ID = '33333333-3333-4333-8333-333333333333';
+const ROUTER_DEFAULT_TYPE_ID = '44444444-4444-4444-8444-444444444444';
+const TYPE_A_ID = '55555555-5555-4555-8555-555555555555';
+const TYPE_B_ID = '66666666-6666-4666-8666-666666666666';
+const TYPE_C_ID = '77777777-7777-4777-8777-777777777777';
 
 const published: Catalogue = {
   revision: {
@@ -116,15 +120,64 @@ function draft(types: Catalogue['types'] = published.types, draftVersion = 1): C
   };
 }
 
-function Wrapper({ children }: { children: ReactNode }) {
+function routeType(
+  id: string,
+  key: string,
+  label: string,
+  sortOrder: number
+): Catalogue['types'][number] {
+  return { ...published.types[0]!, fields: [], id, key, label, sortOrder };
+}
+
+const routerCatalogue: Catalogue = {
+  ...published,
+  types: [
+    routeType(ROUTER_TYPE_ID, 'router', 'Router', 0),
+    routeType(ROUTER_DEFAULT_TYPE_ID, 'default', 'Default', 1),
+  ],
+};
+
+const navigationCatalogue: Catalogue = {
+  ...published,
+  types: [
+    routeType(TYPE_A_ID, 'type_a', 'Type A', 0),
+    routeType(TYPE_B_ID, 'type_b', 'Type B', 1),
+    routeType(TYPE_C_ID, 'type_c', 'Type C', 2),
+  ],
+};
+
+function CatalogueRoute({ navigateTo }: { readonly navigateTo?: string }) {
+  return (
+    <>
+      <TypeCataloguePage />
+      {navigateTo === undefined ? null : <NavigationButton to={navigateTo} />}
+    </>
+  );
+}
+
+function NavigationButton({ to }: { readonly to: string }) {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(to)}>
+      Navigate to requested type
+    </button>
+  );
+}
+
+function renderPage(initialEntry = '/inventory/types', navigateTo?: string) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-}
-
-function renderPage() {
-  return render(<TypeCataloguePage />, { wrapper: Wrapper });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <Routes>
+          <Route path="/inventory/types" element={<CatalogueRoute navigateTo={navigateTo} />} />
+          <Route path="/inventory/types/:id" element={<CatalogueRoute navigateTo={navigateTo} />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 const compatibleResult = {
@@ -172,6 +225,49 @@ describe('TypeCataloguePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue to fields' }));
     expect(screen.getByText('Manufacturer')).toBeInTheDocument();
     expect(screen.getByDisplayValue('manufacturer')).toBeDisabled();
+  });
+
+  it('opens on the type named in the URL', async () => {
+    api.readCatalogue.mockResolvedValue({ data: routerCatalogue, error: undefined });
+    renderPage(`/inventory/types/${ROUTER_TYPE_ID}`);
+
+    expect(await screen.findByRole('button', { name: /Router/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  it('an unknown type id falls back to the default type', async () => {
+    api.readCatalogue.mockResolvedValue({ data: routerCatalogue, error: undefined });
+    renderPage('/inventory/types/unknown');
+
+    expect(await screen.findByRole('button', { name: /Router/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  it('navigating from /inventory/types/A to /inventory/types/B selects B', async () => {
+    api.readCatalogue.mockResolvedValue({ data: navigationCatalogue, error: undefined });
+    renderPage(`/inventory/types/${TYPE_A_ID}`, `/inventory/types/${TYPE_B_ID}`);
+
+    expect(await screen.findByRole('button', { name: /Type A/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Type C/ }));
+    expect(screen.getByRole('button', { name: /Type C/ })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to requested type' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Type B/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    );
+    expect(screen.getByRole('button', { name: /Type A/ })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: /Type C/ })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('creates the draft before applying the first edit', async () => {

@@ -28,7 +28,7 @@ describe('inventory page tree', () => {
     expect(pageTreeMismatches(INVENTORY_PAGES, routes, PAGE_COMPONENTS)).toEqual([]);
     expect(INVENTORY_PAGES).toHaveLength(1);
     expect(INVENTORY_PAGES[0]?.bundleSlot).toBe('inventory-layout');
-    expect(INVENTORY_PAGES[0]?.children).toHaveLength(27);
+    expect(INVENTORY_PAGES[0]?.children).toHaveLength(28);
   });
 
   it("stays within the manifest's three-level page depth", () => {
