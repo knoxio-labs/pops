@@ -430,6 +430,30 @@ describe('bulk item verbs', () => {
     await expect(pending).resolves.toMatchObject({ applied: ['item-1'] });
   });
 
+  it('sends each selected item its own retained stable values', async () => {
+    const queryClient = createTestQueryClient();
+    seedItems(queryClient, [item('item-1'), item('item-2')]);
+    mocks.syncMutations.mockImplementation((request: MutationRequest) =>
+      ok(
+        request.body.mutations.map((mutation, index) => applied(mutation.mutationId, 2, index + 10))
+      )
+    );
+    const { result } = renderHook(() => useBulkItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+    const values = new Map<string, readonly { fieldId: string; values: readonly string[] }[]>([
+      ['item-1', [{ fieldId: 'field-1', values: ['one'] }]],
+      ['item-2', [{ fieldId: 'field-2', values: ['two'] }]],
+    ]);
+
+    await result.current.changeType(['item-1', 'item-2'], 'cable', values);
+
+    expect(requestAt().body.mutations.map(({ args }) => args)).toEqual([
+      { typeId: 'type-cable', values: [{ fieldId: 'field-1', values: ['one'] }] },
+      { typeId: 'type-cable', values: [{ fieldId: 'field-2', values: ['two'] }] },
+    ]);
+  });
+
   it('sends each typed edit with its own values and skips empty writes', async () => {
     const queryClient = createTestQueryClient();
     seedItems(queryClient, [item('item-1'), item('item-2')]);
