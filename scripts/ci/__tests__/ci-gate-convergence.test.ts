@@ -440,5 +440,8 @@ describe('workflow admission wiring', () => {
     expect(workflow).toContain('github.event.pull_request.head.sha || github.sha');
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).toContain('types: [opened, synchronize, reopened, edited]');
+    expect(workflow).toContain(
+      'run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}'
+    );
   });
 });
