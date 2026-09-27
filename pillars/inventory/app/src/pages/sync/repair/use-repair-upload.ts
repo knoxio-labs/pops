@@ -1,10 +1,10 @@
 import { createElement, useCallback, useState } from 'react';
 
-import { usePhotoUploads } from '../../../foundation/photos/use-photo-uploads.js';
+import { useRepairPhotoUploads } from '../../../foundation/photos/use-repair-photo-uploads.js';
 
 import type { ChangeEvent, ReactElement } from 'react';
 
-import type { PhotoUploadResult } from '../../../foundation/photos/use-photo-uploads.js';
+import type { RepairPhotoUploadResult } from '../../../foundation/photos/use-repair-photo-uploads.js';
 
 interface RepairUpload {
   busy: boolean;
@@ -13,7 +13,7 @@ interface RepairUpload {
   open: () => void;
 }
 
-function uploadRefusal(result: PhotoUploadResult | undefined): string | null {
+function uploadRefusal(result: RepairPhotoUploadResult | undefined): string | null {
   if (result === undefined || result.status === 'refused' || result.status === 'failed') {
     return `Not saved. ${result?.reason ?? 'The photo was refused.'}`;
   }
@@ -25,7 +25,7 @@ export function useRepairUpload(input: {
   itemId: string;
   existingPhotoCount: number;
 }): RepairUpload {
-  const uploads = usePhotoUploads('edit', input.itemId, input.existingPhotoCount);
+  const uploads = useRepairPhotoUploads(input.itemId, input.existingPhotoCount);
   const [fileInputNode, setFileInputNode] = useState<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
