@@ -21,12 +21,16 @@ const fullSweepPaths = new Set([
   '.github/workflows/app-quality.yml',
 ]);
 
+/** @typedef {{ name: string, dir: string, dependencies: Set<string>, isApp: boolean }} WorkspacePackage */
+/** @typedef {{ pkg: string, dir: string }} AppMatrixRow */
+
 /**
  * Discovers workspace packages relevant to frontend dependency selection.
  *
  * App package names must retain the `@pops/app-*` convention because the
  * workflow uses those names as exact pnpm selectors.
  */
+/** @param {string} root @returns {WorkspacePackage[]} */
 export function discoverPackages(root = repoRoot) {
   const dirs = [];
   for (const topLevel of ['libs', 'pillars']) {
@@ -66,10 +70,17 @@ export function discoverPackages(root = repoRoot) {
   });
 }
 
+/** @param {string} file @param {string} dir */
 function touchesDir(file, dir) {
   return file === dir || file.startsWith(`${dir}/`);
 }
 
+/**
+ * @param {Map<string, WorkspacePackage>} packageByName
+ * @param {WorkspacePackage} candidate
+ * @param {Set<string>} changedNames
+ * @param {Set<string>} visiting
+ */
 function dependsOn(packageByName, candidate, changedNames, visiting = new Set()) {
   if (changedNames.has(candidate.name)) return true;
   if (visiting.has(candidate.name)) return false;
@@ -95,18 +106,23 @@ function dependsOn(packageByName, candidate, changedNames, visiting = new Set())
  * inputs, workflow plumbing, and package-manifest changes outside an app use
  * a full sweep because the current dependency graph cannot safely describe
  * the graph before the change.
+ * @param {WorkspacePackage[]} packages
+ * @param {string[]} changedFiles
+ * @param {boolean} forceAll
+ * @returns {AppMatrixRow[]}
  */
 export function selectAffectedApps(packages, changedFiles, forceAll = false) {
   const apps = packages.filter((workspacePackage) => workspacePackage.isApp);
   const normalizedFiles = changedFiles.map((file) => file.replaceAll('\\', '/'));
-  const requiresFullSweep =
-    forceAll ||
-    normalizedFiles.some(
+  let requiresFullSweep = forceAll;
+  if (!requiresFullSweep) {
+    requiresFullSweep = normalizedFiles.some(
       (file) =>
         fullSweepPaths.has(file) ||
         file.startsWith('.github/actions/') ||
         (file.endsWith('/package.json') && !apps.some((app) => touchesDir(file, app.dir)))
     );
+  }
   if (requiresFullSweep) return apps.map(toMatrixRow);
 
   const changedNames = new Set(
@@ -122,10 +138,12 @@ export function selectAffectedApps(packages, changedFiles, forceAll = false) {
   return apps.filter((app) => dependsOn(packageByName, app, changedNames)).map(toMatrixRow);
 }
 
+/** @param {WorkspacePackage} app */
 function toMatrixRow(app) {
   return { pkg: app.name, dir: app.dir };
 }
 
+/** @param {string[]} argv */
 function parseArgs(argv) {
   const unknown = argv.filter((arg) => arg !== '--all' && arg !== '--self-test');
   if (unknown.length > 0) throw new Error(`unknown argument(s): ${unknown.join(', ')}`);
@@ -155,6 +173,7 @@ function selfTest() {
       isApp: true,
     },
   ];
+  /** @param {string[]} files @param {boolean} all */
   const names = (files, all = false) =>
     selectAffectedApps(packages, files, all).map((app) => app.pkg);
   const checks = [
