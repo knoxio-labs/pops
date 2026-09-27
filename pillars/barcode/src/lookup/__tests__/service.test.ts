@@ -4,8 +4,14 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { runWithRequestId } from '@pops/pillar-sdk/server';
+
 import { openBarcodeDb, type OpenedBarcodeDb } from '../../db/index.js';
-import { createBarcodeLookupService, SOURCE_BUDGET_MS } from '../service.js';
+import {
+  createBarcodeLookupService,
+  SOURCE_BUDGET_MS,
+  type BarcodeLookupLogger,
+} from '../service.js';
 
 import type { Product } from '../product.js';
 import type { BookSource } from '../source.js';
@@ -33,10 +39,19 @@ afterEach(() => {
   directory = undefined;
 });
 
-function service(sources: readonly BookSource[], now = () => new Date('2026-09-26T00:00:00.000Z')) {
+function service(
+  sources: readonly BookSource[],
+  now = () => new Date('2026-09-26T00:00:00.000Z'),
+  logger?: BarcodeLookupLogger
+) {
   directory = mkdtempSync(join(tmpdir(), 'barcode-service-test-'));
   opened = openBarcodeDb(join(directory, 'barcode.db'));
-  return createBarcodeLookupService({ db: opened.db, sources, now });
+  return createBarcodeLookupService({
+    db: opened.db,
+    sources,
+    now,
+    ...(logger === undefined ? {} : { logger }),
+  });
 }
 
 function source(id: BookSource['id'], lookUp: BookSource['lookUp']): BookSource {
@@ -111,8 +126,14 @@ describe('createBarcodeLookupService', () => {
       }),
     ]);
 
-    await expect(lookup.lookup('9780330423304')).resolves.toEqual({ outcome: 'unavailable' });
-    await expect(lookup.lookup('9780330423304')).resolves.toEqual({ outcome: 'unavailable' });
+    await expect(lookup.lookup('9780330423304')).resolves.toMatchObject({
+      outcome: 'unavailable',
+      error: { code: 'barcode.lookup.provider_unavailable', retryable: true },
+    });
+    await expect(lookup.lookup('9780330423304')).resolves.toMatchObject({
+      outcome: 'unavailable',
+      error: { code: 'barcode.lookup.provider_unavailable', retryable: true },
+    });
     expect(calls).toBe(4);
   });
 
@@ -123,7 +144,10 @@ describe('createBarcodeLookupService', () => {
       }),
     ]);
 
-    await expect(lookup.lookup('9780330423304')).resolves.toEqual({ outcome: 'unavailable' });
+    await expect(lookup.lookup('9780330423304')).resolves.toMatchObject({
+      outcome: 'unavailable',
+      error: { code: 'barcode.lookup.provider_unavailable', retryable: true },
+    });
   });
 
   it('returns unavailable when the shared eight-second budget elapses', async () => {
@@ -141,7 +165,10 @@ describe('createBarcodeLookupService', () => {
 
     const result = lookup.lookup('9780330423304');
     await vi.advanceTimersByTimeAsync(8_000);
-    await expect(result).resolves.toEqual({ outcome: 'unavailable' });
+    await expect(result).resolves.toMatchObject({
+      outcome: 'unavailable',
+      error: { code: 'barcode.lookup.timeout', retryable: true },
+    });
   });
 
   it('moves to the next source after one four-second source budget', async () => {
@@ -189,8 +216,86 @@ describe('createBarcodeLookupService', () => {
       }),
     ]);
 
-    await expect(lookup.lookup('9771234567898')).resolves.toEqual({ outcome: 'not_found' });
+    await expect(lookup.lookup('9771234567898')).resolves.toEqual({
+      outcome: 'not_found',
+      reason: 'unsupported',
+    });
     expect(calls).toBe(0);
+  });
+
+  it('logs safe provider attempts and a correlated outcome without the barcode or exception', async () => {
+    const info = vi.fn<BarcodeLookupLogger['info']>();
+    const lookup = service(
+      [
+        source('open_library', async () => {
+          throw new Error('private provider response');
+        }),
+      ],
+      undefined,
+      { info }
+    );
+
+    const result = await runWithRequestId('barcode-request-5050', () =>
+      lookup.lookup('9780330423304')
+    );
+
+    expect(result).toMatchObject({
+      outcome: 'unavailable',
+      error: {
+        code: 'barcode.lookup.provider_unavailable',
+        requestId: 'barcode-request-5050',
+        retryable: true,
+      },
+    });
+    expect(info).toHaveBeenCalledWith(
+      'barcode provider attempt',
+      expect.objectContaining({
+        requestId: 'barcode-request-5050',
+        source: 'open_library',
+        outcome: 'unavailable',
+        failureClass: 'provider_unavailable',
+        durationMs: expect.any(Number),
+      })
+    );
+    expect(info).toHaveBeenCalledWith(
+      'barcode lookup outcome',
+      expect.objectContaining({
+        requestId: 'barcode-request-5050',
+        outcome: 'unavailable',
+        failureClass: 'barcode.lookup.provider_unavailable',
+        retryable: true,
+      })
+    );
+    const serialisedLogs = JSON.stringify(info.mock.calls);
+    expect(serialisedLogs).not.toContain('9780330423304');
+    expect(serialisedLogs).not.toContain('private provider response');
+  });
+
+  it('logs a provider rate limit with its safe status', async () => {
+    const info = vi.fn<BarcodeLookupLogger['info']>();
+    const lookup = service(
+      [
+        source('google_books', async () => ({
+          kind: 'unavailable',
+          failureClass: 'rate_limited',
+          status: 429,
+        })),
+      ],
+      undefined,
+      { info }
+    );
+
+    await lookup.lookup('9780330423304');
+
+    expect(info).toHaveBeenCalledWith(
+      'barcode provider attempt',
+      expect.objectContaining({
+        source: 'google_books',
+        outcome: 'unavailable',
+        failureClass: 'rate_limited',
+        providerStatus: 429,
+      })
+    );
   });
 
   it('does not call an adapter on a cache hit', async () => {

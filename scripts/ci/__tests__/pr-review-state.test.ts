@@ -21,6 +21,7 @@ import {
   emptyState,
   findingFromModel,
   findingId,
+  isBlockingSeverity,
   merge,
   normalize,
   parseState,
@@ -644,6 +645,20 @@ describe('render', () => {
     expect(body.indexOf('high one')).toBeLessThan(body.indexOf('low one'));
   });
 
+  it('reports blocking and advisory open counts', () => {
+    const low = findingFromModel({ file: 'a.ts', title: 'low one', severity: 'low' }, 'sha');
+    const medium = findingFromModel(
+      { file: 'b.ts', title: 'medium one', severity: 'medium' },
+      'sha'
+    );
+    const body = render(
+      { version: STATE_VERSION, last_reviewed_sha: 'sha', findings: [low, medium] },
+      'sha',
+      'full'
+    );
+    expect(body).toContain('2 open findings. 1 blocking, 1 advisory.');
+  });
+
   it('collapses resolved findings and strikes them through', () => {
     const done = makeFinding({ status: 'resolved', resolved_in: 'sha2', title: 'fixed thing' });
     const body = render(
@@ -706,6 +721,17 @@ describe('render', () => {
       'full'
     );
     expect(two).toContain('2 open findings.');
+  });
+});
+
+describe('isBlockingSeverity', () => {
+  it('makes only exact low advisory', () => {
+    expect(isBlockingSeverity('low')).toBe(false);
+    expect(isBlockingSeverity('medium')).toBe(true);
+    expect(isBlockingSeverity('high')).toBe(true);
+    expect(isBlockingSeverity(undefined)).toBe(true);
+    expect(isBlockingSeverity('LOW')).toBe(true);
+    expect(isBlockingSeverity('critical')).toBe(true);
   });
 });
 

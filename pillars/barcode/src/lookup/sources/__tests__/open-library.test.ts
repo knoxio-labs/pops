@@ -158,9 +158,9 @@ describe('createOpenLibrarySource', () => {
   });
 
   it.each([
-    ['edition-404.json', 404, 'miss'],
-    ['edition-429.json', 429, 'unavailable'],
-  ] as const)('maps an edition HTTP response', async (name, status, kind) => {
+    ['edition-404.json', 404, { kind: 'miss' }],
+    ['edition-429.json', 429, { kind: 'unavailable', failureClass: 'rate_limited', status: 429 }],
+  ] as const)('maps an edition HTTP response', async (name, status, expected) => {
     const { fetcher } = makeFetcher((url) => {
       if (url.includes('/isbn/')) return response(name, status);
       throw new Error(`unexpected URL: ${url}`);
@@ -168,9 +168,7 @@ describe('createOpenLibrarySource', () => {
 
     await expect(
       openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal)
-    ).resolves.toEqual({
-      kind,
-    });
+    ).resolves.toEqual(expected);
   });
 
   it('returns unavailable for malformed edition JSON', async () => {
@@ -183,6 +181,7 @@ describe('createOpenLibrarySource', () => {
       openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal)
     ).resolves.toEqual({
       kind: 'unavailable',
+      failureClass: 'invalid_response',
     });
   });
 
@@ -193,7 +192,7 @@ describe('createOpenLibrarySource', () => {
 
     await expect(
       openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal)
-    ).resolves.toEqual({ kind: 'unavailable' });
+    ).resolves.toEqual({ kind: 'unavailable', failureClass: 'network_error' });
   });
 
   it('returns unavailable when the edition request takes longer than four seconds', async () => {
@@ -208,7 +207,10 @@ describe('createOpenLibrarySource', () => {
     const resultPromise = openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal);
     await vi.advanceTimersByTimeAsync(4_000);
 
-    await expect(resultPromise).resolves.toEqual({ kind: 'unavailable' });
+    await expect(resultPromise).resolves.toEqual({
+      kind: 'unavailable',
+      failureClass: 'timeout',
+    });
   });
 
   it('preserves a year-only publication date', async () => {

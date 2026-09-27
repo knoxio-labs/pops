@@ -21,6 +21,7 @@ export interface ContentsVerbState {
   readonly verbs: ContentsVerbs;
   readonly movingIds: readonly string[];
   readonly setMovingIds: (ids: readonly string[]) => void;
+  readonly moveIds: (ids: readonly string[], target: PlacementTarget) => void;
   readonly moveSelected: (target: PlacementTarget) => void;
 }
 
@@ -53,34 +54,32 @@ function useIdsRunner(run: (id: string, operation: () => ItemVerbPromise) => Pro
   );
 }
 
-function useMoveSelected({
+function useMoveIds({
   itemVerbs,
-  movingIds,
   online,
   runForIds,
   setMovingIds,
 }: {
   itemVerbs: ReturnType<typeof useItemVerbs>;
-  movingIds: readonly string[];
   online: boolean;
   runForIds: (ids: readonly string[], operation: (id: string) => ItemVerbPromise) => void;
   setMovingIds: (ids: readonly string[]) => void;
-}): (target: PlacementTarget) => void {
+}): (ids: readonly string[], target: PlacementTarget) => void {
   return useCallback(
-    (target: PlacementTarget) => {
+    (ids: readonly string[], target: PlacementTarget) => {
       if (!online) return;
       if (target.kind === 'in-hand') {
-        runForIds(movingIds, (id) => itemVerbs.pickUp(id));
+        runForIds(ids, (id) => itemVerbs.pickUp(id));
       } else {
         const fixed: FixedPlacement =
           target.kind === 'location'
             ? { kind: 'location', locationId: target.locationId }
             : { kind: 'container', containerId: target.containerId };
-        runForIds(movingIds, (id) => itemVerbs.move(id, fixed));
+        runForIds(ids, (id) => itemVerbs.move(id, fixed));
       }
       setMovingIds([]);
     },
-    [itemVerbs, movingIds, online, runForIds, setMovingIds]
+    [itemVerbs, online, runForIds, setMovingIds]
   );
 }
 
@@ -120,7 +119,11 @@ export function useContentsVerbs(
     },
     [itemVerbs, online, run, world]
   );
-  const moveSelected = useMoveSelected({ itemVerbs, movingIds, online, runForIds, setMovingIds });
+  const moveIds = useMoveIds({ itemVerbs, online, runForIds, setMovingIds });
+  const moveSelected = useCallback(
+    (target: PlacementTarget): void => moveIds(movingIds, target),
+    [moveIds, movingIds]
+  );
   const verbs = useMemo<ContentsVerbs>(
     () => ({
       pendingIds,
@@ -132,5 +135,5 @@ export function useContentsVerbs(
     }),
     [online, pendingIds, pickUp, startMove, takeOut, tracked.rejections]
   );
-  return { verbs, movingIds, setMovingIds, moveSelected };
+  return { verbs, movingIds, setMovingIds, moveIds, moveSelected };
 }
