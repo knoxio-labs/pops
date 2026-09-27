@@ -2,6 +2,11 @@ import AppCore
 import Foundation
 
 internal enum InventoryPrefillValidator {
+    private enum BooleanEvidence {
+        case value(Bool)
+        case absent
+    }
+
     internal static func validate(
         _ raw: [String: InventoryPrefillRawValue], fields: [InventoryCatalogueField]
     ) -> [String: [InventoryPrimitiveValue]] {
@@ -38,9 +43,10 @@ internal enum InventoryPrefillValidator {
         case .text(let text):
             return groundedText(text, in: source)
         case .texts(let texts):
-            return !texts.isEmpty && texts.allSatisfy {
-                groundedText($0, in: source)
-            }
+            return !texts.isEmpty
+                && texts.allSatisfy {
+                    groundedText($0, in: source)
+                }
         case .flag(let flag):
             return groundedFlag(flag, in: source)
         case .flags(let flags):
@@ -56,20 +62,23 @@ internal enum InventoryPrefillValidator {
     private static func groundedFlag(_ flag: Bool, in source: InventoryPrefillSource) -> Bool {
         evidenceTokens(in: source).contains { tokens in
             tokens.indices.contains { index in
-                booleanValue(in: tokens, at: index) == flag
+                if case .value(let value) = booleanValue(in: tokens, at: index) {
+                    return value == flag
+                }
+                return false
             }
         }
     }
 
-    private static func booleanValue(in tokens: [String], at index: Int) -> Bool? {
+    private static func booleanValue(in tokens: [String], at index: Int) -> BooleanEvidence {
         let value: Bool
         switch tokens[index] {
         case "true", "yes", "present": value = true
         case "false", "no", "absent": value = false
-        default: return nil
+        default: return .absent
         }
 
-        return isNegated(in: tokens, at: index) ? !value : value
+        return .value(isNegated(in: tokens, at: index) ? !value : value)
     }
 
     private static func isNegated(in tokens: [String], at index: Int) -> Bool {
@@ -91,7 +100,8 @@ internal enum InventoryPrefillValidator {
             valueTokens.count >= candidateTokens.count
                 && valueTokens.indices.contains(
                     where: { start in
-                        Array(valueTokens[start...].prefix(candidateTokens.count)) == candidateTokens
+                        Array(valueTokens[start...].prefix(candidateTokens.count))
+                            == candidateTokens
                     })
         }
     }

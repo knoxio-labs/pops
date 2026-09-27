@@ -157,27 +157,33 @@ internal struct InventoryPrefillValidatorTests {
         #expect(
             InventoryPrefillValidator.validate(
                 ["boolean": .flag(true)], fields: fields,
-                source: .text(["Battery: present"])) == ["boolean": [.boolean(true)]])
+                source: .text(["Battery: present"]))
+                == ["boolean": [.boolean(true)]])
         #expect(
             InventoryPrefillValidator.validate(
                 ["boolean": .flag(false)], fields: fields,
-                source: .text(["Battery: present"])).isEmpty)
+                source: .text(["Battery: present"])
+            ).isEmpty)
         #expect(
             InventoryPrefillValidator.validate(
                 ["boolean": .flags([false])], fields: fields,
-                source: .text(["Battery: not present"])) == ["boolean": [.boolean(false)]])
+                source: .text(["Battery: not present"]))
+                == ["boolean": [.boolean(false)]])
         #expect(
             InventoryPrefillValidator.validate(
                 ["boolean": .flag(true)], fields: fields,
-                source: .text(["Battery: not present"])).isEmpty)
+                source: .text(["Battery: not present"])
+            ).isEmpty)
         #expect(
             InventoryPrefillValidator.validate(
                 ["boolean": .flag(false)], fields: fields,
-                source: .text(["Battery isn't present"])) == ["boolean": [.boolean(false)]])
+                source: .text(["Battery isn't present"]))
+                == ["boolean": [.boolean(false)]])
         #expect(
             InventoryPrefillValidator.validate(
                 ["boolean": .flag(true)], fields: fields,
-                source: .text(["Battery never present"])).isEmpty)
+                source: .text(["Battery never present"])
+            ).isEmpty)
         #expect(
             InventoryPrefillValidator.validate(
                 ["boolean": .flag(false)], fields: fields,

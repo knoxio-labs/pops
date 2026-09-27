@@ -11,7 +11,8 @@ internal struct InventoryPrefillEngine: Sendable {
         source: InventoryPrefillSource, type: InventoryCatalogueType,
         draft: InventoryProtocol2Draft, includeName: Bool = false
     ) async -> [String: [InventoryPrimitiveValue]] {
-        let plannedFields = includeName
+        let plannedFields =
+            includeName
             ? [InventoryPrefillName.field(typeId: type.id)] + type.fields
             : type.fields
         let fields = InventoryPrefillFieldPlan.fillable(fields: plannedFields, draft: draft)
