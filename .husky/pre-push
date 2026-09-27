@@ -14,21 +14,7 @@ if git rev-parse --verify --quiet origin/main >/dev/null; then
   node scripts/ci/check-commit-attribution.mjs --base origin/main
 fi
 
-# The typecheck is scoped to what the push contains rather than run
-# unconditionally: it is `tsc -b` over the whole compiled graph plus a fan-out
-# to 24 units, one of which runs `cargo check`, and a branch that touches only
-# `clients/ios` (in neither workspace — ADR-043) cannot affect any of it.
-# scripts/pre-push-scope.mjs decides, and prints two verdicts (one per line):
-# the compiled-graph decision, then whether this push touches scripts/ — a
-# tree `tsc -b tsconfig.build.json` and the compiled-graph fan-out never reach
-# (see mise.toml's `[tasks."typecheck:scripts"]` comment). Both default to
-# `run` on any doubt; the `|| output=...` below keeps that true even if node
-# itself cannot start.
-#
-# This typecheck runs `tsc -b` against the working tree, i.e. HEAD — there is
-# no way to typecheck a different commit without checking it out. That is why
-# scripts/pre-push-check-refs.mjs (below) refuses any pushed ref whose sha is
-# not HEAD, rather than letting this typecheck vouch for a tree it never saw.
+# Scope remains conservative when the pushed refs cannot be resolved.
 output=$(printf '%s' "$refs_input" | node scripts/pre-push-scope.mjs) || output="run
 run"
 decision=$(printf '%s\n' "$output" | sed -n '1p')
@@ -37,6 +23,8 @@ scripts_decision=$(printf '%s\n' "$output" | sed -n '2p')
 [ -n "$scripts_decision" ] || scripts_decision=run
 
 without_repo_locating_git_env() {
+  # Remove Husky's relative prefix; mise restores the absolute workspace bin
+  # path, keeping validation's environment identical to the preceding check.
   env \
     -u GIT_DIR \
     -u GIT_WORK_TREE \
@@ -47,6 +35,7 @@ without_repo_locating_git_env() {
     -u GIT_PREFIX \
     -u GIT_QUARANTINE_PATH \
     -u GIT_NAMESPACE \
+    PATH="${PATH#node_modules/.bin:}" \
     "$@"
 }
 
@@ -83,18 +72,18 @@ else
     exit 1
   fi
 
-  without_repo_locating_git_env pnpm typecheck
+  if ! git diff --quiet HEAD -- || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+    echo "pre-push: commit or move aside tracked changes and untracked source before validating the pushed tree." >&2
+    exit 1
+  fi
+  without_repo_locating_git_env mise run check -- --typecheck-only
 
   if [ "$scripts_decision" = run ]; then
-    # Only `test:scripts` is needed here. `pnpm typecheck` above already runs
-    # `typecheck:scripts` — `[tasks.typecheck]` depends on it since POPS-2763
-    # — so invoking it again type-checked the four scripts/ tsconfig projects
-    # twice on every scripts/-touching push. `[tasks.test]` gained the same
-    # dependency, but this hook never runs the umbrella `test` task, so the
-    # scripts suite still has to be asked for by name: quality.yml's
-    # scripts-tests job gates it in CI, and a scripts/-touching push must not
-    # pass locally and fail there.
     without_repo_locating_git_env mise run test:scripts
+  fi
+  if ! git diff --quiet HEAD -- || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+    echo "pre-push: validation generated changes outside HEAD; review and commit them before pushing." >&2
+    exit 1
   fi
 fi
 
