@@ -18,6 +18,7 @@ import {
 } from '../../inventory-web/useInventoryDefaults.js';
 import { AddDialog } from './add-dialog';
 import { MAX_LABEL_IDS, readLabelParams } from './label-params';
+import { loadSheetId } from './label-storage';
 import { PrintOptions } from './print-options';
 import { PrintPreview } from './print-preview';
 import { LabelPrintStyles } from './print-styles';
@@ -170,7 +171,7 @@ export function LabelsPage() {
   const stored = settings.data ?? DEFAULT_INVENTORY_DEFAULTS;
   const defaults: LabelPageDefaults = {
     template: labelTemplateForShows(stored.labelShows),
-    sheetId: stored.labelSheet,
+    sheetId: loadSheetId() ?? stored.labelSheet,
   };
   const { params, setIds } = useIdsParam(defaults);
   const data = useLabelSubjects(params.ids);

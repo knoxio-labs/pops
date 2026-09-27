@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
+import { SHEET_STORAGE_KEY } from './label-storage';
+
 const api = vi.hoisted(() => ({
   webList: vi.fn(),
   codesSuggest: vi.fn(),
@@ -314,7 +316,15 @@ describe('items without a code', () => {
 });
 
 describe('the sheet', () => {
+  it('prefers the browser remembered sheet over the stored setting', async () => {
+    window.localStorage.setItem(SHEET_STORAGE_KEY, 'L7165');
+    renderPage(`?ids=${GRINDER}`);
+    await screen.findByRole('button', { name: 'Print 1 label' });
+    expect(screen.getByLabelText('Sheet')).toHaveValue('L7165');
+  });
+
   it('opens on the sheet named in the address', async () => {
+    window.localStorage.setItem(SHEET_STORAGE_KEY, 'L7160');
     renderPage(`?ids=${GRINDER}&sheet=L7165`);
     await screen.findByRole('button', { name: 'Print 1 label' });
     expect(screen.getByLabelText('Sheet')).toHaveValue('L7165');
