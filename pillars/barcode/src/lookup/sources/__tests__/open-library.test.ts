@@ -118,12 +118,32 @@ describe('createOpenLibrarySource', () => {
       if (url.includes('/isbn/')) return response('edition-redirect.json');
       if (url.includes('/authors/')) return response('edition-429.json', 500);
       if (url.includes('/works/')) return response('work-hobbit.json');
+      if (url.includes('/search.json')) return response('search-author.json');
       throw new Error(`unexpected URL: ${url}`);
     });
 
     const result = await openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal);
 
-    expect(result).toMatchObject({ kind: 'hit', product: { contributors: [] } });
+    expect(result).toMatchObject({
+      kind: 'hit',
+      product: { contributors: [{ name: 'Stephen King', role: 'author' }] },
+    });
+  });
+
+  it('falls back to ISBN search when the edition has no author links', async () => {
+    const { fetcher, calls } = makeFetcher((url) => {
+      if (url.includes('/isbn/')) return response('edition-year-only.json');
+      if (url.includes('/search.json')) return response('search-author.json');
+      throw new Error(`unexpected URL: ${url}`);
+    });
+
+    const result = await openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal);
+
+    expect(result).toMatchObject({
+      kind: 'hit',
+      product: { contributors: [{ name: 'Stephen King', role: 'author' }] },
+    });
+    expect(calls.some((url) => url.includes('/search.json?isbn=9780330423304'))).toBe(true);
   });
 
   it('keeps edition data when work enrichment times out', async () => {

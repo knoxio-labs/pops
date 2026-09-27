@@ -2,7 +2,7 @@ import { barcodeErrorBody } from '../api/errors.js';
 import { createLookupBudget, sourceAttempt } from './budget.js';
 import { cacheOutcome } from './cache.js';
 import { logProviderAttempt, type BarcodeLookupLogger } from './observability.js';
-import { ProductSchema, type Product } from './product.js';
+import { isProductComplete, ProductSchema, type Product } from './product.js';
 
 import type { LookupOutcome } from '../contract/rest-schemas.js';
 import type { BarcodeDb } from '../db/index.js';
@@ -66,6 +66,76 @@ function logUnavailable(
   });
 }
 
+function contributorKey(contributor: Product['contributors'][number]): string {
+  return `${contributor.name.trim().toLocaleLowerCase()}\u0000${contributor.role?.trim().toLocaleLowerCase() ?? ''}`;
+}
+
+function mergeContributors(
+  current: Product['contributors'],
+  candidate: Product['contributors']
+): Product['contributors'] {
+  const merged = [...current];
+  const seen = new Set(current.map(contributorKey));
+  for (const contributor of candidate) {
+    const key = contributorKey(contributor);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(contributor);
+  }
+  return merged;
+}
+
+function mergeStrings(current: readonly string[], candidate: readonly string[]): string[] {
+  return [...new Set([...current, ...candidate])];
+}
+
+function mergeProducts(current: Product, candidate: Product): Product {
+  return {
+    ...current,
+    subtitle: current.subtitle ?? candidate.subtitle,
+    contributors: mergeContributors(current.contributors, candidate.contributors),
+    publisher: current.publisher ?? candidate.publisher,
+    publishedDate: current.publishedDate ?? candidate.publishedDate,
+    pageCount: current.pageCount ?? candidate.pageCount,
+    language: current.language ?? candidate.language,
+    description: current.description ?? candidate.description,
+    subjects: mergeStrings(current.subjects, candidate.subjects),
+    imageUrls: mergeStrings(current.imageUrls, candidate.imageUrls),
+    attributes: { ...candidate.attributes, ...current.attributes },
+  };
+}
+
+function foundProductOutcome(
+  db: BarcodeDb,
+  code: string,
+  product: Product,
+  requestedAt: Date
+): Extract<LookupOutcome, { outcome: 'found' }> {
+  const outcome = { outcome: 'found' as const, product };
+  cacheOutcome(db, code, outcome, requestedAt);
+  return outcome;
+}
+
+function cacheCompleteProduct(
+  db: BarcodeDb,
+  code: string,
+  product: Product | undefined,
+  requestedAt: Date
+): Extract<LookupOutcome, { outcome: 'found' }> | undefined {
+  return product === undefined || !isProductComplete(product)
+    ? undefined
+    : foundProductOutcome(db, code, product, requestedAt);
+}
+
+function outcomeAfterBudget(
+  product: Product | undefined,
+  options: QuerySourcesOptions
+): LookupOutcome {
+  return product === undefined
+    ? unavailableOutcome('timeout', options.requestId)
+    : foundProductOutcome(options.db, options.code, product, options.requestedAt);
+}
+
 async function querySource(context: SourceContext): Promise<SourceResult> {
   const startedAt = Date.now();
   const attempt = await sourceAttempt(context.source, context.code, context.budget);
@@ -106,13 +176,14 @@ async function querySource(context: SourceContext): Promise<SourceResult> {
   return { kind: 'found', product: parsed.data };
 }
 
-/** Query ordered providers under one shared lookup budget. */
+/** Query ordered providers under one shared lookup budget, enriching partial hits. */
 export async function querySources(options: QuerySourcesOptions): Promise<LookupOutcome> {
   const budget = createLookupBudget();
   let unavailableReason: BarcodeUnavailableReason | undefined;
+  let product: Product | undefined;
   try {
     for (const source of options.sources) {
-      if (budget.signal.aborted) return unavailableOutcome('timeout', options.requestId);
+      if (budget.signal.aborted) return outcomeAfterBudget(product, options);
       const result = await querySource({
         source,
         code: options.code,
@@ -120,12 +191,16 @@ export async function querySources(options: QuerySourcesOptions): Promise<Lookup
         budget,
         ...(options.logger === undefined ? {} : { logger: options.logger }),
       });
-      if (result.kind === 'found') {
-        const outcome = { outcome: 'found' as const, product: result.product };
-        cacheOutcome(options.db, options.code, outcome, options.requestedAt);
-        return outcome;
+      if (result.kind !== 'found') {
+        unavailableReason = mergeUnavailableReason(unavailableReason, result);
+        continue;
       }
-      unavailableReason = mergeUnavailableReason(unavailableReason, result);
+      product = product === undefined ? result.product : mergeProducts(product, result.product);
+      const outcome = cacheCompleteProduct(options.db, options.code, product, options.requestedAt);
+      if (outcome !== undefined) return outcome;
+    }
+    if (product !== undefined) {
+      return foundProductOutcome(options.db, options.code, product, options.requestedAt);
     }
     if (unavailableReason !== undefined) {
       return unavailableOutcome(unavailableReason, options.requestId);

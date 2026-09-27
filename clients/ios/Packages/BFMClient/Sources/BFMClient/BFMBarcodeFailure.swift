@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import OpenAPIRuntime
 
 internal enum BFMBarcodeFailure {
