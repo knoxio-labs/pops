@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 
 import { MAX_MUTATION_BATCH } from '@pops/inventory';
 
+import { InventoryApiError } from '../inventory-api-helpers.js';
 import { dedupeIds } from './item-verbs-bulk-preparation.js';
 import { sendInventoryMutations, type InventoryCommandInput } from './mutation-client.js';
 
@@ -33,7 +34,8 @@ async function deleteBatch(ids: readonly string[], result: DeleteCreatedResult):
       if (id === undefined) throw new Error('inventory delete returned an invalid id index');
       (outcome.status === 'applied' ? result.removed : result.kept).push(id);
     });
-  } catch {
+  } catch (error) {
+    if (!(error instanceof InventoryApiError)) throw error;
     result.kept.push(...ids);
   }
 }

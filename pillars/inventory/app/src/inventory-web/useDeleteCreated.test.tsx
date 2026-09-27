@@ -158,4 +158,22 @@ describe('useDeleteCreated', () => {
     expect(mocks.syncMutations).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();
   });
+
+  it('rethrows programming errors instead of treating them as refused deletions', async () => {
+    const unexpectedOutcome: MutationOutcome = {
+      mutationId: 'm1',
+      get status(): 'applied' {
+        throw new Error('unexpected mutation invariant');
+      },
+      revision: 2,
+      seq: 1,
+      converged: false,
+    };
+    mocks.syncMutations.mockResolvedValue(ok([unexpectedOutcome]));
+    const { result } = renderHook(() => useDeleteCreated(), {
+      wrapper: withQueryClient(createTestQueryClient()),
+    });
+
+    await expect(result.current(['item-1'])).rejects.toThrow('unexpected mutation invariant');
+  });
 });
