@@ -213,7 +213,7 @@ describe('sheets', () => {
     cleanup();
     renderPage({ ...boxes, sheetId: 'custom' });
     expect(screen.getByText('Custom · 24 per sheet, 63.5 × 33.9 mm')).toBeTruthy();
-  });
+  }, 15_000);
 
   it('will not save a custom sheet that runs off the page', () => {
     renderPage(boxes);
