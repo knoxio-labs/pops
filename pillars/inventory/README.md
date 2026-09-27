@@ -281,6 +281,15 @@ those filters to `GET /web/items` and renders the server's totals and pages
 without client-side filtering or sorting. Table, compact and card views share
 the same URL state and keep scrolling within the list body.
 
+### Web inventory routes and navigation
+
+The web app's route table lives in `app/src/routes.tsx`, while the rail and
+PageNav projection comes from the contract in `app/src/nav.ts`. Absolute
+destinations used by global shortcuts are kept in `app/src/navigation-paths.ts`.
+The app test suite resolves every PageNav item and shortcut destination against
+the mounted route table so a navigation entry cannot silently point at an
+unmounted page.
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`

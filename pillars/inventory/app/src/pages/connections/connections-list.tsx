@@ -1,5 +1,5 @@
 import { Cable } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { Checkbox, EmptyState } from '@pops/ui';
 
@@ -9,29 +9,28 @@ import {
   ListError,
   ListSkeleton,
 } from '../../foundation/list-page/list-states.js';
-import { connectionRoom } from './connection-model.js';
+import { connectionRoom, type ConnectionRow, type ResolvedEnd } from './connection-model.js';
 import { CONNECTION_GRID, ConnectionListRow } from './connections-list-row.js';
 
 import type { ReactElement } from 'react';
 
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { SelectionApi } from '../../foundation/selection/use-selection.js';
-import type { WebConnectionRow } from '../../inventory-web/useConnectionsRegistry.js';
 
 export { CONNECTION_GRID } from './connections-list-row.js';
 
 /** Props for the connection registry list body. */
 export interface ConnectionsListProps {
-  rows: readonly WebConnectionRow[];
+  rows: readonly ConnectionRow[];
   world: PlacementWorld;
   selection: SelectionApi;
   traceItemId: string | null;
   online: boolean;
   hasNextPage: boolean;
   onLoadMore: () => void;
-  onOpen: (end: WebConnectionRow['item'] | WebConnectionRow['far']) => void;
-  onTrace: (row: WebConnectionRow) => void;
-  onDisconnect: (row: WebConnectionRow) => void;
+  onOpen: (end: ResolvedEnd) => void;
+  onTrace: (row: ConnectionRow) => void;
+  onDisconnect: (row: ConnectionRow) => void;
   onClearFilters: () => void;
   onRetry: () => void;
   loading: boolean;
@@ -76,23 +75,32 @@ function Sentinel({
   loadedRows: number;
   onLoadMore: () => void;
 }): ReactElement {
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const loadedCount = useRef<number | null>(null);
+  const fetchNextPageRef = useRef(onLoadMore);
 
   useEffect(() => {
-    const node = sentinelRef.current;
+    fetchNextPageRef.current = onLoadMore;
+  });
+
+  const sentinelRef = useCallback((node: HTMLDivElement | null): (() => void) | void => {
     if (node === null || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
-      if (loadedCount.current === loadedRows) return;
-      loadedCount.current = loadedRows;
-      onLoadMore();
+      observer.disconnect();
+      fetchNextPageRef.current();
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [loadedRows, onLoadMore]);
+  }, []);
 
-  return <div ref={sentinelRef} data-testid="connections-sentinel" aria-hidden className="h-px" />;
+  return (
+    <div
+      key={loadedRows}
+      ref={sentinelRef}
+      data-testid="connections-sentinel"
+      aria-hidden
+      className="h-px"
+    />
+  );
 }
 
 function ConnectionRows({
@@ -155,8 +163,8 @@ function EmptyRows({
   return (
     <EmptyState
       icon={Cable}
-      title="No connections yet"
-      description="Connect items to each other or to a fixture to see them here."
+      title="Nothing is connected yet"
+      description="Connect a television to its soundbar, or a router to the network port it uses."
     />
   );
 }
