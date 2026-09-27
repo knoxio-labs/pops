@@ -54,7 +54,7 @@ export function FactsSection({
       aria-label="Facts"
       className={cn(
         'grid min-w-0 content-start gap-x-2 gap-y-0.5',
-        layout === 'grid' ? 'grid-cols-1 @xs:max-lg:grid-cols-2 @lg:grid-cols-3' : 'grid-cols-1'
+        layout === 'grid' ? 'grid-cols-1 @xs:grid-cols-2 @lg:grid-cols-3' : 'grid-cols-1'
       )}
     >
       {facts.map((fact) => (
