@@ -82,6 +82,19 @@ internal struct InventoryPrefillApplicationTests {
         #expect(opened.form.prefillStatus == nil)
     }
 
+    @Test("a universal name suggestion fills the draft name")
+    func nameSuggestionFillsDraft() async {
+        let opened = await Self.opened()
+        defer { opened.loading.cancel() }
+        opened.form.prefillStatus = .running
+
+        opened.form.applySuggestions(
+            [InventoryPrefillName.id: [.string("Fortaleza Digital")]], forTypeId: Self.type.id)
+
+        #expect(opened.form.draft.name == "Fortaleza Digital")
+        #expect(opened.form.prefillStatus == nil)
+    }
+
     @Test("protocol field edits and type changes clear status, name edits do not")
     func statusOwnership() async throws {
         let opened = await Self.opened()

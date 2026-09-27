@@ -32,6 +32,7 @@ export interface ContentsPaneProps {
   onExit?: (count: number, how: ExitKind) => void;
   onStoreHere?: () => void;
   onMove?: (ids: readonly string[]) => void;
+  onEdit?: (id: string) => void;
 }
 
 function useRows(model: ItemDetailModel, state: UnpackState, query: string): ItemRowModel[] {
@@ -171,6 +172,7 @@ export function ContentsPane(props: ContentsPaneProps) {
           onStoreHere={props.onStoreHere}
           onExit={exit}
           onMove={props.onMove}
+          onEdit={props.onEdit}
         />
       )}
       <DockedBar selection={selection} loaded={rows.length} actions={actions} />

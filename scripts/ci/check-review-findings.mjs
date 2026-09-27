@@ -20,7 +20,7 @@
  *      and draft-skipped at job level, so "never ran" is a normal state, not
  *      an edge case.
  *   2. A sticky comment whose `last_reviewed_sha` is not the PR head. The
- *      reviewer debounces ~60s before it even starts, so this is the ORDINARY
+ *      reviewer debounces ~15s before it even starts, so this is the ORDINARY
  *      state for the first minute or so after every push.
  *   3. A state block that is missing, not valid base64, or valid base64 that
  *      is not the JSON shape expected. Never throws; always reported.

@@ -104,7 +104,7 @@ describe('detailVerbs lifecycle', () => {
   it('leaves a destroyed item nothing but copying and history', () => {
     const verbs = verbsOf('itm-phone');
     expect(verbs.primary).toBeNull();
-    expect(verbs.edit).toBeNull();
+    expect(verbs).not.toHaveProperty('edit');
     expect(menuIds('itm-phone')).toEqual(['copy-code', 'copy-link', 'history']);
   });
 });
@@ -113,7 +113,7 @@ describe('detailVerbs offline', () => {
   it('refuses every mutation with the offline reason but keeps read-only entries', () => {
     const verbs = verbsOf('box-k13', true);
     expect(verbs.primary?.disabledReason).toBe(OFFLINE_REASON);
-    expect(verbs.edit?.disabledReason).toBe(OFFLINE_REASON);
+    expect(verbs).not.toHaveProperty('edit');
     expect(verbs.secondary.every((verb) => verb.disabledReason === OFFLINE_REASON)).toBe(true);
     const menu = verbs.menu.flat();
     expect(menu.find((entry) => entry.id === 'copy-link')?.disabledReason).toBeUndefined();

@@ -4,7 +4,7 @@
  * container verbs its type grants, and the More menu. Verbs a state cannot
  * take stay visible with the reason, so nothing silently disappears.
  */
-import { Link2, Pencil } from 'lucide-react';
+import { Link2 } from 'lucide-react';
 
 import { INVENTORY_ICONS, OFFLINE_REASON, targetName } from '../foundation';
 import { actCopy, lifecycleActs, restoreLabel } from '../lifecycle/lifecycle-model';
@@ -18,7 +18,7 @@ const I = INVENTORY_ICONS;
 
 /** A header verb. */
 export interface DetailVerb {
-  id: 'pick-up' | 'put-back' | 'move' | 'open' | 'close' | 'store-here' | 'restore' | 'edit';
+  id: 'pick-up' | 'put-back' | 'move' | 'open' | 'close' | 'store-here' | 'restore';
   label: string;
   icon: LucideIcon;
   shortcutId?: string;
@@ -43,7 +43,6 @@ export interface MenuEntry {
 export interface DetailVerbs {
   primary: DetailVerb | null;
   secondary: DetailVerb[];
-  edit: DetailVerb | null;
   /** Menu groups, separated by rules. Empty groups are dropped. */
   menu: MenuEntry[][];
 }
@@ -145,7 +144,6 @@ export function detailVerbs(
   return {
     primary: verbs.primary && withReason(verbs.primary, OFFLINE_REASON),
     secondary: verbs.secondary.map((verb) => withReason(verb, OFFLINE_REASON)),
-    edit: verbs.edit && withReason(verbs.edit, OFFLINE_REASON),
     menu: verbs.menu.map((group) =>
       group.map((entry) =>
         READ_ONLY_ENTRIES.has(entry.id) ? entry : withReason(entry, OFFLINE_REASON)
@@ -157,9 +155,8 @@ export function detailVerbs(
 function derive(item: ItemRowModel, world: PlacementWorld): DetailVerbs {
   if (item.lifecycle === 'destroyed') {
     const kept = recordEntries(item).filter((entry) => TERMINAL_ENTRIES.has(entry.id));
-    return { primary: null, secondary: [], edit: null, menu: [kept] };
+    return { primary: null, secondary: [], menu: [kept] };
   }
-  const edit: DetailVerb = { id: 'edit', label: 'Edit', icon: Pencil, shortcutId: 'detail-edit' };
   const menu = [recordEntries(item), shapeEntries(item), lifecycleEntries(item)];
   if (item.lifecycle !== 'active') {
     const restore: DetailVerb = {
@@ -168,13 +165,12 @@ function derive(item: ItemRowModel, world: PlacementWorld): DetailVerbs {
       icon: I.undo,
     };
     const kept = [menu[0] ?? [], menu[2] ?? []].filter((group) => group.length > 0);
-    return { primary: restore, secondary: [], edit, menu: kept };
+    return { primary: restore, secondary: [], menu: kept };
   }
   const [first, ...rest] = [...containerVerbs(item), ...placementVerbs(item, world)];
   return {
     primary: first ?? null,
     secondary: rest,
-    edit,
     menu: menu.filter((group) => group.length > 0),
   };
 }

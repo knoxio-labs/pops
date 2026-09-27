@@ -41,6 +41,8 @@ function fixture(id: string, name = id): Fixture {
     name,
     notes: null,
     type: 'power',
+    wiredCount: 0,
+    wiredNames: [],
   };
 }
 
@@ -131,7 +133,7 @@ describe('useFixtures', () => {
           offset: 0,
           search: 'lamp',
           type: 'power',
-          locationId: 'room-1',
+          withinLocationId: 'room-1',
         },
       })
     );

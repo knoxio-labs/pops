@@ -4,43 +4,60 @@ Every workflow YAML file in this directory is documented here exactly once: as a
 
 ## `ci-gate.yml` — the one static aggregate context
 
-`ci-gate.yml` runs a job named `Publish CI Gate verdict`, triggered
-`on: workflow_run` `types: [completed]` of nine workflows: Unit Quality, FE
-Quality, Rust Quality, App Quality, Quality, Registry Generated Quality, iOS
-Quality, Docker Build, E2E Tests. Each name appears twice in that file — in the trigger
-array and in the `gated` array inside the script — and either alone is inert. It
-reads their conclusions through the Actions API and runs none of them itself. The
-file header carries the argument for `workflow_run` over `needs:`, for why the
-verdict converges, and for why it publishes its own check run; the rules the
-`github-script` step implements:
+`ci-gate.yml` observes requested, in-progress and completed runs of nine quality
+workflows. Additional workflows may opt into cancellation-only observation: add
+their existing name to both the trigger and `cancellationOnly`, with a separate
+observer concurrency group. Their verdict belongs to their own required check.
+The wiring guard requires every observed name to exist and keeps the two sets
+disjoint. It publishes an explicit `CI Gate` check against the observed head SHA;
+its own implicit check belongs to the default branch. The workflow never checks
+out or executes pull request content despite holding `actions: write` and
+`checks: write`.
 
-- Concurrency is keyed `ci-gate-${{ github.event.workflow_run.head_sha }}` with
-  `cancel-in-progress: true`, so every sibling completion for a commit collapses
-  onto one evaluation lane.
-- All runs at that head SHA are paginated; the newest run per gated workflow name
-  wins, ordered by `run_number` then `run_attempt`.
-- The gate fails on `failure`, `cancelled`, `timed_out`, `startup_failure`,
-  `action_required` or `stale`.
-- A gated workflow with no run at the SHA is `pass` only when its own
-  `pull_request.paths` filter is a **confirmed** exclusion for this diff
-  (`did not run — path-filtered, treated as pass`); everything else — the
-  filter matches, there is no filter, or the diff can't be determined — is
-  logged as pending, never a pass. One cause of "no run, not a confirmed
-  exclusion" used to be a concurrency-group race silently losing the run's
-  registration entirely; every gated workflow's own `concurrency:` block now
-  runs `cancel-in-progress: false` specifically to close that window — see the
-  MITIGATION paragraph in `ci-gate.yml`'s own CONVERGENCE comment.
-- A run that is not yet `completed` is pending: it does not fail the gate, but it
-  does hold it at `in_progress`. A failure concludes immediately (nothing can
-  clear it); `success` is only ever published once nothing is left in flight.
-- The verdict is POSTed as a **check run named `CI Gate` against
-  `github.event.workflow_run.head_sha`** (hence `permissions: checks: write`).
-  That is the context to put in the branch ruleset.
-- The run's own `run-name` states the evaluated SHA, branch and triggering
-  workflow, because `gh run list` / the Actions UI file every `workflow_run`
-  run under the default branch's tip regardless — see the next section for why
-  that makes the run list, as opposed to the check run above, an unreliable
-  place to read a commit's gate state.
+- Quality concurrency groups include the PR head SHA, so a new push registers
+  without waiting for obsolete work. Native cancellation stays disabled.
+- After a replacement is registered and verified against the current open PR,
+  the observer cancels older runs of that same workflow, PR and source repository.
+  Each evaluation reconciles every registered replacement at the current head,
+  including completed replacements, so coalesced observer events cannot strand old work.
+  Merge-group runs are never cancelled by this mechanism. If cancellation fails,
+  obsolete work may finish, but it cannot contribute to another SHA's verdict.
+- Cancellation-only and non-PR events have separate observer concurrency groups,
+  so their no-verdict evaluations cannot replace a queued admission publication.
+- Gate evaluations for one SHA serialize without cancelling each other's API
+  publications. Every evaluation reads current sibling states. Pushes during
+  evaluation, closed PRs and completions from superseded heads publish nothing.
+- All nine workflows retrigger on PR edits, including base retargets. Title and
+  description edits also rerun checks; there is no event filter for base-only edits.
+- Only PR and merge-group events publish admission verdicts; a manual dispatch
+  or main push cannot overwrite a PR verdict on the same SHA.
+- Fork runs with empty PR associations resolve through the commit-to-PR API,
+  matching source repository, branch and head. Admission then requires a run title
+  that records the target base explicitly; a missing or older base stays pending.
+  Workflow identity comes from its registered ID, because the run API may put a
+  custom title in both `name` and `display_title`. Fork PRs set that base-bearing
+  title; same-repository events retain the canonical workflow name, allowing the
+  observer to roll out while the previous name-based observer is still on main. Ambiguous
+  associations block, and cancellation requires an explicit PR association.
+- Only runs for the same event, PR and base branch contribute; the latest run
+  number and attempt wins. Completed runs pass only on `success` or `skipped`.
+  Cancellations, unknown conclusions and failures block. Rerunning a failed
+  workflow replaces that attempt and can restore a green gate.
+- Missing PR runs pass only for a confirmed path-filter exclusion. An unknown or
+  truncated diff, a matching filter, or an unfiltered workflow remains pending.
+  Every workflow is expected on a merge group, regardless of path filters.
+- A registered but unfinished run holds the check at `in_progress`. The observer
+  includes its triggering registration even if the run-list API has not caught
+  up. Missing expected runs require retriggering; absence never means success.
+- The run title identifies the evaluated SHA and branch. Actions lists attribute
+  these observer runs to the default branch; read the explicit check for the
+  actual PR verdict.
+
+Checks attach to a SHA, not a PR. Concurrent PRs with identical heads and different
+bases share that check context. A merge queue validates a distinct combined SHA
+and avoids that collision. Without one, a promotion needs its own unique candidate
+SHA and required checks against the current main; the PR verdict alone cannot
+isolate shared-head PRs.
 
 ### Rules this file exists to stop people relearning
 
@@ -181,15 +198,16 @@ only in `agent-review.yml`'s preflight.
 
 The corollary is that a workflow's declared `pull_request.paths` is now
 load-bearing in two lanes. `ios-quality.yml`'s path filter covers
-`clients/ios/**`, `pillars/bfm/**`, `pillars/inventory/**`,
-`scripts/ios-e2e/**` — the two pillars and the harness because its UI-flow
+`clients/ios/**`, `pillars/bfm/**`, the inventory server inputs,
+`scripts/ios-e2e/**` — the two processes and the harness because its UI-flow
 step boots a real BFM and a real inventory pillar — and `pnpm-lock.yaml`,
-since a lockfile bump changes what those boots resolve. It deliberately does
-not cover the BFM's transitive `libs/*` (today just `libs/sdk` and
-`libs/types`, per `pnpm list --filter "@pops/bfm..." --depth Infinity`): that
-pair is touched far more often than the lockfile, both libs are already gated
-by `unit-quality.yml` (which runs the BFM's own typecheck and vitest suite
-against them), and this job's header explains the trade in full.
+since a lockfile bump changes what those boots resolve. The inventory web app,
+docs, snapshots and Dockerfile are excluded because the flow builds none of
+them. It deliberately does not cover the BFM's transitive `libs/*` (today just
+`libs/sdk` and `libs/types`, per `pnpm list --filter "@pops/bfm..." --depth
+Infinity`): that pair is touched far more often than the lockfile, both libs
+are already gated by `unit-quality.yml` (which runs the BFM's own typecheck and
+vitest suite against them), and this job's header explains the trade in full.
 
 **What it costs and what it saves**, measured on the 39 completed merge-queue
 entries immediately before the scoping change. Each entry's `ios-quality.yml`
@@ -206,12 +224,9 @@ its own run of everything. Measured on the 15 merges after the `scope` job
 landed, the queue leg — first merge-group run created to merged — split cleanly
 in two: a median of **2.9 minutes** for the entries `scope` deselected iOS on,
 against **85.8 minutes** for the entries it selected. The spread is not the
-queue. That was dominated by the full iOS suite. The selected merge-group lane
-now runs only formatting plus the simulator `build-for-testing` and compiler-log
-analysis; the simulator tests and Release build run on the PR, while the Maestro
-flow runs only after merge. This keeps merge-order compilation coverage while
-avoiding a second run of tests whose PR result already established their
-behaviour.
+queue. That was dominated by the full iOS suite. A selected merge-group lane
+runs the host and simulator tests, Release build, compiler-log analysis and
+Maestro flow against the exact merge candidate.
 
 `check_response_timeout_minutes` is 75, raised from 60. A check that does not
 report inside that window evicts its entry, and the worst in-queue
@@ -266,7 +281,7 @@ markdown/JSON/CSS checked by `quality.yml`'s `Format` job — the only
 PR-scoped gate that applies to a client's non-Swift files, since Swift
 formatting and linting is `ios-quality.yml`'s own job.
 
-A second job, `assert-app-coverage`, enumerates the 7 `pillars/*/app` dirs,
+A second job, `assert-app-coverage`, enumerates the `pillars/*/app` dirs,
 requires each `package.json#name` to match `@pops/app-*`, and greps both
 `fe-quality.yml` and `app-quality.yml` for a `pillars/*/app/**` trigger — reading
 files only, no install.
@@ -287,15 +302,15 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | File                             | Trigger                                                       | Runs                                                                                                             |
 | -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `quality.yml`                    | every PR + push to `main` + every merge group — **no path filter, deliberately** | The repo-wide gate: `Lint`, `Format`, `Module boundaries`, `Duplication check` and the cross-cutting drift checks; scoped to changed units on PRs, whole tree on `main`. No job is advisory, and no job count is recorded here — it rotted twice; the file's own header is the list. See the `CI Gate` rules above |
-| `unit-quality.yml`               | PR/push on unit + shared-root paths; every merge group        | ts and rust lanes over the changed-unit matrix                                                                      |
-| `app-quality.yml`                | PR/push on `pillars/*/app/**`, `pillars/*/openapi/**`, FE libs; every merge group | each `@pops/app-*`'s own typecheck + test                                                                           |
+| `unit-quality.yml`               | PR/push on unit + shared-root paths; every merge group        | separate TypeScript and Rust matrices over their changed units, without reserving opposite-language skip jobs       |
+| `app-quality.yml`                | PR/push on `pillars/*/app/**`, `pillars/*/openapi/**`, FE libs; every merge group; reusable with `full-validation` | PRs run affected `@pops/app-*` packages' typecheck, generated-client drift, remote-bundle build and test; reverse transitive workspace dependencies select consumers, while dependency-graph inputs, an unusable diff base, every merge-group promotion and a reusable call with `full-validation: true` select all apps |
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
-| `ios-quality.yml`                | PR on `clients/ios/**`, `pillars/bfm/**`, `pillars/inventory/**`, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; every merge group, **scoped by a `scope` job to that same filter** | `xcode-27`; selects the Xcode pinned in `clients/ios/mise.toml`, then runs formatting and compiler-log analysis. Every lane runs the simulator tests and a Release build that verifies no BFM host is embedded; the compiler-log analysis (`lint:analyze`, ~19.5 min of the job) and the Maestro UI flow against a real BFM and a real inventory pillar run only in the merge queue. No push trigger: the queue's head commit is the one that lands (POPS-4152). A PR whose base is not `main` (a stacked PR) skips the macOS job; the queue runs it regardless. Caches no derived data, deliberately; the header says why |
+| `ios-quality.yml`                | PR on `clients/ios/**`, `pillars/bfm/**`, inventory server inputs, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; reusable with `full-validation: true`; every merge group, **scoped by a `scope` job to that same filter** | `xcode-27`; selects the Xcode pinned in `clients/ios/mise.toml`, lints first, then runs host and simulator tests and a Release build that verifies no BFM host is embedded. The reusable full lane and merge-group lane add compiler-log analysis (`lint:analyze`, ~19.5 min of the job) and the Maestro UI flow against a real BFM and a real inventory pillar. A reusable promotion call does not suppress an iOS-relevant promotion's native quick PR run; both verdicts are retained. No push trigger (POPS-4152). A PR whose base is not `main` (a stacked PR) skips the macOS job. Caches host SwiftPM build products, but no iOS DerivedData; the header says why |
 | `ios-testflight.yml`             | push to `main`; dispatch with a `sha` on `main` | an `ubuntu-latest` `pick` job (`scripts/ci/testflight-ship-sha.mjs`) chooses the newest pushed commit whose iOS Quality job ran and passed — the merge-group run, or with the queue off (POPS-4439) the `pull_request` run on the head of the PR it landed from — then `xcode-27`, environment `main` (branch-restricted to `main`); archives `Pops` and `PopsPlayground` at that commit with CalVer from `clients/ios/scripts/release-version.sh` and uploads both to TestFlight through `mise run release:testflight`. Each export still fails by default; the exact duplicate-build response is accepted only when `scripts/ci/testflight-upload.mjs` proves the same scheme, bundle id, version, build number and source commit already completed in App Store Connect. Not gated: it runs after merge |
 | `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the advisory reviewer that used to be its last step is now `pr-review.yml` |
-| `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. Debounced and `cancel-in-progress: true`, which is only possible because nothing gates on it. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN` regardless, and a skip is safe here specifically because this job is neither required nor gated |
+| `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. Debounced for 15 seconds by default and `cancel-in-progress: true`, so a burst still collapses to the newest head without adding a minute to every ordinary review. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN` regardless, and a skip is safe here specifically because this job is neither required nor gated |
 | `pr-review-dependabot.yml`       | every non-draft, Dependabot-authored PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the substitute for the row above, only for the PRs it cannot run on (POPS-3343): posts the identical sticky-comment contract with zero findings, via the same `pr-review.mjs publish` code path, but never calls a model or reads the diff — a prose line above the state marker says so |
 | `review-findings-gate.yml`       | every PR, drafts included; every merge group; **required**                                    | blocks a merge while `pr-review.yml`'s (or, on a Dependabot PR, `pr-review-dependabot.yml`'s) sticky comment carries an open finding for the head commit (POPS-2661); polls for the debounced review, passes through on a merge group, and passes without polling on a design-surface-only diff because no review will ever come |
 | `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group, **scoped by a `scope` job to that same filter** | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |

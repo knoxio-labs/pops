@@ -40,6 +40,7 @@ export interface ItemsTableProps {
   /** Replaces the Type column: Containers shows what each box holds. */
   secondColumn?: SecondColumn;
   onOpen?: (id: string) => void;
+  onEdit?: (id: string) => void;
   label: string;
 }
 
@@ -188,6 +189,7 @@ export function ItemsTable(props: ItemsTableProps) {
                 SecondCell={props.secondColumn?.Cell}
                 onToggle={selection.onRowToggle}
                 onOpen={props.onOpen}
+                onEdit={props.onEdit}
               />
             ))}
           </div>
