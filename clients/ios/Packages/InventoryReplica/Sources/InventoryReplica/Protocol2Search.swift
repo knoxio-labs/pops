@@ -22,15 +22,16 @@ internal struct SearchCatalogue {
         types = InventoryCatalogue(
             version: "protocol2-\(snapshot.revision.revision)", units: [],
             types: snapshot.types.map {
-                InventoryType(
+                let effective = snapshot.effectiveType(id: $0.id) ?? $0
+                return InventoryType(
                     key: $0.key, name: $0.label,
-                    capabilities: $0.capabilities.compactMap {
+                    capabilities: effective.capabilities.compactMap {
                         $0 == "containment" ? .containment : nil
                     },
                     fields: [], legacyLabels: $0.legacyLabels)
             })
         var labels: [OptionKey: String] = [:]
-        for field in snapshot.types.flatMap(\.fields) {
+        for field in snapshot.types.flatMap({ snapshot.effectiveType(id: $0.id)?.fields ?? [] }) {
             for option in field.enumOptions {
                 labels[OptionKey(fieldId: field.id, optionId: option.id)] = option.label
             }

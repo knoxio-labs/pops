@@ -36,10 +36,13 @@ internal final class ReplicaExpressionContext {
     /// The item's type in this catalogue: by id, or by key for an item the
     /// protocol-1 migration typed, as the override commands resolve it.
     func type(of item: InventoryItem) -> InventoryCatalogueType? {
-        catalogue.types.first { candidate in
-            if let typeId = item.typeId { return candidate.id == typeId }
-            return item.typeKey != nil && candidate.key == item.typeKey
-        }
+        guard
+            let found = catalogue.types.first(where: { candidate in
+                if let typeId = item.typeId { return candidate.id == typeId }
+                return item.typeKey != nil && candidate.key == item.typeKey
+            })
+        else { return nil }
+        return catalogue.effectiveType(id: found.id)
     }
 
     /// Evaluates one computed field of `item`, or nil when this build cannot:

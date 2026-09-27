@@ -99,6 +99,28 @@ internal struct ComputedOverrideReducerTests {
         #expect(reason == .invalid)
     }
 
+    @Test("an inherited computed field accepts an override")
+    func inheritedComputedFieldAcceptsOverride() throws {
+        let item = InheritedTypeFixture.item(
+            values: [
+                InventoryItemFieldEntry(
+                    fieldId: InheritedTypeFixture.size,
+                    state: .value([InheritedTypeFixture.sizeValue()]), source: .stored,
+                    catalogueRevision: InheritedTypeFixture.revision)
+            ])
+        let replica = try InheritedTypeFixture.downloaded([item])
+
+        _ = try replica.performLocally(
+            .setComputedOverride(
+                id: item.id, fieldId: InheritedTypeFixture.computed, value: .boolean(false)),
+            mutationId: "inherited-override", clientTime: Fixture.created)
+
+        let stored = try #require(try replica.read(.item(id: item.id)))
+        #expect(
+            stored.fieldValues.first { $0.fieldId == InheritedTypeFixture.computed }?.source
+                == .override)
+    }
+
     @Test("clearing when no override exists changes nothing, as the server's empty change does")
     func clearWithoutOverride() throws {
         let replica = try Self.replica()
