@@ -504,7 +504,7 @@ describe('the guard catches each way the wiring goes inert', () => {
     const root = cloneWorkflows();
     patch(root, 'ci-gate.yml', (source) =>
       source.replace(
-        'const cancellationOnly = ["Promotion Quality"];',
+        /const cancellationOnly = \[[^\]]*\];/u,
         'const cancellationOnly = ["Quality"];'
       )
     );
@@ -515,8 +515,32 @@ describe('the guard catches each way the wiring goes inert', () => {
 
   it('requires a trigger for every cancellation-only workflow', () => {
     const root = cloneWorkflows();
-    patch(root, 'ci-gate.yml', (source) => source.replace('      - "Promotion Quality"\n', ''));
+    patch(root, 'ci-gate.yml', (source) =>
+      source.replace(
+        /const cancellationOnly = \[[^\]]*\];/u,
+        'const cancellationOnly = ["Optional Quality"];'
+      )
+    );
+
     expect(checkCiGateWiring(root).join('\n')).toContain('has no observer trigger');
+  });
+
+  it('requires every cancellation-only workflow to exist before observing it', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (source) =>
+      source
+        .replace(
+          /const cancellationOnly = \[[^\]]*\];/u,
+          `const cancellationOnly = ${JSON.stringify([...parseGatedArray(embeddedScript(source), 'cancellationOnly'), 'Optional Quality'])};`
+        )
+        .replace('      - "Quality"', '      - "Quality"\n      - "Optional Quality"')
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain('references workflow "Optional Quality"');
+    writeFileSync(
+      join(root, '.github/workflows/optional-quality.yml'),
+      'name: Optional Quality\non: pull_request\n'
+    );
+    expect(checkCiGateWiring(root)).toEqual([]);
   });
 
   it('flags a workflow that fires the gate but is not in `gated`', () => {

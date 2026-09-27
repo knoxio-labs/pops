@@ -3,13 +3,24 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { embeddedScript } from '../check-ci-gate-wiring.mjs';
+import { embeddedScript, parseGatedArray } from '../check-ci-gate-wiring.mjs';
 
 const source = readFileSync(resolve('.github/workflows/ci-gate.yml'), 'utf8');
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (
   ...args: string[]
 ) => (...args: unknown[]) => Promise<void>;
-const execute = new AsyncFunction('github', 'context', 'core', 'process', embeddedScript(source));
+const script = embeddedScript(source);
+const execute = new AsyncFunction(
+  'github',
+  'context',
+  'core',
+  'process',
+  'observedCancellationOnly',
+  script.replace(
+    /const cancellationOnly = \[[^\]]*\];/u,
+    'const cancellationOnly = observedCancellationOnly;'
+  )
+);
 
 const association = { number: 7, base: { ref: 'main' } };
 const pullRequest = {
@@ -38,6 +49,7 @@ type PullRequest = typeof pullRequest;
 
 async function evaluate(
   options: {
+    cancellationOnly?: string[];
     trigger?: Run;
     runs?: Run[];
     candidates?: Run[];
@@ -73,7 +85,13 @@ async function evaluate(
         actions: {
           listWorkflowRunsForRepo: listRuns,
           listWorkflowRuns: listCandidates,
-          getWorkflowRun: () => Promise.resolve({ data: options.registered ?? trigger }),
+          getWorkflowRun: ({ run_id }: { run_id: number }) =>
+            Promise.resolve({
+              data:
+                options.registered ??
+                options.runs?.find((candidate) => candidate.id === run_id) ??
+                trigger,
+            }),
           cancelWorkflowRun: cancel,
         },
         checks: { create },
@@ -97,7 +115,8 @@ async function evaluate(
       runId: 123,
     },
     { info: vi.fn(), warning: vi.fn(), setFailed },
-    { env: { HEAD_SHA: trigger.head_sha } }
+    { env: { HEAD_SHA: trigger.head_sha } },
+    options.cancellationOnly ?? parseGatedArray(script, 'cancellationOnly')
   );
   return { create, cancel, setFailed };
 }
@@ -250,6 +269,7 @@ describe('registered replacement cancellation', () => {
     const result = await evaluate({
       action: 'requested',
       trigger: { ...replacement, name: 'Promotion Quality' },
+      cancellationOnly: ['Promotion Quality'],
       candidates: [old],
     });
     expect(result.cancel).toHaveBeenCalledExactlyOnceWith({
@@ -261,7 +281,10 @@ describe('registered replacement cancellation', () => {
   });
 
   it('ignores completed optional promotion runs without weakening the nine-workflow gate', async () => {
-    const result = await evaluate({ trigger: { ...run, name: 'Promotion Quality' } });
+    const result = await evaluate({
+      trigger: { ...run, name: 'Promotion Quality' },
+      cancellationOnly: ['Promotion Quality'],
+    });
     expect(result.create).not.toHaveBeenCalled();
     expect(result.cancel).not.toHaveBeenCalled();
   });
@@ -321,11 +344,39 @@ describe('registered replacement cancellation', () => {
     expect(result.create).not.toHaveBeenCalled();
   });
 
-  it('does not cancel anything on completion or when PR identity is absent', async () => {
-    for (const trigger of [run, { ...replacement, pull_requests: [] }]) {
-      const result = await evaluate({ trigger, candidates: [old] });
-      expect(result.cancel).not.toHaveBeenCalled();
+  it('retires obsolete work even when the replacement has already completed', async () => {
+    const result = await evaluate({ trigger: run, candidates: [old] });
+    expect(result.cancel).toHaveBeenCalledExactlyOnceWith({
+      owner: 'example',
+      repo: 'project',
+      run_id: old.id,
+    });
+  });
+
+  it('reconciles other registered workflows when their observer event was coalesced', async () => {
+    for (const name of ['iOS Quality', 'Promotion Quality']) {
+      const queued = { ...replacement, id: 30, name, workflow_id: 9, status: 'queued' };
+      const result = await evaluate({
+        trigger: run,
+        runs: [run, queued],
+        cancellationOnly: ['Promotion Quality'],
+        candidates: [{ ...old, workflow_id: queued.workflow_id }],
+      });
+      expect(result.cancel).toHaveBeenCalledExactlyOnceWith({
+        owner: 'example',
+        repo: 'project',
+        run_id: old.id,
+      });
     }
+  });
+
+  it('does not cancel when a fork run has no explicit PR association', async () => {
+    const result = await evaluate({
+      trigger: { ...replacement, pull_requests: [] },
+      associated: [pullRequest],
+      candidates: [old],
+    });
+    expect(result.cancel).not.toHaveBeenCalled();
   });
 
   it('continues evaluating if obsolete work completes before cancellation reaches it', async () => {
@@ -340,6 +391,13 @@ describe('registered replacement cancellation', () => {
 });
 
 describe('workflow admission wiring', () => {
+  it('isolates cancellation-only and non-PR events from queued admission publications', () => {
+    expect(source).toContain('github.event.workflow_run.event');
+    expect(source).toContain(
+      "github.event.workflow_run.name == 'Promotion Quality' && 'cancellation' || 'admission'"
+    );
+  });
+
   it.each([
     'unit-quality',
     'fe-quality',
