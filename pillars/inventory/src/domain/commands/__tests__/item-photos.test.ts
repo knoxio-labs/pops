@@ -59,6 +59,29 @@ describe('item.removePhoto', () => {
     expect(outcome).toMatchObject({ status: 'applied', revision: 1 });
     expect(h.eventCount()).toBe(0);
   });
+
+  it('compacts the remaining positions after removing a photo', () => {
+    const hashC = 'c'.repeat(64);
+    storeMedia(HASH_A);
+    storeMedia(HASH_B);
+    storeMedia(hashC);
+    h.run(mutation('item.attachPhoto', 'lamp', { sha256: HASH_A, position: 0 }));
+    h.run(mutation('item.attachPhoto', 'lamp', { sha256: HASH_B, position: 1 }));
+    h.run(mutation('item.attachPhoto', 'lamp', { sha256: hashC, position: 2 }));
+
+    h.run(mutation('item.removePhoto', 'lamp', { sha256: HASH_B }));
+
+    expect(
+      h.raw
+        .prepare(
+          'SELECT media_sha256 AS sha256, position FROM item_photos WHERE item_id = ? ORDER BY position'
+        )
+        .all('lamp')
+    ).toEqual([
+      { sha256: HASH_A, position: 0 },
+      { sha256: hashC, position: 1 },
+    ]);
+  });
 });
 
 describe('item.reorderPhotos', () => {
