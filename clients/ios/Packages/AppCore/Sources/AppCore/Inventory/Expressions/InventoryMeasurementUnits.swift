@@ -1,5 +1,3 @@
-import Foundation
-
 /// One symbol of a unit term raised to a non-zero integer power.
 internal struct InventoryUnitFactor: Hashable, Sendable {
     let symbol: String

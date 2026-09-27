@@ -3,8 +3,6 @@ import Foundation
 import InventoryReplica
 import Testing
 
-@testable import BFMClient
-
 /// Search over protocol-2 values as `OnlineInventoryStore` fills the replica
 /// through ``BFMInventoryTransport``'s real decodes (POPS-4404): an enum
 /// value is found by its option's label and a computed field by its

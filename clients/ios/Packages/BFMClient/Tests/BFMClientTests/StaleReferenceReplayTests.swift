@@ -3,8 +3,6 @@ import Foundation
 import InventoryReplica
 import Testing
 
-@testable import BFMClient
-
 /// POPS-4494: a queued edit whose reference target went stale by the time it
 /// replays (the record was deleted, or its type no longer satisfies the
 /// field). The server refuses it outright (`target_missing`,

@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// The detail fixtures with their bank match staged: matched and confirmed,
 /// part matched by the sweep, and matched while finance could not describe

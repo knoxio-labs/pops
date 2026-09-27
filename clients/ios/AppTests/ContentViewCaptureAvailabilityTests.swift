@@ -3,8 +3,6 @@ import SwiftUI
 import Testing
 import UIKit
 
-@testable import Pops
-
 @MainActor
 @Suite("Purchases capture availability")
 internal struct ContentViewCaptureAvailabilityTests {
