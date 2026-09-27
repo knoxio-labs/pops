@@ -40,7 +40,7 @@ export function assertReferenceTarget(
   if (!target || target.deletedAt !== null) {
     throw new ValueValidationError('target_missing', field.id, 'reference target is not live');
   }
-  if (field.referenceTypeIds.size > 0 && !target.typeId) {
+  if (field.admittedReferenceTypeIds.size > 0 && !target.typeId) {
     throw new ValueValidationError(
       'reference_type_mismatch',
       field.id,
@@ -49,8 +49,8 @@ export function assertReferenceTarget(
   }
   if (
     target.typeId &&
-    field.referenceTypeIds.size > 0 &&
-    !field.referenceTypeIds.has(target.typeId)
+    field.admittedReferenceTypeIds.size > 0 &&
+    !field.admittedReferenceTypeIds.has(target.typeId)
   ) {
     throw new ValueValidationError(
       'reference_type_mismatch',
@@ -98,7 +98,11 @@ export function assertIncomingReferencesPermitType(
     const field = loadPublishedCatalogue(db, row.catalogueRevision)
       ?.types.flatMap((type) => type.fields)
       .find((candidate) => candidate.id === row.fieldId);
-    if (field && field.referenceTypeIds.size > 0 && !field.referenceTypeIds.has(nextTypeId)) {
+    if (
+      field &&
+      field.admittedReferenceTypeIds.size > 0 &&
+      !field.admittedReferenceTypeIds.has(nextTypeId)
+    ) {
       throw new IncomingReferenceTypeError(
         row.itemId,
         field.id,
