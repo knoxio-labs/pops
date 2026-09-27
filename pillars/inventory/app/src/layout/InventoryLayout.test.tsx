@@ -1,16 +1,28 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  _clearSearchDropdowns,
+  registerGlobalSearchInput,
+  useSearchDropdown,
+} from '@pops/navigation';
 
 import { UNDO_WINDOW_MS, showUndoToast } from '../foundation/feedback/undo-toast';
 import { reportResponse, resetInterruption } from '../foundation/interruptions/interruption-store';
 import { InventoryLayout } from './InventoryLayout';
+import { openPaletteFromTopBar } from './palette/palette-opener';
+import { TOPBAR_PLACEHOLDER } from './topbar/topbar-provider';
 
 const custom = vi.hoisted(() => vi.fn());
 const dismiss = vi.hoisted(() => vi.fn());
 
 vi.mock('sonner', () => ({
   toast: { custom, dismiss },
+}));
+
+vi.mock('./palette/InventoryPalette', () => ({
+  InventoryPalette: () => <div role="dialog" aria-label="Command palette" />,
 }));
 
 function LocationDisplay() {
@@ -45,6 +57,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.runAllTimers();
   vi.useRealTimers();
+  _clearSearchDropdowns();
+  vi.unstubAllGlobals();
 });
 
 describe('InventoryLayout', () => {
@@ -103,7 +117,7 @@ describe('InventoryLayout', () => {
     expect(screen.getByText('Items page')).toBeInTheDocument();
   });
 
-  it('leaves Cmd-K to a document-level listener while no openPalette is given', () => {
+  it('opens the command palette and consumes Cmd-K', () => {
     const listener = vi.fn();
     document.addEventListener('keydown', listener);
     renderLayout();
@@ -114,11 +128,75 @@ describe('InventoryLayout', () => {
       bubbles: true,
       cancelable: true,
     });
-    document.body.dispatchEvent(event);
+    act(() => document.body.dispatchEvent(event));
 
-    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
     expect(screen.getByTestId('location')).toHaveTextContent('/inventory');
+    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeInTheDocument();
     document.removeEventListener('keydown', listener);
+  });
+
+  it('registers the inventory search dropdown on mount and unregisters it on unmount', () => {
+    const { result } = renderHook(() => useSearchDropdown('inventory'));
+    const view = renderLayout();
+
+    expect(result.current?.placeholder).toBe(TOPBAR_PLACEHOLDER);
+    expect(result.current?.hotkeyLabel).toBe('/');
+    expect(result.current?.openCompact).toBe(openPaletteFromTopBar);
+
+    view.unmount();
+
+    expect(result.current).toBeNull();
+  });
+
+  it('/ focuses the TopBar search', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(min-width: 1024px)',
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+    const search = document.createElement('input');
+    document.body.append(search);
+    registerGlobalSearchInput(search);
+    renderLayout();
+
+    fireEvent.keyDown(document.body, { key: '/' });
+
+    expect(document.activeElement).toBe(search);
+
+    const other = document.createElement('input');
+    document.body.append(other);
+    other.focus();
+    fireEvent.keyDown(other, { key: '/' });
+    expect(document.activeElement).toBe(other);
+  });
+
+  it('/ below 1024px opens the palette instead of focusing the hidden box', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      media: '(min-width: 1024px)',
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+    const search = document.createElement('input');
+    document.body.append(search);
+    registerGlobalSearchInput(search);
+    renderLayout();
+
+    fireEvent.keyDown(document.body, { key: '/' });
+
+    expect(document.activeElement).not.toBe(search);
+    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeInTheDocument();
   });
 
   it('shows the reload notice after a 426 and the signed out prompt after a 401 that follows a catalogue read', () => {

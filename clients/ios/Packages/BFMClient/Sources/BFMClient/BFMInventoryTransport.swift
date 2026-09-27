@@ -15,97 +15,99 @@ import OpenAPIRuntime
 public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSuggestionService,
     InventoryBarcodeLookupService
 {
+    /// Receives one user-safe diagnostic for each failed inventory sync read.
+    ///
+    /// The observer receives no request body, request headers, or response
+    /// body. Callers can persist the code, request identifier, and class
+    /// without changing the sync operation's result.
+    public typealias SyncReadFailureObserver = @Sendable (PopsError, String) async -> Void
+
     internal let client: BFMHTTPClient
     internal let timeZone: @Sendable () -> TimeZone
+    internal let syncReadFailureObserver: SyncReadFailureObserver
 
     /// - Parameter timeZone: The zone a day-only wire value (an item's
     ///   `provenance.purchasedOn`/`warrantyExpires`) is read in.
     public init(
         client: BFMHTTPClient,
-        timeZone: @escaping @Sendable () -> TimeZone = { .autoupdatingCurrent }
+        timeZone: @escaping @Sendable () -> TimeZone = { .autoupdatingCurrent },
+        syncReadFailureObserver: @escaping SyncReadFailureObserver = { _, _ in }
     ) {
         self.client = client
         self.timeZone = timeZone
+        self.syncReadFailureObserver = syncReadFailureObserver
     }
 
     public func fetchCatalogue(knownVersion: String?) async throws -> InventoryCatalogue? {
-        let output: Catalogue.Output
-        do {
-            output = try await client.generated.mobileInventory_catalogue()
-        } catch let error as ClientError {
-            throw Self.failure(error, operation: Catalogue.id)
-        }
-
-        switch output {
-        case .ok(let ok):
-            let payload = try ok.body.json
-            return try BFMInventoryCatalogueWire.catalogue(
-                version: payload.version,
-                units: payload.units.map {
-                    WireCatalogueUnit(
-                        symbol: $0.symbol, dimension: $0.dimension, multiplier: $0.multiplier)
-                },
-                types: payload.types.map(Self.catalogueType(from:))
-            )
-        case .upgradeRequired:
-            throw InventorySyncTransportError.clientTooOld
-        case .badRequest:
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .badRequest, operation: Catalogue.id)
-        case .unauthorized:
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .unauthorized, operation: Catalogue.id)
-        case .forbidden(let forbidden):
-            throw Self.forbiddenFailure(try forbidden.body.json, operation: Catalogue.id)
-        case .tooManyRequests:
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .rateLimited, operation: Catalogue.id)
-        case .badGateway(let upstream):
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code), operation: Catalogue.id)
-        case .serviceUnavailable(let upstream):
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code), operation: Catalogue.id)
-        case .undocumented(let status, _):
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .undocumented(status), operation: Catalogue.id)
-        }
+        try await observedSyncRead(
+            operation: Catalogue.id,
+            mapClientError: { Self.failure($0, operation: Catalogue.id) },
+            read: {
+                let output = try await client.generated.mobileInventory_catalogue()
+                switch output {
+                case .ok(let ok):
+                    return try catalogue(from: ok)
+                case .upgradeRequired:
+                    throw InventorySyncTransportError.clientTooOld
+                case .badRequest:
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .badRequest, operation: Catalogue.id)
+                case .unauthorized:
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .unauthorized, operation: Catalogue.id)
+                case .forbidden(let forbidden):
+                    throw Self.forbiddenFailure(try forbidden.body.json, operation: Catalogue.id)
+                case .tooManyRequests:
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .rateLimited, operation: Catalogue.id)
+                case .badGateway(let upstream):
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .upstream(code: try upstream.body.json.code), operation: Catalogue.id)
+                case .serviceUnavailable(let upstream):
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .upstream(code: try upstream.body.json.code), operation: Catalogue.id)
+                case .undocumented(let status, _):
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .undocumented(status), operation: Catalogue.id)
+                }
+            })
     }
 
     public func fetchCatalogue(revision: Int) async throws -> InventoryCatalogueSnapshot {
-        let output: CatalogueRevision.Output
-        do {
-            output = try await client.generated.mobileInventory_catalogueRevision(
-                query: .init(revision: revision))
-        } catch let error as ClientError {
-            throw Self.syncReadFailure(error, operation: CatalogueRevision.id)
-        }
-        switch output {
-        case .ok(let ok):
-            return try protocol2Catalogue(from: ok.body.json)
-        case .badRequest:
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .badRequest, operation: CatalogueRevision.id)
-        case .unauthorized:
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .unauthorized, operation: CatalogueRevision.id)
-        case .forbidden(let forbidden):
-            throw Self.forbiddenFailure(try forbidden.body.json, operation: CatalogueRevision.id)
-        case .tooManyRequests:
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .rateLimited, operation: CatalogueRevision.id)
-        case .badGateway(let upstream):
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code),
-                operation: CatalogueRevision.id)
-        case .serviceUnavailable(let upstream):
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code),
-                operation: CatalogueRevision.id)
-        case .undocumented(let status, _):
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .undocumented(status), operation: CatalogueRevision.id)
-        }
+        try await observedSyncRead(
+            operation: CatalogueRevision.id,
+            mapClientError: { Self.syncReadFailure($0, operation: CatalogueRevision.id) },
+            read: {
+                let output = try await client.generated.mobileInventory_catalogueRevision(
+                    query: .init(revision: revision))
+                switch output {
+                case .ok(let ok):
+                    return try protocol2Catalogue(from: ok.body.json)
+                case .badRequest:
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .badRequest, operation: CatalogueRevision.id)
+                case .unauthorized:
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .unauthorized, operation: CatalogueRevision.id)
+                case .forbidden(let forbidden):
+                    throw Self.forbiddenFailure(
+                        try forbidden.body.json, operation: CatalogueRevision.id)
+                case .tooManyRequests:
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .rateLimited, operation: CatalogueRevision.id)
+                case .badGateway(let upstream):
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .upstream(code: try upstream.body.json.code),
+                        operation: CatalogueRevision.id)
+                case .serviceUnavailable(let upstream):
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .upstream(code: try upstream.body.json.code),
+                        operation: CatalogueRevision.id)
+                case .undocumented(let status, _):
+                    throw BFMInventoryFailureMapping.repositoryError(
+                        for: .undocumented(status), operation: CatalogueRevision.id)
+                }
+            })
     }
 
     private static func catalogueType(
@@ -115,6 +117,18 @@ public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSugges
             key: wire.key, name: wire.name, capabilities: wire.capabilities,
             fields: wire.fields.map(catalogueField(from:)),
             legacyLabels: wire.legacyLabels
+        )
+    }
+
+    private func catalogue(from output: Catalogue.Output.Ok) throws -> InventoryCatalogue {
+        let payload = try output.body.json
+        return try BFMInventoryCatalogueWire.catalogue(
+            version: payload.version,
+            units: payload.units.map {
+                WireCatalogueUnit(
+                    symbol: $0.symbol, dimension: $0.dimension, multiplier: $0.multiplier)
+            },
+            types: payload.types.map(Self.catalogueType(from:))
         )
     }
 

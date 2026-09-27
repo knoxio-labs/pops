@@ -9,9 +9,12 @@ import { TopBarWidgets } from './TopBarWidgets';
 
 interface TopBarActionsProps {
   onOpenMobileSearch: () => void;
+  /** Opens an app-owned compact search surface when one is registered. */
+  onOpenCompactSearch?: () => void;
 }
 
-export function TopBarActions({ onOpenMobileSearch }: TopBarActionsProps) {
+/** Renders TopBar controls and selects the compact or mobile search opener. */
+export function TopBarActions({ onOpenMobileSearch, onOpenCompactSearch }: TopBarActionsProps) {
   const { t } = useTranslation('shell');
   const theme = useThemeStore((state) => state.theme);
   const toggleTheme = useThemeStore((state) => state.toggleTheme);
@@ -21,8 +24,8 @@ export function TopBarActions({ onOpenMobileSearch }: TopBarActionsProps) {
       <Button
         variant="ghost"
         size="icon"
-        onClick={onOpenMobileSearch}
-        className="min-w-[44px] min-h-[44px] md:hidden"
+        onClick={onOpenCompactSearch ?? onOpenMobileSearch}
+        className={`min-w-[44px] min-h-[44px] ${onOpenCompactSearch === undefined ? 'md:hidden' : 'lg:hidden'}`}
         aria-label={t('openSearch')}
         data-testid="mobile-search-btn"
       >

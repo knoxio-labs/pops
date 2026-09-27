@@ -1,125 +1,72 @@
-import { MapPin } from 'lucide-react';
+import { ArrowUpRight, MapPin } from 'lucide-react';
 
-import { Button } from '@pops/ui';
+import { Button as UiButton } from '@pops/ui';
 
-import { locationPath } from '../../foundation/model/placement-model.js';
-import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
-import { ShortcutHint } from '../../foundation/shortcuts/shortcut-hint.js';
-import { useItemRows } from '../../inventory-web/useWebItems.js';
-import { PreviewFrame, PreviewList, renderPreviewListRows } from './preview-parts.js';
+import { QuantityBadge } from '../../foundation/badges/badges.js';
+import { ItemMark } from '../../foundation/badges/item-mark.js';
+import { PreviewActions, PreviewFrame, PreviewList } from './preview-parts.js';
 
-import type { ReactElement } from 'react';
-
-import type { LocationModel } from '../../foundation/model/model.js';
+import type { ItemRowModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 
 /** Props for a place preview. */
 export interface PlacePreviewProps {
-  place: LocationModel;
-  path: string;
-  onOpen: () => void;
-  onStoreHere: () => void;
-  /** Explains why Store here is unavailable, such as while offline. */
-  disabledReason?: string;
+  readonly place: { readonly id: string; readonly name: string };
+  readonly world: PlacementWorld;
+  readonly onOpen: () => void;
+  readonly onStoreHere: () => void;
 }
 
-type LegacyPlacePreviewProps = {
-  place: LocationModel;
-  world: PlacementWorld;
-  onOpen: () => void;
-  onStoreHere: () => void;
-};
-
-function StoreHereAction({
-  disabledReason,
-  onStoreHere,
-}: {
-  disabledReason: string | undefined;
-  onStoreHere: () => void;
-}): ReactElement {
-  const disabled = disabledReason !== undefined;
-  const button = (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      aria-disabled={disabled || undefined}
-      className={disabled ? 'opacity-50' : undefined}
-      onClick={disabled ? undefined : onStoreHere}
-    >
-      Store here
-    </Button>
-  );
-  if (disabledReason === undefined) return button;
-  return (
-    <HintTooltip label="Store here" disabledReason={disabledReason}>
-      {button}
-    </HintTooltip>
-  );
+function directLocationContents(world: PlacementWorld, locationId: string): ItemRowModel[] {
+  return [...world.items.values()]
+    .filter(
+      (item) => item.placement.kind === 'location' && item.placement.locationId === locationId
+    )
+    .toSorted((left, right) => left.name.localeCompare(right.name));
 }
 
-function PlaceContents({ place }: { place: LocationModel }): ReactElement {
-  const contents = useItemRows({ locationId: place.id, placementKind: 'location' }, 50);
-  const count = contents.total ?? contents.rows.length;
-  return (
-    <PreviewList title="Directly here" count={count} empty="Nothing is directly here.">
-      {renderPreviewListRows({
-        status: contents.status,
-        rows: contents.rows,
-        refetch: contents.refetch,
-      })}
-    </PreviewList>
-  );
-}
-
-function PlacePreviewView({
-  place,
-  path,
-  onOpen,
-  onStoreHere,
-  disabledReason,
-}: PlacePreviewProps): ReactElement {
+/** Renders a place preview with its direct inventory contents. */
+export function PlacePreview({ place, world, onOpen, onStoreHere }: PlacePreviewProps) {
+  const contents = directLocationContents(world, place.id);
   return (
     <PreviewFrame
-      mark={
-        <span className="flex size-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
-          <MapPin className="size-5" aria-hidden />
+      title={
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <MapPin className="size-5" aria-hidden />
+          </span>
+          <span className="truncate">{place.name}</span>
         </span>
       }
-      title={place.name}
-      where={
-        <span className="text-xs text-muted-foreground">{path === '' ? 'Top level' : path}</span>
-      }
-      actions={
-        <>
-          <Button type="button" size="sm" suffix={<ShortcutHint id="list-open" />} onClick={onOpen}>
-            Open place
-          </Button>
-          <StoreHereAction disabledReason={disabledReason} onStoreHere={onStoreHere} />
-        </>
-      }
+      subtitle="Inventory place"
     >
-      <PlaceContents place={place} />
+      <PreviewActions>
+        <UiButton
+          size="sm"
+          onClick={onOpen}
+          prefix={<ArrowUpRight className="size-4" aria-hidden />}
+        >
+          Open place
+        </UiButton>
+        <UiButton size="sm" variant="outline" onClick={onStoreHere}>
+          Store here
+        </UiButton>
+      </PreviewActions>
+      <PreviewList title={`Direct contents · ${contents.length}`}>
+        {contents.length === 0 ? (
+          <p className="px-3 py-4 text-sm text-muted-foreground">
+            Nothing is directly in this place.
+          </p>
+        ) : (
+          contents.map((item) => (
+            <div key={item.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+              <ItemMark item={item} size="sm" />
+              <span className="truncate">{item.name}</span>
+              <QuantityBadge quantity={item.quantity} />
+            </div>
+          ))
+        )}
+      </PreviewList>
     </PreviewFrame>
   );
-}
-
-function LegacyPlacePreview({
-  place,
-  world,
-  onOpen,
-  onStoreHere,
-}: LegacyPlacePreviewProps): ReactElement {
-  const path = locationPath(world, place.id)
-    .slice(0, -1)
-    .map((location) => location.name)
-    .join(' › ');
-  return <PlacePreviewView place={place} path={path} onOpen={onOpen} onStoreHere={onStoreHere} />;
-}
-
-/** Renders a place preview with its direct contents and Store here action. */
-export function PlacePreview(props: PlacePreviewProps): ReactElement;
-export function PlacePreview(props: LegacyPlacePreviewProps): ReactElement;
-export function PlacePreview(props: PlacePreviewProps | LegacyPlacePreviewProps): ReactElement {
-  return 'path' in props ? <PlacePreviewView {...props} /> : <LegacyPlacePreview {...props} />;
 }

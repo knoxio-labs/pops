@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
+import { listTrailState } from '../../inventory-web/list-trail.js';
 import { useShortcutScope } from '../shortcuts/shortcut-provider.js';
 
 import type { ItemRowModel } from '../model/contracts.js';
@@ -13,11 +14,15 @@ export interface ListPageKeysInput {
   selection: SelectionApi;
   /** Page-specific handlers are merged after the shared list handlers. */
   extra?: ShortcutHandlers;
+  /** Carries the currently loaded rows to item detail when Enter opens a row. */
+  trail?: { listName: 'Items' | 'Containers' };
 }
 
 /** Registers open, edit, copy-code, and dismiss handlers for one list page. */
-export function useListPageKeys({ rows, selection, extra }: ListPageKeysInput): void {
+export function useListPageKeys({ rows, selection, extra, trail }: ListPageKeysInput): void {
+  const location = useLocation();
   const navigate = useNavigate();
+  const listName = trail?.listName;
   const openFocused = useCallback(
     (event: KeyboardEvent): boolean => {
       if (
@@ -28,10 +33,20 @@ export function useListPageKeys({ rows, selection, extra }: ListPageKeysInput): 
       }
       const id = selection.state.focusedId;
       if (id === null) return false;
-      void navigate(`/inventory/items/${id}`);
+      const state =
+        listName === undefined
+          ? undefined
+          : {
+              state: listTrailState({
+                listName,
+                href: `${location.pathname}${location.search}`,
+                ids: rows.map((row) => row.id),
+              }),
+            };
+      void navigate(`/inventory/items/${id}`, state);
       return true;
     },
-    [navigate, selection.state.focusedId]
+    [listName, location.pathname, location.search, navigate, rows, selection.state.focusedId]
   );
   const editFocused = useCallback((): boolean => {
     const id = selection.state.focusedId;

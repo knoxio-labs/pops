@@ -127,13 +127,12 @@ holds a raw control fails as **stale**, so an exemption cannot outlive its
 reason. This table and that list must agree — the guard's own test asserts
 every allowlisted path appears in this document.
 
-| path                                                                                        | controls | ticket    |
-| ------------------------------------------------------------------------------------------- | -------- | --------- |
-| `pillars/design/src/comments/Composer.tsx`                                                  | 1        | POPS-3260 |
-| `pillars/design/src/comments/Thread.tsx`                                                    | 2        | POPS-3260 |
-| `pillars/design/src/screens/finance/import-tag-rule-dialog.tsx`                             | 1        | POPS-3260 |
-| `pillars/food/app/src/pages/plan/SlotRow.tsx`                                               | 1        | POPS-3260 |
-| `pillars/inventory/app/src/pages/location-tree-page/sections/location-node/InlineInput.tsx` | 1        | POPS-3201 |
+| path                                                            | controls | ticket    |
+| --------------------------------------------------------------- | -------- | --------- |
+| `pillars/design/src/comments/Composer.tsx`                      | 1        | POPS-3260 |
+| `pillars/design/src/comments/Thread.tsx`                        | 2        | POPS-3260 |
+| `pillars/design/src/screens/finance/import-tag-rule-dialog.tsx` | 1        | POPS-3260 |
+| `pillars/food/app/src/pages/plan/SlotRow.tsx`                   | 1        | POPS-3260 |
 
 The remaining entries are exceptions in a different sense: they are shapes
 the guard does not and should not count at all, recorded so nobody
@@ -169,16 +168,15 @@ the guard does not and should not count at all, recorded so nobody
   exception on record is "not rebuilt on a kit combobox primitive," not "left
   unfixed" — the parts of it a generic gate could have caught (ARIA,
   dismissal, desktop/mobile drift) were fixed within this epic.
-- **Inline rename fields inside a compact row.** Two sites edit a label in
-  place inside a dense list row: inventory's location tree
-  (`pages/location-tree-page/sections/location-node/InlineInput.tsx`,
-  POPS-3201) and food's plan slot list (`pages/plan/SlotRow.tsx`). The kit's
-  `TextInput` renders its input inside a `flex flex-col gap-1.5 w-full`
-  wrapper plus a container whose smallest variant is `h-9`; both rows are
-  shorter than that and size themselves against sibling icons, so adopting
-  it would grow the row and misalign the editing state against the
-  non-editing one. The wrapper has no escape hatch, so this is not a
-  `className` away. Each file says so inline, citing its ticket.
+- **Inline rename fields inside a compact row.** One site edits a label in
+  place inside a dense list row: food's plan slot list
+  (`pages/plan/SlotRow.tsx`, POPS-3260). The kit's `TextInput` renders its
+  input inside a `flex flex-col gap-1.5 w-full` wrapper plus a container
+  whose smallest variant is `h-9`; the row is shorter than that and sizes
+  itself against sibling icons, so adopting it would grow the row and
+  misalign the editing state against the non-editing one. The wrapper has no
+  escape hatch, so this is not a `className` away. The file says so inline,
+  citing its ticket.
 
   This exception is about the row, not about inline editing. POPS-3260
   checked the two superficially similar `lists` row editors and found

@@ -27,7 +27,16 @@ files, then closes over package reverse dependencies. An internal app change
 selects that app; shared libraries select their consumers. Contract changes,
 configuration, Rust, missing history and unknown paths select the full workspace.
 This conservative fallback also covers vendored contract consumers that are not
-package dependencies. Client binaries retain their separate development checks.
+package dependencies. Plain Markdown in root documentation, READMEs and unit docs
+directories runs lint, formatting and the documentation-model guard without
+compiling or testing product units. Markdown below contract or OpenAPI directories,
+the executable docs pillar, and Markdown used as source or fixture input remains in
+the relevant product scope; MDX is treated as executable input. The integration
+promotion helper and its focused test run the root tooling checks without selecting
+the product workspace; validation prepares the compiled graph before recording the
+inputs checked by the root tooling typecheck. Other root scripts remain conservative because generators and
+discovery tooling can affect units without appearing in the package graph.
+Client binaries retain their separate development checks.
 
 Lint and formatting remain workspace checks. Typechecks run with bounded
 concurrency (four by default, configurable using `--jobs <n>`). Package test
