@@ -84,6 +84,19 @@ describe('GET /web/reports/entries', () => {
     expect(result.entries.map((entry) => entry.itemId)).toEqual([activeId, valuedBoxId]);
   });
 
+  it('includes containers valued by either replacement or purchase price', async () => {
+    const purchaseOnlyBoxId = id();
+    await apply(createItem(purchaseOnlyBoxId, 'Purchase-only box'));
+    setContainer(purchaseOnlyBoxId);
+    setItem(purchaseOnlyBoxId, { purchasePrice: 15 });
+
+    const result = await report();
+
+    expect(result.entries).toEqual([
+      expect.objectContaining({ itemId: purchaseOnlyBoxId, purchasePrice: 15 }),
+    ]);
+  });
+
   it('reads the room and place of a boxed item through its container', async () => {
     const home = id();
     const kitchen = id();

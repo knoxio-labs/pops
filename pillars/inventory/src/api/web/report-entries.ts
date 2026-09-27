@@ -57,7 +57,7 @@ function roomFor(
 }
 
 function readReportEntryRows(db: CommandDb): WebReportEntry[] {
-  const rows = readValueReportRows(db, 'replacement', { orderByName: true });
+  const rows = readValueReportRows(db, 'any', { orderByName: true });
   const itemIds = rows.map((row) => row.id);
   const extras = loadItemExtras(db, itemIds);
   const effectiveLocations = readEffectiveLocations(db, itemIds);
