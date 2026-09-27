@@ -89,6 +89,18 @@ internal struct InventoryDestinationPickerState {
     internal var selection: InventoryDestination?
     internal var drafting: String?
     internal var isLoading = false
+
+    internal static func initialPath(
+        for tree: InventoryLocationTree, offered: Set<String>?
+    ) -> [String] {
+        guard
+            tree.roots.count == 1,
+            let root = tree.roots.first,
+            !tree.children(of: root.id).isEmpty,
+            offered?.contains(root.id) ?? true
+        else { return [] }
+        return [root.id]
+    }
 }
 
 /// What the picker's filter circle narrows the top level to.

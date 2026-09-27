@@ -1,3 +1,4 @@
+import { readReportEntries } from '../web/report-entries.js';
 import { readValueReport } from '../web/value-report.js';
 import { runHttp } from './error-mapping.js';
 
@@ -11,6 +12,11 @@ type Req = ServerInferRequest<typeof inventoryWebReportsContract>;
 /** Build handlers for reports consumed by the inventory web application. */
 export function makeWebReportsHandlers(db: InventoryDb) {
   return {
+    entries: () =>
+      runHttp(() => ({
+        status: 200 as const,
+        body: db.transaction((tx) => readReportEntries(tx)),
+      })),
     values: ({ query }: Req['values']) =>
       runHttp(() => ({
         status: 200 as const,

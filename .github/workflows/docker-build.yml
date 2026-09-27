@@ -1,7 +1,9 @@
 name: Docker Build
+run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "infra/docker*/**"
       - "infra/docker-compose*.yml"
@@ -79,6 +81,10 @@ on:
 # alone takes a minute or two — the work was never the problem, the queue
 # was. `fail-fast: false` so one broken Dockerfile does not hide the rest,
 # which is the whole point of validating them together.
+
+concurrency:
+  group: docker-build-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   changes:

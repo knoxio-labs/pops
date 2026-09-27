@@ -4,7 +4,7 @@ sources = ["src/**/*.ts", "tsconfig.json", "package.json"]
 outputs = ["dist/**"]
 
 [tasks.typecheck]
-run = "tsc --noEmit"
+run = "node ../../scripts/local-dev/typecheck.mjs"
 
 [tasks.test]
 run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]

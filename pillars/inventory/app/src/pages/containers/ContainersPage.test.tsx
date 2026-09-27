@@ -241,6 +241,14 @@ describe('ContainersPage', () => {
     expect(screen.getByRole('button', { name: 'Close' })).toHaveAttribute('aria-disabled', 'true');
   });
 
+  it('shows the number of items carried by selected containers', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Open box' }));
+
+    expect(screen.getByText('1 selected, 3 inside')).toBeInTheDocument();
+  });
+
   it('shows a row rejection when a bulk verb fails', async () => {
     renderPage();
     verbs.setAccess.mockRejectedValue(new Error('service unavailable'));
