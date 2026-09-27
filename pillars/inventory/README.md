@@ -285,7 +285,10 @@ The shell mounts the Items browser at `/inventory/items`. Search, type,
 placement, inactive, sort, view and page state live in the URL; the page sends
 those filters to `GET /web/items` and renders the server's totals and pages
 without client-side filtering or sorting. Table, compact and card views share
-the same URL state and keep scrolling within the list body.
+the same URL state and keep scrolling within the list body. Selecting rows also
+offers typed Set type and Set field sheets, plus reversible Retire and Discard
+actions; each applied item write records its own history event and one undo
+toast covers the completed batch.
 
 ### Web inventory routes and navigation
 
