@@ -81,6 +81,7 @@ internal struct InventoryScanIdentifierTests {
                 InventoryPrefillFact(
                     label: "Title", value: "The Hitchhiker's Guide to the Galaxy"),
                 InventoryPrefillFact(label: "Subtitle", value: "A Trilogy in Five Parts"),
+                InventoryPrefillFact(label: "Author", value: "Douglas Adams"),
                 InventoryPrefillFact(
                     label: "Contributors", value: "Douglas Adams (Author)"),
                 InventoryPrefillFact(label: "Publisher", value: "Pan Books"),
@@ -91,6 +92,26 @@ internal struct InventoryScanIdentifierTests {
                 InventoryPrefillFact(label: "Subjects", value: "Fiction, Comedy"),
                 InventoryPrefillFact(label: "Format", value: "Paperback"),
             ])
+    }
+
+    @Test("matched author and language map to recognised catalogue fields")
+    func deterministicMetadata() {
+        let author = InventoryPrefillTestSupport.field(
+            id: "field-author", key: "author", label: "Author")
+        let language = InventoryPrefillTestSupport.field(
+            id: "field-language", key: "language", label: "Language", kind: .enumeration,
+            enumOptions: [
+                InventoryPrefillTestSupport.option(id: "en", label: "English"),
+                InventoryPrefillTestSupport.option(id: "pt", label: "Português"),
+            ])
+        let values = InventoryBarcodeFacts.deterministicValues(
+            InventoryBarcodeProduct(
+                title: "Book", contributors: [.init(name: "Author", role: "author")],
+                language: "por"),
+            fields: [author, language])
+
+        #expect(values[author.id] == [.string("Author")])
+        #expect(values[language.id] == [.enumeration(optionId: "pt")])
     }
 
     @Test("the generator receives product facts without the scanned identifier")
