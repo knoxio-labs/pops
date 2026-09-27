@@ -25,6 +25,17 @@ export {
 export { useFocusTrap } from './useFocusTrap';
 export { useSearchKeyboardNav } from './search-keyboard-nav';
 export type {
+  SearchDropdownProps,
+  SearchDropdownRegistration,
+} from './search-input/search-dropdown-registry';
+export {
+  _clearSearchDropdowns,
+  focusGlobalSearch,
+  registerGlobalSearchInput,
+  registerSearchDropdown,
+  useSearchDropdown,
+} from './search-input/search-dropdown-registry';
+export type {
   SearchResultHit,
   SearchResultSection,
   SearchResultsPanelProps,
