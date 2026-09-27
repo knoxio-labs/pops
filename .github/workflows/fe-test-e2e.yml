@@ -33,6 +33,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "pillars/**"
       - "libs/**"
@@ -46,10 +47,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: fe-test-e2e-${{ github.workflow }}-${{ github.ref }}
-  # Cancelling a superseded run and admitting its replacement is not atomic on
-  # GitHub's side, and `CI Gate` reads an absent run as pending forever. See
-  # the MITIGATION note in ci-gate.yml.
+  group: fe-test-e2e-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 jobs:

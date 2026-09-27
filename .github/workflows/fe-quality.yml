@@ -18,6 +18,7 @@ on:
       - ".github/workflows/fe-quality.yml"
       - ".github/actions/**"
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "pillars/shell/**"
       - "pillars/*/app/**"
@@ -36,6 +37,10 @@ on:
   # would leave a merge group running the job with every step skipped, which
   # reports green having checked nothing.
   merge_group:
+
+concurrency:
+  group: fe-quality-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   changes:
