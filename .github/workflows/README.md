@@ -143,12 +143,14 @@ its PR forever.
 
 ### Main admission without a merge queue
 
-Main's merge queue stays **off**. Its required status checks use strict
-up-to-date protection: if main advances before a PR merges, merge current main
-into the PR branch and rerun validation. Do not bypass the rule or force-push.
-This avoids a serialized admission queue, but competing promotions can still
-need reruns. Check the effective branch rules through GitHub; workflow triggers
-alone do not prove a queue or a required check is enabled.
+Main's merge queue stays **off**. Base movement alone does not require updating
+a conflict-free PR or repeating passing validation. Merge when required checks
+and review gates pass and GitHub permits it. Update the branch to resolve
+conflicts, address an integration failure, or satisfy an effective GitHub
+protection requirement. Do not bypass protection or force-push. Check the
+effective branch rules through GitHub; workflow triggers alone do not prove
+a queue or a required check is enabled. Strict up-to-date protection, when
+enabled, still requires a branch update before GitHub permits merging.
 
 `Promotion validation` is a required terminal job in `promotion-quality.yml`.
 A PR from `promotion/**` or `integration/**` to main calls the existing Quality,
@@ -179,7 +181,7 @@ Keep batches small and coherent. From a clean, current integration checkout:
 mise exec -- node scripts/ci/integration-promote.mjs
 ```
 
-The helper checks the repository/account and strict required promotion gate,
+The helper checks the repository/account and required promotion gate,
 refuses a stale source or empty candidate, creates
 `promotion/<workstream>/<source-sha>`, merges current main and creates a unique
 snapshot commit so integration-head checks cannot be reused. It runs `mise lint`
@@ -191,8 +193,8 @@ The candidate freezes **membership**, not its head: later integration commits
 do not restart its checks. Fixes and current-main merges use ordinary commits
 on the candidate and trigger validation again. A promotion gets its own review
 of the combined diff; earlier small-PR reviews do not waive open findings.
-Merge with `gh pr merge --squash` only after all required checks pass and the
-branch is up to date. Confirm the PR actually reports `MERGED`.
+Merge with `gh pr merge --squash` only after all required checks and review
+gates pass and GitHub permits it. Confirm the PR actually reports `MERGED`.
 
 After promotion, synchronize main back into integration through a PR using
 `gh pr merge --merge` before the next snapshot, preserving ancestry after the
