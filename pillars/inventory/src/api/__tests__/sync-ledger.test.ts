@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WebSyncLedgerResponseSchema } from '../../contract/rest-sync-ledger.js';
 import { granting, openSyncHarness, PROTOCOL, SYNC_KEY, type SyncHarness } from './sync-harness.js';
@@ -17,10 +17,15 @@ type WebSyncLedger = z.infer<typeof WebSyncLedgerResponseSchema>;
 let h: SyncHarness;
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-26T12:00:00.000Z'));
   h = openSyncHarness(transport, { verify: granting(['inventory.sync']) });
 });
 
-afterEach(() => h.close());
+afterEach(() => {
+  h.close();
+  vi.useRealTimers();
+});
 
 function report(overrides: Partial<LedgerReport> = {}): LedgerReport {
   return {
@@ -160,6 +165,7 @@ describe('device sync ledger', () => {
 
     expect((await postLedger(first)).body).toEqual({ stored: true });
     const afterFirst = await readLedger();
+    vi.setSystemTime(new Date('2026-09-26T12:01:00.000Z'));
     expect((await postLedger(second)).body).toEqual({ stored: true });
     const afterSecond = await readLedger();
     expect(afterSecond.attention.map((entry) => entry.id)).toEqual(['second']);
