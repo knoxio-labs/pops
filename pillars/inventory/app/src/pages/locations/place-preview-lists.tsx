@@ -96,7 +96,7 @@ function BoxedItems({
     <ItemList label="In boxes here" onKeyDown={(event) => listKeyDown(selection, event)}>
       {boxes.map((group) => (
         <div key={`${group.box.id}-${group.depth}`} role="rowgroup" aria-label={group.box.name}>
-          <BoxHeader group={group} />
+          <BoxHeader group={group} drag={verbs.drag} />
           <div className={group.depth > 0 ? 'pl-6' : 'pl-2'}>
             <ItemContents
               contents={group.contents}

@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 
 import type { LocationModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
+import type { ContentsVerbs as BulkContentsVerbs } from '../../foundation/places/use-contents-verbs.js';
 import type { ChangedElsewhere } from '../../inventory-web/useChangedElsewhere.js';
 import type { PlaceTally } from '../../inventory-web/useLocationTallies.js';
 import type { PlaceContentsData } from '../../inventory-web/usePlaceContents.js';
@@ -59,27 +60,13 @@ export function LocationBanner({
 }
 
 /** Renders either the location contents, its loading state, or its retry state. */
-export function LocationBody({
-  place,
-  contents,
-  edits,
-  world,
-  contentVerbs,
-  tab,
-  query,
-  online,
-  tallyOf,
-  onStoreHere,
-  onOpenPlace,
-  onOpenItem,
-  onClearQuery,
-  onRetry,
-}: {
+interface LocationBodyProps {
   place: LocationModel;
   contents: PlaceContentsData;
   edits: PlaceEditsApi;
   world: PlacementWorld;
   contentVerbs: ContentsVerbState;
+  bulkVerbs?: BulkContentsVerbs;
   tab: PlaceTab;
   query: string;
   online: boolean;
@@ -89,31 +76,38 @@ export function LocationBody({
   onOpenItem: (id: string, ids: readonly string[]) => void;
   onClearQuery: () => void;
   onRetry: () => void;
-}): ReactElement {
-  if (contents.status === 'pending') return <LocationSkeleton />;
-  if (contents.status === 'error') {
+}
+
+function LoadedLocationBody(props: LocationBodyProps): ReactElement {
+  return (
+    <LocationTabBody
+      place={props.place}
+      tab={props.tab}
+      query={props.query}
+      world={props.world}
+      edits={props.edits}
+      verbs={props.contentVerbs.verbs}
+      bulkVerbs={props.bulkVerbs}
+      tallyOf={props.tallyOf}
+      offline={!props.online}
+      onStoreHere={props.onStoreHere}
+      onClearQuery={props.onClearQuery}
+      onOpenPlace={props.onOpenPlace}
+      onOpenItem={props.onOpenItem}
+    />
+  );
+}
+
+export function LocationBody(props: LocationBodyProps): ReactElement {
+  if (props.contents.status === 'pending') return <LocationSkeleton />;
+  if (props.contents.status === 'error') {
     return (
       <LoadError
-        title={`${place.name} did not load`}
+        title={`${props.place.name} did not load`}
         detail="The inventory service did not answer. Nothing was changed."
-        onRetry={onRetry}
+        onRetry={props.onRetry}
       />
     );
   }
-  return (
-    <LocationTabBody
-      place={place}
-      tab={tab}
-      query={query}
-      world={world}
-      edits={edits}
-      verbs={contentVerbs.verbs}
-      tallyOf={tallyOf}
-      offline={!online}
-      onStoreHere={onStoreHere}
-      onClearQuery={onClearQuery}
-      onOpenPlace={onOpenPlace}
-      onOpenItem={onOpenItem}
-    />
-  );
+  return <LoadedLocationBody {...props} />;
 }
