@@ -395,75 +395,27 @@ function keyedCondition(condition) {
   return undefined;
 }
 
-/** The theme's viewport breakpoints, narrowest first (libs/ui/src/theme/globals.css). */
+/** The theme's breakpoints, narrowest first (libs/ui/src/theme/globals.css). */
 const BREAKPOINTS = ['sm', 'md', 'lg', 'xl', '2xl'];
 
-/** Tailwind's container-query breakpoints, narrowest first. */
-const CONTAINER_BREAKPOINTS = [
-  '3xs',
-  '2xs',
-  'xs',
-  'sm',
-  'md',
-  'lg',
-  'xl',
-  '2xl',
-  '3xl',
-  '4xl',
-  '5xl',
-  '6xl',
-  '7xl',
-];
-
 /**
- * @param {string} variant
- * @returns {{ index: number, isRange: boolean, scale: 'container' | 'viewport' }}
- */
-function breakpointDetails(variant) {
-  const isContainer = variant.startsWith('@');
-  const normalized = variant.replace(/^@/, '');
-  const breakpoint = normalized.replace(/^max-/, '');
-  const breakpoints = isContainer ? CONTAINER_BREAKPOINTS : BREAKPOINTS;
-  return {
-    index: breakpoints.indexOf(breakpoint),
-    isRange: normalized.startsWith('max-'),
-    scale: isContainer ? 'container' : 'viewport',
-  };
-}
-
-/**
- * Whether `rangeEnd` (`max-lg` or `@max-lg`) ends at or below where
- * `breakpoint` (`lg` or `@lg`) starts on the same scale, so no width satisfies
- * both.
+ * Whether `rangeEnd` (`max-lg`) ends at or below where `breakpoint` (`xl`)
+ * starts, so no width satisfies both.
  *
  * @param {string} rangeEnd
  * @param {string} breakpoint
  */
 function rangeEndsBy(rangeEnd, breakpoint) {
-  const range = breakpointDetails(rangeEnd);
-  const start = breakpointDetails(breakpoint);
-  return range.isRange &&
-    !start.isRange &&
-    range.scale === start.scale &&
-    range.index !== -1 &&
-    start.index !== -1
-    ? range.index <= start.index
-    : false;
-}
-
-/** @param {string[]} conditions */
-function isStandaloneContainerBreakpoint(conditions) {
-  if (conditions.length !== 1) return false;
-  const breakpoint = breakpointDetails(conditions[0] ?? '');
-  return breakpoint.scale === 'container' && breakpoint.index !== -1;
+  const end = BREAKPOINTS.indexOf(rangeEnd.replace(/^max-/, ''));
+  const start = BREAKPOINTS.indexOf(breakpoint);
+  return rangeEnd.startsWith('max-') && end !== -1 && start !== -1 && end <= start;
 }
 
 /**
  * Whether two variant chains can never apply at once: one names a keyed
  * condition the other names with another value, one negates (`not-dark`)
  * a condition the other requires, or one's breakpoint range ends at or below
- * where the other's starts on the same scale (`max-lg` against `lg` or `xl`,
- * `@max-lg` against `@lg` or `@xl`).
+ * where the other's starts (`max-lg` against `lg` or `xl`).
  *
  * @param {string[]} a
  * @param {string[]} b
@@ -1041,12 +993,6 @@ function classifyPair(a, b, scope) {
   if (a.variants !== '' && b.variants !== '' && a.variants !== b.variants) {
     if (!scope.variant || a.target !== b.target) return undefined;
     if (
-      isStandaloneContainerBreakpoint(a.conditions) &&
-      isStandaloneContainerBreakpoint(b.conditions)
-    ) {
-      return undefined;
-    }
-    if (
       a.specificity !== undefined &&
       b.specificity !== undefined &&
       a.specificity !== b.specificity
@@ -1341,24 +1287,6 @@ function selfTest() {
       [],
     ],
     [
-      'same-scale container range and breakpoint are exclusive',
-      '<a className="@max-lg:grid-cols-2 @lg:grid-cols-3" />',
-      pillar,
-      [],
-    ],
-    [
-      'same-scale container breakpoints form an ordered ladder',
-      '<a className="@xs:grid-cols-2 @lg:grid-cols-3" />',
-      pillar,
-      [],
-    ],
-    [
-      'mixed-scale container range and viewport breakpoint overlap',
-      '<a className="@xs:max-lg:grid-cols-2 @lg:grid-cols-3" />',
-      pillar,
-      ['@xs:max-lg:grid-cols-2|@lg:grid-cols-3'],
-    ],
-    [
       'a range ending above the next breakpoint overlaps it',
       '<a className="sm:max-xl:grid-cols-2 lg:grid-cols-3" />',
       pillar,
@@ -1407,14 +1335,6 @@ function selfTest() {
       );
       ok = false;
     }
-  }
-  if (!conditionsExclusive(['@max-lg'], ['@lg'])) {
-    console.error('self-test FAILED: same-scale container ranges should be exclusive');
-    ok = false;
-  }
-  if (conditionsExclusive(['@xs', 'max-lg'], ['@lg'])) {
-    console.error('self-test FAILED: mixed-scale container and viewport ranges should overlap');
-    ok = false;
   }
   const broken = findConflicts(
     'fixture.tsx',

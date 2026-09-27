@@ -110,7 +110,6 @@ describe('conditionsExclusive', () => {
     [['sm', 'max-lg'], ['xl']],
     [['xl'], ['sm', 'max-md']],
     [['lg', 'max-xl'], ['2xl']],
-    [['@max-lg'], ['@lg']],
   ])('%j and %j never hold together', (a, b) => {
     expect(conditionsExclusive(a, b)).toBe(true);
   });
@@ -120,7 +119,6 @@ describe('conditionsExclusive', () => {
     [['sm', 'max-xl'], ['lg']],
     [['max-lg'], ['md']],
     [['max-lg'], ['max-xl']],
-    [['@xs', 'max-lg'], ['@lg']],
     [['hover'], ['dark']],
     [['data-[size=sm]'], ['data-[state=open]']],
     [['group-data-[size=sm]/a'], ['group-data-[size=lg]/b']],
@@ -210,13 +208,6 @@ describe('findConflicts, case 1: two variants of one property (shell, libs, pill
   it('reports a range that ends above the breakpoint it competes with', () => {
     expect(pairs('<div className="sm:max-xl:grid-cols-2 lg:grid-cols-3" />', PILLAR)).toEqual([
       'sm:max-xl:grid-cols-2|lg:grid-cols-3',
-    ]);
-  });
-
-  it('keeps container-query ladders separate from mixed viewport ranges', () => {
-    expect(pairs('<div className="@xs:grid-cols-2 @lg:grid-cols-3" />', PILLAR)).toEqual([]);
-    expect(pairs('<div className="@xs:max-lg:grid-cols-2 @lg:grid-cols-3" />', PILLAR)).toEqual([
-      '@xs:max-lg:grid-cols-2|@lg:grid-cols-3',
     ]);
   });
 
