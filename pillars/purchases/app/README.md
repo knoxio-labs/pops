@@ -326,8 +326,8 @@ a broken page rather than as a reference to something living elsewhere.
 
 **A too-large upload answers the same shape as any other refusal.** The
 pillar's `express.json()` limit rejects an oversized body before the contract
-ever sees it; `jsonBodyErrorHandler`
-(`pillars/purchases/src/api/middleware/json-body-error.ts`) catches that
+ever sees it; the shared `createBodyParserErrorHandler`
+(`libs/pillar-express/src/middleware.ts`) catches that
 rejection and answers `413` with the contract's own `{ message, code }` body
 instead of Express's default HTML error page, which the generated client
 cannot parse into a readable `error`.
