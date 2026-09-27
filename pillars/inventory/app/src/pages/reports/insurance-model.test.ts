@@ -126,6 +126,27 @@ describe('insuranceGroups', () => {
       'Torch',
     ]);
   });
+
+  it('can narrow gaps to one missing-evidence reason', () => {
+    const unvalued = insuranceGroups(entries, world, {
+      ...all,
+      gapsOnly: true,
+      gapReason: 'unvalued',
+    });
+    const withoutPhoto = insuranceGroups(entries, world, {
+      ...all,
+      gapsOnly: true,
+      gapReason: 'without-photo',
+    });
+
+    expect(unvalued.flatMap((group) => group.entries.map((entry) => entry.itemId))).toEqual([
+      'Torch',
+    ]);
+    expect(withoutPhoto.flatMap((group) => group.entries.map((entry) => entry.itemId))).toEqual([
+      'Kettle, "steel"',
+      'Torch',
+    ]);
+  });
 });
 
 describe('insuranceCsv', () => {
@@ -148,15 +169,25 @@ describe('insuranceSearch', () => {
       scopeId: null,
       gapsOnly: false,
       sort: 'value',
+      gapReason: null,
     });
     expect(parseInsuranceOptions(new URLSearchParams('locationId=g&gaps=1&sort=name'))).toEqual({
       scopeId: 'g',
       gapsOnly: true,
       sort: 'name',
+      gapReason: null,
     });
     expect(insuranceSearch({ scopeId: null, gapsOnly: false, sort: 'value' })).toBe('');
     expect(insuranceSearch({ scopeId: 'g', gapsOnly: true, sort: 'name' })).toBe(
       '?locationId=g&gaps=1&sort=name'
     );
+    expect(
+      insuranceSearch({
+        scopeId: null,
+        gapsOnly: true,
+        gapReason: 'without-photo',
+        sort: 'value',
+      })
+    ).toBe('?gaps=1&reason=without-photo');
   });
 });
