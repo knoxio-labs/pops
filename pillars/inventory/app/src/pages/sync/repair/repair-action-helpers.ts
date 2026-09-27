@@ -1,6 +1,7 @@
 import { hasRepairWritePayload } from './repair-write-payloads.js';
 
 import type { InventoryMutationOutcome } from '../../../inventory-web/mutation-client.js';
+import type { ChangeTypeWrite } from './repair-targets.js';
 
 export {
   fittingValuesFor,
@@ -8,6 +9,7 @@ export {
   referenceValueFor,
   typeReplacementFor,
 } from './repair-write-payloads.js';
+export { changeTypeWrite } from './repair-targets.js';
 
 import type { RepairActionId, RepairCase } from '../sync-model.js';
 import type { WebAction } from './repair-plan.js';
@@ -59,7 +61,12 @@ function isNavigationAction(action: RepairActionId): boolean {
 }
 
 function actionNeedsItem(action: RepairActionId): boolean {
-  return action === 'use-suggested' || action === 'upload' || action === 'open-type';
+  return (
+    action === 'use-suggested' ||
+    action === 'upload' ||
+    action === 'open-type' ||
+    action === 'change-type'
+  );
 }
 
 function itemStateReason(
@@ -106,6 +113,59 @@ function disabledActionReason(
   return null;
 }
 
+function joinFieldNames(fields: readonly string[]): string {
+  if (fields.length < 2) return fields[0] ?? '';
+  if (fields.length === 2) return `${fields[0]} and ${fields[1]}`;
+  return `${fields.slice(0, -1).join(', ')} and ${fields[fields.length - 1]}`;
+}
+
+function reportReason(repair: RepairCase, device: string): string {
+  return `${device}'s report does not name it. Open ${repair.itemName} to change it.`;
+}
+
+function changeTypeReason(input: {
+  action: WebAction;
+  repair: RepairCase;
+  device: string;
+  catalogueStatus: 'pending' | 'error' | 'success';
+  write: ChangeTypeWrite | null;
+}): string | null {
+  if (input.action.id !== 'change-type') return null;
+  if (input.catalogueStatus === 'pending') return 'Loading the catalogue';
+  if (input.catalogueStatus === 'error') return 'The catalogue did not load';
+  if (input.write === null) return reportReason(input.repair, input.device);
+  if (input.write.kind === 'unmatched') {
+    return `No field on ${input.write.replacement} matches ${joinFieldNames(input.write.fields)}.`;
+  }
+  return null;
+}
+
+function payloadReason(
+  action: WebAction,
+  repair: RepairCase,
+  device: string,
+  input: Parameters<typeof blockedReasonFor>[1]
+): string | null {
+  const hasCatalogueContext = input.catalogueStatus !== undefined || input.changeType !== undefined;
+  if (hasCatalogueContext) {
+    const reason = changeTypeReason({
+      action,
+      repair,
+      device,
+      catalogueStatus: input.catalogueStatus ?? 'success',
+      write: input.changeType ?? null,
+    });
+    if (reason !== null) return reason;
+  }
+  if (
+    (action.id !== 'change-type' || !hasCatalogueContext) &&
+    !hasRepairWritePayload(action.id, repair)
+  ) {
+    return reportReason(repair, device);
+  }
+  return null;
+}
+
 /** Returns the first reason that prevents a repair action from running. */
 export function blockedReasonFor(
   action: WebAction,
@@ -113,19 +173,20 @@ export function blockedReasonFor(
     repair: RepairCase;
     device: string;
     disabledReason?: string;
+    catalogueStatus?: 'pending' | 'error' | 'success';
+    changeType?: ChangeTypeWrite | null;
     detail: { typeId: string | null | undefined; isPending: boolean; isError: boolean };
   }
 ): string | null {
   const { repair, device, disabledReason, detail } = input;
   if (isNavigationAction(action.id)) return null;
-  if (!hasRepairWritePayload(action.id, repair)) {
-    return `${device}'s report does not name it. Open ${repair.itemName} to change it.`;
-  }
-  const typeReason = openTypeReason(action, repair, device, detail);
-  if (typeReason !== null) return typeReason;
-  const disabled = disabledActionReason(action.id, disabledReason);
-  if (disabled !== null) return disabled;
+  const payload = payloadReason(action, repair, device, input);
+  if (payload !== null) return payload;
+  const openType = openTypeReason(action, repair, device, detail);
+  if (openType !== null) return openType;
   const itemReason = itemStateReason(action.id, repair, detail);
   if (itemReason !== null) return itemReason;
+  const disabled = disabledActionReason(action.id, disabledReason);
+  if (disabled !== null) return disabled;
   return null;
 }

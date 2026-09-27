@@ -1,15 +1,22 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 
+import { useBulkItemVerbs } from '../../../inventory-web/item-verbs-bulk.js';
+import { usePublishedCatalogue } from '../../../inventory-web/useCatalogueLookups.js';
 import { useWebItemDetail } from '../../../inventory-web/useWebItemDetail.js';
-import { blockedReasonFor, isWriteAction, typeIdFromRepair } from './repair-action-helpers.js';
+import {
+  blockedReasonFor,
+  changeTypeWrite,
+  isWriteAction,
+  typeIdFromRepair,
+} from './repair-action-helpers.js';
 import { useRepairUpload } from './use-repair-upload.js';
 import { useRepairWrites } from './use-repair-writes.js';
 
 import type { ReactElement } from 'react';
 
 import type { RepairActionId, RepairCase } from '../sync-model.js';
-import type { RepairOutcome } from './repair-outcome.js';
+import type { AppliedRepair, RepairOutcome } from './repair-outcome.js';
 import type { WebAction } from './repair-plan.js';
 
 /** The controls and mutation state for one Sync repair case. */
@@ -33,6 +40,20 @@ function appliedOutcomeFor(
   outcome: RepairOutcome | null
 ): Extract<RepairOutcome, { kind: 'applied' }> | null {
   return outcome?.kind === 'applied' ? outcome : null;
+}
+
+function actionOutcomeFor(
+  writes: RepairOutcome | null,
+  upload: RepairOutcome | null
+): {
+  outcome: Extract<RepairOutcome, { kind: 'applied' }> | null;
+  followUp: string | null;
+} {
+  const local = writes ?? upload;
+  return {
+    outcome: appliedOutcomeFor(local),
+    followUp: local?.kind === 'follow-up' ? local.message : null,
+  };
 }
 
 function navigateForAction(
@@ -61,38 +82,61 @@ function navigateForAction(
   return false;
 }
 
-/** Binds navigation, safe web writes, and photo upload state for one repair sheet. */
-export function useRepairActions(input: {
+function useRepairBlockedReason(input: {
   repair: RepairCase;
   device: string;
   disabledReason?: string;
-}): RepairActions {
-  const { repair, device, disabledReason } = input;
-  const navigate = useNavigate();
-  const detail = useWebItemDetail(repair.kind === 'now-required' ? undefined : repair.itemId);
-  const writes = useRepairWrites(repair);
-  const upload = useRepairUpload({
-    itemId: repair.itemId,
-    existingPhotoCount: detail.data?.item.photos.length ?? 0,
-  });
-  const busy = writes.busy || upload.busy;
-  const localOutcome = writes.outcome ?? upload.outcome;
-  const outcome = appliedOutcomeFor(localOutcome);
-  const followUp = localOutcome?.kind === 'follow-up' ? localOutcome.message : null;
-  const blockedReason = useCallback(
+  catalogueStatus: 'pending' | 'error' | 'success';
+  typeWrite: ReturnType<typeof changeTypeWrite>;
+  detail: { typeId: string | null | undefined; isPending: boolean; isError: boolean };
+}): (action: WebAction) => string | null {
+  const { catalogueStatus, detail, device, disabledReason, repair, typeWrite } = input;
+  return useCallback(
     (action: WebAction): string | null =>
       blockedReasonFor(action, {
         repair,
         device,
         disabledReason,
-        detail: {
-          typeId: detail.data?.item.typeId,
-          isPending: detail.isPending,
-          isError: detail.isError,
-        },
+        catalogueStatus,
+        changeType: typeWrite,
+        detail,
       }),
-    [detail.data?.item.typeId, detail.isError, detail.isPending, device, disabledReason, repair]
+    [catalogueStatus, detail, device, disabledReason, repair, typeWrite]
   );
+}
+
+/** Binds navigation, safe web writes, and photo upload state for one repair sheet. */
+export function useRepairActions(input: {
+  repair: RepairCase;
+  device: string;
+  disabledReason?: string;
+  onApplied?: (applied: AppliedRepair) => void;
+}): RepairActions {
+  const { repair, device, disabledReason, onApplied } = input;
+  const navigate = useNavigate();
+  const catalogue = usePublishedCatalogue();
+  const bulk = useBulkItemVerbs();
+  const detail = useWebItemDetail(repair.kind === 'now-required' ? undefined : repair.itemId);
+  const typeWrite = changeTypeWrite(repair, catalogue.types);
+  const writes = useRepairWrites(repair, { bulk, typeWrite, onApplied });
+  const upload = useRepairUpload({
+    itemId: repair.itemId,
+    existingPhotoCount: detail.data?.item.photos.length ?? 0,
+  });
+  const busy = writes.busy || upload.busy;
+  const { outcome, followUp } = actionOutcomeFor(writes.outcome, upload.outcome);
+  const blockedReason = useRepairBlockedReason({
+    repair,
+    device,
+    disabledReason,
+    catalogueStatus: catalogue.status,
+    typeWrite,
+    detail: {
+      typeId: detail.data?.item.typeId,
+      isPending: detail.isPending,
+      isError: detail.isError,
+    },
+  });
   const run = useCallback(
     async (action: WebAction): Promise<void> => {
       const write = isWriteAction(action.id);
@@ -111,7 +155,6 @@ export function useRepairActions(input: {
     },
     [blockedReason, busy, detail.data?.item.typeId, navigate, repair, upload, writes]
   );
-
   return {
     run,
     blockedReason,

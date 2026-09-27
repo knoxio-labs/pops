@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { ShortcutProvider } from '../../foundation/shortcuts/shortcut-provider.js';
+import { MAX_LABEL_IDS } from '../labels-page/label-params.js';
 import { ContainersPage } from './ContainersPage.js';
 
 import type { ReactElement } from 'react';
@@ -210,7 +211,8 @@ describe('ContainersPage', () => {
   });
 
   it('shows moving-day packing progress and caps label ids at the route limit', () => {
-    const manyClosed = Array.from({ length: 205 }, (_, index) =>
+    const closedCount = MAX_LABEL_IDS + 1;
+    const manyClosed = Array.from({ length: closedCount }, (_, index) =>
       row(`closed-${String(index)}`, `Closed ${String(index)}`, {
         container: { access: 'closed', full: false },
       })
@@ -218,16 +220,20 @@ describe('ContainersPage', () => {
     currentRows = rowsResult([closedBox]);
     currentClosedRows = rowsResult(manyClosed);
     currentSummary = {
-      data: { ...summary, packing: { ...summary.packing, closed: 205 } },
+      data: { ...summary, packing: { ...summary.packing, closed: closedCount } },
       status: 'success',
       refetch: vi.fn(),
     };
     renderPage('/inventory/containers?state=moving');
 
-    expect(screen.getByText('of 206 closed')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Print labels for 200 of 205 closed' }));
+    expect(screen.getByText(`of ${String(closedCount + 1)} closed`)).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `Print labels for ${String(MAX_LABEL_IDS)} of ${String(closedCount)} closed`,
+      })
+    );
     const params = new URLSearchParams(screen.getByTestId('location').textContent?.split('?')[1]);
-    expect(params.get('ids')?.split(',')).toHaveLength(200);
+    expect(params.get('ids')?.split(',')).toHaveLength(MAX_LABEL_IDS);
   });
 
   it('clicking a row opens the item with the Containers list trail', () => {
