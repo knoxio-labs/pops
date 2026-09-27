@@ -31,7 +31,7 @@ export interface StoreHereData {
   create: (name: string) => Promise<boolean>;
   /** Stores the supplied rows with one bulk request. */
   store: (items: readonly ItemRowModel[]) => Promise<void>;
-  /** Opens a closed container, or does nothing when offline or on a place target. */
+  /** Attempts to open a closed container; offline attempts show an error toast without sending a request, and place targets are ignored. */
   openTarget: () => Promise<void>;
 }
 
