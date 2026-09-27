@@ -273,6 +273,12 @@ cell issues, and valid rows commit without rolling back other rows. Omit
 `true` to return `valid` outcomes while rolling back all item, event, mutation,
 and sequence writes.
 
+The inventory app exposes `/inventory/items/bulk-new` as a controlled,
+spreadsheet-like grid over that endpoint. It accepts tab-separated and CSV
+pastes, validates typed rows after a short debounce, creates ready rows while
+leaving refused rows in place, and supports undo, Items navigation, and label
+printing for the items created by the last batch.
+
 ### Web Items browser
 
 The shell mounts the Items browser at `/inventory/items`. Search, type,
