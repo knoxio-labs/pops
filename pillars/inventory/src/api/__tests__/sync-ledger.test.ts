@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WebSyncLedgerResponseSchema } from '../../contract/rest-sync-ledger.js';
 import { granting, openSyncHarness, PROTOCOL, SYNC_KEY, type SyncHarness } from './sync-harness.js';
@@ -11,6 +11,7 @@ import type { Test } from './test-http.js';
 
 const transport = createTestTransport();
 const DAY_MS = 24 * 60 * 60 * 1000;
+const FROZEN_NOW = new Date('2026-09-21T12:00:00.000Z');
 type LedgerReport = z.infer<typeof SyncLedgerReportBodySchema>;
 type WebSyncLedger = z.infer<typeof WebSyncLedgerResponseSchema>;
 
@@ -20,7 +21,10 @@ beforeEach(() => {
   h = openSyncHarness(transport, { verify: granting(['inventory.sync']) });
 });
 
-afterEach(() => h.close());
+afterEach(() => {
+  h.close();
+  vi.useRealTimers();
+});
 
 function report(overrides: Partial<LedgerReport> = {}): LedgerReport {
   return {
@@ -58,6 +62,9 @@ async function readLedger(): Promise<WebSyncLedger> {
 
 describe('device sync ledger', () => {
   it('stores a device report and reads attention oldest first with every evidence field', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(FROZEN_NOW);
+
     const body = report({
       reportedAt: '2026-09-20T10:00:00.000Z',
       lastSyncAt: '2026-09-20T09:59:00.000Z',
