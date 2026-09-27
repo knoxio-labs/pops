@@ -14,17 +14,19 @@ xcodegen = "2.46.0"
 # formats, one intended scope, so they move together.
 SWIFT_SOURCES = "App AppTests Packages Playground Tools"
 
-# Xcode cannot be a `[tools]` pin — mise does not install it — so this is the
-# one committed declaration both the CI job and `verify:xcode-version` below
-# read, rather than two hand-kept copies. It matters because `swift-format`
-# ships inside the toolchain and is therefore the one check whose verdict
-# depends on which Xcode ran it; a local Xcode other than this one can
-# format-lint differently from CI, and `mise run lint` refuses to trust that
-# difference rather than let it pass silently.
+# Xcode cannot be a `[tools]` pin — mise does not install it — so these are the
+# committed declarations both the CI job and `verify:xcode-version` below read,
+# rather than two hand-kept copies. The marketing version selects the installed
+# app; the build number distinguishes a stable release from a beta with the
+# same marketing version. That matters because `swift-format` and SwiftPM
+# compile against the toolchain, so a local Xcode other than this one can
+# format-lint or build differently from CI, and `mise run lint` refuses to trust
+# that difference rather than let it pass silently.
 # The value must be an Xcode the runner image in `ios-quality.yml` and
 # `ios-testflight.yml` actually carries, and that image decides how high the iOS
 # floor can go — see the `deploymentTarget` note in project.yml.
 POPS_XCODE_VERSION = "27.0"
+POPS_XCODE_BUILD = "27A266a"
 
 # The simulator `mise run test` and `mise run test:app` boot. Named rather than
 # left to xcodebuild's choice so the local run and the CI run test the same
@@ -96,7 +98,7 @@ xcodegen generate
 
 [tasks.build]
 description = "Build the app for the iOS Simulator"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 # Names the simulator rather than `generic/platform=iOS Simulator`, for the same
 # reason `build:for-testing` below does: a generic destination has no active
 # architecture, so Xcode forces project.yml's Debug `ONLY_ACTIVE_ARCH: YES` back
@@ -115,7 +117,7 @@ run = 'xcodebuild -project Pops.xcodeproj -scheme Pops -destination "platform=iO
 
 [tasks."build:device"]
 description = "Build a signed Release for a physical iPhone"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 # -allowProvisioningUpdates lets automatic signing register the App ID and fetch
 # a profile, which is what Xcode does on its own when you press Run. Without it
 # the first build on a machine fails with "No profiles for … were found".
@@ -127,6 +129,7 @@ run = "xcodebuild -project Pops.xcodeproj -scheme Pops -destination 'generic/pla
 # App Store Connect setup gets proved without waiting for a merge.
 [tasks."release:testflight"]
 description = "Archive Pops or PopsPlayground at HEAD and upload it to TestFlight (needs an App Store Connect API key)"
+depends = ["verify:xcode-version"]
 run = "scripts/testflight.sh"
 
 # What "install it on my phone" means: the LOCAL flavour (`.local` bundle id,
@@ -135,7 +138,7 @@ run = "scripts/testflight.sh"
 # picks a phone when more than one is paired. See scripts/install-on-phone.sh.
 [tasks."install:phone"]
 description = "Build the local flavour and install + launch it on the paired iPhone, beside the TestFlight app"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = "scripts/install-on-phone.sh"
 
 [tasks."build:packages"]
@@ -191,7 +194,7 @@ done
 [tasks."build:for-testing"]
 description = "Compile the tree once for the simulator, keeping the compiler log `test` and `lint:analyze` share"
 hide = true
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = '''
 set -eu
 set -o pipefail
@@ -439,7 +442,7 @@ exit $status
 # could start skipping on the runner and CI would stay green.
 [tasks."test:app"]
 description = "Run the app's test target on the iOS Simulator, and assert it ran something"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = '''
 set -eu
 set -o pipefail
@@ -465,7 +468,7 @@ scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=lat
 # is, if anything, more reason a skip would go unremarked, not less.
 [tasks."test:device"]
 description = "Run the app's test target on a physical iPhone"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = '''
 set -eu
 set -o pipefail
@@ -620,13 +623,13 @@ exit $status
 # is exercised on every run rather than only on a machine that happens to have
 # the wrong Xcode installed.
 [tasks."verify:xcode-version"]
-description = "Local Xcode matches the version CI pins (POPS_XCODE_VERSION in [env] above)"
+description = "Local Xcode matches the version and build CI pins in [env] above"
 hide = true
 run = '''
 set -u
 status=0
 scripts/check-xcode-version.sh self-test || status=1
-scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" || status=1
+scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" "$POPS_XCODE_BUILD" || status=1
 exit $status
 '''
 
@@ -766,7 +769,7 @@ set -u
 # failure there is a real defect rather than the mismatch being opted into.
 scripts/check-xcode-version.sh self-test || exit 1
 
-if ! scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION"; then
+if ! scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" "$POPS_XCODE_BUILD"; then
   printf '\nformat:unpinned: proceeding on the toolchain above, by explicit request.\n' >&2
   printf '                 The rule-list drift check below still applies, and still refuses.\n' >&2
   printf '                 Read the diff before committing: these are this toolchain\47s rules.\n\n' >&2
@@ -914,7 +917,7 @@ exit $status
 # and says which it did.
 [tasks.e2e]
 description = "Drive every UI flow on the simulator against a running BFM (repo root: `mise run e2e:ios`)"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = '''
 set -eu
 set -o pipefail
