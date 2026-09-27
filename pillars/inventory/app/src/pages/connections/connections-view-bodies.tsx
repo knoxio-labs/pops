@@ -35,16 +35,16 @@ export function GraphBody({ model, focusItemId }: GraphBodyProps): ReactElement 
       />
     );
   }
-  if (model.allConnections.rows.length === 0) {
+  if (model.resolvedAllRows.length === 0) {
     return (
       <EmptyState
         icon={Cable}
-        title="No connections yet"
+        title="Nothing is connected yet"
         description="The graph will appear when the registry has connections."
       />
     );
   }
-  return <ConnectionGraph rows={model.allConnections.rows} focusItemId={focusItemId} />;
+  return <ConnectionGraph rows={model.resolvedAllRows} focusItemId={focusItemId} />;
 }
 
 /** Props for the trace presentation body. */
@@ -56,6 +56,7 @@ export interface TraceBodyProps {
 
 /** Renders the breadth-first trace pane or its loading/unavailable states. */
 export function TraceBody({ model, onClose, onOpenItem }: TraceBodyProps): ReactElement | null {
+  if (model.initialLoading || model.readError) return null;
   if (model.url.trace === null) return null;
   if (model.allConnections.status === 'pending') {
     return (
@@ -77,18 +78,6 @@ export function TraceBody({ model, onClose, onOpenItem }: TraceBodyProps): React
       </aside>
     );
   }
-  if (model.trace === null) {
-    return (
-      <aside className="flex w-full shrink-0 flex-col gap-3 rounded-lg border bg-card p-4 lg:w-80">
-        <h2 className="text-sm font-semibold">Connection trace unavailable</h2>
-        <p className="text-sm text-muted-foreground">
-          The selected item is not present in the current connection registry.
-        </p>
-        <Button variant="outline" size="sm" onClick={onClose}>
-          Close
-        </Button>
-      </aside>
-    );
-  }
+  if (model.trace === null) return null;
   return <ConnectionTracePanel trace={model.trace} onClose={onClose} onOpenItem={onOpenItem} />;
 }

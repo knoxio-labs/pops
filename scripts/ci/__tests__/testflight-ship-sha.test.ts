@@ -125,6 +125,15 @@ describe('verdictFor', () => {
     expect(await verdictFor('abc', a)).toBe('absent');
   });
 
+  it('accepts GitHub’s decorated workflow run name', async () => {
+    const decorated = {
+      ...run(9, 99, 1),
+      name: `${QUALITY_WORKFLOW_NAME} for pull_request into main`,
+    };
+    const a = api([decorated], { 9: [{ name: QUALITY_JOB_NAME, conclusion: 'success' }] });
+    expect(await verdictFor('abc', a)).toBe('success');
+  });
+
   it('reports a run still in flight as pending', async () => {
     expect(await verdictFor('abc', api([run(1, 1, 1, 'in_progress')], {}))).toBe('pending');
   });

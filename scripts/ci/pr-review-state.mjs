@@ -34,6 +34,20 @@ export const STATE_MARKER = 'pr-review-state';
 export const STATE_VERSION = 1;
 export const SEVERITIES = ['high', 'medium', 'low'];
 
+/**
+ * Whether a review severity blocks merge while its finding is open.
+ *
+ * Only the exact persisted value `low` is advisory. Missing, malformed and
+ * future values remain blocking so old or corrupted state cannot bypass the
+ * required findings gate.
+ *
+ * @param {unknown} severity
+ * @returns {boolean}
+ */
+export function isBlockingSeverity(severity) {
+  return severity !== 'low';
+}
+
 const STATE_RE = new RegExp(`<!--\\s*${STATE_MARKER}:\\s*([A-Za-z0-9+/=]+)\\s*-->`, 'u');
 
 /**
@@ -640,6 +654,8 @@ export function render(state, headSha, mode) {
   const open = state.findings
     .filter((f) => f.status === 'open')
     .toSorted((a, b) => severityRank(a) - severityRank(b));
+  const blockingCount = open.filter((finding) => isBlockingSeverity(finding.severity)).length;
+  const advisoryCount = open.length - blockingCount;
   const resolved = state.findings.filter((f) => f.status === 'resolved');
 
   const lines = ['## Review', ''];
@@ -647,7 +663,11 @@ export function render(state, headSha, mode) {
   if (open.length === 0) {
     lines.push('No open findings.', '');
   } else {
-    lines.push(`${open.length} open ${open.length === 1 ? 'finding' : 'findings'}.`, '');
+    lines.push(
+      `${open.length} open ${open.length === 1 ? 'finding' : 'findings'}. ` +
+        `${blockingCount} blocking, ${advisoryCount} advisory.`,
+      ''
+    );
     for (const finding of open) {
       const age =
         finding.first_seen && finding.first_seen !== headSha

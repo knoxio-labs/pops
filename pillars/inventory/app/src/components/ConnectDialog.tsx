@@ -8,6 +8,8 @@ import { AssetIdBadge, Button, SearchPickerDialog, toastError, TypeBadge } from 
 import { InventoryApiError, unwrap } from '../inventory-api-helpers.js';
 import { connectionsConnect, itemsList } from '../inventory-api/index.js';
 
+import type { ReactElement } from 'react';
+
 import type { ItemsListResponse } from '../inventory-api/index.js';
 
 type InventoryItem = ItemsListResponse['data'][number];
@@ -39,6 +41,7 @@ function connectError(error: Error): InventoryApiError {
 interface ConnectDialogProps {
   currentItemId: string;
   onConnected: () => void;
+  trigger?: ReactElement;
   /** Explains why connecting is unavailable and disables the trigger. */
   disabledReason?: string;
 }
@@ -93,8 +96,28 @@ function useConnectMutation(onSuccess: () => void) {
   });
 }
 
+function defaultTrigger(disabledReason: string | undefined): ReactElement {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={disabledReason !== undefined}
+      title={disabledReason}
+      aria-label={disabledReason ? `Connect Item (${disabledReason})` : 'Connect Item'}
+    >
+      <Link2 className="h-4 w-4 mr-1.5" />
+      Connect Item
+    </Button>
+  );
+}
+
 /** Searches inventory items and connects the selected result to the current item. */
-export function ConnectDialog({ currentItemId, onConnected, disabledReason }: ConnectDialogProps) {
+export function ConnectDialog({
+  currentItemId,
+  onConnected,
+  trigger,
+  disabledReason,
+}: ConnectDialogProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -121,18 +144,7 @@ export function ConnectDialog({ currentItemId, onConnected, disabledReason }: Co
         setOpen(v);
         if (!v) setSearch('');
       }}
-      trigger={
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabledReason !== undefined}
-          title={disabledReason}
-          aria-label={disabledReason ? `Connect Item (${disabledReason})` : 'Connect Item'}
-        >
-          <Link2 className="h-4 w-4 mr-1.5" />
-          Connect Item
-        </Button>
-      }
+      trigger={trigger ?? defaultTrigger(disabledReason)}
       title="Connect Item"
       description="Search for an item to connect by name or asset ID."
       searchPlaceholder="Search items..."

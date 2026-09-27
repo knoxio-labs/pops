@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   useItemRows: vi.fn(),
   useItemPurchase: vi.fn(),
   useWebItemDetail: vi.fn(),
-  usePlacementSources: vi.fn(),
   usePurchasePreview: vi.fn(),
 }));
 
@@ -21,9 +20,6 @@ vi.mock('../../inventory-web/useWebItemDetail.js', () => ({
 }));
 vi.mock('../../inventory-web/useItemPurchase.js', () => ({
   useItemPurchase: mocks.useItemPurchase,
-}));
-vi.mock('../../inventory-web/usePlacementSources.js', () => ({
-  usePlacementSources: mocks.usePlacementSources,
 }));
 vi.mock('../../inventory-web/usePurchasePreview.js', () => ({
   usePurchasePreview: mocks.usePurchasePreview,
@@ -37,6 +33,8 @@ import { PurchasePreview } from './purchase-preview.js';
 import type { ItemRowModel, LocationModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { PurchaseResult } from '../../inventory-web/purchase-model.js';
+
+const EMPTY_ITEM_FILTER = 'purchase-preview-empty';
 
 afterAll(() => {
   if (previousTimeZone === undefined) delete process.env.TZ;
@@ -131,7 +129,6 @@ beforeEach(() => {
     detailResult({ merchant: 'Kmart', purchasedOn: '2026-09-12' })
   );
   mocks.useItemPurchase.mockReturnValue({ status: 'success', purchase: null, error: null });
-  mocks.usePlacementSources.mockReturnValue({ world });
   mocks.usePurchasePreview.mockReturnValue({
     status: 'success',
     purchase: purchase(),
@@ -346,7 +343,7 @@ describe('search preview pane', () => {
     render(<PurchasePreview purchaseId="po-1203" currency="AUD" onOpenInPurchases={vi.fn()} />);
 
     expect(mocks.useItemRows).toHaveBeenCalledWith(
-      { ids: 'purchase-preview-empty', includeInactive: true },
+      { ids: EMPTY_ITEM_FILTER, includeInactive: true },
       1
     );
     expect(screen.queryByText(/Tracked as/)).not.toBeInTheDocument();

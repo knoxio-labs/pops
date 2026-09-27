@@ -218,12 +218,7 @@ internal struct DeviceSessionRecoveryTests {
         // exchange, and a gate left shut is a task `rotation.value` below can
         // never finish awaiting. A failed wait must still fail the test — it
         // just cannot do that by skipping the open.
-        var parkFailure: (any Error)?
-        do {
-            try await withDeadline { try await gate.waitForArrivals(atLeast: 1) }
-        } catch {
-            parkFailure = error
-        }
+        let parkFailure = await waitForFirstRevocationArrival(on: gate)
         await fixture.refresher.deviceWasRevoked()
         await gate.open()
         if let parkFailure { throw parkFailure }
@@ -314,11 +309,14 @@ internal struct DeviceSessionRecoveryTests {
             parkFailure = error
         }
 
-        let second = Task { await fixture.refresher.deviceWasRevoked() }
+        let (second, joinFailure) = await startRevocationJoin(
+            on: fixture.refresher,
+            waitForJoin: parkFailure == nil
+        )
         await gate.open()
         await first.value
         await second.value
-        if let parkFailure { throw parkFailure }
+        if let failure = parkFailure ?? joinFailure { throw failure }
 
         #expect(
             fixture.session.events == [.revoked(.revokedByOperator)],
@@ -346,5 +344,31 @@ internal struct DeviceSessionRecoveryTests {
         for secret in ["access-1", "refresh-1", "access-2", "refresh-2"] {
             #expect(!rendered.contains(secret), "\(secret) reached a rendered error")
         }
+    }
+}
+
+private func startRevocationJoin(
+    on refresher: DeviceSessionRefresher,
+    waitForJoin: Bool
+) async -> (Task<Void, Never>, (any Error)?) {
+    let joins = Countdown()
+    await refresher.observeRevocationJoins { joins.record() }
+    let second = Task { await refresher.deviceWasRevoked() }
+    guard waitForJoin else { return (second, nil) }
+
+    do {
+        try await withDeadline { try await joins.wait(atLeast: 1) }
+        return (second, nil)
+    } catch {
+        return (second, error)
+    }
+}
+
+private func waitForFirstRevocationArrival(on gate: Gate) async -> (any Error)? {
+    do {
+        try await withDeadline { try await gate.waitForArrivals(atLeast: 1) }
+        return nil
+    } catch {
+        return error
     }
 }
