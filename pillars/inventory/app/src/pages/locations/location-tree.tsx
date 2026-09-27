@@ -3,12 +3,16 @@ import { Fragment } from 'react';
 
 import { Input, cn } from '@pops/ui';
 
+import { isLifted, rowDropState, treeDragHint } from './tree-drop.js';
 import { TreeRow } from './tree-row.js';
 
 import type { KeyboardEvent, ReactElement } from 'react';
 
+import type { PendingDelete } from '../../foundation/places/delete-place-dialog.js';
+import type { DeleteMode, DeletePlan } from '../../foundation/places/delete-plan.js';
 import type { PlaceTally } from '../../inventory-web/useLocationTallies.js';
 import type { PlaceEditsApi } from '../location-page/location-page-parts.js';
+import type { TreeDrag } from './tree-drop.js';
 import type { TreeRow as TreeRowModel } from './tree-rows.js';
 import type { TreeViewApi } from './use-tree-view.js';
 
@@ -19,6 +23,7 @@ export interface LocationEdits {
   readonly creatingUnder: string | null | undefined;
   readonly renamingId: string | null;
   readonly deleting: PlaceEditsApi['deleting'];
+  readonly pendingDelete?: PendingDelete | null;
   readonly error: string | null;
   readonly startCreate: (parentId: string | null) => void;
   readonly commitCreate: (name: string) => void;
@@ -26,6 +31,9 @@ export interface LocationEdits {
   readonly startRename: (id: string | null) => void;
   readonly commitRename: (name: string) => void;
   readonly moveTo: (id: string, parentId: string | null) => void;
+  readonly arrange?: (id: string, parentId: string | null, order: readonly string[]) => void;
+  readonly setDeleteMode?: (mode: DeleteMode) => void;
+  readonly confirmDeletePlan?: (plan: DeletePlan) => void;
   readonly requestDelete: (id: string) => void;
   readonly confirmDelete: () => void;
   readonly cancelDelete: () => void;
@@ -40,6 +48,7 @@ export interface LocationTreeProps {
   readonly onOpen: (id: string) => void;
   readonly onMove: (id: string) => void;
   readonly className?: string;
+  readonly drag?: TreeDrag;
 }
 
 function CreateRow({ depth, edits }: { depth: number; edits: LocationEdits }): ReactElement {
@@ -77,6 +86,8 @@ function rowFor(props: LocationTreeProps, row: TreeRowModel): ReactElement {
       count={props.tallyOf(id).total}
       selected={tree.selectedId === id}
       offline={props.offline}
+      lifted={props.drag === undefined ? false : isLifted(props.drag, id)}
+      drop={props.drag === undefined ? undefined : rowDropState(props.drag, id)}
       renaming={renaming}
       onSelect={() => tree.select(id)}
       onToggle={() => tree.toggle(id)}
@@ -114,6 +125,7 @@ function handleKey(props: LocationTreeProps, event: KeyboardEvent<HTMLUListEleme
 export function LocationTree(props: LocationTreeProps): ReactElement {
   const creating = props.edits.creatingUnder;
   const empty = props.tree.rows.length === 0 && props.tree.filter.trim() !== '';
+  const hint = props.drag === undefined ? null : treeDragHint(props.drag);
   return (
     <section
       aria-label="Places"
@@ -147,6 +159,7 @@ export function LocationTree(props: LocationTreeProps): ReactElement {
         ))}
         {creating === null ? <CreateRow depth={-1} edits={props.edits} /> : null}
       </ul>
+      {hint === null ? null : <div className="border-t px-2 py-2">{hint}</div>}
       {empty ? (
         <p className="border-t px-3 py-2 text-xs text-muted-foreground">
           No place is called “{props.tree.filter.trim()}”. Clear the filter to see every place.

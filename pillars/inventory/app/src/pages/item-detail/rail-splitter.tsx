@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { cn } from '@pops/ui';
 
 import { useEdgeDrag } from '../../foundation/drag/use-edge-drag';
-import { moveRail, RAIL_DEFAULT, RAIL_MAX, RAIL_MIN, RAIL_STEP } from '../../foundation/item-page';
+import { moveRail, RAIL_DEFAULT, RAIL_MAX, RAIL_MIN, RAIL_STEP } from './rail-width';
 
 import type { KeyboardEvent, PointerEvent } from 'react';
 
@@ -39,7 +39,7 @@ export function RailSplitter({ width, onWidth }: RailSplitterProps) {
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize the facts rail. Enter or double-click restores its width."
+      aria-label="Resize the facts rail. Double-click or Enter restores its width."
       aria-valuenow={width}
       aria-valuemin={RAIL_MIN}
       aria-valuemax={RAIL_MAX}
@@ -53,7 +53,7 @@ export function RailSplitter({ width, onWidth }: RailSplitterProps) {
       <span
         aria-hidden
         className={cn(
-          'my-6 w-px rounded-full bg-transparent transition-colors group-hover/split:w-0.5 group-hover/split:bg-app-accent group-focus-visible/split:w-0.5 group-focus-visible/split:ring-2 group-focus-visible/split:ring-ring',
+          'my-6 w-px rounded-full bg-transparent transition-colors group-hover/split:w-0.5 group-hover/split:bg-app-accent group-focus-visible/split:w-0.5 group-focus-visible/split:bg-app-accent',
           drag.dragging && 'w-0.5 bg-app-accent'
         )}
       />

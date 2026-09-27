@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Validate the evidence packet used before a Huly implementation ticket can
- * be advanced. The packet is deliberately read-only: this command never
- * talks to Huly or GitHub, so advancing an issue remains a deliberate human
- * action after the evidence has been checked.
+ * Validate an optional structured evidence packet for a Huly implementation
+ * ticket. This command never talks to Huly or GitHub. A caller may close the
+ * ticket after confirming passing evidence covers its criteria and the work
+ * has merged; the validator does not require a separate human status change.
  *
  * One packet names one canonical `implementationTicket`. Each pull request
  * separately names its synced `prIssue`; it must not be mistaken for the
@@ -18,7 +18,7 @@
  * evidence's own `status` says happened. Duplicate evidence is ambiguous and never becomes
  * automatic completion. A human may record an override with both an approver
  * and a rationale, but the resulting verdict still says that automation is
- * blocked: only a person may perform the state change.
+ * blocked: an override does not establish that the criteria were met.
  *
  * Usage:
  *   node scripts/implementation-evidence.mjs --evidence <packet.json>
@@ -44,7 +44,9 @@ status (passed, failed, or skipped), detail, limitations, and state. Partial
 or deferred work must name a different follow-up ticket. A complete record
 needs status "passed": "failed" or "skipped" is rejected even when state says
 complete. Ambiguous or incomplete evidence never authorizes automation; an
-override records a named human rationale but remains human-only.`;
+override records a named human rationale but remains human-only. Passing
+evidence supports autonomous closure after the work has merged; this command
+does not change ticket status.`;
 
 /**
  * @typedef {'complete' | 'partial' | 'deferred'} EvidenceState

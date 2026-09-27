@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
 import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { barcodeContract } from '../contract/rest.js';
@@ -37,7 +38,9 @@ export interface CreateBarcodeApiAppDeps extends BarcodeApiDeps {
  */
 export function createBarcodeApiApp(deps: CreateBarcodeApiAppDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'barcode' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json());
 
   const handlers = makeRequestHandler(deps);
@@ -57,6 +60,7 @@ export function createBarcodeApiApp(deps: CreateBarcodeApiAppDeps): Express {
     )
   );
   createExpressEndpoints(barcodeContract, makeBarcodeRestHandlers(deps), app);
+  app.use(errors.final);
 
   return app;
 }

@@ -133,6 +133,7 @@ function emptyVerbState(): ContentsVerbState {
     },
     movingIds: [],
     setMovingIds: vi.fn(),
+    moveIds: vi.fn(),
     moveSelected: vi.fn(),
   };
 }

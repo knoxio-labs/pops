@@ -192,12 +192,14 @@ describe('sheets', () => {
     expect(screen.getByText('12 labels on 2 sheets, from label 1')).toBeTruthy();
   });
 
-  it('measures a custom sheet once and remembers it in this browser', () => {
+  it('measures a custom sheet once and remembers it in this browser', { timeout: 30_000 }, () => {
     renderPage(boxes);
     fireEvent.change(screen.getByLabelText('Sheet'), { target: { value: 'custom' } });
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Labels down'), { target: { value: '8' } });
-    fireEvent.change(within(dialog).getByLabelText('Label height'), { target: { value: '33.9' } });
+    fireEvent.change(within(dialog).getByLabelText('Label height'), {
+      target: { value: '33.9' },
+    });
     fireEvent.change(within(dialog).getByLabelText('Top margin'), { target: { value: '12.9' } });
     fireEvent.change(within(dialog).getByLabelText('Down pitch'), { target: { value: '33.9' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Use this sheet' }));

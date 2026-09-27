@@ -37,7 +37,7 @@ internal struct InventoryPrefillApplicationTests {
         defer { opened.loading.cancel() }
         opened.form.prefillStatus = .running
 
-        opened.form.applySuggestions([Self.field.id: [.string("ignored")]], forTypeId: "other")
+        _ = opened.form.applySuggestions([Self.field.id: [.string("ignored")]], forTypeId: "other")
 
         #expect(opened.form.prefillStatus == .running)
         #expect(opened.form.protocol2Draft?.values(for: Self.field).isEmpty == true)
@@ -51,7 +51,7 @@ internal struct InventoryPrefillApplicationTests {
         opened.form.protocol2Draft?.setText("typed", entryId: entry.id, for: Self.field)
         opened.form.prefillStatus = .running
 
-        opened.form.applySuggestions(
+        _ = opened.form.applySuggestions(
             [Self.field.id: [.string("suggested")]], forTypeId: Self.type.id
         )
 
@@ -64,7 +64,7 @@ internal struct InventoryPrefillApplicationTests {
         let opened = await Self.opened()
         defer { opened.loading.cancel() }
 
-        opened.form.applySuggestions([Self.field.id: []], forTypeId: Self.type.id)
+        _ = opened.form.applySuggestions([Self.field.id: []], forTypeId: Self.type.id)
 
         #expect(opened.form.prefillStatus == .nothingFound)
     }
@@ -75,7 +75,7 @@ internal struct InventoryPrefillApplicationTests {
         defer { opened.loading.cancel() }
         opened.form.prefillStatus = .running
 
-        opened.form.applySuggestions(
+        _ = opened.form.applySuggestions(
             [Self.field.id: [.string("suggested")]], forTypeId: Self.type.id)
 
         #expect(opened.form.protocol2Draft?.values(for: Self.field) == [.string("suggested")])
@@ -88,7 +88,7 @@ internal struct InventoryPrefillApplicationTests {
         defer { opened.loading.cancel() }
         opened.form.prefillStatus = .running
 
-        opened.form.applySuggestions(
+        _ = opened.form.applySuggestions(
             [InventoryPrefillName.id: [.string("Fortaleza Digital")]], forTypeId: Self.type.id)
 
         #expect(opened.form.draft.name == "Fortaleza Digital")
@@ -122,7 +122,8 @@ internal struct InventoryPrefillApplicationTests {
         #expect(
             InventoryPrefillStatus.productNotFound.message == "No product found for this barcode")
         #expect(
-            InventoryPrefillStatus.lookupUnavailable.message == "Couldn't look up this barcode")
+            InventoryPrefillStatus.barcodeUnsupported.message
+                == "Barcode lookup covers books. Use text for this item.")
         #expect(InventoryPrefillStatus.noText.message == "No text recognised")
         #expect(
             InventoryPrefillStatus.scannerUnavailable.message

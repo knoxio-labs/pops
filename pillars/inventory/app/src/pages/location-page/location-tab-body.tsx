@@ -4,6 +4,7 @@ import { Button, EmptyState } from '@pops/ui';
 
 import { useSelection, type SelectionApi } from '../../foundation/selection/use-selection.js';
 import { useShortcutScope } from '../../foundation/shortcuts/shortcut-provider.js';
+import { SelectionBarForTab } from './location-tab-body-selection.js';
 import {
   filterContents,
   placeContents,
@@ -13,13 +14,13 @@ import {
 } from './location-tab-content-model.js';
 import { InlineCreate } from './location-tab-inline-create.js';
 import { ContentsList } from './location-tab-lists.js';
-import { ContentsSelectionBar } from './location-tab-selection-bar.js';
 
 import type { LucideIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 
 import type { LocationModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
+import type { ContentsVerbs as BulkContentsVerbs } from '../../foundation/places/use-contents-verbs.js';
 import type { PlaceTally } from '../../inventory-web/useLocationTallies.js';
 import type { PlaceEditsApi, PlaceTab } from './location-page-parts.js';
 
@@ -31,6 +32,7 @@ export interface LocationTabBodyProps {
   world: PlacementWorld;
   edits: PlaceEditsApi;
   verbs: ContentsVerbs;
+  bulkVerbs?: BulkContentsVerbs;
   tallyOf: (id: string) => PlaceTally;
   offline: boolean;
   onStoreHere: () => void;
@@ -196,9 +198,7 @@ export function LocationTabBody(props: LocationTabBodyProps): ReactElement {
           />
         )}
       </div>
-      {props.tab === 'places' ? null : (
-        <ContentsSelectionBar world={props.world} selection={selection} verbs={props.verbs} />
-      )}
+      <SelectionBarForTab props={props} selection={selection} />
     </div>
   );
 }

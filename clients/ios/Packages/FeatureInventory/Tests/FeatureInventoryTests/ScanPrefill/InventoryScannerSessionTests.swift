@@ -102,6 +102,38 @@ internal struct InventoryScannerSessionTests {
         #expect(session.showsTextPrompt)
     }
 
+    @Test("retry reuses the captured barcode without duplicating its identifier")
+    func retryUsesCapturedBarcode() async {
+        let opened = await ScanPrefillFixture.open(lookupResult: .unavailable)
+        defer { opened.loading.cancel() }
+        let session = InventoryScannerSession(model: opened.form)
+        let callback = ScanPrefillCallbackRecorder()
+        session.recognizeBarcodes(["5012345678900"], onFound: callback.call)
+        await session.processing?.value
+        #expect(session.canRetryLookup)
+        await opened.lookup.setResult(.found(ScanPrefillFixture.product))
+        session.retryLookup(onFound: callback.call)
+        session.retryLookup(onFound: callback.call)
+        await session.processing?.value
+        await opened.form.fillTask?.value
+        #expect(await opened.lookup.codes == ["5012345678900", "5012345678900"])
+        #expect(opened.form.draft.identifiers.count == 1)
+        #expect(callback.invocations == 1)
+        #expect(!session.canRetryLookup)
+    }
+
+    @Test("a definite miss cannot be retried as a service failure")
+    func definiteMissDoesNotRetry() async {
+        let opened = await ScanPrefillFixture.open(lookupResult: .notFound)
+        defer { opened.loading.cancel() }
+        let session = InventoryScannerSession(model: opened.form)
+        session.recognizeBarcodes(["5012345678900"], onFound: {})
+        await session.processing?.value
+        #expect(!session.canRetryLookup)
+        session.retryLookup(onFound: {})
+        #expect(await opened.lookup.codes.count == 1)
+    }
+
     @Test("a found callback fires while field generation is still suspended")
     func foundDismissesBeforeFill() async {
         let gate = ScanPrefillGate()
