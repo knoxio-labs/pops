@@ -3,6 +3,7 @@ import { LayoutRailTabs } from './layout-rail-tabs';
 import type { ReactElement } from 'react';
 
 import type { DetailTab, ItemDetailModel } from './detail-model';
+import type { FactEditing } from './use-fact-editing';
 
 /** Composes the item-detail model with the split rail and tab surface. */
 export function ItemDetailView({
@@ -12,6 +13,8 @@ export function ItemDetailView({
   readOnly,
   onTab,
   onLinksChanged,
+  editing,
+  onQuantity,
 }: {
   itemId: string;
   model: ItemDetailModel;
@@ -19,6 +22,8 @@ export function ItemDetailView({
   readOnly: boolean;
   onTab: (tab: DetailTab) => void;
   onLinksChanged: () => void;
+  editing?: FactEditing;
+  onQuantity?: (action: 'split' | 'change') => void;
 }): ReactElement {
   return (
     <LayoutRailTabs
@@ -28,6 +33,8 @@ export function ItemDetailView({
       readOnly={readOnly}
       onTab={onTab}
       onLinksChanged={onLinksChanged}
+      editing={editing}
+      onQuantity={onQuantity}
     />
   );
 }

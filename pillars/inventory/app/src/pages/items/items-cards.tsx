@@ -150,6 +150,7 @@ interface ItemsListBodyProps {
   hiddenInactiveCount: number;
   narrowed: boolean;
   onClearFilters: () => void;
+  onOpen: (id: string) => void;
 }
 
 /** Renders the Items list states and selects the table or card presentation. */
@@ -170,6 +171,7 @@ export function ItemsListBody(props: ItemsListBodyProps): ReactElement {
     hiddenInactiveCount,
     narrowed,
     onClearFilters,
+    onOpen,
   } = props;
   if (itemRows.status === 'pending') return <ListSkeleton label="Loading items" />;
   if (itemRows.status === 'error') return <ListError noun="items" onRetry={itemRows.refetch} />;
@@ -184,7 +186,7 @@ export function ItemsListBody(props: ItemsListBodyProps): ReactElement {
         total={total}
         world={world}
         selection={selection}
-        onOpen={(id) => navigate(`/inventory/items/${id}`)}
+        onOpen={onOpen}
         onLoadMore={itemRows.fetchNextPage}
       />
     );
@@ -202,7 +204,7 @@ export function ItemsListBody(props: ItemsListBodyProps): ReactElement {
       pendingIds={pendingIds}
       rejections={rejections}
       onRowVerb={onRowVerb}
-      onOpen={(id) => navigate(`/inventory/items/${id}`)}
+      onOpen={onOpen}
       onLoadMore={itemRows.fetchNextPage}
     />
   );

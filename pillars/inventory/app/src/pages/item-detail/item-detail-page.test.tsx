@@ -1,19 +1,29 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppContextProvider } from '@pops/navigation';
 
 import { buildWorld } from '../../foundation/model/placement-model';
 import { ShortcutProvider } from '../../foundation/shortcuts/shortcut-provider';
+import { listTrailState } from '../../inventory-web/list-trail';
 import { ItemDetailPage } from './item-detail-page';
+
+import type { ReactElement } from 'react';
 
 import type { ItemDetailModel } from './detail-model';
 
 const mocks = vi.hoisted(() => ({ useItemDetailModel: vi.fn() }));
 
 vi.mock('./use-item-detail-model', () => ({ useItemDetailModel: mocks.useItemDetailModel }));
+vi.mock('./detail-store-here', () => ({
+  DetailStoreHereSheet: (props: {
+    open: boolean;
+    target: { name: string };
+  }): ReactElement | null =>
+    props.open ? <output data-testid="store-here-target">{props.target.name}</output> : null,
+}));
 
 const item = {
   id: 'item-1',
@@ -57,7 +67,13 @@ const model: ItemDetailModel = {
   eventCount: 0,
 };
 
-function renderPage(initialEntry = '/inventory/items/item-1'): void {
+function LocationProbe(): ReactElement {
+  return <output data-testid="route">{useLocation().pathname}</output>;
+}
+
+function renderPage(
+  initialEntry: string | { pathname: string; state?: unknown } = '/inventory/items/item-1'
+): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
@@ -67,6 +83,7 @@ function renderPage(initialEntry = '/inventory/items/item-1'): void {
             <Routes>
               <Route path="/inventory/items/:id" element={<ItemDetailPage />} />
             </Routes>
+            <LocationProbe />
           </ShortcutProvider>
         </AppContextProvider>
       </MemoryRouter>
@@ -130,5 +147,52 @@ describe('ItemDetailPage', () => {
     });
     renderPage('/inventory/items/missing');
     expect(screen.getByRole('heading', { name: 'This item no longer exists' })).toBeInTheDocument();
+  });
+
+  it('opens the edit form from the header without changing the item action contract', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+
+    expect(screen.getByTestId('route')).toHaveTextContent('/inventory/items/item-1/edit');
+  });
+
+  it('renders the list position and uses the shared detail scope for the next item', () => {
+    renderPage({
+      pathname: '/inventory/items/item-1',
+      state: listTrailState({
+        listName: 'Items',
+        href: '/inventory/items?q=lead',
+        ids: ['item-0', 'item-1', 'item-2'],
+      }),
+    });
+
+    expect(screen.getByTestId('item-detail-back-row')).toHaveTextContent('Items2 of 3');
+    fireEvent.keyDown(window, { key: ']' });
+
+    expect(screen.getByTestId('route')).toHaveTextContent('/inventory/items/item-2');
+  });
+
+  it('does not render a back row when the detail page has no list trail', () => {
+    renderPage();
+
+    expect(screen.queryByTestId('item-detail-back-row')).not.toBeInTheDocument();
+  });
+
+  it('opens Store here with the current container as its target', () => {
+    mocks.useItemDetailModel.mockReturnValue({
+      status: 'ready',
+      error: null,
+      model: {
+        ...model,
+        item: { ...item, container: { access: 'open', full: false } },
+      },
+      retry: vi.fn(),
+    });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Store here' }));
+
+    expect(screen.getByTestId('store-here-target')).toHaveTextContent('Desk lamp');
   });
 });

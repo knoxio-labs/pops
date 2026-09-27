@@ -1,10 +1,11 @@
 import { cn } from '@pops/ui';
 
-import { INVENTORY_ICONS } from '../../foundation/model/icons';
+import { FactRowContent } from './fact-row-content';
 
-import type { ReactElement } from 'react';
+import type { KeyboardEvent, ReactElement, ReactNode } from 'react';
 
 import type { DetailFact } from './detail-model';
+import type { FactPhase } from './use-fact-editing';
 
 /** Props for one read-only fact row. */
 export interface FactRowProps {
@@ -12,59 +13,81 @@ export interface FactRowProps {
   readOnly?: boolean;
   onQuantity?: (action: 'split' | 'change') => void;
   inlineLabel?: boolean;
+  phase?: FactPhase;
+  rejection?: string;
+  onEdit?: (key: string) => void;
+  editor?: ReactNode;
+  onRevert?: () => void;
 }
 
-function FactValue({ fact }: { fact: DetailFact }): ReactElement {
-  if (fact.origin === 'missing-inputs') {
-    return (
-      <span className="truncate text-muted-foreground">
-        Needs {(fact.missingInputs ?? []).join(', ')}
-      </span>
-    );
+function handleFactKeyDown({
+  event,
+  phase,
+  editable,
+  factKey,
+  onEdit,
+  onRevert,
+}: {
+  event: KeyboardEvent<HTMLDivElement>;
+  phase: FactPhase;
+  editable: boolean;
+  factKey: string;
+  onEdit: FactRowProps['onEdit'];
+  onRevert: FactRowProps['onRevert'];
+}): void {
+  if (phase === 'saving') return;
+  if (phase === 'editing') {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onRevert?.();
+      return;
+    }
+    if (event.key !== 'Enter' || event.defaultPrevented || event.shiftKey) return;
+    event.preventDefault();
+    onEdit?.(factKey);
+    return;
   }
-  if (fact.value === null) return <span className="text-muted-foreground">Not set</span>;
-  return (
-    <span className={cn('truncate text-foreground', fact.mono && 'font-mono')}>{fact.value}</span>
-  );
+  if (!editable || event.key !== 'Enter') return;
+  event.preventDefault();
+  onEdit?.(factKey);
 }
 
-function Origin({ fact }: { fact: DetailFact }): ReactElement | null {
-  if (fact.origin === 'entered') return null;
-  const Icon = INVENTORY_ICONS.computed;
-  const label = fact.origin === 'missing-inputs' ? 'Calculated' : fact.origin;
+/** Renders one fact, including its inline editor and optimistic edit phases. */
+export function FactRow({
+  fact,
+  readOnly = false,
+  onQuantity,
+  inlineLabel = false,
+  phase = 'idle',
+  rejection,
+  onEdit,
+  editor,
+  onRevert,
+}: FactRowProps): ReactElement {
+  const editing = phase === 'editing' || phase === 'saving';
+  const editable = !readOnly && onEdit !== undefined && fact.inline;
   return (
-    <span className="inline-flex shrink-0 items-center gap-0.5 text-2xs text-muted-foreground">
-      <Icon className="size-3" aria-hidden />
-      {label.charAt(0).toUpperCase() + label.slice(1)}
-    </span>
-  );
-}
-
-/** Renders one fact in read mode; editing belongs to the next item-page ticket. */
-export function FactRow({ fact, inlineLabel = false }: FactRowProps): ReactElement {
-  return (
-    <div className="flex min-h-11 min-w-0 items-center gap-2 rounded-md px-2 py-1">
-      <span
-        className={cn(
-          'flex min-w-0 flex-1 text-left',
-          inlineLabel
-            ? 'flex-row items-center justify-start gap-2'
-            : 'flex-col items-start justify-center gap-0'
-        )}
-      >
-        <span
-          className={cn(
-            'truncate text-left text-xs text-muted-foreground',
-            inlineLabel ? 'w-32 shrink-0' : 'w-full'
-          )}
-        >
-          {fact.label}
-        </span>
-        <span className="flex w-full min-w-0 items-baseline gap-1.5 text-sm">
-          <FactValue fact={fact} />
-          <Origin fact={fact} />
-        </span>
-      </span>
+    <div
+      className={cn(
+        'flex min-h-11 min-w-0 items-center gap-2 rounded-md px-2 py-1',
+        phase === 'pending' && 'border-l-2 border-app-accent bg-app-accent/5',
+        phase === 'rejected' && 'border-l-2 border-destructive/60'
+      )}
+      onKeyDown={(event) =>
+        handleFactKeyDown({ event, phase, editable, factKey: fact.key, onEdit, onRevert })
+      }
+    >
+      <FactRowContent
+        fact={fact}
+        inlineLabel={inlineLabel}
+        editing={editing}
+        editable={editable}
+        phase={phase}
+        editor={editor}
+        onEdit={onEdit}
+        onQuantity={onQuantity}
+        rejection={rejection}
+      />
     </div>
   );
 }

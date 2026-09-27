@@ -45,7 +45,7 @@ function ContainersTable({ model }: { model: ContainersPageModel }): ReactElemen
         pendingIds={model.pendingIds}
         rejections={model.rejections}
         secondColumn={holdsSecondColumn}
-        onOpen={(id) => void model.navigate(`/inventory/items/${id}`)}
+        onOpen={model.openItem}
         onLoadMore={model.itemRows.fetchNextPage}
       />
     </HoldsContentCountsProvider>
