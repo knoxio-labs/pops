@@ -147,7 +147,7 @@ jobs:
           node scripts/ci/merge-group-scope.mjs --self-test
           node scripts/ci/merge-group-scope.mjs \
             --workflow .github/workflows/docker-build.yml \
-            --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF"
+            --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF" --full
 
   discover:
     name: Discover Dockerfiles

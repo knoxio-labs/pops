@@ -1,65 +1,14 @@
 #!/usr/bin/env node
 /**
- * Does this workflow's own path filter select the merge group's diff?
+ * Validate a merge-group diff and select a workflow's expensive lane.
+ * The main queue passes --full to select all lanes; callers without it use
+ * the workflow's own pull_request.paths. Both modes refuse unreadable inputs,
+ * invalid ancestry and empty diffs instead of reporting a successful skip.
  *
- * A merge-queue run cannot be path-filtered. `paths:` is accepted only on
- * `push`, `pull_request` and `pull_request_target`; under `merge_group` it is a
- * workflow syntax error, and `dorny/paths-filter` has no diff base on that
- * event. So every queue entry used to run what a push to `main` runs — a full
- * cold macOS compile in `ios-quality.yml` and sixteen image builds in
- * `docker-build.yml` — on docs-only merges included.
- *
- * This script is the missing filter, and it is ONE implementation rather than a
- * glob list hand-copied into each workflow. It reads the calling workflow's own
- * `on.pull_request.paths` off disk and answers it against
- * `git diff <base>..<head>`, so the queue lane and the pull-request lane are
- * scoped by the same declaration and cannot drift: widening a workflow's filter
- * widens its queue lane in the same edit.
- *
- * WHY EVERY FAILURE PATH EXITS NON-ZERO. The lane this gates is the one where a
- * wrong answer is invisible: "not selected" makes the expensive job skip, the
- * workflow still concludes `success`, `CI Gate` aggregates that success, and the
- * queue merges a commit nothing compiled. That is precisely the failure the
- * merge queue exists to prevent, reintroduced by its own optimisation. So this
- * script has no "assume it's fine" branch anywhere:
- *
- *   - a base it cannot resolve, or that is not an ancestor of the head, is an
- *     error — not a full run, and certainly not a skip;
- *   - an EMPTY diff is an error. A merge group always carries at least one
- *     pull request, so zero changed files is the signature of a wrong base,
- *     which is the exact input that would deselect every lane at once;
- *   - a workflow with no readable `on.pull_request.paths` is an error. There is
- *     nothing to mirror, and guessing either way is worse than saying so.
- *
- * A red gate costs one re-queue. A silent skip costs an unbuilt merge.
- *
- * The glob subset understood here — literal segments, `*` within a segment,
- * `**` spanning segments — is the same one `.github/workflows/ci-gate.yml`
- * implements inline for its `PATH_FILTERS` mirror. That copy exists because the
- * gate job has no checkout and so cannot import this file;
- * `scripts/ci/__tests__/merge-group-scope.test.ts` holds the two
- * implementations to the same answers on every pattern the scoped workflows
- * declare. Anything outside the subset (`?`, `[...]`, a leading `!`) raises
- * here rather than being matched literally.
- *
- * The gate has since grown ONE thing this has not: a leading `!` as a
- * list-level exclusion, for `fe-test-e2e.yml`'s design carve-out (POPS-2782).
- * That is deliberate rather than drift. This script scopes `merge_group`, and
- * `paths:` is not a legal filter on that event, so an exclusion here would be
- * scoping the queue lane by a rule the queue does not have — the one place a
- * wrong "not selected" merges an unbuilt commit. Neither workflow this script
- * scopes declares an exclusion, and if one starts, the raise below is a red
- * gate rather than a silent skip.
- *
- * Usage:
- *   node scripts/ci/merge-group-scope.mjs \
- *     --workflow .github/workflows/ios-quality.yml \
- *     --base "$BASE_SHA" --head "$HEAD_SHA" [--head-ref "$HEAD_REF"]
- *   node scripts/ci/merge-group-scope.mjs --self-test
- *
- * Writes `selected=true|false` to `$GITHUB_OUTPUT` when that is set, and prints
- * the decision either way. Exit 0 = the question was answered. Exit 1 = it was
- * not, and the caller must not read an answer into that.
+ * Usage: node scripts/ci/merge-group-scope.mjs --workflow <path>
+ *   --base <sha> --head <sha> [--head-ref <queue ref>] [--full]
+ * Writes selected=true|false to GITHUB_OUTPUT when present.
+ * --self-test proves selection, exclusion, full validation and refusal paths.
  *
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
@@ -395,10 +344,11 @@ export function resolveBase({ base, headRef }) {
  * @param {string} args.head
  * @param {string} [args.headRef]
  * @param {string} args.cwd
+ * @param {boolean} [args.full] Validate the complete tree regardless of the PR filter.
  * @returns {ScopeDecision}
  * @throws {ScopeError | ConfigParseError}
  */
-export function scopeLane({ workflowPath, base, head, headRef, cwd }) {
+export function scopeLane({ workflowPath, base, head, headRef, cwd, full = false }) {
   const absolute = workflowPath.startsWith('/') ? workflowPath : join(cwd, workflowPath);
   let source;
   try {
@@ -416,7 +366,7 @@ export function scopeLane({ workflowPath, base, head, headRef, cwd }) {
   }
   const files = changedFiles({ base: resolved.sha, head: headSha, cwd });
   return {
-    selected: selectsAny(patterns, files),
+    selected: full || selectsAny(patterns, files),
     patterns,
     files,
     baseSha: resolved.sha,
@@ -600,6 +550,22 @@ export function selfTest() {
         decision.baseProvenance.startsWith('--base'),
         `expected the explicit base, got ${decision.baseProvenance}`
       );
+    },
+  });
+
+  cases.push({
+    name: 'full validation selects unrelated changes but still rejects an empty diff',
+    run: () => {
+      const { dir, base, head } = repo({ touched: ['README.md'] });
+      const args = {
+        workflowPath: '.github/workflows/subject.yml',
+        base,
+        head,
+        cwd: dir,
+        full: true,
+      };
+      assert(scopeLane(args).selected, 'full validation must include an unrelated diff');
+      assertRaises(() => scopeLane({ ...args, head: base }), /empty/u);
     },
   });
 
@@ -967,6 +933,7 @@ function main() {
       base: flag(argv, 'base'),
       head: flag(argv, 'head') ?? '',
       headRef: flag(argv, 'head-ref'),
+      full: argv.includes('--full'),
       cwd: process.cwd(),
     });
   } catch (error) {
@@ -995,7 +962,7 @@ function main() {
 
   console.log(
     decision.selected
-      ? `::notice::${workflowPath} is SELECTED — this merge group touches its path filter.`
+      ? `::notice::${workflowPath} is SELECTED — full validation or a matching path requires this lane.`
       : `::notice::${workflowPath} is NOT selected — this merge group touches none of its path filter.`
   );
   process.exit(0);

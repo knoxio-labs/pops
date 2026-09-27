@@ -194,6 +194,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
       // The whole mechanism turns on this one argument. A copy-paste that left
       // the other workflow's path here would scope this lane by somebody
       // else's filter, and every test that only reads the helper would pass.
+      expect(run).toContain('--full');
       const wired = /merge-group-scope\.mjs[\s\\]+--workflow[\s\\]+(\S+)/u.exec(run);
       expect(wired?.[1], `${file}'s scope job passes no --workflow`).toBeDefined();
       expect(wired?.[1]).toBe(`.github/workflows/${spec.file}`);

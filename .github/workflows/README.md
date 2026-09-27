@@ -151,73 +151,56 @@ until the queue's check-response timeout evicts it. A queue that evicts
 everything is indistinguishable, from the outside, from a repo where nothing can
 merge.
 
-**A merge-group TRIGGER cannot be path-filtered, so the scoping moved into a
-job.** `paths:` is accepted only on `push`, `pull_request` and
-`pull_request_target`; under `merge_group` it is a workflow syntax error, and
-`dorny/paths-filter` has no diff base on the event either. Every workflow's
-`merge_group` trigger is therefore unconditional and always registers a run.
-What the two expensive ones do inside that run is scoped:
-`ios-quality.yml` and `docker-build.yml` each open with a cheap `ubuntu-latest`
-`scope` job that runs `scripts/ci/merge-group-scope.mjs`, which reads **that
-workflow's own `on.pull_request.paths`** off disk and answers it against
-`git diff <merge_group.base_sha>..<merge_group.head_sha>`. The expensive jobs
-are conditioned on its `selected` output. Every other gated workflow's queue
-lane still runs what a push to `main` runs.
+**The main queue validates the complete tree.** `_discover-units.yml` selects
+all units for `merge_group`; App Quality selects all apps. iOS and Docker
+scope jobs pass `--full` to `scripts/ci/merge-group-scope.mjs`: the helper still
+refuses invalid bases, missing workflows and empty diffs, but an unrelated
+path cannot deselect full validation. PRs retain their affected-path checks.
+The full iOS lane includes the simulator suite, Release check, analyzer and
+Maestro flow against the real BFM and inventory processes. Image builds here
+are validation only; publishing and deployment are separate workflows.
 
-One implementation, not one glob list per workflow: widening a workflow's
-`pull_request.paths` widens its queue lane in the same edit, and the two cannot
-drift. The helper is the only thing in the fleet whose wrong answer is
-invisible — a skip that should have been a build leaves the workflow concluding
-`success` and `CI Gate` aggregating it — so it has no tolerant branch at all.
-An unresolvable base, a base that is not an ancestor of the head, an **empty
-diff** (the signature of a wrong base, and the input that would deselect every
-lane at once), a missing or unparseable workflow, a `pull_request` trigger with
-no `paths:` — each exits non-zero, which skips the expensive job *and* fails the
-workflow. A red queue entry costs one re-queue; a wrong skip merges a commit
-nothing compiled. Its `--self-test` proves both directions (it selects a
-touching diff, it deselects a non-touching one) and every refusal above, and it
-runs in the `scope` job itself immediately before the answer it qualifies, not
-only in `agent-review.yml`'s preflight.
+The queue admits one promotion build at a time, starts without waiting for
+additional entries, and allows 180 minutes including runner acquisition.
+Required checks remain fail-closed; a timeout or failure blocks admission.
 
-The corollary is that a workflow's declared `pull_request.paths` is now
-load-bearing in two lanes. `ios-quality.yml`'s path filter covers
-`clients/ios/**`, `pillars/bfm/**`, `pillars/inventory/**`,
-`scripts/ios-e2e/**` — the two pillars and the harness because its UI-flow
-step boots a real BFM and a real inventory pillar — and `pnpm-lock.yaml`,
-since a lockfile bump changes what those boots resolve. It deliberately does
-not cover the BFM's transitive `libs/*` (today just `libs/sdk` and
-`libs/types`, per `pnpm list --filter "@pops/bfm..." --depth Infinity`): that
-pair is touched far more often than the lockfile, both libs are already gated
-by `unit-quality.yml` (which runs the BFM's own typecheck and vitest suite
-against them), and this job's header explains the trade in full.
+### Integration workstreams and frozen promotion
 
-**What it costs and what it saves**, measured on the 39 completed merge-queue
-entries immediately before the scoping change. Each entry's `ios-quality.yml`
-run took a median of 20 minutes end to end (mean 20.1 minutes, 90th percentile
-28 minutes), and **33 of the 39 touched no iOS path at all** — so five compiles
-in six were spent on a merge group the job had nothing to say about. The `scope`
-job that now decides between them takes 32 seconds, of which its self-test and
-its answer are one second and the rest is checkout plus a warm-cache `pnpm
-install`.
+Small related PRs target `integration/<workstream>`. These protected branches
+require the same deterministic contexts and review-findings gate as main.
+Linux checks select affected code; expensive iOS compilation is deferred to
+main admission. A merge into integration is neither full validation nor
+completion of its implementation ticket. Unrelated fixes may still target
+main directly.
 
-**The queue groups entries, and that is the other half of the cost.** With
-`min_entries_to_merge: 1` the queue formed a group per entry, so each PR bought
-its own run of everything. Measured on the 15 merges after the `scope` job
-landed, the queue leg — first merge-group run created to merged — split cleanly
-in two: a median of **2.9 minutes** for the entries `scope` deselected iOS on,
-against **85.8 minutes** for the entries it selected. The spread is not the
-queue. That was dominated by the full iOS suite. The selected merge-group lane
-now runs only formatting plus the simulator `build-for-testing` and compiler-log
-analysis; the simulator tests and Release build run on the PR, while the Maestro
-flow runs only after merge. This keeps merge-order compilation coverage while
-avoiding a second run of tests whose PR result already established their
-behaviour.
+Keep batches small and coherent. To promote the current remote integration
+revision, use a clean checkout of that integration branch and run:
 
-`check_response_timeout_minutes` is 75, raised from 60. A check that does not
-report inside that window evicts its entry, and the worst in-queue
-`ios-quality.yml` run observed was 52 minutes end to end — which at 60 left
-eight minutes of margin, less than a cold macOS runner acquisition can spend
-before the job even starts. At 75 that margin is 23.
+```sh
+node scripts/ci/integration-promote.mjs
+```
+
+The command checks the repository/account and main's active queue rule,
+refuses a stale source checkout or empty candidate, runs `mise lint` and
+`mise typecheck`, then creates and pushes `promotion/<workstream>/<full-sha>`
+and opens its main PR. Normal push hooks still run. It returns the checkout
+to the integration branch. The candidate is a snapshot: later integration
+commits cannot restart its CI. If publication fails, the candidate branch
+is retained for inspection rather than deleted or force-pushed.
+
+The promotion receives its own review of the combined diff; prior small-PR
+reviews are useful evidence but do not waive new findings. Merge it with
+`gh pr merge --squash` only after its required PR checks pass. The main queue
+then validates the candidate combined with the current main tree. A failure
+is repaired on integration and a new candidate is created, or the batch is
+split; never requeue an unchanged deterministic failure. After promotion,
+merge main back into the integration branch through a PR using `gh pr merge --merge` before the next
+snapshot, preserving fixes and ancestry after the squash. Integration protection permits merge commits for this synchronization; main remains squash-only. Continue new
+independent work while a frozen candidate is validating.
+
+Measure push-to-integration, candidate wait, full validation, reruns and
+push-to-main separately. Batching amortizes validation across related PRs;
+it does not promise lower delivery latency for every individual change.
 
 Two consequences worth stating, because both look like bugs from the outside:
 
@@ -248,7 +231,8 @@ unit when `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.base.json`,
 `mise.ci.toml`, `Cargo.toml` or `Cargo.lock` changed). The header explains why
 the scan stops at maxdepth 1.
 
-The diff's base differs by event: `pull_request` (and `merge_group`) diff from
+Merge groups select every unit and client directory. For affected checks,
+the diff's base differs by event: `pull_request` diffs from
 `merge-base(origin/<base_ref>, HEAD)`, the PR's fork point. `push` diffs from
 `github.event.before` instead — `origin/<branch>` is refreshed by the same
 checkout that fetches the run's own commit, so on a push it already includes

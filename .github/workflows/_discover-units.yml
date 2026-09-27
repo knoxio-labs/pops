@@ -33,7 +33,8 @@ name: Discover Units
 #
 # Outputs:
 #   units   — every discovered unit (full list)
-#   changed — units touched by this PR's diff, OR all units when a shared
+#   changed — all units for a merge group; otherwise units touched by this
+#             PR's diff, OR all units when a shared
 #             root (lockfile / base tsconfig / formatter / mise root / Cargo
 #             root) changed. Drives the unit-quality matrix.
 #
@@ -153,8 +154,10 @@ jobs:
           # same treatment: no diff to trust means no unit can be safely
           # excluded either.
           shared_root_pattern='^(pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|tsconfig\.build\.json|\.oxfmtrc\.json|\.oxlintrc\.json|mise\.toml|mise\.ci\.toml|Cargo\.toml|Cargo\.lock)$'
-          if [ -z "$base" ] || echo "$diff" | grep -qE "$shared_root_pattern"; then
-            if [ -z "$base" ]; then
+          if [ "${{ github.event_name }}" = "merge_group" ] || [ -z "$base" ] || echo "$diff" | grep -qE "$shared_root_pattern"; then
+            if [ "${{ github.event_name }}" = "merge_group" ]; then
+              echo "Main admission validates ALL units."
+            elif [ -z "$base" ]; then
               echo "No usable git base for this push's diff — building ALL units."
             else
               echo "Shared root changed — building ALL units."
