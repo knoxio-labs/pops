@@ -181,15 +181,16 @@ only in `agent-review.yml`'s preflight.
 
 The corollary is that a workflow's declared `pull_request.paths` is now
 load-bearing in two lanes. `ios-quality.yml`'s path filter covers
-`clients/ios/**`, `pillars/bfm/**`, `pillars/inventory/**`,
-`scripts/ios-e2e/**` — the two pillars and the harness because its UI-flow
+`clients/ios/**`, `pillars/bfm/**`, the inventory server inputs,
+`scripts/ios-e2e/**` — the two processes and the harness because its UI-flow
 step boots a real BFM and a real inventory pillar — and `pnpm-lock.yaml`,
-since a lockfile bump changes what those boots resolve. It deliberately does
-not cover the BFM's transitive `libs/*` (today just `libs/sdk` and
-`libs/types`, per `pnpm list --filter "@pops/bfm..." --depth Infinity`): that
-pair is touched far more often than the lockfile, both libs are already gated
-by `unit-quality.yml` (which runs the BFM's own typecheck and vitest suite
-against them), and this job's header explains the trade in full.
+since a lockfile bump changes what those boots resolve. The inventory web app,
+docs, snapshots and Dockerfile are excluded because the flow builds none of
+them. It deliberately does not cover the BFM's transitive `libs/*` (today just
+`libs/sdk` and `libs/types`, per `pnpm list --filter "@pops/bfm..." --depth
+Infinity`): that pair is touched far more often than the lockfile, both libs
+are already gated by `unit-quality.yml` (which runs the BFM's own typecheck and
+vitest suite against them), and this job's header explains the trade in full.
 
 **What it costs and what it saves**, measured on the 39 completed merge-queue
 entries immediately before the scoping change. Each entry's `ios-quality.yml`
@@ -206,12 +207,9 @@ its own run of everything. Measured on the 15 merges after the `scope` job
 landed, the queue leg — first merge-group run created to merged — split cleanly
 in two: a median of **2.9 minutes** for the entries `scope` deselected iOS on,
 against **85.8 minutes** for the entries it selected. The spread is not the
-queue. That was dominated by the full iOS suite. The selected merge-group lane
-now runs only formatting plus the simulator `build-for-testing` and compiler-log
-analysis; the simulator tests and Release build run on the PR, while the Maestro
-flow runs only after merge. This keeps merge-order compilation coverage while
-avoiding a second run of tests whose PR result already established their
-behaviour.
+queue. That was dominated by the full iOS suite. A selected merge-group lane
+runs the host and simulator tests, Release build, compiler-log analysis and
+Maestro flow against the exact merge candidate.
 
 `check_response_timeout_minutes` is 75, raised from 60. A check that does not
 report inside that window evicts its entry, and the worst in-queue
@@ -292,7 +290,7 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
-| `ios-quality.yml`                | PR on `clients/ios/**`, `pillars/bfm/**`, `pillars/inventory/**`, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; every merge group, **scoped by a `scope` job to that same filter** | `xcode-27`; selects the Xcode pinned in `clients/ios/mise.toml`, then runs formatting and compiler-log analysis. Every lane runs the simulator tests and a Release build that verifies no BFM host is embedded; the compiler-log analysis (`lint:analyze`, ~19.5 min of the job) and the Maestro UI flow against a real BFM and a real inventory pillar run only in the merge queue. No push trigger: the queue's head commit is the one that lands (POPS-4152). A PR whose base is not `main` (a stacked PR) skips the macOS job; the queue runs it regardless. Caches no derived data, deliberately; the header says why |
+| `ios-quality.yml`                | PR on `clients/ios/**`, `pillars/bfm/**`, inventory server inputs, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; reusable with `full-validation: true`; every merge group, **scoped by a `scope` job to that same filter** | `xcode-27`; selects the Xcode pinned in `clients/ios/mise.toml`, lints first, then runs host and simulator tests and a Release build that verifies no BFM host is embedded. The reusable full lane and merge-group lane add compiler-log analysis (`lint:analyze`, ~19.5 min of the job) and the Maestro UI flow against a real BFM and a real inventory pillar. A reusable promotion call does not suppress an iOS-relevant promotion's native quick PR run; both verdicts are retained. No push trigger (POPS-4152). A PR whose base is not `main` (a stacked PR) skips the macOS job. Caches host SwiftPM build products, but no iOS DerivedData; the header says why |
 | `ios-testflight.yml`             | push to `main`; dispatch with a `sha` on `main` | an `ubuntu-latest` `pick` job (`scripts/ci/testflight-ship-sha.mjs`) chooses the newest pushed commit whose iOS Quality job ran and passed — the merge-group run, or with the queue off (POPS-4439) the `pull_request` run on the head of the PR it landed from — then `xcode-27`, environment `main` (branch-restricted to `main`); archives `Pops` and `PopsPlayground` at that commit with CalVer from `clients/ios/scripts/release-version.sh` and uploads both to TestFlight through `mise run release:testflight`. Each export still fails by default; the exact duplicate-build response is accepted only when `scripts/ci/testflight-upload.mjs` proves the same scheme, bundle id, version, build number and source commit already completed in App Store Connect. Not gated: it runs after merge |
 | `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the advisory reviewer that used to be its last step is now `pr-review.yml` |
 | `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. Debounced and `cancel-in-progress: true`, which is only possible because nothing gates on it. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN` regardless, and a skip is safe here specifically because this job is neither required nor gated |

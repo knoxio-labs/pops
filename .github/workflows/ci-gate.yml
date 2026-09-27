@@ -263,7 +263,12 @@ jobs:
               "iOS Quality": [
                 "clients/ios/**",
                 "pillars/bfm/**",
-                "pillars/inventory/**",
+                "pillars/inventory/src/**",
+                "pillars/inventory/migrations/**",
+                "pillars/inventory/scripts/**",
+                "pillars/inventory/package.json",
+                "pillars/inventory/mise.toml",
+                "pillars/inventory/tsconfig*.json",
                 "scripts/ios-e2e/**",
                 "pnpm-lock.yaml",
                 ".github/workflows/ios-quality.yml",
