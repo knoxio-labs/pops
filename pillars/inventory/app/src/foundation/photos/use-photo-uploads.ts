@@ -113,28 +113,49 @@ export function usePhotoUploads(
 
   const add = useCallback(
     async (files: readonly File[]): Promise<readonly PhotoUploadResult[]> => {
-      const refusals = files.flatMap((file) => {
+      const results = files.map((file) => {
         const reason = refusalFor(file);
-        return reason === null ? [] : [{ fileName: file.name, status: 'refused' as const, reason }];
+        return reason === null
+          ? null
+          : ({
+              fileName: file.name,
+              status: 'refused' as const,
+              reason,
+            } satisfies PhotoUploadResult);
       });
-      if (refusals.length > 0) {
-        setRefused(refusals.map(({ reason }) => reason));
-        return refusals;
-      }
-      setRefused([]);
+      setRefused(
+        results.flatMap((result) => (result?.status === 'refused' ? [result.reason] : []))
+      );
       const start = mode === 'edit' ? existingPhotoCount : 0;
-      const entries = files.map((file, index) => ({
-        localId: `${Date.now()}-${index}-${file.name}`,
-        file,
-        status: 'uploading' as const,
-      }));
+      const entries = files.flatMap((file, index) =>
+        results[index] === null
+          ? [
+              {
+                inputIndex: index,
+                localId: `${Date.now()}-${index}-${file.name}`,
+                file,
+                status: 'uploading' as const,
+              },
+            ]
+          : []
+      );
       setQueue((current) => [...current, ...entries]);
 
-      return Promise.all(
+      const uploaded = await Promise.all(
         entries.map((entry, index) =>
           uploadEntry(entry, index, { itemId, start, queryClient, setQueue })
         )
       );
+      const uploadedByInput = new Map(
+        entries.map((entry, index) => [entry.inputIndex, uploaded[index]])
+      );
+      return results.map((result, index) => {
+        if (result !== null) return result;
+        const uploadedResult = uploadedByInput.get(index);
+        if (uploadedResult === undefined)
+          throw new Error('The selected photo could not be uploaded.');
+        return uploadedResult;
+      });
     },
     [existingPhotoCount, itemId, mode, queryClient]
   );

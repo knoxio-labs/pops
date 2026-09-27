@@ -1,4 +1,14 @@
+import { hasRepairWritePayload } from './repair-write-payloads.js';
+
 import type { InventoryMutationOutcome } from '../../../inventory-web/mutation-client.js';
+
+export {
+  fittingValuesFor,
+  mineTargetFor,
+  referenceValueFor,
+  typeReplacementFor,
+} from './repair-write-payloads.js';
+
 import type { RepairActionId, RepairCase } from '../sync-model.js';
 import type { WebAction } from './repair-plan.js';
 
@@ -46,15 +56,6 @@ export function isWriteAction(actionId: RepairActionId): boolean {
 
 function isNavigationAction(action: RepairActionId): boolean {
   return action === 'open-item' || action === 'open-holder' || action === 'choose-option';
-}
-
-function isUnidentifiedWrite(action: RepairActionId): boolean {
-  return (
-    action === 'use-mine' ||
-    action === 'save-fitting' ||
-    action === 'change-type' ||
-    action === 'restore-reference'
-  );
 }
 
 function actionNeedsItem(action: RepairActionId): boolean {
@@ -111,7 +112,7 @@ export function blockedReasonFor(
 ): string | null {
   const { repair, device, disabledReason, detail } = input;
   if (isNavigationAction(action.id)) return null;
-  if (isUnidentifiedWrite(action.id)) {
+  if (!hasRepairWritePayload(action.id, repair)) {
     return `${device}'s report does not name it. Open ${repair.itemName} to change it.`;
   }
   const typeReason = openTypeReason(action, repair, device, detail);

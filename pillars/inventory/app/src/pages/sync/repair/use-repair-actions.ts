@@ -89,7 +89,11 @@ export function useRepairActions(input: {
         await writes.run(action);
         return;
       }
-      if (action.id === 'upload') upload.open();
+      if (action.id === 'upload') {
+        upload.open();
+        return;
+      }
+      if (write) await writes.run(action);
     },
     [blockedReason, busy, detail.data?.item.typeId, navigate, repair, upload, writes]
   );
