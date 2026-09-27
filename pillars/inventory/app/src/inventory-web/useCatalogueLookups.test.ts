@@ -13,7 +13,7 @@ vi.mock('../inventory-api/index.js', () => ({
   typesReadCatalogue: (...args: unknown[]) => mocks.typesReadCatalogue(...args),
 }));
 
-import { useCatalogueLookups, useTypeLookup } from './useCatalogueLookups';
+import { useCatalogueLookups, usePublishedCatalogue, useTypeLookup } from './useCatalogueLookups';
 
 type Catalogue = TypesReadCatalogueResponses[200];
 
@@ -68,6 +68,7 @@ describe('useCatalogueLookups', () => {
     const { result } = renderHook(
       () => ({
         lookups: useCatalogueLookups(),
+        published: usePublishedCatalogue(),
         selected: useTypeLookup('type-cable'),
       }),
       { wrapper: withQueryClient(client) }
@@ -79,6 +80,8 @@ describe('useCatalogueLookups', () => {
     expect(result.current.lookups.typeNameById.get('type-cable')).toBe('Cables');
     expect(result.current.selected.type?.label).toBe('Cables');
     expect(result.current.selected.typeName).toBe('Cables');
+    expect(result.current.published.revision).toBe(3);
+    expect(result.current.published.status).toBe('success');
   });
 
   it('reports the previous revision and keeps the first revision at null', async () => {

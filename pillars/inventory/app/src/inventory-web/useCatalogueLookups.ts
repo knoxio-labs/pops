@@ -28,14 +28,12 @@ export interface CatalogueLookups {
   readonly isPending: boolean;
   readonly error: unknown | null;
   readonly refetch: () => void;
-}
-
-/** The published catalogue state needed by typed inventory writes. */
-export interface PublishedCatalogue {
-  readonly types: readonly CatalogueType[];
   readonly revision: number | null;
   readonly status: 'pending' | 'error' | 'success';
 }
+
+/** The combined published catalogue state used by Type arrived and repair actions. */
+export type PublishedCatalogue = CatalogueLookups;
 
 /** Reads the published catalogue through the cache key shared with the editor. */
 export function useCatalogue() {
@@ -47,13 +45,7 @@ export function useCatalogue() {
 
 /** Reads the published catalogue with the revision and load state used by write actions. */
 export function usePublishedCatalogue(): PublishedCatalogue {
-  const query = useCatalogue();
-  const types = query.data?.types ?? EMPTY_TYPES;
-  const revision = query.data?.revision.revision ?? null;
-  return useMemo(
-    () => ({ types, revision, status: query.status }),
-    [query.status, revision, types]
-  );
+  return useCatalogueLookups();
 }
 
 /** Provides the published catalogue and lookup helpers for web item mappers. */
@@ -83,12 +75,9 @@ export function useCatalogueLookups(): CatalogueLookups {
     refetch: () => {
       void catalogueQuery.refetch();
     },
+    revision: catalogueQuery.data?.revision.revision ?? null,
+    status: catalogueQuery.status,
   };
-}
-
-/** Provides the published catalogue and revision metadata for web features. */
-export function usePublishedCatalogue(): CatalogueLookups {
-  return useCatalogueLookups();
 }
 
 /** Adds one selected type to the shared catalogue lookup result. */

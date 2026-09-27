@@ -137,6 +137,8 @@ function catalogueLookups(): CatalogueLookups {
     isPending: false,
     error: null,
     refetch: vi.fn(),
+    revision: 8,
+    status: 'success',
   };
 }
 
@@ -156,6 +158,8 @@ function publishedCatalogue(types: readonly CatalogueType[] = [arrivedType]) {
     isPending: false,
     error: null,
     refetch: vi.fn(),
+    revision: 8,
+    status: 'success',
   };
 }
 
