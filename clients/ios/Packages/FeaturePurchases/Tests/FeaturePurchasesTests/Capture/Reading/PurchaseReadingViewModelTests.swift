@@ -173,10 +173,10 @@ private actor ReadingGate: ReceiptCaptureRepository {
         calls.append(key)
         active += 1
         peak = max(peak, active)
-        resumeCallWaiters()
 
         await withCheckedContinuation { continuation in
             gates[key] = continuation
+            resumeCallWaiters()
         }
         active -= 1
 
