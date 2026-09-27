@@ -9,7 +9,7 @@ import { gitEnv } from '../resolve-report-base.mjs';
 
 const repoRoot = resolve(import.meta.dirname, '../../..');
 
-function discoveryScript(event: string): string {
+function discoveryScript(full: boolean): string {
   const path = join(repoRoot, '.github/workflows/_discover-units.yml');
   const workflow = parseYaml(readFileSync(path, 'utf8'), path);
   if (!isMapping(workflow) || !isMapping(workflow.jobs) || !isMapping(workflow.jobs.list)) {
@@ -20,15 +20,16 @@ function discoveryScript(event: string): string {
   const step: unknown = steps.find((value: unknown) => isMapping(value) && value.id === 'scan');
   if (!isMapping(step) || typeof step.run !== 'string') throw new Error('Missing scan script');
   return step.run
-    .replaceAll('${{ github.event_name }}', event)
+    .replaceAll('${{ github.event_name }}', 'pull_request')
+    .replaceAll('${{ inputs.full-validation }}', String(full))
     .replaceAll('${{ github.event.before }}', '')
     .replaceAll("${{ github.base_ref || 'main' }}", 'main');
 }
 
 describe('integration and promotion discovery', () => {
-  it.each(['pull_request', 'merge_group'])(
-    'runs the actual discovery shell for %s',
-    (event) => {
+  it.each([false, true])(
+    'runs actual discovery with full validation %s',
+    (full) => {
       const scratch = join(repoRoot, 'tmp');
       mkdirSync(scratch, { recursive: true });
       const cwd = mkdtempSync(join(scratch, 'integration-discovery-'));
@@ -54,7 +55,7 @@ describe('integration and promotion discovery', () => {
         writeFileSync(join(cwd, 'pillars/one/source.ts'), 'export const value = 1;');
         git('add', '.');
         git('commit', '-m', 'test: change one unit');
-        execFileSync('bash', ['-c', discoveryScript(event)], {
+        execFileSync('bash', ['-c', discoveryScript(full)], {
           cwd,
           env,
           stdio: 'pipe',
@@ -63,7 +64,7 @@ describe('integration and promotion discovery', () => {
         const lines = readFileSync(output, 'utf8').split('\n');
         const changed = lines.find((line) => line.startsWith('changed='));
         expect(changed).toContain('@pops/one');
-        if (event === 'merge_group') {
+        if (full) {
           expect(changed).toContain('@pops/two');
           expect(lines).toContain('changedClientDirs=clients/ios ');
         } else {

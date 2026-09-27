@@ -1,6 +1,11 @@
 name: Docker Build
 
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        default: false
   pull_request:
     paths:
       - "infra/docker*/**"
@@ -84,7 +89,7 @@ jobs:
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: ${{ !inputs.full-validation && github.event_name == 'pull_request' }}
     outputs:
       relevant: ${{ steps.filter.outputs.docker }}
       compose: ${{ steps.filter.outputs.compose }}
@@ -147,7 +152,7 @@ jobs:
           node scripts/ci/merge-group-scope.mjs --self-test
           node scripts/ci/merge-group-scope.mjs \
             --workflow .github/workflows/docker-build.yml \
-            --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF" --full
+            --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF"
 
   discover:
     name: Discover Dockerfiles
@@ -162,7 +167,7 @@ jobs:
       dockerfiles: ${{ steps.list.outputs.dockerfiles }}
     steps:
       - uses: actions/checkout@v7
-        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
 
       - name: List every pillar Dockerfile
         id: list
@@ -187,7 +192,7 @@ jobs:
         # not silently join the matrix.
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ] && \
+          if [ "${{ inputs.full-validation }}" != "true" ] && [ "${{ github.event_name }}" = "pull_request" ] && \
              [ "${{ needs.changes.outputs.relevant }}" != "true" ]; then
             echo "No Docker-relevant changes detected — skipping"
             echo 'dockerfiles=[]' >> "$GITHUB_OUTPUT"
@@ -250,11 +255,11 @@ jobs:
     if: ${{ !cancelled() && (github.event_name != 'merge_group' || needs.scope.outputs.selected == 'true') }}
     steps:
       - name: Skip — no compose changes
-        if: github.event_name == 'pull_request' && needs.changes.outputs.compose != 'true'
+        if: ${{ !inputs.full-validation && github.event_name == 'pull_request' && needs.changes.outputs.compose != 'true' }}
         run: echo "No compose changes detected — skipping"
 
       - uses: actions/checkout@v7
-        if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
+        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
 
       # `docker compose config` resolves `secrets:` file paths but never opens
       # them — it does not fail when `secrets/` is absent entirely, checked
@@ -265,9 +270,9 @@ jobs:
       # which is exactly what got flagged as a false CI-breaking omission on
       # PR #3893.
       - name: Validate production compose
-        if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
+        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
         run: docker compose -f infra/docker-compose.yml config --quiet
 
       - name: Validate dev compose
-        if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
+        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
         run: docker compose -f infra/docker-compose.dev.yml config --quiet

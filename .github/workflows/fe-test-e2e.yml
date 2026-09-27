@@ -30,6 +30,11 @@ name: E2E Tests
 # `ci-gate.yml`'s PATH_FILTERS mirror carries the same exclusion, and
 # `scripts/ci/check-ci-gate-wiring.mjs` fails if the two drift.
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        default: false
   push:
     branches: [main]
   pull_request:

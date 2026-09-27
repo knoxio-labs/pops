@@ -18,6 +18,11 @@ name: Registry Generated Quality
 # meaningful if it sees every input, which costs running on most PRs.
 
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:

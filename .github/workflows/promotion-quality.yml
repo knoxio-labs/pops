@@ -1,0 +1,77 @@
+name: Promotion Quality
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: promotion-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/quality.yml
+    with:
+      full-validation: true
+  units:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/unit-quality.yml
+    with:
+      full-validation: true
+  apps:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/app-quality.yml
+    with:
+      full-validation: true
+  rust:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/rust-quality.yml
+    with:
+      full-validation: true
+  frontend:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/fe-quality.yml
+    with:
+      full-validation: true
+  browser:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/fe-test-e2e.yml
+    with:
+      full-validation: true
+  images:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      full-validation: true
+  registry:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/registry-generated-quality.yml
+    with:
+      full-validation: true
+  ios:
+    if: github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/'))
+    uses: ./.github/workflows/ios-quality.yml
+    with:
+      full-validation: true
+  validation:
+    name: Promotion validation
+    if: always()
+    needs: [quality, units, apps, rust, frontend, browser, images, registry, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Require every promotion lane
+        env:
+          PROMOTION_REQUIRED: ${{ github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/')) }}
+          PROMOTION_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node scripts/ci/check-promotion.mjs --self-test
+          node scripts/ci/check-promotion.mjs

@@ -24,6 +24,11 @@ name: Unit Quality
 # running nothing. The "exactly one package" guard makes that loud.
 
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        default: false
   pull_request:
     paths:
       - "pillars/**"
@@ -69,6 +74,8 @@ env:
 jobs:
   discover:
     uses: ./.github/workflows/_discover-units.yml
+    with:
+      full-validation: ${{ inputs.full-validation || false }}
 
   ts:
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — ts

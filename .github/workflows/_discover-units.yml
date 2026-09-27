@@ -33,10 +33,9 @@ name: Discover Units
 #
 # Outputs:
 #   units   — every discovered unit (full list)
-#   changed — all units for a merge group; otherwise units touched by this
-#             PR's diff, OR all units when a shared
+#   changed — units touched by this PR's diff, OR all units when a shared
 #             root (lockfile / base tsconfig / formatter / mise root / Cargo
-#             root) changed. Drives the unit-quality matrix.
+#             root) changed, or full-validation is requested. Drives the unit-quality matrix.
 #
 #             The diff's BASE differs by event, because `origin/<branch>` is
 #             not a stable "other side" across all of them: on `pull_request`
@@ -58,6 +57,10 @@ name: Discover Units
 
 on:
   workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        default: false
     outputs:
       units:
         value: ${{ jobs.list.outputs.units }}
@@ -154,13 +157,11 @@ jobs:
           # same treatment: no diff to trust means no unit can be safely
           # excluded either.
           shared_root_pattern='^(pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|tsconfig\.build\.json|\.oxfmtrc\.json|\.oxlintrc\.json|mise\.toml|mise\.ci\.toml|Cargo\.toml|Cargo\.lock)$'
-          if [ "${{ github.event_name }}" = "merge_group" ] || [ -z "$base" ] || echo "$diff" | grep -qE "$shared_root_pattern"; then
-            if [ "${{ github.event_name }}" = "merge_group" ]; then
-              echo "Main admission validates ALL units."
-            elif [ -z "$base" ]; then
+          if [ "${{ inputs.full-validation }}" = "true" ] || [ -z "$base" ] || echo "$diff" | grep -qE "$shared_root_pattern"; then
+            if [ -z "$base" ]; then
               echo "No usable git base for this push's diff — building ALL units."
             else
-              echo "Shared root changed — building ALL units."
+              echo "Shared root changed or full validation requested — building ALL units."
             fi
             echo "changed=$units" >> "$GITHUB_OUTPUT"
             shared_root_changed=1

@@ -41,6 +41,11 @@ name: App Quality
 # covering FE workflow; this workflow now ALSO gives each its own unit lane.
 
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:

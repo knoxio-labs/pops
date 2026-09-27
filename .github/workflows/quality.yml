@@ -81,11 +81,18 @@ on:
   push:
     branches: [main]
   merge_group:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        default: false
 
 jobs:
   discover:
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/_discover-units.yml
+    with:
+      full-validation: ${{ inputs.full-validation || false }}
 
   scope:
     name: Determine changed-unit scope
@@ -103,7 +110,7 @@ jobs:
           CHANGED_CLIENT_DIRS: ${{ needs.discover.outputs.changedClientDirs }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ inputs.full-validation }}" != "true" ] && [ "${{ github.event_name }}" = "pull_request" ]; then
             dirs=$(echo "$CHANGED" | jq -r '(["scripts"] + [.[].dir]) | join(" ")')
           else
             dirs="."

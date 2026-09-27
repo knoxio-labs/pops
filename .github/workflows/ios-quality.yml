@@ -218,7 +218,7 @@ jobs:
           node scripts/ci/merge-group-scope.mjs --self-test
           node scripts/ci/merge-group-scope.mjs \
             --workflow .github/workflows/ios-quality.yml \
-            --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF" --full
+            --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF"
 
   quality:
     name: build + test + lint + UI flow
