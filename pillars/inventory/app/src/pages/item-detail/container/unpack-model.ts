@@ -18,7 +18,7 @@ export interface UnpackState {
   phase: UnpackPhase;
   access: ContainerAccess;
   inside: readonly string[];
-  out: readonly { id: string; how: ExitKind }[];
+  out: readonly { id: string; how: ExitKind | 'lifecycle' }[];
 }
 
 /** Actions accepted by {@link unpackReducer}. */
@@ -27,7 +27,7 @@ export type UnpackAction =
   | { type: 'sync'; ids: readonly string[] }
   | { type: 'exit'; ids: readonly string[]; how: ExitKind }
   | { type: 'restore'; ids: readonly string[] }
-  | { type: 'remove'; ids: readonly string[] }
+  | { type: 'remove'; ids: readonly string[]; how: 'lifecycle' }
   | { type: 'finish' }
   | { type: 'close' }
   | { type: 'open' }
@@ -74,13 +74,15 @@ function restore(state: UnpackState, ids: readonly string[]): UnpackState {
   return { ...state, inside, out, phase };
 }
 
-function remove(state: UnpackState, ids: readonly string[]): UnpackState {
+function remove(state: UnpackState, ids: readonly string[], how: 'lifecycle'): UnpackState {
   const removed = new Set(ids);
   if (removed.size === 0) return state;
-  const inside = state.inside.filter((id) => !removed.has(id));
+  const leaving = new Set(state.inside.filter((id) => removed.has(id)));
+  const inside = state.inside.filter((id) => !leaving.has(id));
   if (inside.length === state.inside.length) return state;
   const emptied = inside.length === 0 && state.phase === 'unpacking';
-  return { ...state, inside, phase: emptied ? 'emptied' : state.phase };
+  const out = [...state.out, ...[...leaving].map((id) => ({ id, how }))];
+  return { ...state, inside, out, phase: emptied ? 'emptied' : state.phase };
 }
 
 function close(state: UnpackState): UnpackState {
@@ -122,7 +124,7 @@ export function unpackReducer(state: UnpackState, action: UnpackAction): UnpackS
     case 'restore':
       return restore(state, action.ids);
     case 'remove':
-      return remove(state, action.ids);
+      return remove(state, action.ids, action.how);
     case 'close':
       return close(state);
     case 'open':

@@ -16,19 +16,21 @@ export interface PendingLifecycle {
   act: LifecycleAction;
 }
 
-interface LifecycleMutationInput {
+/** Inputs for one optimistic bulk retire or discard operation. */
+export interface LifecycleMutationInput {
   pending: PendingLifecycle;
   reason: string | null;
   state: UnpackState;
-  bulk: BulkItemVerbs;
+  bulk: Pick<BulkItemVerbs, 'setLifecycle'>;
   tracked: TrackedWrites;
   dispatch: (action: UnpackAction) => void;
 }
 
-async function executeLifecycle(input: LifecycleMutationInput): Promise<void> {
+/** Optimistically removes lifecycle targets and restores refused, failed, or undone rows. */
+export async function executeLifecycle(input: LifecycleMutationInput): Promise<void> {
   const ids = [...new Set(input.pending.ids)].filter((id) => input.state.inside.includes(id));
   if (ids.length === 0) return;
-  input.dispatch({ type: 'remove', ids });
+  input.dispatch({ type: 'remove', ids, how: 'lifecycle' });
   try {
     const lifecycle = input.pending.act === 'retire' ? 'retired' : 'discarded';
     const result = await input.tracked.track(ids, () =>
