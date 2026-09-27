@@ -36,6 +36,8 @@ What that costs is that the enumeration is no longer the loop. A package added u
 
 On top of those, the run fails if it executed zero tests, and fails if anything skipped. That is not defensive decoration. The `Pops` scheme declared an empty test-target list until the app target existed, and a lane that runs nothing while reporting success is a green check nobody would think to question.
 
+CI sets `POPS_IOS_TEST_DIAGNOSTICS=never`. Xcode 27 otherwise tries to collect a simulator sysdiagnose after a failed assertion and, on the hosted runner, waits exactly 600 seconds before reporting that diagnostic collection itself timed out. The result bundle already contains the failed test and assertion that `app-test-lane.sh` prints, so the CI lane skips only that ten-minute post-failure delay. Local runs leave the variable unset and retain Xcode's normal diagnostic collection.
+
 `mise run test:app` narrows the same scheme to `PopsTests` with `-only-testing`, for a developer changing the app target who does not want to wait on six packages' suites. CI never invokes it — it reaches that target through `mise run test`. Which of the two places a new suite belongs is decided by the rule in [AppTests/README.md](AppTests/README.md); the short version is that a suite goes in the app target only if it needs an app bundle or an entitlement.
 
 `mise run verify:release-carries-no-host` builds Release and fails if the result names a BFM host — see [Where the BFM base URL comes from](#where-the-bfm-base-url-comes-from).

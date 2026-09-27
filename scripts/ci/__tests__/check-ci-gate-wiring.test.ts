@@ -372,7 +372,12 @@ describe('parsePathFilterMap', () => {
     expect(map['iOS Quality']).toEqual([
       'clients/ios/**',
       'pillars/bfm/**',
-      'pillars/inventory/**',
+      'pillars/inventory/src/**',
+      'pillars/inventory/migrations/**',
+      'pillars/inventory/scripts/**',
+      'pillars/inventory/package.json',
+      'pillars/inventory/mise.toml',
+      'pillars/inventory/tsconfig*.json',
       'scripts/ios-e2e/**',
       'pnpm-lock.yaml',
       '.github/workflows/ios-quality.yml',
@@ -668,7 +673,7 @@ describe('the guard catches each way the wiring goes inert', () => {
     const root = cloneWorkflows();
     patch(root, 'ci-gate.yml', (s) =>
       s.replace(
-        '"iOS Quality": [\n                "clients/ios/**",\n                "pillars/bfm/**",\n                "pillars/inventory/**",\n                "scripts/ios-e2e/**",\n                "pnpm-lock.yaml",\n                ".github/workflows/ios-quality.yml",\n                ".github/actions/**"\n              ]',
+        '"iOS Quality": [\n                "clients/ios/**",\n                "pillars/bfm/**",\n                "pillars/inventory/src/**",\n                "pillars/inventory/migrations/**",\n                "pillars/inventory/scripts/**",\n                "pillars/inventory/package.json",\n                "pillars/inventory/mise.toml",\n                "pillars/inventory/tsconfig*.json",\n                "scripts/ios-e2e/**",\n                "pnpm-lock.yaml",\n                ".github/workflows/ios-quality.yml",\n                ".github/actions/**"\n              ]',
         '"iOS Quality": [\n                "clients/ios/**",\n                ".github/workflows/ios-quality.yml"\n              ]'
       )
     );

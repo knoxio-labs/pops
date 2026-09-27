@@ -31,6 +31,14 @@ derived_data=''
 declare -a only_testing=()
 declare -a required=()
 
+test_diagnostics="${POPS_IOS_TEST_DIAGNOSTICS:-}"
+case "$test_diagnostics" in
+    ''|never|on-failure) ;;
+    *)
+        die "POPS_IOS_TEST_DIAGNOSTICS must be never or on-failure; got '$test_diagnostics'."
+        ;;
+esac
+
 while [ "$#" -gt 0 ]; do
     case "$1" in
         # Every test in the target ran. Nothing in the app target skips today;
@@ -126,6 +134,9 @@ declare -a xcodebuild_args=(
     -destination "$destination"
     -resultBundlePath "$result"
 )
+if [ -n "$test_diagnostics" ]; then
+    xcodebuild_args+=(-collect-test-diagnostics "$test_diagnostics")
+fi
 if [ -n "$derived_data" ]; then
     xcodebuild_args+=(-derivedDataPath "$derived_data")
 fi
