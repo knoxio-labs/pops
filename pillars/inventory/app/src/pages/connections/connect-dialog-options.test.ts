@@ -43,6 +43,8 @@ function fixtureRow(overrides: Partial<FixtureListRow> = {}): FixtureListRow {
     type: 'power',
     locationId: 'bedroom',
     notes: 'behind the table',
+    wiredCount: 0,
+    wiredNames: [],
     createdAt: '2026-09-27T00:00:00.000Z',
     lastEditedTime: '2026-09-27T00:00:00.000Z',
     ...overrides,
