@@ -119,19 +119,25 @@ let detailItem: WebGetResponse['item'] | null;
 let detailError: unknown;
 let detailRefetch: ReturnType<typeof vi.fn>;
 type Refetch = () => Promise<unknown>;
+let primaryLocationRefetch: Refetch;
 let primarySubjectRefetch: Refetch;
+let relatedLocationRefetch: Refetch;
 let relatedSubjectRefetch: Refetch;
 
-function source(world: PlacementWorld, error: Error | null, subjectItemsRefetch: Refetch) {
-  const refetch = vi.fn().mockResolvedValue({});
+function source(
+  world: PlacementWorld,
+  error: Error | null,
+  locationRefetch: Refetch,
+  subjectItemsRefetch: Refetch
+) {
   return {
     world,
     isLoading: false,
     isError: error !== null,
     error,
-    locationsQuery: { refetch },
-    openContainersQuery: { refetch },
-    closedContainersQuery: { refetch },
+    locationsQuery: { refetch: locationRefetch },
+    openContainersQuery: { refetch: locationRefetch },
+    closedContainersQuery: { refetch: locationRefetch },
     subjectItemsQuery: { refetch: subjectItemsRefetch },
   };
 }
@@ -149,7 +155,9 @@ beforeEach(() => {
   detailItem = webItem;
   detailError = null;
   detailRefetch = vi.fn().mockResolvedValue({});
+  primaryLocationRefetch = vi.fn<Refetch>().mockResolvedValue({});
   primarySubjectRefetch = vi.fn<Refetch>().mockResolvedValue({});
+  relatedLocationRefetch = vi.fn<Refetch>().mockResolvedValue({});
   relatedSubjectRefetch = vi.fn<Refetch>().mockResolvedValue({});
 
   mocks.useCatalogueLookups.mockReturnValue({
@@ -168,6 +176,7 @@ beforeEach(() => {
     return source(
       ids.includes('item-1') ? primaryWorld : emptyWorld,
       primaryError,
+      ids.includes('item-1') ? primaryLocationRefetch : relatedLocationRefetch,
       ids.includes('item-1') ? primarySubjectRefetch : relatedSubjectRefetch
     );
   });
@@ -237,6 +246,7 @@ describe('useItemDetailModel', () => {
     hook.result.current.retry();
 
     await waitFor(() => expect(detailRefetch).toHaveBeenCalledOnce());
+    expect(relatedLocationRefetch).toHaveBeenCalledTimes(3);
     expect(relatedSubjectRefetch).toHaveBeenCalledOnce();
     expect(mocks.connectionsGraph).toHaveBeenCalledWith(
       expect.objectContaining({ query: { maxDepth: 10 } })
