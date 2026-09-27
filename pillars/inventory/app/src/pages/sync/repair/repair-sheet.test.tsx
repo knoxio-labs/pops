@@ -116,6 +116,15 @@ describe('RepairSheet', () => {
     expect(mocks.showUndoToast).toHaveBeenCalledWith(
       expect.objectContaining({ concept: 'code', message: 'Code set to T03' })
     );
+    expect(screen.getByText('Code set to T03.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+
+    const toast = mocks.showUndoToast.mock.calls[0]?.[0];
+    if (toast === undefined) throw new Error('code change did not offer undo');
+    await toast.onUndo();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Use code T03' })).toBeInTheDocument()
+    );
   });
 
   it('opens the holder search without making a write', async () => {

@@ -9,7 +9,14 @@ import type { RepairCase } from '../sync-model.js';
 import type { RepairPlan } from './repair-plan.js';
 import type { RepairActions } from './use-repair-actions.js';
 
-function OnDevice({ device, children }: { device: string; children: ReactNode }): ReactElement {
+/** Explains the remaining device-side work for a Sync case. */
+export function OnDevice({
+  device,
+  children,
+}: {
+  device: string;
+  children: ReactNode;
+}): ReactElement {
   return (
     <SheetSection title={`On ${device}`}>
       <p className="flex gap-2.5 text-sm">

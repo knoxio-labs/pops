@@ -8,7 +8,8 @@ import { useRepairWrites } from './use-repair-writes.js';
 
 import type { ReactElement } from 'react';
 
-import type { RepairActionId, RepairCase } from '../sync-model.js';
+import type { RepairActionId, RepairCase, ResolvedEntry } from '../sync-model.js';
+import type { RepairOutcome } from './repair-outcome.js';
 import type { WebAction } from './repair-plan.js';
 
 /** The controls and mutation state for one Sync repair case. */
@@ -22,6 +23,8 @@ export interface RepairActions {
   refusal: string | null;
   /** The hidden single-file picker used by the upload action. */
   fileInput: ReactElement;
+  /** The applied action to show after the case has settled. */
+  outcome: ResolvedEntry | null;
 }
 
 function navigateForAction(
@@ -50,6 +53,18 @@ function navigateForAction(
   return false;
 }
 
+function outcomeFor(repair: RepairCase, localOutcome: RepairOutcome | null): ResolvedEntry | null {
+  if (localOutcome === null) return null;
+  return {
+    id: repair.id,
+    itemId: repair.itemId,
+    itemName: repair.itemName,
+    outcome: localOutcome.message,
+    at: localOutcome.at,
+    deviceId: repair.deviceId,
+  };
+}
+
 /** Binds navigation, safe web writes, and photo upload state for one repair sheet. */
 export function useRepairActions(input: {
   repair: RepairCase;
@@ -65,6 +80,7 @@ export function useRepairActions(input: {
     existingPhotoCount: detail.data?.item.photos.length ?? 0,
   });
   const busy = writes.busy || upload.busy;
+  const outcome = outcomeFor(repair, writes.outcome ?? upload.outcome);
   const blockedReason = useCallback(
     (action: WebAction): string | null =>
       blockedReasonFor(action, {
@@ -104,5 +120,6 @@ export function useRepairActions(input: {
     busy,
     refusal: writes.refusal ?? upload.refusal,
     fileInput: upload.fileInput,
+    outcome,
   };
 }
