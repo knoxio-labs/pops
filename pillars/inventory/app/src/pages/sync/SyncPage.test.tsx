@@ -28,6 +28,15 @@ vi.mock('./activity/activity-segment.js', () => ({
     </div>
   ),
 }));
+vi.mock('./repair/repair-sheet.js', () => ({
+  RepairSheet: ({ onClose }: { onClose: () => void }) => (
+    <section aria-label="repair sheet">
+      <button type="button" onClick={onClose}>
+        Close repair
+      </button>
+    </section>
+  ),
+}));
 
 function LocationText(): ReactElement {
   const location = useLocation();
@@ -114,7 +123,7 @@ describe('SyncPage', () => {
     );
   });
 
-  it('Review writes case and Open case on a waiting row opens its case', async () => {
+  it('Review opens the case sheet and Close removes it', async () => {
     renderSync();
 
     fireEvent.click(
@@ -124,6 +133,11 @@ describe('SyncPage', () => {
       expect(screen.getByTestId('location')).toHaveTextContent(
         '/inventory/sync?case=case-parts-code'
       )
+    );
+    expect(screen.getByRole('region', { name: 'repair sheet' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close repair' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/inventory/sync')
     );
 
     cleanup();
