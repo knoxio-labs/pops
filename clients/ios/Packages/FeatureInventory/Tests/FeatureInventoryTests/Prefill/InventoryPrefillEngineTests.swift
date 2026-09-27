@@ -69,18 +69,87 @@ internal struct InventoryPrefillEngineTests {
     func failedChunkDoesNotDiscardSuccessfulChunks() async {
         let first = InventoryPrefillTestSupport.field(id: "first", label: "first", sortOrder: 0)
         let second = InventoryPrefillTestSupport.field(id: "second", label: "second", sortOrder: 1)
-        let type = InventoryPrefillTestSupport.type(fields: [first, second])
+        let third = InventoryPrefillTestSupport.field(id: "third", label: "third", sortOrder: 2)
+        let type = InventoryPrefillTestSupport.type(fields: [first, second, third])
         let generator = RecordingInventoryPrefillGenerator(
             tokenBudget: 12,
-            answers: [[:], ["second": .text("kept")]],
-            failures: [0])
+            answers: [[:], ["second": .text("kept")], [:]],
+            failures: [0, 2])
+        let failures = InventoryPrefillFailureRecorder()
         let engine = InventoryPrefillEngine(generator: generator)
 
         let result = await engine.fill(
             source: .text(["kept"]), type: type,
-            draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1))
+            draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1)
+        ) { failure in
+            await failures.record(failure)
+        }
 
         #expect(result == ["second": [.string("kept")]])
+        #expect(await failures.values.count == 1)
+    }
+
+    @Test("a generation failure reports a safe fixed error")
+    func generationFailureReportsSafeFixedError() async {
+        let field = InventoryPrefillTestSupport.field(id: "field")
+        let type = InventoryPrefillTestSupport.type(fields: [field])
+        let generator = RecordingInventoryPrefillGenerator(tokenBudget: 100, failures: [0])
+        let failures = InventoryPrefillFailureRecorder()
+        let engine = InventoryPrefillEngine(generator: generator)
+
+        let result = await engine.fill(
+            source: .text(["private model input"]), type: type,
+            draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1)
+        ) { failure in
+            await failures.record(failure)
+        }
+
+        #expect(result.isEmpty)
+        #expect(
+            await failures.values == [
+                PopsError(
+                    code: "ios.inventory.prefill_generation_failed",
+                    message: "Couldn't generate item suggestions. Try again.",
+                    retryable: true,
+                    kind: .client)
+            ])
+    }
+
+    @Test("an empty successful generation does not report a failure")
+    func emptySuccessfulGenerationDoesNotReportFailure() async {
+        let field = InventoryPrefillTestSupport.field(id: "field")
+        let type = InventoryPrefillTestSupport.type(fields: [field])
+        let generator = RecordingInventoryPrefillGenerator(tokenBudget: 100, answers: [[:]])
+        let failures = InventoryPrefillFailureRecorder()
+        let engine = InventoryPrefillEngine(generator: generator)
+
+        let result = await engine.fill(
+            source: .text(["facts"]), type: type,
+            draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1)
+        ) { failure in
+            await failures.record(failure)
+        }
+
+        #expect(result.isEmpty)
+        #expect(await failures.values.isEmpty)
+    }
+
+    @Test("cancellation exits without reporting a failure")
+    func cancellationExitsWithoutReportingFailure() async {
+        let field = InventoryPrefillTestSupport.field(id: "field")
+        let type = InventoryPrefillTestSupport.type(fields: [field])
+        let failures = InventoryPrefillFailureRecorder()
+        let engine = InventoryPrefillEngine(generator: CancellingInventoryPrefillGenerator())
+
+        let result = await engine.fill(
+            source: .text(["facts"]), type: type,
+            draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1)
+        ) { failure in
+            await failures.record(failure)
+        }
+
+        #expect(result.isEmpty)
+        #expect(await failures.values.isEmpty)
     }
 
     @Test("no fillable fields make no generator request")
@@ -113,5 +182,27 @@ internal struct InventoryPrefillEngineTests {
 
         #expect(result == [InventoryPrefillName.id: [.string("Fortaleza Digital")]])
         #expect(await generator.requests.map(\.fieldIDs) == [[InventoryPrefillName.id, "detail"]])
+    }
+}
+
+private actor InventoryPrefillFailureRecorder {
+    private(set) var values: [PopsError] = []
+
+    func record(_ failure: PopsError) {
+        values.append(failure)
+    }
+}
+
+private struct CancellingInventoryPrefillGenerator: InventoryPrefillGenerator {
+    let tokenBudget = 100
+
+    func tokenCount(_ text: String) async -> Int {
+        text.count
+    }
+
+    func generate(
+        source: InventoryPrefillSource, fields: [InventoryCatalogueField]
+    ) async throws -> [String: InventoryPrefillRawValue] {
+        throw CancellationError()
     }
 }

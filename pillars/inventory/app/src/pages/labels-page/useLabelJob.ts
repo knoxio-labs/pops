@@ -1,5 +1,5 @@
 /**
- * The label job's state over the items the page loaded: template, sheet,
+ * The label job's state over the items the page loaded: content, sheet,
  * copies, where the first sheet starts, and the print round trip. The
  * items themselves live in the page's address and on the server; this hook
  * only arranges them onto sheets.
@@ -7,18 +7,21 @@
 import { useState } from 'react';
 
 import {
+  DEFAULT_LABEL_CONTENT,
   clampStartAt,
   CUSTOM_SHEET_ID,
   customLayout,
   DEFAULT_COPIES,
   DEFAULT_SHEET_ID,
   expandCopies,
+  fieldChoices,
   findPreset,
+  fitToSheet,
   nextStartAt,
+  NO_DETAILS,
   planSheets,
-  resolveTemplate,
+  resolveLabel,
   sheetLayout,
-  templateFits,
 } from '@pops/inventory/labels';
 
 import {
@@ -32,9 +35,11 @@ import {
 
 import type {
   CopiesByKind,
-  LabelTemplateChoice,
-  LabelTemplateId,
+  LabelContent,
+  LabelDetails,
+  LabelFieldChoice,
   PrintSubject,
+  ResolvedLabel,
   SheetGeometry,
   SheetLayout,
   SheetPage,
@@ -49,15 +54,16 @@ export type PrintOutcome = 'none' | 'asking' | 'printed' | 'cancelled';
 /** Why Print is off: nothing to print, an item still without a code, or labels too small for a QR. */
 export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | null;
 
-/** One label of the job: what it is for and the template it prints with. */
+/** One label of the job: what it is for and the content it prints with. */
 export interface PrintLabelEntry {
   subject: PrintSubject;
-  template: LabelTemplateId;
+  label: ResolvedLabel;
 }
 
-/** The job's starting choices, from the page's address. */
+/** The job's starting choices, from the page's address and inventory settings. */
 export interface LabelJobSeed {
-  template: LabelTemplateChoice;
+  content?: LabelContent;
+  details?: ReadonlyMap<string, LabelDetails>;
   /** A preset's size code or `custom`; null opens on the sheet this browser last used. */
   sheetId: string | null;
 }
@@ -65,10 +71,13 @@ export interface LabelJobSeed {
 /** The job as the page renders it, with the actions that change it. */
 export interface PrintJob {
   subjects: PrintSubject[];
-  template: LabelTemplateChoice;
+  content: LabelContent;
+  /** Every field the selected items have, for the label-content picker. */
+  fields: LabelFieldChoice[];
   layout: SheetLayout;
   customSheet: SheetGeometry | null;
-  fits: Record<LabelTemplateId, boolean>;
+  /** Labels trimmed to fit and labels that fell back to a name or code. */
+  adjustments: { trimmed: number; fallback: number };
   copies: CopiesByKind;
   startAt: number;
   labels: PrintLabelEntry[];
@@ -78,7 +87,7 @@ export interface PrintJob {
   outcome: PrintOutcome;
   /** Where the next job starts if this one printed. */
   nextStart: number;
-  setTemplate: (template: LabelTemplateChoice) => void;
+  setContent: (content: LabelContent) => void;
   setSheet: (id: string) => void;
   saveCustomSheet: (geometry: SheetGeometry) => void;
   setCopies: (kind: PrintSubject['kind'], copies: number) => void;
@@ -123,44 +132,78 @@ function printBlock(labels: number, uncoded: number, tooSmall: boolean): PrintBl
   return uncoded > 0 ? 'uncoded' : null;
 }
 
-function jobLabels(
-  subjects: readonly PrintSubject[],
-  copies: CopiesByKind,
-  template: LabelTemplateChoice,
-  layout: SheetLayout
-): PrintLabelEntry[] {
-  return expandCopies(subjects, (subject) => copies[subject.kind]).flatMap(
-    (subject): PrintLabelEntry[] => {
-      const resolved = resolveTemplate(subject, template, layout);
-      return resolved ? [{ subject, template: resolved }] : [];
+function previewLabel(
+  subject: PrintSubject,
+  content: LabelContent,
+  details: LabelDetails
+): ResolvedLabel {
+  const label = resolveLabel(content, subject, details);
+  if (subject.code !== null || label.parts.includes('code')) return label;
+  return { ...label, parts: [...label.parts, 'code'] };
+}
+
+interface LabelPlanInput {
+  subjects: readonly PrintSubject[];
+  copies: CopiesByKind;
+  content: LabelContent;
+  details: ReadonlyMap<string, LabelDetails>;
+  layout: SheetLayout;
+}
+
+function planLabels({ subjects, copies, content, details, layout }: LabelPlanInput): {
+  entries: PrintLabelEntry[];
+  adjustments: { trimmed: number; fallback: number };
+  tooSmall: boolean;
+} {
+  let trimmed = 0;
+  let fallback = 0;
+  let tooSmall = false;
+  const entries: PrintLabelEntry[] = [];
+  for (const subject of expandCopies(subjects, (entry) => copies[entry.kind])) {
+    const wanted = previewLabel(subject, content, details.get(subject.id) ?? NO_DETAILS);
+    const label = fitToSheet(wanted, layout);
+    if (label === null) {
+      tooSmall = true;
+      continue;
     }
-  );
+    if (label.parts.length < wanted.parts.length || label.fields.length < wanted.fields.length) {
+      trimmed += 1;
+    }
+    if (label.fallback) fallback += 1;
+    entries.push({ subject, label });
+  }
+  return { entries, adjustments: { trimmed, fallback }, tooSmall };
 }
 
 /** The label page's job over `subjects`. */
 export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): PrintJob {
   const sheet = useSheet(seed);
   const { layout } = sheet;
-  const [requestedTemplate, setTemplate] = useState<LabelTemplateChoice>(seed.template);
+  const [content, setContent] = useState<LabelContent>(seed.content ?? DEFAULT_LABEL_CONTENT);
   const [copies, setCopiesState] = useState<CopiesByKind>(DEFAULT_COPIES);
   const [outcome, setOutcome] = useState<PrintOutcome>('none');
-  const fits = { container: templateFits(layout, 'container'), item: templateFits(layout, 'item') };
-  const template =
-    requestedTemplate !== 'auto' && !fits[requestedTemplate] ? 'auto' : requestedTemplate;
   const startAt = clampStartAt(sheet.requestedStart, layout);
-  const labels = jobLabels(subjects, copies, template, layout);
+  const plan = planLabels({
+    subjects,
+    copies,
+    content,
+    details: seed.details ?? new Map(),
+    layout,
+  });
+  const labels = plan.entries;
   const uncoded = subjects.filter((subject) => subject.code === null);
   const nextStart = nextStartAt(labels.length, startAt, layout);
-  const block = printBlock(labels.length, uncoded.length, !fits.item);
+  const block = printBlock(labels.length, uncoded.length, plan.tooSmall);
 
   return {
     subjects,
+    content,
+    fields: fieldChoices(subjects.map((subject) => seed.details?.get(subject.id) ?? NO_DETAILS)),
     layout,
     customSheet: sheet.customSheet,
     setSheet: sheet.setSheet,
     saveCustomSheet: sheet.saveCustomSheet,
-    template,
-    fits,
+    adjustments: plan.adjustments,
     copies,
     startAt,
     labels,
@@ -169,7 +212,7 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
     block,
     outcome,
     nextStart,
-    setTemplate,
+    setContent,
     setCopies: (kind, value) => setCopiesState((current) => ({ ...current, [kind]: value })),
     setStartAt: (value) => sheet.setRequestedStart(clampStartAt(value, layout)),
     print: () => {

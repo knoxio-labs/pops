@@ -5,11 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
+import { SHEET_STORAGE_KEY } from './label-storage';
+
 const api = vi.hoisted(() => ({
   webList: vi.fn(),
   codesSuggest: vi.fn(),
   syncMutations: vi.fn(),
   searchSearch: vi.fn(),
+  settingsList: vi.fn(),
 }));
 
 vi.mock('../../inventory-api/index.js', () => ({
@@ -17,6 +20,7 @@ vi.mock('../../inventory-api/index.js', () => ({
   codesSuggest: (...args: unknown[]) => api.codesSuggest(...args),
   syncMutations: (...args: unknown[]) => api.syncMutations(...args),
   searchSearch: (...args: unknown[]) => api.searchSearch(...args),
+  settingsList: (...args: unknown[]) => api.settingsList(...args),
 }));
 
 import { LabelsPage } from './LabelsPage';
@@ -30,6 +34,7 @@ interface FakeItem {
   quantity: number;
   revision: number;
   typeKey: string | null;
+  fields: Record<string, unknown>;
 }
 
 const BOX = '8c1e4f2a-5b7d-4a9e-b3c6-000000000001';
@@ -50,6 +55,7 @@ function item(id: string, name: string, code: string | null, extra: Partial<Fake
     quantity: 1,
     revision: 1,
     typeKey: null,
+    fields: {},
     ...extra,
   };
 }
@@ -112,6 +118,15 @@ beforeEach(() => {
     ok({ outcomes: [mutationOutcome(body)] })
   );
   api.searchSearch.mockResolvedValue(ok({ hits: [] }));
+  api.settingsList.mockResolvedValue(
+    ok({
+      data: [
+        { key: 'inventory.labelSheet', value: 'L7160' },
+        { key: 'inventory.labelShows', value: 'auto' },
+        { key: 'inventory.density', value: 'compact' },
+      ],
+    })
+  );
 });
 
 afterEach(() => {
@@ -159,6 +174,53 @@ function addressIds(): string[] {
 }
 
 describe('LabelsPage', () => {
+  it('uses stored label defaults when the URL leaves them unset', async () => {
+    api.settingsList.mockResolvedValue(
+      ok({
+        data: [
+          { key: 'inventory.labelSheet', value: 'L7165' },
+          { key: 'inventory.labelShows', value: 'qr-code' },
+          { key: 'inventory.density', value: 'compact' },
+        ],
+      })
+    );
+
+    renderPage(`?ids=${GRINDER}`);
+
+    await screen.findByRole('button', { name: 'Print 1 label' });
+    expect(screen.getByLabelText('Sheet')).toHaveValue('L7165');
+    expect(screen.getByRole('button', { name: 'Label shows: QR and code' })).toBeInTheDocument();
+  });
+
+  it('uses the stored contents preset in the label preview', async () => {
+    api.settingsList.mockResolvedValue(
+      ok({
+        data: [
+          { key: 'inventory.labelSheet', value: 'L7163' },
+          { key: 'inventory.labelShows', value: 'contents' },
+          { key: 'inventory.density', value: 'compact' },
+        ],
+      })
+    );
+
+    renderPage(`?ids=${BOX}`);
+
+    expect(await screen.findByRole('button', { name: 'Print 2 labels' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Label shows: Contents only' })).toBeInTheDocument();
+    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Espresso machine');
+    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Coffee cups ×6');
+  });
+
+  it('opens the label-shows entry point and applies a preset to the preview', async () => {
+    renderPage(`?ids=${BOX}`);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Label shows: Auto' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Contents only/ }));
+
+    expect(screen.getByRole('button', { name: 'Label shows: Contents only' })).toBeInTheDocument();
+    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Milk jug');
+  });
+
   it('returns to the items page instead of the overview placeholder', () => {
     renderPage(`?ids=${GRINDER}`);
     expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute(
@@ -285,7 +347,15 @@ describe('items without a code', () => {
 });
 
 describe('the sheet', () => {
+  it('prefers the browser remembered sheet over the stored setting', async () => {
+    window.localStorage.setItem(SHEET_STORAGE_KEY, 'L7165');
+    renderPage(`?ids=${GRINDER}`);
+    await screen.findByRole('button', { name: 'Print 1 label' });
+    expect(screen.getByLabelText('Sheet')).toHaveValue('L7165');
+  });
+
   it('opens on the sheet named in the address', async () => {
+    window.localStorage.setItem(SHEET_STORAGE_KEY, 'L7160');
     renderPage(`?ids=${GRINDER}&sheet=L7165`);
     await screen.findByRole('button', { name: 'Print 1 label' });
     expect(screen.getByLabelText('Sheet')).toHaveValue('L7165');

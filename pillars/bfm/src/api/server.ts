@@ -160,6 +160,11 @@ const app = createBfmApiApp({
   purchases,
   contacts,
   barcode,
+  barcodeLogger: {
+    info: (message, context) => {
+      process.stdout.write(`${JSON.stringify({ scope: 'bfm-api', message, ...context })}\n`);
+    },
+  },
   refreshTokenTtlMs,
   issuanceLimiter,
   pairingCodeTtlMs,
