@@ -607,6 +607,8 @@ export interface operations {
         merchantEntityId?: string;
         merchantEntityName?: string;
         merchantUnattributed?: boolean;
+        /** @description Limits the list to orders with a purchase item unit linked to this inventory item URI. */
+        inventoryItemUri?: string;
         from?: string;
         to?: string;
       };
@@ -791,6 +793,8 @@ export interface operations {
         merchantEntityId?: string;
         merchantEntityName?: string;
         merchantUnattributed?: boolean;
+        /** @description Limits the list to orders with a purchase item unit linked to this inventory item URI. */
+        inventoryItemUri?: string;
         from?: string;
         to?: string;
         minOrderCount?: number;
@@ -1296,6 +1300,8 @@ export interface operations {
         merchantEntityId?: string;
         merchantEntityName?: string;
         merchantUnattributed?: boolean;
+        /** @description Limits the list to orders with a purchase item unit linked to this inventory item URI. */
+        inventoryItemUri?: string;
         from?: string;
         to?: string;
         limit?: number;
