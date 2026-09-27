@@ -1,0 +1,197 @@
+import { Cable } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+
+import { Checkbox, EmptyState } from '@pops/ui';
+
+import {
+  EmptyFiltered,
+  ListBody,
+  ListError,
+  ListSkeleton,
+} from '../../foundation/list-page/list-states.js';
+import { connectionRoom } from './connection-model.js';
+import { CONNECTION_GRID, ConnectionListRow } from './connections-list-row.js';
+
+import type { ReactElement } from 'react';
+
+import type { PlacementWorld } from '../../foundation/model/placement-model.js';
+import type { SelectionApi } from '../../foundation/selection/use-selection.js';
+import type { WebConnectionRow } from '../../inventory-web/useConnectionsRegistry.js';
+
+export { CONNECTION_GRID } from './connections-list-row.js';
+
+/** Props for the connection registry list body. */
+export interface ConnectionsListProps {
+  rows: readonly WebConnectionRow[];
+  world: PlacementWorld;
+  selection: SelectionApi;
+  traceItemId: string | null;
+  online: boolean;
+  hasNextPage: boolean;
+  onLoadMore: () => void;
+  onOpen: (end: WebConnectionRow['item'] | WebConnectionRow['far']) => void;
+  onTrace: (row: WebConnectionRow) => void;
+  onDisconnect: (row: WebConnectionRow) => void;
+  onClearFilters: () => void;
+  onRetry: () => void;
+  loading: boolean;
+  error: boolean;
+  narrowed: boolean;
+  disconnectingIds: ReadonlySet<string>;
+}
+
+function checkedState(selection: SelectionApi): boolean | 'indeterminate' {
+  if (selection.coverage === 'some') return 'indeterminate';
+  return selection.coverage === 'all';
+}
+
+function Header({ selection }: { selection: SelectionApi }): ReactElement {
+  return (
+    <div
+      role="row"
+      className={`grid h-10 items-center gap-3 border-b px-3 text-xs font-medium text-muted-foreground ${CONNECTION_GRID}`}
+    >
+      <Checkbox
+        checked={checkedState(selection)}
+        aria-label="Select every connection shown"
+        onClick={(event) => {
+          event.preventDefault();
+          selection.onHeaderToggle();
+        }}
+      />
+      <span>Item</span>
+      <span aria-hidden />
+      <span>Connected to</span>
+      <span>Room</span>
+      <span>Since</span>
+      <span className="sr-only">Actions</span>
+    </div>
+  );
+}
+
+function Sentinel({ onLoadMore }: { onLoadMore: () => void }): ReactElement {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (node === null || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) onLoadMore();
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [onLoadMore]);
+
+  return <div ref={sentinelRef} data-testid="connections-sentinel" aria-hidden className="h-px" />;
+}
+
+function ConnectionRows({
+  rows,
+  world,
+  selection,
+  traceItemId,
+  online,
+  disconnectingIds,
+  onOpen,
+  onTrace,
+  onDisconnect,
+}: Pick<
+  ConnectionsListProps,
+  | 'rows'
+  | 'world'
+  | 'selection'
+  | 'traceItemId'
+  | 'online'
+  | 'disconnectingIds'
+  | 'onOpen'
+  | 'onTrace'
+  | 'onDisconnect'
+>): ReactElement {
+  return (
+    <div
+      role="grid"
+      aria-label="Connections"
+      aria-multiselectable
+      tabIndex={0}
+      className="divide-y divide-border/60 outline-none"
+      onKeyDown={(event) => {
+        if (selection.onKey(event)) event.preventDefault();
+      }}
+    >
+      {rows.map((row) => (
+        <ConnectionListRow
+          key={row.id}
+          row={row}
+          room={connectionRoom(row, world)}
+          selected={selection.isSelected(row.id)}
+          traced={traceItemId === row.item.id}
+          online={online}
+          disconnecting={disconnectingIds.has(row.id)}
+          onOpen={onOpen}
+          onTrace={onTrace}
+          onDisconnect={onDisconnect}
+          onToggle={selection.onRowToggle}
+        />
+      ))}
+    </div>
+  );
+}
+
+function EmptyRows({
+  narrowed,
+  onClearFilters,
+}: Pick<ConnectionsListProps, 'narrowed' | 'onClearFilters'>): ReactElement {
+  if (narrowed) return <EmptyFiltered noun="connections" onClear={onClearFilters} />;
+  return (
+    <EmptyState
+      icon={Cable}
+      title="No connections yet"
+      description="Connect items to each other or to a fixture to see them here."
+    />
+  );
+}
+
+/** Renders loading, error, empty, filtered-empty, and server-ordered rows. */
+export function ConnectionsList({
+  rows,
+  world,
+  selection,
+  traceItemId,
+  online,
+  hasNextPage,
+  onLoadMore,
+  onOpen,
+  onTrace,
+  onDisconnect,
+  onClearFilters,
+  onRetry,
+  loading,
+  error,
+  narrowed,
+  disconnectingIds,
+}: ConnectionsListProps): ReactElement {
+  if (loading) return <ListSkeleton label="Loading connections" />;
+  if (error) return <ListError noun="connections" onRetry={onRetry} />;
+
+  return (
+    <ListBody>
+      <Header selection={selection} />
+      {rows.length === 0 ? (
+        <EmptyRows narrowed={narrowed} onClearFilters={onClearFilters} />
+      ) : (
+        <ConnectionRows
+          rows={rows}
+          world={world}
+          selection={selection}
+          traceItemId={traceItemId}
+          online={online}
+          disconnectingIds={disconnectingIds}
+          onOpen={onOpen}
+          onTrace={onTrace}
+          onDisconnect={onDisconnect}
+        />
+      )}
+      {hasNextPage ? <Sentinel onLoadMore={onLoadMore} /> : null}
+    </ListBody>
+  );
+}
