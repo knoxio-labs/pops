@@ -79,6 +79,7 @@ export function toDetailDocuments(rows: DocumentsListForItemResponse['data']): D
     kind: titleCase(row.documentType),
     added: longDate(row.createdAt) ?? row.createdAt,
     paperlessDocumentId: row.paperlessDocumentId,
+    missing: row.missing === true,
   }));
 }
 
