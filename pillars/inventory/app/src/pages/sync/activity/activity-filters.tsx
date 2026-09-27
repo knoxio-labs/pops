@@ -54,7 +54,11 @@ function KindChip({
 }
 
 /** Renders kind, actor, search, and inclusive date-range filters for Activity. */
-export function ActivityFilters({ kindCounts, filter, onChange }: ActivityFiltersProps): ReactElement {
+export function ActivityFilters({
+  kindCounts,
+  filter,
+  onChange,
+}: ActivityFiltersProps): ReactElement {
   const counts = serverKindGroupCounts(kindCounts);
   const set = (patch: Partial<ActivityFilter>): void => onChange?.({ ...filter, ...patch });
   return (
