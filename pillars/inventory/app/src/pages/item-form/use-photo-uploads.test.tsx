@@ -1,0 +1,176 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { usePhotoUploads } from './use-photo-uploads';
+
+import type { ReactNode } from 'react';
+
+import type {
+  InventoryCommandInput,
+  InventoryMutationOutcome,
+} from '../../inventory-web/mutation-client.js';
+
+type ProcessedPhoto = { readonly processed: Blob };
+
+const mocks = vi.hoisted(() => ({
+  processFiles: vi.fn<(files: File[]) => Promise<ProcessedPhoto[]>>(),
+  sendInventoryMutation:
+    vi.fn<(input: InventoryCommandInput) => Promise<InventoryMutationOutcome>>(),
+}));
+
+vi.mock('../../hooks/useImageProcessor', () => ({
+  useImageProcessor: () => ({ processFiles: mocks.processFiles, processing: false }),
+}));
+
+vi.mock('../../inventory-web/mutation-client.js', () => ({
+  sendInventoryMutation: (input: InventoryCommandInput) => mocks.sendInventoryMutation(input),
+}));
+
+class FakeXMLHttpRequest {
+  static readonly instances: FakeXMLHttpRequest[] = [];
+
+  readonly upload: {
+    onprogress:
+      | ((event: { lengthComputable: boolean; loaded: number; total: number }) => void)
+      | null;
+  } = { onprogress: null };
+  readonly headers = new Map<string, string>();
+  method = '';
+  url = '';
+  sent: Blob | null = null;
+  status = 0;
+  responseText = '';
+  timeout = 0;
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  ontimeout: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+
+  constructor() {
+    FakeXMLHttpRequest.instances.push(this);
+  }
+
+  open(method: string, url: string): void {
+    this.method = method;
+    this.url = url;
+  }
+
+  setRequestHeader(name: string, value: string): void {
+    this.headers.set(name, value);
+  }
+
+  send(blob: Blob): void {
+    this.sent = blob;
+    this.status = 201;
+    this.onload?.();
+  }
+}
+
+function applied(seq: number): InventoryMutationOutcome {
+  return {
+    converged: true,
+    mutationId: `mutation-${String(seq)}`,
+    revision: seq,
+    seq,
+    status: 'applied',
+  };
+}
+
+function wrapper({ children }: { readonly children: ReactNode }) {
+  const queryClient = new QueryClient({
+    defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+  });
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
+
+function photo(name: string): File {
+  return new File([new Uint8Array([1, 2, 3])], name, { type: 'image/png' });
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  FakeXMLHttpRequest.instances.length = 0;
+  vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest);
+  mocks.processFiles.mockImplementation(async (files) =>
+    files.map((file) => ({ processed: new Blob([file], { type: 'image/jpeg' }) }))
+  );
+  mocks.sendInventoryMutation.mockResolvedValue(applied(1));
+});
+
+describe('usePhotoUploads', () => {
+  it('stages create photos and attaches them after save', async () => {
+    const { result } = renderHook(() => usePhotoUploads('create', null, 0), { wrapper });
+    const file = photo('lamp.png');
+
+    act(() => result.current.add([file]));
+    expect(result.current.queue[0]?.status).toEqual({ kind: 'staged' });
+
+    let flushed: Awaited<ReturnType<typeof result.current.flush>> | undefined;
+    await act(async () => {
+      flushed = await result.current.flush('item-1');
+    });
+
+    expect(flushed?.attached).toBe(1);
+    expect(result.current.queue[0]?.status).toEqual({ kind: 'attached' });
+    expect(FakeXMLHttpRequest.instances[0]?.method).toBe('PUT');
+    expect(FakeXMLHttpRequest.instances[0]?.url).toMatch(/^\/inventory-api\/media\/[0-9a-f]{64}$/u);
+    expect(FakeXMLHttpRequest.instances[0]?.headers.get('Content-Type')).toBe('image/jpeg');
+    expect(mocks.sendInventoryMutation).toHaveBeenCalledWith({
+      command: {
+        op: 'item.attachPhoto',
+        args: { sha256: expect.any(String), position: 0 },
+      },
+      entityId: 'item-1',
+    });
+  });
+
+  it('reserves distinct positions for concurrent uploads and waits for late additions', async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mocks.processFiles.mockImplementation(async (files) => {
+      await gate;
+      return files.map((file) => ({ processed: new Blob([file], { type: 'image/jpeg' }) }));
+    });
+    const { result } = renderHook(() => usePhotoUploads('create', null, 2), { wrapper });
+
+    act(() => result.current.add([photo('first.png')]));
+    const flush = result.current.flush('item-2');
+    await waitFor(() => expect(result.current.queue[0]?.status.kind).toBe('uploading'));
+    act(() => result.current.add([photo('second.png')]));
+    release?.();
+
+    const flushed = await flush;
+    expect(flushed.attached).toBe(2);
+    expect(mocks.sendInventoryMutation.mock.calls.map(([input]) => input.command)).toEqual([
+      { op: 'item.attachPhoto', args: { sha256: expect.any(String), position: 2 } },
+      { op: 'item.attachPhoto', args: { sha256: expect.any(String), position: 3 } },
+    ]);
+  });
+
+  it('keeps a failed upload in the queue so it can be retried', async () => {
+    mocks.processFiles.mockRejectedValueOnce(new Error('decode failed'));
+    const { result } = renderHook(() => usePhotoUploads('edit', 'item-3', 0), { wrapper });
+
+    act(() => result.current.add([photo('broken.png')]));
+    await waitFor(() => expect(result.current.queue[0]?.status.kind).toBe('failed'));
+
+    expect(result.current.queue[0]?.status).toEqual({
+      kind: 'failed',
+      reason: 'the photo could not be read',
+    });
+    expect(mocks.sendInventoryMutation).not.toHaveBeenCalled();
+
+    act(() => result.current.retry(result.current.queue[0]!.localId));
+    await waitFor(() => expect(result.current.queue[0]?.status.kind).toBe('attached'));
+    expect(mocks.sendInventoryMutation).toHaveBeenCalledWith({
+      command: {
+        op: 'item.attachPhoto',
+        args: { sha256: expect.any(String), position: 1 },
+      },
+      entityId: 'item-3',
+    });
+  });
+});

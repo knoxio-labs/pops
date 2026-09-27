@@ -38,7 +38,7 @@ export interface ImportState {
   /** Parsed data rows from the loaded file. */
   rows: readonly (readonly string[])[];
   mapping: ColumnMapping[];
-  /** Header-target pairs from the first automatic mapping guess. */
+  /** Column-target pairs from the first automatic mapping guess. */
   guessed: ReadonlySet<string>;
   problems: MappingProblem[];
   results: ImportRowResult[];
@@ -159,14 +159,14 @@ export function batchRows(drafts: readonly BulkDraft[]): Parameters<BatchCreate[
   return drafts.map((draft) => ({ ...draft }));
 }
 
-/** Returns the header-target pairs produced by the first automatic mapping guess. */
+/** Returns the column-target pairs produced by the first automatic mapping guess. */
 export function guessedPairs(
   headers: readonly string[],
   guess: (headers: readonly string[]) => readonly ColumnMapping[]
 ): Set<string> {
   return new Set(
-    guess(headers)
-      .filter((column) => column.target !== 'skip')
-      .map((column) => `${column.header}:${column.target}`)
+    guess(headers).flatMap((column, index) =>
+      column.target === 'skip' ? [] : [`${String(index)}:${column.target}`]
+    )
   );
 }
