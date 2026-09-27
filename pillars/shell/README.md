@@ -151,12 +151,42 @@ upstream, its 502, 503, and 504 responses use the ADR-054
 `gateway.upstream_unavailable` envelope and are retryable. Upstream response
 bodies are not intercepted, including pillar-owned 502, 503, and 504 envelopes.
 
-In dev, `vite-plugin-pillar-ui-dev.ts` serves `pillars/<id>/app/dist/remote` at
-the same path, so the loader path is exercised locally rather than first in a
-deployment. Build the bundle with
-`pnpm --filter @pops/app-<pillar> build`; until you do, the shell renders its
-"could not be loaded" placeholder, which is the same degradation a missing
-bundle produces in production.
+In dev, `vite-plugin-pillar-ui-dev.ts` serves a completed remote-build release
+at the same path, so the loader path is exercised locally rather than first in
+a deployment. Start the shell and watch the UI pillars you are changing:
+
+```sh
+pnpm dev:ui -- --pillar inventory --pillar media
+pnpm --filter @pops/shell dev
+```
+
+The watcher validates each normal remote build before publishing it, copies the
+result to an immutable local release, then switches a small release pointer.
+The shell reloads only when that pointer changes. A build that fails therefore
+leaves the last completed bundle available, and a browser never imports a
+half-written entry or chunk. The stable entry and stylesheet URLs redirect to
+that release, which pins their lazy chunks and CSS assets to the same build.
+The watcher retains every release it publishes for its session; it removes
+releases from the previous session only when it starts, after preserving the
+release the existing pointer names.
+
+For source-level feedback without a domain fixture harness, select a pillar
+when starting the shell:
+
+```sh
+POPS_PILLAR_UI_SOURCE=inventory pnpm --filter @pops/shell dev
+```
+
+The registry still provides `/inventory-ui/inventory.js` and the normal external
+loader still imports it. In this mode the dev plugin maps that entry to the
+pillar's real `src/remote-entry.ts` inside the shell Vite graph, so it uses the
+same React, query, i18n, and UI runtime as the shell and receives Vite HMR.
+Its advertised `<pillar>.css` URL receives an empty stylesheet response; the virtual source entry imports `remote.css`
+inside Vite's module graph. Vite therefore updates the source stylesheet and
+Tailwind utilities through HMR without a second linked sheet overriding it.
+Use the watched remote build before merging: source mode proves fast component
+feedback, while the compiled build is the check that proves the published
+external-runtime boundary.
 
 ### The floor when the registry is unreachable
 

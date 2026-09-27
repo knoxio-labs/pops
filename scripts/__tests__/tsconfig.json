@@ -8,5 +8,12 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["*.ts", "../*.mjs", "../ios-e2e/*.mjs", "../inventory-acceptance/*.mjs"]
+  "include": [
+    "*.ts",
+    "../*.mjs",
+    "../ios-e2e/*.mjs",
+    "../inventory-acceptance/*.mjs",
+    "../local-dev/**/*.mjs",
+    "../local-dev/**/*.ts"
+  ]
 }

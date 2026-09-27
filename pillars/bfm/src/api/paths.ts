@@ -40,6 +40,9 @@ export const MOBILE_RECEIPT_EXTRACT_PATH = bfmContract.mobilePurchases.extractRe
  */
 export const MOBILE_INVENTORY_MUTATIONS_PATH = bfmContract.mobileInventory.mutations.path;
 
+/** Where a device's latest inventory sync ledger report arrives. */
+export const MOBILE_INVENTORY_LEDGER_PATH = bfmContract.mobileInventory.reportLedger.path;
+
 /**
  * Where a photo's bytes arrive, and therefore the mount for
  * `MOBILE_INVENTORY_MEDIA_MAX_BYTES` — the wide envelope limit; the
