@@ -11,7 +11,7 @@ outputs = ["dist/**", "openapi/*.json", "src/**/api-types.generated.ts"]
 
 [tasks.typecheck]
 depends = ["build"]
-run = ["tsc --noEmit", "tsc --noEmit -p scripts/tsconfig.json"]
+run = "node ../../scripts/local-dev/typecheck.mjs"
 
 [tasks.test]
 depends = ["build"]

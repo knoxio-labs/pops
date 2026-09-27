@@ -85,8 +85,17 @@ internal struct InventoryWriteFailureTests {
         let failure = try #require(runner.failure)
         #expect(failure == .command(refusal))
         let message = InventoryCopy.message(for: failure)
-        #expect(message == "It cannot go from where it is now to that, so nothing changed.")
-        #expect(!message.contains("cannot revert a destroy"))
+        #expect(message == "cannot revert a destroy")
+    }
+
+    @Test("a blank rejection message falls back to its reason")
+    func blankRejectionMessageUsesReason() {
+        let failure = InventoryWriteFailure.command(
+            .rejected(reason: .illegalTransition, message: " \n "))
+
+        #expect(
+            InventoryCopy.message(for: failure)
+                == "It cannot go from where it is now to that, so nothing changed.")
     }
 
     @Test("a taken code names who holds it and the free one")
@@ -123,14 +132,14 @@ internal struct InventoryWriteFailureTests {
             .mediaMissing, .invalid,
         ]
         let messages = reasons.map {
-            InventoryCopy.message(for: .command(.rejected(reason: $0, message: "x")))
+            InventoryCopy.message(for: .command(.rejected(reason: $0, message: "")))
         }
 
         #expect(Set(messages).count == reasons.count)
         #expect(
             InventoryCopy.message(
-                for: .command(.rejected(reason: .unrecognised("new"), message: "x")))
-                == InventoryCopy.message(for: .command(.rejected(reason: .invalid, message: "x"))))
+                for: .command(.rejected(reason: .unrecognised("new"), message: "")))
+                == InventoryCopy.message(for: .command(.rejected(reason: .invalid, message: ""))))
     }
 
     @Test("a transport error still reads as the offline sentence")

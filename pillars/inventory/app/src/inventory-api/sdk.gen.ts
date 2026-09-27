@@ -251,6 +251,8 @@ import type {
   WebMovingGetData,
   WebMovingGetErrors,
   WebMovingGetResponses,
+  WebReportsEntriesData,
+  WebReportsEntriesResponses,
   WebReportsValuesData,
   WebReportsValuesErrors,
   WebReportsValuesResponses,
@@ -1507,6 +1509,17 @@ export const webMovingGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebMovingGetResponses, WebMovingGetErrors, ThrowOnError> =>
   (options.client ?? client).get<WebMovingGetResponses, WebMovingGetErrors, ThrowOnError>({
     url: '/web/moving-day',
+    ...options,
+  });
+
+/**
+ * Active inventory report entries with provenance and effective placement
+ */
+export const webReportsEntries = <ThrowOnError extends boolean = false>(
+  options?: Options<WebReportsEntriesData, ThrowOnError>
+): RequestResult<WebReportsEntriesResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<WebReportsEntriesResponses, unknown, ThrowOnError>({
+    url: '/web/reports/entries',
     ...options,
   });
 

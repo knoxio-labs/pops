@@ -22,11 +22,7 @@ outputs = ["dist/**", "openapi/*.json", "src/**/api-types.generated.ts"]
 # stale sibling surface as a confusing `TypeError` deep in a test file.
 [tasks.typecheck]
 depends = ["build"]
-run = [
-  "node ../../scripts/require-built-graph.mjs",
-  "tsc --noEmit",
-  "tsc --noEmit -p scripts/tsconfig.json",
-]
+run = "node ../../scripts/local-dev/typecheck.mjs"
 
 [tasks.test]
 depends = ["build"]
