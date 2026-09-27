@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   useItemRows: vi.fn(),
   useItemPurchase: vi.fn(),
   useWebItemDetail: vi.fn(),
+  usePlacementSources: vi.fn(),
   usePurchasePreview: vi.fn(),
 }));
 
