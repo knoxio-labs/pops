@@ -5,9 +5,8 @@ import { OFFLINE_TITLE, StateBanner } from '../../foundation/feedback/state-bann
 import { useChangedElsewhere } from '../../inventory-web/useChangedElsewhere.js';
 import { useOnline } from '../../inventory-web/useOnline.js';
 import { useValueReport } from '../../inventory-web/useValueReport.js';
-import { InsuranceReportPage } from '../InsuranceReportPage.js';
 import { ReportDashboardPage } from '../ReportDashboardPage.js';
-import { WarrantiesPage } from '../WarrantiesPage.js';
+import { InsuranceReportRoute, WarrantiesReportRoute } from './report-routes.js';
 import { downloadValuesCsv } from './reports-csv.js';
 import {
   isValueReportEmpty,
@@ -43,12 +42,6 @@ function pageBanner(online: boolean, changed: ReturnType<typeof useChangedElsewh
       onAction={() => void changed.reload()}
     />
   );
-}
-
-function legacyReport(tab: Exclude<ReportTab, 'values'>): ReactElement {
-  if (tab === 'warranties') return <WarrantiesPage />;
-  if (tab === 'insurance') return <InsuranceReportPage />;
-  return <ReportDashboardPage />;
 }
 
 interface ValuesReportRouteProps {
@@ -152,9 +145,15 @@ export function ReportsPage(): ReactElement {
       />
     );
   }
+  if (url.tab === 'warranties') {
+    return <WarrantiesReportRoute banner={banner} onTabChange={onTabChange} />;
+  }
+  if (url.tab === 'insurance') {
+    return <InsuranceReportRoute banner={banner} onTabChange={onTabChange} />;
+  }
   return (
-    <ReportsShell tab={url.tab} onTabChange={onTabChange} banner={banner}>
-      {legacyReport(url.tab)}
+    <ReportsShell tab="overview" onTabChange={onTabChange} banner={banner}>
+      <ReportDashboardPage />
     </ReportsShell>
   );
 }

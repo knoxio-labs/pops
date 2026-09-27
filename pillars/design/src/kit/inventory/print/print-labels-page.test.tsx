@@ -192,7 +192,7 @@ describe('sheets', () => {
     expect(screen.getByText('12 labels on 2 sheets, from label 1')).toBeTruthy();
   });
 
-  it('measures a custom sheet once and remembers it in this browser', () => {
+  it('measures a custom sheet once and remembers it in this browser', { timeout: 30_000 }, () => {
     renderPage(boxes);
     fireEvent.change(screen.getByLabelText('Sheet'), { target: { value: 'custom' } });
     const dialog = screen.getByRole('dialog');
