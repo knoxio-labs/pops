@@ -53,7 +53,7 @@ describe('templateCsv', () => {
 });
 
 describe('downloadCsv', () => {
-  it('clicks a temporary link and releases its object URL', () => {
+  it('prepends a UTF-8 BOM, clicks a temporary link and releases its object URL', async () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:inventory');
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const click = vi
@@ -62,7 +62,12 @@ describe('downloadCsv', () => {
 
     downloadCsv('inventory-items-2026-09-27.csv', 'Name\r\n');
 
-    expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob));
+    const blob = createObjectUrl.mock.calls[0]?.[0];
+    expect(blob).toBeInstanceOf(Blob);
+    if (!(blob instanceof Blob)) throw new Error('Expected a CSV Blob');
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+    expect(new TextDecoder().decode(bytes.slice(3))).toBe('Name\r\n');
     expect(click).toHaveBeenCalledOnce();
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:inventory');
   });
