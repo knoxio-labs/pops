@@ -2618,7 +2618,6 @@ export type SettingsGetData = {
   body?: never;
   path: {
     key:
-      | 'inventory.paperlessUrl'
       | 'inventory.labelSheet'
       | 'inventory.labelShows'
       | 'inventory.density'
@@ -2672,7 +2671,6 @@ export type SettingsSetData = {
   };
   path: {
     key:
-      | 'inventory.paperlessUrl'
       | 'inventory.labelSheet'
       | 'inventory.labelShows'
       | 'inventory.density'
@@ -2727,7 +2725,6 @@ export type SettingsEnsureData = {
   };
   path: {
     key:
-      | 'inventory.paperlessUrl'
       | 'inventory.labelSheet'
       | 'inventory.labelShows'
       | 'inventory.density'
@@ -2781,7 +2778,6 @@ export type SettingsResetKeyData = {
   };
   path: {
     key:
-      | 'inventory.paperlessUrl'
       | 'inventory.labelSheet'
       | 'inventory.labelShows'
       | 'inventory.density'

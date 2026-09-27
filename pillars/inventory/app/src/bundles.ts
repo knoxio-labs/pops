@@ -1,3 +1,4 @@
+import { PaperlessWidget } from './components/settings/PaperlessWidget';
 /**
  * The `bundles` record the shell's runtime loader resolves against.
  *
@@ -10,11 +11,10 @@
  * table, so both mount paths resolve a page to the same component.
  */
 import { PAGE_COMPONENTS } from './routes';
-import { PaperlessWidget } from './settings/paperless-widget';
 
 import type { ComponentType } from 'react';
 
-import type { InventoryPageSlot } from '@pops/inventory/manifest';
+import type { InventoryPageSlot, InventorySettingsWidgetSlot } from '@pops/inventory/manifest';
 
 /** The settings widget slots supplied by the Inventory remote bundle. */
 export const settingsWidgetBundles = {
@@ -23,7 +23,7 @@ export const settingsWidgetBundles = {
 
 /** The page and settings components the shell resolves by manifest slot. */
 export const bundles: Readonly<
-  Record<InventoryPageSlot, ComponentType> & Readonly<Record<string, ComponentType>>
+  Record<InventoryPageSlot, ComponentType> & Record<InventorySettingsWidgetSlot, ComponentType>
 > = {
   ...PAGE_COMPONENTS,
   ...settingsWidgetBundles,

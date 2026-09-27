@@ -918,14 +918,7 @@ export const MODULES = [
             widget: {
               bundleSlot: 'inventory-paperless',
             },
-            fields: [
-              {
-                key: 'inventory.paperlessUrl',
-                label: 'Address',
-                type: 'url',
-                description: 'Where Inventory reaches Paperless, e.g. https://paperless.home.',
-              },
-            ],
+            fields: [],
           },
           {
             id: 'labels',

@@ -6690,7 +6690,6 @@
             "required": true,
             "schema": {
               "enum": [
-                "inventory.paperlessUrl",
                 "inventory.labelSheet",
                 "inventory.labelShows",
                 "inventory.density",
@@ -6776,7 +6775,6 @@
             "required": true,
             "schema": {
               "enum": [
-                "inventory.paperlessUrl",
                 "inventory.labelSheet",
                 "inventory.labelShows",
                 "inventory.density",
@@ -6883,7 +6881,6 @@
             "required": true,
             "schema": {
               "enum": [
-                "inventory.paperlessUrl",
                 "inventory.labelSheet",
                 "inventory.labelShows",
                 "inventory.density",
@@ -6987,7 +6984,6 @@
             "required": true,
             "schema": {
               "enum": [
-                "inventory.paperlessUrl",
                 "inventory.labelSheet",
                 "inventory.labelShows",
                 "inventory.density",
