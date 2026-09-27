@@ -1,5 +1,5 @@
 name: Registry Generated Quality
-run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Preserves the module-registry `generated.ts` drift gate after
 # `module-registry-quality.yml` is folded into `unit-quality.yml`. unit-quality
@@ -19,6 +19,11 @@ run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.h
 # meaningful if it sees every input, which costs running on most PRs.
 
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        required: true
   push:
     branches: [main]
     paths:
