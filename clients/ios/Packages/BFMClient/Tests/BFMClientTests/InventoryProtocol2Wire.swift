@@ -1,5 +1,3 @@
-import Foundation
-
 /// Protocol-2 bodies for the replica-through-transport suites: an exact
 /// catalogue revision as `/mobile/inventory/type-catalogue` answers it, and
 /// sync pages that pin one. Shapes follow

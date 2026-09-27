@@ -1,5 +1,3 @@
-import Foundation
-
 /// `expression-evaluator.ts`: evaluates a parsed expression against one
 /// snapshot, short-circuiting `and`, `or` and `if` before their unread sides,
 /// then checks the result is a canonical value of the declared kind.

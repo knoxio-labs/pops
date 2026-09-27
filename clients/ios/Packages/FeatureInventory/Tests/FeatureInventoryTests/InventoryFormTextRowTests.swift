@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 
-@testable import FeatureInventory
-
 @Suite("Inventory form text row")
 internal struct InventoryFormTextRowTests {
     private static let source: String = {

@@ -25,6 +25,7 @@ function dayNumber(date: Date): number {
 export function formatWhen(iso: string, now: string): string {
   const at = new Date(iso);
   const reference = new Date(now);
+  if (Number.isNaN(at.getTime()) || Number.isNaN(reference.getTime())) return iso;
   const elapsed = reference.getTime() - at.getTime();
   if (elapsed >= 0 && elapsed < MINUTE) return 'Just now';
   if (elapsed >= 0 && elapsed < 60 * MINUTE) return `${Math.floor(elapsed / MINUTE)} min ago`;

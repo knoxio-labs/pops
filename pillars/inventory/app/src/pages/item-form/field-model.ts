@@ -55,6 +55,8 @@ export interface ReferenceChoice {
   readonly id: string;
   readonly kind: 'item' | 'location';
   readonly label: string;
+  readonly typeId?: string | null;
+  readonly typeName?: string | null;
 }
 
 /** Draft field values grouped by their storage shape. */

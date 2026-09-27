@@ -4,6 +4,8 @@ public enum InventoryBarcodeLookup: Hashable, Sendable {
     case found(InventoryBarcodeProduct)
     /// No product is known for the barcode.
     case notFound
+    /// This identifier's product category is outside the lookup service's coverage.
+    case unsupported
     /// The lookup could not produce a reliable answer right now.
     case unavailable
 }
@@ -73,6 +75,6 @@ public struct InventoryBarcodeContributor: Hashable, Sendable {
 
 /// Looks up product facts for a scanned Inventory barcode.
 public protocol InventoryBarcodeLookupService: Sendable {
-    /// Returns facts, a definite absence, or temporary unavailability for a barcode.
+    /// Returns facts or a coverage outcome; transports throw safe `PopsError` diagnostics on failure.
     func lookUp(code: String) async throws -> InventoryBarcodeLookup
 }

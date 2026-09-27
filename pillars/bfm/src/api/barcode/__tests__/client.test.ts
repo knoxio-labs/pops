@@ -59,6 +59,23 @@ describe('MobileBarcodeClient.lookup', () => {
     });
   });
 
+  it('passes through an unavailable ADR-054 envelope', async () => {
+    const error = {
+      code: 'barcode.lookup.timeout',
+      message: 'Barcode lookup timed out.',
+      requestId: 'barcode-request-5050',
+      retryable: true,
+    };
+    const client = createMobileBarcodeClient(
+      createPillarGateway(barcodeFactory({ kind: 'ok', value: { outcome: 'unavailable', error } }))
+    );
+
+    await expect(client.lookup('9780330423304')).resolves.toEqual({
+      kind: 'ok',
+      value: { outcome: 'unavailable', error },
+    });
+  });
+
   it('turns a malformed producer body into a contract mismatch', async () => {
     const client = createMobileBarcodeClient(
       createPillarGateway(

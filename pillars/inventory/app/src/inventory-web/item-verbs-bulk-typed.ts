@@ -8,14 +8,24 @@ import {
   requireCatalogueRevision,
 } from './item-verbs-bulk-preparation.js';
 
+import type { FieldValueEntry } from './commands.js';
 import type { BulkActionContext } from './item-verbs-bulk-preparation.js';
-import type { BulkItemVerbs, BulkResult } from './item-verbs-bulk-types.js';
+import type { BulkItemVerbs, BulkResult, BulkTypeValues } from './item-verbs-bulk-types.js';
+
+function isValueList(values: BulkTypeValues): values is readonly FieldValueEntry[] {
+  return Array.isArray(values);
+}
+
+function valuesForItem(values: BulkTypeValues | undefined, id: string): readonly FieldValueEntry[] {
+  if (values === undefined) return [];
+  return isValueList(values) ? values : (values.get(id) ?? []);
+}
 
 async function changeType(
   context: BulkActionContext,
   ids: readonly string[],
   typeKey: string,
-  values: Parameters<BulkItemVerbs['changeType']>[2]
+  values: BulkTypeValues | undefined
 ): Promise<BulkResult> {
   const uniqueIds = dedupeIds(ids);
   if (uniqueIds.length === 0) return emptyBulkResult();
@@ -26,7 +36,13 @@ async function changeType(
   const prepared = uniqueIds.map((id): PreparedBulkItem => ({
     id,
     patch: identityPatch,
-    command: { op: 'item.changeType', args: { typeId: type.id, values: values ?? [] } },
+    command: {
+      op: 'item.changeType',
+      args: {
+        typeId: type.id,
+        values: valuesForItem(values, id),
+      },
+    },
     catalogueRevision,
   }));
   const execution = await executeBulk({

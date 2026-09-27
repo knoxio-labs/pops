@@ -87,6 +87,7 @@ export function resolvePurchaseScope(query: PurchaseScopeQuery): PurchaseScopeRe
       from: from.bound,
       to: to.bound,
       currency: query.currency,
+      inventoryItemUri: query.inventoryItemUri,
       merchant: merchant.merchant,
     },
   };

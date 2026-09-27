@@ -24,7 +24,9 @@ interface NewItemInput {
   name: string;
   placement: InventoryPlacementTarget;
   typeKey?: string;
+  typeId?: string;
   fields?: Record<string, unknown>;
+  values?: readonly CreateFieldValueEntry[];
   note?: string;
   quantity?: number;
 }
@@ -53,6 +55,11 @@ export interface FieldValuePatch {
 export interface FieldValueEntry {
   fieldId: string;
   values: readonly FieldWireValue[];
+}
+
+/** One stable field value and its provenance when creating an item. */
+export interface CreateFieldValueEntry extends FieldValueEntry {
+  source: 'stored' | 'override';
 }
 
 /** The protocol-2 arguments for a stable type replacement. */

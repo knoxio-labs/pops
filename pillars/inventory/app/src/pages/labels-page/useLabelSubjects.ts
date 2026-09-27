@@ -11,7 +11,7 @@ import { INVENTORY_SYNC_PROTOCOL } from '../../inventory-web/mutation-client.js'
 import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
 import { MAX_LABEL_IDS } from './label-params';
 
-import type { PrintSubject } from '@pops/inventory/labels';
+import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
 import type { WebListResponses } from '../../inventory-api/types.gen.js';
 
@@ -69,6 +69,8 @@ export interface LabelSubjects {
   missing: string[];
   /** What each box in the job holds, by the box's id. */
   contents: ReadonlyMap<string, LabelSubject[]>;
+  /** Field values and box contents available to the label-content picker. */
+  details: ReadonlyMap<string, LabelDetails>;
 }
 
 function useContents(items: WebItem[]) {
@@ -97,6 +99,34 @@ function useSuggestions(items: WebItem[]) {
   return suggestions;
 }
 
+function valueText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (Array.isArray(value)) return value.map(valueText).filter(Boolean).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value) ?? '';
+  return '';
+}
+
+function detailsFor(item: WebItem, contents: readonly LabelSubject[]): LabelDetails {
+  const fields: LabelFieldValue[] = [];
+  if (item.typeKey !== null) {
+    for (const [key, rawValue] of Object.entries(item.fields)) {
+      const value = valueText(rawValue);
+      if (value.length === 0) continue;
+      fields.push({ id: `${item.typeKey}.${key}`, label: key, value });
+    }
+  }
+  return {
+    typeName: item.typeKey,
+    fields,
+    contents: contents.map((subject) =>
+      subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name
+    ),
+  };
+}
+
 /** Loads the items behind `ids`, each box's contents, and codes to suggest. */
 export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
   const listed = useQuery({
@@ -114,12 +144,18 @@ export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
   const boxContents = useContents(ordered);
   const suggestions = useSuggestions(ordered);
   const subject = (item: WebItem) => toLabelSubject(item, suggestions.get(item.id) ?? null);
+  const contents = new Map(
+    [...boxContents.contents].map(([boxId, held]) => [boxId, held.map(subject)])
+  );
   return {
     isLoading: listed.isLoading,
     contentsLoading: boxContents.isLoading,
     error: listed.error,
     subjects: ordered.map(subject),
     missing: listed.data && !listed.isPlaceholderData ? ids.filter((id) => !byId.has(id)) : [],
-    contents: new Map([...boxContents.contents].map(([boxId, held]) => [boxId, held.map(subject)])),
+    contents,
+    details: new Map(
+      ordered.map((item) => [item.id, detailsFor(item, contents.get(item.id) ?? [])])
+    ),
   };
 }

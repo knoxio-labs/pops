@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// Which side of a purchase search hit to keep.
 public enum PurchasesSearchKind: String, CaseIterable, Equatable, Sendable {

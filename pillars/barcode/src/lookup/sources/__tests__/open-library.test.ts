@@ -118,12 +118,32 @@ describe('createOpenLibrarySource', () => {
       if (url.includes('/isbn/')) return response('edition-redirect.json');
       if (url.includes('/authors/')) return response('edition-429.json', 500);
       if (url.includes('/works/')) return response('work-hobbit.json');
+      if (url.includes('/search.json')) return response('search-author.json');
       throw new Error(`unexpected URL: ${url}`);
     });
 
     const result = await openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal);
 
-    expect(result).toMatchObject({ kind: 'hit', product: { contributors: [] } });
+    expect(result).toMatchObject({
+      kind: 'hit',
+      product: { contributors: [{ name: 'Stephen King', role: 'author' }] },
+    });
+  });
+
+  it('falls back to ISBN search when the edition has no author links', async () => {
+    const { fetcher, calls } = makeFetcher((url) => {
+      if (url.includes('/isbn/')) return response('edition-year-only.json');
+      if (url.includes('/search.json')) return response('search-author.json');
+      throw new Error(`unexpected URL: ${url}`);
+    });
+
+    const result = await openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal);
+
+    expect(result).toMatchObject({
+      kind: 'hit',
+      product: { contributors: [{ name: 'Stephen King', role: 'author' }] },
+    });
+    expect(calls.some((url) => url.includes('/search.json?isbn=9780330423304'))).toBe(true);
   });
 
   it('keeps edition data when work enrichment times out', async () => {
@@ -158,9 +178,9 @@ describe('createOpenLibrarySource', () => {
   });
 
   it.each([
-    ['edition-404.json', 404, 'miss'],
-    ['edition-429.json', 429, 'unavailable'],
-  ] as const)('maps an edition HTTP response', async (name, status, kind) => {
+    ['edition-404.json', 404, { kind: 'miss' }],
+    ['edition-429.json', 429, { kind: 'unavailable', failureClass: 'rate_limited', status: 429 }],
+  ] as const)('maps an edition HTTP response', async (name, status, expected) => {
     const { fetcher } = makeFetcher((url) => {
       if (url.includes('/isbn/')) return response(name, status);
       throw new Error(`unexpected URL: ${url}`);
@@ -168,9 +188,7 @@ describe('createOpenLibrarySource', () => {
 
     await expect(
       openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal)
-    ).resolves.toEqual({
-      kind,
-    });
+    ).resolves.toEqual(expected);
   });
 
   it('returns unavailable for malformed edition JSON', async () => {
@@ -183,6 +201,7 @@ describe('createOpenLibrarySource', () => {
       openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal)
     ).resolves.toEqual({
       kind: 'unavailable',
+      failureClass: 'invalid_response',
     });
   });
 
@@ -193,7 +212,7 @@ describe('createOpenLibrarySource', () => {
 
     await expect(
       openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal)
-    ).resolves.toEqual({ kind: 'unavailable' });
+    ).resolves.toEqual({ kind: 'unavailable', failureClass: 'network_error' });
   });
 
   it('returns unavailable when the edition request takes longer than four seconds', async () => {
@@ -208,7 +227,10 @@ describe('createOpenLibrarySource', () => {
     const resultPromise = openLibrarySource(fetcher).lookUp(ISBN, new AbortController().signal);
     await vi.advanceTimersByTimeAsync(4_000);
 
-    await expect(resultPromise).resolves.toEqual({ kind: 'unavailable' });
+    await expect(resultPromise).resolves.toEqual({
+      kind: 'unavailable',
+      failureClass: 'timeout',
+    });
   });
 
   it('preserves a year-only publication date', async () => {

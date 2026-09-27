@@ -1,5 +1,3 @@
-import Foundation
-
 extension InventoryPrimitiveValue {
     /// This value read as the kind its field declares, or nil when it cannot
     /// be one.

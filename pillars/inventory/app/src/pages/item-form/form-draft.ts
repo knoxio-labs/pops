@@ -129,19 +129,3 @@ export function draftReducer(draft: ItemDraft, action: DraftAction): ItemDraft {
 export function draftAfterSaveAndNew(saved: ItemDraft): ItemDraft {
   return blankDraft(saved.placement, saved.typeId);
 }
-
-/** Serialises draft values into the existing sync command's fields payload. */
-export function draftFields(draft: ItemDraft): Record<string, unknown> {
-  const fields: Record<string, unknown> = {};
-  for (const [fieldId, values] of Object.entries(draft.fields.text)) {
-    const filtered = values.filter((value) => value.trim() !== '');
-    if (filtered.length > 0) fields[fieldId] = filtered.length === 1 ? filtered[0] : filtered;
-  }
-  for (const [fieldId, choices] of Object.entries(draft.fields.refs)) {
-    const ids = choices.map((choice) => choice.id);
-    if (ids.length > 0) fields[fieldId] = ids.length === 1 ? ids[0] : ids;
-  }
-  for (const [fieldId, value] of Object.entries(draft.fields.booleans)) fields[fieldId] = value;
-  for (const [fieldId, value] of Object.entries(draft.overrides)) fields[fieldId] = value;
-  return fields;
-}

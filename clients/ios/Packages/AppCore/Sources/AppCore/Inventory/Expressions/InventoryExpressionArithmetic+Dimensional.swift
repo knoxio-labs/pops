@@ -1,5 +1,3 @@
-import Foundation
-
 /// `expression-dimensional.ts`, expression version 2: measurements of one
 /// dimension add, subtract and compare after the right is converted into the
 /// left's unit, and multiply and divide into derived units. Anything that is

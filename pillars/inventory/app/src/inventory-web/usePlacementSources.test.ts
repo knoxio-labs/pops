@@ -256,6 +256,9 @@ describe('usePlacementSources', () => {
       });
     });
     await waitFor(() => expect(result.current.createLocation.status).toBe('success'));
+    expect(mocks.locationsCreate).toHaveBeenCalledWith({
+      body: { name: 'New location', parentId: 'room', sortOrder: 0 },
+    });
 
     const created = client.getQueryData<LocationTreeResponse>(LOCATION_TREE_QUERY_KEY);
     expect(created?.data[0]?.children).toEqual([

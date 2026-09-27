@@ -37,6 +37,7 @@ import type { MobileInventoryClient } from '../inventory/client.js';
 import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 import type { MobilePurchasesClient } from '../purchases/client.js';
+import type { MobileBarcodeRelayLogger } from '../rest/mobile-barcode-handlers.js';
 
 /** Long enough to satisfy the resolver's floor; fixed so a failure is reproducible. */
 export const TEST_SIGNING_SECRET = 'test-signing-key-0123456789abcdef';
@@ -118,6 +119,8 @@ export interface TestAppOptions {
   contacts?: MobileContactsClient;
   /** Where the `/mobile/barcode/*` route gets its lookup outcome. */
   barcode?: MobileBarcodeClient;
+  /** Captures privacy-safe barcode relay events. */
+  barcodeLogger?: MobileBarcodeRelayLogger;
   /**
    * Where the `/mobile/inventory/*` routes get their data. Defaults, like
    * `finance`, to a client over a gateway whose handle factory throws.
@@ -189,6 +192,7 @@ function passthroughDeps(options: TestAppOptions): Partial<BfmApiDeps> {
     ...(options.receiptRateLimit === undefined
       ? {}
       : { receiptRateLimit: options.receiptRateLimit }),
+    ...(options.barcodeLogger === undefined ? {} : { barcodeLogger: options.barcodeLogger }),
     ...(options.refreshChallenges === undefined
       ? {}
       : { refreshChallenges: options.refreshChallenges }),

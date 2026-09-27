@@ -5,9 +5,11 @@ import { useImageProcessor } from './useImageProcessor';
 
 // Mock browser-image-compression
 vi.mock('browser-image-compression', () => ({
-  default: vi.fn(async (file: File) => {
+  default: vi.fn(async (file: File, options: { fileType?: string }) => {
     // Return a smaller blob to simulate compression
-    const compressed = new Blob([new Uint8Array(100)], { type: file.type || 'image/jpeg' });
+    const compressed = new Blob([new Uint8Array(100)], {
+      type: options.fileType ?? file.type,
+    });
     return compressed;
   }),
 }));
@@ -51,7 +53,7 @@ describe('useImageProcessor', () => {
   });
 
   it('detects HEIC files by extension and converts to JPEG', async () => {
-    const heic2any = (await import('heic2any')).default as unknown as ReturnType<typeof vi.fn>;
+    const heic2any = vi.mocked((await import('heic2any')).default);
     const { result } = renderHook(() => useImageProcessor());
 
     // File with empty type but .heic extension
@@ -67,7 +69,7 @@ describe('useImageProcessor', () => {
   });
 
   it('detects HEIC files by MIME type', async () => {
-    const heic2any = (await import('heic2any')).default as unknown as ReturnType<typeof vi.fn>;
+    const heic2any = vi.mocked((await import('heic2any')).default);
     const { result } = renderHook(() => useImageProcessor());
 
     const file = new File([new Uint8Array(1000)], 'photo.xyz', { type: 'image/heic' });
@@ -80,7 +82,7 @@ describe('useImageProcessor', () => {
   });
 
   it('does not call heic2any for non-HEIC files', async () => {
-    const heic2any = (await import('heic2any')).default as unknown as ReturnType<typeof vi.fn>;
+    const heic2any = vi.mocked((await import('heic2any')).default);
     const { result } = renderHook(() => useImageProcessor());
 
     const file = new File([new Uint8Array(1000)], 'photo.jpg', { type: 'image/jpeg' });
@@ -113,8 +115,7 @@ describe('useImageProcessor', () => {
   });
 
   it('calls imageCompression with correct max dimension', async () => {
-    const imageCompression = (await import('browser-image-compression'))
-      .default as unknown as ReturnType<typeof vi.fn>;
+    const imageCompression = vi.mocked((await import('browser-image-compression')).default);
     const { result } = renderHook(() => useImageProcessor());
 
     const file = new File([new Uint8Array(1000)], 'photo.jpg', { type: 'image/jpeg' });
@@ -129,8 +130,21 @@ describe('useImageProcessor', () => {
         maxWidthOrHeight: 1920,
         initialQuality: 0.8,
         useWebWorker: true,
+        fileType: 'image/jpeg',
       })
     );
+  });
+
+  it('normalizes PNG output to JPEG before upload', async () => {
+    const { result } = renderHook(() => useImageProcessor());
+    const file = new File([new Uint8Array(1000)], 'photo.png', { type: 'image/png' });
+
+    let processed: Awaited<ReturnType<typeof result.current.processFiles>> = [];
+    await act(async () => {
+      processed = await result.current.processFiles([file]);
+    });
+
+    expect(processed[0]?.processed.type).toBe('image/jpeg');
   });
 
   it('generates preview URL for each processed file', async () => {
@@ -159,8 +173,7 @@ describe('useImageProcessor', () => {
   });
 
   it('renames HEIC file extension to .jpg', async () => {
-    const imageCompression = (await import('browser-image-compression'))
-      .default as unknown as ReturnType<typeof vi.fn>;
+    const imageCompression = vi.mocked((await import('browser-image-compression')).default);
     const { result } = renderHook(() => useImageProcessor());
 
     const file = new File([new Uint8Array(1000)], 'vacation.HEIC', { type: '' });

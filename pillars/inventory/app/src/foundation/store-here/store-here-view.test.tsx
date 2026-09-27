@@ -176,6 +176,14 @@ describe('StoreHereSheetPanel', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows offline while reads are pending', () => {
+    renderView({ status: 'pending', offline: true });
+
+    expect(
+      screen.getByText('No connection. Nothing can be stored until it returns.')
+    ).toBeInTheDocument();
+  });
+
   it('a refused target stays disabled while reads are pending', () => {
     renderView({ target: office04Target, initialTab: 'existing', status: 'pending' });
 
@@ -205,6 +213,15 @@ describe('StoreHereSheetPanel', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Items to store' })).not.toBeInTheDocument();
     expect(screen.queryByText(/No active item matches/)).not.toBeInTheDocument();
+  });
+
+  it('shows offline alongside a read error', () => {
+    renderView({ status: 'error', offline: true });
+
+    expect(
+      screen.getByText('No connection. Nothing can be stored until it returns.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load items.');
   });
 
   it('Open the full form calls onOpenForm', () => {

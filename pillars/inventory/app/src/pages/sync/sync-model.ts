@@ -29,6 +29,23 @@ export type WaitReason = WaitingChange['reason'];
 /** A repair kind known by the current contract vocabulary. */
 export type RepairKind = (typeof LEDGER_REPAIR_KINDS)[number];
 
+/** A catalogue-fit state reported for one held value. */
+export type ValueFit = (typeof import('@pops/inventory').LEDGER_VALUE_FITS)[number];
+
+/** Actions that the web can offer for an open repair case. */
+export type RepairActionId =
+  | 'open-item'
+  | 'open-holder'
+  | 'open-type'
+  | 'use-suggested'
+  | 'restore'
+  | 'upload'
+  | 'use-mine'
+  | 'save-fitting'
+  | 'change-type'
+  | 'choose-option'
+  | 'restore-reference';
+
 /** A paired device as displayed by the Sync page. */
 export interface DeviceModel {
   id: string;

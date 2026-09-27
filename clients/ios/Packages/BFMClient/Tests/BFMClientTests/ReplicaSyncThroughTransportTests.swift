@@ -3,8 +3,6 @@ import Foundation
 import InventoryReplica
 import Testing
 
-@testable import BFMClient
-
 /// `OnlineInventoryStore` filling a replica through ``BFMInventoryTransport``'s
 /// real decodes (POPS-4404): the pinned protocol-2 catalogue is fetched
 /// before the page that names it is applied, and nothing is committed

@@ -1,127 +1,118 @@
-import { ChevronRight, MapPin, Package } from 'lucide-react';
-import Markdown from 'react-markdown';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
-import rehypeSanitize from 'rehype-sanitize';
 
-import { Badge, PageHeader, TypeBadge } from '@pops/ui';
+import {
+  CodeBadge,
+  ContainerStateBadge,
+  LifecycleBadge,
+  QuantityBadge,
+  SyncBadge,
+  TypeLabel,
+} from '../../foundation/badges/badges';
+import { PlacementPath } from '../../foundation/badges/placement-path';
+import { AccentTile } from '../../foundation/frame/page-frame';
+import { VerbButton } from '../../foundation/item-page/verb-button';
+import { INVENTORY_ICONS } from '../../foundation/model/icons';
 
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
-import type { ItemDetailAggregate, LocationNode } from '../../foundation/item-page';
+import type { ItemRowModel } from '../../foundation/model/model';
+import type { PlacementWorld } from '../../foundation/model/placement-model';
+import type { TrailPosition } from '../../inventory-web/list-trail';
 
-function LocationBreadcrumb({
-  locationId,
-  locationPath,
-}: {
-  locationId: string | null;
-  locationPath: readonly LocationNode[];
-}) {
-  const content = locationContent(locationId, locationPath);
+/** Props for the item identity, list trail, and action row above the split view. */
+export interface DetailHeaderProps {
+  item: ItemRowModel;
+  world: PlacementWorld;
+  position?: TrailPosition | null;
+  actions?: ReactNode;
+  onPrevious?: () => void;
+  onNext?: () => void;
+}
+
+function BackRow({
+  position,
+  onPrevious,
+  onNext,
+}: Pick<DetailHeaderProps, 'position' | 'onPrevious' | 'onNext'>): ReactElement | null {
+  if (position === undefined || position === null) return null;
   return (
     <div
-      className="mb-4 flex min-w-0 items-center gap-1.5 text-sm"
-      data-testid="location-breadcrumb"
+      className="flex items-center gap-2 text-xs text-muted-foreground"
+      data-testid="item-detail-back-row"
     >
-      <MapPin className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-      {content}
-    </div>
-  );
-}
-
-function locationContent(
-  locationId: string | null,
-  locationPath: readonly LocationNode[]
-): ReactNode {
-  if (locationId === null)
-    return <span className="text-muted-foreground">No location assigned</span>;
-  if (locationPath.length === 0) {
-    return <span className="text-muted-foreground">Location assigned</span>;
-  }
-  return locationPath.map((location, index) => (
-    <span key={location.id} className="flex min-w-0 items-center gap-1.5">
-      {index > 0 ? <ChevronRight className="size-3 shrink-0 text-muted-foreground" /> : null}
-      <Link
-        to={`/inventory/items?location=${location.id}`}
-        className="truncate font-medium text-app-accent hover:underline"
-      >
-        {location.name}
+      <Link className="font-medium text-foreground hover:underline" to={position.href}>
+        {position.listName}
       </Link>
-    </span>
-  ));
-}
-
-function LifecycleBadge({ lifecycle }: { lifecycle: ItemDetailAggregate['lifecycle'] }) {
-  if (lifecycle === 'active') return <Badge variant="secondary">Active</Badge>;
-  return <Badge variant={lifecycle === 'destroyed' ? 'destructive' : 'outline'}>{lifecycle}</Badge>;
-}
-
-function ItemTitle({ detail }: { detail: ItemDetailAggregate }) {
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-app-accent/15 text-app-accent">
-        {detail.isContainer ? (
-          <Package className="size-6" aria-hidden />
-        ) : (
-          <Package className="size-6" aria-hidden />
-        )}
+      <span>
+        {position.index} of {position.total}
       </span>
-      <div className="min-w-0">
-        <span className="block truncate text-2xl font-extrabold tracking-tight md:text-3xl">
-          {detail.name}
-        </span>
-        <span className="flex flex-wrap items-center gap-1.5 pt-1">
-          <LifecycleBadge lifecycle={detail.lifecycle} />
-          {detail.legacyItem.type ? <TypeBadge type={detail.legacyItem.type} /> : null}
-        </span>
-      </div>
+      <span className="ml-auto inline-flex items-center gap-1">
+        <VerbButton
+          label="Previous item"
+          icon={ChevronLeft}
+          iconOnly
+          size="sm"
+          variant="ghost"
+          disabledReason={position.previousId === null ? 'Already at the first item.' : undefined}
+          onClick={onPrevious}
+        />
+        <VerbButton
+          label="Next item"
+          icon={ChevronRight}
+          iconOnly
+          size="sm"
+          variant="ghost"
+          disabledReason={position.nextId === null ? 'Already at the last item.' : undefined}
+          onClick={onNext}
+        />
+      </span>
     </div>
   );
 }
 
-/** Renders the route-compatible header and location metadata for an item. */
+/** Renders the item identity, list trail, and action row above the split view. */
 export function DetailHeader({
-  detail,
-  locationPath,
+  item,
+  world,
+  position,
   actions,
-}: {
-  detail: ItemDetailAggregate;
-  locationPath: readonly LocationNode[];
-  actions: ReactNode;
-}) {
+  onPrevious,
+  onNext,
+}: DetailHeaderProps): ReactElement {
+  const Icon = item.container === null ? INVENTORY_ICONS.item : INVENTORY_ICONS.container;
+  const titleClass = item.lifecycle === 'destroyed' ? 'text-muted-foreground' : 'text-foreground';
   return (
-    <>
-      <PageHeader
-        title={<ItemTitle detail={detail} />}
-        backHref="/inventory/items"
-        breadcrumbs={[{ label: 'Inventory', href: '/inventory' }, { label: detail.name }]}
-        actions={actions}
-        renderLink={Link}
-        className="mb-3"
-      />
-      <LocationBreadcrumb locationId={detail.legacyItem.locationId} locationPath={locationPath} />
-      {detail.note ? (
-        <section className="mb-4" aria-label="Notes">
-          <h2 className="mb-2 text-sm font-semibold">Notes</h2>
-          <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert">
-            <Markdown rehypePlugins={[rehypeSanitize]}>{detail.note}</Markdown>
+    <header className="flex min-w-0 flex-col gap-2" data-testid="item-detail-header">
+      <BackRow position={position} onPrevious={onPrevious} onNext={onNext} />
+      <div className="flex min-w-0 flex-wrap items-start gap-3">
+        <AccentTile icon={Icon} size="lg" />
+        <div className="min-w-0 flex-1">
+          <h1
+            className={`truncate text-2xl font-extrabold tracking-tight md:text-3xl ${titleClass}`}
+          >
+            {item.name}
+          </h1>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+            <QuantityBadge quantity={item.quantity} />
+            <ContainerStateBadge container={item.container} />
+            <LifecycleBadge lifecycle={item.lifecycle} />
+            <SyncBadge sync={item.sync} />
           </div>
-        </section>
-      ) : null}
-    </>
-  );
-}
-
-/** Renders the lifecycle notice that explains why an inactive item is read-only. */
-export function LifecycleNotice({ detail }: { detail: ItemDetailAggregate }) {
-  if (detail.lifecycle === 'active') return null;
-  return (
-    <div className="mb-4 rounded-lg border bg-card px-3 py-2 text-sm" role="status">
-      <p className="font-medium">This item is {detail.lifecycle}.</p>
-      <p className="text-xs text-muted-foreground">
-        {detail.readOnly
-          ? 'Destroyed items are preserved for history and cannot be changed.'
-          : 'The item remains in the record while its lifecycle state is inactive.'}
-      </p>
-    </div>
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <PlacementPath world={world} placement={item.placement} maxSegments={4} />
+            {item.previous ? (
+              <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                <span>from</span>
+                <PlacementPath world={world} placement={item.previous} maxSegments={3} />
+              </span>
+            ) : null}
+            <TypeLabel typeName={item.typeName} />
+            <CodeBadge code={item.code} showNone />
+          </div>
+        </div>
+        {actions}
+      </div>
+    </header>
   );
 }

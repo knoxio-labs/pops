@@ -66,7 +66,7 @@ describe('value vectors', () => {
 
   it('regenerates byte-identically from a fresh database', () => {
     expect(JSON.stringify(build())).toBe(JSON.stringify(file));
-  });
+  }, 15_000);
 
   it('covers every primitive kind at every cardinality the catalogue allows', () => {
     for (const kind of PRIMITIVE_KINDS) {

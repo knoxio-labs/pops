@@ -1,126 +1,148 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, Unlink } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { ExternalLink, FileText, Unlink } from 'lucide-react';
 
-import { Button, Skeleton } from '@pops/ui';
+import { Button } from '@pops/ui';
 
-import { LinkDocumentDialog } from '../../components/LinkDocumentDialog';
-import { unwrap } from '../../inventory-api-helpers.js';
-import { documentsListForItem, documentsUnlink } from '../../inventory-api/index.js';
-import { DocumentViewAction } from './documents-list-actions';
+import { EmptyLine } from '../../foundation/item-page/section-parts';
+import { VerbButton } from '../../foundation/item-page/verb-button';
 
-import type { LinkedDocument } from '../../foundation/item-page';
+import type { ReactElement } from 'react';
 
-const DOCUMENT_TYPE_LABELS: Readonly<Record<string, string>> = {
-  invoice: 'Invoice',
-  manual: 'Manual',
-  other: 'Other',
-  receipt: 'Receipt',
-  warranty: 'Warranty',
-};
+import type { DetailDocument } from './detail-model';
 
-function DocumentThumbnail({ documentId }: { documentId: number }) {
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
-  const source = `/inventory/documents/${documentId}/thumbnail`;
-  if (status === 'error') {
+function documentHref(baseUrl: string, documentId: number): string {
+  return `${baseUrl}/documents/${documentId}/details`;
+}
+
+function documentKind(kind: string): string {
+  return kind.length === 0 ? 'Document' : kind;
+}
+
+function DocumentOpenAction({
+  baseUrl,
+  actionReason,
+  documentId,
+  missing,
+}: {
+  baseUrl: string | null;
+  actionReason: string | undefined;
+  documentId: number;
+  missing: boolean;
+}): ReactElement | null {
+  if (missing) return null;
+  if (baseUrl !== null && actionReason === undefined) {
     return (
-      <div
-        className="flex h-12 w-10 shrink-0 items-center justify-center rounded bg-muted"
-        title="Document unavailable"
+      <a
+        href={documentHref(baseUrl, documentId)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="relative inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+        title="Open in Paperless"
+        aria-label="Open in Paperless"
       >
-        <FileText className="size-5 text-muted-foreground" aria-hidden />
-      </div>
+        <ExternalLink className="size-4" aria-hidden />
+      </a>
     );
   }
   return (
-    <div className="relative h-12 w-10 shrink-0">
-      {status === 'loading' ? <Skeleton className="absolute inset-0 rounded" /> : null}
-      <img
-        src={source}
-        alt="Document thumbnail"
-        className="h-12 w-10 rounded object-cover"
-        onLoad={() => setStatus('loaded')}
-        onError={() => setStatus('error')}
-      />
-    </div>
+    <Button
+      variant="ghost"
+      size="icon"
+      disabled
+      title={actionReason ?? 'Paperless is not available'}
+      aria-label="Open in Paperless"
+    >
+      <ExternalLink className="size-4" aria-hidden />
+    </Button>
   );
+}
+
+function unlinkReason(
+  actionReason: string | undefined,
+  readOnly: boolean,
+  isUnlinking: boolean
+): string | undefined {
+  if (actionReason !== undefined) return actionReason;
+  if (readOnly) return 'Nothing can change on this item.';
+  if (isUnlinking) return 'Unlinking document.';
+  return undefined;
 }
 
 function DocumentRow({
   document,
   baseUrl,
-  disabledReason,
+  actionReason,
   readOnly,
   isUnlinking,
   onUnlink,
 }: {
-  document: LinkedDocument;
+  document: DetailDocument;
   baseUrl: string | null;
-  disabledReason?: string;
+  actionReason: string | undefined;
   readOnly: boolean;
   isUnlinking: boolean;
   onUnlink: (id: number) => void;
-}) {
-  const unlinkLabel = 'Unlink document';
+}): ReactElement {
+  const disabledReason = unlinkReason(
+    document.missing ? undefined : actionReason,
+    readOnly,
+    isUnlinking
+  );
   return (
-    <li className="group flex min-h-11 items-center gap-3 border-b border-border/60 px-2 py-1.5 last:border-b-0">
-      <DocumentThumbnail documentId={document.paperlessDocumentId} />
+    <li className="flex min-h-11 items-center gap-3 border-b border-border/60 px-2 py-1.5 last:border-b-0">
+      <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium">
-          {document.title ?? `Document #${document.paperlessDocumentId}`}
+        <span
+          className={
+            document.missing
+              ? 'truncate text-sm text-muted-foreground line-through'
+              : 'truncate text-sm font-medium'
+          }
+        >
+          {document.title}
         </span>
         <span className="text-xs text-muted-foreground">
-          {DOCUMENT_TYPE_LABELS[document.documentType] ?? document.documentType}
+          {document.missing
+            ? 'Deleted in Paperless. Unlink it to tidy up.'
+            : `${documentKind(document.kind)} · ${document.added}`}
         </span>
       </span>
-      <DocumentViewAction
+      <DocumentOpenAction
         baseUrl={baseUrl}
-        disabledReason={disabledReason}
+        actionReason={actionReason}
         documentId={document.paperlessDocumentId}
+        missing={document.missing}
       />
-      <Button
+      <VerbButton
+        label="Unlink document"
+        icon={Unlink}
         variant="ghost"
-        size="icon"
-        className="text-destructive hover:text-destructive"
-        disabled={readOnly || Boolean(disabledReason) || isUnlinking}
-        title={disabledReason ?? unlinkLabel}
-        aria-label={unlinkLabel}
+        iconOnly
+        disabledReason={disabledReason}
         onClick={() => onUnlink(document.id)}
-      >
-        <Unlink className="size-4" aria-hidden />
-      </Button>
+        className="text-destructive hover:text-destructive"
+      />
     </li>
   );
 }
 
-function DocumentsContent({
+/** Renders the linked-document rows while preserving their action contracts. */
+export function DocumentsList({
   documents,
-  isLoading,
   baseUrl,
-  disabledReason,
+  actionReason,
   readOnly,
   isUnlinking,
   onUnlink,
 }: {
-  documents: readonly LinkedDocument[];
-  isLoading: boolean;
+  documents: readonly DetailDocument[];
   baseUrl: string | null;
-  disabledReason?: string;
+  actionReason: string | undefined;
   readOnly: boolean;
   isUnlinking: boolean;
   onUnlink: (id: number) => void;
-}) {
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <Skeleton className="h-11 w-full" />
-        <Skeleton className="h-11 w-full" />
-      </div>
-    );
-  }
+}): ReactElement {
   if (documents.length === 0) {
-    return <p className="text-sm text-muted-foreground">No documents linked yet.</p>;
+    return <EmptyLine icon={FileText} text="No documents linked." />;
   }
   return (
     <ul aria-label="Documents" className="divide-y divide-border/60">
@@ -129,58 +151,12 @@ function DocumentsContent({
           key={document.id}
           document={document}
           baseUrl={baseUrl}
-          disabledReason={disabledReason}
+          actionReason={actionReason}
           readOnly={readOnly}
           isUnlinking={isUnlinking}
           onUnlink={onUnlink}
         />
       ))}
     </ul>
-  );
-}
-
-/** Reads and renders the linked Paperless documents for one item. */
-export function DocumentsList({
-  itemId,
-  baseUrl,
-  disabledReason,
-  readOnly,
-}: {
-  itemId: string;
-  baseUrl: string | null;
-  disabledReason?: string;
-  readOnly: boolean;
-}) {
-  const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({
-    queryKey: ['inventory', 'documents', 'listForItem', { itemId }],
-    queryFn: async () => unwrap(await documentsListForItem({ path: { itemId } })),
-  });
-  const unlinkMutation = useMutation({
-    mutationFn: async (documentId: number) =>
-      unwrap(await documentsUnlink({ path: { id: documentId } })),
-    onSuccess: () => toast.success('Document unlinked'),
-    onSettled: () => void queryClient.invalidateQueries({ queryKey: ['inventory', 'documents'] }),
-  });
-  const documents = data?.data ?? [];
-  return (
-    <>
-      <DocumentsContent
-        documents={documents}
-        isLoading={isLoading}
-        baseUrl={baseUrl}
-        disabledReason={disabledReason}
-        readOnly={readOnly}
-        isUnlinking={unlinkMutation.isPending}
-        onUnlink={(id) => unlinkMutation.mutate(id)}
-      />
-      <LinkDocumentDialog
-        itemId={itemId}
-        disabledReason={readOnly ? 'Nothing can change on this item.' : disabledReason}
-        onLinked={() => {
-          void queryClient.invalidateQueries({ queryKey: ['inventory', 'documents'] });
-        }}
-      />
-    </>
   );
 }

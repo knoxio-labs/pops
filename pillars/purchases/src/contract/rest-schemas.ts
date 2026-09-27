@@ -34,6 +34,7 @@ import {
   ShipmentStatusSchema,
   UtcOffsetMinutesSchema,
 } from './schemas/purchase.js';
+import { popsUriPattern } from './schemas/scalars.js';
 
 export { CreateItemBodySchema, CreateItemUnitBodySchema, PatchItemBodySchema };
 
@@ -320,6 +321,17 @@ export const ListPurchasesQuerySchema = z.object({
    */
   merchantEntityName: z.string().min(1).optional(),
   merchantUnattributed: QueryBoolSchema.optional(),
+  /**
+   * Limits the list to orders with a purchase item unit linked to this
+   * inventory item URI.
+   */
+  inventoryItemUri: z
+    .string()
+    .regex(popsUriPattern('inventory', 'item'))
+    .optional()
+    .describe(
+      'Limits the list to orders with a purchase item unit linked to this inventory item URI.'
+    ),
   from: IsoTimestampSchema.optional(),
   to: IsoTimestampSchema.optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),

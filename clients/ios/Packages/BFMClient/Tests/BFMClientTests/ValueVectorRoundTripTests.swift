@@ -1,9 +1,6 @@
 import AppCore
-import Foundation
 import InventoryReplica
 import Testing
-
-@testable import BFMClient
 
 /// POPS-4403: every protocol-2 value the inventory pillar's command engine
 /// wrote (`Contracts/value-vectors-v1.json`) travels as the pillar projected
