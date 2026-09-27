@@ -144,7 +144,7 @@ function ActivityBody({
         onRetry={data.feed.refetch}
       />
       {hasDetail ? (
-        <div className="absolute inset-y-0 right-0 z-10 flex max-w-full shadow-xl xl:static xl:shadow-none [&>section]:w-120 xl:[&>section]:w-full">
+        <div className="absolute inset-y-0 right-0 z-10 flex max-w-full shadow-xl xl:static xl:shadow-none max-xl:[&>section]:w-120 xl:[&>section]:w-full">
           <EventDetailSheet event={openModel} source={openSource} onClose={url.closeEvent} />
         </div>
       ) : null}
