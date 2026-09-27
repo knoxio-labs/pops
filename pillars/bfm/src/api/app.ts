@@ -36,6 +36,7 @@ import { createReceiptRateLimit, type ReceiptRateLimitOptions } from './auth/rec
 import { createRefreshRateLimit, type RefreshRateLimitOptions } from './auth/refresh-rate-limit.js';
 import { createRequireCapability } from './auth/require-capability.js';
 import { createRequireDevice } from './auth/require-device.js';
+import { createMobileBarcodeAttemptLogger } from './barcode/request-log.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
 import { createMobileNoStore } from './mobile-no-store.js';
 import {
@@ -110,6 +111,10 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   const errors = createPillarErrorHandlers({ pillar: 'bfm' });
   app.disable('x-powered-by');
   app.use(errors.requestId);
+  app.use(
+    bfmContract.mobileBarcode.lookup.path,
+    createMobileBarcodeAttemptLogger(deps.barcodeLogger)
+  );
 
   // FIRST, ahead of everything, including the guard.
   //

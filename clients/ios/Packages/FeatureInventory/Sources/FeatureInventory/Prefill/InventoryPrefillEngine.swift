@@ -9,7 +9,8 @@ internal struct InventoryPrefillEngine: Sendable {
 
     internal func fill(
         source: InventoryPrefillSource, type: InventoryCatalogueType,
-        draft: InventoryProtocol2Draft, includeName: Bool = false
+        draft: InventoryProtocol2Draft, includeName: Bool = false,
+        reportFailure: @Sendable (PopsError) async -> Void = { _ in }
     ) async -> [String: [InventoryPrimitiveValue]] {
         let plannedFields =
             includeName
@@ -31,16 +32,30 @@ internal struct InventoryPrefillEngine: Sendable {
         }
 
         var result: [String: [InventoryPrimitiveValue]] = [:]
+        var didReportFailure = false
         for chunk in chunks {
+            guard !Task.isCancelled else { return result }
             do {
                 let raw = try await generator.generate(source: facts.source, fields: chunk)
                 let values = InventoryPrefillValidator.validate(
                     raw, fields: chunk, source: facts.source)
                 result.merge(values, uniquingKeysWith: { _, new in new })
+            } catch is CancellationError {
+                return result
             } catch {
-                continue
+                guard !Task.isCancelled else { return result }
+                if !didReportFailure {
+                    didReportFailure = true
+                    await reportFailure(Self.generationFailure)
+                }
             }
         }
         return result
     }
+
+    private static let generationFailure = PopsError(
+        code: "ios.inventory.prefill_generation_failed",
+        message: "Couldn't generate item suggestions. Try again.",
+        retryable: true,
+        kind: .client)
 }
