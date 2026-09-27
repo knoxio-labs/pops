@@ -80,8 +80,7 @@ describe('facadeSource', () => {
           new RegExp(`\\b${name}\\b|export \\* from`)
         );
       }
-    },
-    15_000
+    }
   );
 });
 
