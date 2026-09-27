@@ -2637,23 +2637,32 @@ export type MobileInventoryReportLedgerErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -2687,38 +2696,32 @@ export type MobileInventoryReportLedgerErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
