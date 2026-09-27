@@ -19,11 +19,12 @@ import type { ItemDetailModel } from './detail-model';
 import type { AuxiliaryQueries, ConnectionSources } from './detail-read-queries';
 
 /** The banner states that can appear after the item itself is available. */
-export type ItemDetailBannerState = 'partial' | 'unavailable';
+export type ItemDetailBannerState = 'partial' | 'unavailable' | 'error';
 
 /** Read signals used to distinguish incomplete data from an unavailable read. */
 export interface ItemDetailReadSignals {
   readonly hasPending: boolean;
+  readonly hasUnavailable: boolean;
   readonly hasError: boolean;
 }
 
@@ -136,7 +137,8 @@ export function itemDetailBannerState(
   signals: ItemDetailReadSignals
 ): ItemDetailBannerState | null {
   if (model === null) return null;
-  if (signals.hasError) return 'unavailable';
+  if (signals.hasError) return 'error';
+  if (signals.hasUnavailable) return 'unavailable';
   if (
     signals.hasPending ||
     model.aggregate === null ||

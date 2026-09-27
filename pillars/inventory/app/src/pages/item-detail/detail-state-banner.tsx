@@ -24,6 +24,18 @@ export function DetailStateBanner({ state, onRetry }: DetailStateBannerProps): R
     );
   }
 
+  if (state === 'error') {
+    return (
+      <StateBanner
+        kind="error"
+        title="Some item details did not load."
+        detail="The inventory service returned an error. Nothing was changed."
+        actionLabel="Retry"
+        onAction={onRetry}
+      />
+    );
+  }
+
   return (
     <StateBanner
       kind="offline"

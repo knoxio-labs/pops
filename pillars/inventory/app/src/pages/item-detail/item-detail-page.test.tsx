@@ -179,6 +179,26 @@ describe('ItemDetailPage', () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
+  it('renders an error banner for a failed optional read', () => {
+    const retry = vi.fn();
+    mocks.useItemDetailModel.mockReturnValue({
+      status: 'ready',
+      error: null,
+      model,
+      banner: 'error',
+      retry,
+    });
+
+    renderPage();
+
+    expect(screen.getByText('Some item details did not load.')).toBeInTheDocument();
+    expect(
+      screen.getByText('The inventory service returned an error. Nothing was changed.')
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
   it('uses the unavailable state for an unavailable lead read', () => {
     mocks.useItemDetailModel.mockReturnValue({
       status: 'error',
@@ -269,11 +289,23 @@ describe('ItemDetailPage', () => {
   });
 
   it('keeps the partial boundary at any missing deferred read', () => {
-    expect(itemDetailBannerState(model, { hasPending: false, hasError: false })).toBeNull();
     expect(
-      itemDetailBannerState({ ...model, eventCount: null }, { hasPending: false, hasError: false })
+      itemDetailBannerState(model, { hasPending: false, hasUnavailable: false, hasError: false })
+    ).toBeNull();
+    expect(
+      itemDetailBannerState(
+        { ...model, eventCount: null },
+        { hasPending: false, hasUnavailable: false, hasError: false }
+      )
     ).toBe('partial');
-    expect(itemDetailBannerState(model, { hasPending: false, hasError: true })).toBe('unavailable');
-    expect(itemDetailBannerState(null, { hasPending: true, hasError: true })).toBeNull();
+    expect(
+      itemDetailBannerState(model, { hasPending: false, hasUnavailable: true, hasError: false })
+    ).toBe('unavailable');
+    expect(
+      itemDetailBannerState(model, { hasPending: false, hasUnavailable: true, hasError: true })
+    ).toBe('error');
+    expect(
+      itemDetailBannerState(null, { hasPending: true, hasUnavailable: true, hasError: true })
+    ).toBeNull();
   });
 });

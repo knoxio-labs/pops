@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import { isNotFoundError } from '../../inventory-api-helpers.js';
+import { isNotFoundError, isUnavailableError } from '../../inventory-api-helpers.js';
 import { usePendingItemIds } from '../../inventory-web/item-verbs.js';
 import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { useWebEvents } from '../../inventory-web/useWebEvents.js';
@@ -37,16 +37,21 @@ function itemDetailReadSignals(
     auxiliary.fixtureLinksQuery.isPending,
     auxiliary.fixturesQuery.isPending,
   ].some(Boolean);
-  const hasError = [
-    events.status === 'error',
-    sources.graphQuery.isError,
-    sources.related.isError,
-    auxiliary.documentsQuery.isError,
-    auxiliary.paperlessQuery.isError,
-    auxiliary.fixtureLinksQuery.isError,
-    auxiliary.fixturesQuery.isError,
-  ].some(Boolean);
-  return { hasPending, hasError };
+  const failures = [
+    { failed: events.status === 'error', error: events.error },
+    { failed: sources.graphQuery.isError, error: sources.graphQuery.error },
+    { failed: sources.related.isError, error: sources.related.error },
+    { failed: auxiliary.documentsQuery.isError, error: auxiliary.documentsQuery.error },
+    { failed: auxiliary.paperlessQuery.isError, error: auxiliary.paperlessQuery.error },
+    { failed: auxiliary.fixtureLinksQuery.isError, error: auxiliary.fixtureLinksQuery.error },
+    { failed: auxiliary.fixturesQuery.isError, error: auxiliary.fixturesQuery.error },
+  ].filter((failure) => failure.failed);
+  return {
+    hasPending,
+    hasUnavailable:
+      failures.length > 0 && failures.every((failure) => isUnavailableError(failure.error)),
+    hasError: failures.some((failure) => !isUnavailableError(failure.error)),
+  };
 }
 
 /** The stable read states exposed by the item-detail data hook. */
