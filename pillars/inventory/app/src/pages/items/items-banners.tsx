@@ -4,12 +4,15 @@ import { Button, cn } from '@pops/ui';
 
 import { StateBanner } from '../../foundation/feedback/state-banner.js';
 import { OfflineBanner } from '../../foundation/list-page/list-states.js';
+import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { placementTrail, samePlacement } from '../../foundation/model/placement-model.js';
 
+import type { LucideIcon } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { ItemRowModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
+import type { TypeArrival } from '../../inventory-web/type-arrivals.js';
 
 /** Two loaded rows that may represent the same physical item. */
 export interface DuplicatePair {
@@ -54,20 +57,32 @@ export function findDuplicatePair(
 }
 
 function BannerFrame({
+  icon: Icon,
+  tone,
   title,
   detail,
   children,
 }: {
+  icon: LucideIcon;
+  tone: 'accent' | 'warning';
   title: string;
   detail: string;
   children: ReactNode;
 }): ReactElement {
   return (
     <div
-      className="flex items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2"
+      className={cn(
+        'flex items-center gap-3 rounded-lg border px-3 py-2',
+        tone === 'accent'
+          ? 'border-app-accent/40 bg-app-accent/10'
+          : 'border-warning/40 bg-warning/10'
+      )}
       role="status"
     >
-      <CopySlash className="size-4 shrink-0 text-warning" aria-hidden />
+      <Icon
+        className={cn('size-4 shrink-0', tone === 'accent' ? 'text-app-accent' : 'text-warning')}
+        aria-hidden
+      />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-muted-foreground">{detail}</p>
@@ -91,6 +106,8 @@ export function DuplicatesBanner({
 }): ReactElement {
   return (
     <BannerFrame
+      icon={CopySlash}
+      tone="warning"
       title={`Two items called ${name} sit on ${place}`}
       detail="One has a code and one does not. Open both to decide which to keep."
     >
@@ -104,6 +121,35 @@ export function DuplicatesBanner({
   );
 }
 
+/** Shows one newly published type whose claimed legacy label has matches. */
+export function TypeArrivedBanner({
+  typeLabel,
+  matches,
+  onNotNow,
+  onReview,
+}: {
+  typeLabel: string;
+  matches: number;
+  onNotNow: () => void;
+  onReview: () => void;
+}): ReactElement {
+  return (
+    <BannerFrame
+      icon={INVENTORY_ICONS.type}
+      tone="accent"
+      title={`${matches} untyped items look like ${typeLabel}`}
+      detail={`${typeLabel} was published. Review them before anything changes.`}
+    >
+      <Button size="sm" variant="ghost" onClick={onNotNow}>
+        Not now
+      </Button>
+      <Button size="sm" variant="outline" className={cn('bg-background')} onClick={onReview}>
+        Review {matches}
+      </Button>
+    </BannerFrame>
+  );
+}
+
 interface ItemsBannerProps {
   online: boolean;
   changed: {
@@ -112,17 +158,23 @@ interface ItemsBannerProps {
     reload: () => Promise<void>;
   };
   duplicate: DuplicatePair | null;
+  arrival: TypeArrival | null;
   onDismiss: () => void;
   onCompare: (name: string) => void;
+  onDismissArrival: () => void;
+  onReviewArrival: () => void;
 }
 
-/** Chooses the first applicable offline, stale, or duplicate banner. */
+/** Chooses the first applicable offline, stale, duplicate, or Type arrived banner. */
 export function ItemsBanner({
   online,
   changed,
   duplicate,
+  arrival,
   onDismiss,
   onCompare,
+  onDismissArrival,
+  onReviewArrival,
 }: ItemsBannerProps): ReactElement | null {
   if (!online) return <OfflineBanner />;
   if (changed.stale) {
@@ -137,13 +189,23 @@ export function ItemsBanner({
       />
     );
   }
-  if (duplicate === null) return null;
+  if (duplicate !== null) {
+    return (
+      <DuplicatesBanner
+        name={duplicate.name}
+        place={duplicate.place}
+        onDismiss={onDismiss}
+        onCompare={() => onCompare(duplicate.name)}
+      />
+    );
+  }
+  if (arrival === null) return null;
   return (
-    <DuplicatesBanner
-      name={duplicate.name}
-      place={duplicate.place}
-      onDismiss={onDismiss}
-      onCompare={() => onCompare(duplicate.name)}
+    <TypeArrivedBanner
+      typeLabel={arrival.type.label}
+      matches={arrival.matches}
+      onNotNow={onDismissArrival}
+      onReview={onReviewArrival}
     />
   );
 }

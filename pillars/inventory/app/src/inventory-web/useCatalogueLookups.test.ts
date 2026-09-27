@@ -80,4 +80,44 @@ describe('useCatalogueLookups', () => {
     expect(result.current.selected.type?.label).toBe('Cables');
     expect(result.current.selected.typeName).toBe('Cables');
   });
+
+  it('reports the previous revision and keeps the first revision at null', async () => {
+    const withBase: Catalogue = {
+      ...catalogue,
+      revision: { ...catalogue.revision, baseRevision: 2 },
+    };
+    mocks.typesReadCatalogue.mockResolvedValue(ok(withBase));
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useCatalogueLookups(), {
+      wrapper: withQueryClient(client),
+    });
+
+    await waitFor(() => expect(result.current.catalogue).toEqual(withBase));
+    expect(result.current.baseRevision).toBe(2);
+
+    mocks.typesReadCatalogue.mockResolvedValue(ok(catalogue));
+    const firstRevisionClient = createTestQueryClient();
+    const firstRevision = renderHook(() => useCatalogueLookups(), {
+      wrapper: withQueryClient(firstRevisionClient),
+    });
+    await waitFor(() => expect(firstRevision.result.current.catalogue).toEqual(catalogue));
+    expect(firstRevision.result.current.baseRevision).toBeNull();
+  });
+
+  it('reports no previous revision while the published read is pending or failed', async () => {
+    mocks.typesReadCatalogue.mockImplementation(() => new Promise(() => undefined));
+    const pendingClient = createTestQueryClient();
+    const pending = renderHook(() => useCatalogueLookups(), {
+      wrapper: withQueryClient(pendingClient),
+    });
+    expect(pending.result.current.baseRevision).toBeNull();
+
+    mocks.typesReadCatalogue.mockRejectedValue(new Error('unavailable'));
+    const failedClient = createTestQueryClient();
+    const failed = renderHook(() => useCatalogueLookups(), {
+      wrapper: withQueryClient(failedClient),
+    });
+    await waitFor(() => expect(failed.result.current.error).toBeInstanceOf(Error));
+    expect(failed.result.current.baseRevision).toBeNull();
+  });
 });
