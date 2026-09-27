@@ -8,14 +8,23 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { loadProtocol1Fields } from '../../catalogue/index.js';
 import { SyncEventSchema, SyncItemSchema } from '../../contract/rest-sync-schemas.js';
-import { itemDocuments, itemFieldValues, items } from '../../db/index.js';
+import {
+  catalogueRevisions,
+  itemDocuments,
+  itemFieldValues,
+  items,
+  itemTypeFields,
+  itemTypes,
+} from '../../db/index.js';
 import {
   createItem,
   createLocation,
   openSyncHarness,
   paperless,
   PROTOCOL,
+  PROTOCOL_2,
   send,
   wireMutation,
   type SyncHarness,
@@ -45,6 +54,64 @@ function harness(documents?: DocumentsClient): SyncHarness {
 async function apply(target: SyncHarness, ...mutations: ReturnType<typeof wireMutation>[]) {
   const response = await send(target.api, mutations);
   expect(response.status).toBe(200);
+}
+
+const BOOK_TYPE_ID = '3da7cdc4-09e4-5da6-a0ca-f6b9f11a6a8b';
+const AUTHOR_FIELD_ID = '4add108a-6ee4-54b7-a1cb-1eb9159b3593';
+
+function publishManyAuthorField(target: SyncHarness): void {
+  target.db.db
+    .insert(catalogueRevisions)
+    .values({
+      revision: 2,
+      baseRevision: 1,
+      status: 'draft',
+      minimumProtocol: 2,
+      createdActorKind: 'migration',
+      createdAt: '2026-09-27T00:00:00.000Z',
+    })
+    .run();
+  target.db.db
+    .insert(itemTypes)
+    .values({
+      revision: 2,
+      id: BOOK_TYPE_ID,
+      key: 'book',
+      label: 'Book',
+      sortOrder: 0,
+      capabilitiesJson: '[]',
+      legacyLabelsJson: '["Book"]',
+      presentationJson: '{}',
+    })
+    .run();
+  target.db.db
+    .insert(itemTypeFields)
+    .values({
+      revision: 2,
+      id: AUTHOR_FIELD_ID,
+      typeId: BOOK_TYPE_ID,
+      key: 'Author',
+      label: 'Author',
+      sortOrder: 0,
+      kind: 'short_text',
+      cardinality: 'many',
+      required: 0,
+      storage: 'stored',
+      referenceKindsJson: '[]',
+      referenceTypeIdsJson: '[]',
+      allowOverride: 0,
+      presentationJson: '{}',
+    })
+    .run();
+  target.db.db
+    .update(catalogueRevisions)
+    .set({
+      status: 'published',
+      publishedActorKind: 'migration',
+      publishedAt: '2026-09-27T00:00:01.000Z',
+    })
+    .where(eq(catalogueRevisions.revision, 2))
+    .run();
 }
 
 async function feed(target: SyncHarness): Promise<{ items: SyncItem[]; events: SyncEvent[] }> {
@@ -135,6 +202,63 @@ describe('move events on the wire', () => {
 });
 
 describe('item rows on the wire', () => {
+  it('keeps protocol-2 changes available when Author has multiple canonical values', async () => {
+    const target = harness();
+    const book = randomUUID();
+    await apply(target, createItem(book, 'The Dispossessed'));
+    publishManyAuthorField(target);
+    target.db.db.update(items).set({ typeId: BOOK_TYPE_ID }).where(eq(items.id, book)).run();
+    target.db.db
+      .insert(itemFieldValues)
+      .values([
+        {
+          itemId: book,
+          fieldId: AUTHOR_FIELD_ID,
+          source: 'stored',
+          ordinal: 0,
+          valueJson: '"Ursula K. Le Guin"',
+          catalogueRevision: 2,
+          createdAt: '2026-09-27T00:00:02.000Z',
+          updatedAt: '2026-09-27T00:00:02.000Z',
+        },
+        {
+          itemId: book,
+          fieldId: AUTHOR_FIELD_ID,
+          source: 'stored',
+          ordinal: 1,
+          valueJson: '"Second Author"',
+          catalogueRevision: 2,
+          createdAt: '2026-09-27T00:00:02.000Z',
+          updatedAt: '2026-09-27T00:00:02.000Z',
+        },
+      ])
+      .run();
+
+    expect(() => loadProtocol1Fields(target.db.db, book)).toThrow(
+      'has cardinality unsupported by protocol 1'
+    );
+
+    const snapshot = await target.api.get('/sync/snapshot').set(PROTOCOL_2).query({ limit: 1 });
+    expect(snapshot.status).toBe(200);
+    const response = await target.api
+      .get('/sync/changes')
+      .set(PROTOCOL_2)
+      .query({ since: 0, epoch: snapshot.body.epoch, limit: 500 });
+
+    expect(response.status).toBe(200);
+    const row = SyncItemSchema.array()
+      .parse(response.body.items)
+      .find((candidate) => candidate.id === book);
+    expect(row).toBeDefined();
+    expect(row?.fields).not.toHaveProperty('Author');
+    expect(row?.fieldValues).toContainEqual({
+      fieldId: AUTHOR_FIELD_ID,
+      source: 'stored',
+      catalogueRevision: 2,
+      values: ['Ursula K. Le Guin', 'Second Author'],
+    });
+  });
+
   it('carries protocol-2 stable identities and canonical persisted values beside the compatibility projection', async () => {
     const target = harness();
     const lamp = randomUUID();
