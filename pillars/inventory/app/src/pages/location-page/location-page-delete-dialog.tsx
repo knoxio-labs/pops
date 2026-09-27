@@ -13,11 +13,11 @@ import type { ReactElement } from 'react';
 import type { DeletePlaceState } from './location-page-parts.js';
 
 function DeleteSummary({ state }: { state: DeletePlaceState }): ReactElement {
-  if (state.childCount > 0) {
+  if (state.descendantCount > 0) {
     return (
       <p>
-        {state.childCount} {state.childCount === 1 ? 'place is' : 'places are'} inside and will be
-        deleted.
+        {state.descendantCount} {state.descendantCount === 1 ? 'place is' : 'places are'} inside and
+        will be deleted.
       </p>
     );
   }

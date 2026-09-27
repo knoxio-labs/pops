@@ -2,6 +2,8 @@ import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { OFFLINE_REASON } from '../../foundation/feedback/state-banner.js';
+import { refusalReason } from '../../foundation/list-page/selection-actions.js';
+import { useTrackedWrites } from '../../foundation/list-page/take-out.js';
 import {
   effectiveLocationId,
   type PlacementWorld,
@@ -22,21 +24,30 @@ export interface ContentsVerbState {
   readonly moveSelected: (target: PlacementTarget) => void;
 }
 
-function useVerbRunner() {
-  return useCallback(async (operation: () => ItemVerbPromise): Promise<void> => {
-    try {
-      const result = await operation();
-      if (result.status === 'refused') toast.error('Inventory did not accept that change.');
-    } catch (reason: unknown) {
-      toast.error(inventoryErrorMessage(reason));
-    }
-  }, []);
+function useVerbRunner(setRejection: (id: string, reason: string | null) => void) {
+  return useCallback(
+    async (id: string, operation: () => ItemVerbPromise): Promise<void> => {
+      try {
+        const result = await operation();
+        if (result.status === 'refused') {
+          setRejection(id, refusalReason(result.refusal));
+          toast.error('Inventory did not accept that change.');
+          return;
+        }
+        setRejection(id, null);
+      } catch (reason: unknown) {
+        setRejection(id, 'The inventory service did not answer.');
+        toast.error(inventoryErrorMessage(reason));
+      }
+    },
+    [setRejection]
+  );
 }
 
-function useIdsRunner(run: (operation: () => ItemVerbPromise) => Promise<void>) {
+function useIdsRunner(run: (id: string, operation: () => ItemVerbPromise) => Promise<void>) {
   return useCallback(
     (ids: readonly string[], operation: (id: string) => ItemVerbPromise): void => {
-      for (const id of ids) void run(() => operation(id));
+      for (const id of ids) void run(id, () => operation(id));
     },
     [run]
   );
@@ -82,7 +93,8 @@ export function useContentsVerbs(
 ): ContentsVerbState {
   const itemVerbs = useItemVerbs();
   const pendingIds = usePendingItemIds();
-  const run = useVerbRunner();
+  const tracked = useTrackedWrites();
+  const run = useVerbRunner(tracked.setRejection);
   const runForIds = useIdsRunner(run);
   const pickUp = useCallback(
     (ids: readonly string[]) => {
@@ -102,7 +114,7 @@ export function useContentsVerbs(
       for (const id of ids) {
         const locationId = effectiveLocationId(world, id);
         if (locationId !== null) {
-          void run(() => itemVerbs.move(id, { kind: 'location', locationId }));
+          void run(id, () => itemVerbs.move(id, { kind: 'location', locationId }));
         }
       }
     },
@@ -112,13 +124,13 @@ export function useContentsVerbs(
   const verbs = useMemo<ContentsVerbs>(
     () => ({
       pendingIds,
-      rejections: {},
+      rejections: tracked.rejections,
       disabledReason: online ? undefined : OFFLINE_REASON,
       pickUp,
       startMove,
       takeOut,
     }),
-    [online, pendingIds, pickUp, startMove, takeOut]
+    [online, pendingIds, pickUp, startMove, takeOut, tracked.rejections]
   );
   return { verbs, movingIds, setMovingIds, moveSelected };
 }

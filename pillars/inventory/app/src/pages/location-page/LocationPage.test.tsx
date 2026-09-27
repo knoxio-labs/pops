@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { InventoryApiError } from '../../inventory-api-helpers.js';
 import { LOCATIONS_TREE_QUERY_KEY } from '../../inventory-web/queryKeys.js';
+
+import type { ReactElement } from 'react';
 
 import type { ItemRowModel, LocationModel } from '../../foundation/model/model.js';
 import type { PlaceContentsData } from '../../inventory-web/usePlaceContents.js';
@@ -18,10 +20,16 @@ const mocks = vi.hoisted(() => ({
   usePlaceContents: vi.fn(),
   usePlaceEdits: vi.fn(),
   useLocationGoneQuery: vi.fn(),
+  locationsDelete: vi.fn(),
+  useItemVerbs: vi.fn(),
+  usePendingItemIds: vi.fn(),
 }));
 
 vi.mock('./location-page-model.js', () => ({ useLocationModels: mocks.useLocationModels }));
-vi.mock('../../inventory-web/useLocationTallies.js', () => ({
+vi.mock('../../inventory-web/useLocationTallies.js', async () => ({
+  ...(await vi.importActual<typeof import('../../inventory-web/useLocationTallies.js')>(
+    '../../inventory-web/useLocationTallies.js'
+  )),
   useLocationTallies: mocks.useLocationTallies,
 }));
 vi.mock('../../inventory-web/useOnline.js', () => ({ useOnline: mocks.useOnline }));
@@ -29,6 +37,13 @@ vi.mock('../../inventory-web/usePlaceContents.js', () => ({
   usePlaceContents: mocks.usePlaceContents,
 }));
 vi.mock('./location-page-edits.js', () => ({ usePlaceEdits: mocks.usePlaceEdits }));
+vi.mock('../../inventory-api/index.js', () => ({
+  locationsDelete: (...args: unknown[]) => mocks.locationsDelete(...args),
+}));
+vi.mock('../../inventory-web/item-verbs.js', () => ({
+  useItemVerbs: mocks.useItemVerbs,
+  usePendingItemIds: mocks.usePendingItemIds,
+}));
 vi.mock('./location-page-route-query.js', async () => {
   const actual = await vi.importActual<typeof import('./location-page-route-query.js')>(
     './location-page-route-query.js'
@@ -37,6 +52,8 @@ vi.mock('./location-page-route-query.js', async () => {
 });
 
 import { PlaceActions } from './location-page-actions.js';
+import { useContentsVerbs } from './location-page-content-verbs.js';
+import { DeletePlaceDialog } from './location-page-delete-dialog.js';
 import { LocationBanner, LocationBody } from './location-page-loaded-body.js';
 import {
   defaultTab,
@@ -49,6 +66,7 @@ import { filterContents, placeContents } from './location-tab-content-model.js';
 import { LocationPage } from './LocationPage.js';
 import { PlaceGone } from './place-gone.js';
 
+import type { VerbResult } from '../../inventory-web/item-verbs.js';
 import type { WebChangeGroup } from '../../inventory-web/useChangedElsewhere.js';
 
 const garage: LocationModel = {
@@ -156,6 +174,8 @@ function mockLoadedLocation(): void {
     data: undefined,
     refetch: vi.fn(),
   });
+  mocks.useItemVerbs.mockReturnValue({ pickUp: vi.fn(), move: vi.fn() });
+  mocks.usePendingItemIds.mockReturnValue(new Set<string>());
 }
 
 describe('location page foundations', () => {
@@ -307,6 +327,90 @@ describe('location page foundations', () => {
     expect(screen.getByRole('button', { name: 'Move' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Store here' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Actions for Garage' })).not.toBeInTheDocument();
+  });
+
+  it('shows server descendant counts after delete requires confirmation', async () => {
+    const child: LocationModel = { id: 'child', name: 'Child', parentId: garage.id, kind: 'room' };
+    const grandchild: LocationModel = {
+      id: 'grandchild',
+      name: 'Grandchild',
+      parentId: child.id,
+      kind: 'room',
+    };
+    const world = buildWorld([], [garage, child, grandchild]);
+    mocks.locationsDelete
+      .mockResolvedValueOnce({
+        data: {
+          requiresConfirmation: true,
+          stats: { childCount: 1, descendantCount: 4, itemCount: 0, totalItemCount: 4 },
+        },
+        error: undefined,
+        response: { status: 200 },
+      })
+      .mockResolvedValueOnce({
+        data: { message: 'Location deleted' },
+        error: undefined,
+        response: { status: 200 },
+      });
+    const { usePlaceEdits: useRealPlaceEdits } = await vi.importActual<
+      typeof import('./location-page-edits.js')
+    >('./location-page-edits.js');
+    const onDeleted = vi.fn();
+
+    function DeleteHarness(): ReactElement {
+      const edits = useRealPlaceEdits({
+        online: true,
+        world,
+        tallyOf: () => ({ boxesHere: 0, inBoxes: 0, itemsHere: 0, places: 0, total: 0 }),
+        onDeleted,
+      });
+      return (
+        <>
+          <button onClick={() => edits.requestDelete(garage.id)}>Request delete</button>
+          <DeletePlaceDialog
+            state={edits.deleting}
+            onCancel={edits.cancelDelete}
+            onConfirm={edits.confirmDelete}
+          />
+        </>
+      );
+    }
+
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}
+      >
+        <DeleteHarness />
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Request delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete place' }));
+    await waitFor(() => expect(screen.getByText('4 places are inside and will be deleted.')));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete everything' }));
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledWith(null));
+    expect(mocks.locationsDelete).toHaveBeenNthCalledWith(2, {
+      path: { id: garage.id },
+      query: { force: true },
+    });
+  });
+
+  it('records a refused content write against its item row', async () => {
+    const pickUp = vi.fn<() => Promise<VerbResult>>(async () => ({
+      status: 'refused',
+      refusal: { kind: 'failed', error: new InventoryApiError('refused', 409) },
+    }));
+    mocks.useItemVerbs.mockReturnValue({ pickUp, move: vi.fn() });
+    const { result } = renderHook(() =>
+      useContentsVerbs(buildWorld([item()], [garage]), true, [], vi.fn())
+    );
+
+    result.current.verbs.pickUp(['item']);
+    await waitFor(() =>
+      expect(result.current.verbs.rejections).toEqual({
+        item: 'The inventory service did not answer.',
+      })
+    );
   });
 
   it('retries the location tree and tallies after a route-level error', () => {
