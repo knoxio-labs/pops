@@ -238,15 +238,30 @@ describe('the scope job is wired to the workflow it scopes', () => {
     const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
     const namedStep = (name: string) => steps.find((step) => step.name === name);
 
-    expect(namedStep('Test (iOS Simulator)')?.if).toBe(
+    const pullRequestSuite = namedStep('Test (iOS Simulator)');
+    expect(pullRequestSuite?.if).toBe(
       "github.event_name != 'merge_group' && inputs['full-validation'] != true"
     );
-    expect(namedStep('Test (iOS Simulator)')?.run).toBe('mise run test');
+    expect(pullRequestSuite?.run).toBe('mise run test');
+    expect(pullRequestSuite?.['timeout-minutes']).toBe(25);
+    expect(
+      isMapping(pullRequestSuite?.env) ? pullRequestSuite.env.POPS_IOS_TEST_ARTIFACTS : undefined
+    ).toBe('${{ runner.temp }}/ios-test-diagnostics');
     const fullSuite = namedStep('Test + SwiftLint analyzer rules (one shared compile)');
     expect(fullSuite?.if).toBe(
       "github.event_name == 'merge_group' || inputs['full-validation'] == true"
     );
     expect(fullSuite?.run).toBe('mise run -j 1 test ::: lint:analyze');
+    expect(fullSuite?.['timeout-minutes']).toBe(80);
+    expect(isMapping(fullSuite?.env) ? fullSuite.env.POPS_IOS_TEST_ARTIFACTS : undefined).toBe(
+      '${{ runner.temp }}/ios-test-diagnostics'
+    );
+    const debugArtifact = namedStep('Simulator test log and result bundle');
+    expect(debugArtifact?.if).toBe('failure()');
+    expect(debugArtifact?.uses).toBe('actions/upload-artifact@v7');
+    expect(isMapping(debugArtifact?.with) ? debugArtifact.with.path : undefined).toBe(
+      '${{ runner.temp }}/ios-test-diagnostics'
+    );
     const analyzerSteps = steps.filter((step) => String(step.run ?? '').includes('lint:analyze'));
     expect(analyzerSteps.map((step) => step.name)).toEqual([
       'Test + SwiftLint analyzer rules (one shared compile)',

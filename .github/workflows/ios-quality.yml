@@ -423,11 +423,26 @@ jobs:
       # way.
       - name: Test (iOS Simulator)
         if: github.event_name != 'merge_group' && inputs['full-validation'] != true
+        timeout-minutes: 25
+        env:
+          POPS_IOS_TEST_ARTIFACTS: ${{ runner.temp }}/ios-test-diagnostics
         run: mise run test
 
       - name: Test + SwiftLint analyzer rules (one shared compile)
         if: github.event_name == 'merge_group' || inputs['full-validation'] == true
+        timeout-minutes: 80
+        env:
+          POPS_IOS_TEST_ARTIFACTS: ${{ runner.temp }}/ios-test-diagnostics
         run: "mise run -j 1 test ::: lint:analyze"
+
+      - name: Simulator test log and result bundle
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-simulator-test-debug
+          path: ${{ runner.temp }}/ios-test-diagnostics
+          retention-days: 7
+          if-no-files-found: warn
 
       # THE ONE INVARIANT HERE THAT BUILDING, TESTING AND LINTING DO NOT COVER:
       # a shipped binary names no BFM host, and is re-pointed by re-pairing
