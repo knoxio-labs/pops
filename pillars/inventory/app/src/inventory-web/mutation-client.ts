@@ -3,6 +3,7 @@ import { type QueryClient } from '@tanstack/react-query';
 import { MAX_MUTATION_BATCH } from '@pops/inventory';
 import { ApiError, unwrap } from '@pops/pillar-sdk/client';
 
+import { InventoryApiError } from '../inventory-api-helpers.js';
 /**
  * A mutation client over `POST /sync/mutations` (Inventory ADR-002 D9/D10):
  * builds the wire envelope for one {@link InventoryCommand}, sends it as a
