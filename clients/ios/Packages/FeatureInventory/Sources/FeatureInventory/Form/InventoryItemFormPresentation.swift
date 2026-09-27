@@ -4,12 +4,16 @@ import SwiftUI
 extension View {
     /// Installs the item form as a full-height sheet over this view, and puts
     /// `inventoryItemForm` in the environment so any screen below can open
-    /// it with an `InventoryItemFormRequest`.
+    /// it with an `InventoryItemFormRequest`. A nested chooser can supply
+    /// `onCreated` to close itself after a successful new-item write.
     internal func inventoryItemFormPresentation(
         store: any InventoryStore, suggester: InventoryCodeSuggester = .unbound,
-        scan: InventoryScanPrefill? = nil
+        scan: InventoryScanPrefill? = nil,
+        onCreated: @escaping @MainActor () -> Void = {}
     ) -> some View {
-        modifier(InventoryItemFormPresentation(store: store, suggester: suggester, scan: scan))
+        modifier(
+            InventoryItemFormPresentation(
+                store: store, suggester: suggester, scan: scan, onCreated: onCreated))
     }
 }
 
@@ -17,9 +21,20 @@ private struct InventoryItemFormPresentation: ViewModifier {
     let store: any InventoryStore
     let suggester: InventoryCodeSuggester
     let scan: InventoryScanPrefill?
+    let onCreated: @MainActor () -> Void
     @State private var request: InventoryItemFormRequest?
     @Environment(\.inventoryPlacementPicker) private var picker
     @Environment(\.inventoryScanPrefill) private var inheritedScan
+
+    init(
+        store: any InventoryStore, suggester: InventoryCodeSuggester,
+        scan: InventoryScanPrefill?, onCreated: @escaping @MainActor () -> Void
+    ) {
+        self.store = store
+        self.suggester = suggester
+        self.scan = scan
+        self.onCreated = onCreated
+    }
 
     func body(content: Content) -> some View {
         let resolvedScan = scan ?? inheritedScan ?? .unbound
@@ -28,7 +43,8 @@ private struct InventoryItemFormPresentation: ViewModifier {
             .environment(\.inventoryScanPrefill, resolvedScan)
             .sheet(item: $request) { request in
                 InventoryItemFormSheet(
-                    request: request, store: store, suggester: suggester, scan: resolvedScan
+                    request: request, store: store, suggester: suggester, scan: resolvedScan,
+                    onCreated: onCreated
                 )
                 .environment(\.inventoryPlacementPicker, picker)
                 .presentationDetents([.large])
@@ -40,17 +56,20 @@ private struct InventoryItemFormPresentation: ViewModifier {
 /// presenter does not start the draft over.
 private struct InventoryItemFormSheet: View {
     @State private var model: InventoryItemFormModel
+    private let onCreated: @MainActor () -> Void
 
     init(
         request: InventoryItemFormRequest, store: any InventoryStore,
-        suggester: InventoryCodeSuggester, scan: InventoryScanPrefill
+        suggester: InventoryCodeSuggester, scan: InventoryScanPrefill,
+        onCreated: @escaping @MainActor () -> Void
     ) {
         _model = State(
             wrappedValue: InventoryItemFormModel(
                 request: request, store: store, suggester: suggester, scan: scan))
+        self.onCreated = onCreated
     }
 
     var body: some View {
-        InventoryItemFormView(model: model)
+        InventoryItemFormView(model: model, onCreated: onCreated)
     }
 }

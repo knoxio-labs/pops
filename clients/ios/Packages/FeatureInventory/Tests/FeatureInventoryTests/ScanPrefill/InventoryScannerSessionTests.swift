@@ -9,7 +9,7 @@ internal struct InventoryScannerSessionTests {
     @Test("capturing text before a queued barcode task starts preserves the text fill")
     func textCaptureStopsQueuedBarcode() async {
         let generator = ScanPrefillGenerator(
-            answer: [ScanPrefillFixture.detail.id: .text("from text")])
+            answer: [ScanPrefillFixture.detail.id: .text("Label")])
         let opened = await ScanPrefillFixture.open(generator: generator)
         defer { opened.loading.cancel() }
         let session = InventoryScannerSession(model: opened.form)
@@ -26,7 +26,7 @@ internal struct InventoryScannerSessionTests {
         #expect(opened.form.draft.identifiers.isEmpty)
         #expect(
             opened.form.protocol2Draft?.values(for: ScanPrefillFixture.detail)
-                == [.string("from text")])
+                == [.string("Label")])
         #expect(opened.form.prefillStatus == nil)
     }
 

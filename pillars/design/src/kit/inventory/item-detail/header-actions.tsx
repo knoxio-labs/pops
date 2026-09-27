@@ -1,7 +1,7 @@
 /**
  * The header's verbs: the one that fits where the item is, the container
- * verbs, Edit and More. Move opens the placement picker in place; nothing
- * here navigates away.
+ * verbs and More. Move opens the placement picker in place; nothing here
+ * navigates away.
  */
 import { PlacementPicker } from '../foundation';
 import { MoreMenu } from './more-menu';
@@ -77,7 +77,6 @@ export function HeaderActions(props: HeaderActionsProps) {
       {verbs.secondary.map((verb) => (
         <Verb key={verb.id} verb={verb} primary={false} props={props} />
       ))}
-      {verbs.edit ? <Verb verb={verbs.edit} primary={false} props={props} /> : null}
       {verbs.menu.length > 0 ? (
         <MoreMenu groups={verbs.menu} defaultOpen={props.menuOpen} onSelect={props.onMenu} />
       ) : null}

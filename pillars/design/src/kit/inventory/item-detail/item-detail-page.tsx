@@ -35,6 +35,7 @@ export interface ItemDetailPageProps {
   workspace?: WorkspaceSeed;
   /** Recent placements the Move picker offers first. */
   recents?: readonly PlacementTarget[];
+  onEdit?: (id: string) => void;
   className?: string;
 }
 
@@ -58,6 +59,7 @@ function Body({ props, page }: { props: ItemDetailPageProps; page: Page }) {
         storeHereOpen={page.actions.storeHereOpen}
         onStoreHereChange={page.actions.setStoreHereOpen}
         onExit={page.onExit}
+        onEdit={props.onEdit}
       />
     );
   }

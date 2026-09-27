@@ -21,10 +21,10 @@
  * can act on that by restarting the list, so it is a `400`, not the 502 the
  * shared mapper would give a producer 400 on any other route.
  *
- * `mutations` reads the device `requireDevice` resolved off `res` (the same
- * seam `mobile.bootstrap` uses) to build the `Pops-Actor` header the pillar
- * client sends — never anything the request body carries, since a phone
- * cannot be trusted to name itself.
+ * `mutations` and `reportLedger` read the device `requireDevice` resolved off
+ * `res` (the same seam `mobile.bootstrap` uses) to build the `Pops-Actor`
+ * header the pillar client sends — never anything the request body carries,
+ * since a phone cannot be trusted to name itself.
  *
  * These routes are reachable only behind `requireDevice`/`requireCapability`
  * (mounted on the `/mobile` prefix in `app.ts`), so they never check a caller
@@ -147,6 +147,19 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
       const outcome = orThrowIfTooOld(
         await deps.inventory.mutations({
           mutations: body.mutations,
+          actorHeader: buildInventoryActorHeader(device.id, device.name),
+        })
+      );
+      if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    reportLedger: async ({ body, res }: Req['reportLedger'] & { res: Response }) => {
+      const device = readDevice(res);
+      const outcome = orThrowIfTooOld(
+        await deps.inventory.reportLedger({
+          report: body,
           actorHeader: buildInventoryActorHeader(device.id, device.name),
         })
       );

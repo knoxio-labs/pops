@@ -28,7 +28,7 @@ internal struct InventoryCapturedTextTests {
         let field = try #require(type.fields.first)
         let gate = ScanPrefillGate()
         let generator = ScanPrefillGenerator(
-            answer: [field.id: .text("filled")], gate: gate)
+            answer: [field.id: .text("Model A")], gate: gate)
         let opened = await ScanPrefillFixture.open(generator: generator)
         defer { opened.loading.cancel() }
         opened.form.selectProtocol2Type(type.id)
@@ -40,12 +40,12 @@ internal struct InventoryCapturedTextTests {
 
         let request = try #require(await generator.requests.first)
         #expect(request.source == .text(["Model A", "Serial 123"]))
-        #expect(request.fieldIDs == [field.id])
+        #expect(request.fieldIDs == [InventoryPrefillName.id, field.id])
         #expect(opened.form.protocol2Draft?.values(for: field).isEmpty == true)
         await gate.open()
         await opened.form.fillTask?.value
 
-        #expect(opened.form.protocol2Draft?.values(for: field) == [.string("filled")])
+        #expect(opened.form.protocol2Draft?.values(for: field) == [.string("Model A")])
         #expect(opened.form.prefillStatus == nil)
         #expect(opened.form.draft == draft)
         #expect(await generator.requests.count == 1)

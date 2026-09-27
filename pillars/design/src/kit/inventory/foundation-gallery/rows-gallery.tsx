@@ -55,6 +55,7 @@ function Verbs() {
     <>
       <RowVerb icon={INVENTORY_ICONS.pickUp} label="Pick up" shortcutId="pick-up" />
       <RowVerb icon={INVENTORY_ICONS.move} label="Move" shortcutId="move" />
+      <RowVerb icon={INVENTORY_ICONS.edit} label="Edit" shortcutId="list-edit" />
       <RowVerb icon={MoreHorizontal} label="More" shortcutId="row-menu" />
     </>
   );

@@ -5,8 +5,10 @@
     @available(iOS 26.4, macOS 26.4, *)
     internal struct FoundationModelsPrefillGenerator: InventoryPrefillGenerator {
         internal static let instructions =
-            "Fill a property only when the facts state it. Copy numbers and names verbatim. "
-            + "Leave every other property empty."
+            "Fill a property only when the facts explicitly state its value. Copy text and "
+            + "numbers verbatim. Do not infer, calculate, classify, or choose defaults. For "
+            + "choices, return an option only when its exact label appears in the facts. Leave "
+            + "every other property empty."
 
         internal var tokenBudget: Int {
             get async {
