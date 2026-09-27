@@ -32,6 +32,7 @@ prerequisites run serially before readers. Failures are collected; failed or
 untrusted discovery is an error. A task inherited from root is never treated as a
 unit task. `RUN_ALL_INCLUDE_CLIENTS=1` includes standalone client tasks when
 explicitly running the general `mise run-all` runner.
+Package commands retain each unit's mise environment and tool overrides.
 
 `mise typecheck` covers every workspace unit and the root tooling projects. It
 builds the SDK before tooling that imports it. Unit mise tasks read each package's

@@ -28,6 +28,27 @@ afterEach(() => {
 });
 
 describe('local development task discovery', () => {
+  it('retains the unit mise environment for package-backed tasks', async () => {
+    const root = fixtureRoot();
+    unit(root, 'libs/configured', {
+      'mise.toml': '[env]\nPOPS_DEV_FIXTURE = "unit"\n',
+      'package.json': JSON.stringify({
+        name: '@test/configured',
+        scripts: { test: 'node verify.mjs' },
+      }),
+      'verify.mjs': 'process.exit(process.env.POPS_DEV_FIXTURE === "unit" ? 0 : 17);',
+    });
+    const [task] = await discoverLocalTasks({ cwd: root, taskNames: ['test'], verifyTrust: false });
+    if (task === undefined || task.command[0] === undefined)
+      throw new Error('Missing fixture task');
+    const result = spawnSync(task.command[0], task.command.slice(1), {
+      cwd: task.unitPath,
+      env: { ...process.env, MISE_TRUSTED_CONFIG_PATHS: root },
+      encoding: 'utf8',
+    });
+    expect(result.status, result.stderr).toBe(0);
+  }, 60_000);
+
   it('reads only a unit-local task and never offers an inherited root task', async () => {
     const root = fixtureRoot();
     writeFileSync(join(root, 'mise.toml'), '[tasks.typecheck]\nrun = "false"\n');

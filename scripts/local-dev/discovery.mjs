@@ -127,7 +127,7 @@ function taskWritesFiles(taskName) {
 
 /**
  * Converts locally-defined package or mise tasks to runnable descriptors.
- * Package scripts take precedence so read-only checks do not trigger mise
+ * Package scripts run in the unit's mise environment without retriggering
  * prerequisites that can race against another unit's build.
  *
  * @param {{cwd: string, taskNames?: string[], unitPaths?: string[], verifyTrust?: boolean, includeClients?: boolean}} options
@@ -161,7 +161,7 @@ export async function discoverLocalTasks({
           unitPath: unit.unitPath,
           packageName: unit.packageName,
           taskName,
-          command,
+          command: ['mise', 'exec', '--', ...command],
           source: 'package',
           write: taskWritesFiles(taskName),
         });
@@ -240,7 +240,17 @@ export async function discoverSelectedTasks({ cwd, selectors = [], taskName }) {
         unitPath: root,
         packageName: undefined,
         taskName: 'dev:compiled-graph',
-        command: ['pnpm', 'exec', 'tsc', '-b', 'tsconfig.build.json', '--watch'],
+        command: [
+          'mise',
+          'exec',
+          '--',
+          'pnpm',
+          'exec',
+          'tsc',
+          '-b',
+          'tsconfig.build.json',
+          '--watch',
+        ],
         source: 'package',
         write: false,
       });
@@ -253,7 +263,7 @@ export async function discoverSelectedTasks({ cwd, selectors = [], taskName }) {
           unitPath: food.unitPath,
           packageName: food.packageName,
           taskName: 'dev:api',
-          command: ['pnpm', 'run', 'dev:api'],
+          command: ['mise', 'exec', '--', 'pnpm', 'run', 'dev:api'],
           source: 'package',
           write: false,
         },
@@ -261,7 +271,7 @@ export async function discoverSelectedTasks({ cwd, selectors = [], taskName }) {
           unitPath: food.unitPath,
           packageName: food.packageName,
           taskName: 'dev:worker',
-          command: ['pnpm', 'run', 'dev:worker'],
+          command: ['mise', 'exec', '--', 'pnpm', 'run', 'dev:worker'],
           source: 'package',
           write: false,
         }
