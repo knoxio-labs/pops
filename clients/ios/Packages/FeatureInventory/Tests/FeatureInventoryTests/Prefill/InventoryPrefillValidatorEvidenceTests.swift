@@ -59,6 +59,32 @@ internal struct InventoryPrefillValidatorEvidenceTests {
         )
     }
 
+    @Test("labelled OCR lines do not require a space after the colon")
+    func rejectsTextJoinedAcrossUnspacedLabelledLines() {
+        let name = InventoryPrefillTestSupport.field(id: "name")
+
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["name": .text("Frank Destination")],
+                fields: [name],
+                source: .text(["Author:Frank", "Destination:Bin"])
+            ).isEmpty
+        )
+    }
+
+    @Test("blank OCR lines terminate a continuation span")
+    func rejectsTextJoinedAcrossBlankLines() {
+        let name = InventoryPrefillTestSupport.field(id: "name")
+
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["name": .text("The Hobbit")],
+                fields: [name],
+                source: .text(["The", "", "Hobbit"])
+            ).isEmpty
+        )
+    }
+
     @Test("negation cannot cross a labelled OCR line")
     func rejectsNegationAcrossLabelledLines() {
         let battery = InventoryPrefillTestSupport.field(id: "battery", kind: .boolean)

@@ -1,6 +1,46 @@
 import AppCore
 import Foundation
 
+private enum InventoryPrefillEvidenceTokens {
+    static func sourceLines(_ lines: [String]) -> [[String]] {
+        lines.reduce(into: [[String]]()) { evidence, line in
+            let lineTokens = tokenize(line)
+            guard !lineTokens.isEmpty else {
+                evidence.append([])
+                return
+            }
+
+            if evidence.isEmpty || evidence[evidence.count - 1].isEmpty
+                || startsExplicitLabel(line)
+            {
+                evidence.append(lineTokens)
+            } else {
+                evidence[evidence.count - 1].append(contentsOf: lineTokens)
+            }
+        }
+    }
+
+    static func tokenize(_ text: String) -> [String] {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .split { !$0.isLetter && !$0.isNumber }
+            .map(String.init)
+    }
+
+    private static func startsExplicitLabel(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let colon = trimmed.firstIndex(of: ":") else { return false }
+
+        let label = trimmed[..<colon].trimmingCharacters(in: .whitespaces)
+        guard !label.isEmpty,
+            label.allSatisfy({ $0.isLetter || $0.isNumber || $0.isWhitespace || $0 == "-" })
+        else { return false }
+
+        let valueStart = trimmed.index(after: colon)
+        return valueStart == trimmed.endIndex
+            || !trimmed[valueStart...].hasPrefix("//")
+    }
+}
+
 internal enum InventoryPrefillValidator {
     private enum BooleanEvidence {
         case value(Bool)
@@ -94,7 +134,7 @@ internal enum InventoryPrefillValidator {
     private static func evidenceContains(_ candidate: String, in source: InventoryPrefillSource)
         -> Bool
     {
-        let candidateTokens = tokens(candidate)
+        let candidateTokens = InventoryPrefillEvidenceTokens.tokenize(candidate)
         guard !candidateTokens.isEmpty else { return false }
         return evidenceTokens(in: source).contains { valueTokens in
             valueTokens.count >= candidateTokens.count
@@ -109,42 +149,10 @@ internal enum InventoryPrefillValidator {
     private static func evidenceTokens(in source: InventoryPrefillSource) -> [[String]] {
         switch source {
         case .product(let facts):
-            facts.map { tokens($0.value) }
+            facts.map { InventoryPrefillEvidenceTokens.tokenize($0.value) }
         case .text(let lines):
-            textEvidenceTokens(lines)
+            InventoryPrefillEvidenceTokens.sourceLines(lines)
         }
-    }
-
-    private static func textEvidenceTokens(_ lines: [String]) -> [[String]] {
-        lines.reduce(into: [[String]]()) { evidence, line in
-            let lineTokens = tokens(line)
-            guard !lineTokens.isEmpty else { return }
-
-            if evidence.isEmpty || startsExplicitLabel(line) {
-                evidence.append(lineTokens)
-            } else {
-                evidence[evidence.count - 1].append(contentsOf: lineTokens)
-            }
-        }
-    }
-
-    private static func startsExplicitLabel(_ line: String) -> Bool {
-        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let colon = trimmed.firstIndex(of: ":") else { return false }
-
-        let label = trimmed[..<colon].trimmingCharacters(in: .whitespaces)
-        guard !label.isEmpty,
-            label.allSatisfy({ $0.isLetter || $0.isNumber || $0.isWhitespace || $0 == "-" })
-        else { return false }
-
-        let valueStart = trimmed.index(after: colon)
-        return valueStart == trimmed.endIndex || trimmed[valueStart].isWhitespace
-    }
-
-    private static func tokens(_ text: String) -> [String] {
-        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .split { !$0.isLetter && !$0.isNumber }
-            .map(String.init)
     }
 
     private static func values(
