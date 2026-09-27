@@ -38,8 +38,10 @@ out or executes pull request content despite holding `actions: write` and
   actual PR verdict.
 
 Checks attach to a SHA, not a PR. Concurrent PRs with identical heads and different
-bases share that check context. Main admission therefore relies on the merge queue
-validating its distinct combined SHA; the PR verdict alone cannot isolate those PRs.
+bases share that check context. A merge queue validates a distinct combined SHA
+and avoids that collision. Without one, a promotion needs its own unique candidate
+SHA and required checks against the current main; the PR verdict alone cannot
+isolate shared-head PRs.
 
 ### Rules this file exists to stop people relearning
 
