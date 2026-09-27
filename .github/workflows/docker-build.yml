@@ -6,7 +6,7 @@ on:
     inputs:
       full-validation:
         type: boolean
-        default: false
+        required: true
   pull_request:
     types: [opened, synchronize, reopened, edited]
     paths:

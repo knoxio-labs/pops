@@ -19,7 +19,7 @@ on:
     inputs:
       full-validation:
         type: boolean
-        default: false
+        required: true
   push:
     branches: [main]
     paths:

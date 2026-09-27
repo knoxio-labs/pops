@@ -50,9 +50,8 @@ on:
     inputs:
       full-validation:
         description: Select every app instead of the affected dependency closure
-        required: false
+        required: true
         type: boolean
-        default: false
   push:
     branches: [main]
     paths:

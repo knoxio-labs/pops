@@ -3,6 +3,7 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 
 on:
   pull_request:
+    branches: [main]
     types: [opened, synchronize, reopened, edited]
 
 permissions:

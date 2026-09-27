@@ -87,7 +87,7 @@ on:
     inputs:
       full-validation:
         type: boolean
-        default: false
+        required: true
 
 concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}

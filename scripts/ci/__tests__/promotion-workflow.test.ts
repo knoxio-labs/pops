@@ -46,7 +46,7 @@ function dockerDiscoveryScript(): string {
     .replaceAll('${{ needs.changes.outputs.relevant }}', 'false');
 }
 
-describe('promotion workflow', () => {
+describe('promotion workflow', { timeout: 30_000 }, () => {
   it('calls every full validation lane through a compatible reusable interface', () => {
     const promotion = workflow('promotion-quality.yml');
     const classify = job(promotion, 'classify');
@@ -74,7 +74,8 @@ describe('promotion workflow', () => {
       const inputs = isMapping(workflowCall) ? workflowCall.inputs : undefined;
       const fullValidation = isMapping(inputs) ? inputs['full-validation'] : undefined;
       expect(isMapping(fullValidation) && fullValidation.type).toBe('boolean');
-      expect(isMapping(fullValidation) && fullValidation.default).toBe(false);
+      expect(isMapping(fullValidation) && fullValidation.required).toBe(true);
+      expect(isMapping(fullValidation) && fullValidation.default).toBeUndefined();
     }
 
     const validation = job(promotion, 'validation');
