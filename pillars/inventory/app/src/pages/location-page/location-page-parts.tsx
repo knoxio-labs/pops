@@ -22,9 +22,6 @@ export const TAB_PARAM: Readonly<Record<PlaceTab, string>> = {
   places: 'places',
 };
 
-export { PlaceActions } from './location-page-actions.js';
-export type { PlaceActionsProps } from './location-page-actions.js';
-
 /** The operations and state needed by a location page's place controls. */
 export interface PlaceEditsApi {
   readonly creatingUnder: string | null;
