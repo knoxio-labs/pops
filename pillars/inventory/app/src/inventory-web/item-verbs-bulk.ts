@@ -24,6 +24,7 @@ export {
   type BulkResult,
   type BulkCatalogue,
   type ItemValueWrite,
+  type BulkTypeValues,
 } from './item-verbs-bulk-types.js';
 
 const EMPTY_TYPES: readonly CatalogueType[] = [];

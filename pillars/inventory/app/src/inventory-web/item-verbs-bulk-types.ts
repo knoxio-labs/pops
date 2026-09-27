@@ -27,6 +27,11 @@ export interface ItemValueWrite {
   patches: readonly FieldValuePatch[];
 }
 
+/** Stable values to retain for each item during a bulk type replacement. */
+export type BulkTypeValues =
+  | readonly FieldValueEntry[]
+  | ReadonlyMap<string, readonly FieldValueEntry[]>;
+
 /** Thrown by a bulk `undo()` when any revert is not applied. */
 export class BulkUndoRefusedError extends Error {
   readonly refused: BulkRefusal[];
@@ -60,11 +65,7 @@ export interface BulkItemVerbs {
    * Set type on every id with stable type and value ids from the published
    * catalogue. Values default to an empty list for the server to derive.
    */
-  changeType(
-    ids: readonly string[],
-    typeKey: string,
-    values?: readonly FieldValueEntry[]
-  ): Promise<BulkResult>;
+  changeType(ids: readonly string[], typeKey: string, values?: BulkTypeValues): Promise<BulkResult>;
   /** Set each item's already-encoded stable field patches. */
   editValues(writes: readonly ItemValueWrite[]): Promise<BulkResult>;
 }
