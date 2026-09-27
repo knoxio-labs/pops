@@ -11,6 +11,7 @@ import { useSelection } from '../../foundation/selection/use-selection.js';
 import { usePendingItemIds } from '../../inventory-web/item-verbs.js';
 import { itemsQuery } from '../../inventory-web/items-url-filters.js';
 import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
+import { useTypeArrival } from '../../inventory-web/type-arrivals.js';
 import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { useChangedElsewhere } from '../../inventory-web/useChangedElsewhere.js';
 import { useItemsUrlFilters } from '../../inventory-web/useItemsUrlFilters.js';
@@ -34,6 +35,7 @@ function useItemsPageSources() {
     enabled: itemRows.status === 'success',
   });
   const [dismissedDuplicate, setDismissedDuplicate] = useState(false);
+  const typeArrival = useTypeArrival();
 
   return {
     navigate,
@@ -47,11 +49,12 @@ function useItemsPageSources() {
     changed,
     dismissedDuplicate,
     dismissDuplicate: () => setDismissedDuplicate(true),
+    typeArrival,
   };
 }
 
 function useItemsPageDerived(sources: ReturnType<typeof useItemsPageSources>) {
-  const { itemRows, placement, catalogue, filters, dismissedDuplicate } = sources;
+  const { itemRows, placement, catalogue, filters, dismissedDuplicate, typeArrival } = sources;
 
   const world = useMemo(
     () =>
@@ -89,6 +92,7 @@ function useItemsPageDerived(sources: ReturnType<typeof useItemsPageSources>) {
     typeOptions,
     placeOptions,
     duplicate,
+    typeArrival,
     total,
     unfilteredTotal,
     hiddenInactiveCount,

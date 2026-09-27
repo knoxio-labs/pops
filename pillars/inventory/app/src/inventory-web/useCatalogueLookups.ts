@@ -19,20 +19,21 @@ const EMPTY_TYPES: readonly CatalogueType[] = [];
 export interface CatalogueLookups {
   readonly catalogue: CatalogueDescriptor | undefined;
   readonly types: readonly CatalogueType[];
+  /** The previous published revision, or null before the catalogue is ready or on its first revision. */
+  readonly baseRevision: number | null;
   readonly typeById: ReadonlyMap<string, CatalogueType>;
   readonly typeNameById: ReadonlyMap<string, string>;
   readonly typeForId: (id: string | null | undefined) => CatalogueType | null;
   readonly typeNameForId: (id: string | null | undefined) => string | null;
   readonly isPending: boolean;
   readonly error: unknown | null;
-}
-
-/** The published catalogue state needed by typed inventory writes. */
-export interface PublishedCatalogue {
-  readonly types: readonly CatalogueType[];
+  readonly refetch: () => void;
   readonly revision: number | null;
   readonly status: 'pending' | 'error' | 'success';
 }
+
+/** The combined published catalogue state used by Type arrived and repair actions. */
+export type PublishedCatalogue = CatalogueLookups;
 
 /** Reads the published catalogue through the cache key shared with the editor. */
 export function useCatalogue() {
@@ -40,17 +41,6 @@ export function useCatalogue() {
     queryKey: PUBLISHED_CATALOGUE_QUERY_KEY,
     queryFn: async () => unwrap(await typesReadCatalogue()),
   });
-}
-
-/** Reads the published catalogue with the revision and load state used by write actions. */
-export function usePublishedCatalogue(): PublishedCatalogue {
-  const query = useCatalogue();
-  const types = query.data?.types ?? EMPTY_TYPES;
-  const revision = query.data?.revision.revision ?? null;
-  return useMemo(
-    () => ({ types, revision, status: query.status }),
-    [query.status, revision, types]
-  );
 }
 
 /** Provides the published catalogue and lookup helpers for web item mappers. */
@@ -66,6 +56,10 @@ export function useCatalogueLookups(): CatalogueLookups {
   return {
     catalogue: catalogueQuery.data,
     types,
+    baseRevision:
+      catalogueQuery.isPending || catalogueQuery.error !== null
+        ? null
+        : (catalogueQuery.data?.revision.baseRevision ?? null),
     typeById,
     typeNameById,
     typeForId: (id) => (id === null || id === undefined ? null : (typeById.get(id) ?? null)),
@@ -73,7 +67,17 @@ export function useCatalogueLookups(): CatalogueLookups {
       id === null || id === undefined ? null : (typeNameById.get(id) ?? null),
     isPending: catalogueQuery.isPending,
     error: catalogueQuery.error,
+    refetch: () => {
+      void catalogueQuery.refetch();
+    },
+    revision: catalogueQuery.data?.revision.revision ?? null,
+    status: catalogueQuery.status,
   };
+}
+
+/** Provides the published catalogue and revision metadata for web features. */
+export function usePublishedCatalogue(): PublishedCatalogue {
+  return useCatalogueLookups();
 }
 
 /** Adds one selected type to the shared catalogue lookup result. */
