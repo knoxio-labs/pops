@@ -66,9 +66,19 @@ function LocationProbe(): ReactElement {
   return <output data-testid="location">{useLocation().pathname}</output>;
 }
 
-function KeyHarness({ extra }: { extra: Record<string, () => boolean> }): ReactElement {
+function LocationStateProbe(): ReactElement {
+  return <output data-testid="location-state">{JSON.stringify(useLocation().state)}</output>;
+}
+
+function KeyHarness({
+  extra,
+  trail,
+}: {
+  extra: Record<string, () => boolean>;
+  trail?: { listName: 'Items' | 'Containers' };
+}): ReactElement {
   const selection = useSelection([row.id]);
-  useListPageKeys({ rows: [row], selection, extra });
+  useListPageKeys({ rows: [row], selection, extra, trail });
   return (
     <div role="grid">
       <button type="button" onClick={() => selection.onRowToggle(row.id, false)}>
@@ -176,5 +186,27 @@ describe('list page foundation', () => {
 
     expect(pickUp).toHaveBeenCalledOnce();
     expect(screen.getByTestId('location')).toHaveTextContent('/inventory/items/item-1/edit');
+  });
+
+  it('Enter on a focused row passes the list trail when trail is given', () => {
+    render(
+      <MemoryRouter initialEntries={['/inventory/items?q=lead']}>
+        <ShortcutProvider globalHandlers={{}}>
+          <KeyHarness extra={{}} trail={{ listName: 'Items' }} />
+          <LocationStateProbe />
+        </ShortcutProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'focus row' }));
+    fireEvent.keyDown(screen.getByRole('button', { name: 'focus row' }), { key: 'Enter' });
+
+    expect(JSON.parse(screen.getByTestId('location-state').textContent ?? '')).toEqual({
+      listTrail: {
+        listName: 'Items',
+        href: '/inventory/items?q=lead',
+        ids: ['item-1'],
+      },
+    });
   });
 });

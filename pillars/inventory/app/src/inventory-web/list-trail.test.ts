@@ -1,16 +1,34 @@
 import { describe, expect, it } from 'vitest';
 
-import { listTrailState } from './list-trail.js';
+import { listTrailState, readListTrail, trailPosition } from './list-trail';
 
-describe('listTrailState', () => {
-  it('preserves the list details and copies the item ids', () => {
-    const ids = ['lamp', 'cable'];
+const trail = {
+  listName: 'Items',
+  href: '/inventory/items?q=lead',
+  ids: ['item-1', 'item-2', 'item-3'],
+};
 
-    const state = listTrailState({ listName: 'In hand', href: '/inventory/in-hand', ids });
+describe('list trail', () => {
+  it('reads a trail from router state and ignores anything malformed', () => {
+    expect(readListTrail(listTrailState(trail))).toEqual(trail);
+    expect(readListTrail(null)).toBeNull();
+    expect(readListTrail({ listTrail: { ...trail, ids: ['item-1', 2] } })).toBeNull();
+    expect(readListTrail({ listTrail: { ...trail, href: '' } })).toBeNull();
+    expect(readListTrail({ listTrail: trail.ids })).toBeNull();
+  });
 
-    expect(state).toEqual({
-      listTrail: { listName: 'In hand', href: '/inventory/in-hand', ids: ['lamp', 'cable'] },
+  it('trailPosition gives the 1-based index and neighbours, null at the ends and for an unknown id', () => {
+    expect(trailPosition(trail, 'item-2')).toEqual({
+      listName: 'Items',
+      href: '/inventory/items?q=lead',
+      index: 2,
+      total: 3,
+      previousId: 'item-1',
+      nextId: 'item-3',
     });
-    expect(state.listTrail.ids).not.toBe(ids);
+    expect(trailPosition(trail, 'item-1')?.previousId).toBeNull();
+    expect(trailPosition(trail, 'item-3')?.nextId).toBeNull();
+    expect(trailPosition(trail, 'missing')).toBeNull();
+    expect(trailPosition(null, 'item-1')).toBeNull();
   });
 });
