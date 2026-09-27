@@ -51,4 +51,17 @@ describe('LinkDocumentDialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Link Document' })).toBeInTheDocument();
   });
+
+  it('uses a caller-provided trigger', () => {
+    renderWithProviders(
+      <LinkDocumentDialog
+        itemId="item-1"
+        onLinked={vi.fn()}
+        trigger={<button type="button">Custom link</button>}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom link' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
 });

@@ -1,12 +1,11 @@
 import { FileWarning } from 'lucide-react';
 import { type ReactElement } from 'react';
 
-import { Button, ComboboxSelect, EmptyState, Switch, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { Button, EmptyState } from '@pops/ui';
 
 import { StateBanner } from '../../foundation/feedback/state-banner.js';
-import { locationPath } from '../../foundation/model/placement-model.js';
+import { InsuranceControls } from './insurance-controls.js';
 import { InsuranceColumns, InsuranceRoom, PAPERLESS_DOWN_REASON } from './insurance-rows.js';
-import { formatDollars } from './report-model.js';
 import { ReportPanel, ReportSkeletonRows } from './reports-parts.js';
 
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
@@ -37,78 +36,6 @@ function FailedBody({ onRetry }: { onRetry: () => void }): ReactElement {
       <Button variant="outline" onClick={onRetry}>
         Retry
       </Button>
-    </div>
-  );
-}
-
-function scopeOptions(world: PlacementWorld): { value: string; label: string }[] {
-  const places = [...world.locations.values()]
-    .map((location) => ({
-      value: location.id,
-      label: locationPath(world, location.id)
-        .map((node) => node.name)
-        .join(' / '),
-    }))
-    .toSorted((left, right) => left.label.localeCompare(right.label));
-  return [{ value: 'all', label: 'Whole house' }, ...places];
-}
-
-function Controls({
-  world,
-  options,
-  count,
-  total,
-  onChange,
-}: {
-  world: PlacementWorld;
-  options: InsuranceOptions;
-  count: number;
-  total: number;
-  onChange: (patch: Partial<InsuranceOptions>) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <ComboboxSelect
-        aria-label="Which places"
-        size="sm"
-        className="w-64"
-        options={scopeOptions(world)}
-        value={options.scopeId ?? 'all'}
-        searchPlaceholder="Find a place"
-        onChange={(value) =>
-          onChange({ scopeId: value === 'all' || typeof value !== 'string' ? null : value })
-        }
-      />
-      <Tabs
-        value={options.sort}
-        onValueChange={(value) => onChange({ sort: value === 'name' ? 'name' : 'value' })}
-      >
-        <TabsList aria-label="Sort rows">
-          <TabsTrigger value="value" className="flex-none px-3">
-            Highest value
-          </TabsTrigger>
-          <TabsTrigger value="name" className="flex-none px-3">
-            Name
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      <label className="flex min-h-11 items-center gap-2 text-sm">
-        <Switch
-          checked={options.gapsOnly}
-          onCheckedChange={(checked) => onChange({ gapsOnly: checked })}
-        />
-        Only gaps
-      </label>
-      <p className="ml-auto flex items-center gap-3 text-sm tabular-nums">
-        <span className="hidden items-center gap-1.5 text-xs text-muted-foreground xl:flex">
-          <span className="size-3 rounded-sm border bg-warning/10" aria-hidden />
-          Missing a value or photo
-        </span>
-        <span>
-          <span className="text-muted-foreground">{count} items, </span>
-          <span className="font-semibold">{formatDollars(total)}</span>
-        </span>
-      </p>
     </div>
   );
 }
@@ -186,7 +113,7 @@ export function InsuranceTab(props: InsuranceTabProps): ReactElement {
     props.paperlessState?.configured === true && !props.paperlessState.available;
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <Controls
+      <InsuranceControls
         world={props.world}
         options={props.options}
         count={count}
@@ -204,7 +131,7 @@ export function InsuranceTab(props: InsuranceTabProps): ReactElement {
         groups={props.groups}
         status={props.status}
         paperlessState={props.paperlessState}
-        onClear={() => props.onOptionsChange({ scopeId: null, gapsOnly: false })}
+        onClear={() => props.onOptionsChange({ scopeId: null, gapsOnly: false, gapReason: null })}
       />
     </div>
   );

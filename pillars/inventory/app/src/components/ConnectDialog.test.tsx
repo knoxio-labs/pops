@@ -138,6 +138,15 @@ describe('ConnectDialog', () => {
       fireEvent.click(trigger);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+
+    it('uses a caller-provided trigger', () => {
+      renderWithProviders(
+        <ConnectDialog {...defaultProps} trigger={<button type="button">Custom connect</button>} />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Custom connect' }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
   });
 
   describe('search prompt', () => {

@@ -26,6 +26,12 @@ export interface OpenLibrarySourceOptions {
   readonly fetch?: typeof fetch;
 }
 
+interface OpenLibraryFetchContext {
+  readonly fetcher: typeof fetch;
+  readonly headers: NonNullable<Parameters<typeof fetch>[1]>['headers'];
+  readonly signal: AbortSignal;
+}
+
 /** Create an Open Library ISBN source with the configured identifying contact. */
 export function createOpenLibrarySource(options: OpenLibrarySourceOptions): BookSource {
   const fetcher = options.fetch ?? fetch;
@@ -63,8 +69,8 @@ export function createOpenLibrarySource(options: OpenLibrarySourceOptions): Book
       }
 
       const [contributors, work] = await Promise.all([
-        loadContributors(editionRecord, fetcher, headers, signal),
-        loadWork(editionRecord, fetcher, headers, signal),
+        loadContributors(editionRecord, isbn13, { fetcher, headers, signal }),
+        loadWork(editionRecord, { fetcher, headers, signal }),
       ]);
       const product = mapOpenLibraryProduct(isbn13, editionRecord, contributors, work);
       return product === undefined
@@ -76,9 +82,8 @@ export function createOpenLibrarySource(options: OpenLibrarySourceOptions): Book
 
 async function loadContributors(
   edition: Record<string, unknown>,
-  fetcher: typeof fetch,
-  headers: NonNullable<Parameters<typeof fetch>[1]>['headers'],
-  signal: AbortSignal
+  isbn13: string,
+  context: OpenLibraryFetchContext
 ): Promise<Product['contributors']> {
   const authors = Array.isArray(edition['authors']) ? edition['authors'] : [];
   const results = await Promise.all(
@@ -87,10 +92,10 @@ async function loadContributors(
       const key = readString(authorRecord?.['key']);
       if (key === undefined) return undefined;
       const result = await fetchJson(
-        fetcher,
+        context.fetcher,
         `${OPEN_LIBRARY_BASE_URL}${key}.json`,
-        signal,
-        headers
+        context.signal,
+        context.headers
       );
       if (result.kind === 'failure' || !result.response.ok || result.body === undefined) {
         return undefined;
@@ -99,25 +104,40 @@ async function loadContributors(
       return name === undefined ? undefined : { name, role: 'author' };
     })
   );
-  return results.filter(
+  const contributors = results.filter(
     (contributor): contributor is Product['contributors'][number] => contributor !== undefined
   );
+  if (contributors.length > 0) return contributors;
+  return loadSearchContributors(isbn13, context);
+}
+
+async function loadSearchContributors(
+  isbn13: string,
+  context: OpenLibraryFetchContext
+): Promise<Product['contributors']> {
+  const url = new URL(`${OPEN_LIBRARY_BASE_URL}/search.json`);
+  url.searchParams.set('isbn', isbn13);
+  url.searchParams.set('fields', 'author_name');
+  url.searchParams.set('limit', '1');
+  const result = await fetchJson(context.fetcher, url.toString(), context.signal, context.headers);
+  if (result.kind === 'failure' || !result.response.ok || result.body === undefined) return [];
+  const body = asRecord(result.body);
+  const document = Array.isArray(body?.['docs']) ? asRecord(body['docs'][0]) : undefined;
+  return readStringList(document?.['author_name']).map((name) => ({ name, role: 'author' }));
 }
 
 async function loadWork(
   edition: Record<string, unknown>,
-  fetcher: typeof fetch,
-  headers: NonNullable<Parameters<typeof fetch>[1]>['headers'],
-  signal: AbortSignal
+  context: OpenLibraryFetchContext
 ): Promise<OpenLibraryWork | undefined> {
   const works = Array.isArray(edition['works']) ? edition['works'] : [];
   const workKey = readString(asRecord(works[0])?.['key']);
   if (workKey === undefined) return undefined;
   const result = await fetchJson(
-    fetcher,
+    context.fetcher,
     `${OPEN_LIBRARY_BASE_URL}${workKey}.json`,
-    signal,
-    headers
+    context.signal,
+    context.headers
   );
   if (result.kind === 'failure' || !result.response.ok || result.body === undefined) {
     return undefined;
