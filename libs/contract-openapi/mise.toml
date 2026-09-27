@@ -5,7 +5,7 @@ sources = ["src/**/*.ts", "tsconfig.build.json", "package.json"]
 outputs = ["dist/**"]
 
 [tasks.typecheck]
-run = "tsc --noEmit"
+run = "node ../../scripts/local-dev/typecheck.mjs"
 
 [tasks.test]
 run = "vitest run"
