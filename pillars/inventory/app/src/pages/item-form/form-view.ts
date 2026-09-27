@@ -79,13 +79,36 @@ export function deriveForm(draft: ItemDraft, types: readonly FormTypeDef[]): For
   };
 }
 
-function sameFields(a: ItemDraft, b: ItemDraft): boolean {
-  return JSON.stringify([a.fields, a.overrides]) === JSON.stringify([b.fields, b.overrides]);
+function normalizedFields(draft: ItemDraft): string {
+  const text = Object.fromEntries(
+    Object.entries(draft.fields.text)
+      .map(([fieldId, values]) => [fieldId, values.filter((value) => value.trim() !== '')] as const)
+      .filter(([, values]) => values.length > 0)
+      .toSorted(([left], [right]) => left.localeCompare(right))
+  );
+  const refs = Object.fromEntries(
+    Object.entries(draft.fields.refs)
+      .map(([fieldId, choices]) => [fieldId, choices.map((choice) => choice.id)] as const)
+      .filter(([, ids]) => ids.length > 0)
+      .toSorted(([left], [right]) => left.localeCompare(right))
+  );
+  const booleans = Object.fromEntries(
+    Object.entries(draft.fields.booleans).toSorted(([left], [right]) => left.localeCompare(right))
+  );
+  const overrides = Object.fromEntries(
+    Object.entries(draft.overrides).toSorted(([left], [right]) => left.localeCompare(right))
+  );
+  return JSON.stringify({ text, refs, booleans, overrides });
 }
 
-/** Returns whether cancelling would discard work not present at opening. */
-export function hasStagedWork(draft: ItemDraft, initial: ItemDraft): boolean {
+function sameFields(a: ItemDraft, b: ItemDraft): boolean {
+  return normalizedFields(a) === normalizedFields(b);
+}
+
+/** Returns whether cancelling would discard draft or photo work not present at opening. */
+export function hasStagedWork(draft: ItemDraft, initial: ItemDraft, photoWorkCount = 0): boolean {
   return (
+    photoWorkCount > 0 ||
     draft.name !== initial.name ||
     draft.typeId !== initial.typeId ||
     draft.quantity !== initial.quantity ||

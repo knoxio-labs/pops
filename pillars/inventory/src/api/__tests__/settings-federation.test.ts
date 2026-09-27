@@ -54,7 +54,6 @@ describe('inventory federated /settings', () => {
     );
     expect(byKey.get('inventory.labelSheet')).toBe('L7160');
     expect(byKey.get('inventory.labelShows')).toBe('auto');
-    expect(byKey.get('inventory.paperlessUrl')).toBe('');
     expect(byKey.get('inventory.density')).toBe('compact');
     expect(byKey.get('inventory.defaultLimit')).toBe('50');
     expect(byKey.get('inventory.searchDefaultLimit')).toBe('20');

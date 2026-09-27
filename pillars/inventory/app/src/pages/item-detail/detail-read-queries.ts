@@ -55,7 +55,7 @@ export function useConnectionSources(id: string, webItem: WebGetResponse['item']
       ),
     [primary.world, related.world]
   );
-  return { primary, graphQuery, relatedWorld };
+  return { primary, graphQuery, related, relatedWorld };
 }
 
 /** Reads the detail sections that do not gate the primary placement state. */

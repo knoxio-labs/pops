@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { INVENTORY_SETTINGS_WIDGET_SLOTS } from '@pops/inventory/manifest';
 import { RemotePillarI18nSchema } from '@pops/pillar-sdk';
 
 import { allPageSlots } from './page-slots';
@@ -76,10 +77,18 @@ describe('inventory remote bundle', () => {
     }
   });
 
+  it('resolves the settings-widget slots to components', () => {
+    const { bundles } = assertRemoteUiModule(imported);
+    for (const slot of INVENTORY_SETTINGS_WIDGET_SLOTS) {
+      expect(bundles[slot], slot).toBeDefined();
+      expect(['function', 'object'], slot).toContain(typeof bundles[slot]);
+    }
+  });
+
   it('carries no slot the manifest does not advertise', () => {
     const { bundles } = assertRemoteUiModule(imported);
     expect(Object.keys(bundles).toSorted()).toEqual(
-      [...new Set([...allPageSlots(), 'inventory-paperless'])].toSorted()
+      [...new Set([...allPageSlots(), ...INVENTORY_SETTINGS_WIDGET_SLOTS])].toSorted()
     );
   });
 

@@ -239,6 +239,15 @@ describe('item detail model', () => {
           paperlessDocumentId: 99,
           title: null,
         },
+        {
+          createdAt: '2026-02-15T00:00:00Z',
+          documentType: 'manual',
+          id: 8,
+          itemId: 'item-1',
+          missing: true,
+          paperlessDocumentId: 100,
+          title: 'Desk lamp manual',
+        },
       ])
     ).toEqual([
       {
@@ -247,6 +256,15 @@ describe('item detail model', () => {
         kind: 'Warranty',
         added: '14 Feb 2026',
         paperlessDocumentId: 99,
+        missing: false,
+      },
+      {
+        id: 8,
+        title: 'Desk lamp manual',
+        kind: 'Manual',
+        added: '15 Feb 2026',
+        paperlessDocumentId: 100,
+        missing: true,
       },
     ]);
     expect(paperlessStateOf({ configured: true, available: false })).toBe('unreachable');

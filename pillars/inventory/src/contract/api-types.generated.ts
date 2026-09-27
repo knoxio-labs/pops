@@ -4567,7 +4567,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4630,7 +4629,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4701,7 +4699,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4771,7 +4768,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -5294,9 +5290,14 @@ export interface operations {
               title: string;
               values: {
                 field: string;
+                fieldId?: string;
                 fit: string;
+                recordId?: string;
+                recordKind?: string;
                 replacement?: string;
+                replacementTypeId?: string;
                 value: string;
+                values?: unknown[];
               }[];
             };
             id: string;
@@ -5307,6 +5308,15 @@ export interface operations {
               /** Format: date-time */
               at: string;
               source: string;
+              target?: {
+                containerId?: string;
+                fieldId?: string;
+                kind: string;
+                locationId?: string;
+                name?: string;
+                note?: string | null;
+                values?: unknown[] | null;
+              };
               value: string;
             };
             /** Format: date-time */
@@ -5325,8 +5335,18 @@ export interface operations {
               /** Format: date-time */
               at: string;
               source: string;
+              target?: {
+                containerId?: string;
+                fieldId?: string;
+                kind: string;
+                locationId?: string;
+                name?: string;
+                note?: string | null;
+                values?: unknown[] | null;
+              };
               value: string;
             };
+            typeId?: string;
           }[];
           /** Format: date-time */
           lastSyncAt: string | null;
@@ -5337,11 +5357,17 @@ export interface operations {
             at: string;
             dropped?: {
               field: string;
+              fieldId?: string;
               fit: string;
+              recordId?: string;
+              recordKind?: string;
               replacement?: string;
+              replacementTypeId?: string;
               value: string;
+              values?: unknown[];
             }[];
             id: string;
+            itemId?: string;
             itemName: string;
             outcome: string;
           }[];
@@ -9761,9 +9787,14 @@ export interface operations {
                 title: string;
                 values: {
                   field: string;
+                  fieldId?: string;
                   fit: string;
+                  recordId?: string;
+                  recordKind?: string;
                   replacement?: string;
+                  replacementTypeId?: string;
                   value: string;
+                  values?: unknown[];
                 }[];
               };
               id: string;
@@ -9774,6 +9805,15 @@ export interface operations {
                 /** Format: date-time */
                 at: string;
                 source: string;
+                target?: {
+                  containerId?: string;
+                  fieldId?: string;
+                  kind: string;
+                  locationId?: string;
+                  name?: string;
+                  note?: string | null;
+                  values?: unknown[] | null;
+                };
                 value: string;
               };
               /** Format: date-time */
@@ -9792,8 +9832,18 @@ export interface operations {
                 /** Format: date-time */
                 at: string;
                 source: string;
+                target?: {
+                  containerId?: string;
+                  fieldId?: string;
+                  kind: string;
+                  locationId?: string;
+                  name?: string;
+                  note?: string | null;
+                  values?: unknown[] | null;
+                };
                 value: string;
               };
+              typeId?: string;
             }[];
             attentionCount: number;
             devices: {
@@ -9811,11 +9861,17 @@ export interface operations {
               deviceId: string;
               dropped?: {
                 field: string;
+                fieldId?: string;
                 fit: string;
+                recordId?: string;
+                recordKind?: string;
                 replacement?: string;
+                replacementTypeId?: string;
                 value: string;
+                values?: unknown[];
               }[];
               id: string;
+              itemId?: string;
               itemName: string;
               outcome: string;
             }[];

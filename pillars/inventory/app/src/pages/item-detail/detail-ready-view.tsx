@@ -1,5 +1,6 @@
 import { DetailDialogs } from './detail-dialogs';
 import { DetailHeader } from './detail-header';
+import { DetailStateBanner } from './detail-state-banner';
 import { DetailStoreHereSheet } from './detail-store-here';
 import { HeaderActions } from './header-actions';
 import { ItemDetailView } from './item-detail-view';
@@ -8,6 +9,7 @@ import type { ReactElement } from 'react';
 
 import type { ItemDetailModel } from './detail-model';
 import type { DetailReadyState } from './use-detail-ready-state';
+import type { ItemDetailBannerState } from './use-item-detail-state';
 
 function ReadyHeader({
   model,
@@ -46,14 +48,19 @@ function ReadyContent({
   model,
   ready,
   offline,
+  banner,
+  onRetry,
 }: {
   itemId: string;
   model: ItemDetailModel;
   ready: DetailReadyState;
   offline: boolean;
+  banner: ItemDetailBannerState | null;
+  onRetry: () => void;
 }): ReactElement {
   return (
     <>
+      {banner ? <DetailStateBanner state={banner} onRetry={onRetry} /> : null}
       {ready.actions.refusal ? (
         <p role="alert" className="text-sm text-destructive">
           Not saved. {ready.actions.refusal}
@@ -95,16 +102,27 @@ export function DetailReadyView({
   model,
   ready,
   offline,
+  banner,
+  onRetry,
 }: {
   itemId: string;
   model: ItemDetailModel;
   ready: DetailReadyState;
   offline: boolean;
+  banner: ItemDetailBannerState | null;
+  onRetry: () => void;
 }): ReactElement {
   return (
     <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
       <ReadyHeader model={model} ready={ready} />
-      <ReadyContent itemId={itemId} model={model} ready={ready} offline={offline} />
+      <ReadyContent
+        itemId={itemId}
+        model={model}
+        ready={ready}
+        offline={offline}
+        banner={banner}
+        onRetry={onRetry}
+      />
     </div>
   );
 }
