@@ -40,6 +40,39 @@ internal struct InventoryProtocol2ItemFormTests {
             ])
     }
 
+    @Test("an open typed create uses the active catalogue after a refresh")
+    func typedCreateUsesRefreshedCatalogueRevision() async throws {
+        let field = Self.field()
+        let type = Self.type(field: field)
+        let catalogue = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 3, minimumProtocol: 2),
+            types: [type])
+        let refreshed = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 4, minimumProtocol: 2),
+            types: [type])
+        let store = RecordingFormStore(
+            FormFixtureSource(protocol2Catalogue: catalogue))
+        let form = InventoryItemFormModel(
+            request: .create(placement: nil), store: store, suggester: .unbound,
+            mintId: { "new-item" })
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        form.draft.name = "Cable"
+        form.selectProtocol2Type(type.id)
+        let entry = try #require(form.protocol2Draft?.draftEntries(for: field).first)
+        form.protocol2Draft?.setText("USB-C", entryId: entry.id, for: field)
+        store.setProtocol2Catalogue(refreshed)
+        #expect(await form.await { form.protocol2Catalogue?.revision.revision == 4 })
+
+        #expect(await form.submit())
+        guard case .createProtocol2Item(let item)? = store.performed.first else {
+            Issue.record("expected a protocol-2 create")
+            return
+        }
+        #expect(item.catalogueRevision == 4)
+    }
+
     @Test("local validation blocks malformed offline values before a mutation is queued")
     func offlineValidationBlocksWrite() async throws {
         let field = Self.field(kind: .integer)
