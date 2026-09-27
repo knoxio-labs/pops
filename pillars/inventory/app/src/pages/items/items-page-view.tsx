@@ -19,7 +19,7 @@ import { ItemsListBody } from './items-cards.js';
 
 import type { ReactElement } from 'react';
 
-import type { ItemsPageModel } from './items-page.js';
+import type { ItemsPageModel } from './items-page-model.js';
 
 function ItemsToolbarSection({ model }: { model: ItemsPageModel }): ReactElement | null {
   if (!model.showToolbar) return null;
