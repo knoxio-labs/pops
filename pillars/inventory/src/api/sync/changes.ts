@@ -31,7 +31,8 @@ export interface ChangeRows extends ItemPageRows {
 export function readChanges(
   db: CommandDb,
   state: SyncState,
-  request: { since: number; epoch: string; limit: number }
+  request: { since: number; epoch: string; limit: number },
+  protocol: number = 1
 ): ChangeRows {
   if (request.epoch !== state.epoch) {
     throw resyncRequired('the client is following another epoch');
@@ -69,7 +70,8 @@ export function readChanges(
     locations: locationRows,
     extras: loadItemExtras(
       db,
-      itemRows.map((row) => row.id)
+      itemRows.map((row) => row.id),
+      protocol
     ),
     nextSince: upTo,
     hasMore: upTo < state.maxSeq,

@@ -1,0 +1,97 @@
+name: Promotion Quality
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: promotion-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      required: ${{ steps.scope.outputs.required }}
+    steps:
+      - id: scope
+        env:
+          PROMOTION_REQUIRED: ${{ github.base_ref == 'main' && (startsWith(github.head_ref, 'promotion/') || startsWith(github.head_ref, 'integration/')) }}
+        run: echo "required=$PROMOTION_REQUIRED" >> "$GITHUB_OUTPUT"
+  quality:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/quality.yml
+    with:
+      full-validation: true
+  units:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/unit-quality.yml
+    with:
+      full-validation: true
+  apps:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/app-quality.yml
+    with:
+      full-validation: true
+  rust:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/rust-quality.yml
+    with:
+      full-validation: true
+  frontend:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/fe-quality.yml
+    with:
+      full-validation: true
+  browser:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/fe-test-e2e.yml
+    with:
+      full-validation: true
+  images:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      full-validation: true
+  registry:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/registry-generated-quality.yml
+    with:
+      full-validation: true
+  ios:
+    needs: classify
+    if: needs.classify.outputs.required == 'true'
+    uses: ./.github/workflows/ios-quality.yml
+    with:
+      full-validation: true
+  validation:
+    name: Promotion validation
+    if: always()
+    needs: [classify, quality, units, apps, rust, frontend, browser, images, registry, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Require every promotion lane
+        env:
+          PROMOTION_REQUIRED: ${{ needs.classify.outputs.required }}
+          PROMOTION_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node scripts/ci/check-promotion.mjs --self-test
+          node scripts/ci/check-promotion.mjs

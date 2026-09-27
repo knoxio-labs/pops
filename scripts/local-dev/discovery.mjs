@@ -89,18 +89,20 @@ export async function discoverUnits({ cwd, verifyTrust = true }) {
 /**
  * Returns serialized local mise prerequisites for descriptors. This preserves
  * code generation before package-backed checks without allowing concurrent
- * builds to overwrite shared output directories.
+ * builds to overwrite shared output directories. Supplied units must be the
+ * trusted discovery snapshot for this invocation.
  *
- * @param {{cwd: string, descriptors: LocalTask[]}} options
+ * @param {{cwd: string, descriptors: LocalTask[], units?: LocalUnit[]}} options
  * @returns {Promise<LocalTask[]>}
  */
-export async function prepareTasks({ cwd, descriptors }) {
-  const units = new Map((await discoverUnits({ cwd })).map((unit) => [unit.unitPath, unit]));
+export async function prepareTasks({ cwd, descriptors, units }) {
+  const discovered = units ?? (await discoverUnits({ cwd }));
+  const byPath = new Map(discovered.map((unit) => [unit.unitPath, unit]));
   /** @type {LocalTask[]} */
   const prepared = [];
   const seen = new Set();
   for (const descriptor of descriptors) {
-    const found = units.get(descriptor.unitPath);
+    const found = byPath.get(descriptor.unitPath);
     if (found === undefined) continue;
     const unit = found;
     for (const dependency of unit.miseDependencies[descriptor.taskName] ?? []) {
@@ -128,9 +130,10 @@ function taskWritesFiles(taskName) {
 /**
  * Converts locally-defined package or mise tasks to runnable descriptors.
  * Package scripts run in the unit's mise environment without retriggering
- * prerequisites that can race against another unit's build.
+ * prerequisites that can race against another unit's build. Supplied units must
+ * be the trusted discovery snapshot for this invocation.
  *
- * @param {{cwd: string, taskNames?: string[], unitPaths?: string[], verifyTrust?: boolean, includeClients?: boolean}} options
+ * @param {{cwd: string, taskNames?: string[], unitPaths?: string[], verifyTrust?: boolean, includeClients?: boolean, units?: LocalUnit[]}} options
  * @returns {Promise<LocalTask[]>}
  */
 export async function discoverLocalTasks({
@@ -139,15 +142,16 @@ export async function discoverLocalTasks({
   unitPaths,
   verifyTrust,
   includeClients = process.env.RUN_ALL_INCLUDE_CLIENTS === '1',
+  units,
 }) {
   const root = resolve(cwd);
   const selected =
     unitPaths === undefined ? undefined : new Set(unitPaths.map((path) => resolve(root, path)));
   const requested = taskNames === undefined ? undefined : new Set(taskNames);
-  const units = await discoverUnits({ cwd: root, verifyTrust });
+  const discovered = units ?? (await discoverUnits({ cwd: root, verifyTrust }));
   /** @type {LocalTask[]} */
   const tasks = [];
-  for (const unit of units) {
+  for (const unit of discovered) {
     if (!includeClients && relative(root, unit.unitPath).startsWith('clients/')) continue;
     if (selected !== undefined && !selected.has(unit.unitPath)) continue;
     for (const taskName of unit.taskNames) {

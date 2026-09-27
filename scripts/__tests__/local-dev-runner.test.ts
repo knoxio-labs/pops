@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { signalProcessTree, superviseDevProcesses } from '../local-dev/dev.mjs';
-import { discoverLocalTasks, discoverUnits } from '../local-dev/discovery.mjs';
+import { discoverLocalTasks, discoverUnits, prepareTasks } from '../local-dev/discovery.mjs';
 import { runTasks } from '../local-dev/run-all.mjs';
 
 const temporaryRoots: string[] = [];
@@ -29,6 +29,25 @@ afterEach(() => {
 });
 
 describe('local development task discovery', () => {
+  it('reuses a supplied discovery snapshot for task selection and prerequisites', async () => {
+    const root = fixtureRoot();
+    unit(root, 'libs/example', {
+      'mise.toml': '[tasks.typecheck]\ndepends = ["build"]\nrun = "true"\n',
+      'package.json': JSON.stringify({ scripts: { typecheck: 'tsc --noEmit' } }),
+    });
+    const units = await discoverUnits({ cwd: root, verifyTrust: false });
+    writeFileSync(join(root, 'libs/example/mise.toml'), '[invalid');
+    const tasks = await discoverLocalTasks({ cwd: root, taskNames: ['typecheck'], units });
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]?.unitPath).toBe(join(root, 'libs/example'));
+    expect(await prepareTasks({ cwd: root, descriptors: tasks, units })).toEqual([
+      expect.objectContaining({ taskName: 'build', unitPath: join(root, 'libs/example') }),
+    ]);
+    await expect(discoverUnits({ cwd: root, verifyTrust: false })).rejects.toThrow(
+      'Unable to parse local task configuration'
+    );
+  });
+
   it('retains the unit mise environment for package-backed tasks', async () => {
     const root = fixtureRoot();
     unit(root, 'libs/configured', {

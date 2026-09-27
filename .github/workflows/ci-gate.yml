@@ -20,6 +20,7 @@ on:
       - "FE Quality"
       - "Rust Quality"
       - "App Quality"
+      - "Promotion Quality"
       - "Quality"
       - "Registry Generated Quality"
       - "iOS Quality"
@@ -64,7 +65,7 @@ jobs:
               "Docker Build",
               "E2E Tests",
             ];
-            const cancellationOnly = [];
+            const cancellationOnly = ["Promotion Quality"];
             const passing = new Set(["success", "skipped"]);
 
             // Mirrors each gated workflow's OWN `pull_request.paths` trigger —
