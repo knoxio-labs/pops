@@ -162,6 +162,7 @@ function catalogueType(
     key: id,
     label,
     legacyLabels: [],
+    parentTypeId: null,
     presentation: {},
     replacedBy: null,
     revision: 1,
