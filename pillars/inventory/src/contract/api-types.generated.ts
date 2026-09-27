@@ -4567,7 +4567,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4630,7 +4629,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4701,7 +4699,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4771,7 +4768,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
