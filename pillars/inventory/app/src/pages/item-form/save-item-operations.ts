@@ -4,22 +4,11 @@ import { wirePlacement } from './save-item-wire';
 
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { InventoryCommand } from '../../inventory-web/commands.js';
 import type { FormTypeDef } from './field-model';
 import type { ItemDraft } from './form-draft';
-import type { SaveResult } from './save-types';
+import type { SaveResult, SendCommand } from './save-types';
 
-/** Options accepted by one inventory mutation sender used by the form. */
-export interface SendCommandOptions {
-  readonly baseRevision?: number;
-}
-
-/** Sends one inventory mutation command and returns the normalized save result. */
-export type SendCommand = (
-  command: InventoryCommand,
-  entityId: string,
-  options?: SendCommandOptions
-) => Promise<SaveResult>;
+export type { SendCommand, SendCommandOptions } from './save-types';
 
 /** Inputs for creating an item through the existing inventory mutation protocol. */
 export interface CreateItemOptions {

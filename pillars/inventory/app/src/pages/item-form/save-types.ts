@@ -1,5 +1,18 @@
+import type { InventoryCommand } from '../../inventory-web/commands.js';
 import type { CodeHolder } from './code-assist';
 import type { ItemDraft } from './form-draft';
+
+/** Options accepted by one inventory mutation sender used by the form. */
+export interface SendCommandOptions {
+  readonly baseRevision?: number;
+}
+
+/** Sends one inventory mutation command and returns the normalized save result. */
+export type SendCommand = (
+  command: InventoryCommand,
+  entityId: string,
+  options?: SendCommandOptions
+) => Promise<SaveResult>;
 
 /** The successful item identity shown after Save and start another. */
 export interface JustCreated {

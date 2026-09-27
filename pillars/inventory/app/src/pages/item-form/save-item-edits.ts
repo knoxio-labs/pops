@@ -7,8 +7,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { InventoryCommand } from '../../inventory-web/commands.js';
 import type { FormTypeDef } from './field-model';
 import type { ItemDraft } from './form-draft';
-import type { SendCommand } from './save-item-operations';
-import type { SaveResult } from './save-types';
+import type { SaveResult, SendCommand } from './save-types';
 
 /** Inputs for applying an edited item draft through the existing mutation commands. */
 export interface SaveEditOptions {
