@@ -57,5 +57,14 @@ describe('item form view', () => {
     const initial = blankDraft();
     expect(hasStagedWork(initial, initial)).toBe(false);
     expect(hasStagedWork({ ...initial, name: 'Cable' }, initial)).toBe(true);
+    expect(
+      hasStagedWork(
+        {
+          ...initial,
+          fields: { text: { colour: [''] }, refs: {}, booleans: {} },
+        },
+        initial
+      )
+    ).toBe(false);
   });
 });

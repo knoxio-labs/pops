@@ -23,6 +23,7 @@ export interface ItemFormOpening {
   readonly draft: ItemDraft;
   readonly initial: ItemDraft;
   readonly editing: { readonly id: string; readonly name: string } | null;
+  readonly revision: number | null;
   readonly computed: Readonly<Record<string, ComputedDisplay>>;
 }
 
@@ -45,13 +46,17 @@ function rawValues(value: unknown): readonly unknown[] {
   return [value];
 }
 
-function fieldValuesFromItem(item: WebItem, type: FormTypeDef | null): ItemDraft['fields'] {
+/** Maps a protocol-1 field-key payload into the form's stable field-id drafts. */
+export function fieldDraftsFromProtocolFields(
+  fields: Readonly<Record<string, unknown>>,
+  type: FormTypeDef | null
+): ItemDraft['fields'] {
   const text: Record<string, readonly string[]> = {};
   const refs: Record<string, readonly { id: string; kind: 'item' | 'location'; label: string }[]> =
     {};
   const booleans: Record<string, boolean> = {};
   for (const field of type?.fields ?? []) {
-    const raw = item.fields[field.id];
+    const raw = fields[field.key];
     const values = rawValues(raw);
     if (field.kind === 'boolean') {
       const value = values[0];
@@ -67,6 +72,10 @@ function fieldValuesFromItem(item: WebItem, type: FormTypeDef | null): ItemDraft
     }
   }
   return { text, refs, booleans };
+}
+
+function fieldValuesFromItem(item: WebItem, type: FormTypeDef | null): ItemDraft['fields'] {
+  return fieldDraftsFromProtocolFields(item.fields, type);
 }
 
 function overridesFromItem(item: WebItem): Readonly<Record<string, string>> {
@@ -138,7 +147,7 @@ export function createOpening(
   else if (destination !== null && world.items.has(destination))
     placement = { kind: 'container', containerId: destination };
   const draft = blankDraft(placement, typeId);
-  return { draft, initial: draft, editing: null, computed: {} };
+  return { draft, initial: draft, editing: null, revision: null, computed: {} };
 }
 
 /** Opens an edit form from the current web item response. */
@@ -152,6 +161,7 @@ export function editOpening(
     draft,
     initial: draft,
     editing: { id: item.id, name: item.name },
+    revision: item.revision,
     computed: computedFromItem(item),
   };
 }
