@@ -37,9 +37,11 @@ internal struct InventoryFormKeyboardDismissalTests {
     #if os(iOS)
         @MainActor
         @Test("the iOS tap handler leaves text inputs focused and shares control gestures")
-        func tapDismissalRespectsInputBoundaries() {
+        func tapDismissalRespectsInputBoundaries() throws {
             let coordinator = InventoryKeyboardDismissalCoordinator()
-            let window = UIWindow(frame: .zero)
+            let scene = try #require(
+                UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+            let window = UIWindow(windowScene: scene)
             let container = UIView()
             let field = UITextField()
             container.addSubview(field)
