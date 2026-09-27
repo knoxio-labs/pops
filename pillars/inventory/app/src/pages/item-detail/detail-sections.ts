@@ -17,7 +17,7 @@ import type {
   DetailPhoto,
   DetailProvenance,
   PaperlessState,
-} from './detail-model';
+} from './detail-model-types';
 
 function longDate(value: string | null): string | null {
   if (value === null) return null;

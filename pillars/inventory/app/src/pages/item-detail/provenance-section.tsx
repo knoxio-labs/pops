@@ -57,7 +57,7 @@ export function ProvenanceSection({ provenance }: { provenance: DetailProvenance
       {provenance.purchase ? (
         <a
           href={provenance.purchase.href}
-          className="flex min-h-11 items-center gap-2 rounded-md bg-muted/50 px-2 text-sm text-app-accent hover:underline"
+          className="flex min-h-11 min-w-11 items-center gap-2 rounded-md bg-muted/50 px-2 text-sm text-app-accent hover:underline"
         >
           <Receipt className="size-4 shrink-0" aria-hidden />
           <span className="min-w-0 flex-1 truncate">{provenance.purchase.label}</span>
