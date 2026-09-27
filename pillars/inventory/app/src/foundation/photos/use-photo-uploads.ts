@@ -1,164 +1,176 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
-import { unwrap } from '../../inventory-api-helpers.js';
-import { photosUpload } from '../../inventory-api/index.js';
+import { useImageProcessor } from '../../hooks/useImageProcessor';
+import {
+  addPhotos,
+  photoRefusal,
+  removePhoto,
+  retryPhoto,
+  startStagedUploads,
+  type PhotoUpload,
+} from './photo-queue';
+import { toPhotoFile, uploadPhoto } from './photo-upload-operations';
+import { usePhotoUploadState, type PhotoUploadState } from './photo-upload-state';
 
-import type { PhotosUploadData } from '../../inventory-api/types.gen.js';
+const WEB_QUERY_KEY = ['inventory', 'web'] as const;
 
-/** The supported photo-entry modes. */
-export type PhotoUploadMode = 'create' | 'edit';
-
-/** One browser file tracked while the inventory photo endpoint processes it. */
-export interface PhotoUploadEntry {
-  localId: string;
-  file: File;
-  status: 'staged' | 'uploading' | 'attached' | 'failed';
-  reason?: string;
-}
-
-/** The result for one file accepted by the repair upload action. */
-export type PhotoUploadResult =
-  | { fileName: string; status: 'attached' }
-  | { fileName: string; status: 'refused' | 'failed'; reason: string };
-
-/** The small upload queue contract consumed by item forms and Sync repair actions. */
+/** The queue and upload operations exposed to an item form. */
 export interface PhotoUploads {
-  add(files: readonly File[]): Promise<readonly PhotoUploadResult[]>;
-  queue: readonly PhotoUploadEntry[];
-  refused: readonly string[];
+  readonly queue: PhotoUpload[];
+  readonly refused: string[];
+  /** Adds files from the picker or drop target. */
+  readonly add: (files: readonly File[]) => void;
+  /** Removes one staged or failed photo and its retained file. */
+  readonly remove: (localId: string) => void;
+  /** Retries one failed photo when the edited item already exists. */
+  readonly retry: (localId: string) => void;
+  /** Uploads staged and in-flight photos for the item, including files added while it runs. */
+  readonly flush: (itemId: string) => Promise<{ attached: number; queue: PhotoUpload[] }>;
+  /** Clears queue state and retained files for Save and start another. */
+  readonly reset: () => void;
+  readonly stagedCount: number;
+  readonly attachedCount: number;
 }
 
-const PHOTO_BYTE_LIMIT = 20 * 1024 * 1024;
-
-function isImage(file: File): boolean {
-  if (file.type.startsWith('image/')) return true;
-  const name = file.name.toLowerCase();
-  return name.endsWith('.heic') || name.endsWith('.heif');
+interface PhotoUploadContext {
+  readonly mode: 'create' | 'edit';
+  readonly itemId: string | null;
+  readonly processFiles: (files: File[]) => Promise<Array<{ processed: Blob }>>;
+  readonly queryClient: QueryClient;
+  readonly state: PhotoUploadState;
 }
 
-function refusalFor(file: File): string | null {
-  if (file.size > PHOTO_BYTE_LIMIT) return `${file.name} is over 20 MB.`;
-  if (!isImage(file)) return `${file.name} is not an image.`;
-  return null;
-}
-
-function readBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        reject(new Error('The selected photo could not be read.'));
-        return;
-      }
-      const separator = reader.result.indexOf(',');
-      resolve(separator === -1 ? reader.result : reader.result.slice(separator + 1));
-    };
-    reader.onerror = () => reject(new Error('The selected photo could not be read.'));
-    reader.readAsDataURL(file);
-  });
-}
-
-function uploadBody(fileBase64: string, sortOrder: number): PhotosUploadData['body'] {
-  return { fileBase64, sortOrder };
-}
-
-interface UploadContext {
-  itemId: string;
-  start: number;
-  queryClient: ReturnType<typeof useQueryClient>;
-  setQueue: (update: (current: PhotoUploadEntry[]) => PhotoUploadEntry[]) => void;
-}
-
-async function uploadEntry(
-  entry: PhotoUploadEntry,
-  index: number,
-  context: UploadContext
-): Promise<PhotoUploadResult> {
-  try {
-    const fileBase64 = await readBase64(entry.file);
-    await unwrap(
-      await photosUpload({
-        path: { itemId: context.itemId },
-        body: uploadBody(fileBase64, context.start + index),
-      })
-    );
-    context.setQueue((current) =>
-      current.map((candidate) =>
-        candidate.localId === entry.localId ? { ...candidate, status: 'attached' } : candidate
-      )
-    );
-    void context.queryClient.invalidateQueries({ queryKey: ['inventory', 'web'] });
-    return { fileName: entry.file.name, status: 'attached' };
-  } catch (error: unknown) {
-    const reason = error instanceof Error ? error.message : 'The upload failed.';
-    context.setQueue((current) =>
-      current.map((candidate) =>
-        candidate.localId === entry.localId ? { ...candidate, status: 'failed', reason } : candidate
-      )
-    );
-    return { fileName: entry.file.name, status: 'failed', reason };
+function settledUpload(context: PhotoUploadContext, localId: string): void {
+  context.state.pendingRef.current.delete(localId);
+  if (
+    context.mode === 'edit' &&
+    !context.state.flushingRef.current &&
+    context.state.pendingRef.current.size === 0 &&
+    !context.state.queueRef.current.some((photo) => photo.status.kind === 'uploading')
+  ) {
+    void context.queryClient.invalidateQueries({ queryKey: WEB_QUERY_KEY });
   }
 }
 
-/** Uploads validated browser images and reports refused files without queueing them. */
+function startUpload(
+  context: PhotoUploadContext,
+  localId: string,
+  targetId: string
+): Promise<boolean> {
+  const { state } = context;
+  const pending = state.pendingRef.current.get(localId);
+  if (pending !== undefined) return pending;
+  const file = state.filesRef.current.get(localId);
+  if (file === undefined) return Promise.resolve(false);
+  const operation = uploadPhoto({
+    file,
+    itemId: targetId,
+    position: state.reservePosition(),
+    processFiles: context.processFiles,
+    setStatus: state.setStatus,
+    localId,
+  });
+  state.pendingRef.current.set(localId, operation);
+  void operation.then(
+    () => settledUpload(context, localId),
+    () => state.pendingRef.current.delete(localId)
+  );
+  return operation;
+}
+
+function addPhotoFiles(context: PhotoUploadContext, files: readonly File[]): void {
+  const photoFiles = files.map((file) => {
+    const localId = crypto.randomUUID();
+    context.state.filesRef.current.set(localId, file);
+    return toPhotoFile(file, localId);
+  });
+  const result = addPhotos(context.state.queueRef.current, photoFiles, context.mode);
+  for (const photoFile of photoFiles) {
+    if (photoRefusal(photoFile) !== null) context.state.filesRef.current.delete(photoFile.localId);
+  }
+  const added = result.queue.slice(context.state.queueRef.current.length);
+  context.state.setQueueValue(result.queue);
+  context.state.setRefusedValue([...context.state.refusedRef.current, ...result.refused]);
+  if (context.mode === 'edit' && context.itemId !== null) {
+    for (const photo of added) void startUpload(context, photo.localId, context.itemId);
+  }
+}
+
+function removePhotoFile(context: PhotoUploadContext, localId: string): void {
+  context.state.filesRef.current.delete(localId);
+  context.state.setQueueValue(removePhoto(context.state.queueRef.current, localId));
+}
+
+function retryPhotoFile(context: PhotoUploadContext, localId: string): void {
+  context.state.setQueueValue(retryPhoto(context.state.queueRef.current, localId));
+  if (context.mode === 'edit' && context.itemId !== null)
+    void startUpload(context, localId, context.itemId);
+}
+
+function flushPhotos(
+  context: PhotoUploadContext,
+  targetId: string
+): Promise<{ attached: number; queue: PhotoUpload[] }> {
+  const { state } = context;
+  const currentFlush = state.flushRef.current;
+  if (currentFlush !== null) return currentFlush;
+  const operation = (async (): Promise<{ attached: number; queue: PhotoUpload[] }> => {
+    state.flushingRef.current = true;
+    let attached = 0;
+    try {
+      while (true) {
+        const staged = state.queueRef.current.filter((photo) => photo.status.kind === 'staged');
+        if (staged.length > 0) state.setQueueValue(startStagedUploads(state.queueRef.current));
+        for (const photo of staged) void startUpload(context, photo.localId, targetId);
+        const pending = [...state.pendingRef.current.values()];
+        if (pending.length > 0) {
+          const results = await Promise.all(pending);
+          attached += results.filter(Boolean).length;
+        }
+        const active = state.queueRef.current.some(
+          (photo) => photo.status.kind === 'staged' || photo.status.kind === 'uploading'
+        );
+        if (!active) break;
+      }
+      void context.queryClient.invalidateQueries({ queryKey: WEB_QUERY_KEY });
+      return { attached, queue: state.queueRef.current };
+    } finally {
+      state.flushingRef.current = false;
+    }
+  })();
+  state.flushRef.current = operation;
+  void operation.then(
+    () => {
+      if (state.flushRef.current === operation) state.flushRef.current = null;
+    },
+    () => {
+      if (state.flushRef.current === operation) state.flushRef.current = null;
+    }
+  );
+  return operation;
+}
+
+/** Manages item-detail photo state, staged create uploads and immediate edit uploads. */
 export function usePhotoUploads(
-  mode: PhotoUploadMode,
-  itemId: string,
+  mode: 'create' | 'edit',
+  itemId: string | null,
   existingPhotoCount: number
 ): PhotoUploads {
   const queryClient = useQueryClient();
-  const [queue, setQueue] = useState<PhotoUploadEntry[]>([]);
-  const [refused, setRefused] = useState<string[]>([]);
-
-  const add = useCallback(
-    async (files: readonly File[]): Promise<readonly PhotoUploadResult[]> => {
-      const results = files.map((file) => {
-        const reason = refusalFor(file);
-        return reason === null
-          ? null
-          : ({
-              fileName: file.name,
-              status: 'refused' as const,
-              reason,
-            } satisfies PhotoUploadResult);
-      });
-      setRefused(
-        results.flatMap((result) => (result?.status === 'refused' ? [result.reason] : []))
-      );
-      const start = mode === 'edit' ? existingPhotoCount : 0;
-      const entries = files.flatMap((file, index) =>
-        results[index] === null
-          ? [
-              {
-                inputIndex: index,
-                localId: `${Date.now()}-${index}-${file.name}`,
-                file,
-                status: 'uploading' as const,
-              },
-            ]
-          : []
-      );
-      setQueue((current) => [...current, ...entries]);
-
-      const uploaded = await Promise.all(
-        entries.map((entry, index) =>
-          uploadEntry(entry, index, { itemId, start, queryClient, setQueue })
-        )
-      );
-      const uploadedByInput = new Map(
-        entries.map((entry, index) => [entry.inputIndex, uploaded[index]])
-      );
-      return results.map((result, index) => {
-        if (result !== null) return result;
-        const uploadedResult = uploadedByInput.get(index);
-        if (uploadedResult === undefined)
-          throw new Error('The selected photo could not be uploaded.');
-        return uploadedResult;
-      });
-    },
-    [existingPhotoCount, itemId, mode, queryClient]
-  );
-
-  return { add, queue, refused };
+  const { processFiles } = useImageProcessor();
+  const state = usePhotoUploadState(existingPhotoCount);
+  const context: PhotoUploadContext = { mode, itemId, processFiles, queryClient, state };
+  const stagedCount = state.queue.filter((photo) => photo.status.kind === 'staged').length;
+  const attachedCount = state.queue.filter((photo) => photo.status.kind === 'attached').length;
+  return {
+    queue: state.queue,
+    refused: state.refused,
+    add: (files) => addPhotoFiles(context, files),
+    remove: (localId) => removePhotoFile(context, localId),
+    retry: (localId) => retryPhotoFile(context, localId),
+    flush: (targetId) => flushPhotos(context, targetId),
+    reset: state.reset,
+    stagedCount,
+    attachedCount,
+  };
 }

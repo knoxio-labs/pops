@@ -92,7 +92,13 @@ function disabledActionReason(
   disabledReason: string | undefined
 ): string | null {
   if (
-    (action === 'use-suggested' || action === 'restore' || action === 'upload') &&
+    (action === 'use-suggested' ||
+      action === 'restore' ||
+      action === 'upload' ||
+      action === 'use-mine' ||
+      action === 'save-fitting' ||
+      action === 'change-type' ||
+      action === 'restore-reference') &&
     disabledReason !== undefined
   ) {
     return disabledReason;
