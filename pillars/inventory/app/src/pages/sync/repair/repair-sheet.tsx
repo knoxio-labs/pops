@@ -1,12 +1,11 @@
-import { ChevronLeft, ChevronRight, Smartphone } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button, ButtonPrimitive, SheetPanel } from '@pops/ui';
 
 import { HintTooltip } from '../../../foundation/shortcuts/hint-tooltip.js';
 import { useShortcutScope } from '../../../foundation/shortcuts/shortcut-provider.js';
-import { SheetSection } from '../sheet-section.js';
-import { RepairEvidence } from './repair-evidence.js';
 import { planFor } from './repair-plan.js';
+import { RepairContent } from './repair-sheet-content.js';
 import { useRepairActions } from './use-repair-actions.js';
 
 import type { ReactElement, ReactNode } from 'react';
@@ -25,24 +24,6 @@ export interface RepairSheetProps {
   disabledReason?: string;
   onStep: (caseId: string) => void;
   onClose: () => void;
-}
-
-/** Renders the device-owned portion of a repair decision. */
-export function OnDevice({
-  device,
-  children,
-}: {
-  device: string;
-  children: ReactNode;
-}): ReactElement {
-  return (
-    <SheetSection title={`On ${device}`}>
-      <p className="flex gap-2.5 text-sm">
-        <Smartphone className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <span>{children}</span>
-      </p>
-    </SheetSection>
-  );
 }
 
 function Stepper({
@@ -123,6 +104,42 @@ function ActionButton({
   );
 }
 
+function RepairFooter({
+  plan,
+  actions,
+  position,
+  onStep,
+}: {
+  plan: ReturnType<typeof planFor>;
+  actions: ReturnType<typeof useRepairActions>;
+  position: CasePosition | null;
+  onStep: (caseId: string) => void;
+}): ReactElement {
+  return (
+    <>
+      <Stepper position={position} onStep={onStep} />
+      {plan.secondary.map((action) => (
+        <ActionButton
+          key={action.id}
+          action={action}
+          blockedReason={actions.blockedReason(action)}
+          busy={actions.busy}
+          onRun={(next) => void actions.run(next)}
+        />
+      ))}
+      {plan.primary ? (
+        <ActionButton
+          action={plan.primary}
+          blockedReason={actions.blockedReason(plan.primary)}
+          busy={actions.busy}
+          onRun={(next) => void actions.run(next)}
+          primary
+        />
+      ) : null}
+    </>
+  );
+}
+
 /** Renders one repair case with evidence, web actions, and the phone's choice. */
 export function RepairSheet({
   repair,
@@ -143,50 +160,9 @@ export function RepairSheet({
       description={repair.problem}
       onClose={onClose}
       className="rounded-xl"
-      footer={
-        <>
-          <Stepper position={position} onStep={onStep} />
-          {plan.secondary.map((action) => (
-            <ActionButton
-              key={action.id}
-              action={action}
-              blockedReason={actions.blockedReason(action)}
-              busy={actions.busy}
-              onRun={(next) => void actions.run(next)}
-            />
-          ))}
-          {plan.primary ? (
-            <ActionButton
-              action={plan.primary}
-              blockedReason={actions.blockedReason(plan.primary)}
-              busy={actions.busy}
-              onRun={(next) => void actions.run(next)}
-              primary
-            />
-          ) : null}
-        </>
-      }
+      footer={<RepairFooter plan={plan} actions={actions} position={position} onStep={onStep} />}
     >
-      <div className="space-y-5">
-        {actions.refusal ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm"
-          >
-            {actions.refusal}
-          </p>
-        ) : null}
-        {actions.fileInput}
-        <RepairEvidence repair={repair} now={now} />
-        {plan.primary ? (
-          <SheetSection title="From this web app">
-            <p className="text-sm">
-              <span className="font-medium">{plan.primary.label}.</span> {plan.primary.outcome}
-            </p>
-          </SheetSection>
-        ) : null}
-        {plan.onDevice ? <OnDevice device={device}>{plan.onDevice}</OnDevice> : null}
-      </div>
+      <RepairContent repair={repair} device={device} now={now} plan={plan} actions={actions} />
     </SheetPanel>
   );
 }

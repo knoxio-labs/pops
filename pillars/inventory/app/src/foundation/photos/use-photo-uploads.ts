@@ -17,9 +17,14 @@ export interface PhotoUploadEntry {
   reason?: string;
 }
 
+/** The result for one file accepted by the repair upload action. */
+export type PhotoUploadResult =
+  | { fileName: string; status: 'attached' }
+  | { fileName: string; status: 'refused' | 'failed'; reason: string };
+
 /** The small upload queue contract consumed by item forms and Sync repair actions. */
 export interface PhotoUploads {
-  add(files: readonly File[]): Promise<void>;
+  add(files: readonly File[]): Promise<readonly PhotoUploadResult[]>;
   queue: readonly PhotoUploadEntry[];
   refused: readonly string[];
 }
@@ -58,6 +63,44 @@ function uploadBody(fileBase64: string, sortOrder: number): PhotosUploadData['bo
   return { fileBase64, sortOrder };
 }
 
+interface UploadContext {
+  itemId: string;
+  start: number;
+  queryClient: ReturnType<typeof useQueryClient>;
+  setQueue: (update: (current: PhotoUploadEntry[]) => PhotoUploadEntry[]) => void;
+}
+
+async function uploadEntry(
+  entry: PhotoUploadEntry,
+  index: number,
+  context: UploadContext
+): Promise<PhotoUploadResult> {
+  try {
+    const fileBase64 = await readBase64(entry.file);
+    await unwrap(
+      await photosUpload({
+        path: { itemId: context.itemId },
+        body: uploadBody(fileBase64, context.start + index),
+      })
+    );
+    context.setQueue((current) =>
+      current.map((candidate) =>
+        candidate.localId === entry.localId ? { ...candidate, status: 'attached' } : candidate
+      )
+    );
+    void context.queryClient.invalidateQueries({ queryKey: ['inventory', 'web'] });
+    return { fileName: entry.file.name, status: 'attached' };
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : 'The upload failed.';
+    context.setQueue((current) =>
+      current.map((candidate) =>
+        candidate.localId === entry.localId ? { ...candidate, status: 'failed', reason } : candidate
+      )
+    );
+    return { fileName: entry.file.name, status: 'failed', reason };
+  }
+}
+
 /** Uploads validated browser images and reports refused files without queueing them. */
 export function usePhotoUploads(
   mode: PhotoUploadMode,
@@ -69,13 +112,14 @@ export function usePhotoUploads(
   const [refused, setRefused] = useState<string[]>([]);
 
   const add = useCallback(
-    async (files: readonly File[]): Promise<void> => {
-      const refusals = files
-        .map((file) => refusalFor(file))
-        .filter((reason): reason is string => reason !== null);
+    async (files: readonly File[]): Promise<readonly PhotoUploadResult[]> => {
+      const refusals = files.flatMap((file) => {
+        const reason = refusalFor(file);
+        return reason === null ? [] : [{ fileName: file.name, status: 'refused' as const, reason }];
+      });
       if (refusals.length > 0) {
-        setRefused(refusals);
-        return;
+        setRefused(refusals.map(({ reason }) => reason));
+        return refusals;
       }
       setRefused([]);
       const start = mode === 'edit' ? existingPhotoCount : 0;
@@ -86,35 +130,10 @@ export function usePhotoUploads(
       }));
       setQueue((current) => [...current, ...entries]);
 
-      await Promise.all(
-        entries.map(async (entry, index) => {
-          try {
-            const fileBase64 = await readBase64(entry.file);
-            await unwrap(
-              await photosUpload({
-                path: { itemId },
-                body: uploadBody(fileBase64, start + index),
-              })
-            );
-            setQueue((current) =>
-              current.map((candidate) =>
-                candidate.localId === entry.localId
-                  ? { ...candidate, status: 'attached' }
-                  : candidate
-              )
-            );
-            void queryClient.invalidateQueries({ queryKey: ['inventory', 'web'] });
-          } catch (error: unknown) {
-            const reason = error instanceof Error ? error.message : 'The upload failed.';
-            setQueue((current) =>
-              current.map((candidate) =>
-                candidate.localId === entry.localId
-                  ? { ...candidate, status: 'failed', reason }
-                  : candidate
-              )
-            );
-          }
-        })
+      return Promise.all(
+        entries.map((entry, index) =>
+          uploadEntry(entry, index, { itemId, start, queryClient, setQueue })
+        )
       );
     },
     [existingPhotoCount, itemId, mode, queryClient]
