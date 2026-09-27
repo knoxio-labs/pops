@@ -58,6 +58,9 @@ settings:
       ONLY_ACTIVE_ARCH: YES
 
 packages:
+  SwiftCollections:
+    url: https://github.com/apple/swift-collections
+    exactVersion: 1.6.0
   AppCore:
     path: Packages/AppCore
   Auth:
