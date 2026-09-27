@@ -1,3 +1,9 @@
+import {
+  encodeBulkReferenceValues,
+  isBulkReferenceInput,
+  type BulkReferenceInput,
+} from './bulk-reference-model.js';
+
 import type {
   FieldValueEntry,
   FieldValuePatch,
@@ -15,7 +21,7 @@ export interface BulkFieldCandidate {
 }
 
 /** The input values supported by the live bulk field sheet. */
-export type BulkFieldInput = string | string[] | boolean;
+export type BulkFieldInput = string | string[] | boolean | BulkReferenceInput;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -43,7 +49,6 @@ export function supportsBulkField(field: CatalogueType['fields'][number]): boole
   return (
     field.archivedAt === null &&
     field.storage === 'stored' &&
-    field.kind !== 'reference' &&
     (field.kind !== 'measurement' || field.fixedUnit !== null)
   );
 }
@@ -104,12 +109,13 @@ export function typeChangeValues(
 /** Creates a blank input for a field's editor. */
 export function initialBulkFieldInput(field: CatalogueType['fields'][number]): BulkFieldInput {
   if (field.kind === 'boolean') return false;
-  if (field.kind === 'enum' && field.cardinality === 'many') return [];
+  if ((field.kind === 'enum' && field.cardinality === 'many') || field.kind === 'reference')
+    return [];
   return '';
 }
 
 function textInputValues(input: BulkFieldInput): string[] {
-  if (typeof input === 'boolean') return [];
+  if (typeof input === 'boolean' || isBulkReferenceInput(input)) return [];
   return (Array.isArray(input) ? input : [input]).map((value) => value.trim()).filter(Boolean);
 }
 
@@ -156,6 +162,7 @@ export function encodeBulkFieldValues(
 ): readonly FieldWireValue[] | null {
   if (!supportsBulkField(field)) return null;
   if (field.kind === 'boolean') return typeof input === 'boolean' ? [input] : null;
+  if (field.kind === 'reference') return encodeBulkReferenceValues(field, input);
   if (field.kind === 'enum') return encodeEnumValues(field, input);
   if (field.kind === 'integer' || field.kind === 'decimal') {
     return encodeNumericValue(field, input);

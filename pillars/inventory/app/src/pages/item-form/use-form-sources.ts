@@ -30,6 +30,24 @@ function sourceStatus(
   return 'success';
 }
 
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function referenceItemIds(item: WebItem | undefined): string[] {
+  if (item === undefined) return [];
+  return [
+    ...new Set(
+      item.fieldValues.flatMap((entry) =>
+        entry.values.flatMap((value) => {
+          if (!isRecord(value) || value.targetKind !== 'item') return [];
+          return typeof value.targetId === 'string' ? [value.targetId] : [];
+        })
+      )
+    ),
+  ];
+}
+
 /** Source state required by a create or edit item-form session. */
 export interface FormSources {
   readonly catalogue: CatalogueDescriptor | undefined;
@@ -49,12 +67,19 @@ export interface FormSources {
 export function useFormSources(itemId: string | undefined): FormSources {
   const queryClient = useQueryClient();
   const catalogueLookups = useCatalogueLookups();
+  const itemQuery = useWebItemDetail(itemId, 1);
+  const referenceIds = useMemo(
+    () => referenceItemIds(itemQuery.data?.item),
+    [itemQuery.data?.item]
+  );
   const subject: PickerSubject = useMemo(
-    () => ({ kind: 'items', ids: itemId === undefined ? [] : [itemId] }),
-    [itemId]
+    () => ({
+      kind: 'items',
+      ids: itemId === undefined ? [] : [itemId, ...referenceIds],
+    }),
+    [itemId, referenceIds]
   );
   const placement = usePlacementSources(subject);
-  const itemQuery = useWebItemDetail(itemId, 1);
   const catalogue = catalogueLookups.catalogue;
   const types = useMemo(() => formTypesOf(catalogue), [catalogue]);
   const createLocation = useCallback(

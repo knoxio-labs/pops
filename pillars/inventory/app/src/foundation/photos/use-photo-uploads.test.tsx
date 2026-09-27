@@ -117,6 +117,31 @@ describe('usePhotoUploads', () => {
     });
   });
 
+  it('reserves distinct positions for concurrent uploads and waits for late additions', async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mocks.processFiles.mockImplementation(async (files) => {
+      await gate;
+      return files.map((file) => ({ processed: new Blob([file], { type: 'image/jpeg' }) }));
+    });
+    const { result } = renderHook(() => usePhotoUploads('create', null, 2), { wrapper });
+
+    act(() => result.current.add([photo('first.png')]));
+    const flush = result.current.flush('item-2');
+    await waitFor(() => expect(result.current.queue[0]?.status.kind).toBe('uploading'));
+    act(() => result.current.add([photo('second.png')]));
+    release?.();
+
+    const flushed = await flush;
+    expect(flushed.attached).toBe(2);
+    expect(mocks.sendInventoryMutation.mock.calls.map(([input]) => input.command)).toEqual([
+      { op: 'item.attachPhoto', args: { sha256: expect.any(String), position: 2 } },
+      { op: 'item.attachPhoto', args: { sha256: expect.any(String), position: 3 } },
+    ]);
+  });
+
   it('keeps a failed upload in the queue so it can be retried', async () => {
     mocks.processFiles.mockRejectedValueOnce(new Error('decode failed'));
     const { result } = renderHook(() => usePhotoUploads('edit', 'item-3', 0), { wrapper });

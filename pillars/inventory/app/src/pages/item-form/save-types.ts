@@ -1,10 +1,14 @@
+import type { QueryClient } from '@tanstack/react-query';
+
 import type { InventoryCommand } from '../../inventory-web/commands.js';
 import type { CodeHolder } from './code-assist';
+import type { FormTypeDef } from './field-model';
 import type { ItemDraft } from './form-draft';
 
 /** Options accepted by one inventory mutation sender used by the form. */
 export interface SendCommandOptions {
   readonly baseRevision?: number;
+  readonly catalogueRevision?: number;
 }
 
 /** Sends one inventory mutation command and returns the normalized save result. */
@@ -13,6 +17,18 @@ export type SendCommand = (
   entityId: string,
   options?: SendCommandOptions
 ) => Promise<SaveResult>;
+
+/** Inputs for applying an edited item draft through stable catalogue commands. */
+export interface SaveEditOptions {
+  readonly id: string;
+  readonly draft: ItemDraft;
+  readonly initial: ItemDraft;
+  readonly type: FormTypeDef | null;
+  readonly catalogueRevision: number;
+  readonly baseRevision: number;
+  readonly queryClient: QueryClient;
+  readonly send: SendCommand;
+}
 
 /** The successful item identity shown after Save and start another. */
 export interface JustCreated {

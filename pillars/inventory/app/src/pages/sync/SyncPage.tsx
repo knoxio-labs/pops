@@ -143,6 +143,8 @@ export function SyncPage(): ReactElement {
       updateParams(setSearchParams, (next) => applyNavigation(next, navigation)),
     [setSearchParams]
   );
+  const onCloseCase = (): void => navigate({ kind: 'ledger', value: 'attention' });
+  const onCloseResolved = (): void => navigate({ kind: 'ledger', value: 'resolved' });
 
   const banner = (
     <PageBanner online={online} reports={api.reportedSince} onReload={() => void api.reload()} />
@@ -176,7 +178,7 @@ export function SyncPage(): ReactElement {
           onSegment={(value) => navigate({ kind: 'ledger', value })}
           onOpenCase={(id) => navigate({ kind: 'case', id })}
           onOpenResolved={(id) => navigate({ kind: 'resolved', id })}
-          onCloseCase={() => navigate({ kind: 'ledger', value: 'attention' })}
+          onCloseCase={segment === 'resolved' ? onCloseResolved : onCloseCase}
           onStepCase={(id) => navigate({ kind: 'case', id })}
           onRetry={() => void api.reload()}
         />

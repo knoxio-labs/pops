@@ -36,6 +36,29 @@ const cable: FormTypeDef = {
   ],
 };
 
+const computedCable: FormTypeDef = {
+  ...cable,
+  fields: [
+    ...cable.fields,
+    {
+      id: 'replacement-value',
+      key: 'replacement_value',
+      label: 'Replacement value',
+      kind: 'decimal',
+      cardinality: 'one',
+      required: false,
+      storage: 'computed',
+      allowOverride: true,
+      help: null,
+      fixedUnit: null,
+      enumOptions: [],
+      referenceKinds: [],
+      referenceTypeIds: [],
+      expression: {},
+    },
+  ],
+};
+
 function savedResult(itemId = 'item-1', revision = 1): SaveResult {
   return { status: 'saved', result: { itemId, revision } };
 }
@@ -45,10 +68,11 @@ function editDraft(draft: ItemDraft): ItemDraft {
 }
 
 describe('item form save operations', () => {
-  it('sends create fields using the selected type keys', async () => {
+  it('sends create values using stable field ids and the catalogue revision', async () => {
     const commands: InventoryCommand[] = [];
-    const send: SendCommand = async (command) => {
+    const send: SendCommand = async (command, _entityId, options) => {
       commands.push(command);
+      expect(options?.catalogueRevision).toBe(12);
       return savedResult();
     };
     const draft = draftReducer(blankDraft(), {
@@ -59,8 +83,8 @@ describe('item form save operations', () => {
 
     await createItem({
       draft,
-      typeKey: 'cable',
       type: cable,
+      catalogueRevision: 12,
       queryClient: new QueryClient(),
       send,
     });
@@ -68,7 +92,10 @@ describe('item form save operations', () => {
     const command = commands[0];
     expect(command?.op).toBe('item.create');
     if (command?.op !== 'item.create') throw new Error('expected item.create');
-    expect(command.args.item.fields).toEqual({ colour: 'red' });
+    expect(command.args.item).toMatchObject({
+      typeId: 'cable',
+      values: [{ fieldId: 'colour-id', source: 'stored', values: ['red'] }],
+    });
   });
 
   it('sends null for a cleared field in an edit patch', async () => {
@@ -90,8 +117,8 @@ describe('item form save operations', () => {
       id: 'item-1',
       draft,
       initial,
-      typeKey: 'cable',
       type: cable,
+      catalogueRevision: 12,
       baseRevision: 7,
       queryClient: new QueryClient(),
       send,
@@ -100,7 +127,7 @@ describe('item form save operations', () => {
     const command = commands[0];
     expect(command?.op).toBe('item.edit');
     if (command?.op !== 'item.edit') throw new Error('expected item.edit');
-    expect(command.args.fields).toEqual({ colour: null });
+    expect(command.args.values).toEqual([{ fieldId: 'colour-id', values: null }]);
   });
 
   it('uses the opening revision and advances it between edit commands', async () => {
@@ -123,8 +150,8 @@ describe('item form save operations', () => {
       id: 'item-1',
       draft,
       initial,
-      typeKey: 'cable',
       type: cable,
+      catalogueRevision: 12,
       baseRevision: 7,
       queryClient: new QueryClient(),
       send,
@@ -156,8 +183,8 @@ describe('item form save operations', () => {
       id: 'item-1',
       draft,
       initial,
-      typeKey: 'cable',
       type: cable,
+      catalogueRevision: 12,
       baseRevision: 7,
       queryClient: new QueryClient(),
       send,
@@ -194,8 +221,8 @@ describe('item form save operations', () => {
       id: 'item-1',
       draft,
       initial,
-      typeKey: 'cable',
       type: cable,
+      catalogueRevision: 12,
       baseRevision: 7,
       queryClient: new QueryClient(),
       send,
@@ -204,6 +231,38 @@ describe('item form save operations', () => {
     const command = commands[0];
     expect(command?.op).toBe('item.changeType');
     if (command?.op !== 'item.changeType') throw new Error('expected item.changeType');
-    expect(command.args).toEqual({ typeKey: 'cable', fields: { colour: 'red' } });
+    expect(command.args).toEqual({
+      typeId: 'cable',
+      values: [{ fieldId: 'colour-id', values: ['red'] }],
+    });
+  });
+
+  it('saves computed overrides through the typed override command', async () => {
+    const commands: InventoryCommand[] = [];
+    const send: SendCommand = async (command, _entityId, options) => {
+      commands.push(command);
+      expect(options?.catalogueRevision).toBe(12);
+      return savedResult();
+    };
+    const initial = editDraft({ ...blankDraft(), typeId: 'cable' });
+    const draft = { ...initial, typeId: 'cable', overrides: { 'replacement-value': '19.99' } };
+
+    await saveItemEdits({
+      id: 'item-1',
+      draft,
+      initial,
+      type: computedCable,
+      catalogueRevision: 12,
+      baseRevision: 7,
+      queryClient: new QueryClient(),
+      send,
+    });
+
+    expect(commands).toEqual([
+      {
+        op: 'item.setOverride',
+        args: { fieldId: 'replacement-value', values: ['19.99'] },
+      },
+    ]);
   });
 });

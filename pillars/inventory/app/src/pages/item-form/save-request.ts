@@ -32,10 +32,19 @@ export async function saveRequest({
   photos,
 }: SaveRequestOptions): Promise<SaveResult> {
   const type = typeFor(options, submitted);
-  const typeKey = type?.key ?? null;
+  const catalogueRevision = options.sources.revision;
+  if (catalogueRevision === null) {
+    return {
+      status: 'refused',
+      refusal: {
+        kind: 'failed',
+        message: 'The published catalogue revision is unavailable. Reload and try again.',
+      },
+    };
+  }
   let result: SaveResult;
   if (options.opening.editing === null) {
-    result = await saveApi.create(submitted, typeKey, type);
+    result = await saveApi.create(submitted, type, catalogueRevision);
   } else if (baseRevision === null) {
     result = {
       status: 'refused',
@@ -49,8 +58,8 @@ export async function saveRequest({
       id: options.opening.editing.id,
       draft: submitted,
       initial: options.initial,
-      typeKey,
       type,
+      catalogueRevision,
       baseRevision,
     });
   }

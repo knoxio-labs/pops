@@ -3,7 +3,7 @@ import { EMPTY_DRAFTS } from './field-model';
 
 import type { Placement } from '../../foundation/model/model';
 import type { CodeAction, CodeEntry } from './code-assist';
-import type { FieldDrafts, FormFieldDef, FormTypeDef, ReferenceChoice } from './field-model';
+import type { FieldDrafts, ReferenceChoice } from './field-model';
 
 /** Everything typed in the item form before the server accepts it. */
 export interface ItemDraft {
@@ -128,50 +128,4 @@ export function draftReducer(draft: ItemDraft, action: DraftAction): ItemDraft {
 /** Creates the next draft used by Save and start another. */
 export function draftAfterSaveAndNew(saved: ItemDraft): ItemDraft {
   return blankDraft(saved.placement, saved.typeId);
-}
-
-function fieldValue(draft: ItemDraft, field: FormFieldDef): unknown | null {
-  const override = draft.overrides[field.id];
-  if (override !== undefined) return override;
-  if (field.kind === 'boolean') {
-    const value = draft.fields.booleans[field.id];
-    return value ?? null;
-  }
-  if (field.kind === 'reference') {
-    const ids = (draft.fields.refs[field.id] ?? []).map((choice) => choice.id);
-    return protocolValue(ids);
-  }
-  const values = (draft.fields.text[field.id] ?? []).filter((value) => value.trim() !== '');
-  return protocolValue(values);
-}
-
-function protocolValue(values: readonly unknown[]): unknown | null {
-  if (values.length === 0) return null;
-  if (values.length === 1) return values[0] ?? null;
-  return values;
-}
-
-/** Serialises the selected type's draft values into protocol-1 field keys. */
-export function draftFields(draft: ItemDraft, type: FormTypeDef | null): Record<string, unknown> {
-  const fields: Record<string, unknown> = {};
-  for (const field of type?.fields ?? []) {
-    const value = fieldValue(draft, field);
-    if (value !== null) fields[field.key] = value;
-  }
-  return fields;
-}
-
-/** Returns a protocol-1 per-key patch, including nulls for fields the user cleared. */
-export function draftFieldPatch(
-  draft: ItemDraft,
-  initial: ItemDraft,
-  type: FormTypeDef | null
-): Record<string, unknown | null> {
-  const fields: Record<string, unknown | null> = {};
-  for (const field of type?.fields ?? []) {
-    const value = fieldValue(draft, field);
-    const previous = fieldValue(initial, field);
-    if (JSON.stringify(value) !== JSON.stringify(previous)) fields[field.key] = value;
-  }
-  return fields;
 }

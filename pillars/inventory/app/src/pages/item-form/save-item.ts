@@ -21,8 +21,8 @@ export interface SaveEditRequest {
   readonly id: string;
   readonly draft: ItemDraft;
   readonly initial: ItemDraft;
-  readonly typeKey: string | null;
   readonly type: FormTypeDef | null;
+  readonly catalogueRevision: number;
   readonly baseRevision: number;
 }
 
@@ -31,8 +31,8 @@ export interface ItemSaveApi {
   readonly saving: boolean;
   readonly create: (
     draft: ItemDraft,
-    typeKey: string | null,
-    type: FormTypeDef | null
+    type: FormTypeDef | null,
+    catalogueRevision: number
   ) => Promise<SaveResult>;
   readonly saveEdits: (request: SaveEditRequest) => Promise<SaveResult>;
 }
@@ -89,8 +89,8 @@ export function useItemSave(): ItemSaveApi {
     }
   }, []);
   const create = useCallback(
-    (draft: ItemDraft, typeKey: string | null, type: FormTypeDef | null): Promise<SaveResult> =>
-      run(() => createItem({ draft, typeKey, type, queryClient, send })),
+    (draft: ItemDraft, type: FormTypeDef | null, catalogueRevision: number): Promise<SaveResult> =>
+      run(() => createItem({ draft, type, catalogueRevision, queryClient, send })),
     [queryClient, run]
   );
   const saveEdits = useCallback(

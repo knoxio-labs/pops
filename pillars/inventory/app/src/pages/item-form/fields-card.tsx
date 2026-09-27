@@ -17,6 +17,20 @@ export interface FieldsCardProps {
   readonly onReferenceQuery: (query: string) => void;
 }
 
+function FieldError({
+  fieldId,
+  error,
+}: {
+  readonly fieldId: string;
+  readonly error: string | undefined;
+}): ReactElement | null {
+  return error === undefined ? null : (
+    <p id={`field-error-${fieldId}`} role="alert" className="text-sm text-destructive">
+      {error}
+    </p>
+  );
+}
+
 /** Renders the selected type's fields and communicates type-change leftovers. */
 export function FieldsCard({
   draft,
@@ -54,12 +68,11 @@ export function FieldsCard({
               field={field}
               draft={draft}
               computed={computed[field.id]}
+              error={view.fieldErrors[field.id]}
               dispatch={dispatch}
               onReferenceQuery={onReferenceQuery}
             />
-            {view.fieldErrors[field.id] ? (
-              <p className="text-sm text-destructive">{view.fieldErrors[field.id]}</p>
-            ) : null}
+            <FieldError fieldId={field.id} error={view.fieldErrors[field.id]} />
           </div>
         ))}
         <div className="space-y-2 border-t pt-5">

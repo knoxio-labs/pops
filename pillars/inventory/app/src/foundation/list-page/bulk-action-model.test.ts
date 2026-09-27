@@ -158,7 +158,7 @@ describe('bulk action model', () => {
     const published = catalogue(types);
 
     expect(supportsBulkField(editable)).toBe(true);
-    expect(supportsBulkField(reference)).toBe(false);
+    expect(supportsBulkField(reference)).toBe(true);
     expect(supportsBulkField(computed)).toBe(false);
     expect(supportsBulkField(dynamicMeasurement)).toBe(false);
     expect(
@@ -170,6 +170,7 @@ describe('bulk action model', () => {
     ).toEqual([
       { field: other, have: 1, itemIds: ['item-b'] },
       { field: editable, have: 1, itemIds: ['item-a'] },
+      { field: reference, have: 1, itemIds: ['item-a'] },
     ]);
   });
 
@@ -193,12 +194,32 @@ describe('bulk action model', () => {
       kind: 'measurement',
       fixedUnit: 'kg',
     });
+    const reference = field('type-a', 'related', 'Related', {
+      kind: 'reference',
+      cardinality: 'many',
+      referenceKinds: ['item', 'location'],
+      referenceTypeIds: ['type-cable'],
+    });
 
     expect(encodeBulkFieldValues(integer, '4')).toEqual([4]);
     expect(encodeBulkFieldValues(integer, '4.5')).toBeNull();
     expect(encodeBulkFieldValues(enumField, ['red'])).toEqual([{ optionId: 'red' }]);
     expect(encodeBulkFieldValues(enumField, ['old'])).toBeNull();
     expect(encodeBulkFieldValues(measurement, '2.5')).toEqual([{ amount: '2.5', unit: 'kg' }]);
+    expect(
+      encodeBulkFieldValues(reference, [
+        { id: 'item-1', kind: 'item', label: 'Cable', typeId: 'type-cable' },
+        { id: 'room-1', kind: 'location', label: 'Workshop' },
+      ])
+    ).toEqual([
+      { targetKind: 'item', targetId: 'item-1' },
+      { targetKind: 'location', targetId: 'room-1' },
+    ]);
+    expect(
+      encodeBulkFieldValues(reference, [
+        { id: 'item-2', kind: 'item', label: 'Lamp', typeId: 'type-lamp' },
+      ])
+    ).toBeNull();
     expect(bulkFieldPatch(measurement, '')).toBeNull();
   });
 

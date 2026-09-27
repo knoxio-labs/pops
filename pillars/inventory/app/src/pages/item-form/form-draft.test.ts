@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  blankDraft,
-  draftAfterSaveAndNew,
-  draftFieldPatch,
-  draftFields,
-  draftReducer,
-} from './form-draft';
+import { draftFieldEntries, draftFieldPatches } from './field-values';
+import { blankDraft, draftAfterSaveAndNew, draftReducer } from './form-draft';
 
 import type { FormTypeDef } from './field-model';
 
@@ -69,16 +64,16 @@ describe('item form draft', () => {
     expect(next.code.value).toBe('');
   });
 
-  it('writes catalogue keys and ignores values left from another type', () => {
+  it('writes stable field ids and ignores values left from another type', () => {
     const draft = draftReducer(
       draftReducer(blankDraft(), { type: 'field-text', fieldId: 'colour-id', values: ['red'] }),
       { type: 'field-text', fieldId: 'old-field-id', values: ['stale'] }
     );
 
-    expect(draftFields(draft, cable)).toEqual({ colour: 'red' });
+    expect(draftFieldEntries(draft, cable)).toEqual([{ fieldId: 'colour-id', values: ['red'] }]);
   });
 
-  it('emits a null patch when an existing field is cleared', () => {
+  it('emits a null stable patch when an existing field is cleared', () => {
     const initial = draftReducer(blankDraft(), {
       type: 'field-text',
       fieldId: 'colour-id',
@@ -90,6 +85,8 @@ describe('item form draft', () => {
       values: [''],
     });
 
-    expect(draftFieldPatch(draft, initial, cable)).toEqual({ colour: null });
+    expect(draftFieldPatches(draft, initial, cable)).toEqual([
+      { fieldId: 'colour-id', values: null },
+    ]);
   });
 });
