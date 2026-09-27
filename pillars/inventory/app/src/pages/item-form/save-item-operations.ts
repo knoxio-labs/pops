@@ -1,5 +1,5 @@
 import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
-import { draftCreateFieldValues } from './form-draft';
+import { draftCreateFieldValues } from './field-values';
 import { wirePlacement } from './save-item-wire';
 
 import type { QueryClient } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import type { FormTypeDef } from './field-model';
 import type { ItemDraft } from './form-draft';
 import type { SaveResult, SendCommand } from './save-types';
 
-export type { SendCommand, SendCommandOptions } from './save-types';
+export type { SaveEditOptions, SendCommand, SendCommandOptions } from './save-types';
 
 /** Inputs for creating an item through the existing inventory mutation protocol. */
 export interface CreateItemOptions {
@@ -45,4 +45,3 @@ export async function createItem(options: CreateItemOptions): Promise<SaveResult
 }
 
 export { saveItemEdits } from './save-item-edits';
-export type { SaveEditOptions } from './save-item-edits';

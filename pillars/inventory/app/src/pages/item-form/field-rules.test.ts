@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { atomError, fieldError, referenceError } from './field-rules';
-import {
-  blankDraft,
-  draftCreateFieldValues,
-  draftFieldEntries,
-  draftFieldPatches,
-} from './form-draft';
+import { draftCreateFieldValues, draftFieldEntries, draftFieldPatches } from './field-values';
+import { blankDraft } from './form-draft';
 
 import type { FormFieldDef, FormTypeDef } from './field-model';
 

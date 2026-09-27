@@ -129,12 +129,3 @@ export function draftReducer(draft: ItemDraft, action: DraftAction): ItemDraft {
 export function draftAfterSaveAndNew(saved: ItemDraft): ItemDraft {
   return blankDraft(saved.placement, saved.typeId);
 }
-
-export {
-  draftCreateFieldValues,
-  draftFieldEntries,
-  draftFieldPatches,
-  draftOverrideChanges,
-  fieldWireValues,
-} from './field-values';
-export type { DraftOverrideChange } from './field-values';

@@ -1,11 +1,10 @@
-import { draftFieldEntries, draftFieldPatches, draftOverrideChanges } from './form-draft';
+import { draftFieldEntries, draftFieldPatches, draftOverrideChanges } from './field-values';
 import { wirePlacement } from './save-item-wire';
 
 import type { InventoryCommand } from '../../inventory-web/commands.js';
 import type { FormTypeDef } from './field-model';
 import type { ItemDraft } from './form-draft';
-import type { SaveEditOptions } from './save-item-edits';
-import type { SaveResult, SendCommand } from './save-types';
+import type { SaveEditOptions, SaveResult, SendCommand } from './save-types';
 
 interface EditState {
   readonly draft: ItemDraft;

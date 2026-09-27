@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  blankDraft,
-  draftAfterSaveAndNew,
-  draftFieldPatches,
-  draftFieldEntries,
-  draftReducer,
-} from './form-draft';
+import { draftFieldEntries, draftFieldPatches } from './field-values';
+import { blankDraft, draftAfterSaveAndNew, draftReducer } from './form-draft';
 
 import type { FormTypeDef } from './field-model';
 
