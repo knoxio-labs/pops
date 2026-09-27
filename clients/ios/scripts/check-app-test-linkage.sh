@@ -2,9 +2,6 @@
 
 set -euo pipefail
 
-APPCORE_SYMBOL_PREFIX="$(printf '\044s7AppCore')"
-readonly APPCORE_SYMBOL_PREFIX
-
 die() {
     printf 'check-app-test-linkage: %s\n' "$1" >&2
     exit 1
@@ -50,6 +47,18 @@ link_verdict() {
         die "PopsTests still links AppCoreFakes.o instead of compiling its canonical sources."
 }
 
+metadata_verdict() {
+    local host="$1" tests="$2"
+    local host_descriptors test_descriptors
+    host_descriptors="$(grep -Ec $'_[\x24]s7AppCore.*Mn$' <<<"$host" || true)"
+    test_descriptors="$(grep -Ec $'_[\x24]s7AppCore.*Mn$' <<<"$tests" || true)"
+
+    [ "$host_descriptors" -gt 0 ] ||
+        die "the host defines no AppCore nominal type descriptors, so the runtime-copy check is vacuous."
+    [ "$test_descriptors" -eq 0 ] ||
+        die "PopsTests defines $test_descriptors AppCore nominal type descriptor(s); the hosted process would contain duplicate type identities."
+}
+
 single_match() {
     local description="$1"
     shift
@@ -93,13 +102,9 @@ cmd_built() {
 
     host_symbols="$(nm -U "$host_binary")"
     test_symbols="$(nm -U "$test_binary")"
-    grep -qF "$APPCORE_SYMBOL_PREFIX" <<<"$host_symbols" ||
-        die "the host defines no AppCore symbols, so the runtime-copy check is vacuous."
-    if grep -qF "$APPCORE_SYMBOL_PREFIX" <<<"$test_symbols"; then
-        die "PopsTests defines AppCore symbols; the hosted process would contain a second runtime copy."
-    fi
+    metadata_verdict "$host_symbols" "$test_symbols"
 
-    printf 'check-app-test-linkage: AppCore is defined only by the host executable.\n'
+    printf 'check-app-test-linkage: AppCore nominal type metadata is defined only by the host.\n'
 }
 
 passes() { ("$@") >/dev/null 2>&1; }
@@ -107,6 +112,7 @@ rejects() { ! ("$@") >/dev/null 2>&1; }
 
 cmd_self_test() {
     local correct missing_source linked_product linked_appcore imports host tests
+    local host_symbols extension_symbols duplicate_symbols
     correct=$'  PopsTests:\n    sources:\n      - AppTests\n      - Packages/AppCore/Sources/AppCoreFakes\n    dependencies:\n      - target: Pops\n      - package: AppCore\n        link: false\n      - package: FeatureInventory\n        link: false'
     missing_source="${correct/      - Packages\/AppCore\/Sources\/AppCoreFakes$'\n'/}"
     linked_product="$correct"$'\n      - package: AppCore\n        product: AppCoreFakes'
@@ -114,6 +120,9 @@ cmd_self_test() {
     imports='AppSearchModelTests.swift'
     host='/Build/Products/Debug-iphonesimulator/AppCore.o'
     tests=$'/Build/Products/Debug-iphonesimulator/AppCoreFakes.o\n/Build/Products/Debug-iphonesimulator/AppCore.o'
+    host_symbols=$'0000000000001000 S _\x24s7AppCore15RepositoryErrorOMn'
+    extension_symbols=$'0000000000002000 T _\x24s7AppCore0A12DependenciesV9PopsTestsE4fakeACyFZ'
+    duplicate_symbols=$'0000000000003000 S _\x24s7AppCore21UnboundInventoryStoreVMn'
 
     passes project_verdict "$correct" '' || die "the correct project fixture was rejected."
     rejects project_verdict "$missing_source" '' || die "a missing canonical source edge was accepted."
@@ -122,8 +131,14 @@ cmd_self_test() {
     rejects project_verdict "$correct" "$imports" || die "an AppCoreFakes import was accepted."
     passes link_verdict "$host" '' || die "the one-copy link fixture was rejected."
     rejects link_verdict "$host" "$tests" || die "duplicate AppCore link inputs were accepted."
+    passes metadata_verdict "$host_symbols" "$extension_symbols" ||
+        die "a test-owned AppCore extension was mistaken for duplicate type metadata."
+    rejects metadata_verdict "$host_symbols" "$duplicate_symbols" ||
+        die "duplicate AppCore nominal type metadata was accepted."
+    rejects metadata_verdict '' "$extension_symbols" ||
+        die "a vacuous host metadata fixture was accepted."
 
-    printf 'check-app-test-linkage: graph and linker-input regressions are rejected.\n'
+    printf 'check-app-test-linkage: graph, linker-input and type-identity regressions are rejected.\n'
 }
 
 case "${1-}" in
