@@ -10,13 +10,23 @@ import {
 } from '../../foundation/badges/badges.js';
 import { ItemMark } from '../../foundation/badges/item-mark.js';
 import { PlacementPath } from '../../foundation/badges/placement-path.js';
-import { ListBody } from '../../foundation/list-page/list-states.js';
+import { ItemsTable } from '../../foundation/items-table/items-table.js';
+import {
+  EmptyFiltered,
+  EmptyInventory,
+  ListBody,
+  ListError,
+  ListSkeleton,
+} from '../../foundation/list-page/list-states.js';
 
 import type { ReactElement } from 'react';
 
+import type { ListVerbs } from '../../foundation/list-page/use-list-verbs.js';
 import type { ItemRowModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { SelectionApi } from '../../foundation/selection/use-selection.js';
+import type { ItemsUrlFilters } from '../../inventory-web/items-url-filters.js';
+import type { ItemRows } from '../../inventory-web/useWebItems.js';
 
 /** Props for the card view of the item list. */
 export interface ItemsCardsProps {
@@ -45,6 +55,7 @@ function Card({
     <div
       role="gridcell"
       aria-selected={selected}
+      data-focused={focused || undefined}
       className={cn(
         'group relative flex flex-col gap-2 rounded-lg border bg-background p-2 transition-colors',
         selected ? 'border-app-accent/60 bg-app-accent/10' : 'hover:border-foreground/20',
@@ -120,5 +131,79 @@ export function ItemsCards({
         </div>
       ) : null}
     </ListBody>
+  );
+}
+
+interface ItemsListBodyProps {
+  itemRows: ItemRows;
+  filters: ItemsUrlFilters;
+  online: boolean;
+  navigate: (path: string) => void;
+  world: PlacementWorld;
+  selection: SelectionApi;
+  pendingIds: ReadonlySet<string>;
+  rejections: Readonly<Record<string, string>>;
+  onRowVerb: ListVerbs['onRowVerb'];
+  onSort: (sort: ItemsUrlFilters['sort']) => void;
+  total: number;
+  unfilteredTotal: number;
+  hiddenInactiveCount: number;
+  narrowed: boolean;
+  onClearFilters: () => void;
+}
+
+/** Renders the Items list states and selects the table or card presentation. */
+export function ItemsListBody(props: ItemsListBodyProps): ReactElement {
+  const {
+    itemRows,
+    filters,
+    online,
+    navigate,
+    world,
+    selection,
+    pendingIds,
+    rejections,
+    onRowVerb,
+    onSort,
+    total,
+    unfilteredTotal,
+    hiddenInactiveCount,
+    narrowed,
+    onClearFilters,
+  } = props;
+  if (itemRows.status === 'pending') return <ListSkeleton label="Loading items" />;
+  if (itemRows.status === 'error') return <ListError noun="items" onRetry={itemRows.refetch} />;
+  if (!narrowed && unfilteredTotal === 0 && hiddenInactiveCount === 0) {
+    return <EmptyInventory noun="items" onNavigate={navigate} offline={!online} />;
+  }
+  if (total === 0) return <EmptyFiltered noun="items" onClear={onClearFilters} />;
+  if (filters.view === 'cards') {
+    return (
+      <ItemsCards
+        rows={itemRows.rows}
+        total={total}
+        world={world}
+        selection={selection}
+        onOpen={(id) => navigate(`/inventory/items/${id}`)}
+        onLoadMore={itemRows.fetchNextPage}
+      />
+    );
+  }
+  return (
+    <ItemsTable
+      label="items"
+      rows={itemRows.rows}
+      total={total}
+      world={world}
+      selection={selection}
+      density={filters.view === 'compact' ? 'compact' : 'default'}
+      sort={filters.sort}
+      onSort={onSort}
+      pendingIds={pendingIds}
+      rejections={rejections}
+      onRowVerb={onRowVerb}
+      onOpen={(id) => navigate(`/inventory/items/${id}`)}
+      onLoadMore={itemRows.fetchNextPage}
+    />
   );
 }
