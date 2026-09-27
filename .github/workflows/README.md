@@ -222,7 +222,7 @@ unit when `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.base.json`,
 `mise.ci.toml`, `Cargo.toml` or `Cargo.lock` changed). The header explains why
 the scan stops at maxdepth 1.
 
-Merge groups select every unit and client directory. For affected checks,
+Calls with `full-validation: true` select every unit and client directory. For affected checks,
 the diff's base differs by event: `pull_request` diffs from
 `merge-base(origin/<base_ref>, HEAD)`, the PR's fork point. `push` diffs from
 `github.event.before` instead — `origin/<branch>` is refreshed by the same
