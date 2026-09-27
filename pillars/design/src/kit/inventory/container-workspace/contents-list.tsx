@@ -27,6 +27,7 @@ export interface ContentsListProps {
   onStoreHere?: () => void;
   onExit: (ids: readonly string[], how: ExitKind) => void;
   onMove?: (ids: readonly string[]) => void;
+  onEdit?: (id: string) => void;
 }
 
 function Empty({
@@ -86,6 +87,13 @@ function RowVerbs({ id, props }: { id: string; props: ContentsListProps }) {
         shortcutId="pick-up"
         disabledReason={reason}
         onClick={() => props.onExit([id], 'pick-up')}
+      />
+      <RowVerb
+        icon={I.edit}
+        label="Edit"
+        shortcutId="list-edit"
+        disabledReason={reason}
+        onClick={() => props.onEdit?.(id)}
       />
     </>
   );

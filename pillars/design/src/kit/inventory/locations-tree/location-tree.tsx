@@ -59,6 +59,7 @@ function rowFor(props: LocationTreeProps, row: TreeRowModel) {
       onSelect={() => api.tree.select(id)}
       onToggle={() => api.tree.toggle(id)}
       onOpen={() => props.onOpen(id)}
+      onRename={() => api.edits.startRename(id)}
       dragHandlers={rowDragHandlers(api, id)}
       menu={{
         onOpen: () => props.onOpen(id),
@@ -66,7 +67,6 @@ function rowFor(props: LocationTreeProps, row: TreeRowModel) {
           if (!row.expanded && row.hasChildren) api.tree.toggle(id);
           api.edits.startCreate(id);
         },
-        onRename: () => api.edits.startRename(id),
         onMove: () => props.onMove(id),
         onDelete: () => api.edits.requestDelete(id),
       }}

@@ -41,6 +41,7 @@ export interface ContainerWorkspaceProps {
   storeHereOpen: boolean;
   onStoreHereChange: (open: boolean) => void;
   onExit?: (count: number, how: ExitKind) => void;
+  onEdit?: (id: string) => void;
 }
 
 const MOVE_TARGET: PlacementTarget = { kind: 'location', locationId: 'loc-kitchen' };
@@ -152,6 +153,7 @@ export function ContainerWorkspace(props: ContainerWorkspaceProps) {
         onExit={props.onExit}
         onStoreHere={() => props.onStoreHereChange(true)}
         onMove={setMoveIds}
+        onEdit={props.onEdit}
       />
       <aside
         aria-label={`About ${model.item.name}`}
