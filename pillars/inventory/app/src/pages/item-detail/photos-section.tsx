@@ -1,92 +1,71 @@
-import { ImageOff } from 'lucide-react';
-import { useState } from 'react';
+import { Camera } from 'lucide-react';
+
+import { EmptyState, ImageGallery } from '@pops/ui';
+
+import { PaneLabel } from '../../foundation/item-page/section-parts';
+import { PhotoAddDialog } from '../../foundation/photos/photo-add-dialog';
 
 import type { ReactElement } from 'react';
 
 import type { DetailPhoto } from './detail-model';
 
-/** Props for the read-only photo block in the facts rail. */
+/** Props for the item-detail photo section. */
 export interface PhotosSectionProps {
-  itemId: string;
-  itemName: string;
-  photos: readonly DetailPhoto[];
-  disabledReason?: string;
+  readonly itemId: string;
+  readonly itemName: string;
+  readonly photos: readonly DetailPhoto[];
+  readonly disabledReason?: string;
 }
 
-function LeadPhoto({ photo, itemName }: { photo: DetailPhoto; itemName: string }): ReactElement {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return (
-      <div className="flex size-full flex-col items-center justify-center gap-1 bg-muted px-3 text-center text-muted-foreground">
-        <ImageOff className="size-6" aria-hidden />
-        <p className="text-xs font-medium text-foreground">Photo did not load</p>
-        <p className="text-2xs">The file is missing or damaged. Replace it or remove it.</p>
-      </div>
-    );
-  }
-  return (
-    <img
-      src={photo.url}
-      alt={photo.caption ?? `${itemName} photo`}
-      className="size-full object-cover"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
-function Thumbnail({ photo }: { photo: DetailPhoto }): ReactElement {
-  const [failed, setFailed] = useState(false);
-  return (
-    <div className="size-11 overflow-hidden rounded-md border bg-muted">
-      {failed ? (
-        <span className="flex size-full items-center justify-center" title="Photo did not load">
-          <ImageOff className="size-4 text-muted-foreground" aria-hidden />
-        </span>
-      ) : (
-        <img
-          src={photo.thumbUrl}
-          alt={photo.caption ?? ''}
-          className="size-full object-cover"
-          onError={() => setFailed(true)}
-        />
-      )}
-    </div>
-  );
-}
-
-/** Renders the lead photo and up to three read-only thumbnails. */
+/** Renders the item-detail gallery and its add-photo action. */
 export function PhotosSection({
   itemId,
   itemName,
   photos,
   disabledReason,
 }: PhotosSectionProps): ReactElement {
-  const [lead, ...rest] = photos;
+  const items = photos.map((photo, index) => ({
+    id: photo.id,
+    src: photo.url,
+    caption: photo.caption ?? undefined,
+    alt: photo.caption ?? `${itemName} photo ${index + 1}`,
+  }));
   return (
     <section
       aria-label="Photos"
-      className="flex w-full shrink-0 flex-col gap-2"
+      className="flex w-full shrink-0 flex-col gap-3"
       data-item-id={itemId}
       title={disabledReason}
     >
-      <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
-        {lead ? (
-          <LeadPhoto key={lead.id} photo={lead} itemName={itemName} />
-        ) : (
-          <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-            No photos
-          </div>
-        )}
-      </div>
-      {lead && rest.length > 0 ? (
-        <ul aria-label="More photos" className="flex gap-1">
-          {rest.slice(0, 3).map((photo) => (
-            <li key={photo.id}>
-              <Thumbnail photo={photo} />
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <PaneLabel
+        trailing={
+          <PhotoAddDialog
+            itemId={itemId}
+            itemName={itemName}
+            existingPhotoCount={photos.length}
+            disabledReason={disabledReason}
+          />
+        }
+      >
+        <span className="inline-flex items-center gap-2">
+          <Camera className="size-4" aria-hidden />
+          Photos
+          {photos.length > 0 ? (
+            <span className="font-normal tabular-nums">{photos.length}</span>
+          ) : null}
+        </span>
+      </PaneLabel>
+      {items.length === 0 ? (
+        <EmptyState
+          icon={Camera}
+          title="No photos yet"
+          description="Add a photo to keep this item easy to identify."
+          size="sm"
+          className="rounded-lg border bg-muted/30"
+        />
+      ) : (
+        <ImageGallery items={items} className="min-w-0" />
+      )}
     </section>
   );
 }
