@@ -1,5 +1,7 @@
+import type { PlacementWorld } from '../../foundation/model/placement-model';
 import type { WebGetResponses } from '../../inventory-api/types.gen.js';
 import type { FormFieldDef, FormTypeDef } from './field-model';
+import type { ReferenceChoice } from './field-model';
 import type { ItemDraft } from './form-draft';
 
 type WebItem = WebGetResponses[200]['item'];
@@ -20,6 +22,11 @@ function stringValue(value: unknown, key: string): string | null {
   return typeof result === 'string' ? result : null;
 }
 
+function nonEmpty(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed === undefined || trimmed === '' ? null : trimmed;
+}
+
 function dateTimeForDraft(value: string): string {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString().slice(0, 16);
@@ -34,6 +41,26 @@ function enumTextValue(field: FormFieldDef, value: unknown): string {
       candidate.label === optionValue
   );
   return option?.id ?? optionValue ?? fieldValueFor(value);
+}
+
+function referenceChoiceFor(
+  kind: 'item' | 'location',
+  id: string,
+  world: PlacementWorld | undefined
+): ReferenceChoice {
+  if (kind === 'item') {
+    const item = world?.items.get(id);
+    const label = nonEmpty(item?.name) ?? nonEmpty(item?.typeName) ?? 'Unknown item';
+    const choice: ReferenceChoice = { id, kind, label };
+    return item === undefined
+      ? choice
+      : {
+          ...choice,
+          typeId: item.typeId,
+          typeName: item.typeName,
+        };
+  }
+  return { id, kind, label: world?.locations.get(id)?.name ?? 'Unknown place' };
 }
 
 /** Converts one stable field value into the form's text representation. */
@@ -58,14 +85,14 @@ function rawValues(value: unknown): readonly unknown[] {
   return [value];
 }
 
-/** Maps a protocol-1 field-key payload into the form's stable field-id drafts. */
+/** Maps protocol-1 field keys into stable drafts, resolving references through the optional world. */
 export function fieldDraftsFromProtocolFields(
   fields: Readonly<Record<string, unknown>>,
-  type: FormTypeDef | null
+  type: FormTypeDef | null,
+  world?: PlacementWorld
 ): ItemDraft['fields'] {
   const text: Record<string, readonly string[]> = {};
-  const refs: Record<string, readonly { id: string; kind: 'item' | 'location'; label: string }[]> =
-    {};
+  const refs: Record<string, readonly ReferenceChoice[]> = {};
   const booleans: Record<string, boolean> = {};
   for (const field of type?.fields ?? []) {
     const values = rawValues(fields[field.key]);
@@ -75,7 +102,7 @@ export function fieldDraftsFromProtocolFields(
     } else if (field.kind === 'reference') {
       refs[field.id] = values.flatMap((value) =>
         typeof value === 'string'
-          ? [{ id: value, kind: field.referenceKinds[0] ?? 'item', label: value }]
+          ? [referenceChoiceFor(field.referenceKinds[0] ?? 'item', value, world)]
           : []
       );
     } else {
@@ -87,14 +114,14 @@ export function fieldDraftsFromProtocolFields(
 
 type StableFieldEntry = Pick<WebItem['fieldValues'][number], 'fieldId' | 'values'>;
 
-/** Maps stable catalogue field values into the item-form draft model. */
+/** Maps stable values into drafts, resolving references through the optional world. */
 export function fieldDraftsFromStableValues(
   values: readonly StableFieldEntry[],
-  type: FormTypeDef | null
+  type: FormTypeDef | null,
+  world?: PlacementWorld
 ): ItemDraft['fields'] {
   const text: Record<string, readonly string[]> = {};
-  const refs: Record<string, readonly { id: string; kind: 'item' | 'location'; label: string }[]> =
-    {};
+  const refs: Record<string, readonly ReferenceChoice[]> = {};
   const booleans: Record<string, boolean> = {};
   const byField = new Map(values.map((entry) => [entry.fieldId, entry.values] as const));
   for (const field of type?.fields ?? []) {
@@ -107,7 +134,7 @@ export function fieldDraftsFromStableValues(
         const targetId = stringValue(value, 'targetId');
         const targetKind = stringValue(value, 'targetKind');
         if (targetId === null || (targetKind !== 'item' && targetKind !== 'location')) return [];
-        return [{ id: targetId, kind: targetKind, label: targetId }];
+        return [referenceChoiceFor(targetKind, targetId, world)];
       });
     } else {
       text[field.id] = rawValues.map((value) => textValueForField(field, value));

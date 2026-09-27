@@ -41,11 +41,15 @@ function placementFromWeb(item: WebItem): Placement {
 
 export { fieldDraftsFromProtocolFields, fieldDraftsFromStableValues } from './field-opening';
 
-function fieldValuesFromItem(item: WebItem, type: FormTypeDef | null): ItemDraft['fields'] {
+function fieldValuesFromItem(
+  item: WebItem,
+  type: FormTypeDef | null,
+  world: PlacementWorld
+): ItemDraft['fields'] {
   const stored = item.fieldValues.filter((value) => value.source === 'stored');
   return stored.length > 0
-    ? fieldDraftsFromStableValues(stored, type)
-    : fieldDraftsFromProtocolFields(item.fields, type);
+    ? fieldDraftsFromStableValues(stored, type, world)
+    : fieldDraftsFromProtocolFields(item.fields, type, world);
 }
 
 function overridesFromItem(
@@ -66,7 +70,11 @@ function overridesFromItem(
   return overrides;
 }
 
-function draftFromItem(item: WebItem, types: readonly FormTypeDef[]): ItemDraft {
+function draftFromItem(
+  item: WebItem,
+  types: readonly FormTypeDef[],
+  world: PlacementWorld
+): ItemDraft {
   const type = types.find((candidate) => candidate.id === item.typeId) ?? null;
   return {
     mode: 'edit',
@@ -75,7 +83,7 @@ function draftFromItem(item: WebItem, types: readonly FormTypeDef[]): ItemDraft 
     quantity: String(item.quantity),
     placement: placementFromWeb(item),
     note: item.note ?? '',
-    fields: fieldValuesFromItem(item, type),
+    fields: fieldValuesFromItem(item, type, world),
     code: {
       value: item.code ?? '',
       status: item.code === null ? 'idle' : 'free',
@@ -127,13 +135,14 @@ export function createOpening(
   return { draft, initial: draft, editing: null, revision: null, computed: {} };
 }
 
-/** Opens an edit form from the current web item response. */
+/** Opens an edit form and resolves stored reference labels through the supplied placement world. */
 export function editOpening(
   item: WebItem,
-  catalogue: CatalogueDescriptor | undefined
+  catalogue: CatalogueDescriptor | undefined,
+  world: PlacementWorld
 ): ItemFormOpening {
   const types = formTypesOf(catalogue);
-  const draft = draftFromItem(item, types);
+  const draft = draftFromItem(item, types, world);
   return {
     draft,
     initial: draft,

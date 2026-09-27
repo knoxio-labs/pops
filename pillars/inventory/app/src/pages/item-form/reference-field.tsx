@@ -24,6 +24,7 @@ interface ReferenceCandidate {
   readonly kind: 'item' | 'location';
   readonly label: string;
   readonly typeId?: string | null;
+  readonly typeName?: string | null;
 }
 
 function candidatesFor(
@@ -42,6 +43,7 @@ function candidatesFor(
           kind: 'item',
           label: hit.item.name,
           typeId: hit.item.typeId,
+          typeName: hit.item.typeName,
         });
       }
     }
@@ -88,12 +90,18 @@ function ReferenceMatches({
           variant="ghost"
           size="sm"
           className="w-full justify-start"
+          aria-label={candidate.label}
           onClick={() => {
             addReference(field, refs, candidate, dispatch);
             clearQuery();
           }}
         >
-          {candidate.label}
+          <span className="truncate">{candidate.label}</span>
+          {candidate.kind === 'item' ? (
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+              {candidate.typeName ?? 'Unknown type'}
+            </span>
+          ) : null}
         </Button>
       ))}
     </div>
@@ -122,6 +130,7 @@ function SelectedReferences({
           size="sm"
           className={error === undefined ? undefined : 'border border-destructive'}
           aria-invalid={error !== undefined}
+          aria-label={`${ref.label} ×`}
           onClick={() =>
             dispatch({
               type: 'field-refs',
@@ -132,7 +141,13 @@ function SelectedReferences({
             })
           }
         >
-          {ref.label} ×
+          <span className="truncate">{ref.label}</span>
+          {ref.kind === 'item' ? (
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {ref.typeName ?? 'Unknown type'}
+            </span>
+          ) : null}
+          <span aria-hidden="true">×</span>
         </Button>
       ))}
     </div>

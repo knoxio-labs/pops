@@ -149,15 +149,45 @@ describe('item form opening', () => {
   });
 
   it('loads typed stable values for enum, measurement, references and date-time fields', () => {
+    const world = buildWorld(
+      [
+        {
+          id: 'item-1',
+          name: 'Desk lamp',
+          typeId: 'type-lamp',
+          typeName: 'Lamp',
+          code: null,
+          quantity: 1,
+          container: null,
+          lifecycle: 'active',
+          placement: { kind: 'in-hand' },
+          previous: null,
+          sync: 'synced',
+          photoUrl: null,
+          note: null,
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      [{ id: 'place-1', name: 'Workshop', parentId: null, kind: 'room' }]
+    );
     expect(
       fieldDraftsFromStableValues(
         [
           { fieldId: 'colour-option', values: [{ optionId: 'option-red' }] },
           { fieldId: 'weight', values: [{ amount: '12.50', unit: 'kg' }] },
-          { fieldId: 'related', values: [{ targetKind: 'item', targetId: 'item-1' }] },
+          {
+            fieldId: 'related',
+            values: [
+              { targetKind: 'item', targetId: 'item-1' },
+              { targetKind: 'location', targetId: 'place-1' },
+              { targetKind: 'item', targetId: 'missing-item' },
+              { targetKind: 'location', targetId: 'missing-place' },
+            ],
+          },
           { fieldId: 'registered', values: ['2026-01-02T03:04:05.000Z'] },
         ],
-        typed
+        typed,
+        world
       )
     ).toEqual({
       text: {
@@ -166,7 +196,18 @@ describe('item form opening', () => {
         registered: ['2026-01-02T03:04'],
       },
       refs: {
-        related: [{ id: 'item-1', kind: 'item', label: 'item-1' }],
+        related: [
+          {
+            id: 'item-1',
+            kind: 'item',
+            label: 'Desk lamp',
+            typeId: 'type-lamp',
+            typeName: 'Lamp',
+          },
+          { id: 'place-1', kind: 'location', label: 'Workshop' },
+          { id: 'missing-item', kind: 'item', label: 'Unknown item' },
+          { id: 'missing-place', kind: 'location', label: 'Unknown place' },
+        ],
       },
       booleans: {},
     });
