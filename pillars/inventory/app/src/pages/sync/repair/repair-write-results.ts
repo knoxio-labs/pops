@@ -24,7 +24,7 @@ export function showAppliedResult(
       },
     });
   }
-  setOutcome({ message, at: new Date().toISOString() });
+  setOutcome({ kind: 'settled', message, at: new Date().toISOString() });
 }
 
 /** Converts a refused verb into the repair sheet's existing refusal notice. */

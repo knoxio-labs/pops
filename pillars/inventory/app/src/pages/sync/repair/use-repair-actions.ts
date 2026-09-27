@@ -25,6 +25,8 @@ export interface RepairActions {
   fileInput: ReactElement;
   /** The applied action to show after the case has settled. */
   outcome: ResolvedEntry | null;
+  /** A successful action that still requires a device-side follow-up. */
+  followUp: string | null;
 }
 
 function navigateForAction(
@@ -54,7 +56,7 @@ function navigateForAction(
 }
 
 function outcomeFor(repair: RepairCase, localOutcome: RepairOutcome | null): ResolvedEntry | null {
-  if (localOutcome === null) return null;
+  if (localOutcome === null || localOutcome.kind !== 'settled') return null;
   return {
     id: repair.id,
     itemId: repair.itemId,
@@ -80,7 +82,9 @@ export function useRepairActions(input: {
     existingPhotoCount: detail.data?.item.photos.length ?? 0,
   });
   const busy = writes.busy || upload.busy;
-  const outcome = outcomeFor(repair, writes.outcome ?? upload.outcome);
+  const localOutcome = writes.outcome ?? upload.outcome;
+  const outcome = outcomeFor(repair, localOutcome);
+  const followUp = localOutcome?.kind === 'follow-up' ? localOutcome.message : null;
   const blockedReason = useCallback(
     (action: WebAction): string | null =>
       blockedReasonFor(action, {
@@ -121,5 +125,6 @@ export function useRepairActions(input: {
     refusal: writes.refusal ?? upload.refusal,
     fileInput: upload.fileInput,
     outcome,
+    followUp,
   };
 }

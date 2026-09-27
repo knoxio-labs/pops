@@ -51,6 +51,14 @@ export function RepairContent({
           {actions.refusal}
         </p>
       ) : null}
+      {actions.followUp ? (
+        <p
+          role="status"
+          className="rounded-lg border border-app-accent/40 bg-app-accent/10 px-3 py-2.5 text-sm"
+        >
+          {actions.followUp}.
+        </p>
+      ) : null}
       {actions.fileInput}
       <RepairEvidence repair={repair} now={now} />
       {plan.primary ? (

@@ -9,6 +9,7 @@ import {
   archivedCase,
   codeCase,
   deletedCase,
+  photoCase,
   placementCase,
 } from '../../../foundation/test-fixtures/sync.js';
 import { RepairSheet } from './repair-sheet.js';
@@ -156,6 +157,21 @@ describe('RepairSheet', () => {
       seq: 42,
       entityId: 'item-case-ladder-deleted',
     });
+  });
+
+  it('keeps a photo repair open after the upload and shows the device follow-up', async () => {
+    mocks.add.mockResolvedValue([{ fileName: 'drill.jpg', status: 'attached' }]);
+    renderSheet(photoCase);
+
+    fireEvent.change(screen.getByLabelText('Choose a photo'), {
+      target: { files: [new File(['photo'], 'drill.jpg', { type: 'image/jpeg' })] },
+    });
+
+    await waitFor(() => expect(screen.getByText('Photo sent.')).toBeInTheDocument());
+    expect(screen.getByText("Or choose Retry or Remove on Joao's iPhone.")).toBeInTheDocument();
+    expect(screen.queryByText(/both copies match/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing left to do/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
   });
 
   it('keeps writes disabled when the device report does not identify the item', () => {

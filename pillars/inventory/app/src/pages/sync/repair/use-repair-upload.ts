@@ -42,7 +42,7 @@ export function useRepairUpload(input: {
         const [result] = await uploads.add([file]);
         setRefusal(uploadRefusal(result));
         if (result?.status === 'attached') {
-          setOutcome({ message: 'Photo sent', at: new Date().toISOString() });
+          setOutcome({ kind: 'follow-up', message: 'Photo sent', at: new Date().toISOString() });
         }
       } catch (error: unknown) {
         setRefusal(`Not saved. ${error instanceof Error ? error.message : 'The upload failed.'}`);

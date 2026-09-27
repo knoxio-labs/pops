@@ -155,7 +155,7 @@ export function RepairSheet({
   const actions = useRepairActions({ repair, device, disabledReason });
   useShortcutScope('detail', { dismiss: () => (onClose(), true) });
 
-  if (actions.outcome !== null) {
+  if (actions.outcome !== null && repair.kind !== 'photo-failed') {
     const nextId = position?.nextId ?? null;
     return (
       <SettledSheet
