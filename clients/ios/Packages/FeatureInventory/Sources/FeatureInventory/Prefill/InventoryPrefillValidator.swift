@@ -111,8 +111,34 @@ internal enum InventoryPrefillValidator {
         case .product(let facts):
             facts.map { tokens($0.value) }
         case .text(let lines):
-            [lines.flatMap(tokens)]
+            textEvidenceTokens(lines)
         }
+    }
+
+    private static func textEvidenceTokens(_ lines: [String]) -> [[String]] {
+        lines.reduce(into: [[String]]()) { evidence, line in
+            let lineTokens = tokens(line)
+            guard !lineTokens.isEmpty else { return }
+
+            if evidence.isEmpty || startsExplicitLabel(line) {
+                evidence.append(lineTokens)
+            } else {
+                evidence[evidence.count - 1].append(contentsOf: lineTokens)
+            }
+        }
+    }
+
+    private static func startsExplicitLabel(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let colon = trimmed.firstIndex(of: ":") else { return false }
+
+        let label = trimmed[..<colon].trimmingCharacters(in: .whitespaces)
+        guard !label.isEmpty,
+            label.allSatisfy({ $0.isLetter || $0.isNumber || $0.isWhitespace || $0 == "-" })
+        else { return false }
+
+        let valueStart = trimmed.index(after: colon)
+        return valueStart == trimmed.endIndex || trimmed[valueStart].isWhitespace
     }
 
     private static func tokens(_ text: String) -> [String] {
