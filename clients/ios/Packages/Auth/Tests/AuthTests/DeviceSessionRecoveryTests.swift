@@ -314,11 +314,22 @@ internal struct DeviceSessionRecoveryTests {
             parkFailure = error
         }
 
+        let joins = Countdown()
+        await fixture.refresher.observeRevocationJoins { joins.record() }
         let second = Task { await fixture.refresher.deviceWasRevoked() }
+        var joinFailure: (any Error)?
+        if parkFailure == nil {
+            do {
+                try await withDeadline { try await joins.wait(atLeast: 1) }
+            } catch {
+                joinFailure = error
+            }
+        }
         await gate.open()
         await first.value
         await second.value
         if let parkFailure { throw parkFailure }
+        if let joinFailure { throw joinFailure }
 
         #expect(
             fixture.session.events == [.revoked(.revokedByOperator)],
