@@ -278,14 +278,14 @@ jobs:
           if [ "$dirs" = "." ]; then
             pnpm build
           else
-            projects=""
+            projects=()
             for d in $dirs; do
-              [ -f "$d/tsconfig.build.json" ] && projects="$projects $d/tsconfig.build.json"
+              [ -f "$d/tsconfig.build.json" ] && projects+=("$d/tsconfig.build.json")
             done
-            if [ -z "$projects" ]; then
+            if [ "${#projects[@]}" = 0 ]; then
               echo "no changed unit owns a tsconfig.build.json — nothing to build"
             else
-              pnpm exec tsc -b $projects
+              pnpm exec tsc -b "${projects[@]}"
             fi
           fi
       - name: Exports/files whitelist self-consistency
