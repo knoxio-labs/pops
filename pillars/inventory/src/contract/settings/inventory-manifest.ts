@@ -16,6 +16,20 @@ export const inventoryManifest: SettingsManifest = {
   order: 150,
   groups: [
     {
+      id: 'paperless',
+      title: 'Paperless',
+      description: 'Receipts, manuals and warranties live in Paperless; items link to them.',
+      widget: { bundleSlot: 'inventory-paperless' },
+      fields: [
+        {
+          key: 'inventory.paperlessUrl',
+          label: 'Address',
+          type: 'url',
+          description: 'Where Inventory reaches Paperless, e.g. https://paperless.home.',
+        },
+      ],
+    },
+    {
       id: 'labels',
       title: 'Labels',
       description: 'What the label page starts with. Each print can still change it.',

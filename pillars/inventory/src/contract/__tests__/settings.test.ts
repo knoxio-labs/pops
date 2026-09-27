@@ -51,6 +51,23 @@ describe('inventoryManifest', () => {
     );
   });
 
+  it('declares the Paperless address and status widget', () => {
+    expect(inventoryManifest.groups.find((group) => group.id === 'paperless')).toEqual({
+      id: 'paperless',
+      title: 'Paperless',
+      description: 'Receipts, manuals and warranties live in Paperless; items link to them.',
+      widget: { bundleSlot: 'inventory-paperless' },
+      fields: [
+        {
+          key: 'inventory.paperlessUrl',
+          label: 'Address',
+          type: 'url',
+          description: 'Where Inventory reaches Paperless, e.g. https://paperless.home.',
+        },
+      ],
+    });
+  });
+
   it('keeps every declared key unique and every select default selectable', () => {
     const fields = inventoryManifest.groups.flatMap((group) => group.fields);
     expect(new Set(fields.map((field) => field.key)).size).toBe(fields.length);
