@@ -1,6 +1,7 @@
 import { Card, cn } from '@pops/ui';
 
 import { Segmented } from '../../foundation/frame/segmented.js';
+import { LetGoSheet } from './outcome-sheets.js';
 import { RepairSheet } from './repair/repair-sheet.js';
 import { casePosition, segmentCounts } from './sync-model.js';
 import { Devices, Rows } from './sync-segment-content.js';
@@ -99,13 +100,32 @@ function SegmentList({
   );
 }
 
+function openResolvedSheet(props: SyncSegmentProps): ReactNode {
+  if (props.openId === null) return null;
+  const entry = props.ledger.resolved.find((candidate) => candidate.id === props.openId);
+  if (entry === undefined || entry.dropped === undefined || entry.dropped.length === 0) return null;
+  return (
+    <LetGoSheet
+      entry={entry}
+      device={
+        props.ledger.devices.find((device) => device.id === entry.deviceId)?.name ??
+        'An unknown device'
+      }
+      now={props.now}
+      onClose={props.onCloseCase}
+    />
+  );
+}
+
 function openRepairSheet(props: SyncSegmentProps): ReactNode {
   if (props.sheet !== undefined) return props.sheet;
+  if (props.segment === 'resolved') return openResolvedSheet(props);
   if (props.segment !== 'attention' || props.openId === null) return null;
   const repair = props.ledger.attention.find((entry) => entry.id === props.openId);
   if (repair === undefined) return null;
   return (
     <RepairSheet
+      key={repair.id}
       repair={repair}
       device={
         props.ledger.devices.find((device) => device.id === repair.deviceId)?.name ??

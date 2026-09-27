@@ -9,7 +9,14 @@ import type { RepairCase } from '../sync-model.js';
 import type { RepairPlan } from './repair-plan.js';
 import type { RepairActions } from './use-repair-actions.js';
 
-function OnDevice({ device, children }: { device: string; children: ReactNode }): ReactElement {
+/** Explains the remaining device-side work for a Sync case. */
+export function OnDevice({
+  device,
+  children,
+}: {
+  device: string;
+  children: ReactNode;
+}): ReactElement {
   return (
     <SheetSection title={`On ${device}`}>
       <p className="flex gap-2.5 text-sm">
@@ -42,6 +49,14 @@ export function RepairContent({
           className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm"
         >
           {actions.refusal}
+        </p>
+      ) : null}
+      {actions.followUp ? (
+        <p
+          role="status"
+          className="rounded-lg border border-app-accent/40 bg-app-accent/10 px-3 py-2.5 text-sm"
+        >
+          {actions.followUp}.
         </p>
       ) : null}
       {actions.fileInput}
