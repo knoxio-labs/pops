@@ -16,7 +16,7 @@ import { WireItemOption } from './wire-item-option.js';
 import type { ReactElement } from 'react';
 
 import type { ItemRowModel } from '../../foundation/model/model.js';
-import type { WireItemsState } from './wire-items-sheet.js';
+import type { WireItemsState } from './wire-items-types.js';
 
 /** Returns the refusal reason for an item that cannot be wired to the fixture. */
 export function wireItemRefusal(item: ItemRowModel, wiredIds: ReadonlySet<string>): string | null {
