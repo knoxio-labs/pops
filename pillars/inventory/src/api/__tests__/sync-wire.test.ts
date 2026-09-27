@@ -257,6 +257,17 @@ describe('item rows on the wire', () => {
       catalogueRevision: 2,
       values: ['Ursula K. Le Guin', 'Second Author'],
     });
+
+    const web = await target.api.get(`/web/items/${book}`);
+    expect(web.status).toBe(200);
+    const webItem = SyncItemSchema.parse(web.body.item);
+    expect(webItem.fields).not.toHaveProperty('Author');
+    expect(webItem.fieldValues).toContainEqual({
+      fieldId: AUTHOR_FIELD_ID,
+      source: 'stored',
+      catalogueRevision: 2,
+      values: ['Ursula K. Le Guin', 'Second Author'],
+    });
   });
 
   it('carries protocol-2 stable identities and canonical persisted values beside the compatibility projection', async () => {

@@ -67,7 +67,7 @@ function append<T>(map: Map<string, T[]>, key: string, value: T): void {
 }
 
 /** Load photos and document links for `ids`, in the caller's (read) transaction. */
-export function loadItemExtras(db: CommandDb, ids: readonly string[], protocol = 1): ItemExtras {
+export function loadItemExtras(db: CommandDb, ids: readonly string[], protocol = 2): ItemExtras {
   const fields = new Map<string, Protocol1Fields>();
   const fieldValues = new Map<string, readonly ReadItemFieldValue[]>();
   const typeKeys = new Map<string, string | null>();
