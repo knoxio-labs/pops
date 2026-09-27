@@ -11,7 +11,9 @@ import {
   placeFilterOptions,
   typeFilterOptions,
 } from '../../foundation/list-page/list-filters.js';
+import { SelectionDock } from '../../foundation/list-page/selection-dock.js';
 import { useListPageKeys } from '../../foundation/list-page/use-list-page-keys.js';
+import { useListVerbs, useTrackedWrites } from '../../foundation/list-page/use-list-verbs.js';
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { useSelection } from '../../foundation/selection/use-selection.js';
@@ -25,7 +27,7 @@ import { useOnline } from '../../inventory-web/useOnline.js';
 import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
 import { useItemRows } from '../../inventory-web/useWebItems.js';
 import { ItemsBanner, findDuplicatePair } from './items-banners.js';
-import { ItemsBody } from './items-body.js';
+import { ItemsListBody } from './items-cards.js';
 
 import type { ReactElement } from 'react';
 
@@ -43,7 +45,6 @@ function useItemsPageSources() {
     queryKeys: [[...WEB_ITEMS_QUERY_KEY, 'list']],
     enabled: itemRows.status === 'success',
   });
-  useListPageKeys({ rows: itemRows.rows, selection });
   const [dismissedDuplicate, setDismissedDuplicate] = useState(false);
 
   return {
@@ -148,6 +149,16 @@ function ItemsToolbarSection({ model }: { model: ItemsPageModel }): ReactElement
 
 function ItemsPageView({ model }: { model: ItemsPageModel }): ReactElement {
   const { filters, itemRows, online, navigate, changed, duplicate } = model;
+  const tracked = useTrackedWrites();
+  const verbs = useListVerbs({
+    rows: itemRows.rows,
+    world: model.world,
+    selection: model.selection,
+    contentCounts: itemRows.contentCounts,
+    offline: !online,
+    tracked,
+  });
+  useListPageKeys({ rows: itemRows.rows, selection: model.selection, extra: verbs.keyHandlers });
 
   return (
     <InventoryPage
@@ -164,25 +175,34 @@ function ItemsPageView({ model }: { model: ItemsPageModel }): ReactElement {
         />
       }
       toolbar={<ItemsToolbarSection model={model} />}
+      dock={
+        <SelectionDock
+          selection={model.selection}
+          loadedCount={itemRows.rows.length}
+          carried={verbs.carried}
+          actions={verbs.actions}
+          offline={!online}
+          anchorRef={verbs.dockAnchorRef}
+        />
+      }
+      overlay={verbs.overlays}
     >
-      <ItemsBody
-        status={itemRows.status}
-        rows={itemRows.rows}
+      <ItemsListBody
+        itemRows={itemRows}
+        filters={filters.filters}
+        online={online}
+        navigate={navigate}
+        world={model.world}
+        selection={model.selection}
+        pendingIds={model.pendingIds}
+        rejections={verbs.rejections}
+        onRowVerb={verbs.onRowVerb}
+        onSort={(sort) => filters.setFilters({ sort })}
         total={model.total}
         unfilteredTotal={model.unfilteredTotal}
         hiddenInactiveCount={model.hiddenInactiveCount}
         narrowed={model.narrowed}
-        view={filters.filters.view}
-        sort={filters.filters.sort}
-        world={model.world}
-        selection={model.selection}
-        pendingIds={model.pendingIds}
-        online={online}
-        onNavigate={navigate}
-        onRetry={itemRows.refetch}
-        onClear={model.clearEmptyFilters}
-        onSort={(sort) => filters.setFilters({ sort })}
-        onLoadMore={itemRows.fetchNextPage}
+        onClearFilters={model.clearEmptyFilters}
       />
     </InventoryPage>
   );
