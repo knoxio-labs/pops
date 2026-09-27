@@ -107,6 +107,7 @@ vi.mock('../location-page/location-page-content-verbs.js', () => ({
     },
     movingIds,
     setMovingIds,
+    moveIds: mocks.contentsVerbs.moveSelected,
     moveSelected: mocks.contentsVerbs.moveSelected,
   }),
 }));
@@ -266,11 +267,12 @@ describe('LocationTreePage', () => {
     resetFixtures();
   });
 
-  it('describes the place count without the legacy instruction', () => {
+  it('describes the place count and the drag destination', () => {
     renderPage();
 
-    expect(screen.getByText('4 places.')).toBeInTheDocument();
-    expect(screen.queryByText(/drag/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText('4 places. Drag things onto a place to move them there.')
+    ).toBeInTheDocument();
   });
 
   it('selects from the URL, reveals ancestors, preserves other params, and shows tally summary', async () => {

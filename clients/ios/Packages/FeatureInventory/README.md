@@ -1,5 +1,7 @@
 # FeatureInventory
 
+Item detail separates its supporting sections by 24pt. History starts collapsed; its Show/Hide header reveals muted, caret-free event rows while keeping event sheets and the full history reachable.
+
 Place detail keeps its icon and name in the inline navigation bar alongside the system back button. The navigation bar belongs to the page across loading, missing, and loaded states; breadcrumbs and counts remain in the scrolling content.
 
 Inventory on the phone. `InventoryFlowView` is the Inventory tab: it owns the tab's `NavigationStack`, puts the dashboard at its root, and resolves every `InventoryRoute` itself. `InventoryEntity` and `InventoryEntityView` are the other public surface: the app registers `InventoryEntity.types` under `InventoryEntity.pillar` with its `EntityRouter`, and presents the referenced item, container or place on a stack of its own when a label or a `pops://inventory/...` link names one.

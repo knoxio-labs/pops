@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import { Input } from '@pops/ui';
 
 import { Segmented } from '../../foundation/frame/segmented.js';
+import { placeSummary as formatPlaceSummary } from '../../foundation/places/place-summary.js';
 
 import type { ReactElement } from 'react';
 
@@ -10,6 +11,8 @@ import type { BreadcrumbSegment } from '@pops/ui';
 
 import type { LocationModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
+import type { PendingDelete } from '../../foundation/places/delete-place-dialog.js';
+import type { DeleteMode, DeletePlan } from '../../foundation/places/delete-plan.js';
 import type { PlaceTally } from '../../inventory-web/useLocationTallies.js';
 
 /** The three tabs shown by a location page. */
@@ -27,6 +30,7 @@ export interface PlaceEditsApi {
   readonly creatingUnder: string | null;
   readonly renamingId: string | null;
   readonly deleting: DeletePlaceState | null;
+  readonly pendingDelete?: PendingDelete | null;
   readonly lastMove: PlaceMoveNotice | null;
   readonly error: string | null;
   startCreate: (parentId?: string) => void;
@@ -35,6 +39,9 @@ export interface PlaceEditsApi {
   startRename: (id: string | null) => void;
   commitRename: (name: string) => void;
   moveTo: (id: string, parentId: string | null) => void;
+  readonly arrange?: (id: string, parentId: string | null, order: readonly string[]) => void;
+  readonly setDeleteMode?: (mode: DeleteMode) => void;
+  readonly confirmDeletePlan?: (plan: DeletePlan) => void;
   requestDelete: (id: string) => void;
   confirmDelete: () => void;
   cancelDelete: () => void;
@@ -97,19 +104,7 @@ export function placeCrumbs(world: PlacementWorld, place: LocationModel): Breadc
 }
 
 /** Formats the server tally as the single line under a place title. */
-export function placeSummary(tally: PlaceTally): string {
-  const count = (value: number, singular: string, plural: string): string =>
-    `${value} ${value === 1 ? singular : plural}`;
-  const parts: string[] = [];
-  if (tally.places > 0) parts.push(`${count(tally.places, 'place', 'places')} inside`);
-  if (tally.itemsHere > 0) parts.push(`${count(tally.itemsHere, 'thing', 'things')} here`);
-  if (tally.boxesHere > 0) {
-    const contents =
-      tally.inBoxes > 0 ? ` holding ${count(tally.inBoxes, 'thing', 'things')}` : ', empty';
-    parts.push(`${count(tally.boxesHere, 'box', 'boxes')}${contents}`);
-  }
-  return parts.length === 0 ? 'Empty' : parts.join(', ');
-}
+export const placeSummary = formatPlaceSummary;
 
 /** Props for {@link PlaceToolbar}. */
 export interface PlaceToolbarProps {
