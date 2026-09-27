@@ -1,116 +1,71 @@
-import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 
-import { useBulkItemVerbs } from '../../inventory-web/item-verbs-bulk.js';
-import { useBatchCreate } from '../../inventory-web/useBatchCreate.js';
-import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
-import { useWebSearch } from '../../inventory-web/useWebSearch.js';
-import { buildWorld } from '../model/placement-model.js';
-import { useStoreHereActions } from './store-here-actions.js';
-import { storeCandidates } from './store-here-model.js';
+import { useOnline } from '../../inventory-web/useOnline.js';
 import { StoreHereSheetView } from './store-here-view.js';
+import { useStoreHere } from './use-store-here.js';
 
 import type { ReactElement } from 'react';
 
-import type { ItemRowModel, StoreHereTarget } from '../model/contracts.js';
-import type { PlacementWorld } from '../model/placement-model.js';
+import type { StoreHereTarget } from '../model/contracts.js';
 
-/** Props for the live Store here sheet used by place surfaces. */
+/** Props accepted by the live Store here sheet. */
 export interface StoreHereSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   target: StoreHereTarget;
-  offline: boolean;
+  initialTab?: 'new' | 'existing';
+  /** An opener may force the mutation-disabled state for a degraded page. */
+  offline?: boolean;
 }
 
-function statusOf(
-  placement: ReturnType<typeof usePlacementSources>
-): 'pending' | 'error' | 'success' {
-  if (placement.isError) return 'error';
-  if (placement.isLoading) return 'pending';
-  return 'success';
-}
+/** The controlled props used by pages that do not need the compatibility override. */
+export type StoreHereSheetOpenProps = Pick<
+  StoreHereSheetProps,
+  'open' | 'onOpenChange' | 'target' | 'initialTab'
+>;
 
-function mergeWorld(
-  placement: PlacementWorld,
-  searchItems: readonly ItemRowModel[]
-): PlacementWorld {
-  const items = new Map(placement.items);
-  for (const item of searchItems) items.set(item.id, item);
-  return buildWorld([...items.values()], [...placement.locations.values()]);
-}
-
-function useStoreHereSources(query: string, target: StoreHereTarget) {
-  const placement = usePlacementSources({ kind: 'items', ids: [] });
-  const search = useWebSearch({ q: query, activeOnly: true, limit: 50 });
-  const itemVerbs = useBulkItemVerbs();
-  const batch = useBatchCreate();
-  const world = useMemo(
-    () =>
-      mergeWorld(
-        placement.world,
-        search.results.items.map((hit) => hit.item)
-      ),
-    [placement.world, search.results.items]
-  );
-  const candidates = useMemo(() => storeCandidates(world, target, query), [query, target, world]);
-  const status = statusOf(placement);
-  return { placement, search, itemVerbs, batch, world, candidates, status };
-}
-
-/** Renders Store here with live placement reads and bulk writes for one target. */
-export function StoreHereSheet({
-  open,
-  onOpenChange,
-  target,
-  offline,
-}: StoreHereSheetProps): ReactElement {
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [created, setCreated] = useState<readonly string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const sources = useStoreHereSources(query, target);
-  const actions = useStoreHereActions({
-    target,
-    offline,
-    busy,
-    onOpenChange,
-    placement: sources.placement,
-    search: sources.search,
-    itemVerbs: sources.itemVerbs,
-    batch: sources.batch,
-    setBusy,
-    setCreated,
-  });
+function StoreHereSheetContent(props: StoreHereSheetProps): ReactElement {
+  const online = useOnline();
+  const data = useStoreHere(props.target);
+  const navigate = useNavigate();
+  const offline = props.offline === true || !online;
 
   return (
     <StoreHereSheetView
-      open={open}
-      onOpenChange={onOpenChange}
-      target={target}
-      world={sources.world}
-      status={sources.status}
-      onRetry={actions.retry}
-      candidates={sources.candidates}
-      query={query}
-      onQuery={setQuery}
-      selected={selected}
-      onToggle={(id) =>
-        setSelected((current) => {
-          const next = new Set(current);
-          if (next.has(id)) next.delete(id);
-          else next.add(id);
-          return next;
-        })
-      }
-      created={created}
-      onCreate={actions.onCreate}
-      createError={null}
-      onStoreExisting={actions.onStoreExisting}
-      onOpenTarget={actions.onOpenTarget}
-      onOpenForm={actions.onOpenForm}
-      onDone={() => onOpenChange(false)}
+      open
+      onOpenChange={props.onOpenChange}
+      target={props.target}
+      world={data.world}
+      status={data.status}
+      onRetry={data.retry}
+      candidates={data.candidates}
+      initialTab={props.initialTab}
+      query={data.query}
+      onQuery={data.setQuery}
+      selected={data.selected}
+      onToggle={data.toggle}
+      created={data.created}
+      onCreate={data.create}
+      createError={data.createError}
+      onStoreExisting={data.store}
+      onOpenTarget={data.openTarget}
+      onOpenForm={() => {
+        void navigate(`/inventory/items/new?in=${encodeURIComponent(props.target.id)}`);
+      }}
+      onDone={() => props.onOpenChange(false)}
       offline={offline}
-      busy={busy || sources.batch.isRunning}
+      busy={data.busy}
+    />
+  );
+}
+
+/** Renders the live Store here sheet only after it opens, so closed sheets fetch nothing. */
+export function StoreHereSheet(props: StoreHereSheetProps): ReactElement | null {
+  if (!props.open) return null;
+  return (
+    <StoreHereSheetContent
+      key={`${props.target.kind}:${props.target.id}:${props.initialTab ?? 'new'}`}
+      {...props}
     />
   );
 }
