@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { cloneElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildWorld } from '../model/placement-model.js';
@@ -15,15 +16,18 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../placement-picker/placement-picker.js', () => ({
   PlacementPicker: (
     props: PlacementPickerProps & {
-      trigger: ReactElement;
+      trigger: ReactElement<{ onClick?: () => void }>;
       open: boolean;
       onOpenChange: (open: boolean) => void;
     }
   ) => {
     mocks.picker(props);
+    const trigger = cloneElement(props.trigger, {
+      onClick: () => props.onOpenChange(true),
+    });
     return (
       <>
-        <span onClick={() => props.onOpenChange(true)}>{props.trigger}</span>
+        {trigger}
         {props.open ? (
           <button
             type="button"
@@ -89,6 +93,23 @@ describe('place controls', () => {
         initialDrillId: null,
       })
     );
+  });
+
+  it('forwards the picker trigger activation to the Move button', () => {
+    const onOpenChange = vi.fn();
+    const world = buildWorld([], [place('garage', 'Garage')]);
+    render(
+      <MovePlaceButton
+        world={world}
+        place={place('garage', 'Garage')}
+        open={false}
+        onOpenChange={onOpenChange}
+        onPick={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
+    expect(onOpenChange).toHaveBeenCalledWith(true);
   });
 
   it('does not open when disabled', () => {

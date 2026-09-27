@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { forwardRef, useMemo } from 'react';
 
 import { Button } from '@pops/ui';
 
@@ -7,7 +7,7 @@ import { PlacementPicker } from '../placement-picker/placement-picker.js';
 import { HintTooltip } from '../shortcuts/hint-tooltip.js';
 import { ShortcutHint } from '../shortcuts/shortcut-hint.js';
 
-import type { ReactElement } from 'react';
+import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 
 import type { LocationModel } from '../model/model.js';
 import type { PlacementWorld } from '../model/placement-model.js';
@@ -22,27 +22,40 @@ export interface MovePlaceButtonProps {
   disabledReason?: string;
 }
 
-function Trigger({ disabledReason }: { disabledReason?: string }): ReactElement {
-  const button = (
-    <Button
-      size="sm"
-      variant="ghost"
-      disabled={disabledReason !== undefined}
-      aria-disabled={disabledReason !== undefined ? 'true' : undefined}
-      prefix={<INVENTORY_ICONS.move className="size-4" aria-hidden />}
-      suffix={disabledReason === undefined ? <ShortcutHint id="move" /> : undefined}
-    >
-      Move
-    </Button>
-  );
-  return disabledReason === undefined ? (
-    button
-  ) : (
-    <HintTooltip label="Move" disabledReason={disabledReason}>
-      {button}
-    </HintTooltip>
-  );
-}
+type TriggerProps = Omit<
+  ComponentPropsWithoutRef<typeof Button>,
+  'children' | 'disabled' | 'prefix' | 'suffix'
+> & {
+  disabledReason?: string;
+};
+
+const Trigger = forwardRef<HTMLButtonElement, TriggerProps>(
+  ({ disabledReason, ...props }, ref): ReactElement => {
+    const button = (
+      <Button
+        {...props}
+        ref={ref}
+        size="sm"
+        variant="ghost"
+        disabled={disabledReason !== undefined}
+        aria-disabled={disabledReason !== undefined ? 'true' : undefined}
+        prefix={<INVENTORY_ICONS.move className="size-4" aria-hidden />}
+        suffix={disabledReason === undefined ? <ShortcutHint id="move" /> : undefined}
+      >
+        Move
+      </Button>
+    );
+    return disabledReason === undefined ? (
+      button
+    ) : (
+      <HintTooltip label="Move" disabledReason={disabledReason}>
+        {button}
+      </HintTooltip>
+    );
+  }
+);
+
+Trigger.displayName = 'MovePlaceTrigger';
 
 /** Opens a placement picker that accepts only valid parent locations for one place. */
 export function MovePlaceButton({
