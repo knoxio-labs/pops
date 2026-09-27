@@ -1,8 +1,9 @@
 import { type QueryClient } from '@tanstack/react-query';
 
 import { MAX_MUTATION_BATCH } from '@pops/inventory';
-import { ApiError, unwrap } from '@pops/pillar-sdk/client';
+import { unwrap } from '@pops/pillar-sdk/client';
 
+import { InventoryApiError } from '../inventory-api-helpers.js';
 /**
  * A mutation client over `POST /sync/mutations` (Inventory ADR-002 D9/D10):
  * builds the wire envelope for one {@link InventoryCommand}, sends it as a
@@ -111,7 +112,7 @@ export async function sendInventoryMutations(
   );
   const outcomes = data.outcomes;
   if (outcomes.length !== inputs.length) {
-    throw new ApiError({
+    throw new InventoryApiError({
       code: 'web.client.invalid_response',
       kind: 'client',
       message: `inventory mutation returned ${String(outcomes.length)} outcomes for ${String(inputs.length)} mutations`,
@@ -146,7 +147,7 @@ export async function sendInventoryMutation(
   );
   const outcome = data.outcomes[0];
   if (outcome === undefined) {
-    throw new ApiError({
+    throw new InventoryApiError({
       code: 'web.client.no_data',
       kind: 'client',
       message: 'inventory mutation returned no outcome',
