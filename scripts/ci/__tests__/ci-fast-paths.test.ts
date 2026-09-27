@@ -39,4 +39,12 @@ describe('fast CI workflow wiring', () => {
     expect(unitQuality).not.toContain("matrix.unit.lang != 'ts'");
     expect(unitQuality).not.toContain("matrix.unit.lang != 'rust'");
   });
+
+  it('passes changed TypeScript project paths without word splitting', () => {
+    const quality = workflow('quality.yml');
+
+    expect(quality).toContain('projects+=("$d/tsconfig.build.json")');
+    expect(quality).toContain('pnpm exec tsc -b "${projects[@]}"');
+    expect(quality).not.toContain('pnpm exec tsc -b $projects');
+  });
 });
