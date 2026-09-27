@@ -57,9 +57,17 @@ internal struct InventorySearchFilterFields<Header: View>: View {
                     Text($0.title).tag($0)
                 }
             }
-            Picker("Type", selection: $filter.typeName) {
-                Text("Any").tag(String?.none)
-                ForEach(types, id: \.self) { Text($0).tag(String?.some($0)) }
+            NavigationLink {
+                InventoryFormTypePicker(
+                    selection: $filter.typeName, additionalNames: types, showsNoneOption: true,
+                    noneOptionTitle: "Any")
+            } label: {
+                HStack {
+                    Text("Type")
+                    Spacer(minLength: PopsSpacing.sm)
+                    Text(filter.typeName ?? "Any")
+                        .foregroundStyle(Color.popsMutedForeground)
+                }
             }
             Picker("Quantity", selection: $filter.quantity) {
                 ForEach(InventoryQuantityFilter.allCases) { Text($0.title).tag($0) }
