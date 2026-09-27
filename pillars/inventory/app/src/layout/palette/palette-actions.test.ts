@@ -34,6 +34,24 @@ function fakeVerbs(): ItemVerbs {
     split: vi.fn((_id: string, _quantity: number) => applied()),
     setCode: vi.fn((_id: string, _code: string | null) => applied()),
     edit: vi.fn((_id: string, _changes: Parameters<ItemVerbs['edit']>[1]) => applied()),
+    editValues: vi.fn((_id: string, _patches: Parameters<ItemVerbs['editValues']>[1]) => applied()),
+    changeType: vi.fn(
+      (
+        _id: string,
+        _typeReference: Parameters<ItemVerbs['changeType']>[1],
+        _values: Parameters<ItemVerbs['changeType']>[2]
+      ) => applied()
+    ),
+    setOverride: vi.fn(
+      (
+        _id: string,
+        _fieldId: Parameters<ItemVerbs['setOverride']>[1],
+        _value: Parameters<ItemVerbs['setOverride']>[2]
+      ) => applied()
+    ),
+    clearOverride: vi.fn((_id: string, _fieldId: Parameters<ItemVerbs['clearOverride']>[1]) =>
+      applied()
+    ),
   };
 }
 
