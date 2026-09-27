@@ -195,7 +195,7 @@ export function FixtureDetailView({
     return (
       <InventoryPage title={title} icon={icon} breadcrumbs={breadcrumbs} banner={banner}>
         <FixtureDetailProblem
-          variant={isNotFoundError(model.error) || fixture === undefined ? 'not-found' : 'error'}
+          variant={isNotFoundError(model.error) ? 'not-found' : 'error'}
           error={model.error}
           onRetry={model.refetch}
         />

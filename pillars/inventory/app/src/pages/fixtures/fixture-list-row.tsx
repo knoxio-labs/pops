@@ -36,7 +36,7 @@ export function FixtureListRow({
         aria-label={`Open ${row.name}`}
         onClick={() => onOpen(row.id)}
         className={cn(
-          'grid h-12 w-full items-center gap-3 rounded-none px-3 pr-24 text-left font-normal',
+          'grid h-12 w-full items-center gap-3 rounded-none pl-3 pr-24 text-left font-normal',
           GRID
         )}
       >

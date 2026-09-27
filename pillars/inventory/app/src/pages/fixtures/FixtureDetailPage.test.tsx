@@ -18,6 +18,7 @@ vi.mock('../../foundation/feedback/undo-toast.js', () => ({
 }));
 vi.mock('sonner', () => ({ toast: { error: (...args: unknown[]) => mocks.toastError(...args) } }));
 
+import { InventoryApiError } from '../../inventory-api-helpers.js';
 import { FixtureDetailPage } from './FixtureDetailPage.js';
 
 import type { ItemRowModel } from '../../foundation/model/model.js';
@@ -140,7 +141,7 @@ describe('FixtureDetailPage', () => {
     ).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('renders loading, stale, and not-found states from the model', () => {
+  it('renders loading, stale, not-found, and retryable error states from the model', () => {
     const loading = pageModel({ status: 'pending', fixture: undefined });
     mocks.useFixtureDetailPageModel.mockReturnValue(loading);
     const { rerender } = render(
@@ -166,7 +167,7 @@ describe('FixtureDetailPage', () => {
     const notFound = pageModel({
       fixture: undefined,
       status: 'error',
-      error: new Error('missing'),
+      error: new InventoryApiError('missing', 404),
     });
     mocks.useFixtureDetailPageModel.mockReturnValue(notFound);
     rerender(
@@ -177,5 +178,21 @@ describe('FixtureDetailPage', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('Fixture not found')).toBeInTheDocument();
+
+    const transientError = pageModel({
+      fixture: undefined,
+      status: 'error',
+      error: new InventoryApiError('service unavailable', 503),
+    });
+    mocks.useFixtureDetailPageModel.mockReturnValue(transientError);
+    rerender(
+      <MemoryRouter initialEntries={['/inventory/fixtures/fixture-1']}>
+        <Routes>
+          <Route path="/inventory/fixtures/:id" element={<FixtureDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Fixture did not load')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });
