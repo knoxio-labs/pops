@@ -44,6 +44,8 @@ export interface DetailDocument {
   kind: string;
   added: string;
   paperlessDocumentId: number;
+  /** Whether Paperless no longer has the linked document. */
+  missing: boolean;
 }
 
 /** Availability of the Paperless integration. */
