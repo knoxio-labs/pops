@@ -24,7 +24,7 @@ const {
 } = await import('../handle-factory.js');
 
 describe('createInventoryPillarHandleFactory', () => {
-  it('always sends this build sync protocol, with no actor header outside a mutation call', async () => {
+  it('always sends this build sync protocol, with no actor header outside a sync write call', async () => {
     const factory = createInventoryPillarHandleFactory();
     factory('inventory');
 

@@ -145,10 +145,11 @@ export function embeddedScript(source) {
  * Accepts a bare script body too, so a caller (and the self-test) can exercise
  * the array reader without wrapping it in a workflow.
  *
- * @param {string} source  A workflow document, or the script body alone.
+ * @param {string} source A workflow document, or the script body alone.
+ * @param {"gated" | "cancellationOnly"} [name] Which observer array to read.
  * @returns {string[]}
  */
-export function parseGatedArray(source) {
+export function parseGatedArray(source, name = 'gated') {
   let body = source;
   try {
     const fromWorkflow = embeddedScript(source);
@@ -158,7 +159,7 @@ export function parseGatedArray(source) {
     // workflow that does not parse is reported by the caller, which reads it
     // through `workflowDoc` directly.
   }
-  const block = /const\s+gated\s*=\s*\[([\s\S]*?)\]\s*;/u.exec(body);
+  const block = new RegExp(`const\\s+${name}\\s*=\\s*\\[([\\s\\S]*?)\\]\\s*;`, 'u').exec(body);
   const captured = block?.[1];
   if (captured === undefined) return [];
   return captured
@@ -479,6 +480,7 @@ export function checkCiGateWiring(root) {
     ];
   }
   const gated = parseGatedArray(script);
+  const cancellationOnly = parseGatedArray(script, 'cancellationOnly');
 
   if (triggerNames.length === 0) {
     violations.push('ci-gate.yml declares no workflow_run trigger list.');
@@ -486,7 +488,7 @@ export function checkCiGateWiring(root) {
   if (gated.length === 0) violations.push('ci-gate.yml declares no `gated` array.');
 
   for (const name of triggerNames) {
-    if (!gated.includes(name)) {
+    if (!gated.includes(name) && !cancellationOnly.includes(name)) {
       violations.push(
         `"${name}" fires ci-gate.yml but is missing from its \`gated\` array — the gate ` +
           'runs on its completion and then ignores its conclusion.'
@@ -502,9 +504,16 @@ export function checkCiGateWiring(root) {
     }
   }
 
+  for (const name of cancellationOnly) {
+    if (gated.includes(name))
+      violations.push(`"${name}" must not be both gated and cancellation-only.`);
+    if (!triggerNames.includes(name))
+      violations.push(`Cancellation-only workflow "${name}" has no observer trigger.`);
+  }
+
   const { names: known, problems } = readWorkflowNames(root);
   violations.push(...problems);
-  for (const name of new Set([...triggerNames, ...gated])) {
+  for (const name of new Set([...triggerNames, ...gated, ...cancellationOnly])) {
     if (!known.has(name)) {
       violations.push(
         `ci-gate.yml references workflow "${name}", which matches no \`name:\` under ` +
