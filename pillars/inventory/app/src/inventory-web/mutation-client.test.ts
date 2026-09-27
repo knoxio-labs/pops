@@ -81,24 +81,53 @@ describe('buildMutationEnvelope', () => {
     expect(() => new Date(a.clientTime).toISOString()).not.toThrow();
   });
 
-  it('carries catalogueRevision only for stable typed commands', () => {
+  it('carries catalogueRevision for protocol-2 values and omits it for unchanged commands', () => {
     const target: InventoryPlacementTarget = { kind: 'hand' };
-    const typed = buildMutationEnvelope({
-      command: { op: 'item.changeType', args: { typeId: 'type-cable', values: [] } },
+    const typedEdit = buildMutationEnvelope({
+      command: {
+        op: 'item.edit',
+        args: { values: [{ fieldId: 'field-name', values: ['Lamp'] }] },
+      },
       entityId: 'item-1',
       catalogueRevision: 7,
       mutationId: '30000000-0000-4000-8000-000000000008',
       clientTime: '2026-09-19T00:00:00.000Z',
     });
-    const untyped = buildMutationEnvelope({
-      command: { op: 'item.move', args: { to: target, verb: 'move' } },
+    const typedOverride = buildMutationEnvelope({
+      command: {
+        op: 'item.setOverride',
+        args: { fieldId: 'field-label', values: [{ optionId: 'label-a' }] },
+      },
       entityId: 'item-1',
+      catalogueRevision: 7,
       mutationId: '30000000-0000-4000-8000-000000000009',
       clientTime: '2026-09-19T00:00:00.000Z',
     });
+    const typedChange = buildMutationEnvelope({
+      command: { op: 'item.changeType', args: { typeId: 'type-cable', values: [] } },
+      entityId: 'item-1',
+      catalogueRevision: 7,
+      mutationId: '30000000-0000-4000-8000-000000000010',
+      clientTime: '2026-09-19T00:00:00.000Z',
+    });
+    const untyped = buildMutationEnvelope({
+      command: { op: 'item.move', args: { to: target, verb: 'move' } },
+      entityId: 'item-1',
+      mutationId: '30000000-0000-4000-8000-000000000011',
+      clientTime: '2026-09-19T00:00:00.000Z',
+    });
+    const revert = buildMutationEnvelope({
+      command: { op: 'event.revert', args: { seq: 12 } },
+      entityId: 'item-1',
+      mutationId: '30000000-0000-4000-8000-000000000012',
+      clientTime: '2026-09-19T00:00:00.000Z',
+    });
 
-    expect(typed.catalogueRevision).toBe(7);
+    expect(typedEdit.catalogueRevision).toBe(7);
+    expect(typedOverride.catalogueRevision).toBe(7);
+    expect(typedChange.catalogueRevision).toBe(7);
     expect(untyped).not.toHaveProperty('catalogueRevision');
+    expect(revert).not.toHaveProperty('catalogueRevision');
   });
 });
 

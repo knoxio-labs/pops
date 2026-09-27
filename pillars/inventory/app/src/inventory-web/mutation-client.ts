@@ -1,3 +1,5 @@
+import { type QueryClient } from '@tanstack/react-query';
+
 import { MAX_MUTATION_BATCH } from '@pops/inventory';
 
 import { InventoryApiError } from '../inventory-api-helpers.js';
@@ -16,12 +18,31 @@ import { syncMutations } from '../inventory-api/index.js';
 
 import type { SyncMutationsData, SyncMutationsResponses } from '../inventory-api/types.gen.js';
 import type { InventoryCommand } from './commands.js';
+import type { OptimisticItems } from './optimistic-items.js';
 
 /** The protocol version this app speaks (Inventory ADR-002 D10); the server's current minimum is `1`. */
 export const INVENTORY_SYNC_PROTOCOL = '1';
 
 /** One outcome of `POST /sync/mutations`, as the server reports it. */
 export type InventoryMutationOutcome = SyncMutationsResponses[200]['outcomes'][number];
+
+/** A mutation outcome or transport failure that refused a verb. */
+export type VerbRefusal =
+  | { kind: 'outcome'; outcome: Exclude<InventoryMutationOutcome, { status: 'applied' }> }
+  | { kind: 'failed'; error: InventoryApiError };
+
+/** The result of one optimistic item verb. */
+export type VerbResult =
+  | { status: 'applied'; seq: number; undo: (() => Promise<void>) | null }
+  | { status: 'refused'; refusal: VerbRefusal };
+
+/** Thrown by an undo function when the compensating event is not applied. */
+export class UndoRefusedError extends Error {
+  constructor(readonly refusal: VerbRefusal) {
+    super('inventory undo was refused');
+    this.name = 'UndoRefusedError';
+  }
+}
 
 type MutationBody = NonNullable<SyncMutationsData['body']>;
 /** The wire envelope for a single mutation inside a batch. */
@@ -130,4 +151,29 @@ export async function sendInventoryMutation(
     throw new InventoryApiError('inventory mutation returned no outcome', result.response?.status);
   }
   return outcome;
+}
+
+/** Creates the compensating event used to undo one applied web mutation. */
+export function createUndo(
+  queryClient: QueryClient,
+  optimistic: OptimisticItems,
+  id: string,
+  seq: number
+) {
+  return async () => {
+    await optimistic.settled(id);
+    try {
+      const outcome = await sendInventoryMutation({
+        command: { op: 'event.revert', args: { seq } },
+        entityId: id,
+      });
+      if (outcome.status !== 'applied') throw new UndoRefusedError({ kind: 'outcome', outcome });
+    } catch (error: unknown) {
+      if (error instanceof UndoRefusedError) throw error;
+      if (error instanceof InventoryApiError) throw new UndoRefusedError({ kind: 'failed', error });
+      throw error;
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ['inventory', 'web'] });
+    }
+  };
 }

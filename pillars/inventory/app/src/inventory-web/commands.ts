@@ -1,3 +1,7 @@
+import type { WebItem } from './item-row-model.js';
+import type { ItemPatch } from './optimistic-items.js';
+import type { CatalogueDescriptor } from './useCatalogueLookups.js';
+
 /**
  * The typed shape of every command the sync mutation protocol accepts
  * (Inventory ADR-002), as the web app is allowed to send them.
@@ -51,6 +55,12 @@ export interface FieldValueEntry {
   values: readonly FieldWireValue[];
 }
 
+/** The protocol-2 arguments for a stable type replacement. */
+export interface StableChangeTypeArgs {
+  typeId: string;
+  values: readonly FieldValueEntry[];
+}
+
 type ItemEditInput = Partial<Pick<NewItemInput, 'name' | 'fields' | 'quantity'>> & {
   note?: string | null;
   values?: readonly FieldValuePatch[];
@@ -71,10 +81,10 @@ export type InventoryCommand =
   | { op: 'item.edit'; args: ItemEditInput }
   | {
       op: 'item.changeType';
-      args:
-        | { typeKey: string; fields?: Record<string, unknown> }
-        | { typeId: string; values: readonly FieldValueEntry[] };
+      args: { typeKey: string; fields?: Record<string, unknown> } | StableChangeTypeArgs;
     }
+  | { op: 'item.setOverride'; args: { fieldId: string; values: readonly [FieldWireValue] } }
+  | { op: 'item.clearOverride'; args: { fieldId: string } }
   | { op: 'item.setCode'; args: { code: string | null } }
   | { op: 'item.setQuantity'; args: { quantity: number } }
   | { op: 'item.split'; args: { newItemId: string; quantity: number } }
@@ -89,3 +99,118 @@ export type InventoryCommand =
 
 /** `InventoryCommand['op']`, spelled out so a caller can narrow on it without a value in hand. */
 export type InventoryCommandOp = InventoryCommand['op'];
+
+type TypedVerbRun<TResult> = (
+  ...input: [string, ItemPatch, InventoryCommand, number]
+) => Promise<TResult>;
+type OptionalCatalogue = CatalogueDescriptor | undefined;
+
+function requireCatalogueRevision(catalogue: OptionalCatalogue): number {
+  const revision = catalogue?.revision.revision;
+  if (revision === undefined) throw new Error('the published catalogue is not loaded');
+  return revision;
+}
+
+function applyFieldValuePatch(
+  item: WebItem,
+  patch: FieldValuePatch,
+  source: 'stored' | 'override',
+  catalogueRevision: number
+): WebItem {
+  const index = item.fieldValues.findIndex(
+    (entry) => entry.fieldId === patch.fieldId && entry.source === source
+  );
+  if (patch.values === null) {
+    if (index === -1) return item;
+    return {
+      ...item,
+      fieldValues: item.fieldValues.filter(
+        (entry) => entry.fieldId !== patch.fieldId || entry.source !== source
+      ),
+    };
+  }
+  const nextEntry = {
+    catalogueRevision,
+    fieldId: patch.fieldId,
+    source,
+    values: [...patch.values],
+  };
+  const fieldValues =
+    index === -1
+      ? [...item.fieldValues, nextEntry]
+      : item.fieldValues.map((entry, entryIndex) => (entryIndex === index ? nextEntry : entry));
+  return { ...item, fieldValues };
+}
+
+function storedValuePatch(patches: readonly FieldValuePatch[], revision: number): ItemPatch {
+  return (item) =>
+    patches.reduce(
+      (current, patch) => applyFieldValuePatch(current, patch, 'stored', revision),
+      item
+    );
+}
+
+function overrideValuePatch(
+  fieldId: string,
+  values: readonly FieldWireValue[] | null,
+  revision: number
+): ItemPatch {
+  return (item) => applyFieldValuePatch(item, { fieldId, values }, 'override', revision);
+}
+
+/** Creates the protocol-2 single-item verbs that depend on a published catalogue. */
+export function createTypedItemVerbs<TResult>(
+  run: TypedVerbRun<TResult>,
+  catalogue: OptionalCatalogue
+) {
+  const editValues = async (id: string, patches: readonly FieldValuePatch[]): Promise<TResult> => {
+    if (patches.length === 0) throw new Error('item.edit requires at least one field patch');
+    const revision = requireCatalogueRevision(catalogue);
+    return run(
+      id,
+      storedValuePatch(patches, revision),
+      { op: 'item.edit', args: { values: patches } },
+      revision
+    );
+  };
+  const changeType = async (
+    id: string,
+    typeReference: string,
+    values?: readonly FieldValueEntry[]
+  ): Promise<TResult> => {
+    const revision = requireCatalogueRevision(catalogue);
+    const type = catalogue?.types.find(
+      (candidate) => candidate.key === typeReference || candidate.id === typeReference
+    );
+    if (type === undefined) throw new Error(`unknown type ${typeReference}`);
+    return run(
+      id,
+      (item) => item,
+      { op: 'item.changeType', args: { typeId: type.id, values: values ?? [] } },
+      revision
+    );
+  };
+  const setOverride = async (
+    id: string,
+    fieldId: string,
+    value: FieldWireValue
+  ): Promise<TResult> => {
+    const revision = requireCatalogueRevision(catalogue);
+    return run(
+      id,
+      overrideValuePatch(fieldId, [value], revision),
+      { op: 'item.setOverride', args: { fieldId, values: [value] } },
+      revision
+    );
+  };
+  const clearOverride = async (id: string, fieldId: string): Promise<TResult> => {
+    const revision = requireCatalogueRevision(catalogue);
+    return run(
+      id,
+      overrideValuePatch(fieldId, null, revision),
+      { op: 'item.clearOverride', args: { fieldId } },
+      revision
+    );
+  };
+  return { editValues, changeType, setOverride, clearOverride };
+}
