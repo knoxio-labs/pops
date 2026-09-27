@@ -1,22 +1,14 @@
 import { CircleAlert, FileUp, ListPlus, Plus, SearchX } from 'lucide-react';
 
-import { Button, EmptyState, Skeleton, cn } from '@pops/ui';
+import { Button, EmptyState, Skeleton } from '@pops/ui';
 
 import { OFFLINE_TITLE, StateBanner } from '../feedback/state-banner.js';
+import { ListBody } from '../items-table/list-body.js';
 
 import type { LucideIcon } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 
-/** The scroll container shared by every inventory list body state. */
-export function ListBody({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}): ReactElement {
-  return <div className={cn('min-h-0 flex-1 overflow-auto', className)}>{children}</div>;
-}
+export { ListBody } from '../items-table/list-body.js';
 
 const SKELETON_ROWS = Array.from({ length: 14 }, (_, index) => `row-${String(index)}`);
 
