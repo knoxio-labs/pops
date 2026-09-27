@@ -59,10 +59,7 @@ export function ValueGroupRow({
       type="button"
       aria-pressed={active}
       onClick={onSelect}
-      className={cn(
-        'flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-none border-l-2 border-transparent px-4 py-2 text-left transition-colors hover:bg-muted/60',
-        active && 'border-l-app-accent bg-app-accent/10'
-      )}
+      className="flex min-h-11 min-w-11 w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-none border-l-2 border-transparent px-4 py-2 text-left transition-colors hover:bg-muted/60 aria-pressed:border-l-app-accent aria-pressed:bg-app-accent/10"
     >
       <span className="min-w-0 flex-1 truncate text-sm">{group.label}</span>
       <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
