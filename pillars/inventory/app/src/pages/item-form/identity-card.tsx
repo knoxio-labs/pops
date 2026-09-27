@@ -4,11 +4,11 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@pops/ui';
 
 import { buildWorld } from '../../foundation/model/placement-model';
+import { PhotosField } from '../../foundation/photos/photos-field';
 import { CodeField } from './code-field';
 import { CountAndPlace } from './count-and-place';
 import { draftRow } from './form-opening';
 import { IdentityFields } from './identity-fields';
-import { PhotosField } from './photos-field';
 
 import type { ReactElement } from 'react';
 

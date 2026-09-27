@@ -12,8 +12,8 @@ import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { useOnline } from '../../inventory-web/useOnline.js';
 import { useSyncLedger } from '../../inventory-web/useSyncLedger.js';
 import { ActivitySegment } from './activity/activity-segment.js';
+import { SyncLedgerBody } from './sync-ledger-body.js';
 import { parseSyncSegment } from './sync-model.js';
-import { SyncLedgerBody } from './sync-segment.js';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -106,6 +106,28 @@ function PageBanner({
   return <StaleBanner reports={reports} onReload={onReload} />;
 }
 
+function PageActions({
+  show,
+  attentionCount,
+  onChange,
+}: {
+  show: PageControl;
+  attentionCount: number | undefined;
+  onChange: (value: PageControl) => void;
+}): ReactElement {
+  return (
+    <Segmented
+      label="Show"
+      value={show}
+      onChange={onChange}
+      segments={[
+        { id: 'activity', label: 'Activity' },
+        { id: 'sync', label: 'Sync', count: attentionCount, alert: true },
+      ]}
+    />
+  );
+}
+
 /** Renders the Sync page frame, its URL-selected segment, and the read-only ledger. */
 export function SyncPage(): ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -134,19 +156,10 @@ export function SyncPage(): ReactElement {
       banner={banner}
       bodyClassName="gap-3"
       actions={
-        <Segmented
-          label="Show"
-          value={show}
+        <PageActions
+          show={show}
+          attentionCount={api.ledger?.attentionCount}
           onChange={(value) => navigate({ kind: 'page', value })}
-          segments={[
-            { id: 'activity', label: 'Activity' },
-            {
-              id: 'sync',
-              label: 'Sync',
-              count: api.ledger?.attentionCount,
-              alert: true,
-            },
-          ]}
         />
       }
     >
@@ -159,9 +172,12 @@ export function SyncPage(): ReactElement {
           segment={ledgerSegment}
           now={now}
           openId={openId}
+          disabledReason={disabledReason}
           onSegment={(value) => navigate({ kind: 'ledger', value })}
           onOpenCase={(id) => navigate({ kind: 'case', id })}
           onOpenResolved={(id) => navigate({ kind: 'resolved', id })}
+          onCloseCase={() => navigate({ kind: 'ledger', value: 'attention' })}
+          onStepCase={(id) => navigate({ kind: 'case', id })}
           onRetry={() => void api.reload()}
         />
       )}

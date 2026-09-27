@@ -1,0 +1,68 @@
+import { createElement, useCallback, useState } from 'react';
+
+import { useRepairPhotoUploads } from '../../../foundation/photos/use-repair-photo-uploads.js';
+
+import type { ChangeEvent, ReactElement } from 'react';
+
+import type { RepairPhotoUploadResult } from '../../../foundation/photos/use-repair-photo-uploads.js';
+
+interface RepairUpload {
+  busy: boolean;
+  refusal: string | null;
+  fileInput: ReactElement;
+  open: () => void;
+}
+
+function uploadRefusal(result: RepairPhotoUploadResult | undefined): string | null {
+  if (result === undefined || result.status === 'refused' || result.status === 'failed') {
+    return `Not saved. ${result?.reason ?? 'The photo was refused.'}`;
+  }
+  return null;
+}
+
+/** Manages the single photo picker used by a Sync repair action. */
+export function useRepairUpload(input: {
+  itemId: string;
+  existingPhotoCount: number;
+}): RepairUpload {
+  const uploads = useRepairPhotoUploads(input.itemId, input.existingPhotoCount);
+  const [fileInputNode, setFileInputNode] = useState<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  const upload = useCallback(
+    async (file: File): Promise<void> => {
+      setRefusal(null);
+      setBusy(true);
+      try {
+        const [result] = await uploads.add([file]);
+        setRefusal(uploadRefusal(result));
+      } catch (error: unknown) {
+        setRefusal(`Not saved. ${error instanceof Error ? error.message : 'The upload failed.'}`);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [uploads]
+  );
+
+  const onFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>): void => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (file !== undefined) void upload(file);
+    },
+    [upload]
+  );
+  const open = useCallback((): void => fileInputNode?.click(), [fileInputNode]);
+  const fileInput = createElement('input', {
+    ref: setFileInputNode,
+    type: 'file',
+    accept: 'image/*,.heic,.heif',
+    'aria-label': 'Choose a photo',
+    className: 'hidden',
+    onChange: onFileChange,
+  });
+
+  return { busy, refusal, fileInput, open };
+}

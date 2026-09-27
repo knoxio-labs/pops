@@ -119,11 +119,11 @@ let detailItem: WebGetResponse['item'] | null;
 let detailError: unknown;
 let detailRefetch: ReturnType<typeof vi.fn>;
 type Refetch = () => Promise<unknown>;
-const relatedRefetch = vi.fn<Refetch>().mockResolvedValue({});
+let primarySubjectRefetch: Refetch;
+let relatedSubjectRefetch: Refetch;
 
-function source(world: PlacementWorld, error: Error | null, subjectRefetch?: Refetch) {
-  const refetch = vi.fn<Refetch>().mockResolvedValue({});
-  const subject = subjectRefetch ?? refetch;
+function source(world: PlacementWorld, error: Error | null, subjectItemsRefetch: Refetch) {
+  const refetch = vi.fn().mockResolvedValue({});
   return {
     world,
     isLoading: false,
@@ -132,7 +132,7 @@ function source(world: PlacementWorld, error: Error | null, subjectRefetch?: Ref
     locationsQuery: { refetch },
     openContainersQuery: { refetch },
     closedContainersQuery: { refetch },
-    subjectItemsQuery: { refetch: subject },
+    subjectItemsQuery: { refetch: subjectItemsRefetch },
   };
 }
 
@@ -149,6 +149,8 @@ beforeEach(() => {
   detailItem = webItem;
   detailError = null;
   detailRefetch = vi.fn().mockResolvedValue({});
+  primarySubjectRefetch = vi.fn<Refetch>().mockResolvedValue({});
+  relatedSubjectRefetch = vi.fn<Refetch>().mockResolvedValue({});
 
   mocks.useCatalogueLookups.mockReturnValue({
     catalogue: undefined,
@@ -166,7 +168,7 @@ beforeEach(() => {
     return source(
       ids.includes('item-1') ? primaryWorld : emptyWorld,
       primaryError,
-      ids.includes('item-1') ? undefined : relatedRefetch
+      ids.includes('item-1') ? primarySubjectRefetch : relatedSubjectRefetch
     );
   });
   mocks.useWebEvents.mockReturnValue({
@@ -235,7 +237,7 @@ describe('useItemDetailModel', () => {
     hook.result.current.retry();
 
     await waitFor(() => expect(detailRefetch).toHaveBeenCalledOnce());
-    expect(relatedRefetch).toHaveBeenCalledOnce();
+    expect(relatedSubjectRefetch).toHaveBeenCalledOnce();
     expect(mocks.connectionsGraph).toHaveBeenCalledWith(
       expect.objectContaining({ query: { maxDepth: 10 } })
     );

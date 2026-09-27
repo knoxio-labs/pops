@@ -150,7 +150,7 @@ function flushPhotos(
   return operation;
 }
 
-/** Manages item-form photo state, staged create uploads and immediate edit uploads. */
+/** Manages item-detail photo state, staged create uploads and immediate edit uploads. */
 export function usePhotoUploads(
   mode: 'create' | 'edit',
   itemId: string | null,
