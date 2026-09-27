@@ -232,13 +232,16 @@ internal enum InventoryWire {
 }
 
 extension BFMInventoryTransport {
-    internal static func stubbed(_ transport: StubTransport) throws -> BFMInventoryTransport {
+    internal static func stubbed(
+        _ transport: StubTransport,
+        syncReadFailureObserver: @escaping SyncReadFailureObserver = { _, _ in }
+    ) throws -> BFMInventoryTransport {
         BFMInventoryTransport(
             client: BFMHTTPClient(
                 baseURL: try #require(URL(string: "https://bfm.example")),
                 transport: transport
             ),
-            timeZone: { .gmt }
+            timeZone: { .gmt }, syncReadFailureObserver: syncReadFailureObserver
         )
     }
 }

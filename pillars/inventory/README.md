@@ -281,6 +281,15 @@ those filters to `GET /web/items` and renders the server's totals and pages
 without client-side filtering or sorting. Table, compact and card views share
 the same URL state and keep scrolling within the list body.
 
+### Web inventory routes and navigation
+
+The web app's route table lives in `app/src/routes.tsx`, while the rail and
+PageNav projection comes from the contract in `app/src/nav.ts`. Absolute
+destinations used by global shortcuts are kept in `app/src/navigation-paths.ts`.
+The app test suite resolves every PageNav item and shortcut destination against
+the mounted route table so a navigation entry cannot silently point at an
+unmounted page.
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`
@@ -380,7 +389,10 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
 - Protocol 2 item rows carry the persisted `typeId` and canonical
   stable-field-ID `fieldValues` (each with its source and catalogue revision).
   The existing `typeKey` and `fields` projection remains alongside them for
-  protocol-1 readers during the transition.
+  protocol-1 readers during the transition. Canonical `many` values remain
+  complete in `fieldValues`; when one cannot fit the single-value legacy shape,
+  protocol 2 omits that entire field from `fields` rather than truncating the
+  value or failing the page. Protocol 1 keeps rejecting that cardinality.
 - Sync and web item rows also carry `computedValues`: one entry per computed
   field, evaluated against the active catalogue at read time, with `state`
   `ok`, `overridden` or `unavailable` (plus `reason`, `failedFieldId` and `missingInputs`), the
@@ -581,8 +593,7 @@ that exist:
 - [`src/api/modules/reports/`](src/api/modules/reports/README.md) — the
   read-only report surface and the warranty window it does not own.
   [`app/src/pages/item-detail/`](app/src/pages/item-detail/README.md),
-  [`app/src/pages/item-form/`](app/src/pages/item-form/README.md),
-  [`location-tree-page/`](app/src/pages/location-tree-page/README.md).
+  [`app/src/pages/item-form/`](app/src/pages/item-form/README.md).
 
 Everything else is documented by the file header comments in the directory
 itself.

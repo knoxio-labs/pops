@@ -14,14 +14,24 @@ export type {
   PersistedItemType,
   PersistedItemTypeField,
   PersistedTypeLookup,
+  UnresolvedItemType,
+  UnresolvedItemTypeField,
 } from './catalogue.js';
+export {
+  MAX_TYPE_TREE_DEPTH,
+  ancestorIds,
+  descendantIds,
+  resolveTypeTree,
+  typeChain,
+} from './catalogue-tree.js';
+export type { TypeChain } from './catalogue-tree.js';
 export {
   patchItemFieldValues,
   replaceItemFieldValues,
   validateProtocol1Fields,
 } from './protocol-1-values.js';
 export { clearItemFieldValues, copyItemFieldValues } from './protocol-1-copy.js';
-export { loadProtocol1Fields } from './protocol-1-read.js';
+export { loadLegacyFieldsForProtocol, loadProtocol1Fields } from './protocol-1-read.js';
 export { Protocol1ValueError } from './protocol-1-types.js';
 export { projectProtocol1Catalogue } from './protocol-1-catalogue.js';
 export type {

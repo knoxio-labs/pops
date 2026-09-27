@@ -24,25 +24,38 @@ It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface                                | What it does                                                                                      |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.                |
-| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.                    |
-| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.                       |
-| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.                     |
-| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.                        |
-| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.                  |
-| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.                           |
-| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.                |
-| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.                         |
-| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).               |
-| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                          |
-| `GET /mobile/barcode/lookup/:code`     | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes. |
-| `GET /mobile/purchases`                | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape).      |
-| `GET /mobile/purchases/search`         | Purchase and line matches, including the owning order context for each line.                      |
-| `GET /mobile/purchases/:id`            | One order with its lines and Inventory-link flags, for the detail screen.                         |
-| `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).              |
-| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.                |
+| Surface                                | What it does                                                                                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.                                                               |
+| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.                                                                   |
+| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.                                                                      |
+| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.                                                                    |
+| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.                                                                       |
+| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.                                                                 |
+| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.                                                                          |
+| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.                                                               |
+| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.                                                                        |
+| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
+| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                                                                         |
+| `GET /mobile/barcode/lookup/:code`     | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes, with optional ADR-054 detail on `unavailable`. |
+| `GET /mobile/purchases`                | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape).                                                     |
+| `GET /mobile/purchases/search`         | Purchase and line matches, including the owning order context for each line.                                                                     |
+| `GET /mobile/purchases/:id`            | One order with its lines and Inventory-link flags, for the detail screen.                                                                        |
+| `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).                                                             |
+| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.                                                               |
+
+The barcode relay preserves an ADR-054 envelope supplied by the barcode
+pillar. The mobile caller opts into additive diagnostic fields with
+`X-Pops-Barcode-Diagnostics: 1`; without that header BFM returns the exact
+legacy `not_found` and `unavailable` objects for installed clients whose
+generated decoders reject unknown properties. For older barcode deployments
+that return a bare `unavailable`, BFM adds a retryable gateway envelope before
+applying that compatibility projection. Downstream 401 and 403 responses mean
+BFM's service account is absent or under-scoped, so they become
+`bfm.upstream.misconfigured`; they do not describe the phone's authentication.
+Structured relay events carry the BFM request ID, duration, outcome, safe
+failure class, retryability, and the upstream request ID when it differs. The
+scanned code and all credentials are excluded.
 
 Inventory mutations retain the phone's `catalogueRevision` while BFM relays
 them to the inventory pillar. The revision is the immutable schema against

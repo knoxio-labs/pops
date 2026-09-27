@@ -78,11 +78,14 @@ internal struct InventoryItemDetailHeader: View {
                 .strikethrough(detail.item.lifecycle == .destroyed)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            Text(
+                InventoryFormType.detailSubtitle(
+                    typeName: detail.item.typeName, quantity: detail.item.quantity.count)
+            )
+            .font(.popsSubheadline)
+            .foregroundStyle(Color.popsMutedForeground)
+            .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: PopsSpacing.sm) {
-                Text(detail.subtitle)
-                    .font(.popsSubheadline)
-                    .foregroundStyle(Color.popsMutedForeground)
-                    .lineLimit(1)
                 if let code = detail.item.code {
                     InventoryCodeBadge(code: code)
                 }

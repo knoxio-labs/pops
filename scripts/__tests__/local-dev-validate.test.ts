@@ -5,11 +5,14 @@ const state = vi.hoisted(() => ({
   fingerprints: new Array<string>(),
   sources: new Array<string>(),
   cached: false,
-  scriptsStatus: 0,
+  rootTypecheckStatus: 0,
+  rootTestStatus: 0,
+  docsStatus: 0,
   taskStatus: 0,
+  changedPaths: ['libs/example/src/code.ts'],
 }));
 vi.mock('../local-dev/discovery.mjs', () => ({
-  discoverUnits: async () => [
+  discoverUnits: vi.fn(async () => [
     {
       unitPath: '/fixture/libs/example',
       packageName: 'example',
@@ -28,19 +31,16 @@ vi.mock('../local-dev/discovery.mjs', () => ({
       dependencies: [],
       taskNames: ['typecheck', 'test'],
     },
-  ],
-  discoverLocalTasks: async ({
-    taskNames,
-    unitPaths,
-  }: {
-    taskNames: string[];
-    unitPaths: string[];
-  }) => unitPaths.map((unitPath) => ({ unitPath, taskName: taskNames[0] })),
-  prepareTasks: async () => [{ unitPath: 'libs/example', taskName: 'build' }],
+  ]),
+  discoverLocalTasks: vi.fn(
+    async ({ taskNames, unitPaths }: { taskNames: string[]; unitPaths: string[] }) =>
+      unitPaths.map((unitPath) => ({ unitPath, taskName: taskNames[0] }))
+  ),
+  prepareTasks: vi.fn(async () => [{ unitPath: 'libs/example', taskName: 'build' }]),
 }));
 vi.mock('../local-dev/affected.mjs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../local-dev/affected.mjs')>();
-  return { ...actual, changedFiles: () => ['libs/example/src/code.ts'] };
+  return { ...actual, changedFiles: () => state.changedPaths };
 });
 vi.mock('../local-dev/private-inputs.mjs', () => ({ privateInputs: () => [] }));
 vi.mock('../local-dev/fingerprint.mjs', () => ({
@@ -48,8 +48,9 @@ vi.mock('../local-dev/fingerprint.mjs', () => ({
     state.fingerprints.length > 1 ? state.fingerprints.shift() : state.fingerprints[0],
 }));
 vi.mock('../local-dev/repository-inputs.mjs', () => ({
-  repositoryFingerprint: () =>
-    state.sources.length > 1 ? state.sources.shift() : state.sources[0],
+  repositoryFingerprint: vi.fn(() =>
+    state.sources.length > 1 ? state.sources.shift() : state.sources[0]
+  ),
 }));
 vi.mock('../local-dev/validation-cache.mjs', () => ({
   readReceipt: () => null,
@@ -71,42 +72,96 @@ vi.mock('../local-dev/run-all.mjs', () => ({
   },
 }));
 vi.mock('node:child_process', () => ({
-  spawnSync: (_command: string, args: string[]) => {
+  spawnSync: (command: string, args: string[]) => {
     state.events.push(args.join(' '));
-    return { status: args.includes('typecheck:scripts') ? state.scriptsStatus : 0 };
+    if (command === 'node') return { status: state.docsStatus };
+    if (args.includes('typecheck:scripts')) return { status: state.rootTypecheckStatus };
+    if (args.includes('test:scripts')) return { status: state.rootTestStatus };
+    return { status: 0 };
   },
 }));
 
+import { discoverUnits, discoverLocalTasks, prepareTasks } from '../local-dev/discovery.mjs';
+import { repositoryFingerprint } from '../local-dev/repository-inputs.mjs';
 import { validate } from '../local-dev/validate.mjs';
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.stubEnv('CI', undefined);
   state.events = [];
   state.fingerprints = ['steady'];
   state.sources = ['source'];
   state.cached = false;
-  state.scriptsStatus = 0;
+  state.rootTypecheckStatus = 0;
+  state.rootTestStatus = 0;
+  state.docsStatus = 0;
   state.taskStatus = 0;
+  state.changedPaths = ['libs/example/src/code.ts'];
 });
 
 afterEach(() => vi.unstubAllEnvs());
 
 describe('validation orchestration', () => {
+  it('plans without reading source snapshots or running checks', async () => {
+    expect(await validate({ cwd: '/fixture', planOnly: true })).toBe(0);
+    expect(discoverUnits).toHaveBeenCalledOnce();
+    expect(repositoryFingerprint).not.toHaveBeenCalled();
+    expect(discoverLocalTasks).not.toHaveBeenCalled();
+    expect(state.events).toEqual([]);
+  });
+  it('shares the trusted discovery result across checks, prerequisites and tests', async () => {
+    expect(await validate({ cwd: '/fixture' })).toBe(0);
+    expect(discoverUnits).toHaveBeenCalledOnce();
+    const units = await vi.mocked(discoverUnits).mock.results[0]?.value;
+    expect(units).toHaveLength(3);
+    expect(discoverLocalTasks).toHaveBeenCalledTimes(2);
+    for (const [options] of vi.mocked(discoverLocalTasks).mock.calls)
+      expect(options.units).toBe(units);
+    expect(vi.mocked(prepareTasks).mock.calls[0]?.[0].units).toBe(units);
+  });
   it('normalizes discovered absolute paths and excludes clients and unrelated units', async () => {
     expect(await validate({ cwd: '/fixture', typecheckOnly: true })).toBe(0);
     expect(state.events).toContain('typecheck:libs/example');
     expect(state.events).not.toContain('typecheck:pillars/other');
     expect(state.events).not.toContain('typecheck:clients/ios');
   });
-  it('builds before root scripts on a full cold check', async () => {
+  it('builds and prepares generated inputs before checking root tooling', async () => {
     expect(await validate({ cwd: '/fixture', all: true, typecheckOnly: true })).toBe(0);
     expect(state.events.indexOf('build')).toBeLessThan(
       state.events.indexOf('run typecheck:scripts')
     );
     expect(state.events).toContain('typecheck:pillars/other');
   });
+  it('typechecks standalone root tooling when no product unit is selected', async () => {
+    state.changedPaths = ['scripts/ci/integration-promote.mjs'];
+    expect(await validate({ cwd: '/fixture', typecheckOnly: true })).toBe(0);
+    expect(state.events).toContain('run typecheck:scripts');
+    expect(state.events).not.toContain('typecheck:libs/example');
+    expect(state.events).not.toContain('typecheck:pillars/other');
+  });
+  it('runs standalone root tooling tests and returns their failure', async () => {
+    state.changedPaths = ['scripts/ci/integration-promote.mjs'];
+    state.rootTestStatus = 3;
+    expect(await validate({ cwd: '/fixture' })).toBe(3);
+    expect(state.events).toContain('run typecheck:scripts');
+    expect(state.events).toContain('run test:scripts');
+  });
+  it('stops documentation-only validation after lint, format and the docs guard', async () => {
+    state.changedPaths = ['README.md', 'pillars/other/README.md'];
+    expect(await validate({ cwd: '/fixture' })).toBe(0);
+    expect(state.events).toEqual([
+      'lint',
+      'exec -- pnpm format:check',
+      'scripts/ci/check-docs-model.mjs',
+    ]);
+  });
+  it('returns a documentation guard failure before typechecking', async () => {
+    state.docsStatus = 4;
+    expect(await validate({ cwd: '/fixture' })).toBe(4);
+    expect(state.events).not.toContain('typecheck:libs/example');
+  });
   it('does not check units or publish success after prerequisite failure', async () => {
-    state.scriptsStatus = 2;
+    state.rootTypecheckStatus = 2;
     expect(await validate({ cwd: '/fixture', all: true, typecheckOnly: true })).toBe(2);
     expect(state.events).not.toContain('typecheck:libs/example');
     expect(state.events).not.toContain('receipt');
@@ -144,6 +199,7 @@ describe('validation orchestration', () => {
     expect(state.events).toEqual([
       'lint',
       'exec -- pnpm format:check',
+      'scripts/ci/check-docs-model.mjs',
       'run test:scripts',
       'test:libs/example',
       'test:pillars/other',

@@ -1,6 +1,6 @@
 import { List, Network, Search } from 'lucide-react';
 
-import { Input, Select, ViewToggleGroup } from '@pops/ui';
+import { Input, Tabs, TabsList, TabsTrigger, ViewToggleGroup } from '@pops/ui';
 
 import { isConnectionKind, type ConnectionKind, type ConnectionView } from './connections-url.js';
 
@@ -14,22 +14,22 @@ export interface ConnectionsToolbarProps {
   kind: ConnectionKind;
   view: ConnectionView;
   summary: WebConnectionsListResponse['summary'] | null;
+  total: number | null;
+  narrowed: boolean;
   onQueryChange: (value: string) => void;
   onKindChange: (kind: ConnectionKind) => void;
   onViewChange: (view: ConnectionView) => void;
 }
 
-const KIND_OPTIONS = [
-  { value: 'all', label: 'All connections' },
-  { value: 'item', label: 'Between items' },
-  { value: 'fixture', label: 'To fixtures' },
-];
-
-function Summary({ summary }: Pick<ConnectionsToolbarProps, 'summary'>): ReactElement | null {
-  if (summary === null) return null;
+function Summary({
+  summary,
+  total,
+  narrowed,
+}: Pick<ConnectionsToolbarProps, 'summary' | 'total' | 'narrowed'>): ReactElement | null {
+  if (!narrowed || summary === null || total === null) return null;
   return (
     <p aria-live="polite" className="text-xs tabular-nums text-muted-foreground">
-      {summary.connections} connections · {summary.items} items · {summary.fixtures} fixtures
+      {summary.connections} of {total} shown: {summary.items} items, {summary.fixtures} fixtures
     </p>
   );
 }
@@ -40,6 +40,8 @@ export function ConnectionsToolbar({
   kind,
   view,
   summary,
+  total,
+  narrowed,
   onQueryChange,
   onKindChange,
   onViewChange,
@@ -61,16 +63,19 @@ export function ConnectionsToolbar({
           className="pl-9"
         />
       </label>
-      <Select
-        aria-label="Connection kind"
+      <Tabs
         value={kind}
-        options={KIND_OPTIONS}
-        onChange={(event) => {
-          if (isConnectionKind(event.target.value)) onKindChange(event.target.value);
+        onValueChange={(value) => {
+          if (isConnectionKind(value)) onKindChange(value);
         }}
-        containerClassName="w-48"
-      />
-      <Summary summary={summary} />
+      >
+        <TabsList aria-label="Connection kind" variant="line">
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="item">Between items</TabsTrigger>
+          <TabsTrigger value="fixture">To fixtures</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <Summary summary={summary} total={total} narrowed={narrowed} />
       <ViewToggleGroup<ConnectionView>
         className="ml-auto"
         value={view}
