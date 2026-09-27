@@ -4,15 +4,32 @@ import { ButtonPrimitive, Input, cn } from '@pops/ui';
 
 import { DROP_TARGET_CLASS } from '../../foundation/drag/drag-dock.js';
 import { PLACE_ICONS } from '../../foundation/places/place-icons.js';
-import { PlaceMenu } from './place-menu.js';
+import { PlaceMenu, type PlaceMenuHandlers } from './place-menu.js';
 
 import type { ReactElement } from 'react';
 
 import type { RowDropState } from './tree-drop.js';
-import type { TreeRowProps } from './tree-row.js';
 import type { TreeRow as TreeRowModel } from './tree-rows.js';
 
 const INDENTS = ['pl-1', 'pl-5', 'pl-9', 'pl-13', 'pl-17', 'pl-21', 'pl-25'] as const;
+
+/** Props for one keyboard- and pointer-selectable tree row. */
+export interface TreeRowProps {
+  readonly row: TreeRowModel;
+  readonly count: number;
+  readonly selected: boolean;
+  readonly offline: boolean;
+  readonly lifted?: boolean;
+  readonly drop?: RowDropState;
+  readonly renaming?: {
+    readonly onCommit: (name: string) => void;
+    readonly onCancel: () => void;
+  };
+  readonly menu: PlaceMenuHandlers;
+  readonly onSelect: () => void;
+  readonly onToggle: () => void;
+  readonly onOpen: () => void;
+}
 
 function InlineNameInput({
   initial,

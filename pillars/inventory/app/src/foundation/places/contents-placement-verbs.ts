@@ -6,7 +6,7 @@ import type { useBulkItemVerbs } from '../../inventory-web/item-verbs-bulk.js';
 import type { useTrackedWrites } from '../list-page/take-out.js';
 import type { PlacementTarget } from '../model/model.js';
 import type { PlacementWorld } from '../model/placement-model.js';
-import type { ContentsVerbs } from './use-contents-verbs.js';
+import type { ContentsVerbs } from './contents-verb-types.js';
 
 type BulkVerbs = ReturnType<typeof useBulkItemVerbs>;
 type Tracked = ReturnType<typeof useTrackedWrites>;

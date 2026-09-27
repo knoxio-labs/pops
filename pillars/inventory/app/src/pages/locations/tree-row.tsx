@@ -7,30 +7,12 @@ import { DropLine, TreeRowSurface } from './tree-row-surface.js';
 
 import type { ReactElement } from 'react';
 
-import type { PlaceMenuHandlers } from './place-menu.js';
-import type { RowDropState } from './tree-drop.js';
-import type { TreeRow as TreeRowModel } from './tree-rows.js';
+import type { TreeRowProps } from './tree-row-surface.js';
+
+export type { TreeRowProps } from './tree-row-surface.js';
 
 /** Icons used for the semantic kinds assigned to inventory places. */
 export { PLACE_ICONS };
-
-/** Props for one keyboard- and pointer-selectable tree row. */
-export interface TreeRowProps {
-  readonly row: TreeRowModel;
-  readonly count: number;
-  readonly selected: boolean;
-  readonly offline: boolean;
-  readonly lifted?: boolean;
-  readonly drop?: RowDropState;
-  readonly renaming?: {
-    readonly onCommit: (name: string) => void;
-    readonly onCancel: () => void;
-  };
-  readonly menu: PlaceMenuHandlers;
-  readonly onSelect: () => void;
-  readonly onToggle: () => void;
-  readonly onOpen: () => void;
-}
 
 /** Renders one location row and its inline rename state. */
 export function TreeRow(props: TreeRowProps): ReactElement {
