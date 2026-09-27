@@ -1,18 +1,29 @@
 import { execFileSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   analyzeSources,
   ERROR_CODE_PATTERN,
   formatFindings,
   maskNonCode,
+  readGitSources,
 } from '../check-error-codes.mjs';
+import { commit, fixtureRepo, write } from './git-fixture.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const guardPath = resolve(here, '..', 'check-error-codes.mjs');
+const created: string[] = [];
+
+afterEach(() => {
+  while (created.length > 0) {
+    const directory = created.pop();
+    if (directory !== undefined) rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 const passingSource = {
   path: 'pillars/demo/src/api/errors.ts',
@@ -105,6 +116,19 @@ describe('check-error-codes', () => {
       },
     ]);
     expect(result.findings.some((finding) => finding.rule === 'class-name-derivation')).toBe(true);
+  });
+
+  it('reads revision-prefixed git grep paths as repository-relative paths', () => {
+    const root = fixtureRepo();
+    created.push(root);
+    const source = "const demoErrors = defineErrors('demo', { ok: { area: 'request' } });";
+    write(root, 'pillars/demo/src/api/errors.ts', source);
+    commit(root, 'add error registration');
+    execFileSync('git', ['-C', root, 'update-ref', 'refs/remotes/origin/main', 'main']);
+
+    expect(readGitSources(root, 'origin/main')).toEqual([
+      { path: 'pillars/demo/src/api/errors.ts', text: source },
+    ]);
   });
 
   it('runs the exact CLI self-test', () => {
