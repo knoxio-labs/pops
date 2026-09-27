@@ -1,4 +1,5 @@
 name: Quality
+run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
 
 # Lint / format / module-boundaries gate, scoped to the units a PR actually
 # touches. On `pull_request` these run over `scripts/` (root-owned tooling,

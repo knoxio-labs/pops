@@ -35,7 +35,9 @@ out or executes pull request content despite holding `actions: write` and
   matching source repository, branch and head. Admission then requires a run title
   that records the target base explicitly; a missing or older base stays pending.
   Workflow identity comes from its registered ID, because the run API may put a
-  custom title in both `name` and `display_title`. Ambiguous
+  custom title in both `name` and `display_title`. Fork PRs set that base-bearing
+  title; same-repository events retain the canonical workflow name, allowing the
+  observer to roll out while the previous name-based observer is still on main. Ambiguous
   associations block, and cancellation requires an explicit PR association.
 - Only runs for the same event, PR and base branch contribute; the latest run
   number and attempt wins. Completed runs pass only on `success` or `skipped`.

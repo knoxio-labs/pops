@@ -1,4 +1,5 @@
 name: iOS Quality
+run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
 
 # The only workflow in this repo that does not run on `ubuntu-latest`, because
 # Swift does not build anywhere else. `knoxio-labs/pops` is public, so
