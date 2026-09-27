@@ -220,7 +220,9 @@ extension InventoryItemFormModel {
             case .edit:
                 guard let original else { return [] }
                 return InventoryItemFormSubmission.protocol2Edit(
-                    draft, protocol2: protocol2, type: type, original: original)
+                    draft, protocol2: protocol2, type: type, original: original,
+                    catalogueRevision: protocol2Catalogue?.revision.revision
+                        ?? protocol2.catalogueRevision)
             }
         }
         switch mode {

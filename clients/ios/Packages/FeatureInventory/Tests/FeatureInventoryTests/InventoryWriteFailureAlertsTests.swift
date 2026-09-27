@@ -28,6 +28,18 @@ internal struct InventoryWriteFailureAlertsTests {
 
         #expect(error == source)
     }
+
+    @Test("server rejection messages reach the shared error presenter")
+    func commandRejectionPresentation() {
+        let message = "The catalogue is out of date. Refresh and try again."
+        let refusal = InventoryCommandError.rejected(reason: .invalid, message: message)
+        let error = InventoryWriteFailure.command(refusal).popsError
+
+        #expect(error.code == "ios.inventory.command_rejected")
+        #expect(error.message == message)
+        #expect(error.kind == .client)
+        #expect(!error.retryable)
+    }
 }
 
 /// POPS-4192: every screen that keeps an `InventoryWriteFailure` presents it
