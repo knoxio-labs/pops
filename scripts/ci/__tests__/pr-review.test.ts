@@ -494,6 +494,21 @@ describe('the prompt', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('says it is a first review when nothing is carried', () => {
     expect(carriedBlock([])).toContain('first review');
   });
+
+  it('reserves low for advisory non-defects and makes substantive defects blocking', () => {
+    const prompt = fill(PROMPT_TEMPLATE, {
+      scope: SCOPE.full,
+      rubric: RUBRIC.join('\n- '),
+      carried: carriedBlock([]),
+      rejudge: '',
+      out: '/x/findings.json',
+      diff: 'diff body',
+    });
+    expect(prompt).toContain('Both `high` and `medium` block a merge');
+    expect(prompt).toContain('never classify a concrete defect as `low`');
+    expect(prompt).toContain('Use `low` only for a');
+    expect(prompt).toContain('non-defect maintainability suggestion');
+  });
 });
 
 describe('usage', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
