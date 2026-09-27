@@ -23,11 +23,10 @@ export interface StoreHereSheetProps {
 }
 
 function statusOf(
-  placement: ReturnType<typeof usePlacementSources>,
-  searchStatus: ReturnType<typeof useWebSearch>['status']
+  placement: ReturnType<typeof usePlacementSources>
 ): 'pending' | 'error' | 'success' {
-  if (placement.isError || searchStatus === 'error') return 'error';
-  if (placement.isLoading || searchStatus === 'pending') return 'pending';
+  if (placement.isError) return 'error';
+  if (placement.isLoading) return 'pending';
   return 'success';
 }
 
@@ -54,7 +53,7 @@ function useStoreHereSources(query: string, target: StoreHereTarget) {
     [placement.world, search.results.items]
   );
   const candidates = useMemo(() => storeCandidates(world, target, query), [query, target, world]);
-  const status = statusOf(placement, search.status);
+  const status = statusOf(placement);
   return { placement, search, itemVerbs, batch, world, candidates, status };
 }
 
