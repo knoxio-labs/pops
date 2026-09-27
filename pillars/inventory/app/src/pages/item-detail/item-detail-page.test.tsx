@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import { useState } from 'react';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppContextProvider } from '@pops/navigation';
@@ -31,14 +32,21 @@ vi.mock('./container/workspace', () => ({
     model: ItemDetailModel;
     storeHereOpen: boolean;
     storeTarget: { name: string };
-  }): ReactElement => (
-    <>
-      <output data-testid="container-workspace">{props.model.item.name}</output>
-      {props.storeHereOpen ? (
-        <output data-testid="store-here-target">{props.storeTarget.name}</output>
-      ) : null}
-    </>
-  ),
+  }): ReactElement => {
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    return (
+      <>
+        <output data-testid="container-workspace">{props.model.item.name}</output>
+        <button type="button" onClick={() => setDetailsOpen(true)}>
+          Open container details
+        </button>
+        {detailsOpen ? <output data-testid="container-workspace-details" /> : null}
+        {props.storeHereOpen ? (
+          <output data-testid="store-here-target">{props.storeTarget.name}</output>
+        ) : null}
+      </>
+    );
+  },
 }));
 
 const item = {
@@ -87,8 +95,18 @@ function LocationProbe(): ReactElement {
   return <output data-testid="route">{useLocation().pathname}</output>;
 }
 
+function NavigationProbe(): ReactElement {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate('/inventory/items/container-2')}>
+      Navigate to container-2
+    </button>
+  );
+}
+
 function renderPage(
-  initialEntry: string | { pathname: string; state?: unknown } = '/inventory/items/item-1'
+  initialEntry: string | { pathname: string; state?: unknown } = '/inventory/items/item-1',
+  includeNavigationProbe = false
 ): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -100,6 +118,7 @@ function renderPage(
               <Route path="/inventory/items/:id" element={<ItemDetailPage />} />
             </Routes>
             <LocationProbe />
+            {includeNavigationProbe ? <NavigationProbe /> : null}
           </ShortcutProvider>
         </AppContextProvider>
       </MemoryRouter>
@@ -318,6 +337,44 @@ describe('ItemDetailPage', () => {
 
     expect(screen.getByTestId('container-workspace')).toHaveTextContent('Archive box');
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
+
+  it('resets container workspace state when navigating to another container', () => {
+    const firstContainer = {
+      ...model,
+      item: {
+        ...item,
+        id: 'container-1',
+        name: 'First box',
+        container: { access: 'open', full: false },
+      },
+    };
+    const secondContainer = {
+      ...model,
+      item: {
+        ...item,
+        id: 'container-2',
+        name: 'Second box',
+        container: { access: 'open', full: false },
+      },
+    };
+    mocks.useItemDetailModel.mockImplementation((id: string) => ({
+      status: 'ready',
+      error: null,
+      model: id === 'container-2' ? secondContainer : firstContainer,
+      banner: null,
+      retry: vi.fn(),
+    }));
+
+    renderPage('/inventory/items/container-1', true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open container details' }));
+    expect(screen.getByTestId('container-workspace-details')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to container-2' }));
+
+    expect(screen.getByTestId('container-workspace')).toHaveTextContent('Second box');
+    expect(screen.queryByTestId('container-workspace-details')).not.toBeInTheDocument();
   });
 
   it('keeps the partial boundary at any missing deferred read', () => {
