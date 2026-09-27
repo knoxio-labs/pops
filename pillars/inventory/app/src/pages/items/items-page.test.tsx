@@ -158,6 +158,10 @@ function LocationProbe(): ReactElement {
   return <output data-testid="location">{useLocation().search + useLocation().pathname}</output>;
 }
 
+function LocationStateProbe(): ReactElement {
+  return <output data-testid="location-state">{JSON.stringify(useLocation().state)}</output>;
+}
+
 function renderPage(initialEntry = '/inventory/items'): void {
   mocks.useItemRows.mockImplementation(() => currentRows);
   mocks.useOnline.mockImplementation(() => currentOnline);
@@ -195,6 +199,7 @@ function renderPage(initialEntry = '/inventory/items'): void {
           <Route path="*" element={<ItemsPage />} />
         </Routes>
         <LocationProbe />
+        <LocationStateProbe />
       </ShortcutProvider>
     </MemoryRouter>
   );
@@ -397,6 +402,26 @@ describe('ItemsPage', () => {
     fireEvent.keyDown(grid, { key: 'j' });
     fireEvent.keyDown(grid, { key: 'Enter' });
     expect(screen.getByTestId('location')).toHaveTextContent('/inventory/items/item-1');
+  });
+
+  it('clicking a row opens the item with the Items list trail', () => {
+    const rows = [
+      activeRow,
+      { ...activeRow, id: 'item-2', name: 'Kitchen 14' },
+      { ...activeRow, id: 'item-3', name: 'Kitchen 15' },
+    ];
+    currentRows = rowsResult({ rows });
+    renderPage('/inventory/items?q=lead');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Kitchen 14' }));
+
+    expect(JSON.parse(screen.getByTestId('location-state').textContent ?? '')).toEqual({
+      listTrail: {
+        listName: 'Items',
+        href: '/inventory/items?q=lead',
+        ids: ['item-1', 'item-2', 'item-3'],
+      },
+    });
   });
 
   it('Escape with rows ticked clears them; with none it leaves the input to the global dismiss', () => {

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { coreWorld } from '../../foundation/test-fixtures/core';
 
 const mocks = vi.hoisted(() => ({
-  bulk: { editValues: vi.fn() },
+  itemVerbs: { editValues: vi.fn() },
   pending: new Set<string>(),
 }));
 
@@ -14,11 +14,8 @@ vi.mock('../../inventory-web/useCatalogueLookups', () => ({
   }),
 }));
 
-vi.mock('../../inventory-web/item-verbs-bulk', () => ({
-  useBulkItemVerbs: () => mocks.bulk,
-}));
-
 vi.mock('../../inventory-web/item-verbs', () => ({
+  useItemVerbs: () => mocks.itemVerbs,
   usePendingItemIds: () => mocks.pending,
 }));
 
@@ -107,13 +104,13 @@ function model(): FactEditingModel {
 }
 
 function applied() {
-  return { applied: ['itm-drill'], refused: [], undo: null };
+  return { status: 'applied' as const, seq: 4, undo: null };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.pending.clear();
-  mocks.bulk.editValues.mockResolvedValue(applied());
+  mocks.itemVerbs.editValues.mockResolvedValue(applied());
 });
 
 describe('useFactEditing', () => {
@@ -150,12 +147,12 @@ describe('useFactEditing', () => {
     act(() => result.current.save());
 
     expect(result.current.problem).toBe('Choose one value.');
-    expect(mocks.bulk.editValues).not.toHaveBeenCalled();
+    expect(mocks.itemVerbs.editValues).not.toHaveBeenCalled();
   });
 
   it('shows saving and then returns to idle after an applied edit', async () => {
     let resolve: ((value: ReturnType<typeof applied>) => void) | undefined;
-    mocks.bulk.editValues.mockReturnValueOnce(
+    mocks.itemVerbs.editValues.mockReturnValueOnce(
       new Promise((finish) => {
         resolve = finish;
       })
@@ -165,13 +162,8 @@ describe('useFactEditing', () => {
     act(() => result.current.start('serial'));
     act(() => result.current.save());
     expect(result.current.phaseOf('serial')).toBe('saving');
-    expect(mocks.bulk.editValues).toHaveBeenCalledWith([
-      {
-        id: 'itm-drill',
-        patches: [
-          { fieldId: 'field-serial', values: [{ targetId: 'itm-tape', targetKind: 'item' }] },
-        ],
-      },
+    expect(mocks.itemVerbs.editValues).toHaveBeenCalledWith('itm-drill', [
+      { fieldId: 'field-serial', values: [{ targetId: 'itm-tape', targetKind: 'item' }] },
     ]);
 
     if (resolve === undefined) throw new Error('edit promise did not expose a resolver');
@@ -181,7 +173,7 @@ describe('useFactEditing', () => {
 
   it('marks an edit pending when another mutation is already in flight', () => {
     mocks.pending.add('itm-drill');
-    mocks.bulk.editValues.mockReturnValueOnce(new Promise(() => undefined));
+    mocks.itemVerbs.editValues.mockReturnValueOnce(new Promise(() => undefined));
     const { result } = renderHook(() => useFactEditing(model()));
 
     act(() => result.current.start('serial'));
@@ -191,18 +183,12 @@ describe('useFactEditing', () => {
   });
 
   it('restores the old draft and exposes the server refusal', async () => {
-    mocks.bulk.editValues.mockResolvedValueOnce({
-      applied: [],
-      refused: [
-        {
-          id: 'itm-drill',
-          refusal: {
-            kind: 'outcome',
-            outcome: { status: 'rejected', reason: 'Catalogue changed.' },
-          },
-        },
-      ],
-      undo: null,
+    mocks.itemVerbs.editValues.mockResolvedValueOnce({
+      status: 'refused',
+      refusal: {
+        kind: 'outcome',
+        outcome: { status: 'rejected', reason: 'Catalogue changed.' },
+      },
     });
     const { result } = renderHook(() => useFactEditing(model()));
 

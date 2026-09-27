@@ -2,7 +2,8 @@ import { useState } from 'react';
 
 import { fieldProblem, fieldValuePatch, refusalText } from './fact-editing-validation';
 
-import type { BulkItemVerbs } from '../../inventory-web/item-verbs-bulk';
+import type { FieldValuePatch } from '../../inventory-web/commands';
+import type { VerbResult } from '../../inventory-web/item-verbs';
 import type { FieldDrafts, FormFieldDef } from '../item-form/field-model';
 
 /** The state and operations managed by one-at-a-time fact editing. */
@@ -24,7 +25,7 @@ export interface FactEditingStateInput {
   fields: readonly FormFieldDef[];
   initialDrafts: FieldDrafts;
   pendingItemIds: ReadonlySet<string>;
-  editValues: BulkItemVerbs['editValues'];
+  editValues: (patches: readonly FieldValuePatch[]) => Promise<VerbResult>;
 }
 
 interface FactEditingSetters {
@@ -85,14 +86,13 @@ function createSave(context: SaveContext): () => void {
     context.setters.setProblem(null);
     context.setters.setRejection(null);
     void context.input
-      .editValues([{ id: context.input.itemId, patches: [fieldValuePatch(context.drafts, field)] }])
+      .editValues([fieldValuePatch(context.drafts, field)])
       .then((result) => {
-        const refused = result.refused.find((entry) => entry.id === context.input.itemId);
-        if (refused !== undefined) {
+        if (result.status === 'refused') {
           context.setters.setDrafts(context.initialDrafts);
           context.setters.setActiveKey(key);
           context.setters.setPhase('rejected');
-          context.setters.setRejection({ key, reason: refusalText(refused.refusal) });
+          context.setters.setRejection({ key, reason: refusalText(result.refusal) });
           return;
         }
         context.setters.setActiveKey(null);

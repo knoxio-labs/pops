@@ -1,7 +1,5 @@
-import { Button, cn } from '@pops/ui';
-
+import { VerbButton } from '../../foundation/item-page/verb-button';
 import { PlacementPicker } from '../../foundation/placement-picker/placement-picker';
-import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip';
 import { LegacyHeaderActions } from './legacy-header-actions';
 import { MoreMenu } from './more-menu';
 
@@ -28,41 +26,6 @@ export interface HeaderActionsProps {
   onCreatePlace?: (name: string, parentId: string | null) => Promise<void>;
 }
 
-function DetailVerbButton({
-  verb,
-  primary,
-  onClick,
-}: {
-  verb: DetailVerb;
-  primary: boolean;
-  onClick: () => void;
-}): ReactElement {
-  const Icon = verb.icon;
-  const refused = verb.disabledReason !== undefined;
-  const button = (
-    <Button
-      size="default"
-      variant={primary ? 'default' : 'outline'}
-      className={cn('whitespace-nowrap', refused && 'opacity-50')}
-      prefix={<Icon className="size-4" aria-hidden />}
-      aria-disabled={refused || undefined}
-      onClick={refused ? undefined : onClick}
-    >
-      {verb.label}
-    </Button>
-  );
-
-  return (
-    <HintTooltip
-      label={verb.detail === undefined ? verb.label : `${verb.label}. ${verb.detail}`}
-      shortcutId={verb.shortcutId}
-      disabledReason={verb.disabledReason}
-    >
-      {button}
-    </HintTooltip>
-  );
-}
-
 function MoveVerb({ props, button }: { props: HeaderActionsProps; button: ReactElement }) {
   return (
     <PlacementPicker
@@ -84,7 +47,16 @@ function MoveVerb({ props, button }: { props: HeaderActionsProps; button: ReactE
 function VerbHeaderActions(props: HeaderActionsProps): ReactElement {
   const renderVerb = (verb: DetailVerb, primary: boolean): ReactElement => {
     const button = (
-      <DetailVerbButton verb={verb} primary={primary} onClick={() => props.onVerb?.(verb)} />
+      <VerbButton
+        label={verb.label}
+        icon={verb.icon}
+        shortcutId={verb.shortcutId}
+        disabledReason={verb.disabledReason}
+        detail={verb.detail}
+        variant={primary ? 'default' : 'outline'}
+        size="default"
+        onClick={() => props.onVerb?.(verb)}
+      />
     );
     return verb.id === 'move' && verb.disabledReason === undefined ? (
       <MoveVerb key={verb.id} props={props} button={button} />

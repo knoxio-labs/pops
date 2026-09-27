@@ -1,5 +1,5 @@
 import type { FieldValuePatch, FieldWireValue } from '../../inventory-web/commands';
-import type { BulkItemRefusal } from '../../inventory-web/item-verbs-bulk';
+import type { VerbRefusal } from '../../inventory-web/item-verbs';
 import type { FieldDrafts, FormFieldDef } from '../item-form/field-model';
 
 function valuesForField(drafts: FieldDrafts, field: FormFieldDef): readonly string[] {
@@ -62,8 +62,7 @@ export function fieldValuePatch(drafts: FieldDrafts, field: FormFieldDef): Field
 }
 
 /** Converts a bulk refusal into inline fact-editor copy. */
-export function refusalText(refusal: BulkItemRefusal): string {
-  if (refusal.kind === 'no-previous-place') return 'There is no remembered place for this item.';
+export function refusalText(refusal: VerbRefusal): string {
   if (refusal.kind === 'failed') return refusal.error.message;
   if (refusal.outcome.status === 'rejected') {
     return refusal.outcome.reason || refusal.outcome.message;

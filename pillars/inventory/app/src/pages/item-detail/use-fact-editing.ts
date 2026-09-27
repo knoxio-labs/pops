@@ -1,5 +1,4 @@
-import { usePendingItemIds } from '../../inventory-web/item-verbs';
-import { useBulkItemVerbs } from '../../inventory-web/item-verbs-bulk';
+import { useItemVerbs, usePendingItemIds } from '../../inventory-web/item-verbs';
 import { useCatalogueLookups, type CatalogueType } from '../../inventory-web/useCatalogueLookups';
 import { formTypesOf, type FieldDrafts, type FormFieldDef } from '../item-form/field-model';
 import { useFactEditingState } from './fact-editing-state';
@@ -48,7 +47,7 @@ export interface FactEditing {
 /** Provides validated, optimistic, one-fact-at-a-time editing for an item detail model. */
 export function useFactEditing(model: FactEditingModel): FactEditing {
   const catalogue = useCatalogueLookups();
-  const itemVerbs = useBulkItemVerbs();
+  const itemVerbs = useItemVerbs();
   const pendingItemIds = usePendingItemIds();
   const type = model.aggregate?.type ?? null;
   const formType = type === null ? null : (formTypesOf({ types: [type] })[0] ?? null);
@@ -62,7 +61,7 @@ export function useFactEditing(model: FactEditingModel): FactEditing {
     fields: formType?.fields ?? [],
     initialDrafts,
     pendingItemIds,
-    editValues: itemVerbs.editValues,
+    editValues: (patches) => itemVerbs.editValues(model.item.id, patches),
   });
   const typeLabel = (typeId: string): string =>
     catalogue.typeNameForId(typeId) ?? (type?.id === typeId ? type.label : null) ?? 'Unknown type';
