@@ -1,6 +1,6 @@
 /**
  * The required-check guard that reads `pr-review.yml`'s own sticky comment
- * and blocks a merge on an open finding (POPS-2661).
+ * and blocks a merge on an open substantive finding (POPS-2661).
  *
  * Every case here is one of the ticket's explicit test bullets, plus the
  * poll/timeout behaviour that decides whether a normal post-push window
@@ -53,10 +53,8 @@ describe('evaluateReviewState', () => {
     expect(result.outcome === 'fail' && result.findings?.map((f) => f.id)).toEqual(['f1']);
   });
 
-  // AGENTS.md says every open finding blocks, whatever its severity (POPS-3415).
-  // A severity filter added here later has to fail this first.
-  it.each(['low', 'medium', 'high', undefined])(
-    'fails on one open finding of severity %s, because severity is not a gate',
+  it.each(['medium', 'high'])(
+    'fails on one open substantive finding of severity %s',
     (severity) => {
       const result = evaluateReviewState({
         comments: [
@@ -68,6 +66,65 @@ describe('evaluateReviewState', () => {
         headSha: HEAD,
       });
       expect(result.outcome).toBe('fail');
+    }
+  );
+
+  it('passes a low-only review and exposes its advisory suggestion', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [
+            { id: 'f1', file: 'a.ts', title: 'maintainability', severity: 'low', status: 'open' },
+          ],
+        }),
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('pass');
+    expect(result.outcome === 'pass' && result.advisories?.map((finding) => finding.id)).toEqual([
+      'f1',
+    ]);
+  });
+
+  it('blocks the substantive finding in a mixed review and preserves the advisory', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [
+            { id: 'low', severity: 'low', status: 'open' },
+            { id: 'medium', severity: 'medium', status: 'open' },
+          ],
+        }),
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('fail');
+    expect(result.outcome === 'fail' && result.findings?.map((finding) => finding.id)).toEqual([
+      'medium',
+    ]);
+    expect(result.outcome === 'fail' && result.advisories?.map((finding) => finding.id)).toEqual([
+      'low',
+    ]);
+  });
+
+  it.each([undefined, 'LOW', 'critical', 1])(
+    'fails closed on missing or invalid open severity %s',
+    (severity) => {
+      const result = evaluateReviewState({
+        comments: [
+          stateComment({
+            last_reviewed_sha: HEAD,
+            findings: [{ id: 'legacy', severity, status: 'open' }],
+          }),
+        ],
+        headSha: HEAD,
+      });
+      expect(result.outcome).toBe('fail');
+      expect(result.outcome === 'fail' && result.findings?.map((finding) => finding.id)).toEqual([
+        'legacy',
+      ]);
     }
   );
 

@@ -14,7 +14,17 @@ export type {
   PersistedItemType,
   PersistedItemTypeField,
   PersistedTypeLookup,
+  UnresolvedItemType,
+  UnresolvedItemTypeField,
 } from './catalogue.js';
+export {
+  MAX_TYPE_TREE_DEPTH,
+  ancestorIds,
+  descendantIds,
+  resolveTypeTree,
+  typeChain,
+} from './catalogue-tree.js';
+export type { TypeChain } from './catalogue-tree.js';
 export {
   patchItemFieldValues,
   replaceItemFieldValues,
