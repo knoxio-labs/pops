@@ -12,7 +12,7 @@ import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { SelectionApi } from '../../foundation/selection/use-selection.js';
 import type { PlaceContentsData } from '../../inventory-web/usePlaceContents.js';
 import type { ContentsVerbs, PlaceContents } from '../location-page/location-tab-content-model.js';
-import type { PlacePreviewProps } from './place-preview.js';
+import type { PlacePreviewProps } from './place-preview-types.js';
 
 /** Props for the selected-place preview surface and its overlay actions. */
 export interface PreviewPanelProps {

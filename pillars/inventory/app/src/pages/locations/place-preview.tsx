@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import { buildWorld, type PlacementWorld } from '../../foundation/model/placement-model.js';
+import { buildWorld } from '../../foundation/model/placement-model.js';
 import { useSelection } from '../../foundation/selection/use-selection.js';
 import { usePlaceContents } from '../../inventory-web/usePlaceContents.js';
 import { useContentsVerbs } from '../location-page/location-page-content-verbs.js';
@@ -11,21 +11,8 @@ import { usePreviewShortcuts } from './use-preview-shortcuts.js';
 
 import type { ReactElement } from 'react';
 
-import type { LocationModel, PlacementTarget } from '../../foundation/model/model.js';
-import type { PlaceTally } from '../../inventory-web/useLocationTallies.js';
-import type { LocationEdits } from './location-tree.js';
-
-/** Props for the selected-place preview beside the locations tree. */
-export interface PlacePreviewProps {
-  readonly place: LocationModel;
-  readonly locationsWorld: PlacementWorld;
-  readonly tally: PlaceTally;
-  readonly edits: LocationEdits;
-  readonly offline: boolean;
-  readonly movingPlace: boolean;
-  readonly onMovingPlaceChange: (open: boolean) => void;
-  readonly onOpen: () => void;
-}
+import type { PlacementTarget } from '../../foundation/model/model.js';
+import type { PlacePreviewProps } from './place-preview-types.js';
 
 /** Renders the selected place, its contents states, and item placement actions. */
 export function PlacePreview(props: PlacePreviewProps): ReactElement {

@@ -367,7 +367,10 @@ describe('LocationTreePage', () => {
     renderPage('/inventory/locations?selected=home');
     expect(screen.getByRole('button', { name: 'New place in Home' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Move' })).toBeDisabled();
-    fireEvent.keyDown(screen.getAllByRole('button', { name: 'Actions for Home' })[0], {
+    const homeActions = screen.getAllByRole('button', { name: 'Actions for Home' });
+    const homeAction = homeActions.at(0);
+    if (!homeAction) throw new Error('Expected an actions button for Home');
+    fireEvent.keyDown(homeAction, {
       key: 'Enter',
     });
     expect(screen.getByRole('menuitem', { name: 'Open' })).toBeInTheDocument();
