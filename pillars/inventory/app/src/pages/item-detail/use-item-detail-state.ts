@@ -18,6 +18,15 @@ import type {
 import type { ItemDetailModel } from './detail-model';
 import type { AuxiliaryQueries, ConnectionSources } from './detail-read-queries';
 
+/** The banner states that can appear after the item itself is available. */
+export type ItemDetailBannerState = 'partial' | 'unavailable';
+
+/** Read signals used to distinguish incomplete data from an unavailable read. */
+export interface ItemDetailReadSignals {
+  readonly hasPending: boolean;
+  readonly hasError: boolean;
+}
+
 const EMPTY_GRAPH: ConnectionsGraphResponse['data'] = { edges: [], nodes: [] };
 
 /** Applies pending-sync presentation to the primary item without mutating query data. */
@@ -119,6 +128,26 @@ export function buildModel(input: BuildModelInput): ItemDetailModel | null {
     events: [],
     eventCount: input.eventCount,
   };
+}
+
+/** Returns the loaded-item banner state without replacing the detail surface. */
+export function itemDetailBannerState(
+  model: ItemDetailModel | null,
+  signals: ItemDetailReadSignals
+): ItemDetailBannerState | null {
+  if (model === null) return null;
+  if (signals.hasError) return 'unavailable';
+  if (
+    signals.hasPending ||
+    model.aggregate === null ||
+    model.documents === null ||
+    model.paperless === null ||
+    model.connections === null ||
+    model.eventCount === null
+  ) {
+    return 'partial';
+  }
+  return null;
 }
 
 /** Derives the page read state from the primary identifier, query error, and model. */

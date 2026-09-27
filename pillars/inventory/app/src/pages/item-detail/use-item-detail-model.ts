@@ -12,12 +12,42 @@ import {
   connectionsFor,
   displayItem,
   documentsFor,
+  itemDetailBannerState,
   paperlessFor,
   retryReads,
   statusFor,
 } from './use-item-detail-state';
 
 import type { ItemDetailModel } from './detail-model';
+import type { ItemDetailBannerState } from './use-item-detail-state';
+
+function itemDetailReadSignals(
+  detailQuery: ReturnType<typeof useWebItemDetail>,
+  events: ReturnType<typeof useWebEvents>,
+  sources: ReturnType<typeof useConnectionSources>,
+  auxiliary: ReturnType<typeof useAuxiliaryQueries>
+) {
+  const hasPending = [
+    detailQuery.isPending,
+    events.status === 'pending',
+    sources.graphQuery.isPending,
+    sources.related.isLoading,
+    auxiliary.documentsQuery.isPending,
+    auxiliary.paperlessQuery.isPending,
+    auxiliary.fixtureLinksQuery.isPending,
+    auxiliary.fixturesQuery.isPending,
+  ].some(Boolean);
+  const hasError = [
+    events.status === 'error',
+    sources.graphQuery.isError,
+    sources.related.isError,
+    auxiliary.documentsQuery.isError,
+    auxiliary.paperlessQuery.isError,
+    auxiliary.fixtureLinksQuery.isError,
+    auxiliary.fixturesQuery.isError,
+  ].some(Boolean);
+  return { hasPending, hasError };
+}
 
 /** The stable read states exposed by the item-detail data hook. */
 export type ItemDetailStatus = 'loading' | 'error' | 'not-found' | 'ready';
@@ -27,6 +57,7 @@ export interface ItemDetailModelState {
   status: ItemDetailStatus;
   error: unknown | null;
   model: ItemDetailModel | null;
+  banner: ItemDetailBannerState | null;
   retry: () => void;
 }
 
@@ -60,9 +91,13 @@ export function useItemDetailModel(id: string): ItemDetailModelState {
   const primaryError = sources.primary.isError ? sources.primary.error : null;
   const error = detailQuery.error ?? primaryError ?? null;
   const status: ItemDetailStatus = statusFor(id, notFound, error, model);
+  const banner = itemDetailBannerState(
+    model,
+    itemDetailReadSignals(detailQuery, events, sources, auxiliary)
+  );
   const retry = useCallback(
     () => retryReads({ id, detailQuery, sources, auxiliary, events }),
     [auxiliary, detailQuery, events, id, sources]
   );
-  return { status, error, model, retry };
+  return { status, error, model, banner, retry };
 }
