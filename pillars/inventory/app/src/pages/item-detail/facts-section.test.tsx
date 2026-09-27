@@ -56,7 +56,8 @@ describe('FactsSection', () => {
 
     const editButton = screen.getByRole('button', { name: 'Edit Serial' });
 
-    expect(editButton).toHaveClass('h-9', 'before:absolute');
+    expect(editButton).toHaveClass('h-9');
+    expect(editButton).toHaveClass('before:absolute');
   });
 
   it('opens the stable-key editor and saves it with Enter', () => {
