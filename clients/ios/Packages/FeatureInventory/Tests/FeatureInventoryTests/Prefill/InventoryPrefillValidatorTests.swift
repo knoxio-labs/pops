@@ -178,6 +178,10 @@ internal struct InventoryPrefillValidatorTests {
             InventoryPrefillValidator.validate(
                 ["boolean": .flag(true)], fields: fields,
                 source: .text(["Battery never present"])).isEmpty)
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["boolean": .flag(false)], fields: fields,
+                source: .text(["Battery cannot present"])) == ["boolean": [.boolean(false)]])
     }
 
     @Test("a single value can be supplied to a many-valued field")

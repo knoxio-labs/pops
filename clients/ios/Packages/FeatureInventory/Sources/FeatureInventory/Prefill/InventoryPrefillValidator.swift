@@ -74,7 +74,7 @@ internal enum InventoryPrefillValidator {
 
     private static func isNegated(in tokens: [String], at index: Int) -> Bool {
         guard index > 0 else { return false }
-        if ["not", "never"].contains(tokens[index - 1]) { return true }
+        if ["cannot", "never", "not"].contains(tokens[index - 1]) { return true }
         guard tokens[index - 1] == "t", index > 1 else { return false }
         return [
             "aren", "can", "couldn", "didn", "doesn", "don", "hadn", "hasn", "haven",
