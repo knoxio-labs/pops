@@ -30,6 +30,8 @@ import type { ItemRowModel, LocationModel } from '../../foundation/model/model.j
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { PurchaseResult } from '../../inventory-web/purchase-model.js';
 
+const EMPTY_ITEM_FILTER = 'purchase-preview-empty';
+
 afterAll(() => {
   if (previousTimeZone === undefined) delete process.env.TZ;
   else process.env.TZ = previousTimeZone;
@@ -314,7 +316,7 @@ describe('search preview pane', () => {
     render(<PurchasePreview purchaseId="po-1203" currency="AUD" onOpenInPurchases={vi.fn()} />);
 
     expect(mocks.useItemRows).toHaveBeenCalledWith(
-      { ids: 'purchase-preview-empty', includeInactive: true },
+      { ids: EMPTY_ITEM_FILTER, includeInactive: true },
       1
     );
     expect(screen.queryByText(/Tracked as/)).not.toBeInTheDocument();
