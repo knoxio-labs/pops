@@ -232,4 +232,13 @@ describe('useItemDetailModel', () => {
       expect.objectContaining({ query: { maxDepth: 10 } })
     );
   });
+
+  it('uses the generic banner for a non-network auxiliary read error', async () => {
+    mocks.documentsListForItem.mockRejectedValue(new InventoryApiError('invalid request', 400));
+
+    const hook = renderModel();
+
+    await waitFor(() => expect(hook.result.current.banner).toBe('error'));
+    expect(hook.result.current.banner).not.toBe('unavailable');
+  });
 });
