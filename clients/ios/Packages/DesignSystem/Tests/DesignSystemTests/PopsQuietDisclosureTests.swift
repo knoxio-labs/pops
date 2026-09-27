@@ -13,7 +13,7 @@ internal struct PopsQuietDisclosureTests {
         let renderer = ImageRenderer(
             content:
                 content
-                .frame(width: Self.canvas.width, height: Self.canvas.height)
+                .frame(width: Self.canvas.width, height: Self.canvas.height, alignment: .top)
         )
         renderer.scale = 1
         return try #require(renderer.cgImage)
