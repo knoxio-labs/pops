@@ -1,5 +1,3 @@
-import Foundation
-
 /// Every node an expression-version-1 AST may contain. Mirrors the server's
 /// `EXPRESSION_V1_OPS`; the shared vectors check both lists are evaluated.
 public enum InventoryExpressionOp: String, CaseIterable, Hashable, Sendable {

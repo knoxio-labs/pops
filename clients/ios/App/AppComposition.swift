@@ -3,7 +3,6 @@ import Auth
 import BFMClient
 import FeatureInventory
 import FeaturePurchases
-import Foundation
 import InventoryReplica
 
 /// The composition root: the one place a protocol is bound to a concrete type,

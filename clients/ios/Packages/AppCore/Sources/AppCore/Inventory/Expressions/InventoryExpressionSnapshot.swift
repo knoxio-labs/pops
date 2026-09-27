@@ -1,5 +1,3 @@
-import Foundation
-
 /// How a snapshot knows one item a read reaches. Only `resolved`, at the
 /// revision the snapshot holds, is readable; the others become
 /// `reference_unresolved`, `reference_missing` and `reference_deleted`

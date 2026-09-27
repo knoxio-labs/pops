@@ -1,5 +1,3 @@
-import Foundation
-
 extension InventoryExpressionEvaluator {
     /// `expression-coalesce.ts`: the first argument that has a value. An
     /// unavailable argument is skipped, and the input it lacked is recorded as

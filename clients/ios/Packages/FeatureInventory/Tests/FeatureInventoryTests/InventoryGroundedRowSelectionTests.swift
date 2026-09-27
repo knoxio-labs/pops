@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 
-@testable import FeatureInventory
-
 @Suite("Inventory grounded row selection")
 internal struct InventoryGroundedRowSelectionTests {
     private static let source: String = {

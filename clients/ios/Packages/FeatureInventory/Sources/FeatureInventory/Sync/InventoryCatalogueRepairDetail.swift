@@ -1,5 +1,3 @@
-import AppCore
-
 /// How one value in a queued change stands against the fields this phone has
 /// now, as the approved `inventory/catalogue-repair` design marks it.
 internal enum InventoryFieldFit: Hashable, Sendable {

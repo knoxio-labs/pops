@@ -2,8 +2,6 @@ import AppCore
 import InventoryReplica
 import Testing
 
-@testable import BFMClient
-
 /// A wire value the server never sends for its field's kind.
 internal struct Protocol2KindMismatch: Sendable, CustomTestStringConvertible {
     internal let label: String

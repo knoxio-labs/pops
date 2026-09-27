@@ -1,5 +1,3 @@
-import Foundation
-
 extension InventoryExpression {
     /// `comparesDecimals`: whether validation typed an `equal` whose left
     /// operand is this node as comparing decimals. Decimals and text share a

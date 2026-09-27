@@ -1,4 +1,3 @@
-import AppCore
 import Foundation
 
 /// `clients/ios/Contracts/value-vectors-v1.json`, vendored byte for byte from
