@@ -4,43 +4,60 @@ Every workflow YAML file in this directory is documented here exactly once: as a
 
 ## `ci-gate.yml` — the one static aggregate context
 
-`ci-gate.yml` runs a job named `Publish CI Gate verdict`, triggered
-`on: workflow_run` `types: [completed]` of nine workflows: Unit Quality, FE
-Quality, Rust Quality, App Quality, Quality, Registry Generated Quality, iOS
-Quality, Docker Build, E2E Tests. Each name appears twice in that file — in the trigger
-array and in the `gated` array inside the script — and either alone is inert. It
-reads their conclusions through the Actions API and runs none of them itself. The
-file header carries the argument for `workflow_run` over `needs:`, for why the
-verdict converges, and for why it publishes its own check run; the rules the
-`github-script` step implements:
+`ci-gate.yml` observes requested, in-progress and completed runs of nine quality
+workflows. Additional workflows may opt into cancellation-only observation: add
+their existing name to both the trigger and `cancellationOnly`, with a separate
+observer concurrency group. Their verdict belongs to their own required check.
+The wiring guard requires every observed name to exist and keeps the two sets
+disjoint. It publishes an explicit `CI Gate` check against the observed head SHA;
+its own implicit check belongs to the default branch. The workflow never checks
+out or executes pull request content despite holding `actions: write` and
+`checks: write`.
 
-- Concurrency is keyed `ci-gate-${{ github.event.workflow_run.head_sha }}` with
-  `cancel-in-progress: true`, so every sibling completion for a commit collapses
-  onto one evaluation lane.
-- All runs at that head SHA are paginated; the newest run per gated workflow name
-  wins, ordered by `run_number` then `run_attempt`.
-- The gate fails on `failure`, `cancelled`, `timed_out`, `startup_failure`,
-  `action_required` or `stale`.
-- A gated workflow with no run at the SHA is `pass` only when its own
-  `pull_request.paths` filter is a **confirmed** exclusion for this diff
-  (`did not run — path-filtered, treated as pass`); everything else — the
-  filter matches, there is no filter, or the diff can't be determined — is
-  logged as pending, never a pass. One cause of "no run, not a confirmed
-  exclusion" used to be a concurrency-group race silently losing the run's
-  registration entirely; every gated workflow's own `concurrency:` block now
-  runs `cancel-in-progress: false` specifically to close that window — see the
-  MITIGATION paragraph in `ci-gate.yml`'s own CONVERGENCE comment.
-- A run that is not yet `completed` is pending: it does not fail the gate, but it
-  does hold it at `in_progress`. A failure concludes immediately (nothing can
-  clear it); `success` is only ever published once nothing is left in flight.
-- The verdict is POSTed as a **check run named `CI Gate` against
-  `github.event.workflow_run.head_sha`** (hence `permissions: checks: write`).
-  That is the context to put in the branch ruleset.
-- The run's own `run-name` states the evaluated SHA, branch and triggering
-  workflow, because `gh run list` / the Actions UI file every `workflow_run`
-  run under the default branch's tip regardless — see the next section for why
-  that makes the run list, as opposed to the check run above, an unreliable
-  place to read a commit's gate state.
+- Quality concurrency groups include the PR head SHA, so a new push registers
+  without waiting for obsolete work. Native cancellation stays disabled.
+- After a replacement is registered and verified against the current open PR,
+  the observer cancels older runs of that same workflow, PR and source repository.
+  Each evaluation reconciles every registered replacement at the current head,
+  including completed replacements, so coalesced observer events cannot strand old work.
+  Merge-group runs are never cancelled by this mechanism. If cancellation fails,
+  obsolete work may finish, but it cannot contribute to another SHA's verdict.
+- Cancellation-only and non-PR events have separate observer concurrency groups,
+  so their no-verdict evaluations cannot replace a queued admission publication.
+- Gate evaluations for one SHA serialize without cancelling each other's API
+  publications. Every evaluation reads current sibling states. Pushes during
+  evaluation, closed PRs and completions from superseded heads publish nothing.
+- All nine workflows retrigger on PR edits, including base retargets. Title and
+  description edits also rerun checks; there is no event filter for base-only edits.
+- Only PR and merge-group events publish admission verdicts; a manual dispatch
+  or main push cannot overwrite a PR verdict on the same SHA.
+- Fork runs with empty PR associations resolve through the commit-to-PR API,
+  matching source repository, branch and head. Admission then requires a run title
+  that records the target base explicitly; a missing or older base stays pending.
+  Workflow identity comes from its registered ID, because the run API may put a
+  custom title in both `name` and `display_title`. Fork PRs set that base-bearing
+  title; same-repository events retain the canonical workflow name, allowing the
+  observer to roll out while the previous name-based observer is still on main. Ambiguous
+  associations block, and cancellation requires an explicit PR association.
+- Only runs for the same event, PR and base branch contribute; the latest run
+  number and attempt wins. Completed runs pass only on `success` or `skipped`.
+  Cancellations, unknown conclusions and failures block. Rerunning a failed
+  workflow replaces that attempt and can restore a green gate.
+- Missing PR runs pass only for a confirmed path-filter exclusion. An unknown or
+  truncated diff, a matching filter, or an unfiltered workflow remains pending.
+  Every workflow is expected on a merge group, regardless of path filters.
+- A registered but unfinished run holds the check at `in_progress`. The observer
+  includes its triggering registration even if the run-list API has not caught
+  up. Missing expected runs require retriggering; absence never means success.
+- The run title identifies the evaluated SHA and branch. Actions lists attribute
+  these observer runs to the default branch; read the explicit check for the
+  actual PR verdict.
+
+Checks attach to a SHA, not a PR. Concurrent PRs with identical heads and different
+bases share that check context. A merge queue validates a distinct combined SHA
+and avoids that collision. Without one, a promotion needs its own unique candidate
+SHA and required checks against the current main; the PR verdict alone cannot
+isolate shared-head PRs.
 
 ### Rules this file exists to stop people relearning
 

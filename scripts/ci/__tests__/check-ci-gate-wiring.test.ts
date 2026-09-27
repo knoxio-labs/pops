@@ -505,6 +505,49 @@ describe('the live repo', () => {
 });
 
 describe('the guard catches each way the wiring goes inert', () => {
+  it('keeps optional cancellation observation disjoint from required verdict inputs', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (source) =>
+      source.replace(
+        /const cancellationOnly = \[[^\]]*\];/u,
+        'const cancellationOnly = ["Quality"];'
+      )
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'must not be both gated and cancellation-only'
+    );
+  });
+
+  it('requires a trigger for every cancellation-only workflow', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (source) =>
+      source.replace(
+        /const cancellationOnly = \[[^\]]*\];/u,
+        'const cancellationOnly = ["Optional Quality"];'
+      )
+    );
+
+    expect(checkCiGateWiring(root).join('\n')).toContain('has no observer trigger');
+  });
+
+  it('requires every cancellation-only workflow to exist before observing it', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (source) =>
+      source
+        .replace(
+          /const cancellationOnly = \[[^\]]*\];/u,
+          `const cancellationOnly = ${JSON.stringify([...parseGatedArray(embeddedScript(source), 'cancellationOnly'), 'Optional Quality'])};`
+        )
+        .replace('      - "Quality"', '      - "Quality"\n      - "Optional Quality"')
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain('references workflow "Optional Quality"');
+    writeFileSync(
+      join(root, '.github/workflows/optional-quality.yml'),
+      'name: Optional Quality\non: pull_request\n'
+    );
+    expect(checkCiGateWiring(root)).toEqual([]);
+  });
+
   it('flags a workflow that fires the gate but is not in `gated`', () => {
     const root = cloneWorkflows();
     patch(root, 'ci-gate.yml', (s) => s.replace('              "iOS Quality",\n', ''));
@@ -660,8 +703,8 @@ describe('the guard catches each way the wiring goes inert', () => {
     const root = cloneWorkflows();
     patch(root, 'ios-quality.yml', (s) =>
       s.replace(
-        '  pull_request:\n    paths:\n      - "clients/ios/**"\n',
-        '  pull_request:\n    paths:\n      - "clients/ios/**"\n      - "docs/**"\n'
+        '  pull_request:\n    types: [opened, synchronize, reopened, edited]\n    paths:\n',
+        '  pull_request:\n    types: [opened, synchronize, reopened, edited]\n    paths:\n      - "docs/**"\n'
       )
     );
     expect(checkCiGateWiring(root).join('\n')).toContain(
