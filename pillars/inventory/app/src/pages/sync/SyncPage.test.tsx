@@ -247,4 +247,20 @@ describe('SyncPage', () => {
     expect(screen.getByText('Shielding')).toBeInTheDocument();
     expect(screen.getByText(/Let go on Joao's iPhone/)).toBeInTheDocument();
   });
+
+  it('closing the dropped values outcome stays on the Resolved tab', async () => {
+    renderSync('/inventory/sync?segment=resolved');
+
+    fireEvent.click(screen.getByRole('button', { name: 'See what was dropped' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/inventory/sync?segment=resolved&case=res-cable-let-go'
+      )
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/inventory/sync?segment=resolved')
+    );
+  });
 });

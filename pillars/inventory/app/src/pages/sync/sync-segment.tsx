@@ -100,19 +100,23 @@ function SegmentList({
   );
 }
 
-function openResolvedSheet(props: SyncSegmentProps): ReactNode {
-  if (props.openId === null) return null;
-  const entry = props.ledger.resolved.find((candidate) => candidate.id === props.openId);
+function openResolvedSheet({
+  ledger,
+  openId,
+  now,
+  onCloseCase: onCloseResolved,
+}: SyncSegmentProps): ReactNode {
+  if (openId === null) return null;
+  const entry = ledger.resolved.find((candidate) => candidate.id === openId);
   if (entry === undefined || entry.dropped === undefined || entry.dropped.length === 0) return null;
   return (
     <LetGoSheet
       entry={entry}
       device={
-        props.ledger.devices.find((device) => device.id === entry.deviceId)?.name ??
-        'An unknown device'
+        ledger.devices.find((device) => device.id === entry.deviceId)?.name ?? 'An unknown device'
       }
-      now={props.now}
-      onClose={props.onCloseCase}
+      now={now}
+      onClose={onCloseResolved}
     />
   );
 }
