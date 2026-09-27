@@ -12,6 +12,10 @@ vi.mock('sonner', () => ({
   toast: { custom, dismiss },
 }));
 
+vi.mock('./palette/InventoryPalette', () => ({
+  InventoryPalette: () => <div role="dialog" aria-label="Command palette" />,
+}));
+
 function LocationDisplay() {
   const location = useLocation();
   return <div data-testid="location">{location.pathname + location.search}</div>;
@@ -101,7 +105,7 @@ describe('InventoryLayout', () => {
     expect(screen.getByText('Items page')).toBeInTheDocument();
   });
 
-  it('leaves Cmd-K to a document-level listener while no openPalette is given', () => {
+  it('opens the command palette and consumes Cmd-K', () => {
     const listener = vi.fn();
     document.addEventListener('keydown', listener);
     renderLayout();
@@ -112,10 +116,12 @@ describe('InventoryLayout', () => {
       bubbles: true,
       cancelable: true,
     });
-    document.body.dispatchEvent(event);
+    act(() => document.body.dispatchEvent(event));
 
-    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
     expect(screen.getByTestId('location')).toHaveTextContent('/inventory');
+    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeInTheDocument();
     document.removeEventListener('keydown', listener);
   });
 });
