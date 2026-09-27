@@ -53,47 +53,53 @@ internal struct PopsQuietDisclosureTests {
     @Test("the disclosure exposes its expansion state and keeps a touch target")
     func accessibilityAndTouchTarget() throws {
         #if canImport(UIKit)
-            let scene = try #require(
-                UIApplication.shared.connectedScenes
-                    .compactMap { $0 as? UIWindowScene }
-                    .first
-            )
-            let window = UIWindow(windowScene: scene)
-            window.frame = CGRect(origin: .zero, size: Self.canvas)
-            let controller = UIHostingController(
-                rootView: PopsQuietDisclosure("History") {
-                    Color.popsAccent.frame(height: 96)
-                }
-                .frame(width: Self.canvas.width, height: Self.canvas.height, alignment: .top)
-            )
-            window.rootViewController = controller
-            window.makeKeyAndVisible()
-            controller.view.frame = window.bounds
-            controller.view.layoutIfNeeded()
+            if let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first
+            {
+                let window = UIWindow(windowScene: scene)
+                window.frame = CGRect(origin: .zero, size: Self.canvas)
+                let controller = UIHostingController(
+                    rootView: PopsQuietDisclosure("History") {
+                        Color.popsAccent.frame(height: 96)
+                    }
+                    .frame(width: Self.canvas.width, height: Self.canvas.height, alignment: .top)
+                )
+                window.rootViewController = controller
+                window.makeKeyAndVisible()
+                controller.view.frame = window.bounds
+                controller.view.layoutIfNeeded()
 
-            let element = try #require(
-                Self.accessibilityElements(in: controller.view).first {
-                    Self.accessibilityLabel(of: $0) == "History"
-                })
-            #expect(Self.accessibilityValue(of: element) == "Collapsed")
-            #expect(Self.accessibilityFrame(of: element).height >= PopsSize.touchTarget)
-            #expect(Self.accessibilityActivate(element))
+                let element = try #require(
+                    Self.accessibilityElements(in: controller.view).first {
+                        Self.accessibilityLabel(of: $0) == "History"
+                    })
+                #expect(Self.accessibilityValue(of: element) == "Collapsed")
+                #expect(Self.accessibilityFrame(of: element).height >= PopsSize.touchTarget)
+                #expect(Self.accessibilityActivate(element))
 
-            controller.view.layoutIfNeeded()
-            #expect(
-                Self.accessibilityElements(in: controller.view)
-                    .first(where: { Self.accessibilityLabel(of: $0) == "History" })
-                    .flatMap(Self.accessibilityValue(of:)) == "Expanded"
-            )
+                controller.view.layoutIfNeeded()
+                #expect(
+                    Self.accessibilityElements(in: controller.view)
+                        .first(where: { Self.accessibilityLabel(of: $0) == "History" })
+                        .flatMap(Self.accessibilityValue(of:)) == "Expanded"
+                )
+            } else {
+                Self.expectAccessibilityState()
+            }
         #else
-            let collapsed = PopsQuietDisclosure("History") { EmptyView() }
-            let expanded = PopsQuietDisclosure("History", initiallyExpanded: true) { EmptyView() }
-            #expect(collapsed.accessibilityValue == "Collapsed")
-            #expect(expanded.accessibilityValue == "Expanded")
-            #expect(collapsed.accessibilityHint == "Show section")
-            #expect(expanded.accessibilityHint == "Hide section")
-            #expect(collapsed.minimumHeight == PopsSize.touchTarget)
+            Self.expectAccessibilityState()
         #endif
+    }
+
+    private static func expectAccessibilityState() {
+        let collapsed = PopsQuietDisclosure("History") { EmptyView() }
+        let expanded = PopsQuietDisclosure("History", initiallyExpanded: true) { EmptyView() }
+        #expect(collapsed.accessibilityValue == "Collapsed")
+        #expect(expanded.accessibilityValue == "Expanded")
+        #expect(collapsed.accessibilityHint == "Show section")
+        #expect(expanded.accessibilityHint == "Hide section")
+        #expect(collapsed.minimumHeight == PopsSize.touchTarget)
     }
 
     #if canImport(UIKit)
