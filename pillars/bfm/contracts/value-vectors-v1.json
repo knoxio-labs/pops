@@ -9951,8 +9951,8 @@
     {
       "category": "protocol_above_supported",
       "name": "minimum protocol one above the supported protocol",
-      "supportedProtocol": 2,
-      "minimumProtocol": 3
+      "supportedProtocol": 3,
+      "minimumProtocol": 4
     }
   ]
 }

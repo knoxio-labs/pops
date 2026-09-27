@@ -149,12 +149,12 @@ function assertTypeChangePermitted(
   }
   if (
     row.isContainer === 1 &&
-    !type.capabilities.includes('containment') &&
+    !type.effectiveCapabilities.includes('containment') &&
     hasActiveContents(db, row.id)
   ) {
     throw new CommandRejected('has_contents', `item ${row.id} still holds active contents`);
   }
-  if (type.capabilities.includes('containment') && row.quantity > 1) {
+  if (type.effectiveCapabilities.includes('containment') && row.quantity > 1) {
     throw new CommandRejected(
       'quantity_container_conflict',
       `item ${row.id} has quantity ${row.quantity}; a container must have quantity exactly 1 (ADR-002 D3)`
@@ -188,7 +188,7 @@ export const itemChangeType = defineOp({
       args
     );
     assertTypeChangePermitted(ctx.db, row, type);
-    const willContain = type.capabilities.includes('containment');
+    const willContain = type.effectiveCapabilities.includes('containment');
 
     const changes: FieldValues = {
       ...fields,
