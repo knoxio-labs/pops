@@ -52,6 +52,14 @@ export class PaperlessClient {
     };
   }
 
+  /** Get the total number of documents in Paperless-ngx. */
+  async getDocumentCount(): Promise<number> {
+    const raw = await this.get<Pick<RawPaperlessPaginatedResponse<never>, 'count'>>(
+      '/api/documents/?page_size=1'
+    );
+    return raw.count;
+  }
+
   /** Get a single document by ID. */
   async getDocument(id: number): Promise<PaperlessDocument> {
     const raw = await this.get<RawPaperlessDocument>(`/api/documents/${id}/`);

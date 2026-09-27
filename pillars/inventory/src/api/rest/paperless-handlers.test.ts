@@ -16,7 +16,12 @@ import type {
 
 function stubClient(overrides: Partial<DocumentsClient> = {}): DocumentsClient {
   return {
-    getPaperlessStatus: vi.fn(async () => ({ configured: false, available: false, baseUrl: null })),
+    getPaperlessStatus: vi.fn(async () => ({
+      configured: false,
+      available: false,
+      baseUrl: null,
+      documentCount: null,
+    })),
     searchPaperlessDocuments: vi.fn(async () => null),
     paperlessDocumentMissing: vi.fn(async () => null),
     ...overrides,
@@ -29,6 +34,7 @@ describe('paperless.status', () => {
       configured: true,
       available: true,
       baseUrl: 'https://paperless.example',
+      documentCount: 123,
     };
     const handlers = makePaperlessHandlers(
       stubClient({ getPaperlessStatus: vi.fn(async () => status) })
@@ -46,7 +52,9 @@ describe('paperless.status', () => {
 
     expect(result).toEqual({
       status: 200,
-      body: { data: { configured: false, available: false, baseUrl: null } },
+      body: {
+        data: { configured: false, available: false, baseUrl: null, documentCount: null },
+      },
     });
   });
 });

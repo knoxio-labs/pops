@@ -5508,9 +5508,15 @@
                         },
                         "configured": {
                           "type": "boolean"
+                        },
+                        "documentCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
                         }
                       },
-                      "required": ["configured", "available", "baseUrl"],
+                      "required": ["configured", "available", "baseUrl", "documentCount"],
                       "type": "object"
                     }
                   },
