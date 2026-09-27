@@ -112,8 +112,8 @@ internal struct AppSearchModelTests {
 
         model.query = "nothing"
 
-        #expect(await Self.eventually { await inventory.askedQueries() == ["nothing"] })
         #expect(!model.hasNoResults, "Purchases has not answered yet")
+        #expect(await Self.eventually { await inventory.askedQueries() == ["nothing"] })
         #expect(await Self.eventually { model.hasNoResults })
     }
 
