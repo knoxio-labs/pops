@@ -214,7 +214,7 @@ jobs:
     name: Build + smoke image
     runs-on: ubuntu-latest
     needs: [discover]
-    if: always() && needs.discover.outputs.dockerfiles != '[]' && needs.discover.outputs.dockerfiles != ''
+    if: ${{ !cancelled() && needs.discover.outputs.dockerfiles != '[]' && needs.discover.outputs.dockerfiles != '' }}
     strategy:
       fail-fast: false
       matrix:

@@ -7,7 +7,7 @@
  * and however unconditional those jobs look when you read them.
  *
  * `.github/workflows/quality.yml` is built on exactly that chain. `discover`
- * runs only on `pull_request`; `scope` needs it, carries `if: always()`, and
+ * runs only on `pull_request`; `scope` needs it, carries `if: ${{ !cancelled() }}`, and
  * duly runs on a `push` to `main` reporting `success` and `dirs="."`. The four
  * jobs below it — `Lint`, `Format`, `Module boundaries`, `Exports discipline`
  * — took the default and were therefore skipped on every push to `main`, even
@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { promotionFailures } from '../check-promotion.mjs';
 import { ConfigParseError, isMapping, parseYaml } from '../config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -188,7 +189,7 @@ describe('every workflow', () => {
       violations,
       "These jobs will be SKIPPED whenever an upstream job is, because a job's default " +
         '`success()` is evaluated over the whole transitive `needs` graph. Add ' +
-        "`if: always() && needs.<direct-dependency>.result == 'success'`. A plain " +
+        "`if: ${{ !cancelled() && needs.<direct-dependency>.result == 'success' }}`. A plain " +
         'expression will not do it — only a status check function breaks the inherited skip.'
     ).toEqual([]);
   });
@@ -301,5 +302,117 @@ jobs:
 
   it('refuses a workflow with no jobs mapping instead of reporting it clean', () => {
     expect(() => fixture('on: push\n')).toThrow(ConfigParseError);
+  });
+});
+
+describe('validation workflow cancellation', () => {
+  const guardedJobs = [
+    ['quality.yml', 'scope'],
+    ['quality.yml', 'lint'],
+    ['quality.yml', 'format'],
+    ['quality.yml', 'boundaries'],
+    ['quality.yml', 'exports'],
+    ['fe-quality.yml', 'quality'],
+    ['docker-build.yml', 'docker-build'],
+    ['promotion-quality.yml', 'validation'],
+  ] as const;
+  const validationFiles = [
+    'quality.yml',
+    'unit-quality.yml',
+    'app-quality.yml',
+    'rust-quality.yml',
+    'fe-quality.yml',
+    'fe-test-e2e.yml',
+    'docker-build.yml',
+    'registry-generated-quality.yml',
+    'ios-quality.yml',
+    'promotion-quality.yml',
+  ];
+  type Results = Record<string, { result: string; outputs: { dockerfiles: string } }>;
+
+  function evaluate(file: string, job: string, cancelled: boolean, needs: Results): boolean {
+    const condition = conditionOf(readWorkflow(file), job);
+    expect(condition, `${file}:${job} must parse as an expression string`).toBeTypeOf('string');
+    if (condition === undefined) throw new Error(`Missing condition: ${file}:${job}`);
+    expect(condition).toMatch(BREAKS_INHERITED_SKIP);
+    const expression = condition
+      .replace(/^\s*\$\{\{\s*|\s*\}\}\s*$/gu, '')
+      .replace(/==/gu, '===')
+      .replace(/!=/gu, '!==');
+    const run = new Function('needs', 'cancelled', 'always', `return (${expression});`) as (
+      n: Results,
+      c: () => boolean,
+      a: () => boolean
+    ) => unknown;
+    return (
+      run(
+        needs,
+        () => cancelled,
+        () => true
+      ) === true
+    );
+  }
+
+  function results(
+    file: string,
+    job: string,
+    result: string,
+    dockerfiles = '["Dockerfile"]'
+  ): Results {
+    return Object.fromEntries(
+      needsOf(readWorkflow(file), job).map((name) => [name, { result, outputs: { dockerfiles } }])
+    );
+  }
+
+  it.each(validationFiles)('%s has no cancellation-resistant job condition', (file) => {
+    const workflow = readWorkflow(file);
+    for (const job of workflow.jobs.keys()) {
+      expect(conditionOf(workflow, job) ?? '', `${file}:${job}`).not.toMatch(/always\(\s*\)/u);
+    }
+  });
+
+  it.each(guardedJobs)('%s:%s stops when the workflow is cancelled', (file, job) => {
+    expect(evaluate(file, job, false, results(file, job, 'success'))).toBe(true);
+    expect(evaluate(file, job, true, results(file, job, 'success'))).toBe(false);
+  });
+
+  it.each(['success', 'failure', 'skipped'])('preserves upstream %s handling', (result) => {
+    for (const [file, job] of guardedJobs) {
+      const guardedByScope = file === 'quality.yml' && job !== 'scope';
+      expect(evaluate(file, job, false, results(file, job, result)), `${file}:${job}`).toBe(
+        !guardedByScope || result === 'success'
+      );
+      expect(evaluate(file, job, true, results(file, job, result)), `${file}:${job}`).toBe(false);
+    }
+  });
+
+  it.each(['[]', ''])('preserves the Docker empty-matrix guard for %j', (dockerfiles) => {
+    expect(
+      evaluate(
+        'docker-build.yml',
+        'docker-build',
+        false,
+        results('docker-build.yml', 'docker-build', 'success', dockerfiles)
+      )
+    ).toBe(false);
+  });
+
+  it.each(['failure', 'skipped'])(
+    'still runs promotion admission to reject an upstream %s',
+    (result) => {
+      const needs = results('promotion-quality.yml', 'validation', 'success');
+      needs.quality = { result, outputs: { dockerfiles: '' } };
+      expect(evaluate('promotion-quality.yml', 'validation', false, needs)).toBe(true);
+      expect(promotionFailures(true, needs)).toEqual(['quality']);
+    }
+  );
+
+  it('keeps the Playwright report cleanup step unconditional', () => {
+    const workflow = readWorkflow('fe-test-e2e.yml');
+    const steps = [...workflow.jobs.values()].flatMap((job) =>
+      Array.isArray(job.steps) ? job.steps.filter(isMapping) : []
+    );
+    const report = steps.find((step) => step.name === 'Upload Playwright report');
+    expect(report?.if).toBe('always()');
   });
 });
