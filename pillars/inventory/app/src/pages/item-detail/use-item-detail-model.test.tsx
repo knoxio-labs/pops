@@ -118,9 +118,12 @@ let primaryError: Error | null;
 let detailItem: WebGetResponse['item'] | null;
 let detailError: unknown;
 let detailRefetch: ReturnType<typeof vi.fn>;
+type Refetch = () => Promise<unknown>;
+const relatedRefetch = vi.fn<Refetch>().mockResolvedValue({});
 
-function source(world: PlacementWorld, error: Error | null) {
-  const refetch = vi.fn().mockResolvedValue({});
+function source(world: PlacementWorld, error: Error | null, subjectRefetch?: Refetch) {
+  const refetch = vi.fn<Refetch>().mockResolvedValue({});
+  const subject = subjectRefetch ?? refetch;
   return {
     world,
     isLoading: false,
@@ -129,7 +132,7 @@ function source(world: PlacementWorld, error: Error | null) {
     locationsQuery: { refetch },
     openContainersQuery: { refetch },
     closedContainersQuery: { refetch },
-    subjectItemsQuery: { refetch },
+    subjectItemsQuery: { refetch: subject },
   };
 }
 
@@ -160,7 +163,11 @@ beforeEach(() => {
   mocks.usePendingItemIds.mockReturnValue(new Set<string>());
   mocks.usePlacementSources.mockImplementation((subject: PickerSubject) => {
     const ids = subject.kind === 'items' ? subject.ids : [];
-    return source(ids.includes('item-1') ? primaryWorld : emptyWorld, primaryError);
+    return source(
+      ids.includes('item-1') ? primaryWorld : emptyWorld,
+      primaryError,
+      ids.includes('item-1') ? undefined : relatedRefetch
+    );
   });
   mocks.useWebEvents.mockReturnValue({
     events: [],
@@ -228,6 +235,7 @@ describe('useItemDetailModel', () => {
     hook.result.current.retry();
 
     await waitFor(() => expect(detailRefetch).toHaveBeenCalledOnce());
+    expect(relatedRefetch).toHaveBeenCalledOnce();
     expect(mocks.connectionsGraph).toHaveBeenCalledWith(
       expect.objectContaining({ query: { maxDepth: 10 } })
     );
