@@ -18,7 +18,7 @@ import {
 import { startAcceptanceStack, type AcceptanceStack } from './test-helpers-acceptance-stack.js';
 
 const conflictSchema = z.object({
-  code: z.literal('catalogue_draft_conflict'),
+  code: z.literal('inventory.catalogue.draft_conflict'),
   currentDraftVersion: z.number().int().positive(),
 });
 const currentDraftSchema = z.union([
@@ -84,7 +84,7 @@ describe('S4 catalogue draft concurrency', () => {
       { kind: 'put_type', key: 'acc_from_a_again', label: 'A again' },
     ]);
     expect(staleForA.ok).toBe(false);
-    expect(staleForA.ok ? '' : staleForA.message).toMatch(/catalogue_draft_conflict/);
+    expect(staleForA.ok ? '' : staleForA.message).toMatch(/inventory\.catalogue\.draft_conflict/);
     await (await DraftSession.resume(editorA.baseRevision)).abandon();
   });
 
@@ -112,10 +112,10 @@ describe('S4 catalogue draft concurrency', () => {
       expect(after.types.some((type) => type.key === 'acc_race_edit')).toBe(false);
       typeByKey(after, 'acc_race_base');
       expect(await mustRefuse('inventory.catalogue.readDraft', {})).toMatch(
-        /catalogue_draft_missing/
+        /inventory\.catalogue\.draft_missing/
       );
     } else {
-      expect(published.ok ? '' : published.message).toMatch(/catalogue_draft_conflict/);
+      expect(published.ok ? '' : published.message).toMatch(/inventory\.catalogue\.draft_conflict/);
       expect(after.revision.revision).toBe(before.revision.revision);
       const draft = await editorBReads();
       expect(draft.revision.draftVersion).toBeGreaterThan(version);
@@ -135,7 +135,7 @@ describe('S4 catalogue draft concurrency', () => {
       baseRevision: editorA.baseRevision,
       expectedDraftVersion: staleVersion,
     });
-    expect(refused).toMatch(/catalogue_draft_conflict/);
+    expect(refused).toMatch(/inventory\.catalogue\.draft_conflict/);
     expect((await publishedCatalogue()).revision.revision).toBe(before.revision.revision);
 
     const published = await editorA.mustPublish({ note: 'S4 fresh publish' });
