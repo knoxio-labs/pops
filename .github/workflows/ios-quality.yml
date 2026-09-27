@@ -1,5 +1,4 @@
 name: iOS Quality
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # The only workflow in this repo that does not run on `ubuntu-latest`, because
 # Swift does not build anywhere else. `knoxio-labs/pops` is public, so

@@ -1,5 +1,4 @@
 name: FE Quality
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 on:
   push:

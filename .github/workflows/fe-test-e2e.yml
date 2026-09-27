@@ -1,5 +1,4 @@
 name: E2E Tests
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Playwright against the shell and the app bundles it mounts. No pillar
 # backend is started: every spec fulfils the REST surface it exercises at the
