@@ -15,11 +15,12 @@ const association = { number: 7, base: { ref: 'main' } };
 const pullRequest = {
   ...association,
   state: 'open',
-  head: { sha: 'new-head' },
+  head: { sha: 'new-head', ref: 'feature', repo: { id: 4 } },
 };
 const run = {
   id: 20,
   name: 'Quality',
+  display_title: 'Quality for pull_request into main',
   workflow_id: 3,
   head_sha: 'new-head',
   head_branch: 'feature',
@@ -46,6 +47,7 @@ async function evaluate(
     failFiles?: boolean;
     cancelFails?: boolean;
     registered?: Run;
+    associated?: PullRequest[];
   } = {}
 ) {
   const trigger = options.trigger ?? run;
@@ -57,11 +59,13 @@ async function evaluate(
   });
   const setFailed = vi.fn();
   const listFiles = Symbol('files');
+  const listAssociated = Symbol('associated');
   const listRuns = Symbol('runs');
   const listCandidates = Symbol('candidates');
   await execute(
     {
       rest: {
+        repos: { listPullRequestsAssociatedWithCommit: listAssociated },
         pulls: {
           get: () => Promise.resolve({ data: prs.length > 1 ? prs.shift() : prs[0] }),
           listFiles,
@@ -75,6 +79,7 @@ async function evaluate(
         checks: { create },
       },
       paginate: (endpoint: symbol) => {
+        if (endpoint === listAssociated) return Promise.resolve(options.associated ?? []);
         if (endpoint === listFiles) {
           if (options.failFiles) throw new Error('unavailable');
           return Promise.resolve(
@@ -98,6 +103,37 @@ async function evaluate(
 }
 
 describe('CI Gate convergence', () => {
+  it('resolves fork PRs with empty run associations using source identity and the recorded base', async () => {
+    const result = await evaluate({
+      trigger: { ...run, pull_requests: [] },
+      associated: [pullRequest],
+    });
+    expect(result.create).toHaveBeenCalledWith(expect.objectContaining({ conclusion: 'success' }));
+  });
+
+  it('rejects a fork run recorded for the old base after retargeting', async () => {
+    const result = await evaluate({
+      trigger: {
+        ...run,
+        pull_requests: [],
+        display_title: 'Quality for pull_request into integration/work',
+      },
+      associated: [pullRequest],
+    });
+    expect(result.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'in_progress' }));
+  });
+
+  it('does not guess when fork identity is wrong or multiple matching PRs share its head', async () => {
+    for (const associated of [
+      [{ ...pullRequest, head: { ...pullRequest.head, repo: { id: 99 } } }],
+      [pullRequest, { ...pullRequest, number: 8 }],
+    ]) {
+      const result = await evaluate({ trigger: { ...run, pull_requests: [] }, associated });
+      expect(result.create).not.toHaveBeenCalled();
+      expect(result.setFailed).toHaveBeenCalled();
+    }
+  });
+
   it('passes a docs-only PR after its unfiltered workflow completes', async () => {
     const result = await evaluate();
     expect(result.create).toHaveBeenCalledWith(
@@ -186,7 +222,7 @@ describe('CI Gate convergence', () => {
 
   it('ignores old heads and PRs closed during or before evaluation', async () => {
     for (const prs of [
-      [{ ...pullRequest, head: { sha: 'third-head' } }],
+      [{ ...pullRequest, head: { ...pullRequest.head, sha: 'third-head' } }],
       [{ ...pullRequest, state: 'closed' }],
       [pullRequest, { ...pullRequest, state: 'closed' }],
       [pullRequest, { ...pullRequest, base: { ref: 'other-base' } }],
@@ -209,6 +245,26 @@ describe('CI Gate convergence', () => {
 describe('registered replacement cancellation', () => {
   const replacement = { ...run, status: 'in_progress', conclusion: '' };
   const old = { ...run, id: 19, head_sha: 'old-head', status: 'in_progress', conclusion: '' };
+
+  it('cancels obsolete promotion runs without publishing or aggregating an admission verdict', async () => {
+    const result = await evaluate({
+      action: 'requested',
+      trigger: { ...replacement, name: 'Promotion Quality' },
+      candidates: [old],
+    });
+    expect(result.cancel).toHaveBeenCalledExactlyOnceWith({
+      owner: 'example',
+      repo: 'project',
+      run_id: 19,
+    });
+    expect(result.create).not.toHaveBeenCalled();
+  });
+
+  it('ignores completed optional promotion runs without weakening the nine-workflow gate', async () => {
+    const result = await evaluate({ trigger: { ...run, name: 'Promotion Quality' } });
+    expect(result.create).not.toHaveBeenCalled();
+    expect(result.cancel).not.toHaveBeenCalled();
+  });
 
   it('cancels only older runs belonging to this workflow, PR and repository', async () => {
     const result = await evaluate({
@@ -259,7 +315,7 @@ describe('registered replacement cancellation', () => {
       action: 'requested',
       trigger: replacement,
       candidates: [old],
-      prs: [pullRequest, { ...pullRequest, head: { sha: 'third-head' } }],
+      prs: [pullRequest, { ...pullRequest, head: { ...pullRequest.head, sha: 'third-head' } }],
     });
     expect(result.cancel).not.toHaveBeenCalled();
     expect(result.create).not.toHaveBeenCalled();
@@ -299,5 +355,8 @@ describe('workflow admission wiring', () => {
     expect(workflow).toContain('github.event.pull_request.head.sha || github.sha');
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).toContain('types: [opened, synchronize, reopened, edited]');
+    expect(workflow).toContain(
+      'run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref'
+    );
   });
 });

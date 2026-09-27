@@ -1,4 +1,5 @@
 name: App Quality
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Runs each `pillars/*/app` frontend unit's OWN typecheck + test suite.
 #

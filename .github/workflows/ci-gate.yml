@@ -25,6 +25,7 @@ on:
       - "iOS Quality"
       - "Docker Build"
       - "E2E Tests"
+      - "Promotion Quality"
     types: [requested, in_progress, completed]
 
 # Serialize publications for a commit; an interrupted API write can otherwise
@@ -64,6 +65,7 @@ jobs:
               "Docker Build",
               "E2E Tests",
             ];
+            const cancellationOnly = ["Promotion Quality"];
             const passing = new Set(["success", "skipped"]);
 
             // Mirrors each gated workflow's OWN `pull_request.paths` trigger —
@@ -257,10 +259,19 @@ jobs:
               core.info("Only pull request and merge-group runs can publish an admission verdict.");
               return;
             }
-            const pullRequests = triggeringRun.pull_requests || [];
+            let pullRequests = triggeringRun.pull_requests || [];
             let pullRequest = null;
             let changedFiles = null;
             if (triggeringEvent === "pull_request") {
+              if (pullRequests.length === 0) {
+                const associated = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+                  ...context.repo,
+                  commit_sha: headSha,
+                  per_page: 100,
+                });
+                pullRequests = associated.filter((pr) => pr.state === "open" && pr.head.sha === headSha &&
+                  pr.head.repo?.id === triggeringRun.head_repository?.id && pr.head.ref === triggeringRun.head_branch);
+              }
               if (pullRequests.length !== 1) {
                 core.setFailed("Cannot identify one pull request for this run; no verdict published.");
                 return;
@@ -323,6 +334,8 @@ jobs:
               }
             }
 
+            if (cancellationOnly.includes(triggeringRun.name)) return;
+
             const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
               ...context.repo,
               head_sha: headSha,
@@ -332,9 +345,15 @@ jobs:
             const latest = new Map();
             for (const run of [...runs, triggeringRun]) {
               if (!gated.includes(run.name) || run.event !== triggeringEvent || run.head_sha !== headSha) continue;
-              if (pullRequest && !run.pull_requests.some((pr) =>
-                pr.number === pullRequest.number && pr.base.ref === pullRequest.base.ref
-              )) continue;
+              if (pullRequest) {
+                const associated = run.pull_requests.some((pr) =>
+                  pr.number === pullRequest.number && pr.base.ref === pullRequest.base.ref);
+                const forkRun = run.pull_requests.length === 0 &&
+                  run.head_repository?.id === pullRequest.head.repo?.id &&
+                  run.head_branch === pullRequest.head.ref &&
+                  run.display_title === `${run.name} for pull_request into ${pullRequest.base.ref}`;
+                if (!associated && !forkRun) continue;
+              }
               const prev = latest.get(run.name);
               if (!prev || run.run_number > prev.run_number || (run.run_number === prev.run_number &&
                   (run.run_attempt > prev.run_attempt || (run.run_attempt === prev.run_attempt &&

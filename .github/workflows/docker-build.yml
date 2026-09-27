@@ -1,4 +1,5 @@
 name: Docker Build
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 on:
   workflow_call:
@@ -87,7 +88,7 @@ on:
 # which is the whole point of validating them together.
 
 concurrency:
-  group: docker-build-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: docker-build-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 jobs:

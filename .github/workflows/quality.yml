@@ -1,4 +1,5 @@
 name: Quality
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Lint / format / module-boundaries gate, scoped to the units a PR actually
 # touches. On `pull_request` these run over `scripts/` (root-owned tooling,
@@ -89,7 +90,7 @@ on:
         default: false
 
 concurrency:
-  group: quality-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
