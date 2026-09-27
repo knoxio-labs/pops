@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useBulkItemVerbs } from '../../inventory-web/item-verbs-bulk.js';
 import { useItemVerbs } from '../../inventory-web/item-verbs.js';
 import { labelsHref } from '../../pages/labels-page/label-params.js';
-import { PlacementPicker } from '../placement-picker/placement-picker.js';
-import { BulkMoveSheet, usePlacementController } from './bulk-move-sheet.js';
+import { usePlacementController } from './bulk-move-sheet.js';
 import {
   carriedCount,
   copyCodes,
@@ -15,14 +13,18 @@ import {
 } from './selection-actions.js';
 import { useListWriteActions } from './selection-dock.js';
 import { extraDisabledReason, listShortcutHandlers } from './take-out.js';
+import { useListBulkActions } from './use-list-bulk-actions.js';
 
-import type { ReactElement, ReactNode, RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 
+import type { WebItem } from '../../inventory-web/item-row-model.js';
+import type { CatalogueDescriptor } from '../../inventory-web/useCatalogueLookups.js';
 import type { RowVerbId } from '../items-table/items-table.js';
 import type { ItemRowModel, SelectionBarAction } from '../model/index.js';
 import type { PlacementWorld } from '../model/placement-model.js';
 import type { SelectionApi } from '../selection/use-selection.js';
 import type { ShortcutHandlers } from '../shortcuts/shortcut-provider.js';
+import type { BulkActionKind } from './bulk-action-types.js';
 import type { SelectionActionId, SelectionHandlers } from './selection-actions.js';
 import type { TrackWrite, TrackedWrites } from './take-out.js';
 
@@ -32,6 +34,8 @@ export type { TrackedWrites } from './take-out.js';
 /** Inputs required to bind item placement verbs to one list page. */
 export interface ListVerbsInput {
   rows: readonly ItemRowModel[];
+  webItems?: readonly WebItem[];
+  catalogue?: CatalogueDescriptor;
   world: PlacementWorld;
   selection: SelectionApi;
   contentCounts: Readonly<Record<string, { direct: number; deep: number }>>;
@@ -58,6 +62,7 @@ function listControls(
     navigate: ReturnType<typeof useNavigate>;
     writes: ReturnType<typeof useListWriteActions>;
     placement: ReturnType<typeof usePlacementController>;
+    openBulkAction: (kind: BulkActionKind) => void;
   }
 ): Pick<ListVerbs, 'actions' | 'keyHandlers'> {
   const ids = input.selection.selectedIds;
@@ -72,6 +77,10 @@ function listControls(
       onLabel: () => void input.navigate(labelsHref(ids)),
       onCopyCodes: () => copyCodes(input.rows, ids),
     }),
+    'set-type': () => input.openBulkAction('set-type'),
+    'set-field': () => input.openBulkAction('set-field'),
+    retire: () => input.openBulkAction('retire'),
+    discard: () => input.openBulkAction('discard'),
     ...input.extraHandlers,
   };
   const actions = itemSelectionActions(input.world, ids, handlers).map((action) => {
@@ -115,9 +124,23 @@ export function useListVerbs(input: ListVerbsInput): ListVerbs {
     openPicker: placement.openPicker,
   });
 
-  const controls = listControls({ ...input, navigate, writes, placement });
-
-  const overlays = <ListOverlays placement={placement} writes={writes} />;
+  const bulkActions = useListBulkActions({
+    rows,
+    webItems: input.webItems,
+    catalogue: input.catalogue,
+    selection,
+    tracked,
+    bulk,
+    writes,
+    placement,
+  });
+  const controls = listControls({
+    ...input,
+    navigate,
+    writes,
+    placement,
+    openBulkAction: bulkActions.openBulkAction,
+  });
 
   return {
     actions: controls.actions,
@@ -127,71 +150,6 @@ export function useListVerbs(input: ListVerbsInput): ListVerbs {
     rejections: tracked.rejections,
     track: tracked.track,
     keyHandlers: controls.keyHandlers,
-    overlays,
+    overlays: bulkActions.overlays,
   };
-}
-
-function ListOverlays({
-  placement,
-  writes,
-}: {
-  placement: ReturnType<typeof usePlacementController>;
-  writes: ReturnType<typeof useListWriteActions>;
-}): ReactElement {
-  const [moveBusy, setMoveBusy] = useState(false);
-  const apply = (): void => {
-    const plan = placement.movePlan;
-    if (plan === null || moveBusy) return;
-    setMoveBusy(true);
-    void writes
-      .runBulkMove(plan, () => placement.setMoveSheetOpen(false))
-      .finally(() => setMoveBusy(false));
-  };
-  return (
-    <>
-      <PlacementOverlay placement={placement} />
-      {placement.movePlan !== null ? (
-        <BulkMoveSheet
-          open={placement.moveSheetOpen}
-          onOpenChange={placement.setMoveSheetOpen}
-          plan={placement.movePlan}
-          world={placement.planWorld ?? placement.moveWorld}
-          busy={moveBusy}
-          onApply={apply}
-          onChangeTarget={() => {
-            placement.setMoveSheetOpen(false);
-            placement.openPicker(placement.pickerIds, 'bulk');
-          }}
-        />
-      ) : null}
-    </>
-  );
-}
-
-function PlacementOverlay({
-  placement,
-}: {
-  placement: ReturnType<typeof usePlacementController>;
-}): ReactElement {
-  return (
-    <PlacementPicker
-      open={placement.pickerOpen}
-      onOpenChange={placement.setPickerOpen}
-      trigger={
-        <span
-          data-placement-picker-trigger
-          aria-hidden="true"
-          className="fixed size-0"
-          style={{ top: placement.anchor.top, left: placement.anchor.left }}
-        />
-      }
-      world={placement.moveWorld}
-      subject={placement.pickerSubject}
-      recents={placement.sources.recents}
-      onPick={placement.onPickerPick}
-      onCreatePlace={(name, parentId) => {
-        placement.sources.createLocation.mutate({ name, parentId });
-      }}
-    />
-  );
 }
