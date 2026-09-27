@@ -192,7 +192,7 @@ export function SyncSegment(props: SyncSegmentProps): ReactElement {
           </ul>
         </Card>
         {hasSheet ? (
-          <div className="absolute inset-y-0 right-0 z-10 flex max-w-full shadow-xl xl:static xl:min-h-0 xl:shadow-none [&>section]:w-120 xl:[&>section]:w-full">
+          <div className="absolute inset-y-0 right-0 z-10 flex max-w-full shadow-xl xl:static xl:min-h-0 xl:shadow-none max-xl:[&>section]:w-120 xl:[&>section]:w-full">
             {props.sheet}
           </div>
         ) : null}
