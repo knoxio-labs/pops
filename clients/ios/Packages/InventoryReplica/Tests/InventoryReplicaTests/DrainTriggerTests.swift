@@ -130,10 +130,11 @@ internal struct DrainTriggerTests {
         drain.start()
         reachability.set(true)
 
-        #expect(await eventually {
-            transport.calls.changesSince == [10, 10]
-                && (try? replica.read(.replicaStatus)) == .current
-        })
+        #expect(
+            await eventually {
+                transport.calls.changesSince == [10, 10]
+                    && (try? replica.read(.replicaStatus)) == .current
+            })
     }
 
     @Test("a local-first store given a network path sends what it logs")
