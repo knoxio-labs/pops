@@ -10,8 +10,8 @@ import Testing
 #if os(iOS)
     private enum InventoryKeyboardDismissalViewInspector {
         @MainActor
-        static func dismissalRecognizer(in window: UIWindow) -> UITapGestureRecognizer? {
-            window.gestureRecognizers?
+        static func dismissalRecognizer(in view: UIView) -> UITapGestureRecognizer? {
+            view.gestureRecognizers?
                 .compactMap { $0 as? UITapGestureRecognizer }
                 .first { $0.delegate is InventoryKeyboardDismissalCoordinator }
         }
@@ -37,11 +37,9 @@ internal struct InventoryFormKeyboardDismissalTests {
     #if os(iOS)
         @MainActor
         @Test("the iOS tap handler leaves text inputs focused and shares control gestures")
-        func tapDismissalRespectsInputBoundaries() throws {
+        func tapDismissalRespectsInputBoundaries() {
             let coordinator = InventoryKeyboardDismissalCoordinator()
-            let scene = try #require(
-                UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
-            let window = UIWindow(windowScene: scene)
+            let hostView = UIView()
             let container = UIView()
             let field = UITextField()
             container.addSubview(field)
@@ -51,17 +49,18 @@ internal struct InventoryFormKeyboardDismissalTests {
             let tap = UITapGestureRecognizer()
             let controlGesture = UITapGestureRecognizer()
 
-            coordinator.setWindow(window)
+            coordinator.setHostView(hostView)
             #expect(
-                InventoryKeyboardDismissalViewInspector.dismissalRecognizer(in: window) != nil)
+                InventoryKeyboardDismissalViewInspector.dismissalRecognizer(in: hostView) != nil)
             #expect(!coordinator.shouldDismiss(for: field))
             #expect(!coordinator.shouldDismiss(for: fieldContent))
             #expect(coordinator.shouldDismiss(for: control))
             #expect(
                 coordinator.gestureRecognizer(
                     tap, shouldRecognizeSimultaneouslyWith: controlGesture))
-            coordinator.setWindow(nil)
-            #expect(InventoryKeyboardDismissalViewInspector.dismissalRecognizer(in: window) == nil)
+            coordinator.setHostView(nil)
+            #expect(
+                InventoryKeyboardDismissalViewInspector.dismissalRecognizer(in: hostView) == nil)
         }
     #endif
 }

@@ -17,23 +17,23 @@ import SwiftUI
     internal final class InventoryKeyboardDismissalCoordinator: NSObject,
         UIGestureRecognizerDelegate
     {
-        private weak var window: UIWindow?
+        private weak var hostView: UIView?
         private var recognizer: UITapGestureRecognizer?
 
-        internal func setWindow(_ window: UIWindow?) {
-            guard self.window !== window else { return }
-            if let oldWindow = self.window, let recognizer {
-                oldWindow.removeGestureRecognizer(recognizer)
+        internal func setHostView(_ view: UIView?) {
+            guard hostView !== view else { return }
+            if let oldHostView = hostView, let recognizer {
+                oldHostView.removeGestureRecognizer(recognizer)
             }
-            self.window = window
+            hostView = view
             recognizer = nil
-            guard let window else { return }
+            guard let view else { return }
 
             let recognizer = UITapGestureRecognizer(
                 target: self, action: #selector(dismissKeyboard))
             recognizer.cancelsTouchesInView = false
             recognizer.delegate = self
-            window.addGestureRecognizer(recognizer)
+            view.addGestureRecognizer(recognizer)
             self.recognizer = recognizer
         }
 
@@ -76,12 +76,12 @@ import SwiftUI
             let view = InventoryKeyboardDismissalAnchorView()
             view.isUserInteractionEnabled = false
             let coordinator = context.coordinator
-            view.onWindowChange = { [weak coordinator] window in coordinator?.setWindow(window) }
+            view.onWindowChange = { [weak coordinator] window in coordinator?.setHostView(window) }
             return view
         }
 
         func updateUIView(_ uiView: InventoryKeyboardDismissalAnchorView, context: Context) {
-            context.coordinator.setWindow(uiView.window)
+            context.coordinator.setHostView(uiView.window)
         }
 
         static func dismantleUIView(
@@ -89,7 +89,7 @@ import SwiftUI
             coordinator: InventoryKeyboardDismissalCoordinator
         ) {
             uiView.onWindowChange = nil
-            coordinator.setWindow(nil)
+            coordinator.setHostView(nil)
         }
     }
 #endif
