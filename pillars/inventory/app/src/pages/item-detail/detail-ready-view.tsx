@@ -58,6 +58,7 @@ function ReadyMain({
   if (model.item.container !== null && ready.storeTarget !== null) {
     return (
       <ContainerWorkspace
+        key={model.item.id}
         model={model}
         placementWorld={ready.placement.world}
         recents={ready.placement.recents}
