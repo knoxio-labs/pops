@@ -11,6 +11,7 @@ import type { ItemRowModel } from '../model/model.js';
 export interface BulkFieldCandidate {
   readonly field: CatalogueType['fields'][number];
   readonly have: number;
+  readonly itemIds: readonly string[];
 }
 
 /** The input values supported by the live bulk field sheet. */
@@ -51,7 +52,7 @@ function supportsTypeValue(field: CatalogueType['fields'][number]): boolean {
   return field.archivedAt === null && field.storage === 'stored';
 }
 
-/** Finds writable fields shared by at least one selected row's current type. */
+/** Finds writable fields and the selected rows whose current types declare them. */
 export function bulkFieldCandidates(
   rows: readonly ItemRowModel[],
   ids: readonly string[],
@@ -59,19 +60,23 @@ export function bulkFieldCandidates(
 ): BulkFieldCandidate[] {
   if (catalogue === undefined) return [];
   const selected = new Set(ids);
-  const fields = new Map<string, { field: CatalogueType['fields'][number]; ids: Set<string> }>();
+  const fields = new Map<
+    string,
+    { field: CatalogueType['fields'][number]; itemIds: Set<string> }
+  >();
   for (const row of rows) {
     if (!selected.has(row.id) || row.typeId === null) continue;
     const type = catalogue.types.find((candidate) => candidate.id === row.typeId);
     for (const field of type?.fields ?? []) {
       if (!supportsBulkField(field)) continue;
       const existing = fields.get(field.id);
-      if (existing === undefined) fields.set(field.id, { field, ids: new Set([row.id]) });
-      else existing.ids.add(row.id);
+      if (existing === undefined) {
+        fields.set(field.id, { field, itemIds: new Set([row.id]) });
+      } else existing.itemIds.add(row.id);
     }
   }
   return [...fields.values()]
-    .map(({ field, ids: fieldIds }) => ({ field, have: fieldIds.size }))
+    .map(({ field, itemIds }) => ({ field, have: itemIds.size, itemIds: [...itemIds] }))
     .toSorted((left, right) => left.field.label.localeCompare(right.field.label));
 }
 

@@ -168,8 +168,8 @@ describe('bulk action model', () => {
         published
       )
     ).toEqual([
-      { field: other, have: 1 },
-      { field: editable, have: 1 },
+      { field: other, have: 1, itemIds: ['item-b'] },
+      { field: editable, have: 1, itemIds: ['item-a'] },
     ]);
   });
 

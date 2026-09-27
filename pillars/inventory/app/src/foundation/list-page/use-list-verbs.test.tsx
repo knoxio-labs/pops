@@ -371,6 +371,49 @@ describe('useListVerbs', () => {
     ]);
   });
 
+  it('writes a shared field to every compatible selected row', async () => {
+    const sharedField = field('type-old', 'colour', 'Colour');
+    const rows = [
+      { ...coreItem('itm-lamp'), typeId: 'type-old', typeName: 'Old type' },
+      { ...coreItem('itm-printer'), typeId: 'type-other', typeName: 'Other type' },
+      { ...coreItem('itm-drill'), typeId: 'type-missing', typeName: 'Missing type' },
+    ];
+
+    render(
+      <BulkActionHarness
+        value={input({
+          rows,
+          selection: selection(rows.map((row) => row.id)),
+          catalogue: catalogue([
+            type('type-old', 'Old type', [sharedField]),
+            type('type-other', 'Other type', [{ ...sharedField, typeId: 'type-other' }]),
+            type('type-missing', 'Missing type'),
+          ]),
+        })}
+      />,
+      { wrapper }
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-field' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Colour' }), {
+      target: { value: 'blue' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Set on 2 items' }));
+
+    await waitFor(() =>
+      expect(mocks.bulk.editValues).toHaveBeenCalledWith([
+        {
+          id: 'itm-lamp',
+          patches: [{ fieldId: 'colour', values: ['blue'] }],
+        },
+        {
+          id: 'itm-printer',
+          patches: [{ fieldId: 'colour', values: ['blue'] }],
+        },
+      ])
+    );
+  });
+
   it('runs bulk pick up and offers one undo toast for applied ids', async () => {
     const { result } = renderHook(() => useListVerbs(input()), { wrapper });
     const action = result.current.actions.find((entry) => entry.id === 'pick-up');
