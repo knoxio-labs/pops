@@ -5,16 +5,19 @@ import { fixedTarget, restoreUnapplied, showBulkUndo } from './workspace-model.j
 
 import type { TrackedWrites } from '../../../foundation/list-page/take-out.js';
 import type { BulkItemVerbs } from '../../../inventory-web/item-verbs-bulk.js';
-import type { UnpackAction } from './unpack-model.js';
+import type { UnpackAction, UnpackState } from './unpack-model.js';
 
 interface MoveRequestInput {
   plan: MovePlan;
-  bulk: BulkItemVerbs;
+  state: UnpackState;
+  bulk: Pick<BulkItemVerbs, 'move' | 'pickUp'>;
   tracked: TrackedWrites;
   dispatch: (action: UnpackAction) => void;
 }
 
-async function executeMove(input: MoveRequestInput): Promise<void> {
+/** Applies a move plan only while the source container is still open. */
+export async function executeMove(input: MoveRequestInput): Promise<void> {
+  if (input.state.access === 'closed') return;
   const ids = input.plan.moving.map((item) => item.id);
   const target = fixedTarget(input.plan.target);
   if (ids.length === 0) return;
@@ -40,6 +43,7 @@ async function executeMove(input: MoveRequestInput): Promise<void> {
 /** Returns the guarded optimistic mutation for an applicable move plan. */
 export function useContainerMoveAction({
   plan,
+  state,
   readOnly,
   bulk,
   tracked,
@@ -47,6 +51,7 @@ export function useContainerMoveAction({
   clearMove,
 }: {
   plan: MovePlan | null;
+  state: UnpackState;
   readOnly: boolean;
   bulk: BulkItemVerbs;
   tracked: TrackedWrites;
@@ -57,9 +62,9 @@ export function useContainerMoveAction({
   const runMove = useCallback(async (): Promise<void> => {
     if (plan === null || !planIsApplicable(plan) || readOnly) return;
     setMoveBusy(true);
-    await executeMove({ plan, bulk, tracked, dispatch });
+    await executeMove({ plan, state, bulk, tracked, dispatch });
     setMoveBusy(false);
     clearMove();
-  }, [bulk, clearMove, dispatch, plan, readOnly, tracked]);
+  }, [bulk, clearMove, dispatch, plan, readOnly, state, tracked]);
   return { moveBusy, runMove };
 }

@@ -108,9 +108,9 @@ function createSetFieldHandler(
     if (candidate === undefined) return;
     const patch = bulkFieldPatch(candidate.field, fieldInput);
     if (patch === null) return;
-    const selected = new Set(action.ids);
+    const eligible = new Set(candidate.itemIds);
     const writes = context.rows
-      .filter((row) => selected.has(row.id) && row.typeId === candidate.field.typeId)
+      .filter((row) => eligible.has(row.id))
       .map((row) => ({ id: row.id, patches: [patch] }));
     await context.runBulk(
       () => context.bulk.editValues(writes),

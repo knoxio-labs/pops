@@ -11,18 +11,20 @@ import type { PlacementWorld } from '../../../foundation/model/placement-model.j
 import type { BulkItemVerbs, BulkResult } from '../../../inventory-web/item-verbs-bulk.js';
 import type { UnpackAction, UnpackState, ExitKind } from './unpack-model.js';
 
-interface ExitRequestInput {
+/** Inputs for one guarded container exit operation. */
+export interface ExitRequestInput {
   ids: readonly string[];
   how: ExitKind;
   state: UnpackState;
   world: PlacementWorld;
-  bulk: BulkItemVerbs;
+  bulk: Pick<BulkItemVerbs, 'move' | 'pickUp'>;
   tracked: TrackedWrites;
   dispatch: (action: UnpackAction) => void;
   openMove: (ids: readonly string[]) => void;
 }
 
-async function executeExit(input: ExitRequestInput): Promise<void> {
+/** Applies a take-out or pick-up operation with optimistic rollback and refusals. */
+export async function executeExit(input: ExitRequestInput): Promise<void> {
   const selected = [...new Set(input.ids)].filter((id) => input.state.inside.includes(id));
   if (input.how === 'move') {
     input.openMove(selected);
