@@ -9,7 +9,7 @@ import type { ReactElement } from 'react';
 import type { SelectionBarAction } from '../../../foundation/model/contracts.js';
 import type { ItemRowModel } from '../../../foundation/model/model.js';
 import type { SelectionApi } from '../../../foundation/selection/use-selection.js';
-import type { ContentsPaneProps } from './contents-pane.js';
+import type { ContentsPaneProps } from './workspace-types.js';
 
 type LayoutProps = ContentsPaneProps & {
   query: string;

@@ -8,32 +8,7 @@ import { exitRefusal } from './unpack-model.js';
 
 import type { ReactElement } from 'react';
 
-import type { PlacementWorld } from '../../../foundation/model/placement-model.js';
-import type { ExitKind, UnpackAction, UnpackState } from './unpack-model.js';
-
-/** Props for the contents-first pane of a container workspace. */
-export interface ContentsPaneProps {
-  name: string;
-  home: string;
-  world: PlacementWorld;
-  inside: readonly string[];
-  contentCounts: Readonly<Record<string, { readonly direct: number; readonly deep: number }>>;
-  state: UnpackState;
-  dispatch: (action: UnpackAction) => void;
-  readOnly: boolean;
-  readOnlyReason?: string;
-  pendingIds: ReadonlySet<string>;
-  rejections: Readonly<Record<string, string>>;
-  onExit: (ids: readonly string[], how: ExitKind) => void;
-  onMove: (ids: readonly string[]) => void;
-  onLabel: (ids: readonly string[]) => void;
-  onLifecycle: (ids: readonly string[], lifecycle: 'retire' | 'discard') => void;
-  onStoreHere?: () => void;
-  onOpen: (id: string) => void;
-  onEdit: (id: string) => void;
-  onOpenContainer: () => void;
-  onRetire: () => void;
-}
+import type { ContentsPaneProps } from './workspace-types.js';
 
 /** Renders a filterable, selectable, contents-first container pane. */
 export function ContentsPane(props: ContentsPaneProps): ReactElement {
