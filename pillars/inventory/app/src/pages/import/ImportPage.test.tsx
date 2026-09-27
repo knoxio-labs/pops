@@ -144,6 +144,22 @@ describe('ImportPage', () => {
     expect(screen.getByText('Ready to check rows')).toBeInTheDocument();
   });
 
+  it('changes the selected occurrence when headers repeat', async () => {
+    renderImport();
+    await uploadCsv('Name,Note,Note\r\nLamp,first,second');
+
+    const user = userEvent.setup();
+    const noteColumns = screen.getAllByRole('combobox', { name: 'Note becomes' });
+    const secondNoteColumn = noteColumns[1];
+    if (secondNoteColumn === undefined) throw new Error('second Note column not found');
+    await user.selectOptions(secondNoteColumn, 'where');
+    await checkRows();
+
+    expect(mocks.validate).toHaveBeenCalledWith([
+      { name: 'Lamp', type: '', quantity: '', code: '', where: 'second', note: 'first' },
+    ]);
+  });
+
   it('blocks Check rows when a mapping has no Name column', async () => {
     renderImport();
     await uploadCsv('Quantity,Note\r\n2,missing name');

@@ -50,7 +50,7 @@ export interface ImportState {
   progress: BatchProgress | null;
   createdIds: readonly string[];
   load: (file: File) => Promise<void>;
-  setTarget: (header: string, target: ColumnTarget) => void;
+  setTarget: (index: number, target: ColumnTarget) => void;
   setOnlyProblems: (on: boolean) => void;
   check: () => Promise<void>;
   commit: () => Promise<void>;

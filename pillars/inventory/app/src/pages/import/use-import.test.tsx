@@ -107,6 +107,21 @@ describe('useImport', () => {
     ]);
   });
 
+  it('updates only the selected mapping when headers repeat', async () => {
+    const { result } = renderHook(() => useImport());
+    await act(async () => {
+      await result.current.load(csvFile('Name,Note,Note\r\nLamp,first,second'));
+    });
+    act(() => result.current.setTarget(2, 'where'));
+    await act(async () => {
+      await result.current.check();
+    });
+
+    expect(mocks.validate).toHaveBeenCalledWith([
+      { name: 'Lamp', type: '', quantity: '', code: '', where: 'second', note: 'first' },
+    ]);
+  });
+
   it('commits valid rows and reports invalid rows as skipped', async () => {
     const { result } = renderHook(() => useImport());
     await act(async () => {

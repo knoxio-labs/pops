@@ -24,8 +24,8 @@ export interface MappingStepProps {
   rows: readonly (readonly string[])[];
   /** Header-target pairs from the initial automatic guess. */
   guessed: ReadonlySet<string>;
-  /** Receives a mapping selection without casting the native select value. */
-  onTarget: (header: string, target: ColumnTarget) => void;
+  /** Receives a source-column index and mapping selection without casting the native select value. */
+  onTarget: (index: number, target: ColumnTarget) => void;
 }
 
 function sample(cell: string | undefined): string {
@@ -39,11 +39,13 @@ function source(column: ColumnMapping, guessed: boolean): string {
 
 function MappingRow({
   column,
+  index,
   samples,
   guessed,
   onTarget,
 }: {
   column: ColumnMapping;
+  index: number;
   samples: readonly string[];
   guessed: boolean;
   onTarget: MappingStepProps['onTarget'];
@@ -63,7 +65,7 @@ function MappingRow({
           options={OPTIONS}
           onChange={(event) => {
             const target = TARGETS.find((candidate) => candidate === event.currentTarget.value);
-            if (target !== undefined) onTarget(column.header, target);
+            if (target !== undefined) onTarget(index, target);
           }}
           className={cn(column.target === 'skip' && 'text-muted-foreground')}
         />
@@ -120,6 +122,7 @@ export function MappingStep({ mapping, rows, guessed, onTarget }: MappingStepPro
             <MappingRow
               key={`${column.header}-${String(index)}`}
               column={column}
+              index={index}
               samples={rows.slice(0, 4).map((cells) => sample(cells[index]))}
               guessed={guessed.has(`${column.header}:${column.target}`)}
               onTarget={onTarget}

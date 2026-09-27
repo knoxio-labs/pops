@@ -50,14 +50,11 @@ async function loadImport(file: File, setData: SetImportData): Promise<void> {
   });
 }
 
-function changeTarget(setData: SetImportData, header: string, target: ColumnTarget): void {
+function changeTarget(setData: SetImportData, columnIndex: number, target: ColumnTarget): void {
   setData((current) => {
-    let changed = false;
-    const mapping = current.mapping.map((column) => {
-      if (changed || column.header !== header) return column;
-      changed = true;
-      return { ...column, target };
-    });
+    const mapping = current.mapping.map((column, index) =>
+      index === columnIndex ? { ...column, target } : column
+    );
     return { ...current, mapping, problems: mappingProblems(mapping) };
   });
 }
@@ -143,7 +140,7 @@ export function useImport(): ImportState {
 
   const load = useCallback((file: File) => loadImport(file, setData), []);
   const setTarget = useCallback(
-    (header: string, target: ColumnTarget) => changeTarget(setData, header, target),
+    (columnIndex: number, target: ColumnTarget) => changeTarget(setData, columnIndex, target),
     []
   );
   const setOnlyProblems = useCallback(
