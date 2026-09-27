@@ -7,8 +7,16 @@ import { CaseRow, ResolvedRow, WaitingRow } from './ledger-rows.js';
 
 import type { ReactElement, ReactNode } from 'react';
 
-import type { SyncLedger } from './sync-model.js';
-import type { SyncSegmentProps } from './sync-segment.js';
+import type { SyncLedger, SyncSegment } from './sync-model.js';
+
+interface RowsProps {
+  ledger: SyncLedger;
+  segment: SyncSegment;
+  now: string;
+  openId: string | null;
+  onOpenCase: (id: string) => void;
+  onOpenResolved: (id: string) => void;
+}
 
 export function Devices({ ledger, now }: { ledger: SyncLedger; now: string }): ReactElement {
   return (
@@ -48,10 +56,7 @@ export function Rows({
   openId,
   onOpenCase,
   onOpenResolved,
-}: Pick<
-  SyncSegmentProps,
-  'ledger' | 'segment' | 'now' | 'openId' | 'onOpenCase' | 'onOpenResolved'
->): ReactNode {
+}: RowsProps): ReactNode {
   if (segment === 'attention') {
     if (ledger.attention.length === 0) return <AllClear ledger={ledger} />;
     return ledger.attention.map((repair) => (
