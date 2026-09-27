@@ -30,6 +30,11 @@ const barcodeDb = openBarcodeDb(resolveBarcodeSqlitePath());
 const lookupService = createBarcodeLookupService({
   db: barcodeDb.db,
   sources: [createOpenLibrarySource({ userAgentContact }), createGoogleBooksSource()],
+  logger: {
+    info: (message, context) => {
+      process.stdout.write(`${JSON.stringify({ scope: 'barcode-api', message, ...context })}\n`);
+    },
+  },
 });
 const app = createBarcodeApiApp({ barcodeDb, version, selfBaseUrl, lookupService });
 
