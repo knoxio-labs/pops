@@ -12,14 +12,16 @@ internal struct InventoryLocationAddSheet: View {
     internal let tree: InventoryLocationTree
     internal let place: InventoryLocationNode
     internal let runner: InventoryCommandRunner
+    @Environment(\.dismiss) private var dismiss
 
     internal var body: some View {
         NavigationStack {
-            InventoryLocationAddRoot(tree: tree, place: place, runner: runner)
+            InventoryLocationAddRoot(
+                tree: tree, place: place, runner: runner, onCreated: { dismiss() })
         }
         .presentationDetents([.height(InventoryChoiceStep.sheetHeight)])
         .tint(.popsInventory)
-        .inventoryItemFormPresentation(store: runner.store)
+        .inventoryItemFormPresentation(store: runner.store, onCreated: { dismiss() })
     }
 }
 
@@ -30,6 +32,7 @@ private struct InventoryLocationAddRoot: View {
     let tree: InventoryLocationTree
     let place: InventoryLocationNode
     let runner: InventoryCommandRunner
+    let onCreated: @MainActor () -> Void
     @State private var creatingPlace = false
     @Environment(\.inventoryItemForm) private var itemForm
 
@@ -46,7 +49,8 @@ private struct InventoryLocationAddRoot: View {
             ]
         )
         .sheet(isPresented: $creatingPlace) {
-            InventoryLocationCreateSheet(tree: tree, runner: runner, parentID: place.id)
+            InventoryLocationCreateSheet(
+                tree: tree, runner: runner, parentID: place.id, onCreated: onCreated)
         }
     }
 }
