@@ -5,9 +5,11 @@ Every workflow YAML file in this directory is documented here exactly once: as a
 ## `ci-gate.yml` — the one static aggregate context
 
 `ci-gate.yml` observes requested, in-progress and completed runs of nine quality
-workflows. Promotion Quality is an optional cancellation-only observer input: its
-absence never blocks the aggregate, and its own required Promotion validation
-check carries its verdict. The wiring guard keeps those two sets disjoint. It publishes an explicit `CI Gate` check against the observed head SHA;
+workflows. Additional workflows may opt into cancellation-only observation: add
+their existing name to both the trigger and `cancellationOnly`, with a separate
+observer concurrency group. Their verdict belongs to their own required check.
+The wiring guard requires every observed name to exist and keeps the two sets
+disjoint. It publishes an explicit `CI Gate` check against the observed head SHA;
 its own implicit check belongs to the default branch. The workflow never checks
 out or executes pull request content despite holding `actions: write` and
 `checks: write`.
@@ -16,8 +18,12 @@ out or executes pull request content despite holding `actions: write` and
   without waiting for obsolete work. Native cancellation stays disabled.
 - After a replacement is registered and verified against the current open PR,
   the observer cancels older runs of that same workflow, PR and source repository.
+  Each evaluation reconciles every registered replacement at the current head,
+  including completed replacements, so coalesced observer events cannot strand old work.
   Merge-group runs are never cancelled by this mechanism. If cancellation fails,
   obsolete work may finish, but it cannot contribute to another SHA's verdict.
+- Cancellation-only and non-PR events have separate observer concurrency groups,
+  so their no-verdict evaluations cannot replace a queued admission publication.
 - Gate evaluations for one SHA serialize without cancelling each other's API
   publications. Every evaluation reads current sibling states. Pushes during
   evaluation, closed PRs and completions from superseded heads publish nothing.

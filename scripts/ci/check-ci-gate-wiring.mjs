@@ -513,7 +513,7 @@ export function checkCiGateWiring(root) {
 
   const { names: known, problems } = readWorkflowNames(root);
   violations.push(...problems);
-  for (const name of gated) {
+  for (const name of new Set([...triggerNames, ...gated, ...cancellationOnly])) {
     if (!known.has(name)) {
       violations.push(
         `ci-gate.yml references workflow "${name}", which matches no \`name:\` under ` +
