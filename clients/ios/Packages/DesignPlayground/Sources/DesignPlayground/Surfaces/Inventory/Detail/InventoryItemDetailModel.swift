@@ -159,7 +159,7 @@ internal struct InventoryItemDetail: Identifiable {
     }
 
     private var template: InventoryTemplate? {
-        InventoryPropertyTemplates.all.first { $0.name == item.typeName }
+        InventoryFormType.named(item.typeName)
     }
 
     private func isHighlighted(_ field: InventoryDetailField) -> Bool {

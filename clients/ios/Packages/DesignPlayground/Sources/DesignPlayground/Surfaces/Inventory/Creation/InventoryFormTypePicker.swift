@@ -5,17 +5,19 @@ internal struct InventoryFormTypePicker: View {
     @Binding internal var selection: String?
     internal let additionalNames: [String]
     internal let showsNoneOption: Bool
+    internal let noneOptionTitle: String
     private let initialQuery: String
     @Environment(\.dismiss) private var dismiss
     @State private var query: String
 
     internal init(
         selection: Binding<String?>, additionalNames: [String] = [], query: String = "",
-        showsNoneOption: Bool = true
+        showsNoneOption: Bool = true, noneOptionTitle: String = InventoryFormType.none
     ) {
         _selection = selection
         self.additionalNames = additionalNames
         self.showsNoneOption = showsNoneOption
+        self.noneOptionTitle = noneOptionTitle
         initialQuery = query
         _query = State(initialValue: query)
     }
@@ -43,7 +45,7 @@ internal struct InventoryFormTypePicker: View {
                 Button {
                     choose(nil)
                 } label: {
-                    optionLabel(name: InventoryFormType.none, isSelected: selection == nil)
+                    optionLabel(name: noneOptionTitle, isSelected: selection == nil)
                 }
             }
             ForEach(InventoryFormType.children(of: nil)) { node in

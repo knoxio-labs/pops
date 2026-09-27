@@ -37,6 +37,22 @@ internal struct InventoryTypeTreeTests {
         )
     }
 
+    @Test("detail highlights fields inherited by a tree type")
+    func detailHighlightsTreeTypeFields() {
+        let detail = InventoryItemDetail(
+            item: InventoryFoundationItem(
+                id: "pillowcase", name: "Linen pillowcase", typeName: "Pillowcase",
+                placement: .direct(location: "Guest room")),
+            fields: [
+                InventoryDetailField(key: "Destination", value: "Guest room"),
+                InventoryDetailField(key: "Material", value: "Cotton"),
+                InventoryDetailField(key: "Closure", value: "Envelope"),
+            ])
+
+        #expect(detail.highlightedFields.map(\.key) == ["Destination"])
+        #expect(detail.otherFields.map(\.key) == ["Material", "Closure"])
+    }
+
     @Test("a parent type filter includes its descendants")
     func parentFilterIncludesDescendants() {
         let pillowcase = InventorySearchRecord(
@@ -66,20 +82,27 @@ internal struct InventoryTypeTreeTests {
         )
     }
 
-    @Test("the search filter hides the form-only no-type option")
-    func searchFilterHidesFormOnlyNoneOption() throws {
+    @Test("the form type picker keeps its no-type option")
+    func formTypePickerKeepsNoneOption() throws {
         let picker = try source(
             at:
                 "Sources/DesignPlayground/Surfaces/Inventory/Creation/InventoryFormTypePicker.swift"
         )
+
+        #expect(picker.contains("showsNoneOption: Bool = true"))
+        #expect(picker.contains("if showsNoneOption"))
+        #expect(picker.contains("InventoryFormType.none"))
+    }
+
+    @Test("the search filter offers Any to clear the type")
+    func searchFilterOffersAnyTypeOption() throws {
         let filterSheet = try source(
             at:
                 "Sources/DesignPlayground/Surfaces/Inventory/Search/InventorySearchFilterSheet.swift"
         )
 
-        #expect(picker.contains("showsNoneOption: Bool = true"))
-        #expect(picker.contains("if showsNoneOption"))
-        #expect(filterSheet.contains("showsNoneOption: false"))
+        #expect(filterSheet.contains("showsNoneOption: true"))
+        #expect(filterSheet.contains("noneOptionTitle: \"Any\""))
     }
 
     @Test("the ticket states are registered on their required surfaces")
