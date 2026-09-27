@@ -178,6 +178,12 @@ describe('location page foundations', () => {
     );
   });
 
+  it('keeps primary place actions separate from the toolbar module', async () => {
+    const parts = await import('./location-page-parts.js');
+
+    expect(parts).not.toHaveProperty('PlaceActions');
+  });
+
   it('uses five full-width skeleton rows while route data is pending', () => {
     mocks.useLocationModels.mockReturnValue({
       locations: [],
