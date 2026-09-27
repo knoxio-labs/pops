@@ -122,7 +122,8 @@ internal struct InventoryPrefillApplicationTests {
         #expect(
             InventoryPrefillStatus.productNotFound.message == "No product found for this barcode")
         #expect(
-            InventoryPrefillStatus.lookupUnavailable.message == "Couldn't look up this barcode")
+            InventoryPrefillStatus.barcodeUnsupported.message
+                == "Barcode lookup covers books. Use text for this item.")
         #expect(InventoryPrefillStatus.noText.message == "No text recognised")
         #expect(
             InventoryPrefillStatus.scannerUnavailable.message
