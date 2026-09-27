@@ -12,7 +12,7 @@ import type { ActivityFilter, KindGroup } from './activity-model.js';
 const ACTORS: ReadonlyArray<{ value: EventActor | 'anyone'; label: string }> = [
   { value: 'anyone', label: 'Anyone' },
   { value: 'web', label: 'This web app' },
-  { value: 'device', label: "Joao's iPhone" },
+  { value: 'device', label: 'Any device' },
   { value: 'service', label: 'Purchases import' },
   { value: 'migration', label: 'Catalogue revisions' },
 ];
