@@ -1,3 +1,4 @@
+import type { DragPlacementApi } from '../../foundation/drag/use-drag-placement.js';
 import type { LocationModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { PlaceTally } from '../../inventory-web/useLocationTallies.js';
@@ -13,4 +14,5 @@ export interface PlacePreviewProps {
   readonly movingPlace: boolean;
   readonly onMovingPlaceChange: (open: boolean) => void;
   readonly onOpen: () => void;
+  readonly onItemDragChange?: (drag: DragPlacementApi | undefined) => void;
 }

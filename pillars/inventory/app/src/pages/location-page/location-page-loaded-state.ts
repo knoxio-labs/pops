@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router';
 
+import {
+  useContentsVerbs as useBulkContentsVerbs,
+  type ContentsVerbs as BulkContentsVerbs,
+} from '../../foundation/places/use-contents-verbs.js';
 import { LOCATIONS_TREE_QUERY_KEY, WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
 import {
   useChangedElsewhere,
@@ -22,6 +26,7 @@ export interface LoadedLocationState {
   readonly storeHereOpen: boolean;
   readonly setStoreHereOpen: (open: boolean) => void;
   readonly contentVerbs: ContentsVerbState;
+  readonly bulkContentVerbs: BulkContentsVerbs;
   readonly changed: ChangedElsewhere;
 }
 
@@ -38,6 +43,7 @@ export function useLoadedLocationState(
   const [storeHereOpen, setStoreHereOpen] = useState(false);
   const [movingItemIds, setMovingItemIds] = useState<readonly string[]>([]);
   const contentVerbs = useContentsVerbs(world, online, movingItemIds, setMovingItemIds);
+  const bulkContentVerbs = useBulkContentsVerbs({ world, offline: !online });
   const changed = useChangedElsewhere({
     queryKeys: [
       LOCATIONS_TREE_QUERY_KEY,
@@ -56,6 +62,7 @@ export function useLoadedLocationState(
     storeHereOpen,
     setStoreHereOpen,
     contentVerbs,
+    bulkContentVerbs,
     changed,
   };
 }
