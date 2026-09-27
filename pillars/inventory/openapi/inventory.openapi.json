@@ -19777,6 +19777,126 @@
         "tags": ["webMoving"]
       }
     },
+    "/web/reports/entries": {
+      "get": {
+        "operationId": "webReports.entries",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "entries": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "effectiveLocationId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "isContainer": {
+                            "type": "boolean"
+                          },
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "photos": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "place": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "purchasePrice": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "purchasedOn": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "receiptId": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "replacementValue": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "room": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["key", "label"],
+                            "type": "object"
+                          },
+                          "typeKey": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "warrantyExpires": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "itemId",
+                          "name",
+                          "code",
+                          "typeKey",
+                          "isContainer",
+                          "quantity",
+                          "replacementValue",
+                          "purchasePrice",
+                          "purchasedOn",
+                          "warrantyExpires",
+                          "receiptId",
+                          "photos",
+                          "effectiveLocationId",
+                          "room",
+                          "place"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["entries"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Active inventory report entries with provenance and effective placement",
+        "tags": ["webReports"]
+      }
+    },
     "/web/reports/values": {
       "get": {
         "operationId": "webReports.values",
