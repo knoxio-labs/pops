@@ -277,6 +277,8 @@ describe('item detail model', () => {
         name: 'Wall hook',
         notes: null,
         type: 'hook',
+        wiredCount: 0,
+        wiredNames: [],
       },
     ];
     expect(toDetailConnections('item-1', graph, links, fixtures, relatedWorld)).toMatchObject([

@@ -41,6 +41,8 @@ function fixture(id: string, name = id): Fixture {
     name,
     notes: null,
     type: 'power',
+    wiredCount: 0,
+    wiredNames: [],
   };
 }
 
