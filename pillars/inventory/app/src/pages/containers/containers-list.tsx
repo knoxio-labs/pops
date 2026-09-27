@@ -6,6 +6,7 @@ import {
   ListError,
   ListSkeleton,
 } from '../../foundation/list-page/list-states.js';
+import { carriedCount } from '../../foundation/list-page/selection-actions.js';
 import { SelectionBar } from '../../foundation/selection/selection-bar.js';
 import { HoldsContentCountsProvider, holdsSecondColumn } from './holds-cell.js';
 
@@ -71,7 +72,11 @@ export function ContainersSelectionBar({ model }: { model: ContainersPageModel }
       loadedCount={model.itemRows.rows.length}
       coverage={model.selection.coverage}
       actions={model.selectionActions}
-      carriedCount={0}
+      carriedCount={carriedCount(
+        model.selection.selectedIds,
+        model.itemRows.contentCounts,
+        model.world
+      )}
       onSelectAll={model.selection.onHeaderToggle}
       onClear={model.selection.clearSelection}
     />
