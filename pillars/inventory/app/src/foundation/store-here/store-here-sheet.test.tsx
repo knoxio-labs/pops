@@ -1,75 +1,95 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { kitchen13Target, storeWorld } from '../test-fixtures/store-here';
+import { buildWorld } from '../model/placement-model.js';
+import { kitchen13Target, office04Target, storeWorld } from '../test-fixtures/store-here';
+import { storeCandidates } from './store-here-model.js';
 import { StoreHereSheet } from './store-here-sheet.js';
 
 const mocks = vi.hoisted(() => ({
-  usePlacementSources: vi.fn(),
-  useWebSearch: vi.fn(),
-  useBulkItemVerbs: vi.fn(),
-  useBatchCreate: vi.fn(),
-  commit: vi.fn(),
+  useStoreHere: vi.fn(),
+  useOnline: vi.fn(),
   navigate: vi.fn(),
 }));
 
-vi.mock('../../inventory-web/usePlacementSources.js', () => ({
-  usePlacementSources: mocks.usePlacementSources,
-}));
-vi.mock('../../inventory-web/useWebSearch.js', () => ({ useWebSearch: mocks.useWebSearch }));
-vi.mock('../../inventory-web/item-verbs-bulk.js', () => ({
-  useBulkItemVerbs: mocks.useBulkItemVerbs,
-}));
-vi.mock('../../inventory-web/useBatchCreate.js', () => ({ useBatchCreate: mocks.useBatchCreate }));
+vi.mock('./use-store-here.js', () => ({ useStoreHere: mocks.useStoreHere }));
+vi.mock('../../inventory-web/useOnline.js', () => ({ useOnline: mocks.useOnline }));
 vi.mock('react-router', () => ({ useNavigate: () => mocks.navigate }));
 
 describe('StoreHereSheet', () => {
+  function dataFor(target = kitchen13Target) {
+    const sourceTarget =
+      storeWorld.items.get(target.id) ?? storeWorld.items.get(kitchen13Target.id);
+    const world =
+      sourceTarget === undefined
+        ? storeWorld
+        : buildWorld(
+            [...storeWorld.items.values(), { ...sourceTarget, id: target.id, name: target.name }],
+            [...storeWorld.locations.values()]
+          );
+    return {
+      status: 'success' as const,
+      retry: vi.fn(),
+      world,
+      candidates: storeCandidates(world, target, ''),
+      query: '',
+      setQuery: vi.fn(),
+      selected: new Set<string>(),
+      toggle: vi.fn(),
+      created: [],
+      create: vi.fn().mockResolvedValue(true),
+      createError: null,
+      busy: false,
+      store: vi.fn().mockResolvedValue(undefined),
+      openTarget: vi.fn().mockResolvedValue(undefined),
+    };
+  }
+
   beforeEach(() => {
-    mocks.usePlacementSources.mockReset();
-    mocks.useWebSearch.mockReset();
-    mocks.useBulkItemVerbs.mockReset();
-    mocks.useBatchCreate.mockReset();
-    mocks.commit.mockReset();
+    mocks.useStoreHere.mockReset();
+    mocks.useOnline.mockReset();
     mocks.navigate.mockReset();
-    mocks.usePlacementSources.mockReturnValue({
-      world: storeWorld,
-      isError: false,
-      isLoading: false,
-      locationsQuery: { refetch: vi.fn() },
-      openContainersQuery: { refetch: vi.fn() },
-      closedContainersQuery: { refetch: vi.fn() },
-      subjectItemsQuery: { refetch: vi.fn() },
-    });
-    mocks.useWebSearch.mockReturnValue({
-      results: { exact: null, items: [], places: [], total: 0 },
-      status: 'error',
-      error: null,
-      hasNextPage: false,
-      isFetchingNextPage: false,
-      fetchNextPage: vi.fn(),
-      refetch: vi.fn(),
-    });
-    mocks.useBulkItemVerbs.mockReturnValue({ store: vi.fn() });
-    mocks.commit.mockResolvedValue({
-      outcomes: [{ status: 'created', row: 0, itemId: 'new-item' }],
-    });
-    mocks.useBatchCreate.mockReturnValue({ commit: mocks.commit, isRunning: false });
+    mocks.useOnline.mockReturnValue(true);
+    mocks.useStoreHere.mockImplementation((target) => dataFor(target));
   });
 
-  it('keeps New item Create enabled when the optional web search fails', async () => {
-    render(<StoreHereSheet open onOpenChange={vi.fn()} target={kitchen13Target} offline={false} />);
+  it('renders nothing and fetches nothing while closed', () => {
+    render(<StoreHereSheet open={false} onOpenChange={vi.fn()} target={kitchen13Target} />);
+
+    expect(mocks.useStoreHere).not.toHaveBeenCalled();
+    expect(mocks.useOnline).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('creates a named item and opens the full form with an encoded target id', async () => {
+    const data = dataFor({ ...kitchen13Target, id: 'box/1 ?&' });
+    mocks.useStoreHere.mockReturnValue(data);
+    render(
+      <StoreHereSheet open onOpenChange={vi.fn()} target={{ ...kitchen13Target, id: 'box/1 ?&' }} />
+    );
 
     const input = screen.getByRole('textbox', { name: 'Name of the new item in Kitchen 13' });
     fireEvent.change(input, { target: { value: 'New item' } });
 
     expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(data.create).toHaveBeenCalledWith('New item');
 
-    await waitFor(() =>
-      expect(mocks.commit).toHaveBeenCalledWith(
-        [{ code: '', name: 'New item', note: '', quantity: '1', type: '', where: '' }],
-        { kind: 'container', itemId: 'box-k13' }
-      )
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Open the full form for Kitchen 13' }));
+    expect(mocks.navigate).toHaveBeenCalledWith('/inventory/items/new?in=box%2F1%20%3F%26');
+  });
+
+  it('disables mutations offline but lets a closed target attempt to open', () => {
+    const data = dataFor(office04Target);
+    data.selected = new Set(['itm-tape']);
+    mocks.useStoreHere.mockReturnValue(data);
+    mocks.useOnline.mockReturnValue(false);
+    render(<StoreHereSheet open onOpenChange={vi.fn()} target={office04Target} />);
+
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Existing items' }), { button: 0 });
+    expect(screen.getByRole('button', { name: 'Store 1 item' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Office 04' }));
+    expect(data.openTarget).toHaveBeenCalledOnce();
   });
 });
