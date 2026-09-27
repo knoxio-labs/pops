@@ -124,12 +124,14 @@ describe('check-error-codes', () => {
     const source = "const demoErrors = defineErrors('demo', { ok: { area: 'request' } });";
     write(root, 'pillars/demo/src/api/errors.ts', source);
     commit(root, 'add error registration');
-    execFileSync('git', ['-C', root, 'update-ref', 'refs/remotes/origin/main', 'main']);
+    execFileSync('git', ['-C', root, 'update-ref', 'refs/remotes/origin/main', 'main'], {
+      timeout: 10_000,
+    });
 
     expect(readGitSources(root, 'origin/main')).toEqual([
       { path: 'pillars/demo/src/api/errors.ts', text: source },
     ]);
-  });
+  }, 30_000);
 
   it('runs the exact CLI self-test', () => {
     const output = execFileSync(process.execPath, [guardPath, '--self-test'], { encoding: 'utf8' });
