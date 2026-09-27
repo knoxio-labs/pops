@@ -3,7 +3,7 @@ import { formatFactValue } from '../../foundation/item-page/fact-value';
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types';
 import type { PlacementWorld } from '../../foundation/model/placement-model';
 import type { ConnectionsGraphResponse, WebGetResponse } from '../../inventory-api/types.gen.js';
-import type { DetailFact } from './detail-model';
+import type { DetailFact } from './detail-model-types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
