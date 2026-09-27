@@ -7,6 +7,18 @@ and caches successful products and misses in its own SQLite database.
 The lookup uses Open Library followed by Google Books without changing this
 pillar's contract or lookup policy.
 
+Every valid request still returns HTTP 200 with `found`, `not_found`, or
+`unavailable`. The latter may carry an ADR-054 `error` envelope with a safe
+code, message, request ID, and retry decision. A valid non-book barcode returns
+`not_found` with optional reason `unsupported`; an ordinary provider miss has
+no reason. Both additions are optional so consumers generated from the earlier
+union remain compatible.
+
+Provider attempts and final lookup outcomes emit structured events keyed by
+the propagated request ID. They include source, duration, outcome, and safe
+failure class. They never include the scanned code, credentials, provider
+payloads, or exception text.
+
 This pillar does not scan camera frames, map book metadata onto an inventory
 type, broadcast events, download image bytes, or own inventory data. Consumers
 send a code to `GET /lookup/:code` and decide how a returned product should be

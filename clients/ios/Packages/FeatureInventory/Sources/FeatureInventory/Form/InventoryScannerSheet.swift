@@ -30,6 +30,12 @@
                         if session.showsTextPrompt {
                             if let message = model.prefillStatus?.message { Text(message) }
                             Text("Point at the label text and tap Use text")
+                            if session.canRetryLookup {
+                                Button("Retry lookup") {
+                                    session.retryLookup(onFound: { dismiss() })
+                                }
+                                .frame(minHeight: PopsSize.touchTarget)
+                            }
                         }
                         Button {
                             let lines = InventoryLabelText.lines(from: session.recognizedText)

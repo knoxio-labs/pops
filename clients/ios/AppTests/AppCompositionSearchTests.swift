@@ -1,5 +1,4 @@
 import AppCore
-import AppCoreFakes
 import Auth
 import FeaturePurchases
 import Testing

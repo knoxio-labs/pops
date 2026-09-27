@@ -5,11 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { useSelection } from '../../foundation/selection/use-selection.js';
-import { connectionTrace } from './connection-trace.js';
+import { ShortcutProvider } from '../../foundation/shortcuts/shortcut-provider.js';
+import { connectionRows } from './connection-model.js';
+import { traceChain } from './connection-trace.js';
 import { parseConnectionsUrl, writeConnectionsUrl } from './connections-url.js';
 
 import type { ReactElement } from 'react';
 
+import type { ItemRowModel } from '../../foundation/model/model.js';
 import type { WebConnectionRow } from '../../inventory-web/useConnectionsRegistry.js';
 
 const mocks = vi.hoisted(() => ({
@@ -67,6 +70,25 @@ const rows: WebConnectionRow[] = [
     item: item('item-a', 'Alpha'),
   },
 ];
+
+function modelItem(row: WebConnectionRow['item']): ItemRowModel {
+  return {
+    id: row.id,
+    name: row.name,
+    typeId: null,
+    typeName: null,
+    code: row.code,
+    quantity: 1,
+    container: null,
+    lifecycle: 'active',
+    placement: { kind: 'in-hand' },
+    previous: null,
+    sync: 'synced',
+    photoUrl: null,
+    note: null,
+    updatedAt: '2026-09-01T00:00:00.000Z',
+  };
+}
 
 let currentRows = rows;
 let currentStatus: 'pending' | 'error' | 'success' = 'success';
@@ -131,6 +153,13 @@ function useFakePageModel() {
   const [queryDraft, setQueryDraft] = useState(url.q);
   const [kindDraft, setKindDraft] = useState(url.kind);
   const selection = useSelection(currentRows.map((row) => row.id));
+  const itemModels = new Map<string, ItemRowModel>();
+  for (const row of currentRows) {
+    itemModels.set(row.item.id, modelItem(row.item));
+    if (row.far.kind === 'item') itemModels.set(row.far.id, modelItem(row.far));
+  }
+  const world = buildWorld([...itemModels.values()], []);
+  const resolvedRows = connectionRows(currentRows, world);
   const setTrace = (trace: string | null): void => {
     setSearchParams((current) => writeConnectionsUrl(current, { trace }), { replace: true });
   };
@@ -154,7 +183,8 @@ function useFakePageModel() {
       refetch: mocks.retry,
     },
     allConnections: { rows: currentRows, status: currentStatus, error: null },
-    placement: { world: buildWorld([], []) },
+    placement: { world, isLoading: false, isError: false },
+    world,
     online: currentOnline,
     changed: { stale: currentStale, groups: [], reload: mocks.reload },
     selection,
@@ -163,8 +193,14 @@ function useFakePageModel() {
       connectItems: mocks.connectItems,
       connectFixture: mocks.connectFixture,
     },
-    narrowed: url.q !== '' || url.kind !== 'all',
-    trace: url.trace === null ? null : connectionTrace(currentRows, url.trace),
+    narrowed: url.q.trim() !== '' || url.kind !== 'all',
+    total: currentStatus === 'success' ? currentRows.length : null,
+    resolvedRows,
+    resolvedAllRows: resolvedRows,
+    initialLoading: currentStatus === 'pending',
+    readError: currentStatus === 'error',
+    registryFiltering: false,
+    trace: url.trace === null ? null : traceChain(url.trace, resolvedRows, world),
     setQueryDraft,
     setKindDraft,
     setView,
@@ -184,10 +220,12 @@ function renderPage(initialEntry = '/inventory/connections'): void {
   mocks.useConnectionsPageModel.mockImplementation(useFakePageModel);
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
-      <Routes>
-        <Route path="*" element={<ConnectionsPage />} />
-      </Routes>
-      <LocationProbe />
+      <ShortcutProvider globalHandlers={{}}>
+        <Routes>
+          <Route path="*" element={<ConnectionsPage />} />
+        </Routes>
+        <LocationProbe />
+      </ShortcutProvider>
     </MemoryRouter>
   );
 }
@@ -274,6 +312,50 @@ describe('ConnectionsPage', () => {
     expect(mocks.connectFixture).toHaveBeenCalledWith('item-a', 'fixture-1');
   });
 
+  it('sends selected disconnects in row order and includes both item ends in labels', async () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Alpha to Beta' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Alpha to Outlet' }));
+    expect(screen.getByRole('button', { name: 'Disconnect 2' })).not.toHaveAttribute(
+      'aria-disabled'
+    );
+    expect(screen.getByRole('button', { name: 'Trace' })).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: /^Print labels/ }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/inventory/labels?ids=item-a%2Citem-b'
+      )
+    );
+
+    cleanup();
+    renderPage();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Alpha to Beta' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Alpha to Outlet' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect 2' }));
+
+    await waitFor(() => expect(mocks.disconnect).toHaveBeenCalledTimes(2));
+    expect(mocks.disconnect).toHaveBeenNthCalledWith(1, rows[0]);
+    expect(mocks.disconnect).toHaveBeenNthCalledWith(2, rows[1]);
+    expect(mocks.showUndoToast).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Disconnected 2 connections' })
+    );
+  });
+
+  it('stops a disconnect batch at the first error and leaves undo unavailable', async () => {
+    mocks.disconnect.mockRejectedValueOnce(new Error('connection refused'));
+    renderPage();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Alpha to Beta' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Alpha to Outlet' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect 2' }));
+
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('connection refused'));
+    expect(mocks.disconnect).toHaveBeenCalledOnce();
+    expect(mocks.showUndoToast).not.toHaveBeenCalled();
+  });
+
   it('renders loading, error/retry, empty, no-match, offline, and stale states', () => {
     currentStatus = 'pending';
     renderPage();
@@ -283,6 +365,7 @@ describe('ConnectionsPage', () => {
     currentStatus = 'error';
     renderPage();
     expect(screen.getByText('Connections did not load')).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /Alpha/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(mocks.retry).toHaveBeenCalledOnce();
 
@@ -290,16 +373,19 @@ describe('ConnectionsPage', () => {
     currentStatus = 'success';
     currentRows = [];
     renderPage();
-    expect(screen.getByText('No connections yet')).toBeInTheDocument();
+    expect(screen.getByText('Nothing is connected yet')).toBeInTheDocument();
 
     cleanup();
     renderPage('/inventory/connections?q=missing');
     expect(screen.getByText('No connections match these filters')).toBeInTheDocument();
 
     cleanup();
+    currentRows = rows;
     currentOnline = false;
     renderPage();
     expect(screen.getByText('No connection. Showing what loaded.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Disconnect Alpha from Beta' })).toBeDisabled();
 
     cleanup();
     currentOnline = true;
