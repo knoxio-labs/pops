@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import { lookupCache, type BarcodeDb } from '../db/index.js';
-import { ProductSchema, type Product } from './product.js';
+import { isProductComplete, ProductSchema, type Product } from './product.js';
 
 import type { LookupOutcome } from '../contract/rest-schemas.js';
 
@@ -11,19 +11,24 @@ export const FOUND_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Cache lifetime for a definitive source miss. */
 export const NOT_FOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
+const CACHE_VERSION = 2;
+
 function expired(expiresAt: string, now: Date): boolean {
   const timestamp = Date.parse(expiresAt);
   return !Number.isFinite(timestamp) || timestamp <= now.getTime();
 }
 
 function cachedOutcome(row: typeof lookupCache.$inferSelect): LookupOutcome | undefined {
+  if (row.cacheVersion !== CACHE_VERSION) return undefined;
   if (row.outcome === 'not_found') return { outcome: 'not_found' };
   if (row.productJson === null) return undefined;
 
   try {
     const parsed: unknown = JSON.parse(row.productJson);
     const product = ProductSchema.safeParse(parsed);
-    return product.success ? { outcome: 'found', product: product.data } : undefined;
+    return product.success && isProductComplete(product.data)
+      ? { outcome: 'found', product: product.data }
+      : undefined;
   } catch {
     return undefined;
   }
@@ -47,6 +52,10 @@ export function cacheOutcome(
   outcome: Extract<LookupOutcome, { outcome: 'found' | 'not_found' }>,
   fetchedAt: Date
 ): void {
+  if (outcome.outcome === 'found' && !isProductComplete(outcome.product)) {
+    db.delete(lookupCache).where(eq(lookupCache.code, code)).run();
+    return;
+  }
   const expiresAt = new Date(
     fetchedAt.getTime() +
       (outcome.outcome === 'found' ? FOUND_CACHE_TTL_MS : NOT_FOUND_CACHE_TTL_MS)
@@ -59,6 +68,7 @@ export function cacheOutcome(
       outcome: outcome.outcome,
       productJson: product === null ? null : JSON.stringify(product),
       source: product?.source ?? null,
+      cacheVersion: CACHE_VERSION,
       fetchedAt: fetchedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
     })
@@ -68,6 +78,7 @@ export function cacheOutcome(
         outcome: outcome.outcome,
         productJson: product === null ? null : JSON.stringify(product),
         source: product?.source ?? null,
+        cacheVersion: CACHE_VERSION,
         fetchedAt: fetchedAt.toISOString(),
         expiresAt: expiresAt.toISOString(),
       },

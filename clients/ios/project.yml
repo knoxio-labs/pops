@@ -9,7 +9,8 @@ options:
   # which is a merge gate that cannot exist. Raising this means waiting for a
   # runner image to ship that Xcode, then moving `runs-on` in ios-quality.yml
   # and ios-testflight.yml, POPS_XCODE_VERSION in mise.toml and every
-  # `platforms:` floor under Packages/ in the same commit.
+  # `platforms:` floor under Packages/ in the same commit. The exact Xcode
+  # build pin lives beside the marketing version in clients/ios/mise.toml.
   deploymentTarget:
     iOS: '27.0'
   createIntermediateGroups: true
