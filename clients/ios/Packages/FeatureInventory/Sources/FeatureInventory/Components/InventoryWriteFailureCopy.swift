@@ -2,9 +2,8 @@ import AppCore
 
 extension InventoryCopy {
     /// Why a write or an Undo did not land: who won a conflict, which code is
-    /// taken, or what the server refused, in one short sentence. A non-empty
-    /// server rejection message is safe to show verbatim; the reason-specific
-    /// copy is a fallback for older or local responses without one.
+    /// taken, or what the server refused, in one short sentence. Never the
+    /// server's own diagnostic `message`, which is written for a log.
     ///
     /// `.storageFull` answers with the shared Storage full message. No
     /// screen shows it through the one-line alert: `inventoryWriteFailureAlerts`
@@ -21,20 +20,17 @@ extension InventoryCopy {
     private static func message(for error: InventoryCommandError) -> String {
         switch error {
         case .fieldConflict(let field, _, _, let source, _, _):
-            return
-                "\(fieldName(field)) was changed on \(source.inSentence) first, so nothing changed here."
+            "\(fieldName(field)) was changed on \(source.inSentence) first, so nothing changed here."
         case .codeCollision(_, let heldByName, let suggestedCode):
-            return "That code is already on \(heldByName). \(suggestedCode) is free."
+            "That code is already on \(heldByName). \(suggestedCode) is free."
         case .deletedElsewhere(let source, _):
-            return "This was deleted on \(source.inSentence), so nothing changed."
-        case .rejected(let reason, let serverMessage):
-            let trimmedMessage = serverMessage.trimmingCharacters(
-                in: .whitespacesAndNewlines)
-            return trimmedMessage.isEmpty ? message(for: reason) : trimmedMessage
+            "This was deleted on \(source.inSentence), so nothing changed."
+        case .rejected(let reason, _):
+            message(for: reason)
         case .nothingToUndo:
-            return "There is nothing left to undo."
+            "There is nothing left to undo."
         case .repairNotFound:
-            return "That was already settled."
+            "That was already settled."
         }
     }
 

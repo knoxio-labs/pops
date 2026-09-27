@@ -69,9 +69,6 @@ import type {
   MobileInventoryPutMediaData,
   MobileInventoryPutMediaErrors,
   MobileInventoryPutMediaResponses,
-  MobileInventoryReportLedgerData,
-  MobileInventoryReportLedgerErrors,
-  MobileInventoryReportLedgerResponses,
   MobileInventorySnapshotData,
   MobileInventorySnapshotErrors,
   MobileInventorySnapshotResponses,
@@ -473,29 +470,6 @@ export const mobileInventoryChanges = <ThrowOnError extends boolean = false>(
     MobileInventoryChangesErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/sync/changes', ...options });
-
-/**
- * Store a device's latest sync ledger report
- */
-export const mobileInventoryReportLedger = <ThrowOnError extends boolean = false>(
-  options?: Options<MobileInventoryReportLedgerData, ThrowOnError>
-): RequestResult<
-  MobileInventoryReportLedgerResponses,
-  MobileInventoryReportLedgerErrors,
-  ThrowOnError
-> =>
-  (options?.client ?? client).post<
-    MobileInventoryReportLedgerResponses,
-    MobileInventoryReportLedgerErrors,
-    ThrowOnError
-  >({
-    url: '/mobile/inventory/sync/ledger',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
 
 /**
  * One page of live items and locations; the first page fixes the high-water seq the feed resumes from

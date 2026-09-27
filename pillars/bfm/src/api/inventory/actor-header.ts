@@ -1,7 +1,7 @@
 /**
- * Build the `Pops-Actor` header inventory's sync write routes honour
+ * Building the `Pops-Actor` header inventory's `POST /sync/mutations` honours
  * (`pillars/inventory/src/api/sync/actor.ts`'s `parseActorHeader`): the
- * device the mutation batch or ledger report should be recorded against.
+ * device the mutation batch should be recorded against.
  *
  * The label comes from the device row `requireDevice` resolved, never from
  * anything the phone put on this request — inventory trusts this header only

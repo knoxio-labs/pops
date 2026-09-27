@@ -1,5 +1,4 @@
 name: App Quality
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Runs each `pillars/*/app` frontend unit's OWN typecheck + test suite.
 #
@@ -38,20 +37,10 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 #
 # Selectors use the manifest `name` (`@pops/app-<id>`) discovered from disk,
 # never a hardcoded list, so a newly added pillar app is covered with no edit.
-# The matrix is the reverse transitive dependency closure of the changed
-# workspace packages: one app edit runs one row; a pillar contract runs its
-# consumers; a shared package runs every app that reaches it. Dependency-graph
-# inputs and an untrustworthy git base deliberately fall back to all apps.
 # `assert-app-coverage` in `_discover-units.yml` keeps every app routed to a
 # covering FE workflow; this workflow now ALSO gives each its own unit lane.
 
 on:
-  workflow_call:
-    inputs:
-      full-validation:
-        description: Select every app instead of the affected dependency closure
-        required: true
-        type: boolean
   push:
     branches: [main]
     paths:
@@ -71,7 +60,6 @@ on:
       - ".github/workflows/app-quality.yml"
       - ".github/actions/**"
   pull_request:
-    types: [opened, synchronize, reopened, edited]
     paths:
       - "pillars/*/app/**"
       - "pillars/*/openapi/**"
@@ -92,8 +80,15 @@ on:
   # lane re-runs this for every entry.
   merge_group:
 
+# cancel-in-progress is deliberately OFF — see the matching note in
+# ios-quality.yml and the CONVERGENCE comment in ci-gate.yml: cancelling a
+# superseded run and admitting the new one is not atomic, and the race can
+# drop the new run's registration entirely rather than merely delaying it,
+# which leaves the required `CI Gate` check stuck `in_progress`. A superseded
+# run is left to finish instead; `queue: single` (the default) still caps
+# this group at one pending run.
 concurrency:
-  group: app-quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: app-quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -101,52 +96,36 @@ env:
 
 jobs:
   discover:
-    name: Discover affected app units
+    name: Discover app units from disk
     runs-on: ubuntu-latest
     outputs:
       apps: ${{ steps.scan.outputs.apps }}
       count: ${{ steps.scan.outputs.count }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
       - id: scan
-        name: Compute the reverse dependency closure from the changed files
+        name: Walk pillars/*/app/package.json for the manifest name
+        # An app unit is any `pillars/*/app` carrying a package.json. Emit the
+        # manifest `name` (the only valid `pnpm --filter` selector — basenames
+        # all collide on `app`) plus its dir as a display key. Disk-derived so
+        # adding a pillar app needs no edit here. The names MUST be @pops/app-*
+        # (enforced by assert-app-coverage); fail loud on a stray name so a
+        # mis-named member can't silently drop out of the matrix.
         run: |
           set -euo pipefail
-          node scripts/ci/select-affected-apps.mjs --self-test
-          node scripts/ci/check-generated-clients.mjs --self-test
-
-          force_all=0
-          if [ "${{ github.event_name }}" = "merge_group" ] || [ "${{ inputs['full-validation'] }}" = "true" ]; then
-            echo "Promotion validation selects every app."
-            force_all=1
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            before='${{ github.event.before }}'
-            if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ] && git merge-base --is-ancestor "$before" HEAD 2>/dev/null; then
-              base="$before"
-            else
-              force_all=1
-            fi
-          else
-            base=$(git merge-base "origin/${{ github.base_ref || 'main' }}" HEAD 2>/dev/null) || force_all=1
-          fi
-
-          if [ "$force_all" = 1 ]; then
-            echo "No trustworthy diff base; selecting every app."
-            apps=$(node scripts/ci/select-affected-apps.mjs --all </dev/null)
-          else
-            echo "Selecting apps affected since $base:"
-            git diff --name-only "$base" HEAD
-            apps=$(git diff --name-only "$base" HEAD | node scripts/ci/select-affected-apps.mjs)
-          fi
+          apps=$(find pillars -mindepth 2 -maxdepth 2 -type d -name app | sort | while read -r d; do
+            [ -f "$d/package.json" ] || continue
+            pkg=$(jq -r '.name' "$d/package.json")
+            case "$pkg" in
+              @pops/app-*) : ;;
+              *) echo "::error::$d is named '$pkg' (expected @pops/app-*) — fix the name or this unit drops out of app-quality" >&2; exit 1 ;;
+            esac
+            jq -n --arg pkg "$pkg" --arg dir "$d" '{pkg:$pkg,dir:$dir}'
+          done | jq -s -c '.')
           count=$(echo "$apps" | jq 'length')
           echo "apps=$apps" >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "Selected $count app unit(s):"
+          echo "Discovered $count app unit(s):"
           echo "$apps" | jq .
 
   app:
@@ -191,6 +170,9 @@ jobs:
         # Deps only (`^...`), so the compiled .d.ts the app's typecheck, test
         # and bundle build all import are materialised before any of them run.
         run: pnpm --filter "${{ matrix.app.pkg }}^..." build
+
+      - name: Gate self-test (proves it catches drift, a generator error, and missing output)
+        run: node scripts/ci/check-generated-clients.mjs --self-test
 
       - name: Codegen drift
         # Runs for every app unit in the matrix — every app's pre-existing

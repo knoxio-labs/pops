@@ -3,9 +3,9 @@
  * (Inventory ADR-002 D9/D10, `pillars/inventory/src/contract/rest-sync.ts`).
  *
  * The type catalogue, the paged snapshot, the change feed and one item's
- * history (slice A9) are read routes; `mutations`, `reportLedger` and
- * `suggestCodes` (A12) are the write ones, gated by their own capability
- * (`inventory.write`) on the same reasoning `purchases.write` is declared apart from
+ * history (slice A9) are read routes; `mutations` and `suggestCodes` (A12)
+ * are the write ones, gated by their own capability (`inventory.write`) on
+ * the same reasoning `purchases.write` is declared apart from
  * `purchases.read` — writing is its own authority.
  *
  * `putMedia`/`getMedia` (A13, ADR-002 D9) relay inventory's content-addressed
@@ -23,22 +23,18 @@
  * - `426` (`client_too_old`) — never actually reaches a handler's typed
  *   return; see `api/rest/inventory-protocol-error.ts` for why.
  *
- * `mutations` and `reportLedger` declare no `409`: a conflict there is not a
- * fact about the replica being stale, it is one mutation's own outcome
+ * `mutations` declares no `409`: a conflict there is not a fact about the
+ * replica being stale, it is one mutation's own outcome
  * (`MobileMutationOutcomeSchema`'s `conflict` member) inside an otherwise
  * successful `200`, exactly as inventory's own `POST /sync/mutations`
- * answers it. They declare `413` instead — bfm caps both structured JSON
- * bodies itself (`MOBILE_INVENTORY_MUTATIONS_MAX_BYTES` and
- * `MOBILE_INVENTORY_LEDGER_MAX_BYTES`).
+ * answers it. It declares `413` instead — bfm caps this one body itself
+ * (`MOBILE_INVENTORY_MUTATIONS_MAX_BYTES`), well below what a batch of 50
+ * mutations could otherwise reach.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { requires } from './capabilities.js';
-import {
-  MobileInventoryLedgerReportBodySchema,
-  MobileInventoryLedgerReportResponseSchema,
-} from './mobile-inventory-ledger-schemas.js';
 import {
   MobileInventoryMediaBytesSchema,
   MobileInventoryMediaStoredSchema,
@@ -81,9 +77,6 @@ const InventoryPageLimit = z.coerce.number().int().min(1).max(500).optional();
  * of Express's 100kb default.
  */
 export const MOBILE_INVENTORY_MUTATIONS_MAX_BYTES = 256 * 1024;
-
-/** The structured-JSON body cap for `POST /mobile/inventory/sync/ledger`. */
-export const MOBILE_INVENTORY_LEDGER_MAX_BYTES = 256 * 1024;
 
 /**
  * The largest JSON body `PUT /mobile/inventory/media/:sha256` is mounted
@@ -197,21 +190,6 @@ export const mobileInventoryContract = c.router({
       ...MOBILE_UPSTREAM_RESPONSES,
     },
     summary: 'Apply up to 50 mutations in order, each in its own transaction, idempotently',
-    metadata: requires('inventory.write'),
-  },
-  reportLedger: {
-    method: 'POST',
-    path: '/mobile/inventory/sync/ledger',
-    body: MobileInventoryLedgerReportBodySchema,
-    responses: {
-      200: MobileInventoryLedgerReportResponseSchema,
-      413: MobilePayloadTooLargeErrorSchema,
-      426: MobileClientTooOldErrorSchema,
-      ...MOBILE_REQUEST_RESPONSES,
-      ...MOBILE_PERIMETER_RESPONSES,
-      ...MOBILE_UPSTREAM_RESPONSES,
-    },
-    summary: "Store a device's latest sync ledger report",
     metadata: requires('inventory.write'),
   },
   suggestCodes: {

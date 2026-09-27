@@ -56,7 +56,7 @@ name: PR Review
 #   PR_REVIEW_MODEL    - default "sonnet". Routine review does not need the top
 #                        tier, and the top tier burns the subscription's weekly
 #                        allowance several times faster.
-#   PR_REVIEW_DEBOUNCE - seconds to wait before starting, default 15.
+#   PR_REVIEW_DEBOUNCE - seconds to wait before starting, default 60.
 
 on:
   pull_request:
@@ -110,7 +110,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          sleep "${{ vars.PR_REVIEW_DEBOUNCE || 15 }}"
+          sleep "${{ vars.PR_REVIEW_DEBOUNCE || 60 }}"
           current=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
           if [ "$current" != "$EVENT_SHA" ]; then
             echo "Head moved $EVENT_SHA -> $current; a newer run owns this PR."

@@ -6424,44 +6424,6 @@ export type WebMovingGetResponses = {
 
 export type WebMovingGetResponse = WebMovingGetResponses[keyof WebMovingGetResponses];
 
-export type WebReportsEntriesData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/web/reports/entries';
-};
-
-export type WebReportsEntriesResponses = {
-  /**
-   * 200
-   */
-  200: {
-    entries: Array<{
-      code: string | null;
-      effectiveLocationId: string | null;
-      isContainer: boolean;
-      itemId: string;
-      name: string;
-      photos: number;
-      place: string | null;
-      purchasePrice: number | null;
-      purchasedOn: string | null;
-      quantity: number;
-      receiptId: number | null;
-      replacementValue: number | null;
-      room: {
-        key: string;
-        label: string;
-      };
-      typeKey: string | null;
-      warrantyExpires: string | null;
-    }>;
-  };
-};
-
-export type WebReportsEntriesResponse =
-  WebReportsEntriesResponses[keyof WebReportsEntriesResponses];
-
 export type WebReportsValuesData = {
   body?: never;
   path?: never;

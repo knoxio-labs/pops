@@ -56,42 +56,8 @@ export const WebValueReportResponseSchema = z.object({
   groups: z.array(ValueReportGroupSchema),
 });
 
-/** One active item and its report provenance for the inventory web reports. */
-export const WebReportEntrySchema = z.object({
-  itemId: z.string(),
-  name: z.string(),
-  code: z.string().nullable(),
-  typeKey: z.string().nullable(),
-  isContainer: z.boolean(),
-  quantity: z.number().int(),
-  /** Per unit, as stored on the item. */
-  replacementValue: z.number().nullable(),
-  purchasePrice: z.number().nullable(),
-  purchasedOn: z.string().nullable(),
-  warrantyExpires: z.string().nullable(),
-  /** The Paperless document id of the first receipt linked to the item. */
-  receiptId: z.number().int().nullable(),
-  photos: z.number().int().nonnegative(),
-  effectiveLocationId: z.string().nullable(),
-  /** The room containing the item, or the in-hand/unknown fallback. */
-  room: z.object({ key: z.string(), label: z.string() }),
-  /** The effective location's name, or null while in hand or unresolved. */
-  place: z.string().nullable(),
-});
-
-/** All active inventory entries consumed by the web report tabs. */
-export const WebReportEntriesResponseSchema = z.object({
-  entries: z.array(WebReportEntrySchema),
-});
-
 /** REST router for reports consumed by the inventory web application. */
 export const inventoryWebReportsContract = c.router({
-  entries: {
-    method: 'GET',
-    path: '/web/reports/entries',
-    responses: { 200: WebReportEntriesResponseSchema },
-    summary: 'Active inventory report entries with provenance and effective placement',
-  },
   values: {
     method: 'GET',
     path: '/web/reports/values',

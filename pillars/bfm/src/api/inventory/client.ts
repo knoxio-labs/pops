@@ -4,10 +4,9 @@
  *
  * The inventory pillar built this protocol to be relayed as-is — its own
  * contract header says so — so unlike `finance`/`purchases` there is no
- * general reshaping step here: the mobile inventory schemas mirror the
- * producer's fields, with the ledger's nullish timestamp normalised at the
- * producer boundary, and `parseOrMismatch` is what stands between a producer
- * rename and a phone reading `undefined`.
+ * reshaping step here: `mobile-inventory-schemas.ts`'s schemas mirror the
+ * producer's field-for-field, and `parseOrMismatch` is what stands between a
+ * producer rename and a phone reading `undefined`.
  *
  * `Pops-Inventory-Protocol` is not the caller's business: it names the WIRE
  * SHAPE this build of bfm understands, so it travels on every call this
@@ -16,7 +15,6 @@
  * `/mobile/inventory/*` has its own contract, versioned independently through
  * bfm's own OpenAPI and Swift codegen.
  */
-import { MobileInventoryLedgerReportResponseSchema } from '../../contract/mobile-inventory-ledger-schemas.js';
 import {
   MobileCodeSuggestResponseSchema,
   MobileMutationsResponseSchema,
@@ -30,10 +28,6 @@ import { parseOrMismatch } from '../pillars/parse-response.js';
 import { createMobileInventoryCatalogueClient } from './catalogue-client.js';
 import { withInventoryActor } from './handle-factory.js';
 
-import type {
-  MobileInventoryLedgerReport,
-  MobileInventoryLedgerReportResponse,
-} from '../../contract/mobile-inventory-ledger-schemas.js';
 import type {
   MobileCodeSuggestResponse,
   MobileMutation,
@@ -60,7 +54,6 @@ export type InventorySyncRouter = InventoryCatalogueRouter & {
     changes: (input: { since: number; epoch: string; limit?: number }) => Promise<unknown>;
     itemEvents: (input: { id: string; cursor?: string; limit?: number }) => Promise<unknown>;
     mutations: (input: { mutations: readonly MobileMutation[] }) => Promise<unknown>;
-    reportLedger: (input: MobileInventoryLedgerReport) => Promise<unknown>;
   };
   codes: {
     suggest: (input: { name: string; typeKey?: string; stem?: string }) => Promise<unknown>;
@@ -95,14 +88,6 @@ export interface MutationsRequest {
   readonly actorHeader: string;
 }
 
-/** The ledger report and authenticated device identity sent to inventory. */
-export interface LedgerReportRequest {
-  /** The latest report from the paired device. */
-  readonly report: MobileInventoryLedgerReport;
-  /** The authenticated device identity sent to inventory as `Pops-Actor`. */
-  readonly actorHeader: string;
-}
-
 export interface SuggestCodesRequest {
   readonly name: string;
   readonly typeKey: string | null;
@@ -114,9 +99,6 @@ export interface MobileInventoryClient extends MobileInventoryCatalogueClient {
   changes(request: ChangesRequest): Promise<GatewayOutcome<MobileInventoryChanges>>;
   itemHistory(request: ItemHistoryRequest): Promise<GatewayOutcome<MobileInventoryItemHistory>>;
   mutations(request: MutationsRequest): Promise<GatewayOutcome<MobileMutationsResponse>>;
-  reportLedger(
-    request: LedgerReportRequest
-  ): Promise<GatewayOutcome<MobileInventoryLedgerReportResponse>>;
   suggestCodes(request: SuggestCodesRequest): Promise<GatewayOutcome<MobileCodeSuggestResponse>>;
 }
 
@@ -189,26 +171,6 @@ async function callMutations(
   );
 }
 
-async function callReportLedger(
-  gateway: PillarGateway,
-  request: LedgerReportRequest
-): Promise<GatewayOutcome<MobileInventoryLedgerReportResponse>> {
-  const outcome = await withInventoryActor(request.actorHeader, () =>
-    gateway.call<InventorySyncRouter, unknown>(INVENTORY_PILLAR_ID, (handle) =>
-      handle.sync.reportLedger({
-        ...request.report,
-        lastSyncAt: request.report.lastSyncAt ?? null,
-      })
-    )
-  );
-  return parseOrMismatch(
-    INVENTORY_PILLAR_ID,
-    outcome,
-    MobileInventoryLedgerReportResponseSchema,
-    'sync.reportLedger'
-  );
-}
-
 async function callSuggestCodes(
   gateway: PillarGateway,
   request: SuggestCodesRequest
@@ -235,7 +197,6 @@ export function createMobileInventoryClient(gateway: PillarGateway): MobileInven
     changes: (request) => callChanges(gateway, request),
     itemHistory: (request) => callItemHistory(gateway, request),
     mutations: (request) => callMutations(gateway, request),
-    reportLedger: (request) => callReportLedger(gateway, request),
     suggestCodes: (request) => callSuggestCodes(gateway, request),
   };
 }

@@ -7,7 +7,6 @@
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
 import { emptyInventoryChanges, emptyInventorySnapshot } from './inventory-fake-pages.js';
-import { makeLedgerProcedure, type InventoryLedgerCall } from './inventory-ledger-fake.js';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
 
@@ -40,7 +39,6 @@ export interface InventoryFake {
   changesCalls: InventoryChangesCall[];
   itemEventsCalls: (InventorySyncCall & { id?: string })[];
   mutationsCalls: InventoryMutationsCall[];
-  ledgerCalls: InventoryLedgerCall[];
   suggestCalls: InventorySuggestCall[];
   catalogueCalls: number;
 }
@@ -61,8 +59,6 @@ export interface InventoryFakeOptions {
   catalogueRevisionResult?: (revision: number) => CallResult<unknown>;
   /** What `sync.mutations` answers. Defaults to one `applied` outcome per mutation sent. */
   mutationsResult?: (input: unknown) => CallResult<unknown>;
-  /** What `sync.reportLedger` answers. Defaults to `{ stored: true }`. */
-  ledgerResult?: CallResult<unknown>;
   /** What `codes.suggest` answers. */
   suggestResult?: CallResult<unknown>;
 }
@@ -136,7 +132,6 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
   const changesCalls: InventoryChangesCall[] = [];
   const itemEventsCalls: (InventorySyncCall & { id?: string })[] = [];
   const mutationsCalls: InventoryMutationsCall[] = [];
-  const ledgerCalls: InventoryLedgerCall[] = [];
   const suggestCalls: InventorySuggestCall[] = [];
   let catalogueCalls = 0;
 
@@ -178,7 +173,6 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
           changes: makeChangesProcedure(options, changesCalls),
           itemEvents: makeItemEventsProcedure(options, itemEventsCalls),
           mutations,
-          reportLedger: makeLedgerProcedure(options.ledgerResult, ledgerCalls),
         },
         types: { catalogue, read: { catalogue: catalogueRevision } },
         codes: { suggest },
@@ -187,7 +181,6 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
     changesCalls,
     itemEventsCalls,
     mutationsCalls,
-    ledgerCalls,
     suggestCalls,
     get catalogueCalls() {
       return catalogueCalls;

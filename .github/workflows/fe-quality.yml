@@ -1,12 +1,6 @@
 name: FE Quality
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 on:
-  workflow_call:
-    inputs:
-      full-validation:
-        type: boolean
-        required: true
   push:
     branches: [main]
     paths:
@@ -24,7 +18,6 @@ on:
       - ".github/workflows/fe-quality.yml"
       - ".github/actions/**"
   pull_request:
-    types: [opened, synchronize, reopened, edited]
     paths:
       - "pillars/shell/**"
       - "pillars/*/app/**"
@@ -43,10 +36,6 @@ on:
   # would leave a merge group running the job with every step skipped, which
   # reports green having checked nothing.
   merge_group:
-
-concurrency:
-  group: fe-quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: false
 
 jobs:
   changes:
@@ -83,45 +72,45 @@ jobs:
     if: always()
     steps:
       - name: Skip — no relevant changes
-        if: ${{ !inputs.full-validation && github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true' }}
+        if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "No shell/UI changes detected — skipping quality checks"
 
       - uses: actions/checkout@v7
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
 
       - name: Install pnpm
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         with:
           node-version: "24"
           cache: pnpm
 
       - name: Install dependencies
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build shared packages
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: pnpm --filter "@pops/shell^..." --filter "!./pillars/*/app" build
 
       - name: Type check
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: cd pillars/shell && pnpm typecheck
 
       # The committed nginx.conf is the prod BOOT FALLBACK (PRD-255). Gate it
       # for drift here, not only via the Vitest snapshot, so a stale fallback
       # fails the build.
       - name: nginx fallback conf drift gate
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: cd pillars/shell && pnpm gen:nginx:check
 
       - name: Test
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: cd pillars/shell && pnpm test
 
       - name: Build
-        if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: cd pillars/shell && pnpm build

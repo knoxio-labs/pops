@@ -151,7 +151,6 @@ internal struct InventoryItemFormView: View {
         // tap was meant to change gets typed there instead. `ReceiptDraftView`
         // carries the same modifier for the same class of tap.
         .scrollDismissesKeyboard(.interactively)
-        .inventoryDismissesKeyboardOnTap()
         .task(id: model.draft.code.value) { await model.checkCode() }
     }
 

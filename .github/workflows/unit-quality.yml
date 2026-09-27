@@ -1,5 +1,4 @@
 name: Unit Quality
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Single disk-discovered matrix gating every buildable unit under
 # `pillars/` + `libs/` (maxdepth 1), TS and Rust. Replaces the per-lib
@@ -13,11 +12,9 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 # not routed to a covering FE workflow, so "discovery covers every unit" is a
 # gate, not a hope.
 #
-# The unit list + language-specific changed sets come from
-# `_discover-units.yml`, so a TypeScript change does not reserve a second
-# runner merely to skip a Rust-shaped matrix row (and vice versa). The
-# per-unit `mise.toml` pins the toolchain so the steps are uniform regardless
-# of unit. `./.github/actions/setup-mise`
+# The unit list + changed-set come from `_discover-units.yml`. Each lane is
+# selected by `matrix.unit.lang`; the per-unit `mise.toml` pins the toolchain
+# so the steps are uniform regardless of unit. `./.github/actions/setup-mise`
 # is the sole Node manager (no setup-node); `MISE_ENV=ci` pins node 24 via
 # `mise.ci.toml`.
 #
@@ -27,13 +24,7 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 # running nothing. The "exactly one package" guard makes that loud.
 
 on:
-  workflow_call:
-    inputs:
-      full-validation:
-        type: boolean
-        required: true
   pull_request:
-    types: [opened, synchronize, reopened, edited]
     paths:
       - "pillars/**"
       - "libs/**"
@@ -61,8 +52,15 @@ on:
   # the change will actually land on.
   merge_group:
 
+# cancel-in-progress is deliberately OFF — see the matching note in
+# ios-quality.yml and the CONVERGENCE comment in ci-gate.yml: cancelling a
+# superseded run and admitting the new one is not atomic, and the race can
+# drop the new run's registration entirely rather than merely delaying it,
+# which leaves the required `CI Gate` check stuck `in_progress`. A superseded
+# run is left to finish instead; `queue: single` (the default) still caps
+# this group at one pending run.
 concurrency:
-  group: unit-quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: unit-quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -71,24 +69,28 @@ env:
 jobs:
   discover:
     uses: ./.github/workflows/_discover-units.yml
-    with:
-      full-validation: ${{ inputs.full-validation || false }}
 
   ts:
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — ts
     needs: discover
-    if: ${{ needs.discover.outputs.changedTs != '[]' }}
+    if: ${{ needs.discover.outputs.changed != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        unit: ${{ fromJson(needs.discover.outputs.changedTs) }}
+        unit: ${{ fromJson(needs.discover.outputs.changed) }}
     steps:
-      - uses: actions/checkout@v7
+      - if: ${{ matrix.unit.lang != 'ts' }}
+        run: echo "skip non-ts unit ${{ matrix.unit.name }} (${{ matrix.unit.lang }})"
 
-      - uses: ./.github/actions/setup-mise
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        uses: actions/checkout@v7
 
-      - name: Expose bundled node-gyp on PATH
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        uses: ./.github/actions/setup-mise
+
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Expose bundled node-gyp on PATH
         # mise-installed node bundles node-gyp under npm but does not put it on
         # PATH, so native-module installs (better-sqlite3 in most pillars +
         # libs/settings) fail with `node-gyp: not found` during their pnpm
@@ -100,7 +102,8 @@ jobs:
           [ -x "$gyp_bin/node-gyp" ] || { echo "::error::bundled node-gyp not found at $gyp_bin"; exit 1; }
           echo "$gyp_bin" >> "$GITHUB_PATH"
 
-      - name: Assert --filter matches exactly one package
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Assert --filter matches exactly one package
         # pnpm --filter exits 0 on zero matches (a warning, not an error), so
         # a dir-name != pkg-name skew would silently run nothing. Fail loud.
         run: |
@@ -108,13 +111,16 @@ jobs:
           n=$(pnpm ls -r --depth -1 --filter "${{ matrix.unit.pkg }}" --json | jq 'length')
           [ "$n" = 1 ] || { echo "::error::--filter ${{ matrix.unit.pkg }} matched $n packages (expected 1)"; exit 1; }
 
-      - name: Install (subgraph only)
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Install (subgraph only)
         run: pnpm install --frozen-lockfile --filter "${{ matrix.unit.pkg }}..."
 
-      - name: Format check
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Format check
         run: pnpm exec oxfmt --check ${{ matrix.unit.dir }}/
 
-      - name: Lint
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Lint
         # Data-only units (e.g. libs/locales) have no src/ — nothing to lint.
         run: |
           set -euo pipefail
@@ -124,7 +130,8 @@ jobs:
             echo "no src/ in ${{ matrix.unit.dir }} — skip lint"
           fi
 
-      - name: Build dependency closure
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Build dependency closure
         # Build the unit's compiled-lib deps so their dist/.d.ts exists before
         # typecheck/test resolve them. `^...` selects strictly the dependencies
         # (never the unit), and pnpm no-ops deps that lack a `build` script, so
@@ -133,7 +140,8 @@ jobs:
         # pillar-quality's `pnpm --filter "<pkg>^..." build` step.
         run: pnpm --filter "${{ matrix.unit.pkg }}^..." build
 
-      - name: Build own unit (only when it owns a build task)
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Build own unit (only when it owns a build task)
         # mise merges configs UP the tree: a `build` resolved from -C <dir> for a
         # unit whose own mise.toml lacks `build` (source libs ui/navigation/
         # overlay-ego/locales) is the inherited ROOT build (`tsc -b`
@@ -159,7 +167,8 @@ jobs:
               ;;
           esac
 
-      - name: Typecheck
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Typecheck
         run: |
           set -euo pipefail
           if node -e "process.exit((require('./${{ matrix.unit.dir }}/package.json').scripts||{}).typecheck?0:1)"; then
@@ -168,7 +177,8 @@ jobs:
             echo "no typecheck script for ${{ matrix.unit.pkg }} — skip"
           fi
 
-      - name: Codegen drift
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Codegen drift
         # Run every `generate:*` script the unit defines, then fail on any diff.
         run: |
           set -euo pipefail
@@ -185,7 +195,8 @@ jobs:
             git diff --exit-code ${{ matrix.unit.dir }}/
           fi
 
-      - name: Test
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Test
         # Prefer `test:coverage` when the unit defines it, mirroring
         # app-quality.yml — a coverage ratchet a unit declares in its own
         # vitest.config.ts must actually run somewhere, or it is a threshold
@@ -206,18 +217,24 @@ jobs:
   rust:
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — rust
     needs: discover
-    if: ${{ needs.discover.outputs.changedRust != '[]' }}
+    if: ${{ needs.discover.outputs.changed != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        unit: ${{ fromJson(needs.discover.outputs.changedRust) }}
+        unit: ${{ fromJson(needs.discover.outputs.changed) }}
     steps:
-      - uses: actions/checkout@v7
+      - if: ${{ matrix.unit.lang != 'rust' }}
+        run: echo "skip non-rust unit ${{ matrix.unit.name }} (${{ matrix.unit.lang }})"
 
-      - uses: ./.github/actions/setup-mise
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        uses: actions/checkout@v7
 
-      - name: Ensure rustfmt + clippy for the pinned toolchain
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        uses: ./.github/actions/setup-mise
+
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Ensure rustfmt + clippy for the pinned toolchain
         # mise selects the toolchain by exporting RUSTUP_TOOLCHAIN from the root
         # `mise.toml` rust pin. rustup then auto-installs that exact version
         # with the DEFAULT profile, which does NOT include rustfmt or clippy —
@@ -226,14 +243,18 @@ jobs:
         # the runner ships a preinstalled `stable` that already carries both.
         run: rustup component add rustfmt clippy
 
-      - name: Format check
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Format check
         run: cargo fmt -p ${{ matrix.unit.pkg }} --check
 
-      - name: Clippy
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Clippy
         run: cargo clippy -p ${{ matrix.unit.pkg }} --all-targets --all-features -- -D warnings
 
-      - name: Build
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Build
         run: cargo build -p ${{ matrix.unit.pkg }} --all-targets
 
-      - name: Test
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Test
         run: cargo test -p ${{ matrix.unit.pkg }}

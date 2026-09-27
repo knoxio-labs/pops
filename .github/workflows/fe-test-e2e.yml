@@ -1,5 +1,4 @@
 name: E2E Tests
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Playwright against the shell and the app bundles it mounts. No pillar
 # backend is started: every spec fulfils the REST surface it exercises at the
@@ -31,15 +30,9 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 # `ci-gate.yml`'s PATH_FILTERS mirror carries the same exclusion, and
 # `scripts/ci/check-ci-gate-wiring.mjs` fails if the two drift.
 on:
-  workflow_call:
-    inputs:
-      full-validation:
-        type: boolean
-        required: true
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, edited]
     paths:
       - "pillars/**"
       - "libs/**"
@@ -53,7 +46,10 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: fe-test-e2e-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: fe-test-e2e-${{ github.workflow }}-${{ github.ref }}
+  # Cancelling a superseded run and admitting its replacement is not atomic on
+  # GitHub's side, and `CI Gate` reads an absent run as pending forever. See
+  # the MITIGATION note in ci-gate.yml.
   cancel-in-progress: false
 
 jobs:

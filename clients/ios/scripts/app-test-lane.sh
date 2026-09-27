@@ -31,14 +31,6 @@ derived_data=''
 declare -a only_testing=()
 declare -a required=()
 
-test_diagnostics="${POPS_IOS_TEST_DIAGNOSTICS:-}"
-case "$test_diagnostics" in
-    ''|never|on-failure) ;;
-    *)
-        die "POPS_IOS_TEST_DIAGNOSTICS must be never or on-failure; got '$test_diagnostics'."
-        ;;
-esac
-
 while [ "$#" -gt 0 ]; do
     case "$1" in
         # Every test in the target ran. Nothing in the app target skips today;
@@ -118,15 +110,9 @@ if [ "$without_building" = true ] && [ ! -d "$derived_data" ]; then
         "'mise run build:for-testing' writes it."
 fi
 
-if [ -n "${POPS_IOS_TEST_ARTIFACTS:-}" ]; then
-    work="$POPS_IOS_TEST_ARTIFACTS"
-    mkdir -p "$work"
-else
-    work="$(mktemp -d)"
-    trap 'rm -rf "$work"' EXIT
-fi
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
 result="$work/test.xcresult"
-test_log="$work/test.log"
 
 action='test'
 if [ "$without_building" = true ]; then
@@ -140,9 +126,6 @@ declare -a xcodebuild_args=(
     -destination "$destination"
     -resultBundlePath "$result"
 )
-if [ -n "$test_diagnostics" ]; then
-    xcodebuild_args+=(-collect-test-diagnostics "$test_diagnostics")
-fi
 if [ -n "$derived_data" ]; then
     xcodebuild_args+=(-derivedDataPath "$derived_data")
 fi
@@ -153,29 +136,23 @@ if [ "$allow_provisioning_updates" = true ]; then
     xcodebuild_args+=(-allowProvisioningUpdates)
 fi
 
-set +e
-xcodebuild "${xcodebuild_args[@]}" 2>&1 | tee "$test_log"
-pipeline_status=("${PIPESTATUS[@]}")
-set -e
-status="${pipeline_status[0]}"
-if [ "${pipeline_status[1]}" -ne 0 ]; then
-    die "could not write the xcodebuild log to '$test_log'."
-fi
+status=0
+xcodebuild "${xcodebuild_args[@]}" > "$work/test.log" 2>&1 || status=1
 
 # A run that died before producing a bundle has no count to report, and the
 # reason is in the log rather than in anything below.
 if [ ! -e "$result" ]; then
-    tail -60 "$test_log" >&2
+    tail -60 "$work/test.log" >&2
     die "xcodebuild produced no result bundle."
 fi
 
 if ! summary="$(xcrun xcresulttool get test-results summary --path "$result")"; then
-    tail -60 "$test_log" >&2
+    tail -60 "$work/test.log" >&2
     die "could not read a summary out of the result bundle."
 fi
 
 if [ "$status" -ne 0 ]; then
-    tail -60 "$test_log" >&2
+    tail -60 "$work/test.log" >&2
     # `// []` because a build failure produces a bundle with no failed *tests*
     # in it. Without it jq aborts on `null[]`, replacing the failure this branch
     # exists to report with a jq error about reporting it.
@@ -216,7 +193,7 @@ fi
 # because where a bundle sits under the plan is xcresulttool's business, not
 # this script's.
 if ! tests="$(xcrun xcresulttool get test-results tests --path "$result")"; then
-    tail -60 "$test_log" >&2
+    tail -60 "$work/test.log" >&2
     die "could not read the test tree out of the result bundle."
 fi
 ran="$(jq -r '[.. | objects | select((.nodeType? // "") | endswith("test bundle"))

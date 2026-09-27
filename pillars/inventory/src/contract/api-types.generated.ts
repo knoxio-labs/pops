@@ -1244,23 +1244,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/web/reports/entries': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Active inventory report entries with provenance and effective placement */
-    get: operations['webReports.entries'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/web/reports/values': {
     parameters: {
       query?: never;
@@ -9216,47 +9199,6 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  'webReports.entries': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            entries: {
-              code: string | null;
-              effectiveLocationId: string | null;
-              isContainer: boolean;
-              itemId: string;
-              name: string;
-              photos: number;
-              place: string | null;
-              purchasePrice: number | null;
-              purchasedOn: string | null;
-              quantity: number;
-              receiptId: number | null;
-              replacementValue: number | null;
-              room: {
-                key: string;
-                label: string;
-              };
-              typeKey: string | null;
-              warrantyExpires: string | null;
-            }[];
-          };
         };
       };
     };

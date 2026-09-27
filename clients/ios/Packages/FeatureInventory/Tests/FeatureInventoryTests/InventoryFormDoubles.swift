@@ -112,10 +112,6 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
         change { $0.status = status }
     }
 
-    internal func setProtocol2Catalogue(_ catalogue: InventoryCatalogueSnapshot?) {
-        change { $0.protocol2Catalogue = catalogue }
-    }
-
     /// Reports how far each staged photo got, as a local-first store does.
     internal func setPhotoUploads(_ uploads: [String: InventoryPhotoUpload]) {
         change { $0.photoUploads = uploads }

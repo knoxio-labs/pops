@@ -54,9 +54,7 @@
     "pr-review:self-test": "node scripts/ci/pr-review.mjs --self-test",
     "ci:fix": "pnpm lint:fix && pnpm format && pnpm typecheck",
     "registry:build": "pnpm --filter @pops/module-registry registry:build",
-    "prepare": "husky",
-    "check": "mise run check",
-    "dev:ui": "node scripts/local-dev/ui-remote-watch.mjs"
+    "prepare": "husky"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

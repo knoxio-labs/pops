@@ -114,15 +114,6 @@ describe('matchesPathFilter (as embedded in ci-gate.yml)', () => {
     );
   });
 
-  it('excludes inventory web changes but selects the server the iOS flow boots', async () => {
-    const { matchesPathFilter } = await runEmbeddedScript();
-    expect(matchesPathFilter('iOS Quality', ['pillars/inventory/app/src/App.tsx'])).toBe(false);
-    expect(matchesPathFilter('iOS Quality', ['pillars/inventory/src/api/server.ts'])).toBe(true);
-    expect(matchesPathFilter('iOS Quality', ['pillars/inventory/migrations/0023_next.sql'])).toBe(
-      true
-    );
-  });
-
   it('is null (unknown, not a match) when the diff could not be determined', async () => {
     const { matchesPathFilter } = await runEmbeddedScript();
     expect(matchesPathFilter('iOS Quality', null)).toBeNull();

@@ -149,7 +149,6 @@ describe('GET /openapi', () => {
       '/mobile/inventory/media/{sha256}',
       '/mobile/inventory/mutations',
       '/mobile/inventory/sync/changes',
-      '/mobile/inventory/sync/ledger',
       '/mobile/inventory/sync/snapshot',
       '/mobile/inventory/type-catalogue',
       '/mobile/inventory/types',
@@ -178,9 +177,6 @@ describe('GET /openapi', () => {
     );
     expect(body.paths?.['/mobile/purchases/receipts']?.['post']?.operationId).toBe(
       'mobilePurchases.saveReceiptDraft'
-    );
-    expect(body.paths?.['/mobile/inventory/sync/ledger']?.['post']?.operationId).toBe(
-      'mobileInventory.reportLedger'
     );
   });
 });

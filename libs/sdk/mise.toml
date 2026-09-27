@@ -5,7 +5,8 @@ sources = ["src/**/*.ts", "tsconfig.build.json", "package.json"]
 outputs = ["dist/**"]
 
 [tasks.typecheck]
-run = "node ../../scripts/local-dev/typecheck.mjs"
+# require-built-graph.mjs refuses a missing sibling dist; an incremental build can no-op when only .tsbuildinfo survives.
+run = ["node ../../scripts/require-built-graph.mjs", "tsc --noEmit"]
 
 [tasks.test]
 run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]
