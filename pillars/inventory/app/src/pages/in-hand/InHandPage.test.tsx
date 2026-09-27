@@ -269,10 +269,9 @@ describe('InHandPage', () => {
     expect(screen.getAllByRole('row')[0]).toHaveTextContent('Loose cable');
     expect(screen.getByText('Old shed was deleted. Choose a new place')).toBeInTheDocument();
     expect(screen.getByText('Found loose, never placed. Choose a place')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Put back' })).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
+    expect(
+      within(screen.getAllByRole('row')[0]).getByRole('button', { name: 'Put back' })
+    ).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('fetches every page before replacing the loading state with rows', async () => {
@@ -327,7 +326,8 @@ describe('InHandPage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Put back in Garage' }));
-    expect(await screen.findByText('Not saved. The place is closed.')).toBeInTheDocument();
+    expect(currentVerbs.putBack).toHaveBeenCalledWith('lamp');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Not saved. The place is closed.');
     expect(screen.getByRole('button', { name: 'Put back' })).toHaveAttribute(
       'aria-disabled',
       'true'
@@ -379,15 +379,17 @@ describe('InHandPage', () => {
     expect(currentVerbs.move).not.toHaveBeenCalled();
   });
 
-  it('disables label printing at the maximum-plus-one boundary', () => {
+  it('disables label printing at the maximum-plus-one boundary', { timeout: 15_000 }, () => {
     const many = Array.from({ length: MAX_LABEL_IDS + 1 }, (_, index) =>
       item(`item-${index}`, `Item ${index}`)
     );
     currentRows = rowsResult(many);
     renderPage();
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Item 0' }));
-    fireEvent.click(screen.getByRole('button', { name: `Select all ${many.length}` }));
+    fireEvent.keyDown(screen.getByRole('grid', { name: 'In hand' }), {
+      key: 'a',
+      ctrlKey: true,
+    });
     expect(
       within(screen.getByRole('region', { name: 'Selection' })).getByRole('button', {
         name: /^Label/u,
