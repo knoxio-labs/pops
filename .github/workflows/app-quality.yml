@@ -1,5 +1,5 @@
 name: App Quality
-run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Runs each `pillars/*/app` frontend unit's OWN typecheck + test suite.
 #
@@ -50,9 +50,8 @@ on:
     inputs:
       full-validation:
         description: Select every app instead of the affected dependency closure
-        required: false
+        required: true
         type: boolean
-        default: false
   push:
     branches: [main]
     paths:

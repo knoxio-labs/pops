@@ -16,6 +16,11 @@ mise typecheck
 mise check -- --typecheck-only --force
 ```
 
+Plan-only mode discovers and verifies configuration without hashing source or
+build output. A validation invocation shares one trusted unit-discovery snapshot
+across planning, prerequisites, typechecks and tests; later invocations discover
+afresh. Source snapshots still reject configuration edits during validation.
+
 The default comparison is the merge base with `origin/main`. `--base <ref>` selects
 another branch. Selection includes committed, staged, unstaged and untracked
 files, then closes over package reverse dependencies. An internal app change

@@ -380,7 +380,10 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
 - Protocol 2 item rows carry the persisted `typeId` and canonical
   stable-field-ID `fieldValues` (each with its source and catalogue revision).
   The existing `typeKey` and `fields` projection remains alongside them for
-  protocol-1 readers during the transition.
+  protocol-1 readers during the transition. Canonical `many` values remain
+  complete in `fieldValues`; when one cannot fit the single-value legacy shape,
+  protocol 2 omits that entire field from `fields` rather than truncating the
+  value or failing the page. Protocol 1 keeps rejecting that cardinality.
 - Sync and web item rows also carry `computedValues`: one entry per computed
   field, evaluated against the active catalogue at read time, with `state`
   `ok`, `overridden` or `unavailable` (plus `reason`, `failedFieldId` and `missingInputs`), the

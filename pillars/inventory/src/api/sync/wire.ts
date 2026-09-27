@@ -2,7 +2,7 @@ import { and, asc, inArray, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
-  loadProtocol1Fields,
+  loadLegacyFieldsForProtocol,
   readItemFieldValues,
   resolveProtocol1TypeById,
   type Protocol1Fields,
@@ -67,7 +67,7 @@ function append<T>(map: Map<string, T[]>, key: string, value: T): void {
 }
 
 /** Load photos and document links for `ids`, in the caller's (read) transaction. */
-export function loadItemExtras(db: CommandDb, ids: readonly string[]): ItemExtras {
+export function loadItemExtras(db: CommandDb, ids: readonly string[], protocol = 2): ItemExtras {
   const fields = new Map<string, Protocol1Fields>();
   const fieldValues = new Map<string, readonly ReadItemFieldValue[]>();
   const typeKeys = new Map<string, string | null>();
@@ -92,7 +92,7 @@ export function loadItemExtras(db: CommandDb, ids: readonly string[]): ItemExtra
     .where(inArray(items.id, [...ids]))
     .all();
   for (const item of itemTypes) {
-    fields.set(item.id, loadProtocol1Fields(db, item.id));
+    fields.set(item.id, loadLegacyFieldsForProtocol(db, item.id, protocol));
     fieldValues.set(item.id, readItemFieldValues(db, item.id));
     const type = item.typeId === null ? null : resolveProtocol1TypeById(db, item.typeId);
     typeKeys.set(item.id, type?.key ?? null);

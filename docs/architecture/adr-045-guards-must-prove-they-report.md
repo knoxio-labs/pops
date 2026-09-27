@@ -70,6 +70,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 
 | Guard                                               | Job                                                                             | Reads                                                                                                 |
 | --------------------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `scripts/ci/check-promotion.mjs`                    | `promotion-quality.yml` → `validation`                                          | Promotion lane results supplied as JSON; rejects missing, cancelled, skipped and failed lanes.        |
 | `scripts/check-pillar-ui-reachability.mjs`          | `quality.yml` → `pillar-ui-reachability`                                        | Pillar wire manifests, `package.json`                                                                 |
 | `scripts/check-pillar-locales.mjs`                  | `quality.yml` → `pillar-locales`                                                | Pillar `src/locales/*.json`, `index.ts`, `locales.test.ts`, `package.json`                            |
 | `scripts/check-tailwind-source-coverage.mjs`        | `quality.yml` → `tailwind-source-coverage`                                      | CSS `@source` globs, source file paths                                                                |
