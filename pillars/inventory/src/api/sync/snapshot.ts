@@ -148,7 +148,8 @@ function pageFrom(db: CommandDb, position: Continuation, limit: number): PageRow
 export function readSnapshotPage(
   db: CommandDb,
   state: SyncState,
-  request: { cursor?: string; limit: number }
+  request: { cursor?: string; limit: number },
+  protocol: number = 1
 ): SnapshotRows {
   const position = startOrResume(state, request.cursor);
   const page = pageFrom(db, position, request.limit);
@@ -160,7 +161,8 @@ export function readSnapshotPage(
     items: page.things,
     extras: loadItemExtras(
       db,
-      page.things.map((row) => row.id)
+      page.things.map((row) => row.id),
+      protocol
     ),
     nextCursor: page.next === null ? null : encodeCursor({ ...position, ...page.next }),
   };
