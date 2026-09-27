@@ -135,4 +135,24 @@ describe('blockedReasonFor', () => {
       })
     ).toContain("Joao's iPhone's report does not name it");
   });
+
+  it('blocks every repair write while offline', () => {
+    const cases: readonly [WebAction['id'], RepairCase][] = [
+      ['use-mine', identifiedPlacementCase()],
+      ['save-fitting', identifiedArchivedCase()],
+      ['change-type', identifiedTypeReplacementCase()],
+      ['restore-reference', identifiedReferenceCase()],
+    ];
+
+    for (const [id, repair] of cases) {
+      expect(
+        blockedReasonFor(action(id), {
+          repair,
+          device: "Joao's iPhone",
+          disabledReason: 'Web actions are unavailable offline.',
+          detail,
+        })
+      ).toBe('Web actions are unavailable offline.');
+    }
+  });
 });

@@ -7,9 +7,9 @@ import { blankDraft } from './form-draft';
 import { deriveForm } from './form-view';
 import { ItemFormPage } from './item-form-page';
 
+import type { PhotoUploads } from '../../foundation/photos/use-photo-uploads';
 import type { FormSources } from './use-form-sources';
 import type { ItemFormApi } from './use-item-form';
-import type { PhotoUploads } from './use-photo-uploads';
 
 const mocks = vi.hoisted(() => ({
   useFormSources: vi.fn(),

@@ -182,6 +182,7 @@ export function retryReads(input: RetryInput): void {
     input.sources.primary.openContainersQuery.refetch(),
     input.sources.primary.closedContainersQuery.refetch(),
     input.sources.primary.subjectItemsQuery.refetch(),
+    input.sources.related.subjectItemsQuery.refetch(),
     input.auxiliary.documentsQuery.refetch(),
     input.auxiliary.paperlessQuery.refetch(),
     input.sources.graphQuery.refetch(),

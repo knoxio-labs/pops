@@ -8,10 +8,10 @@ import { useItemForm } from './use-item-form';
 
 import type { ReactNode } from 'react';
 
+import type { PhotoUploads } from '../../foundation/photos/use-photo-uploads';
 import type { ItemFormOpening } from './form-opening';
 import type { FormSaveActions } from './use-form-save-actions';
 import type { FormSources } from './use-form-sources';
-import type { PhotoUploads } from './use-photo-uploads';
 
 const mocks = vi.hoisted(() => ({
   useCodeAssist: vi.fn(),
@@ -23,7 +23,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('./use-code-assist', () => ({ useCodeAssist: mocks.useCodeAssist }));
 vi.mock('./use-form-save-actions', () => ({ useFormSaveActions: mocks.useFormSaveActions }));
-vi.mock('./use-photo-uploads', () => ({ usePhotoUploads: mocks.usePhotoUploads }));
+vi.mock('../../foundation/photos/use-photo-uploads', () => ({
+  usePhotoUploads: mocks.usePhotoUploads,
+}));
 vi.mock('./use-online', () => ({ useOnline: mocks.useOnline }));
 vi.mock('../../foundation/shortcuts/shortcut-provider', () => ({
   useShortcutScope: mocks.useShortcutScope,

@@ -6,10 +6,10 @@ import { deriveForm, placementTargetName } from './form-view';
 import { useItemSave } from './save-item';
 import { saveRequest } from './save-request';
 
+import type { PhotoUploads } from '../../foundation/photos/use-photo-uploads';
 import type { ItemDraft } from './form-draft';
 import type { FormSaveActionsOptions } from './form-save-options';
 import type { JustCreated, SaveRefusal, SaveResult } from './save-types';
-import type { PhotoUploads } from './use-photo-uploads';
 
 /** Save actions and transient save feedback returned by the form action hook. */
 export interface FormSaveActions {

@@ -1,13 +1,13 @@
 import { toast } from 'sonner';
 
-import { photoSummary } from './photo-queue';
+import { photoSummary } from '../../foundation/photos/photo-queue';
 
+import type { PhotoUploads } from '../../foundation/photos/use-photo-uploads';
 import type { FormTypeDef } from './field-model';
 import type { ItemDraft } from './form-draft';
 import type { FormSaveActionsOptions } from './form-save-options';
 import type { ItemSaveApi } from './save-item';
 import type { SaveResult } from './save-types';
-import type { PhotoUploads } from './use-photo-uploads';
 
 function typeFor(options: FormSaveActionsOptions, draft: ItemDraft): FormTypeDef | null {
   if (draft.typeId === null) return null;
