@@ -23,6 +23,7 @@ export interface PanelContext {
   /** Set when mutations are unavailable (offline); every verb shows it. */
   disabledReason?: string;
   onNavigate?: (path: string) => void;
+  onEdit?: (id: string) => void;
 }
 
 /** Open containers, each with Close. */
@@ -67,7 +68,12 @@ export function OpenContainersPanel({
                 label={`Close ${container.name}`}
                 disabledReason={ctx.disabledReason}
               />
-              <RowVerb icon={I.edit} label={`Edit ${container.name}`} shortcutId="list-edit" />
+              <RowVerb
+                icon={I.edit}
+                label={`Edit ${container.name}`}
+                shortcutId="list-edit"
+                onClick={() => ctx.onEdit?.(container.id)}
+              />
             </>
           }
         />
@@ -126,7 +132,12 @@ export function InHandPanel({ items, ctx }: { items: readonly ItemRowModel[]; ct
                 shortcutId="move"
                 disabledReason={ctx.disabledReason}
               />
-              <RowVerb icon={I.edit} label={`Edit ${item.name}`} shortcutId="list-edit" />
+              <RowVerb
+                icon={I.edit}
+                label={`Edit ${item.name}`}
+                shortcutId="list-edit"
+                onClick={() => ctx.onEdit?.(item.id)}
+              />
             </>
           }
         />

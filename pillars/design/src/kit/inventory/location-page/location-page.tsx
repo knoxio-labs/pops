@@ -40,6 +40,7 @@ export interface LocationPageProps {
   banner?: StateBannerProps;
   toast?: UndoToastProps;
   recents?: readonly PlacementTarget[];
+  onEdit?: (id: string) => void;
 }
 
 function Title({ api, place }: { api: LocationsApi; place: LocationModel }) {
@@ -102,6 +103,7 @@ export function LocationPage(props: LocationPageProps) {
         initialSelection={props.initialSelection}
         onStoreHere={() => setStoring(true)}
         onClearQuery={() => setQuery('')}
+        onEdit={props.onEdit}
       />
       <PlaceOverlays
         api={api}

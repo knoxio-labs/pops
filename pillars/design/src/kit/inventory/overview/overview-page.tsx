@@ -34,10 +34,19 @@ export interface OverviewPageProps {
   /** Present while a move is under way. */
   moving?: { destination: string };
   onNavigate?: (path: string) => void;
+  onEdit?: (id: string) => void;
 }
 
-function Panels({ world, events, now, disabledReason, moving, onNavigate }: OverviewPageProps) {
-  const ctx = { world, disabledReason, onNavigate };
+function Panels({
+  world,
+  events,
+  now,
+  disabledReason,
+  moving,
+  onNavigate,
+  onEdit,
+}: OverviewPageProps) {
+  const ctx = { world, disabledReason, onNavigate, onEdit };
   const inHand = [...world.items.values()].filter(
     (entry) => entry.placement.kind === 'in-hand' && entry.lifecycle === 'active'
   );

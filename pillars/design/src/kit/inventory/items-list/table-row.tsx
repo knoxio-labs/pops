@@ -40,6 +40,7 @@ export interface TableRowProps {
   rejection?: string | null;
   onToggle?: (id: string, shiftKey: boolean) => void;
   onOpen?: (id: string) => void;
+  onEdit?: (id: string) => void;
   /** Replaces the Type cell: the Containers browser shows what a box holds there. */
   SecondCell?: SecondColumn['Cell'];
 }
@@ -60,7 +61,7 @@ function shortDate(iso: string): string {
     : otherYear.format(date);
 }
 
-function RowVerbs({ item }: { item: ItemRowModel }) {
+function RowVerbs({ item, onEdit }: { item: ItemRowModel; onEdit?: (id: string) => void }) {
   const inHand = item.placement.kind === 'in-hand';
   return (
     <span className="absolute inset-0 flex items-center justify-end gap-0.5 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 group-data-focused:opacity-100">
@@ -70,7 +71,12 @@ function RowVerbs({ item }: { item: ItemRowModel }) {
         <RowVerb icon={INVENTORY_ICONS.pickUp} label="Pick up" shortcutId="pick-up" />
       )}
       <RowVerb icon={INVENTORY_ICONS.move} label="Move" shortcutId="move" />
-      <RowVerb icon={INVENTORY_ICONS.edit} label="Edit" shortcutId="list-edit" />
+      <RowVerb
+        icon={INVENTORY_ICONS.edit}
+        label="Edit"
+        shortcutId="list-edit"
+        onClick={() => onEdit?.(item.id)}
+      />
       <RowVerb icon={MoreHorizontal} label="More" shortcutId="row-menu" />
     </span>
   );
@@ -164,7 +170,7 @@ export function TableRow(props: TableRowProps) {
           <span className="hidden h-full items-center text-xs tabular-nums text-muted-foreground group-focus-within:invisible group-hover:invisible group-data-focused:invisible lg:flex">
             {shortDate(item.updatedAt)}
           </span>
-          <RowVerbs item={item} />
+          <RowVerbs item={item} onEdit={props.onEdit} />
         </span>
       </div>
       {props.rejection ? (

@@ -26,6 +26,7 @@ export interface InHandRowProps {
   disabledReason?: string;
   onToggle?: (id: string, shiftKey: boolean) => void;
   onMove?: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
 function Origin({ item, world }: { item: ItemRowModel; world: PlacementWorld }) {
@@ -62,11 +63,13 @@ function Actions({
   putBack,
   disabledReason,
   onMove,
+  onEdit,
 }: {
   item: ItemRowModel;
   putBack: ReturnType<typeof putBackState>;
   disabledReason?: string;
   onMove?: (id: string) => void;
+  onEdit?: (id: string) => void;
 }) {
   return (
     <span className="flex items-center gap-0.5">
@@ -88,6 +91,7 @@ function Actions({
         label={`Edit ${item.name}`}
         shortcutId="list-edit"
         disabledReason={disabledReason}
+        onClick={() => onEdit?.(item.id)}
       />
     </span>
   );
@@ -102,6 +106,7 @@ export function InHandRow({
   disabledReason,
   onToggle,
   onMove,
+  onEdit,
 }: InHandRowProps) {
   const putBack = putBackState(item, world, disabledReason);
   return (
@@ -132,7 +137,13 @@ export function InHandRow({
       <span className="hidden lg:inline-flex">
         <CodeBadge code={item.code} />
       </span>
-      <Actions item={item} putBack={putBack} disabledReason={disabledReason} onMove={onMove} />
+      <Actions
+        item={item}
+        putBack={putBack}
+        disabledReason={disabledReason}
+        onMove={onMove}
+        onEdit={onEdit}
+      />
     </div>
   );
 }

@@ -38,6 +38,7 @@ export interface PlacePreviewProps {
   onRename: () => void;
   onStoreHere: () => void;
   onOpenItem?: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
 function SectionTitle({ label, count }: { label: string; count: number }) {
@@ -180,6 +181,7 @@ export function PlacePreview(props: PlacePreviewProps) {
     onPickUp: (id) => props.verbs.pickUp([id]),
     onMove: (id) => props.verbs.startMove([id]),
     onTakeOut: (id) => props.verbs.takeOut([id]),
+    onEdit: props.onEdit,
   };
   return (
     <>
