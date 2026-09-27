@@ -84,7 +84,7 @@ interface IssueBody {
 interface ErrorBody {
   readonly code: string;
   readonly message: string;
-  readonly issues: IssueBody[];
+  readonly details: { readonly issues: IssueBody[] };
 }
 
 interface DraftResponseBody {
@@ -208,7 +208,7 @@ function expectIssue(
   response: { body: ErrorBody },
   expected: { readonly code: string; readonly definitionId: string; readonly path: string }
 ): void {
-  expect(response.body.issues).toContainEqual(expect.objectContaining(expected));
+  expect(response.body.details.issues).toContainEqual(expect.objectContaining(expected));
 }
 
 beforeEach(() => {
@@ -239,7 +239,7 @@ describe('type catalogue parent trees', () => {
     ]);
 
     expect(result.response.status, JSON.stringify(result.response.body)).toBe(400);
-    expect(result.response.body.code).toBe('catalogue_validation_failed');
+    expect(result.response.body.code).toBe('inventory.catalogue.validation_failed');
     expectIssue(result.response, {
       code: 'type_parent_cycle',
       definitionId: root.type.id,
@@ -257,8 +257,8 @@ describe('type catalogue parent trees', () => {
     ]);
 
     expect(result.response.status, JSON.stringify(result.response.body)).toBe(400);
-    expect(result.response.body.code).toBe('catalogue_validation_failed');
-    expect(result.response.body.issues).toContainEqual(
+    expect(result.response.body.code).toBe('inventory.catalogue.validation_failed');
+    expect(result.response.body.details.issues).toContainEqual(
       expect.objectContaining({ code: 'type_depth_exceeded', path: 'parentTypeId' })
     );
   });
@@ -275,11 +275,11 @@ describe('type catalogue parent trees', () => {
     ]);
 
     expect(result.response.status, JSON.stringify(result.response.body)).toBe(400);
-    expect(result.response.body.code).toBe('catalogue_validation_failed');
-    expect(result.response.body.issues).toEqual([
+    expect(result.response.body.code).toBe('inventory.catalogue.validation_failed');
+    expect(result.response.body.details.issues).toEqual([
       expect.objectContaining({ code: 'type_parent_unknown', path: 'parentTypeId' }),
     ]);
-    expect(result.response.body.issues[0].definitionId).toEqual(expect.any(String));
+    expect(result.response.body.details.issues[0].definitionId).toEqual(expect.any(String));
   });
 
   it('rejects a live child when its parent is archived through archive_type', async () => {
@@ -344,10 +344,10 @@ describe('type catalogue parent trees', () => {
     ]);
 
     expect(result.response.status, JSON.stringify(result.response.body)).toBe(400);
-    expect(result.response.body.issues).toContainEqual(
+    expect(result.response.body.details.issues).toContainEqual(
       expect.objectContaining({ code: 'inherited_key_duplicate', path: 'key' })
     );
-    expect(result.response.body.issues[0].definitionId).toEqual(expect.any(String));
+    expect(result.response.body.details.issues[0].definitionId).toEqual(expect.any(String));
   });
 
   it('ignores archived parent fields when checking inherited keys', async () => {
@@ -405,7 +405,7 @@ describe('type catalogue parent trees', () => {
       definitionId: created.type.id,
       path: 'parentTypeId',
     });
-    expect(result.response.body.issues).toContainEqual(
+    expect(result.response.body.details.issues).toContainEqual(
       expect.objectContaining({ message: 'A type cannot be its own parent' })
     );
   });
@@ -479,8 +479,8 @@ describe('type catalogue parent trees', () => {
 
     const published = await publishDraft(changed.context);
     expect(published.status, JSON.stringify(published.body)).toBe(409);
-    expect(published.body.code).toBe('catalogue_change_forbidden');
-    expect(published.body.issues).toContainEqual({
+    expect(published.body.code).toBe('inventory.catalogue.change_forbidden');
+    expect(published.body.details.issues).toContainEqual({
       definitionId: parent.id,
       path: '$',
       code: 'published_type_parent_changed',
@@ -536,7 +536,7 @@ describe('type catalogue parent trees', () => {
 
     expect(published.status, JSON.stringify(published.body)).toBe(409);
     expect(published.body).toMatchObject({
-      code: 'protocol_rollout_required',
+      code: 'inventory.catalogue.protocol_rollout_required',
       message: expect.stringContaining('Activate inventory protocol 3'),
     });
   });

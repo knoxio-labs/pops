@@ -372,7 +372,7 @@ describe('items against effective type-tree definitions', () => {
       fieldValues: [],
     });
     expect(validation.status).toBe(400);
-    expect(validation.body.issues).toContainEqual(
+    expect(validation.body.details.issues).toContainEqual(
       expect.objectContaining({ code: 'required_missing', definitionId: catalogue.materialFieldId })
     );
 
