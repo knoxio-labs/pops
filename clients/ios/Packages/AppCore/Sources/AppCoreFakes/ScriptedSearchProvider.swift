@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// One delayed event emitted by ``ScriptedSearchProvider``.
 public struct ScriptedSearchStep<Hit: Sendable>: Sendable {

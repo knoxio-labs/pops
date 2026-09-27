@@ -2,8 +2,6 @@ import Foundation
 import HTTPTypes
 import OpenAPIRuntime
 
-@testable import BFMClient
-
 /// One answer the scripted server gives a route.
 internal struct ScriptedReply: Sendable {
     internal let status: HTTPResponse.Status

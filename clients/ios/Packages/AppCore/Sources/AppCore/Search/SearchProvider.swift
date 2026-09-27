@@ -1,5 +1,3 @@
-import Foundation
-
 /// One event produced while a search provider answers a query.
 public enum SearchProviderEvent<Hit: Sendable>: Sendable {
     /// The provider's current ordered matches.

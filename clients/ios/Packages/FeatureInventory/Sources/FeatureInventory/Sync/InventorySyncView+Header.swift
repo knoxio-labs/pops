@@ -1,5 +1,3 @@
-import Foundation
-
 /// The Sync page header's line and glyph for each status.
 extension InventorySyncView {
     internal static func statusLine(_ status: InventorySyncHeaderStatus) -> String {
