@@ -19,6 +19,7 @@ export interface JustCreated {
   readonly name: string;
   readonly place: string;
   readonly itemId: string;
+  readonly photos: number;
 }
 
 /** A save refusal that the form can render without losing the draft. */
@@ -35,6 +36,7 @@ export type SaveRefusal =
 export interface SaveSuccess {
   readonly itemId: string;
   readonly revision: number | null;
+  readonly photos?: number;
 }
 
 /** The result returned by one item-form save operation. */

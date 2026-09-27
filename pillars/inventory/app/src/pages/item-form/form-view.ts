@@ -106,8 +106,9 @@ function sameFields(a: ItemDraft, b: ItemDraft): boolean {
 }
 
 /** Returns whether cancelling would discard work not present at opening. */
-export function hasStagedWork(draft: ItemDraft, initial: ItemDraft): boolean {
+export function hasStagedWork(draft: ItemDraft, initial: ItemDraft, stagedPhotos = 0): boolean {
   return (
+    stagedPhotos > 0 ||
     draft.name !== initial.name ||
     draft.typeId !== initial.typeId ||
     draft.quantity !== initial.quantity ||

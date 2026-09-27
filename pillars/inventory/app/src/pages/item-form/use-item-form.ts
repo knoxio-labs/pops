@@ -7,6 +7,7 @@ import { deriveForm, hasStagedWork } from './form-view';
 import { useCodeAssist } from './use-code-assist';
 import { useFormSaveActions } from './use-form-save-actions';
 import { useOnline } from './use-online';
+import { usePhotoUploads } from './use-photo-uploads';
 
 import type { Dispatch } from 'react';
 
@@ -28,6 +29,7 @@ export interface ItemFormApi {
   readonly saving: boolean;
   readonly saveError: Extract<SaveRefusal, { kind: 'message' | 'failed' }> | null;
   readonly justCreated: JustCreated | null;
+  readonly photos: ReturnType<typeof usePhotoUploads>;
   readonly cancelAsked: boolean;
   readonly setCancelAsked: (open: boolean) => void;
   readonly requestCancel: () => void;
@@ -48,7 +50,8 @@ function isModalTarget(target: EventTarget | null): boolean {
 function useNavigation(
   opening: ItemFormOpening,
   draft: ItemDraft,
-  initial: ItemDraft
+  initial: ItemDraft,
+  stagedPhotos: number
 ): {
   cancelAsked: boolean;
   setCancelAsked: (open: boolean) => void;
@@ -68,9 +71,9 @@ function useNavigation(
     }
   }, [location.key, navigate, opening.editing]);
   const requestCancel = useCallback((): void => {
-    if (hasStagedWork(draft, initial)) setCancelAsked(true);
+    if (hasStagedWork(draft, initial, stagedPhotos)) setCancelAsked(true);
     else leave();
-  }, [draft, initial, leave]);
+  }, [draft, initial, leave, stagedPhotos]);
   const discard = useCallback((): void => {
     setCancelAsked(false);
     leave();
@@ -110,6 +113,11 @@ export function useItemForm(opening: ItemFormOpening, sources: FormSources): Ite
   const [draft, dispatch] = useReducer(draftReducer, opening.draft);
   const [initial, setInitial] = useState(opening.initial);
   const offline = !useOnline();
+  const photos = usePhotoUploads(
+    draft.mode,
+    opening.editing?.id ?? null,
+    sources.item?.photos.length ?? 0
+  );
   const typeKey =
     sources.catalogue?.types.find((candidate) => candidate.id === draft.typeId)?.key ?? null;
   const typeLabel = draft.typeId === null ? null : sources.typeLabel(draft.typeId);
@@ -131,8 +139,9 @@ export function useItemForm(opening: ItemFormOpening, sources: FormSources): Ite
     setInitial,
     offline,
     dispatch,
+    photos,
   });
-  const navigation = useNavigation(opening, draft, initial);
+  const navigation = useNavigation(opening, draft, initial, photos.stagedCount);
   useFormShortcuts(actions.save, actions.saveAndNew, navigation.requestCancel);
   return {
     draft,
@@ -143,6 +152,7 @@ export function useItemForm(opening: ItemFormOpening, sources: FormSources): Ite
     saving: actions.saving,
     saveError: actions.saveError,
     justCreated: actions.justCreated,
+    photos,
     cancelAsked: navigation.cancelAsked,
     setCancelAsked: navigation.setCancelAsked,
     requestCancel: navigation.requestCancel,
