@@ -1,10 +1,11 @@
 name: Review Findings Gate
 
 # Required check (POPS-2661): blocks a merge while `pr-review.yml`'s own
-# sticky comment still carries an open finding for the PR's head commit.
+# sticky comment still carries an open HIGH or MEDIUM finding for the PR's head
+# commit. LOW suggestions are advisory.
 #
-# WHY THIS EXISTS. `pr-review.yml` finds real defects and writes them into a
-# sticky comment nothing reads. Before this workflow, `mergeStateStatus` read
+# WHY THIS EXISTS. Before this workflow, `pr-review.yml` wrote real defects into
+# a sticky comment nothing read, and `mergeStateStatus` read
 # CLEAN whether the reviewer found nothing, found ten HIGH findings, or never
 # ran — `Review` is not a required context, and its findings are comment
 # prose rather than review threads, so nothing exists for
@@ -81,10 +82,10 @@ name: Review Findings Gate
 # finding by checking whether its snippet is still in the file, and that
 # check can go permanently wrong: a short anchor that also occurs, correctly,
 # in an unrelated branch of the same function means the finding never
-# resolves no matter what the author does. A gate that blocks on ANY open
-# finding with no way out would wedge that PR forever — worse than the bug
-# this workflow exists to fix, because it gets disabled within a day rather
-# than fixed. `check-review-findings.mjs` therefore accepts a PLAIN PR
+# resolves no matter what the author does. A gate that blocks on an open
+# substantive finding with no way out would wedge that PR forever — worse than
+# the bug this workflow exists to fix, because it gets disabled within a day
+# rather than fixed. `check-review-findings.mjs` therefore accepts a PLAIN PR
 # COMMENT containing `<!-- review-findings-gate-dismiss: <finding-id> -->` to
 # waive exactly one finding by its content-addressed id — see that file's
 # "THE ESCAPE HATCH" section for the id, the reasoning, and why it is

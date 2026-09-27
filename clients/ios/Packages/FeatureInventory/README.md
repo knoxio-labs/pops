@@ -1,5 +1,7 @@
 # FeatureInventory
 
+Item detail separates its supporting sections by 24pt. History starts collapsed; its Show/Hide header reveals muted, caret-free event rows while keeping event sheets and the full history reachable.
+
 Place detail keeps its icon and name in the inline navigation bar alongside the system back button. The navigation bar belongs to the page across loading, missing, and loaded states; breadcrumbs and counts remain in the scrolling content.
 
 Inventory on the phone. `InventoryFlowView` is the Inventory tab: it owns the tab's `NavigationStack`, puts the dashboard at its root, and resolves every `InventoryRoute` itself. `InventoryEntity` and `InventoryEntityView` are the other public surface: the app registers `InventoryEntity.types` under `InventoryEntity.pillar` with its `EntityRouter`, and presents the referenced item, container or place on a stack of its own when a label or a `pops://inventory/...` link names one.
@@ -46,6 +48,8 @@ Tapping outside an input dismisses the keyboard in both New item and Edit item f
 Label text is grouped in view coordinates after whitespace-only items are dropped: items are visited top to bottom, and each joins the current line only if its vertical midpoint falls within that line's first item's vertical span. The span never expands as words join. Each line is then read left to right with a single space between trimmed transcripts; two-column labels interleave by row. Empty captures report that no text was recognised without invoking generation.
 
 `InventoryScanPrefill` keeps lookup, generation and availability together across the dashboard, entity and global-search form presenters. Nested presenters in placement sheets inherit that seam from the environment. Descriptive product facts or captured label lines reach the on-device engine under `Prefill/`; barcode identifiers and provider metadata stay outside it. The engine validates every answer through the existing protocol-2 parser and fills only fields not already touched in the draft or carrying an existing stored value, including fields showing catalogue defaults. Suggestions belong to the type selected when lookup completes or text is captured; changing or clearing it prevents those suggestions being applied. Dismissing the form cancels filling, and dismissing the scanner cancels its pending lookup.
+
+Lookup failures go through the app's shared error presenter, which persists safe diagnostics in Recent errors with a copyable request ID. The scanner distinguishes authentication, permission, connectivity, timeout, service and response-format failures from an unknown barcode. Inventory's last sync state does not suppress a barcode request: lookup has its own bounded transport and can succeed while Inventory is stale. A retryable failure offers Retry lookup for the captured code without adding another identifier; unsupported non-book codes offer text capture. Generation failures also reach Recent errors, while any successfully filled chunks are retained. Cancellation is silent and an empty successful model answer remains a normal no-match result.
 
 Two things it reaches for belong to other screens, and it asks for them rather than owning them:
 

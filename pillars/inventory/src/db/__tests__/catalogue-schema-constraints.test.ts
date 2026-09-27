@@ -338,6 +338,12 @@ describe('item_types', () => {
     insertType();
     expect(() => insertType({ key: 'other' })).toThrow(/UNIQUE constraint failed/);
   });
+
+  it('refuses a type whose parent is itself', () => {
+    expect(() => insertType({ parent_type_id: 'type-1' })).toThrow(
+      'CHECK constraint failed: ck_item_types_parent_type_id'
+    );
+  });
 });
 
 describe('item_type_fields', () => {

@@ -38,6 +38,8 @@ export interface ConnectionsRegistry {
   readonly status: 'pending' | 'error' | 'success';
   readonly error: InventoryApiError | null;
   readonly hasNextPage: boolean;
+  /** True while the unfiltered graph reader is fetching another cursor page. */
+  readonly isFetchingNextPage: boolean;
   readonly fetchNextPage: () => void;
   readonly refetch: () => void;
 }
@@ -109,23 +111,28 @@ export function useConnectionsRegistry(filter: ConnectionsFilter): ConnectionsRe
     status: registry.status,
     error: registry.error instanceof InventoryApiError ? registry.error : null,
     hasNextPage,
+    isFetchingNextPage: registry.isFetchingNextPage,
     fetchNextPage,
     refetch,
   };
 }
 
 /** Loads every unfiltered registry page for the graph and trace views. */
-export function useAllConnections(): Pick<ConnectionsRegistry, 'rows' | 'status' | 'error'> {
-  const { error, fetchNextPage, hasNextPage, rows, status } = useConnectionsRegistry({
-    kind: 'all',
-    q: '',
-  });
+export function useAllConnections(): Pick<
+  ConnectionsRegistry,
+  'rows' | 'summary' | 'status' | 'error' | 'hasNextPage' | 'isFetchingNextPage'
+> {
+  const { error, fetchNextPage, hasNextPage, isFetchingNextPage, rows, status, summary } =
+    useConnectionsRegistry({
+      kind: 'all',
+      q: '',
+    });
 
   useEffect(() => {
     if (hasNextPage) fetchNextPage();
   }, [fetchNextPage, hasNextPage]);
 
-  return { rows, status, error };
+  return { rows, summary, status, error, hasNextPage, isFetchingNextPage };
 }
 
 async function invalidateConnectionQueries(queryClient: QueryClient): Promise<void> {
