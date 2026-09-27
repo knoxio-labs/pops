@@ -26,6 +26,20 @@ vi.mock('./detail-store-here', () => ({
   }): ReactElement | null =>
     props.open ? <output data-testid="store-here-target">{props.target.name}</output> : null,
 }));
+vi.mock('./container/workspace', () => ({
+  ContainerWorkspace: (props: {
+    model: ItemDetailModel;
+    storeHereOpen: boolean;
+    storeTarget: { name: string };
+  }): ReactElement => (
+    <>
+      <output data-testid="container-workspace">{props.model.item.name}</output>
+      {props.storeHereOpen ? (
+        <output data-testid="store-here-target">{props.storeTarget.name}</output>
+      ) : null}
+    </>
+  ),
+}));
 
 const item = {
   id: 'item-1',
@@ -286,6 +300,24 @@ describe('ItemDetailPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Store here' }));
 
     expect(screen.getByTestId('store-here-target')).toHaveTextContent('Desk lamp');
+  });
+
+  it('uses the contents-first workspace for container items', () => {
+    mocks.useItemDetailModel.mockReturnValue({
+      status: 'ready',
+      error: null,
+      model: {
+        ...model,
+        item: { ...item, name: 'Archive box', container: { access: 'open', full: false } },
+      },
+      banner: null,
+      retry: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(screen.getByTestId('container-workspace')).toHaveTextContent('Archive box');
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 
   it('keeps the partial boundary at any missing deferred read', () => {
