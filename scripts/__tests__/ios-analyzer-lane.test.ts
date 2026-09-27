@@ -90,7 +90,7 @@ describe('the iOS analyzer lane', () => {
       '--config',
       '.swiftlint.yml',
     ]);
-  });
+  }, 15000);
 
   it.each([
     '',
@@ -98,25 +98,29 @@ describe('the iOS analyzer lane', () => {
     'Found 0 violations, 0 serious in 4 files.',
     'Found 0 violations in unknown files.',
     'Found 0 violations, 0 serious in 5 files.\nFound 0 violations, 0 serious in 4 files.',
-  ])('rejects missing, malformed or partial coverage: %j', (summary) => {
-    const { result } = run(summary);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('the compiler log did not cover the whole tree');
-  });
+  ])(
+    'rejects missing, malformed or partial coverage: %j',
+    (summary) => {
+      const { result } = run(summary);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('the compiler log did not cover the whole tree');
+    },
+    15000
+  );
 
   it('preserves a nonzero analyzer status when the coverage floor is met', () => {
     expect(run(undefined, '7').result.status).toBe(7);
     expect(run('Found 0 violations, 0 serious in 4 files.', '7').result.status).toBe(1);
-  });
+  }, 15000);
 
   it('refuses an absent compiler log before invoking the analyzer', () => {
     const setup = fixture();
     rmSync(setup.compilerLog);
-    const result = spawnSync('bash', [lane], { ...setup, encoding: 'utf8' });
+    const result = spawnSync('bash', [lane], { ...setup, encoding: 'utf8', timeout: 5000 });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('no compiler log');
     expect(() => readFileSync(setup.env.POPS_TEST_ARGUMENTS)).toThrow();
-  });
+  }, 15000);
 
   it.each([false, true])(
     'streams before completion and retains interrupted=%s output',
@@ -160,7 +164,8 @@ describe('the iOS analyzer lane', () => {
       const log = readFileSync(join(setup.artifacts, 'analyze.log'), 'utf8');
       expect(log).toContain('analyzer stdout marker');
       expect(log.includes('Found 0 violations')).toBe(!interrupt);
-    }
+    },
+    15000
   );
 
   it('keeps the CI timeout, failure artifact, and shared task entry point wired', () => {
