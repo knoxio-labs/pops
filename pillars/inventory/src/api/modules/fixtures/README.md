@@ -13,10 +13,16 @@ migration. `name` is not unique — "Power Outlet" exists in every room.
 
 ## Who calls this
 
-Nothing in `app/`. The inventory frontend has no fixtures screen at all; the
-generated client simply carries the bindings. The only consumer of the
-`fixtures.*` contract is the `mcp` pillar, which wraps these endpoints as tools
-so fixtures can be created and wired up by conversation.
+The inventory frontend consumes the list and wired-item endpoints through
+`useFixtures` and `useFixtureItems`. The `mcp` pillar also wraps the contract so
+fixtures can be created and wired up by conversation.
+
+`GET /fixtures` searches fixture names, notes, and live wired item names. Its
+`withinLocationId` filter includes the selected location and all descendants;
+the legacy `locationId` filter remains an exact-location alias for MCP callers.
+Rows are ordered by room name, then fixture name, with the fixture ID as the
+final tie-breaker. Each row includes `wiredCount` and alphabetically ordered
+`wiredNames`, excluding deleted items.
 
 ## Deliberately absent
 
@@ -26,8 +32,6 @@ so fixtures can be created and wired up by conversation.
   connected to each other.
 - There is no confirmation handshake on delete, unlike locations. Deleting a
   fixture always succeeds; the connection cascade is the whole safety story.
-- The list endpoint filters by `locationId` and `type` only — no free-text
-  search.
 - Fixture-to-fixture connections do not exist.
 
 ## Error mapping
