@@ -129,7 +129,12 @@ describe('reading a workflow’s own pull_request.paths', () => {
     expect(paths).toEqual([
       'clients/ios/**',
       'pillars/bfm/**',
-      'pillars/inventory/**',
+      'pillars/inventory/src/**',
+      'pillars/inventory/migrations/**',
+      'pillars/inventory/scripts/**',
+      'pillars/inventory/package.json',
+      'pillars/inventory/mise.toml',
+      'pillars/inventory/tsconfig*.json',
       'scripts/ios-e2e/**',
       'pnpm-lock.yaml',
       '.github/workflows/ios-quality.yml',
@@ -221,26 +226,40 @@ describe('the scope job is wired to the workflow it scopes', () => {
     expect(condition, 'a plain expression inherits the skip from a skipped `scope`').toMatch(
       BREAKS_INHERITED_SKIP
     );
-    expect(condition, 'must still run on every non-merge-group event').toMatch(
-      /github\.event_name != 'merge_group'/u
+    expect(condition, 'must name the native PR or reusable full-validation lane').toMatch(
+      /github\.event_name (?:!= 'merge_group'|== 'pull_request')|inputs\['full-validation'\]/u
     );
     expect(condition, 'must require an explicit true, so a failed scope job cannot select').toMatch(
       /needs\.scope\.outputs\.selected == 'true'/u
     );
   });
 
-  it('runs the analyzer and Maestro only in the queue, the suite and Release check everywhere', () => {
+  it('runs the analyzer and Maestro in every explicit full lane', () => {
     const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
     const namedStep = (name: string) => steps.find((step) => step.name === name);
 
-    expect(namedStep('Test (iOS Simulator)')?.if).toBe("github.event_name != 'merge_group'");
-    expect(namedStep('Test (iOS Simulator)')?.run).toBe('mise run test');
-    const queueSuite = namedStep('Test + SwiftLint analyzer rules (one shared compile)');
-    expect(queueSuite?.if).toBe("github.event_name == 'merge_group'");
-    expect(queueSuite?.run).toBe('mise run -j 1 test ::: lint:analyze');
+    const pullRequestSuite = namedStep('Test (iOS Simulator)');
+    expect(pullRequestSuite?.if).toBeUndefined();
+    expect(pullRequestSuite?.run).toBe('mise run test');
+    expect(pullRequestSuite?.['timeout-minutes']).toBe(25);
+    expect(
+      isMapping(pullRequestSuite?.env) ? pullRequestSuite.env.POPS_IOS_TEST_ARTIFACTS : undefined
+    ).toBe('${{ runner.temp }}/ios-test-diagnostics');
+    const fullSuite = namedStep('SwiftLint analyzer rules (reuse the test compile)');
+    expect(fullSuite?.if).toBe(
+      "success() && (github.event_name == 'merge_group' || inputs['full-validation'] == true)"
+    );
+    expect(fullSuite?.run).toBe('mise run --skip-deps lint:analyze');
+    expect(fullSuite?.['timeout-minutes']).toBe(40);
+    const debugArtifact = namedStep('Simulator test log and result bundle');
+    expect(debugArtifact?.if).toBe('failure()');
+    expect(debugArtifact?.uses).toBe('actions/upload-artifact@v7');
+    expect(isMapping(debugArtifact?.with) ? debugArtifact.with.path : undefined).toBe(
+      '${{ runner.temp }}/ios-test-diagnostics'
+    );
     const analyzerSteps = steps.filter((step) => String(step.run ?? '').includes('lint:analyze'));
     expect(analyzerSteps.map((step) => step.name)).toEqual([
-      'Test + SwiftLint analyzer rules (one shared compile)',
+      'SwiftLint analyzer rules (reuse the test compile)',
     ]);
 
     for (const name of [
@@ -248,10 +267,51 @@ describe('the scope job is wired to the workflow it scopes', () => {
       "Install the BFM's and inventory's subgraphs",
       'UI flow (Maestro, against a real BFM)',
     ]) {
-      expect(namedStep(name)?.if).toBe("github.event_name == 'merge_group'");
+      expect(namedStep(name)?.if).toBe(
+        "github.event_name == 'merge_group' || inputs['full-validation'] == true"
+      );
     }
 
     expect(namedStep('Release carries no BFM host')?.if).toBeUndefined();
+
+    const workflowCall = triggersOf('ios-quality.yml').workflow_call;
+    expect(isMapping(workflowCall)).toBe(true);
+    const inputs =
+      isMapping(workflowCall) && isMapping(workflowCall.inputs) ? workflowCall.inputs : undefined;
+    const fullValidation = isMapping(inputs?.['full-validation'])
+      ? inputs['full-validation']
+      : undefined;
+    expect(fullValidation).toEqual({
+      description: 'Run the simulator tests with analyzer rules and the Maestro flow',
+      required: true,
+      type: 'boolean',
+    });
+  });
+
+  it('reports source lint before restoring or compiling host packages', () => {
+    const quality = jobsOf('ios-quality.yml').get('quality');
+    const steps = stepsOf(quality);
+    const names = steps
+      .map((step) => step.name)
+      .filter((name): name is string => typeof name === 'string');
+
+    expect(isMapping(quality?.env) ? quality.env.POPS_IOS_TEST_DIAGNOSTICS : undefined).toBe(
+      'never'
+    );
+    expect(names.indexOf('Lint (swift-format + SwiftLint)')).toBeLessThan(
+      names.indexOf('Cache host-toolchain package builds')
+    );
+    expect(names.indexOf('Cache host-toolchain package builds')).toBeLessThan(
+      names.indexOf('Test packages (host toolchain)')
+    );
+
+    const cache = steps.find((step) => step.name === 'Cache host-toolchain package builds');
+    const cacheInputs = isMapping(cache?.with) ? cache.with : undefined;
+    expect(cacheInputs?.path).toBe('clients/ios/Packages/*/.build');
+    expect(cacheInputs?.key).toMatch(/POPS_XCODE_VERSION/u);
+    expect(cacheInputs?.key).toMatch(/Packages\/\*\/Sources/u);
+    expect(cacheInputs?.key).toMatch(/Packages\/\*\/Tests/u);
+    expect(JSON.stringify(cacheInputs)).not.toMatch(/DerivedData/u);
   });
 });
 
@@ -265,6 +325,7 @@ describe("ios-quality.yml's macOS job condition", () => {
     eventName: string;
     selected?: string;
     baseRef?: string;
+    fullValidation?: boolean;
     cancelled?: boolean;
   };
 
@@ -282,12 +343,14 @@ describe("ios-quality.yml's macOS job condition", () => {
       },
     };
     const needs = { scope: { outputs: { selected: event.selected ?? '' } } };
-    const evaluate = new Function('github', 'needs', 'cancelled', `return (${js});`) as (
+    const inputs = { 'full-validation': event.fullValidation === true };
+    const evaluate = new Function('github', 'needs', 'inputs', 'cancelled', `return (${js});`) as (
       g: typeof github,
       n: typeof needs,
+      i: typeof inputs,
       c: () => boolean
     ) => unknown;
-    return evaluate(github, needs, () => event.cancelled === true) === true;
+    return evaluate(github, needs, inputs, () => event.cancelled === true) === true;
   }
 
   it.each([
@@ -297,6 +360,15 @@ describe("ios-quality.yml's macOS job condition", () => {
       false,
       { eventName: 'pull_request', baseRef: 'pops-1-lower' },
     ],
+    [
+      'a reusable full-validation call regardless of PR base',
+      true,
+      {
+        eventName: 'pull_request',
+        baseRef: 'pops-1-lower',
+        fullValidation: true,
+      },
+    ],
     ['a merge group the scope job selected', true, { eventName: 'merge_group', selected: 'true' }],
     [
       'a merge group the scope job deselected',
@@ -305,6 +377,11 @@ describe("ios-quality.yml's macOS job condition", () => {
     ],
     ['a merge group whose scope job failed', false, { eventName: 'merge_group', selected: '' }],
     ['a cancelled PR run', false, { eventName: 'pull_request', baseRef: 'main', cancelled: true }],
+    [
+      'a cancelled reusable full-validation run',
+      false,
+      { eventName: 'pull_request', baseRef: 'main', fullValidation: true, cancelled: true },
+    ],
   ] as const)('%s → runs=%s', (_label, expected, event) => {
     expect(runsFor(event)).toBe(expected);
   });
