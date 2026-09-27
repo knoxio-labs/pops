@@ -1,5 +1,6 @@
 import AppCore
 import Auth
+import DesignSystem
 import FeatureInventory
 import FeaturePurchases
 import Foundation
@@ -54,13 +55,11 @@ internal enum ContentViewFixture {
 /// ## Why the single-feature path is not rendered here
 ///
 /// `TransactionsFlowView` is the one screen this suite must not construct.
-/// Rendering it through `ImageRenderer` — even indirectly, through
-/// `ContentView` — crashes the host process outright:
-/// `SwiftUICore/Logging.swift:232: Fatal error: no current update to enqueue
-/// action to`, from the list's `.task` starting real async work outside a
-/// SwiftUI transaction `ImageRenderer` never opens. That is the same
-/// limitation `TransactionDetailRenderingTests` documents and works around by
-/// rendering `TransactionDetailCard` rather than the screen it sits in.
+/// Its list's `.task` starts real async repository work as soon as the view is
+/// hosted, which a rendering test must not do. Offscreen rasterisation also
+/// crashes at `SwiftUICore/Logging.swift:232: Fatal error: no current update to
+/// enqueue action to`. `TransactionDetailRenderingTests` works around the same
+/// limit by rendering `TransactionDetailCard` rather than its screen.
 /// `ContentView`'s single-feature path had an equivalent safe substitute —
 /// `ReceiptCaptureView`, a screen with an observable model but no `.task` —
 /// until POPS-4294 removed it; every screen `RootFeature.renderable` maps to
@@ -72,40 +71,54 @@ internal enum ContentViewFixture {
 ///
 /// ## Why two-or-more features are not rendered here
 ///
-/// Measured, not assumed, the same way: an `ImageRenderer` asked to flatten
-/// the `TabView` branch logs `Unable to render flattened version of
+/// The `TabView` branch cannot be proved by flattening its pixels: it logs
+/// `Unable to render flattened version of
 /// PlatformViewControllerRepresentableAdaptor<UIKitAdaptableTabView>` and
-/// produces nothing a byte comparison could tell apart. That branch is mounted
-/// in a real window instead — see ``ContentViewTabSwitcherTests``.
+/// produces nothing a byte comparison could tell apart. That branch is read
+/// from its mounted controller instead — see ``ContentViewTabSwitcherTests``.
 @Suite("ContentView feature switching")
 @MainActor
 internal struct ContentViewFeatureSwitchingTests {
     private static let canvas = CGSize(width: 390, height: 844)
 
     private static func render(_ view: some View, in scheme: ColorScheme = .light) -> Data? {
-        let renderer = ImageRenderer(
-            content:
-                view
-                .environment(\.colorScheme, scheme)
-                .frame(width: canvas.width, height: canvas.height)
-        )
-        renderer.scale = 1
-        guard let image = renderer.cgImage, let pixels = image.dataProvider?.data else {
-            return nil
+        let content = view.environment(\.colorScheme, scheme).frame(
+            width: canvas.width, height: canvas.height)
+        let controller = UIHostingController(rootView: content)
+        controller.overrideUserInterfaceStyle = scheme == .dark ? .dark : .light
+        controller.view.backgroundColor = .clear
+
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        guard let scene = scenes.first else { return nil }
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(origin: .zero, size: canvas)
+        controller.view.frame = window.bounds
+        window.addSubview(controller.view)
+        defer { controller.view.removeFromSuperview() }
+        window.layoutIfNeeded()
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: canvas, format: format).image { context in
+            controller.view.layer.render(in: context.cgContext)
         }
-        return pixels as Data
+        return image.cgImage?.dataProvider?.data as Data?
     }
 
-    private func contentView(available: [MobileFeature]) -> ContentView {
-        ContentViewFixture.view(available: available)
+    private static func rendersSchemeAwareContent(_ view: some View) throws -> Bool {
+        let light = try #require(render(view, in: .light))
+        let dark = try #require(render(view, in: .dark))
+        let lightBackground = try #require(render(Color.popsBackground, in: .light))
+        let darkBackground = try #require(render(Color.popsBackground, in: .dark))
+        return light != dark && light != lightBackground && dark != darkBackground
     }
 
     @Test("zero available features renders, and renders real content rather than a blank screen")
     func zeroFeaturesRendersRealContent() throws {
-        let light = try #require(Self.render(contentView(available: []), in: .light))
-        let dark = try #require(Self.render(contentView(available: []), in: .dark))
-
-        #expect(light != dark, "the explanation renders identically in both colour schemes")
+        let content = ContentViewFixture.view(available: [])
+        #expect(try Self.rendersSchemeAwareContent(content))
+        #expect(try !Self.rendersSchemeAwareContent(Color.clear))
+        #expect(try !Self.rendersSchemeAwareContent(Color.popsBackground))
     }
 
     /// `.receiptCapture` is not in `RootFeature.renderable` — POPS-4294
@@ -117,11 +130,8 @@ internal struct ContentViewFeatureSwitchingTests {
     /// lone screen of its own.
     @Test("receipt-capture alone renders the nothing-available explanation, not a screen")
     func receiptCaptureAloneRendersNothingAvailable() throws {
-        let light = try #require(
-            Self.render(contentView(available: [.receiptCapture]), in: .light))
-        let dark = try #require(Self.render(contentView(available: [.receiptCapture]), in: .dark))
-
-        #expect(light != dark, "the explanation renders identically in both colour schemes")
+        let content = ContentViewFixture.view(available: [.receiptCapture])
+        #expect(try Self.rendersSchemeAwareContent(content))
     }
 }
 
