@@ -131,6 +131,8 @@ The shell fronts the stack via its nginx reverse proxy and routes browser traffi
 
 See [`AGENTS.md`](AGENTS.md) for the full command reference, repo structure, data flows, and coding standards.
 
+Small related PRs can target `integration/<workstream>` for affected checks and review. A frozen promotion to `main` runs the full validation suite against current main; the merge queue stays off. See the [integration and promotion workflow](.github/workflows/README.md#integration-workstreams-and-frozen-promotion) for the commands and merge requirements.
+
 ### Key Commands
 
 Run `mise tasks` for the authoritative list. The common cross-repo gates:
