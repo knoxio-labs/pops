@@ -159,9 +159,12 @@ export function SyncPage(): ReactElement {
           segment={ledgerSegment}
           now={now}
           openId={openId}
+          disabledReason={disabledReason}
           onSegment={(value) => navigate({ kind: 'ledger', value })}
           onOpenCase={(id) => navigate({ kind: 'case', id })}
           onOpenResolved={(id) => navigate({ kind: 'resolved', id })}
+          onCloseCase={() => navigate({ kind: 'ledger', value: 'attention' })}
+          onStepCase={(id) => navigate({ kind: 'case', id })}
           onRetry={() => void api.reload()}
         />
       )}

@@ -6,7 +6,8 @@ import { formatWhen } from '../../foundation/feedback/when.js';
 import { Segmented } from '../../foundation/frame/segmented.js';
 import { ListError, ListSkeleton } from '../../foundation/list-page/list-states.js';
 import { CaseRow, ResolvedRow, WaitingRow } from './ledger-rows.js';
-import { segmentCounts, toSyncLedger } from './sync-model.js';
+import { RepairSheet } from './repair/repair-sheet.js';
+import { casePosition, segmentCounts, toSyncLedger } from './sync-model.js';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -24,6 +25,9 @@ export interface SyncLedgerBodyProps {
   onOpenCase: (id: string) => void;
   onOpenResolved: (id: string) => void;
   onRetry: () => void;
+  disabledReason?: string;
+  onCloseCase: () => void;
+  onStepCase: (id: string) => void;
 }
 
 /** Props for {@link SyncSegment}. */
@@ -38,6 +42,9 @@ export interface SyncSegmentProps {
   onSegment: (segment: Segment) => void;
   onOpenCase: (id: string) => void;
   onOpenResolved: (id: string) => void;
+  disabledReason?: string;
+  onCloseCase: () => void;
+  onStepCase: (id: string) => void;
 }
 
 function Devices({ ledger, now }: { ledger: SyncLedger; now: string }): ReactElement {
@@ -77,7 +84,10 @@ function Rows({
   openId,
   onOpenCase,
   onOpenResolved,
-}: Omit<SyncSegmentProps, 'onSegment' | 'sheet'>): ReactNode {
+}: Pick<
+  SyncSegmentProps,
+  'ledger' | 'segment' | 'now' | 'openId' | 'onOpenCase' | 'onOpenResolved'
+>): ReactNode {
   if (segment === 'attention') {
     if (ledger.attention.length === 0) return <AllClear ledger={ledger} />;
     return ledger.attention.map((repair) => (
@@ -131,6 +141,9 @@ export function SyncLedgerBody({
   onOpenCase,
   onOpenResolved,
   onRetry,
+  disabledReason,
+  onCloseCase,
+  onStepCase,
 }: SyncLedgerBodyProps): ReactElement {
   if (status === 'error') return <ListError noun="sync" onRetry={onRetry} />;
   if (status === 'pending' || ledger === undefined) return <ListSkeleton label="Loading sync" />;
@@ -143,6 +156,9 @@ export function SyncLedgerBody({
       onSegment={onSegment}
       onOpenCase={onOpenCase}
       onOpenResolved={onOpenResolved}
+      disabledReason={disabledReason}
+      onCloseCase={onCloseCase}
+      onStepCase={onStepCase}
     />
   );
 }
@@ -150,7 +166,27 @@ export function SyncLedgerBody({
 /** Renders the read-only Sync lists and their device status line. */
 export function SyncSegment(props: SyncSegmentProps): ReactElement {
   const counts = segmentCounts(props.ledger);
-  const hasSheet = props.sheet !== undefined;
+  const repair =
+    props.segment === 'attention' && props.openId !== null
+      ? props.ledger.attention.find((entry) => entry.id === props.openId)
+      : undefined;
+  const sheet =
+    props.sheet ??
+    (repair ? (
+      <RepairSheet
+        repair={repair}
+        device={
+          props.ledger.devices.find((device) => device.id === repair.deviceId)?.name ??
+          'An unknown device'
+        }
+        now={props.now}
+        position={casePosition(props.ledger.attention, repair.id)}
+        disabledReason={props.disabledReason}
+        onStep={props.onStepCase}
+        onClose={props.onCloseCase}
+      />
+    ) : null);
+  const hasSheet = sheet !== undefined && sheet !== null;
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -193,7 +229,7 @@ export function SyncSegment(props: SyncSegmentProps): ReactElement {
         </Card>
         {hasSheet ? (
           <div className="absolute inset-y-0 right-0 z-10 flex max-w-full shadow-xl xl:static xl:min-h-0 xl:shadow-none max-xl:[&>section]:w-120 xl:[&>section]:w-full">
-            {props.sheet}
+            {sheet}
           </div>
         ) : null}
       </div>
