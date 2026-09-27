@@ -40,7 +40,13 @@ export function granting(scopes: readonly string[], name = 'bfm'): ServiceAccoun
 export function paperless(status: Partial<PaperlessStatus> = {}): DocumentsClient {
   return {
     getPaperlessStatus: () =>
-      Promise.resolve({ configured: true, available: true, baseUrl: null, ...status }),
+      Promise.resolve({
+        configured: true,
+        available: true,
+        baseUrl: null,
+        documentCount: null,
+        ...status,
+      }),
     searchPaperlessDocuments: () => Promise.resolve([]),
     paperlessDocumentMissing: () => Promise.resolve(null),
   };

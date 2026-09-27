@@ -2109,6 +2109,7 @@ export type PaperlessStatusResponses = {
       available: boolean;
       baseUrl: string | null;
       configured: boolean;
+      documentCount: number | null;
     };
   };
 };

@@ -30,7 +30,8 @@ function documentsClient(
   paperlessDocumentMissing: DocumentsClient['paperlessDocumentMissing']
 ): DocumentsClient {
   return {
-    getPaperlessStatus: () => Promise.resolve({ configured: true, available: true, baseUrl: null }),
+    getPaperlessStatus: () =>
+      Promise.resolve({ configured: true, available: true, baseUrl: null, documentCount: null }),
     searchPaperlessDocuments: () => Promise.resolve([]),
     paperlessDocumentMissing,
   };

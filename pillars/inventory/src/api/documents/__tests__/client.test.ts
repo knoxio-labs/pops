@@ -70,7 +70,12 @@ function stubHandle(impls: StubImpls): PillarHandle<DocumentsRouter> {
 
 describe('createDocumentsClient.getPaperlessStatus', () => {
   it('returns the documents pillar data on success', async () => {
-    const status = { configured: true, available: true, baseUrl: 'https://paperless.example' };
+    const status = {
+      configured: true,
+      available: true,
+      baseUrl: 'https://paperless.example',
+      documentCount: 123,
+    };
     const client = createDocumentsClient(() =>
       stubHandle({ status: async () => ok({ data: status }) })
     );
@@ -86,6 +91,7 @@ describe('createDocumentsClient.getPaperlessStatus', () => {
       configured: false,
       available: false,
       baseUrl: null,
+      documentCount: null,
     });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('degraded'));
     warn.mockRestore();

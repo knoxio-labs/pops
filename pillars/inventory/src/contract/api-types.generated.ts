@@ -3922,6 +3922,7 @@ export interface operations {
               available: boolean;
               baseUrl: string | null;
               configured: boolean;
+              documentCount: number | null;
             };
           };
         };

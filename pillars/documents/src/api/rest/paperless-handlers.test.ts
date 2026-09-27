@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 interface MockPaperlessClient {
-  getDocumentTypes: ReturnType<typeof vi.fn>;
+  getDocumentCount: ReturnType<typeof vi.fn>;
   getBaseUrl: ReturnType<typeof vi.fn>;
   searchDocuments: ReturnType<typeof vi.fn>;
   getDocument: ReturnType<typeof vi.fn>;
@@ -26,7 +26,7 @@ const { PaperlessApiError } = await import('../modules/paperless/types.js');
 /** A client stub with every method present, so a test overrides only what it exercises. */
 function mockClient(overrides: Partial<MockPaperlessClient> = {}): MockPaperlessClient {
   return {
-    getDocumentTypes: vi.fn(),
+    getDocumentCount: vi.fn(),
     getBaseUrl: vi.fn(),
     searchDocuments: vi.fn(),
     getDocument: vi.fn(),
@@ -61,14 +61,16 @@ describe('paperless.status', () => {
 
     expect(result).toEqual({
       status: 200,
-      body: { data: { configured: false, available: false, baseUrl: null } },
+      body: {
+        data: { configured: false, available: false, baseUrl: null, documentCount: null },
+      },
     });
   });
 
   it('reports configured + available when the upstream call succeeds', async () => {
     mockGetPaperlessClient.mockReturnValue(
       mockClient({
-        getDocumentTypes: vi.fn().mockResolvedValue([]),
+        getDocumentCount: vi.fn().mockResolvedValue(123),
         getBaseUrl: vi.fn().mockReturnValue('https://paperless.example'),
       })
     );
@@ -78,14 +80,21 @@ describe('paperless.status', () => {
 
     expect(result).toEqual({
       status: 200,
-      body: { data: { configured: true, available: true, baseUrl: 'https://paperless.example' } },
+      body: {
+        data: {
+          configured: true,
+          available: true,
+          baseUrl: 'https://paperless.example',
+          documentCount: 123,
+        },
+      },
     });
   });
 
   it('reports configured + unavailable when the upstream call throws', async () => {
     mockGetPaperlessClient.mockReturnValue(
       mockClient({
-        getDocumentTypes: vi.fn().mockRejectedValue(new PaperlessApiError(0, 'timeout')),
+        getDocumentCount: vi.fn().mockRejectedValue(new PaperlessApiError(0, 'timeout')),
         getBaseUrl: vi.fn().mockReturnValue('https://paperless.example'),
       })
     );
@@ -95,7 +104,14 @@ describe('paperless.status', () => {
 
     expect(result).toEqual({
       status: 200,
-      body: { data: { configured: true, available: false, baseUrl: 'https://paperless.example' } },
+      body: {
+        data: {
+          configured: true,
+          available: false,
+          baseUrl: 'https://paperless.example',
+          documentCount: null,
+        },
+      },
     });
   });
 });
