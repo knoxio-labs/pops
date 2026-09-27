@@ -72,7 +72,8 @@ export function describeArrival(
   if (matched === 0) return `${published} It claims items filed as ${labelsText(type)}.`;
   if (stage === 'applied') {
     const left = matched - applied;
-    return `${published} ${applied} items are now ${type.name}.${left > 0 ? ` ${left} left untyped.` : ''}`;
+    const itemState = applied === 1 ? 'item is' : 'items are';
+    return `${published} ${applied} ${itemState} now ${type.name}.${left > 0 ? ` ${left} left untyped.` : ''}`;
   }
   return `${published} ${matched} untyped items were filed as ${labelsText(type)}. Untick any that are not ${type.name}.`;
 }
