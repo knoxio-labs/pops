@@ -1,9 +1,10 @@
 import AppCore
 
 extension InventoryDrain {
-    func reachabilityWatcher(_ reachability: any NetworkReachability) -> Task<Void, Never> {
+    func reachabilityWatcher(
+        _ reachability: any NetworkReachability, startedSatisfied: Bool
+    ) -> Task<Void, Never> {
         Task { [weak self, reachability] in
-            let startedSatisfied = reachability.isSatisfied
             var wasSatisfied = startedSatisfied
             var isFirstUpdate = true
             for await satisfied in reachability.updates() {

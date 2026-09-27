@@ -111,21 +111,23 @@ internal struct DrainTriggerTests {
         #expect(arrival.1, "nothing is sent while the path is down")
     }
 
-    @Test("the network path becoming satisfied refreshes an offline replica without queued changes")
-    func reachabilityRegainedRefreshesOfflineReplica() async throws {
+    @Test("a path that recovers while its watcher starts refreshes an offline replica")
+    func watcherStartupRecoveryRefreshesOfflineReplica() async throws {
         let reachability = ScriptedNetworkReachability(satisfied: false)
         let replica = try Fixture.downloaded(items: [Fixture.item("lamp", revision: 4)])
         var script = FakeSyncTransport.Script()
         script.changes = { _, _ in throw RepositoryError.unavailable }
         let transport = FakeSyncTransport(script)
-        let store = LocalFirstInventoryStore(
-            replica: replica, transport: transport, reachability: reachability,
-            drainClock: ManualDrainClock())
+        let online = OnlineInventoryStore(replica: replica, transport: transport)
 
-        await store.refresh()
+        await online.refresh()
         #expect(try replica.read(.replicaStatus) == .offline(lastRefreshAt: Fixture.created))
 
         transport.update { $0.changes = { _, _ in Fixture.changes() } }
+        let drain = InventoryDrain(
+            replica: replica, online: online, reachability: reachability, clock: ManualDrainClock(),
+            now: { Fixture.created })
+        drain.start()
         reachability.set(true)
 
         #expect(await eventually {

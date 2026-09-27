@@ -114,6 +114,7 @@ internal final class InventoryDrain: Sendable {
     func start() {
         tasks.withLock { tasks in
             guard tasks.loop == nil else { return }
+            let startedSatisfied = reachability.isSatisfied
             tasks.loop = Task { [weak self, triggers] in
                 var failures = 0
                 for await _ in triggers {
@@ -123,7 +124,7 @@ internal final class InventoryDrain: Sendable {
                     for waiter in waiting { waiter.resume() }
                 }
             }
-            tasks.watcher = reachabilityWatcher(reachability)
+            tasks.watcher = reachabilityWatcher(reachability, startedSatisfied: startedSatisfied)
         }
     }
 
