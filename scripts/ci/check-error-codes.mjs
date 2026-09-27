@@ -531,11 +531,13 @@ export function readGitSources(root, ref) {
   /** @type {string[]} */
   let names;
   try {
+    const outputPrefix = `${ref}:`;
     names = execFileSync('git', ['grep', '-l', 'defineErrors', ref, '--', 'pillars'], {
       cwd: root,
       encoding: 'utf8',
     })
       .split('\n')
+      .map((name) => (name.startsWith(outputPrefix) ? name.slice(outputPrefix.length) : name))
       .filter((name) => name.endsWith('.ts') || name.endsWith('.tsx'))
       .filter((name) => !/__tests__|(?:^|[.])(test|spec)\.[^.]+$/u.test(name));
   } catch (error) {

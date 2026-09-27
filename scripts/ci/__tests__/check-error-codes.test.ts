@@ -9,10 +9,12 @@ import {
   ERROR_CODE_PATTERN,
   formatFindings,
   maskNonCode,
+  readGitSources,
 } from '../check-error-codes.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const guardPath = resolve(here, '..', 'check-error-codes.mjs');
+const repoRoot = resolve(here, '..', '..', '..');
 
 const passingSource = {
   path: 'pillars/demo/src/api/errors.ts',
@@ -111,4 +113,12 @@ describe('check-error-codes', () => {
     const output = execFileSync(process.execPath, [guardPath, '--self-test'], { encoding: 'utf8' });
     expect(output).toContain('self-test OK');
   }, 60_000);
+
+  it('reads base-ref sources as repository-relative paths', () => {
+    const sources = readGitSources(repoRoot, 'origin/main');
+
+    expect(sources.length).toBeGreaterThan(0);
+    expect(sources.every((source) => source.path.startsWith('pillars/'))).toBe(true);
+    expect(sources.every((source) => !source.path.startsWith('origin/main:'))).toBe(true);
+  });
 });

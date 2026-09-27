@@ -328,6 +328,39 @@ describe('item verbs', () => {
     await expect(response.undo()).rejects.toBeInstanceOf(UndoRefusedError);
   });
 
+  it('undo preserves a shared API transport failure as the refusal cause', async () => {
+    const queryClient = createTestQueryClient();
+    seedItem(queryClient);
+    mocks.syncMutations.mockResolvedValueOnce(ok([applied('m1', 2, 41)])).mockResolvedValueOnce({
+      data: undefined,
+      error: {
+        code: 'inventory.sync.protocol_too_old',
+        message: 'client too old',
+        requestId: 'req-1',
+        retryable: false,
+      },
+      response: { status: 426 },
+    });
+    const { result } = renderHook(() => useItemVerbs(), {
+      wrapper: withQueryClient(queryClient),
+    });
+    const response = await result.current.move('item-1', {
+      kind: 'location',
+      locationId: 'new-room',
+    });
+    if (response.status !== 'applied' || response.undo === null) {
+      throw new Error('move did not return undo');
+    }
+
+    await expect(response.undo()).rejects.toMatchObject({
+      name: 'UndoRefusedError',
+      refusal: {
+        kind: 'failed',
+        error: { name: 'ApiError', status: 426 },
+      },
+    });
+  });
+
   it('split and destroy return no undo', async () => {
     const queryClient = createTestQueryClient();
     seedItem(queryClient);

@@ -29,7 +29,7 @@ export type InventoryMutationOutcome = SyncMutationsResponses[200]['outcomes'][n
 /** A mutation outcome or transport failure that refused a verb. */
 export type VerbRefusal =
   | { kind: 'outcome'; outcome: Exclude<InventoryMutationOutcome, { status: 'applied' }> }
-  | { kind: 'failed'; error: InventoryApiError };
+  | { kind: 'failed'; error: ApiError };
 
 /** The result of one optimistic item verb. */
 export type VerbResult =
@@ -174,7 +174,7 @@ export function createUndo(
       if (outcome.status !== 'applied') throw new UndoRefusedError({ kind: 'outcome', outcome });
     } catch (error: unknown) {
       if (error instanceof UndoRefusedError) throw error;
-      if (error instanceof InventoryApiError) throw new UndoRefusedError({ kind: 'failed', error });
+      if (error instanceof ApiError) throw new UndoRefusedError({ kind: 'failed', error });
       throw error;
     } finally {
       void queryClient.invalidateQueries({ queryKey: ['inventory', 'web'] });
