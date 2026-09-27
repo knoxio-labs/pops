@@ -6,6 +6,11 @@ public struct PopsQuietDisclosure<Content: View>: View {
     private let content: Content
     @State private var isExpanded = false
 
+    internal var accessibilityLabel: String { title }
+    internal var accessibilityValue: String { isExpanded ? "Expanded" : "Collapsed" }
+    internal var accessibilityHint: String { isExpanded ? "Hide section" : "Show section" }
+    internal var touchTargetHeight: CGFloat { PopsSize.touchTarget }
+
     /// Creates a section whose expansion lasts for this view's lifetime.
     /// The default presentation is collapsed; `initiallyExpanded` is useful
     /// for a staged state that should open on first render.
@@ -29,13 +34,13 @@ public struct PopsQuietDisclosure<Content: View>: View {
                     Spacer(minLength: PopsSpacing.sm)
                     Text(isExpanded ? "Hide" : "Show").font(.popsCaption)
                 }
-                .frame(minHeight: PopsSize.touchTarget)
+                .frame(minHeight: touchTargetHeight)
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(title)
-            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-            .accessibilityHint(isExpanded ? "Hide section" : "Show section")
+            .accessibilityLabel(accessibilityLabel)
+            .accessibilityValue(accessibilityValue)
+            .accessibilityHint(accessibilityHint)
             if isExpanded {
                 content
             }

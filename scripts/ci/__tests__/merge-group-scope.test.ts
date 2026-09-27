@@ -337,6 +337,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
     expect(restore?.uses).toBe('actions/cache/restore@v6');
     expect(restoreInputs?.path).toBe('clients/ios/Packages/*/.build');
     expect(restoreInputs?.key).toMatch(/POPS_XCODE_VERSION/u);
+    expect(restoreInputs?.key).toMatch(/POPS_XCODE_BUILD/u);
     expect(restoreInputs?.key).toMatch(/Packages\/\*\/Sources/u);
     expect(restoreInputs?.key).toMatch(/Packages\/\*\/Tests/u);
     expect(JSON.stringify(restoreInputs)).not.toMatch(/DerivedData/u);

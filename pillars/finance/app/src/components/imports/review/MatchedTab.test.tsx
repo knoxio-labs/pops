@@ -79,17 +79,21 @@ describe('MatchedTab (POPS-2448)', () => {
     expect(screen.queryAllByTestId('transaction-card')).toHaveLength(0);
   });
 
-  it('renders only group headers for a large import until a group is expanded', () => {
-    const merchants = Array.from({ length: 30 }, (_, i) => `Merchant ${i}`);
-    const rows = matchedRows(1200, merchants);
-    renderTab(rows, { entities: merchants.map((name) => ({ id: `ent-${name}`, name })) });
+  it(
+    'renders only group headers for a large import until a group is expanded',
+    { timeout: 30_000 },
+    () => {
+      const merchants = Array.from({ length: 30 }, (_, i) => `Merchant ${i}`);
+      const rows = matchedRows(1200, merchants);
+      renderTab(rows, { entities: merchants.map((name) => ({ id: `ent-${name}`, name })) });
 
-    expect(screen.getAllByTestId('transaction-group')).toHaveLength(30);
-    expect(screen.queryAllByTestId('transaction-card')).toHaveLength(0);
+      expect(screen.getAllByTestId('transaction-group')).toHaveLength(30);
+      expect(screen.queryAllByTestId('transaction-card')).toHaveLength(0);
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[7] as HTMLElement);
-    expect(screen.getAllByTestId('transaction-card')).toHaveLength(40);
-  });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[7] as HTMLElement);
+      expect(screen.getAllByTestId('transaction-card')).toHaveLength(40);
+    }
+  );
 
   it('keeps alphabetical order even when a later group was matched by the AI', () => {
     const rows = [

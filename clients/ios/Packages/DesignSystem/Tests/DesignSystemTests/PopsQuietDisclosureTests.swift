@@ -47,17 +47,19 @@ internal struct PopsQuietDisclosureTests {
     }
 
     @Test("the disclosure exposes its expansion state and keeps a touch target")
-    func accessibilityAndTouchTarget() throws {
-        let source = try String(
-            contentsOf: URL(filePath: #filePath)
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .appending(path: "Sources/DesignSystem/Primitives/PopsQuietDisclosure.swift"),
-            encoding: .utf8
-        )
+    func accessibilityAndTouchTarget() {
+        let collapsed = PopsQuietDisclosure("History") {
+            Color.popsAccent.frame(height: 96)
+        }
+        let expanded = PopsQuietDisclosure("History", initiallyExpanded: true) {
+            Color.popsAccent.frame(height: 96)
+        }
 
-        #expect(source.contains(".accessibilityValue(isExpanded ? \"Expanded\" : \"Collapsed\")"))
-        #expect(source.contains(".frame(minHeight: PopsSize.touchTarget)"))
+        #expect(collapsed.accessibilityLabel == "History")
+        #expect(collapsed.accessibilityValue == "Collapsed")
+        #expect(collapsed.accessibilityHint == "Show section")
+        #expect(expanded.accessibilityValue == "Expanded")
+        #expect(expanded.accessibilityHint == "Hide section")
+        #expect(collapsed.touchTargetHeight == PopsSize.touchTarget)
     }
 }

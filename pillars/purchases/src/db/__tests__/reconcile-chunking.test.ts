@@ -41,22 +41,17 @@ function insertCharges(raw: Database.Database, purchaseId: string, count: number
   return ids;
 }
 
-function insertUnconfirmedLinks(
-  raw: Database.Database,
-  chargeIds: readonly string[],
-  pinnedChargeId: string
-): void {
+function insertUnconfirmedLinks(raw: Database.Database, chargeIds: readonly string[]): void {
   const insert = raw.prepare(
     `INSERT INTO purchase_charge_links
        (id, charge_id, transaction_uri, amount_cents, link_type, confirmed_at)
      VALUES (?, ?, ?, 100, 'exact', NULL)`
   );
   const insertMany = raw.transaction((ids: readonly string[]) => {
-    for (const chargeId of ids) {
-      if (chargeId === pinnedChargeId) continue;
+    ids.forEach((chargeId) => {
       const linkId = `unconfirmed-${chargeId}`;
       insert.run(linkId, chargeId, `pops://finance/transaction/${linkId}`);
-    }
+    });
   });
   insertMany(chargeIds);
 }
@@ -76,11 +71,17 @@ function insertRejections(raw: Database.Database, chargeIds: readonly string[]):
     `INSERT INTO purchase_link_rejections (charge_id, transaction_uri) VALUES (?, ?)`
   );
   const insertMany = raw.transaction((ids: readonly string[]) => {
-    for (const chargeId of ids) {
+    ids.forEach((chargeId) => {
       insert.run(chargeId, `pops://finance/transaction/${chargeId}`);
-    }
+    });
   });
   insertMany(chargeIds);
+}
+
+function insertRejection(raw: Database.Database, chargeId: string, transactionUri: string): void {
+  raw
+    .prepare(`INSERT INTO purchase_link_rejections (charge_id, transaction_uri) VALUES (?, ?)`)
+    .run(chargeId, transactionUri);
 }
 
 describe('sweep charge-scoped queries at real SQLite scale', () => {
@@ -115,7 +116,11 @@ describe('sweep charge-scoped queries at real SQLite scale', () => {
       const pinnedChargeId = chargeIds[Math.floor(chargeIds.length / 2)];
       if (pinnedChargeId === undefined) throw new Error('expected a mid-list charge id');
       insertConfirmedLink(opened.raw, pinnedChargeId, 'pinned-link');
-      insertUnconfirmedLinks(opened.raw, chargeIds, pinnedChargeId);
+
+      insertUnconfirmedLinks(
+        opened.raw,
+        chargeIds.filter((chargeId) => chargeId !== pinnedChargeId)
+      );
 
       const removed = tearDownUnconfirmedLinks(opened.db, chargeIds);
 
@@ -143,7 +148,7 @@ describe('sweep charge-scoped queries at real SQLite scale', () => {
       // among results scoped to `chargeIds`, chunked or not.
       const outsideCharge = insertCharges(opened.raw, purchaseId, 1)[0];
       if (outsideCharge === undefined) throw new Error('expected an out-of-scope charge id');
-      insertRejections(opened.raw, [outsideCharge]);
+      insertRejection(opened.raw, outsideCharge, 'pops://finance/transaction/outside');
 
       const rejections = listRejectedPairings(opened.db, chargeIds);
 
