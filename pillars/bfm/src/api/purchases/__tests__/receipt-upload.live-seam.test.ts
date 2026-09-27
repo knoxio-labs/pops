@@ -52,10 +52,11 @@
  * `mapHttpFailure` gives an unmapped 4xx like 413 its own `refused` kind
  * (permanent, carrying the real status), which `toGatewayFailure` folds onto
  * the same `invalid-request` outcome `bad-request` gets, so bfm reports this
- * as `502 upstream_invalid_request, retryable: false` — distinct from the
- * `503 upstream_unavailable, retryable: true` a dead purchases process would
- * produce. The test below asserts today's actual behaviour so it fails the
- * moment that mapping regresses.
+ * as a `502 purchases.request.body_too_large` envelope with
+ * `retryable: false` — distinct from the `503 gateway.upstream_unavailable,
+ * retryable: true` a dead purchases process would produce. The test below
+ * asserts today's actual behaviour so it fails the moment that mapping
+ * regresses.
  *
  * **The contract-mismatch direction is deliberately NOT driven at this seam.**
  * `toGatewayFailure`'s `contract-mismatch` arm is already unit-tested directly
@@ -600,7 +601,11 @@ describe('bfm -> purchases receipt upload live seam', () => {
     );
 
     expect(response.status).toBe(404);
-    expect(((await response.json()) as { code: string }).code).toBe('not_found');
+    expect(await response.json()).toMatchObject({
+      code: 'purchases.resource.not_found',
+      retryable: false,
+      details: { upstream: { pillar: 'purchases', status: 404 } },
+    });
   });
 
   it('a reading the arithmetic refused still crosses the seam as an editable draft', async () => {
@@ -650,18 +655,18 @@ describe('bfm -> purchases receipt upload live seam', () => {
       // file's header, "The mobile write" in `pillars/bfm/README.md`) — and
       // not the `payload_too_large` shape bfm's OWN front door answers with
       // either, because bfm never got the chance to refuse this one itself.
-      // A 413 is a permanent producer refusal, not an outage: `refused` maps
-      // to `502 upstream_invalid_request`, `retryable: false` (see
-      // `toGatewayFailure` / `upstream-error.ts`'s `classify`), not the
-      // `503 upstream_unavailable, retryable: true` a dead purchases process
-      // would produce.
+      // A 413 is a permanent producer refusal, not an outage: `refused` keeps
+      // the producer's ADR-054 envelope and maps the route to 502 with
+      // `retryable: false`, not the `503 gateway.upstream_unavailable,
+      // retryable: true` a dead purchases process would produce.
       expect(response.status).toBe(502);
       const body: unknown = await response.json();
-      expect(body).toEqual({
-        code: 'upstream_invalid_request',
-        pillar: 'purchases',
+      expect(body).toMatchObject({
+        code: 'purchases.request.body_too_large',
+        details: { upstream: { pillar: 'purchases', status: 413 } },
+        message: 'The request body is too large.',
+        requestId: expect.any(String),
         retryable: false,
-        message: expect.any(String),
       });
 
       // Independent verification: purchases itself answered 413, not
@@ -818,16 +823,16 @@ describe('bfm -> purchases receipt upload live seam — a real 413', () => {
     expect(response.status).not.toBe(503);
     const body = (await response.json()) as {
       code: string;
-      retryable: boolean;
-      pillar: string;
+      details: { upstream: { pillar: string; status: number } };
       message: string;
+      requestId: string;
+      retryable: boolean;
     };
     expect(body.code).not.toBe('upstream_unavailable');
+    expect(body.code).toBe('purchases.request.body_too_large');
+    expect(body.details.upstream).toEqual({ pillar: 'purchases', status: 413 });
+    expect(body.requestId).toEqual(expect.any(String));
     expect(body.retryable).toBe(false);
-    expect(body.pillar).toBe('purchases');
-    // The real upstream status is not lost, only not distinguished on the
-    // wire (see `gateway.ts`'s `toGatewayFailure` header) — it still reaches
-    // an operator via the message.
-    expect(body.message).toContain('413');
+    expect(body.message).toBe('The request body is too large.');
   });
 });

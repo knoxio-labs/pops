@@ -1,6 +1,6 @@
 import type { CallFailure } from '@pops/pillar-sdk/server';
 
-import type { GatewayFailure } from './gateway.js';
+import type { GatewayFailure } from './gateway-types.js';
 
 /** Translate an SDK failure into the BFM mobile gateway vocabulary. */
 export function toGatewayFailure(failure: CallFailure): GatewayFailure {
