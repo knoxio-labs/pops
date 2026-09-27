@@ -1,5 +1,7 @@
 # DesignPlayground
 
+Item detail separates its supporting sections by 24pt. History starts collapsed; its Show/Hide header reveals muted, caret-free event rows while keeping event sheets and the full history reachable.
+
 The iOS design playground: where a phone screen is designed, argued about and
 decided, on the device, before anything implements it.
 

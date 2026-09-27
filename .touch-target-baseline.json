@@ -157,15 +157,6 @@
   "pillars/inventory/app/src/components/inventory-card/VerticalCard.tsx": {
     "button": 1
   },
-  "pillars/inventory/app/src/pages/location-tree-page/sections/MoveDialog.tsx": {
-    "button": 2
-  },
-  "pillars/inventory/app/src/pages/location-tree-page/sections/location-node/NodeActions.tsx": {
-    "button": 3
-  },
-  "pillars/inventory/app/src/pages/location-tree-page/sections/location-node/NodeRow.tsx": {
-    "button": 2
-  },
   "pillars/inventory/app/src/pages/warranties-page/WarrantyRow.tsx": {
     "a": 1,
     "button": 1

@@ -132,6 +132,10 @@ function LocationProbe(): ReactElement {
   return <output data-testid="location">{locationState.pathname + locationState.search}</output>;
 }
 
+function LocationStateProbe(): ReactElement {
+  return <output data-testid="location-state">{JSON.stringify(useLocation().state)}</output>;
+}
+
 function renderPage(initialEntry = '/inventory/containers'): void {
   mocks.useItemRows.mockImplementation((query: WebItemsFilters) =>
     query.access === 'closed' && query.sort === 'name' ? currentClosedRows : currentRows
@@ -165,6 +169,7 @@ function renderPage(initialEntry = '/inventory/containers'): void {
           <Route path="*" element={<ContainersPage />} />
         </Routes>
         <LocationProbe />
+        <LocationStateProbe />
       </ShortcutProvider>
     </MemoryRouter>
   );
@@ -210,7 +215,7 @@ describe('ContainersPage', () => {
         container: { access: 'closed', full: false },
       })
     );
-    currentRows = rowsResult(manyClosed);
+    currentRows = rowsResult([closedBox]);
     currentClosedRows = rowsResult(manyClosed);
     currentSummary = {
       data: { ...summary, packing: { ...summary.packing, closed: 205 } },
@@ -223,6 +228,20 @@ describe('ContainersPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Print labels for 200 of 205 closed' }));
     const params = new URLSearchParams(screen.getByTestId('location').textContent?.split('?')[1]);
     expect(params.get('ids')?.split(',')).toHaveLength(200);
+  });
+
+  it('clicking a row opens the item with the Containers list trail', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Closed box' }));
+
+    expect(JSON.parse(screen.getByTestId('location-state').textContent ?? '')).toEqual({
+      listTrail: {
+        listName: 'Containers',
+        href: '/inventory/containers',
+        ids: ['box-open', 'box-closed'],
+      },
+    });
   });
 
   it('uses the bulk access verb for selected containers and keeps it disabled offline', async () => {

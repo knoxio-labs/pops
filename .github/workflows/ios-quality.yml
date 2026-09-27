@@ -1,5 +1,5 @@
 name: iOS Quality
-run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # The only workflow in this repo that does not run on `ubuntu-latest`, because
 # Swift does not build anywhere else. `knoxio-labs/pops` is public, so
@@ -414,20 +414,33 @@ jobs:
       # ejection instead of a red PR; `mise run lint:analyze` locally still
       # answers it before a push.
       #
-      # A reusable full-validation call and the merge queue run both, off one
-      # compile. `-j 1` is mandatory: mise runs the two concurrently by default,
-      # `swiftlint analyze` then saturates the runner's three cores while the
-      # simulator suite is running, and the Auth concurrency tests poll for a
-      # condition with a timeout. `twentyConcurrentRejectionsRefreshOnce` failed
-      # with "a request never reached the refresher" on one run in three that
-      # way.
+      # Every lane gives the simulator action the same bound. A reusable
+      # full-validation call and the merge queue run the analyzer only after
+      # that test succeeds. `--skip-deps` is mandatory there: `test` already
+      # ran `build:for-testing`, producing the compiler log and derived data the
+      # analyzer reads, so preparing lint:analyze's dependency would compile the
+      # same tree a second time.
       - name: Test (iOS Simulator)
-        if: github.event_name != 'merge_group' && inputs['full-validation'] != true
+        timeout-minutes: 25
+        env:
+          POPS_IOS_TEST_ARTIFACTS: ${{ runner.temp }}/ios-test-diagnostics
         run: mise run test
 
-      - name: Test + SwiftLint analyzer rules (one shared compile)
-        if: github.event_name == 'merge_group' || inputs['full-validation'] == true
-        run: "mise run -j 1 test ::: lint:analyze"
+      - name: SwiftLint analyzer rules (reuse the test compile)
+        if: >-
+          success() &&
+          (github.event_name == 'merge_group' || inputs['full-validation'] == true)
+        timeout-minutes: 40
+        run: mise run --skip-deps lint:analyze
+
+      - name: Simulator test log and result bundle
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-simulator-test-debug
+          path: ${{ runner.temp }}/ios-test-diagnostics
+          retention-days: 7
+          if-no-files-found: warn
 
       # THE ONE INVARIANT HERE THAT BUILDING, TESTING AND LINTING DO NOT COVER:
       # a shipped binary names no BFM host, and is re-pointed by re-pairing

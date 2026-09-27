@@ -2,8 +2,12 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { WEB_ITEMS_MAX_IDS } from '@pops/inventory';
+
+import * as csv from '../../foundation/list-page/inventory-csv';
 import { buildWorld } from '../../foundation/model/placement-model';
 import { ShortcutProvider } from '../../foundation/shortcuts/shortcut-provider';
+import { ExportMenu } from './export-menu';
 import { ItemsPage } from './items-page';
 
 import type { ReactElement } from 'react';
@@ -21,13 +25,14 @@ const mocks = vi.hoisted(() => ({
   useBulkItemVerbs: vi.fn(),
   useChangedElsewhere: vi.fn(),
   useOnline: vi.fn(),
+  webList: vi.fn(),
 }));
 
 vi.mock('../../inventory-web/useWebItems', () => ({ useItemRows: mocks.useItemRows }));
-vi.mock('../../inventory-web/useCatalogueLookups', () => ({
+vi.mock('../../inventory-web/useCatalogueLookups.js', () => ({
   useCatalogueLookups: mocks.useCatalogueLookups,
 }));
-vi.mock('../../inventory-web/usePlacementSources', () => ({
+vi.mock('../../inventory-web/usePlacementSources.js', () => ({
   usePlacementSources: mocks.usePlacementSources,
 }));
 vi.mock('../../inventory-web/item-verbs', () => ({
@@ -41,6 +46,9 @@ vi.mock('../../inventory-web/useChangedElsewhere', () => ({
   useChangedElsewhere: mocks.useChangedElsewhere,
 }));
 vi.mock('../../inventory-web/useOnline', () => ({ useOnline: mocks.useOnline }));
+vi.mock('../../inventory-api/index.js', () => ({
+  webList: (...args: unknown[]) => mocks.webList(...args),
+}));
 
 const location = { id: 'garage', name: 'Garage', parentId: null, kind: 'property' as const };
 
@@ -158,6 +166,10 @@ function LocationProbe(): ReactElement {
   return <output data-testid="location">{useLocation().search + useLocation().pathname}</output>;
 }
 
+function LocationStateProbe(): ReactElement {
+  return <output data-testid="location-state">{JSON.stringify(useLocation().state)}</output>;
+}
+
 function renderPage(initialEntry = '/inventory/items'): void {
   mocks.useItemRows.mockImplementation(() => currentRows);
   mocks.useOnline.mockImplementation(() => currentOnline);
@@ -195,13 +207,16 @@ function renderPage(initialEntry = '/inventory/items'): void {
           <Route path="*" element={<ItemsPage />} />
         </Routes>
         <LocationProbe />
+        <LocationStateProbe />
       </ShortcutProvider>
     </MemoryRouter>
   );
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
+  vi.spyOn(csv, 'downloadCsv').mockImplementation(() => undefined);
   vi.useFakeTimers();
   observers.length = 0;
   globalThis.IntersectionObserver = TestIntersectionObserver;
@@ -220,6 +235,112 @@ afterEach(() => {
 });
 
 describe('ItemsPage', () => {
+  it('Export offers the view, the selection and the template with their counts', () => {
+    currentRows = rowsResult({ total: 12 });
+    renderPage();
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Export' }), {
+      button: 0,
+      pointerType: 'mouse',
+    });
+
+    expect(screen.getByRole('menuitem', { name: /This view as CSV/u })).toHaveTextContent(
+      "12 rows, as filtered now. Every column, plus each type's fields."
+    );
+    expect(screen.getByRole('menuitem', { name: /Selected rows as CSV/u })).toHaveTextContent(
+      'Select rows first.'
+    );
+    expect(screen.getByRole('menuitem', { name: /Selected rows as CSV/u })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
+    expect(screen.getByRole('menuitem', { name: /Import template/u })).toHaveTextContent(
+      'An empty CSV with the columns Import reads.'
+    );
+  });
+
+  it('This view as CSV is disabled until the list total arrives', () => {
+    currentRows = rowsResult({ total: null, status: 'pending' });
+    renderPage();
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Export' }), {
+      button: 0,
+      pointerType: 'mouse',
+    });
+
+    expect(screen.getByRole('menuitem', { name: /This view as CSV/u })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
+  });
+
+  it('disables every export choice while placement data is loading', () => {
+    render(
+      <ExportMenu
+        viewCount={12}
+        selectedCount={1}
+        busy
+        onView={vi.fn()}
+        onSelection={vi.fn()}
+        onTemplate={vi.fn()}
+      />
+    );
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Export' }), {
+      button: 0,
+      pointerType: 'mouse',
+    });
+
+    expect(screen.getByRole('menuitem', { name: /This view as CSV/u })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
+    expect(screen.getByRole('menuitem', { name: /Selected rows as CSV/u })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
+    expect(screen.getByRole('menuitem', { name: /Import template/u })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
+  });
+
+  it('the selection bar offers Export selected as CSV', async () => {
+    mocks.webList.mockResolvedValue({
+      data: {
+        contentCounts: {},
+        hiddenInactiveCount: 0,
+        items: [],
+        nextCursor: null,
+        total: 0,
+        unfilteredTotal: 0,
+      },
+      error: undefined,
+      response: { status: 200 },
+    });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Kitchen 13' }));
+    expect(screen.getByRole('button', { name: /Set type/u })).toBeInTheDocument();
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'More actions for the selection' }), {
+      button: 0,
+      pointerType: 'mouse',
+    });
+    expect(screen.getByRole('menuitem', { name: 'Retire' })).toBeInTheDocument();
+    const exportAction = screen.getByRole('menuitem', { name: 'Export selected as CSV' });
+    expect(exportAction).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(exportAction);
+      await Promise.resolve();
+    });
+
+    expect(mocks.webList).toHaveBeenCalledWith({
+      query: { ids: 'item-1', includeInactive: true, limit: WEB_ITEMS_MAX_IDS },
+    });
+    expect(csv.downloadCsv).toHaveBeenCalled();
+  });
+
   it('renders the table with the server total and the hidden inactive count', () => {
     currentRows = rowsResult({ total: 12, unfilteredTotal: 40, hiddenInactiveCount: 3 });
     renderPage();
@@ -397,6 +518,26 @@ describe('ItemsPage', () => {
     fireEvent.keyDown(grid, { key: 'j' });
     fireEvent.keyDown(grid, { key: 'Enter' });
     expect(screen.getByTestId('location')).toHaveTextContent('/inventory/items/item-1');
+  });
+
+  it('clicking a row opens the item with the Items list trail', () => {
+    const rows = [
+      activeRow,
+      { ...activeRow, id: 'item-2', name: 'Kitchen 14' },
+      { ...activeRow, id: 'item-3', name: 'Kitchen 15' },
+    ];
+    currentRows = rowsResult({ rows });
+    renderPage('/inventory/items?q=lead');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Kitchen 14' }));
+
+    expect(JSON.parse(screen.getByTestId('location-state').textContent ?? '')).toEqual({
+      listTrail: {
+        listName: 'Items',
+        href: '/inventory/items?q=lead',
+        ids: ['item-1', 'item-2', 'item-3'],
+      },
+    });
   });
 
   it('Escape with rows ticked clears them; with none it leaves the input to the global dismiss', () => {
