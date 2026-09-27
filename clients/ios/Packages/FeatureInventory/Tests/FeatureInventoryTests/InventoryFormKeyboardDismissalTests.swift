@@ -3,6 +3,21 @@ import Testing
 
 @testable import FeatureInventory
 
+#if os(iOS)
+    import UIKit
+#endif
+
+#if os(iOS)
+    private enum InventoryKeyboardDismissalViewInspector {
+        @MainActor
+        static func dismissalRecognizer(in window: UIWindow) -> UITapGestureRecognizer? {
+            window.gestureRecognizers?
+                .compactMap { $0 as? UITapGestureRecognizer }
+                .first { $0.delegate is InventoryKeyboardDismissalCoordinator }
+        }
+    }
+#endif
+
 @Suite("Inventory form keyboard dismissal")
 internal struct InventoryFormKeyboardDismissalTests {
     private static let formSource: String = {
@@ -14,23 +29,37 @@ internal struct InventoryFormKeyboardDismissalTests {
         return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
     }()
 
-    private static let platformSource: String = {
-        let url = URL(filePath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appending(path: "Sources/FeatureInventory/Form/InventoryFormPlatform.swift")
-        return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-    }()
-
     @Test("the item form dismisses the keyboard on a tap")
     func formInstallsTapDismissal() {
         #expect(Self.formSource.contains(".inventoryDismissesKeyboardOnTap()"))
     }
 
-    @Test("the iOS tap handler resigns the first responder")
-    func tapDismissalResignsFirstResponder() {
-        #expect(Self.platformSource.contains("simultaneousGesture"))
-        #expect(Self.platformSource.contains("resignFirstResponder"))
-    }
+    #if os(iOS)
+        @MainActor
+        @Test("the iOS tap handler leaves text inputs focused and shares control gestures")
+        func tapDismissalRespectsInputBoundaries() {
+            let coordinator = InventoryKeyboardDismissalCoordinator()
+            let window = UIWindow()
+            let container = UIView()
+            let field = UITextField()
+            container.addSubview(field)
+            let fieldContent = UIView()
+            field.addSubview(fieldContent)
+            let control = UIButton()
+            let tap = UITapGestureRecognizer()
+            let controlGesture = UITapGestureRecognizer()
+
+            coordinator.setWindow(window)
+            #expect(
+                InventoryKeyboardDismissalViewInspector.dismissalRecognizer(in: window) != nil)
+            #expect(!coordinator.shouldDismiss(for: field))
+            #expect(!coordinator.shouldDismiss(for: fieldContent))
+            #expect(coordinator.shouldDismiss(for: control))
+            #expect(
+                coordinator.gestureRecognizer(
+                    tap, shouldRecognizeSimultaneouslyWith: controlGesture))
+            coordinator.setWindow(nil)
+            #expect(InventoryKeyboardDismissalViewInspector.dismissalRecognizer(in: window) == nil)
+        }
+    #endif
 }
