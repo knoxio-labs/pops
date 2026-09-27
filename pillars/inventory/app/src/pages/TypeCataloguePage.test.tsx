@@ -45,6 +45,8 @@ const ROUTER_DEFAULT_TYPE_ID = '44444444-4444-4444-8444-444444444444';
 const TYPE_A_ID = '55555555-5555-4555-8555-555555555555';
 const TYPE_B_ID = '66666666-6666-4666-8666-666666666666';
 const TYPE_C_ID = '77777777-7777-4777-8777-777777777777';
+const TYPE_A_FIELD_ID = '88888888-8888-4888-8888-888888888888';
+const TYPE_B_FIELD_ID = '99999999-9999-4999-8999-999999999999';
 
 const published: Catalogue = {
   revision: {
@@ -124,9 +126,18 @@ function routeType(
   id: string,
   key: string,
   label: string,
-  sortOrder: number
+  sortOrder: number,
+  fields: Catalogue['types'][number]['fields'] = []
 ): Catalogue['types'][number] {
-  return { ...published.types[0]!, fields: [], id, key, label, sortOrder };
+  return { ...published.types[0]!, fields, id, key, label, sortOrder };
+}
+
+function routeField(
+  typeId: string,
+  id: string,
+  label: string
+): Catalogue['types'][number]['fields'][number] {
+  return { ...published.types[0]!.fields[0]!, id, label, typeId };
 }
 
 const routerCatalogue: Catalogue = {
@@ -140,8 +151,12 @@ const routerCatalogue: Catalogue = {
 const navigationCatalogue: Catalogue = {
   ...published,
   types: [
-    routeType(TYPE_A_ID, 'type_a', 'Type A', 0),
-    routeType(TYPE_B_ID, 'type_b', 'Type B', 1),
+    routeType(TYPE_A_ID, 'type_a', 'Type A', 0, [
+      routeField(TYPE_A_ID, TYPE_A_FIELD_ID, 'A field'),
+    ]),
+    routeType(TYPE_B_ID, 'type_b', 'Type B', 1, [
+      routeField(TYPE_B_ID, TYPE_B_FIELD_ID, 'B field'),
+    ]),
     routeType(TYPE_C_ID, 'type_c', 'Type C', 2),
   ],
 };
@@ -268,6 +283,24 @@ describe('TypeCataloguePage', () => {
     );
     expect(screen.getByRole('button', { name: /Type A/ })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: /Type C/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('resets the editor state when navigating from type A to type B', async () => {
+    api.readCatalogue.mockResolvedValue({ data: navigationCatalogue, error: undefined });
+    renderPage(`/inventory/types/${TYPE_A_ID}`, `/inventory/types/${TYPE_B_ID}`);
+
+    expect(await screen.findByRole('button', { name: /Type A/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to fields' }));
+    expect(await screen.findByDisplayValue('A field')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to requested type' }));
+
+    await waitFor(() => expect(screen.getByDisplayValue('Type B')).toBeInTheDocument());
+    expect(screen.queryByText('Choose a field')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Type B/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('creates the draft before applying the first edit', async () => {

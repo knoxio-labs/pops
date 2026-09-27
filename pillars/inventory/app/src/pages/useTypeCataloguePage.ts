@@ -16,16 +16,9 @@ import type { ArchiveTarget, EditorMode } from './cataloguePageTypes';
  * navigation changes the parameter without remounting the page.
  */
 export function useTypeCataloguePage() {
-  const { id } = useParams<{ id?: string }>();
+  const { mode, selectedFieldId, setMode, setSelectedFieldId, setStoredTypeId, storedTypeId } =
+    useTypeRouteState();
   const model = useCatalogueEditor();
-  const [lastSeenId, setLastSeenId] = useState(id);
-  const [storedTypeId, setStoredTypeId] = useState<string | null>(id ?? null);
-  if (id !== lastSeenId) {
-    setLastSeenId(id);
-    setStoredTypeId(id ?? null);
-  }
-  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
-  const [mode, setMode] = useState<EditorMode>('type');
   const [auditOpen, setAuditOpen] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<ArchiveTarget | null>(null);
   const data = useCataloguePageData(
@@ -73,5 +66,27 @@ export function useTypeCataloguePage() {
     setAuditOpen,
     setMode,
     mode,
+  };
+}
+
+function useTypeRouteState() {
+  const { id } = useParams<{ id?: string }>();
+  const [lastSeenId, setLastSeenId] = useState(id);
+  const [storedTypeId, setStoredTypeId] = useState<string | null>(id ?? null);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [mode, setMode] = useState<EditorMode>('type');
+  if (id !== lastSeenId) {
+    setLastSeenId(id);
+    setStoredTypeId(id ?? null);
+    setSelectedFieldId(null);
+    setMode('type');
+  }
+  return {
+    mode,
+    selectedFieldId,
+    setMode,
+    setSelectedFieldId,
+    setStoredTypeId,
+    storedTypeId,
   };
 }
