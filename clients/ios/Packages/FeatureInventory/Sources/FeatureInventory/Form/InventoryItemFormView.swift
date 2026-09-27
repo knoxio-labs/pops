@@ -68,6 +68,7 @@ internal struct InventoryItemFormView: View {
             Task { await model.undoPhotoRemoval(offer) }
         }
         .inventoryWriteFailureAlerts($model.failure)
+        .inventoryScanFailureAlerts($model.scanFailure)
         .safeAreaInset(edge: .bottom) {
             if let failure = model.codeSuggestionFailure {
                 InventoryCodeSuggestionToast(

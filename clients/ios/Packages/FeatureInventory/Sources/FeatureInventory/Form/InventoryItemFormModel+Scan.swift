@@ -22,15 +22,7 @@ extension InventoryItemFormModel {
             prefillStatus = .nothingFound
             return
         }
-        let typeId = currentDraft.typeId
-        let includeName = draft.trimmedName.isEmpty
-        prefillStatus = .running
-        fillTask = Task {
-            let values = await scan.engine.fill(
-                source: .text(lines), type: type, draft: currentDraft, includeName: includeName)
-            guard !Task.isCancelled else { return }
-            applySuggestions(values, forTypeId: typeId)
-        }
+        startPrefill(source: .text(lines), type: type, currentDraft: currentDraft)
     }
 
     internal func handleScannedBarcode(_ payload: String) async -> InventoryScanOutcome {
@@ -41,22 +33,38 @@ extension InventoryItemFormModel {
         }) {
             draft.identifiers.append(identifier)
         }
-        guard !isOffline else {
-            prefillStatus = .lookupUnavailable
+        let result: InventoryBarcodeLookup
+        do {
+            result = try await scan.lookUp(payload)
+        } catch {
+            guard !Task.isCancelled, !(error is CancellationError) else { return .miss }
+            recordLookupFailure(error as? PopsError ?? Self.unknownLookupFailure)
             return .miss
         }
-
-        let result = try? await scan.lookUp(payload)
         guard !Task.isCancelled else { return .miss }
         switch result {
         case .found(let product):
             return fillFromProduct(product)
         case .notFound:
             prefillStatus = .productNotFound
-        case .unavailable, nil:
-            prefillStatus = .lookupUnavailable
+        case .unsupported:
+            prefillStatus = .barcodeUnsupported
+        case .unavailable:
+            recordLookupFailure(Self.unknownLookupFailure)
         }
         return .miss
+    }
+
+    private func recordLookupFailure(_ error: PopsError) {
+        scanFailure = error
+        prefillStatus = .lookupFailed(error)
+    }
+
+    private static var unknownLookupFailure: PopsError {
+        PopsError(
+            code: "ios.barcode.unavailable",
+            message: "Barcode lookup is unavailable. Try again or use text.",
+            retryable: true, kind: .server)
     }
 
     internal func cancelScanPrefill() {
@@ -92,16 +100,8 @@ extension InventoryItemFormModel {
         if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             draft.name = product.title
         }
-        let typeId = currentDraft.typeId
-        let includeName = draft.trimmedName.isEmpty
         let source = InventoryPrefillSource.product(InventoryBarcodeFacts.facts(product))
-        prefillStatus = .running
-        fillTask = Task {
-            let values = await scan.engine.fill(
-                source: source, type: type, draft: currentDraft, includeName: includeName)
-            guard !Task.isCancelled else { return }
-            applySuggestions(values, forTypeId: typeId)
-        }
+        startPrefill(source: source, type: type, currentDraft: currentDraft)
         return .found
     }
 

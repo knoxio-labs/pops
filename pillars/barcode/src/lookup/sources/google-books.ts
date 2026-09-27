@@ -74,7 +74,7 @@ export function createGoogleBooksSource(options: GoogleBooksSourceOptions = {}):
         configuredKey === undefined || configuredKey === ''
           ? resolveGoogleBooksApiKey()
           : configuredKey;
-      if (apiKey === undefined) return { kind: 'unavailable' };
+      if (apiKey === undefined) return { kind: 'unavailable', failureClass: 'misconfigured' };
 
       return requestGoogleBooks(fetcher, isbn13, apiKey, signal);
     },
@@ -93,8 +93,18 @@ async function requestGoogleBooks(
     signal,
     {}
   );
-  if (result === undefined || !result.response.ok || result.body === undefined) {
-    return { kind: 'unavailable' };
+  if (result.kind === 'failure') {
+    return { kind: 'unavailable', failureClass: result.failureClass };
+  }
+  if (!result.response.ok) {
+    return {
+      kind: 'unavailable',
+      failureClass: result.response.status === 429 ? 'rate_limited' : 'http_error',
+      status: result.response.status,
+    };
+  }
+  if (result.body === undefined) {
+    return { kind: 'unavailable', failureClass: 'invalid_response' };
   }
 
   return mapGoogleBooksResponse(isbn13, result.body);
@@ -104,13 +114,17 @@ function mapGoogleBooksResponse(isbn13: string, rawBody: unknown): SourceAnswer 
   const body = asRecord(rawBody);
   const totalItems = body?.['totalItems'];
   if (totalItems === 0) return { kind: 'miss' };
-  if (typeof totalItems !== 'number' || totalItems < 0) return { kind: 'unavailable' };
+  if (typeof totalItems !== 'number' || totalItems < 0) {
+    return { kind: 'unavailable', failureClass: 'invalid_response' };
+  }
 
   const items = Array.isArray(body?.['items']) ? body['items'] : [];
   const volume = asRecord(items[0]);
   const volumeInfo = asRecord(volume?.['volumeInfo']);
   const product = volumeInfo === undefined ? undefined : mapProduct(isbn13, volumeInfo);
-  return product === undefined ? { kind: 'unavailable' } : { kind: 'hit', product };
+  return product === undefined
+    ? { kind: 'unavailable', failureClass: 'invalid_response' }
+    : { kind: 'hit', product };
 }
 
 function mapProduct(isbn13: string, volumeInfo: Record<string, unknown>): Product | undefined {

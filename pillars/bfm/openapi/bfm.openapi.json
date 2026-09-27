@@ -512,6 +512,14 @@
               "minLength": 1,
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "x-pops-barcode-diagnostics",
+            "schema": {
+              "enum": ["1"],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -637,6 +645,10 @@
                         "outcome": {
                           "enum": ["not_found"],
                           "type": "string"
+                        },
+                        "reason": {
+                          "enum": ["unsupported"],
+                          "type": "string"
                         }
                       },
                       "required": ["outcome"],
@@ -645,6 +657,13 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "error": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/ErrorBody"
+                            }
+                          ]
+                        },
                         "outcome": {
                           "enum": ["unavailable"],
                           "type": "string"

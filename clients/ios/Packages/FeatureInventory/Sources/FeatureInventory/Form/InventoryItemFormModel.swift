@@ -56,6 +56,8 @@ internal final class InventoryItemFormModel {
         }
     }
     internal var prefillStatus: InventoryPrefillStatus?
+    internal var scanFailure: PopsError?
+    internal var prefillFailure: PopsError?
     internal private(set) var protocol2ReferenceTargets: [InventoryProtocol2ReferenceTarget] = []
     /// The replica read the last time the store answered, kept only to
     /// evaluate a computed field's expression again between then and now;

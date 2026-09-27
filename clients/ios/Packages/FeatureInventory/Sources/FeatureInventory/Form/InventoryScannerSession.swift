@@ -7,6 +7,7 @@ internal final class InventoryScannerSession {
     internal private(set) var processing: Task<Void, Never>?
     private let model: InventoryItemFormModel
     private var acceptedBarcode = false
+    private var lastPayload: String?
     private var stopped = false
 
     internal init(model: InventoryItemFormModel) {
@@ -23,6 +24,7 @@ internal final class InventoryScannerSession {
     ) {
         guard !stopped, !acceptedBarcode, let payload = payloads.first else { return }
         acceptedBarcode = true
+        lastPayload = payload
         processing = Task {
             guard !Task.isCancelled else { return }
             let outcome = await model.handleScannedBarcode(payload)
@@ -32,6 +34,20 @@ internal final class InventoryScannerSession {
             case .miss: showsTextPrompt = true
             }
         }
+    }
+
+    internal var canRetryLookup: Bool {
+        guard !stopped, showsTextPrompt,
+            case .lookupFailed(let failure) = model.prefillStatus
+        else { return false }
+        return failure.retryable
+    }
+
+    internal func retryLookup(onFound: @escaping @MainActor () -> Void) {
+        guard canRetryLookup, let lastPayload else { return }
+        acceptedBarcode = false
+        showsTextPrompt = false
+        recognizeBarcodes([lastPayload], onFound: onFound)
     }
 
     internal func stop() {
