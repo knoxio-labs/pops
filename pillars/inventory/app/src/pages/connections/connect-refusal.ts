@@ -143,7 +143,9 @@ export function connectVerdict(args: {
 }): { ok: boolean; text: string; from: Candidate | null; to: Candidate | null } {
   const { from, to } = args;
   if (!hasName(from) || !hasName(to)) return { ok: false, text: 'Choose both ends.', from, to };
-  if (args.status !== 'success')
+  if (args.status === 'pending')
+    return { ok: false, text: 'Loading existing connections…', from, to };
+  if (args.status === 'error')
     return { ok: false, text: 'Existing connections did not load.', from, to };
   const failure = failureText(args.failure, from, to);
   if (failure !== null) return { ok: false, text: failure, from, to };

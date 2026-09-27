@@ -74,6 +74,52 @@ let currentOnline = true;
 let currentStale = false;
 let currentHasNextPage = false;
 
+const originalIntersectionObserver = globalThis.IntersectionObserver;
+const observers: TestIntersectionObserver[] = [];
+
+class TestIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | null = null;
+  readonly rootMargin = '';
+  readonly scrollMargin = '';
+  readonly thresholds: readonly number[] = [];
+  private target: Element | null = null;
+
+  constructor(private readonly callback: IntersectionObserverCallback) {
+    observers.push(this);
+  }
+
+  observe(target: Element): void {
+    this.target = target;
+  }
+
+  unobserve(target: Element): void {
+    if (this.target === target) this.target = null;
+  }
+
+  disconnect(): void {
+    this.target = null;
+  }
+
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+
+  trigger(isIntersecting = true): void {
+    if (this.target === null) return;
+    const bounds = this.target.getBoundingClientRect();
+    const entry: IntersectionObserverEntry = {
+      boundingClientRect: bounds,
+      intersectionRatio: isIntersecting ? 1 : 0,
+      intersectionRect: bounds,
+      isIntersecting,
+      rootBounds: null,
+      target: this.target,
+      time: 0,
+    };
+    this.callback([entry], this);
+  }
+}
+
 function LocationProbe(): ReactElement {
   const location = useLocation();
   return <output data-testid="location">{location.pathname + location.search}</output>;
@@ -148,6 +194,8 @@ function renderPage(initialEntry = '/inventory/connections'): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  observers.length = 0;
+  globalThis.IntersectionObserver = TestIntersectionObserver;
   currentRows = rows;
   currentStatus = 'success';
   currentOnline = true;
@@ -158,7 +206,14 @@ beforeEach(() => {
   mocks.connectFixture.mockResolvedValue(undefined);
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  if (originalIntersectionObserver === undefined) {
+    Reflect.deleteProperty(globalThis, 'IntersectionObserver');
+  } else {
+    globalThis.IntersectionObserver = originalIntersectionObserver;
+  }
+});
 
 describe('ConnectionsPage', () => {
   it('renders the server-ordered ends, room/date columns, and only adds a next-page sentinel when needed', () => {
@@ -174,6 +229,18 @@ describe('ConnectionsPage', () => {
     currentHasNextPage = true;
     renderPage();
     expect(screen.getByTestId('connections-sentinel')).toBeInTheDocument();
+  });
+
+  it('requests each next page once per loaded row count', () => {
+    currentHasNextPage = true;
+    renderPage();
+
+    const observer = observers[0];
+    if (observer === undefined) throw new Error('Expected a connections sentinel observer');
+    observer.trigger();
+    observer.trigger();
+
+    expect(mocks.fetchNextPage).toHaveBeenCalledOnce();
   });
 
   it('writes trace and view changes through replace-style URL state', async () => {

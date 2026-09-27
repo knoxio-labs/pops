@@ -69,18 +69,28 @@ function Header({ selection }: { selection: SelectionApi }): ReactElement {
   );
 }
 
-function Sentinel({ onLoadMore }: { onLoadMore: () => void }): ReactElement {
+function Sentinel({
+  loadedRows,
+  onLoadMore,
+}: {
+  loadedRows: number;
+  onLoadMore: () => void;
+}): ReactElement {
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadedCount = useRef<number | null>(null);
 
   useEffect(() => {
     const node = sentinelRef.current;
     if (node === null || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) onLoadMore();
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      if (loadedCount.current === loadedRows) return;
+      loadedCount.current = loadedRows;
+      onLoadMore();
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [onLoadMore]);
+  }, [loadedRows, onLoadMore]);
 
   return <div ref={sentinelRef} data-testid="connections-sentinel" aria-hidden className="h-px" />;
 }
@@ -191,7 +201,7 @@ export function ConnectionsList({
           onDisconnect={onDisconnect}
         />
       )}
-      {hasNextPage ? <Sentinel onLoadMore={onLoadMore} /> : null}
+      {hasNextPage ? <Sentinel loadedRows={rows.length} onLoadMore={onLoadMore} /> : null}
     </ListBody>
   );
 }

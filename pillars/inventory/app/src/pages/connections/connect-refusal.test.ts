@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { connectRefusal, endFromKey } from './connect-refusal';
+import { connectRefusal, connectVerdict, endFromKey } from './connect-refusal';
 
 import type { ItemRowModel } from '../../foundation/model/model';
 import type { WebConnectionRow } from '../../inventory-web/useConnectionsRegistry';
@@ -142,5 +142,19 @@ describe('endFromKey', () => {
     expect(endFromKey('location:room')).toBeNull();
     expect(endFromKey('item:')).toBeNull();
     expect(endFromKey('item:lamp:extra')).toBeNull();
+  });
+});
+
+describe('connectVerdict', () => {
+  it('distinguishes a pending existing-connections read from a failed read', () => {
+    const from = { end: { kind: 'item' as const, itemId: 'lamp' }, name: 'Lamp' };
+    const to = { end: { kind: 'item' as const, itemId: 'soundbar' }, name: 'Soundbar' };
+
+    expect(connectVerdict({ from, to, status: 'pending', refusal: null, failure: null }).text).toBe(
+      'Loading existing connections…'
+    );
+    expect(connectVerdict({ from, to, status: 'error', refusal: null, failure: null }).text).toBe(
+      'Existing connections did not load.'
+    );
   });
 });
