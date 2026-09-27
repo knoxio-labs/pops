@@ -1,4 +1,5 @@
 name: Quality
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Lint / format / module-boundaries gate, scoped to the units a PR actually
 # touches. On `pull_request` these run over `scripts/` (root-owned tooling,
@@ -78,14 +79,26 @@ name: Quality
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
   merge_group:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        required: true
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   discover:
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/_discover-units.yml
+    with:
+      full-validation: ${{ inputs.full-validation || false }}
 
   scope:
     name: Determine changed-unit scope
@@ -103,7 +116,7 @@ jobs:
           CHANGED_CLIENT_DIRS: ${{ needs.discover.outputs.changedClientDirs }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ inputs.full-validation }}" != "true" ] && [ "${{ github.event_name }}" = "pull_request" ]; then
             dirs=$(echo "$CHANGED" | jq -r '(["scripts"] + [.[].dir]) | join(" ")')
           else
             dirs="."
@@ -278,14 +291,14 @@ jobs:
           if [ "$dirs" = "." ]; then
             pnpm build
           else
-            projects=""
+            projects=()
             for d in $dirs; do
-              [ -f "$d/tsconfig.build.json" ] && projects="$projects $d/tsconfig.build.json"
+              [ -f "$d/tsconfig.build.json" ] && projects+=("$d/tsconfig.build.json")
             done
-            if [ -z "$projects" ]; then
+            if [ "${#projects[@]}" = 0 ]; then
               echo "no changed unit owns a tsconfig.build.json — nothing to build"
             else
-              pnpm exec tsc -b $projects
+              pnpm exec tsc -b "${projects[@]}"
             fi
           fi
       - name: Exports/files whitelist self-consistency

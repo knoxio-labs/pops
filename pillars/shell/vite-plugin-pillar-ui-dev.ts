@@ -1,55 +1,22 @@
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Plugin } from 'vite';
+import {
+  attachPublishedReleaseReload,
+  parseUiRequest,
+  publishedBundleFile,
+  releaseFor,
+  releasePathFor,
+  releaseUrl,
+  sourceEntry,
+  sourceModuleId,
+  sourceModuleSource,
+  sourcePillarsFrom,
+} from './pillar-ui-dev-paths.js';
 
-/**
- * Serves a pillar's built UI bundle in dev, at the same path production does.
- *
- * A pillar the shell mounts through its runtime loader advertises a
- * root-relative `assetsBaseUrl` — `/purchases-ui/purchases.js` — which in
- * production is an nginx location proxying to that pillar's static image. The
- * dev server has neither, so without this the one pillar not in the bundle map
- * is the one pillar that does not appear while developing, and the loader path
- * would be exercised by nobody until it reached a deployment.
- *
- * `/<pillar>-ui/<file>` maps to `pillars/<pillar>/app/dist/remote/<file>`,
- * which is what `pnpm --filter @pops/app-<pillar> build` writes. Derived from
- * the request path rather than from a list of which pillars have a UI: a list
- * here is the central enumeration the federation model removes, and it would
- * need an edit for each of the eight pillars still to move.
- *
- * A pillar whose bundle has not been built yet answers 404 with a line saying
- * which command produces it — the shell's `<ErrorBoundary>` then renders its
- * "could not be loaded" placeholder, which is the same degradation a missing
- * bundle produces in production, reached the same way.
- */
+import type { ServerResponse } from 'node:http';
 
-/** `/<pillar>-ui/<file>` → the pillar id and the file it names. */
-function parseUiRequest(url: string): { pillarId: string; file: string } | undefined {
-  const [pathname] = url.split('?');
-  if (pathname === undefined) return undefined;
-  const match = /^\/([a-z][a-z0-9-]*)-ui\/(.+)$/.exec(pathname);
-  const pillarId = match?.[1];
-  const encoded = match?.[2];
-  if (pillarId === undefined || encoded === undefined) return undefined;
-
-  // Decoded BEFORE the traversal check, not after. `req.url` arrives
-  // percent-encoded, so a check on the raw segment reads `%2e%2e%2f` as an
-  // ordinary filename and lets it through — and whether that then escapes the
-  // directory depends on how the filesystem call decodes it, which is not a
-  // property to leave to chance. A segment that will not decode is refused
-  // outright rather than passed on in whatever form it arrived.
-  let file: string;
-  try {
-    file = decodeURIComponent(encoded);
-  } catch {
-    return undefined;
-  }
-  if (file.includes('\0')) return undefined;
-  if (path.posix.normalize(file).startsWith('..')) return undefined;
-  return { pillarId, file };
-}
+import type { Plugin, ViteDevServer } from 'vite';
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.js': 'application/javascript; charset=utf-8',
@@ -57,42 +24,115 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.css': 'text/css; charset=utf-8',
 };
 
+function serveSourceEntry(server: ViteDevServer, pillarId: string, res: ServerResponse): void {
+  void server
+    .transformRequest(sourceModuleId(pillarId))
+    .then((result) => {
+      if (result === null) throw new Error(`could not transform source entry for '${pillarId}'`);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      res.end(result.code);
+    })
+    .catch((error: unknown) => {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end(
+        `Could not load the source UI for '${pillarId}': ${
+          error instanceof Error ? error.message : String(error)
+        }\n`
+      );
+    });
+}
+
+function configureUiAssets(
+  server: ViteDevServer,
+  repoRoot: string,
+  sourcePillars: ReadonlySet<string>
+): void {
+  server.watcher.add(path.join(repoRoot, 'pillars'));
+  attachPublishedReleaseReload(server.watcher, repoRoot, () =>
+    server.ws.send({ type: 'full-reload' })
+  );
+  server.middlewares.use((req, res, next) => {
+    const request = req.url === undefined ? undefined : parseUiRequest(req.url);
+    if (request === undefined) return next();
+    if (sourcePillars.has(request.pillarId) && request.file === `${request.pillarId}.js`) {
+      serveSourceEntry(server, request.pillarId, res);
+      return;
+    }
+    if (sourcePillars.has(request.pillarId) && request.file === `${request.pillarId}.css`) {
+      res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      res.end();
+      return;
+    }
+    const file = publishedBundleFile(repoRoot, request);
+    if (file === undefined) {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end(
+        `No completed UI bundle for '${request.pillarId}'.\n` +
+          `Start its watcher with: pnpm dev:ui -- --pillar ${request.pillarId}\n`
+      );
+      return;
+    }
+    if (releasePathFor(request) === undefined) {
+      const release = releaseFor(path.join(repoRoot, 'pillars', request.pillarId, 'app'));
+      if (release !== undefined) {
+        res.statusCode = 302;
+        res.setHeader('Location', releaseUrl(request, release));
+        res.end();
+        return;
+      }
+    }
+    res.setHeader('Content-Type', CONTENT_TYPES[path.extname(file)] ?? 'application/octet-stream');
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    createReadStream(file).pipe(res);
+  });
+}
+
+/**
+ * Serve completed pillar remote bundles in shell development and optionally
+ * compile selected pillars from source inside the shell's Vite module graph.
+ *
+ * `POPS_PILLAR_UI_SOURCE=inventory,media` maps only those remote entries and
+ * stylesheets to their source files, while retaining the normal registry URL
+ * and external loader contract.
+ */
 export function pillarUiDevPlugin(repoRoot: string): Plugin {
+  const sourcePillars = sourcePillarsFrom(process.env.POPS_PILLAR_UI_SOURCE);
   return {
     name: 'pops-pillar-ui-dev',
     apply: 'serve',
+    resolveId(id) {
+      if (!id.startsWith('\0pops-pillar-ui-source:')) return undefined;
+      const pillarId = id.slice('\0pops-pillar-ui-source:'.length);
+      return sourcePillars.has(pillarId) ? id : undefined;
+    },
+    load(id) {
+      if (!id.startsWith('\0pops-pillar-ui-source:')) return undefined;
+      const pillarId = id.slice('\0pops-pillar-ui-source:'.length);
+      const entry = sourceEntry(repoRoot, pillarId);
+      if (!existsSync(entry)) throw new Error(`no source remote entry for '${pillarId}'`);
+      return sourceModuleSource(repoRoot, pillarId);
+    },
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const parsed = req.url === undefined ? undefined : parseUiRequest(req.url);
-        if (parsed === undefined) {
-          next();
-          return;
-        }
-
-        const bundleDir = path.join(repoRoot, 'pillars', parsed.pillarId, 'app/dist/remote');
-        const file = path.join(bundleDir, parsed.file);
-        if (!existsSync(file) || !statSync(file).isFile()) {
-          res.statusCode = 404;
-          res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-          res.end(
-            `No built UI bundle for '${parsed.pillarId}' at ${path.relative(repoRoot, file)}.\n` +
-              `Build it with: pnpm --filter @pops/app-${parsed.pillarId} build\n`
-          );
-          return;
-        }
-
-        res.setHeader(
-          'Content-Type',
-          CONTENT_TYPES[path.extname(file)] ?? 'application/octet-stream'
-        );
-        // Nothing here is hashed from the dev server's point of view and a
-        // rebuild replaces the files in place, so every response revalidates.
-        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-        createReadStream(file).pipe(res);
-      });
+      configureUiAssets(server, repoRoot, sourcePillars);
     },
   };
 }
 
-/** Exposed for `vite-plugin-pillar-ui-dev.test.ts`; not part of the plugin. */
-export const pillarUiDevInternals = { parseUiRequest };
+/** Test-only internals; not part of the Vite plugin API. */
+export {
+  attachPublishedReleaseReload,
+  isPublishedReleasePointer,
+  parseUiRequest,
+  publishedBundleFile,
+  releasePathFor,
+  releaseUrl,
+  reloadForPublishedRelease,
+  sourceModuleId,
+  sourceModuleSource,
+  sourcePillarsFrom,
+} from './pillar-ui-dev-paths.js';
