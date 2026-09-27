@@ -105,9 +105,10 @@ function sameFields(a: ItemDraft, b: ItemDraft): boolean {
   return normalizedFields(a) === normalizedFields(b);
 }
 
-/** Returns whether cancelling would discard work not present at opening. */
-export function hasStagedWork(draft: ItemDraft, initial: ItemDraft): boolean {
+/** Returns whether cancelling would discard draft or photo work not present at opening. */
+export function hasStagedWork(draft: ItemDraft, initial: ItemDraft, photoWorkCount = 0): boolean {
   return (
+    photoWorkCount > 0 ||
     draft.name !== initial.name ||
     draft.typeId !== initial.typeId ||
     draft.quantity !== initial.quantity ||

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { downloadCsv } from '../../foundation/list-page/inventory-csv.js';
 import { commitWithProgress } from '../../inventory-web/batch-commit.js';
@@ -29,8 +29,14 @@ export type { ImportIssue, ImportPhase, ImportRowResult, ImportState } from './i
 
 type SetImportData = Dispatch<SetStateAction<ImportData>>;
 
-async function loadImport(file: File, setData: SetImportData): Promise<void> {
+interface LoadRequest {
+  readonly generation: number;
+  readonly currentGeneration: () => number;
+}
+
+async function loadImport(file: File, setData: SetImportData, request: LoadRequest): Promise<void> {
   const parsed = readCsv(await file.text());
+  if (request.currentGeneration() !== request.generation) return;
   const refusal = fileRefusal(file.name, parsed);
   if (refusal !== null) {
     setData({ ...initialImportData(), refused: refusal });
@@ -135,10 +141,18 @@ function downloadSkippedRows(data: ImportData): void {
 /** Owns CSV parsing, mapping, server validation, partial commit, and undo state. */
 export function useImport(): ImportState {
   const [data, setData] = useState<ImportData>(initialImportData);
+  const loadGeneration = useRef(0);
   const { validate, commit: create } = useBatchCreate();
   const deleteCreated = useDeleteCreated();
 
-  const load = useCallback((file: File) => loadImport(file, setData), []);
+  const load = useCallback((file: File): Promise<void> => {
+    const generation = loadGeneration.current + 1;
+    loadGeneration.current = generation;
+    return loadImport(file, setData, {
+      generation,
+      currentGeneration: () => loadGeneration.current,
+    });
+  }, []);
   const setTarget = useCallback(
     (columnIndex: number, target: ColumnTarget) => changeTarget(setData, columnIndex, target),
     []

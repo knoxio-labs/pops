@@ -22,7 +22,7 @@ const OPTIONS: SelectOption[] = TARGETS.map((target) => ({
 export interface MappingStepProps {
   mapping: readonly ColumnMapping[];
   rows: readonly (readonly string[])[];
-  /** Header-target pairs from the initial automatic guess. */
+  /** Column-target pairs from the initial automatic guess. */
   guessed: ReadonlySet<string>;
   /** Receives a source-column index and mapping selection without casting the native select value. */
   onTarget: (index: number, target: ColumnTarget) => void;
@@ -124,7 +124,7 @@ export function MappingStep({ mapping, rows, guessed, onTarget }: MappingStepPro
               column={column}
               index={index}
               samples={rows.slice(0, 4).map((cells) => sample(cells[index]))}
-              guessed={guessed.has(`${column.header}:${column.target}`)}
+              guessed={guessed.has(`${String(index)}:${column.target}`)}
               onTarget={onTarget}
             />
           ))}

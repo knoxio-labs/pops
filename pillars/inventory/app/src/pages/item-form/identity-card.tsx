@@ -8,6 +8,7 @@ import { CodeField } from './code-field';
 import { CountAndPlace } from './count-and-place';
 import { draftRow } from './form-opening';
 import { IdentityFields } from './identity-fields';
+import { PhotosField } from './photos-field';
 
 import type { ReactElement } from 'react';
 
@@ -108,6 +109,13 @@ function IdentityCardContent({
         onQuantity={(value) => api.dispatch({ type: 'quantity', value })}
         onPick={onPick}
         onCreatePlace={onCreatePlace}
+      />
+      <PhotosField
+        photos={api.photos.queue}
+        refused={api.photos.refused}
+        onRemove={api.photos.remove}
+        onRetry={api.photos.retry}
+        onFiles={api.photos.add}
       />
     </CardContent>
   );
