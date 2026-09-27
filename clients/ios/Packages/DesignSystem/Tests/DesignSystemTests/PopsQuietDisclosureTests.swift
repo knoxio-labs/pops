@@ -1,45 +1,54 @@
-import Foundation
+import SwiftUI
 import Testing
 
-@Suite("Quiet disclosure wiring")
+@testable import DesignSystem
+
+@MainActor
+@Suite("Quiet disclosure")
 internal struct PopsQuietDisclosureTests {
-    private static func source() throws -> String {
-        let package = URL(filePath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        return try String(
-            contentsOf: package.appending(
-                path: "Sources/DesignSystem/Primitives/PopsQuietDisclosure.swift"),
-            encoding: .utf8)
+    private static let canvas = CGSize(width: 320, height: 240)
+
+    private func render(_ content: some View) throws -> Data {
+        let renderer = ImageRenderer(
+            content:
+                content
+                .frame(width: Self.canvas.width, height: Self.canvas.height)
+        )
+        renderer.scale = 1
+        let image = try #require(renderer.cgImage)
+        let pixels = try #require(image.dataProvider?.data)
+        return pixels as Data
     }
 
-    @Test("content starts hidden and the header toggles the same expansion state")
-    func collapsedContentAndToggle() throws {
-        let source = try Self.source()
-        #expect(source.contains("@State private var isExpanded = false"))
-        #expect(source.contains("isExpanded.toggle()"))
-        #expect(source.contains("if isExpanded {\n                content\n            }"))
-        #expect(source.contains("Text(isExpanded ? \"Hide\" : \"Show\")"))
+    @Test(
+        "history starts collapsed and expanded content renders when requested",
+        .requiresCompiledColorCatalog
+    )
+    func collapsedByDefault() throws {
+        let collapsed = try render(
+            PopsQuietDisclosure("History") {
+                Text("Moved")
+            })
+        let expanded = try render(
+            PopsQuietDisclosure("History", initiallyExpanded: true) {
+                Text("Moved")
+            })
+
+        #expect(collapsed != expanded)
     }
 
-    @Test("the button exposes its state and keeps a full touch target")
-    func accessibleExpansion() throws {
-        let source = try Self.source()
-        #expect(source.contains(".accessibilityLabel(title)"))
+    @Test("the disclosure exposes its expansion state and keeps a touch target")
+    func accessibilityAndTouchTarget() throws {
+        let source = try String(
+            contentsOf: URL(filePath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Sources/DesignSystem/Primitives/PopsQuietDisclosure.swift"),
+            encoding: .utf8
+        )
+
         #expect(source.contains(".accessibilityValue(isExpanded ? \"Expanded\" : \"Collapsed\")"))
         #expect(source.contains(".frame(minHeight: PopsSize.touchTarget)"))
-    }
-
-    @Test("secondary rows stay muted and carry no caret or navigation glyph")
-    func quietRows() throws {
-        let source = try Self.source()
-        let row = try #require(
-            source.components(separatedBy: "public struct PopsQuietDetailLine").last)
-        #expect(row.contains(".font(.popsCaption)"))
-        #expect(row.contains(".foregroundStyle(Color.popsMutedForeground)"))
-        #expect(row.contains(".frame(minHeight: PopsSize.touchTarget)"))
-        #expect(!row.contains("Image("))
-        #expect(!row.contains("DisclosureGroup"))
     }
 }

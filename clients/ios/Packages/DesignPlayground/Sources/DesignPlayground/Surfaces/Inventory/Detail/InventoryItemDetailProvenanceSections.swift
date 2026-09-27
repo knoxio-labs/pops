@@ -81,7 +81,7 @@ internal struct InventoryItemDetailHistorySection: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, PopsSpacing.xxl)
+            .padding(.horizontal, PopsSpacing.lg)
             .sheet(item: $viewing) { entry in
                 InventoryHistoryEventSheet(entry: entry)
             }

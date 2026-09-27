@@ -7,9 +7,16 @@ public struct PopsQuietDisclosure<Content: View>: View {
     @State private var isExpanded = false
 
     /// Creates a section whose expansion lasts for this view's lifetime.
-    public init(_ title: String, @ViewBuilder content: () -> Content) {
+    /// The default presentation is collapsed; `initiallyExpanded` is useful
+    /// for a staged state that should open on first render.
+    public init(
+        _ title: String,
+        initiallyExpanded: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
         self.content = content()
+        self._isExpanded = State(initialValue: initiallyExpanded)
     }
 
     public var body: some View {
