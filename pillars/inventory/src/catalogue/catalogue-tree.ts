@@ -13,6 +13,8 @@ export const MAX_TYPE_TREE_DEPTH = 3;
 export interface TypeChain {
   readonly ancestorIds: readonly string[];
   readonly stop: 'root' | 'missing_parent' | 'cycle';
+  /** The first parent id absent from the type list, when the walk stops there. */
+  readonly missingParentId?: string;
 }
 
 /** Walks a type's parent chain without throwing or looping on malformed input. */
@@ -25,10 +27,12 @@ export function typeChain(types: readonly TypeTreeNode[], typeId: string): TypeC
   const ancestors: string[] = [];
   let current = start;
   let stop: TypeChain['stop'] = 'root';
+  let missingParentId: string | undefined;
   while (current.parentTypeId !== null) {
     const parent = byId.get(current.parentTypeId);
     if (parent === undefined) {
       stop = 'missing_parent';
+      missingParentId = current.parentTypeId;
       break;
     }
     if (seen.has(parent.id)) {
@@ -39,7 +43,11 @@ export function typeChain(types: readonly TypeTreeNode[], typeId: string): TypeC
     ancestors.push(parent.id);
     current = parent;
   }
-  return { ancestorIds: ancestors.toReversed(), stop };
+  return {
+    ancestorIds: ancestors.toReversed(),
+    stop,
+    ...(missingParentId === undefined ? {} : { missingParentId }),
+  };
 }
 
 /** Returns the root-first ancestor ids of a type. */

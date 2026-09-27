@@ -9,6 +9,7 @@ function parentChainIssues(
   type: PersistedItemType
 ): CatalogueIssue[] {
   const chain = typeChain(catalogue.types, type.id);
+  const { ancestorIds, missingParentId } = chain;
   const issues: CatalogueIssue[] = [];
   if (chain.stop === 'missing_parent') {
     issues.push(
@@ -16,7 +17,7 @@ function parentChainIssues(
         type.id,
         'parentTypeId',
         'type_parent_unknown',
-        `Parent type ${type.parentTypeId} does not exist`
+        `Parent type ${missingParentId ?? ancestorIds[ancestorIds.length - 1] ?? type.parentTypeId} does not exist`
       )
     );
   }
