@@ -54,11 +54,23 @@ internal enum InventoryPrefillValidator {
     }
 
     private static func groundedFlag(_ flag: Bool, in source: InventoryPrefillSource) -> Bool {
-        let expected = flag ? ["true", "yes", "present"] : ["false", "no", "absent"]
-        let evidence = evidenceTokens(in: source)
-        return expected.contains { expected in
-            evidence.contains { tokens in tokens.contains(expected) }
+        evidenceTokens(in: source).contains { tokens in
+            tokens.indices.contains { index in
+                booleanValue(in: tokens, at: index) == flag
+            }
         }
+    }
+
+    private static func booleanValue(in tokens: [String], at index: Int) -> Bool? {
+        let value: Bool
+        switch tokens[index] {
+        case "true", "yes", "present": value = true
+        case "false", "no", "absent": value = false
+        default: return nil
+        }
+
+        guard index > 0, tokens[index - 1] == "not" else { return value }
+        return !value
     }
 
     private static func evidenceContains(_ candidate: String, in source: InventoryPrefillSource)

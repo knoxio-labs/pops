@@ -149,6 +149,29 @@ internal struct InventoryPrefillValidatorTests {
                 ])
     }
 
+    @Test("boolean values require grounded polarity")
+    func groundsBooleanValues() {
+        let field = InventoryPrefillTestSupport.field(id: "boolean", kind: .boolean)
+        let fields = [field]
+
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["boolean": .flag(true)], fields: fields,
+                source: .text(["Battery: present"])) == ["boolean": [.boolean(true)]])
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["boolean": .flag(false)], fields: fields,
+                source: .text(["Battery: present"])).isEmpty)
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["boolean": .flags([false])], fields: fields,
+                source: .text(["Battery: not present"])) == ["boolean": [.boolean(false)]])
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["boolean": .flag(true)], fields: fields,
+                source: .text(["Battery: not present"])).isEmpty)
+    }
+
     @Test("a single value can be supplied to a many-valued field")
     func oneTextForMany() {
         let field = InventoryPrefillTestSupport.field(id: "many", cardinality: .many)
