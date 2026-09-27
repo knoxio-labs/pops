@@ -25,8 +25,13 @@ scripts_decision=$(printf '%s\n' "$output" | sed -n '2p')
 without_repo_locating_git_env() {
   # Git and Husky inject helper paths before invoking hooks. Restore the
   # caller's path so identical manual and hook checks can share evidence.
-  validation_task_path=${PATH#node_modules/.bin:}
+  validation_task_path=$PATH
   if [ -n "${GIT_EXEC_PATH:-}" ]; then
+    validation_task_path=${validation_task_path#"$GIT_EXEC_PATH":}
+  fi
+  validation_git_first_path=$validation_task_path
+  validation_task_path=${validation_task_path#node_modules/.bin:}
+  if [ "$validation_git_first_path" = "$PATH" ] && [ -n "${GIT_EXEC_PATH:-}" ]; then
     validation_task_path=${validation_task_path#"$GIT_EXEC_PATH":}
   fi
   env \

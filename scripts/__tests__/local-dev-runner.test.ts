@@ -11,6 +11,7 @@ import { runTasks } from '../local-dev/run-all.mjs';
 const temporaryRoots: string[] = [];
 
 function fixtureRoot(): string {
+  mkdirSync(join(process.cwd(), 'tmp'), { recursive: true });
   const root = mkdtempSync(join(process.cwd(), 'tmp', 'local-dev-runner-'));
   temporaryRoots.push(root);
   return root;

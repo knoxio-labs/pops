@@ -25,6 +25,7 @@ afterEach(async () => {
 });
 
 async function temporaryApp(): Promise<string> {
+  await mkdir(path.join(process.cwd(), 'tmp'), { recursive: true });
   const temporaryRoot = await mkdtemp(path.join(process.cwd(), 'tmp', 'ui-remote-watch-'));
   temporaryDirectories.push(temporaryRoot);
   const appRoot = path.join(temporaryRoot, 'app');
