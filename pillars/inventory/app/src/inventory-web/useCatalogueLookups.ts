@@ -28,7 +28,12 @@ export interface CatalogueLookups {
   readonly isPending: boolean;
   readonly error: unknown | null;
   readonly refetch: () => void;
+  readonly revision: number | null;
+  readonly status: 'pending' | 'error' | 'success';
 }
+
+/** The combined published catalogue state used by Type arrived and repair actions. */
+export type PublishedCatalogue = CatalogueLookups;
 
 /** Reads the published catalogue through the cache key shared with the editor. */
 export function useCatalogue() {
@@ -65,11 +70,13 @@ export function useCatalogueLookups(): CatalogueLookups {
     refetch: () => {
       void catalogueQuery.refetch();
     },
+    revision: catalogueQuery.data?.revision.revision ?? null,
+    status: catalogueQuery.status,
   };
 }
 
 /** Provides the published catalogue and revision metadata for web features. */
-export function usePublishedCatalogue(): CatalogueLookups {
+export function usePublishedCatalogue(): PublishedCatalogue {
   return useCatalogueLookups();
 }
 
