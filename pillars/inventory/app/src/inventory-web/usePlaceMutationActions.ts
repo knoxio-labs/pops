@@ -12,7 +12,7 @@ import { placeMutationSupport } from './usePlaceMutationSupport.js';
 import type { QueryClient } from '@tanstack/react-query';
 
 import type { BulkItemVerbs } from './item-verbs-bulk.js';
-import type { PlaceRemoval, PlaceUndo } from './usePlaceMutations.js';
+import type { PlaceRemoval, PlaceUndo } from './place-mutation-types.js';
 
 const {
   arrangeWrites,

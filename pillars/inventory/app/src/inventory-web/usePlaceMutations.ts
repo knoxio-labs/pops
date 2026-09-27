@@ -4,19 +4,9 @@ import { useMemo } from 'react';
 import { useBulkItemVerbs } from './item-verbs-bulk.js';
 import { createPlaceActions } from './usePlaceMutationActions.js';
 
-/** The compensating operation exposed by reversible place mutations. */
-export interface PlaceUndo {
-  undo: () => Promise<void>;
-}
+import type { PlaceRemoval, PlaceUndo } from './place-mutation-types.js';
 
-/** The server-side effects planned for deleting one place. */
-export interface PlaceRemoval {
-  placeId: string;
-  mode: 'reparent' | 'to-hand';
-  parentId: string | null;
-  subtreeIds: readonly string[];
-  thingIds: readonly string[];
-}
+export type { PlaceRemoval, PlaceUndo } from './place-mutation-types.js';
 
 /** Place edits and deletion operations backed by the inventory REST API. */
 export interface PlaceMutations {
