@@ -13,8 +13,8 @@ internal struct InventoryPrefillEngineTests {
         let generator = RecordingInventoryPrefillGenerator(
             tokenBudget: 8,
             answers: [
-                ["first": .text("alpha")],
-                ["second": .text("beta")],
+                ["first": .text("a")],
+                ["second": .text("b")],
             ])
         let engine = InventoryPrefillEngine(generator: generator)
 
@@ -23,7 +23,7 @@ internal struct InventoryPrefillEngineTests {
             draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1))
         let requests = await generator.requests
 
-        #expect(result == ["first": [.string("alpha")], "second": [.string("beta")]])
+        #expect(result == ["first": [.string("a")], "second": [.string("b")]])
         #expect(requests.map(\.fieldIDs) == [["first"], ["second"]])
         #expect(requests.map(\.source) == [.text(["a", "b"]), .text(["a", "b"])])
     }
@@ -59,7 +59,7 @@ internal struct InventoryPrefillEngineTests {
         let engine = InventoryPrefillEngine(generator: generator)
 
         let result = await engine.fill(
-            source: .text([]), type: type,
+            source: .text(["kept"]), type: type,
             draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1))
 
         #expect(result == ["field": [.string("kept")]])
@@ -67,17 +67,17 @@ internal struct InventoryPrefillEngineTests {
 
     @Test("a failed chunk does not discard successful chunks")
     func failedChunkDoesNotDiscardSuccessfulChunks() async {
-        let first = InventoryPrefillTestSupport.field(id: "first", label: "one", sortOrder: 0)
-        let second = InventoryPrefillTestSupport.field(id: "second", label: "two", sortOrder: 1)
+        let first = InventoryPrefillTestSupport.field(id: "first", label: "first", sortOrder: 0)
+        let second = InventoryPrefillTestSupport.field(id: "second", label: "second", sortOrder: 1)
         let type = InventoryPrefillTestSupport.type(fields: [first, second])
         let generator = RecordingInventoryPrefillGenerator(
-            tokenBudget: 5,
+            tokenBudget: 12,
             answers: [[:], ["second": .text("kept")]],
             failures: [0])
         let engine = InventoryPrefillEngine(generator: generator)
 
         let result = await engine.fill(
-            source: .text([]), type: type,
+            source: .text(["kept"]), type: type,
             draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1))
 
         #expect(result == ["second": [.string("kept")]])
@@ -96,5 +96,22 @@ internal struct InventoryPrefillEngineTests {
 
         #expect(result.isEmpty)
         #expect(await generator.requests.isEmpty)
+    }
+
+    @Test("the universal name can be requested alongside type fields")
+    func includesNameWhenRequested() async {
+        let detail = InventoryPrefillTestSupport.field(id: "detail")
+        let type = InventoryPrefillTestSupport.type(fields: [detail])
+        let generator = RecordingInventoryPrefillGenerator(
+            tokenBudget: 100,
+            answers: [[InventoryPrefillName.id: .text("Fortaleza Digital")]])
+        let engine = InventoryPrefillEngine(generator: generator)
+
+        let result = await engine.fill(
+            source: .text(["Fortaleza Digital"]), type: type,
+            draft: InventoryProtocol2Draft(type: type, catalogueRevision: 1), includeName: true)
+
+        #expect(result == [InventoryPrefillName.id: [.string("Fortaleza Digital")]])
+        #expect(await generator.requests.map(\.fieldIDs) == [[InventoryPrefillName.id, "detail"]])
     }
 }

@@ -116,6 +116,39 @@ internal struct InventoryPrefillValidatorTests {
             ])
     }
 
+    @Test("values absent from captured facts are rejected")
+    func rejectsUngroundedValues() {
+        let useOption = InventoryPrefillTestSupport.option(
+            id: "electrical", label: "Electrical")
+        let destinationOption = InventoryPrefillTestSupport.option(
+            id: "storage", label: "Storage")
+        let fields = [
+            InventoryPrefillTestSupport.field(id: "name", label: "Name"),
+            InventoryPrefillTestSupport.field(id: "length", label: "Length"),
+            InventoryPrefillTestSupport.field(
+                id: "destination", label: "Destination", kind: .enumeration,
+                enumOptions: [destinationOption]),
+            InventoryPrefillTestSupport.field(
+                id: "use", label: "Use", kind: .enumeration, enumOptions: [useOption]),
+        ]
+        let raw: [String: InventoryPrefillRawValue] = [
+            "name": .text("Fortaleza Digital"),
+            "length": .text("999"),
+            "destination": .text("Storage"),
+            "use": .text("Electrical"),
+        ]
+
+        #expect(
+            InventoryPrefillValidator.validate(
+                raw,
+                fields: fields,
+                source: .text(["Fortaleza Digital", "Dan Brown", "Paperback", "304", "Electrical"]))
+                == [
+                    "name": [.string("Fortaleza Digital")],
+                    "use": [.enumeration(optionId: "electrical")],
+                ])
+    }
+
     @Test("a single value can be supplied to a many-valued field")
     func oneTextForMany() {
         let field = InventoryPrefillTestSupport.field(id: "many", cardinality: .many)

@@ -9,9 +9,12 @@ internal struct InventoryPrefillEngine: Sendable {
 
     internal func fill(
         source: InventoryPrefillSource, type: InventoryCatalogueType,
-        draft: InventoryProtocol2Draft
+        draft: InventoryProtocol2Draft, includeName: Bool = false
     ) async -> [String: [InventoryPrimitiveValue]] {
-        let fields = InventoryPrefillFieldPlan.fillable(fields: type.fields, draft: draft)
+        let plannedFields = includeName
+            ? [InventoryPrefillName.field(typeId: type.id)] + type.fields
+            : type.fields
+        let fields = InventoryPrefillFieldPlan.fillable(fields: plannedFields, draft: draft)
         guard !fields.isEmpty else { return [:] }
 
         let budget = await generator.tokenBudget
@@ -30,7 +33,8 @@ internal struct InventoryPrefillEngine: Sendable {
         for chunk in chunks {
             do {
                 let raw = try await generator.generate(source: facts.source, fields: chunk)
-                let values = InventoryPrefillValidator.validate(raw, fields: chunk)
+                let values = InventoryPrefillValidator.validate(
+                    raw, fields: chunk, source: facts.source)
                 result.merge(values, uniquingKeysWith: { _, new in new })
             } catch {
                 continue
