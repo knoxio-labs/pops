@@ -55,6 +55,81 @@ describe('local affected selection', { timeout: 60_000 }, () => {
       unitPaths: units.map((u) => u.unitPath).toSorted(),
     });
   });
+  it.each([
+    'README.md',
+    'docs/architecture/adr-001-example.md',
+    'pillars/finance/README.md',
+    'pillars/finance/docs/operations.md',
+  ])('skips product validation for plain documentation %s', (path) => {
+    expect(affectedUnits(units, [path])).toMatchObject({
+      full: false,
+      scripts: false,
+      unitPaths: [],
+    });
+  });
+  it.each([
+    'pillars/finance/src/contracts/README.md',
+    'pillars/finance/src/contract/README.md',
+    'pillars/finance/openapi/README.md',
+    'pillars/finance/docs/guide.mdx',
+  ])('does not classify executable or contract documentation %s as plain documentation', (path) => {
+    expect(affectedUnits(units, [path]).full).toBe(true);
+  });
+  it('selects an owning unit for Markdown used as source or fixture input', () => {
+    expect(affectedUnits(units, ['pillars/finance/src/content.md']).unitPaths).toEqual([
+      'pillars/finance',
+      'pillars/finance/app',
+    ]);
+    expect(affectedUnits(units, ['pillars/finance/tests/fixtures/input.md']).unitPaths).toEqual([
+      'pillars/finance',
+      'pillars/finance/app',
+    ]);
+    expect(affectedUnits(units, ['pillars/finance/tests/fixtures/README.md']).unitPaths).toEqual([
+      'pillars/finance',
+      'pillars/finance/app',
+    ]);
+    expect(affectedUnits(units, ['pillars/finance/src/__tests__/README.md']).unitPaths).toEqual([
+      'pillars/finance',
+      'pillars/finance/app',
+    ]);
+  });
+  it('selects the executable documentation site for its Markdown content', () => {
+    const graph = [
+      ...units,
+      { unitPath: 'pillars/docs', packageName: '@pops/docs', dependencies: [] },
+    ];
+    expect(affectedUnits(graph, ['pillars/docs/src/guide.md']).unitPaths).toEqual(['pillars/docs']);
+    expect(affectedUnits(graph, ['pillars/docs/README.md']).unitPaths).toEqual(['pillars/docs']);
+  });
+  it('checks known standalone root tooling without selecting product units', () => {
+    expect(
+      affectedUnits(units, [
+        'scripts/ci/integration-promote.mjs',
+        'scripts/ci/__tests__/integration-promote.test.ts',
+      ])
+    ).toMatchObject({
+      full: false,
+      scripts: true,
+      unitPaths: [],
+    });
+  });
+  it('keeps unknown and generator scripts conservative', () => {
+    expect(affectedUnits(units, ['scripts/tool.mjs']).full).toBe(true);
+    expect(affectedUnits(units, ['scripts/generate-clients.mjs']).full).toBe(true);
+  });
+  it('unions standalone tooling with changed units and reverse dependencies', () => {
+    expect(
+      affectedUnits(units, [
+        'scripts/ci/integration-promote.mjs',
+        'libs/ui/src/button.tsx',
+        'pillars/finance/README.md',
+      ])
+    ).toMatchObject({
+      full: false,
+      scripts: true,
+      unitPaths: ['libs/ui', 'pillars/finance/app', 'pillars/media/app'],
+    });
+  });
   it('widens on unavailable history and remains empty for an empty diff', () => {
     expect(affectedUnits(units, null).full).toBe(true);
     expect(affectedUnits(units, []).unitPaths).toEqual([]);
