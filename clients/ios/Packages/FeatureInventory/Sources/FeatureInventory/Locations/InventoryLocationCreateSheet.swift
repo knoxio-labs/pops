@@ -11,6 +11,7 @@ import SwiftUI
 internal struct InventoryLocationCreateSheet: View {
     internal let tree: InventoryLocationTree
     internal let runner: InventoryCommandRunner
+    internal let onCreated: @MainActor () -> Void
     @State private var name: String
     @State private var parent: InventoryDestination?
     @State private var choosingParent = false
@@ -20,10 +21,11 @@ internal struct InventoryLocationCreateSheet: View {
 
     internal init(
         tree: InventoryLocationTree, runner: InventoryCommandRunner, parentID: String? = nil,
-        name: String = ""
+        name: String = "", onCreated: @escaping @MainActor () -> Void = {}
     ) {
         self.tree = tree
         self.runner = runner
+        self.onCreated = onCreated
         _name = State(initialValue: name)
         _parent = State(
             initialValue: parentID.flatMap { tree.node($0) }.map {
@@ -113,6 +115,7 @@ internal struct InventoryLocationCreateSheet: View {
             sortOrder: tree.children(of: parentID).count)
         if await runner.perform([.createLocation(newLocation)]) != nil {
             dismiss()
+            onCreated()
         }
     }
 }
