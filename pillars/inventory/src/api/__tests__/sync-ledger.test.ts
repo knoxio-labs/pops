@@ -17,6 +17,8 @@ type WebSyncLedger = z.infer<typeof WebSyncLedgerResponseSchema>;
 let h: SyncHarness;
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-26T12:00:00.000Z'));
   h = openSyncHarness(transport, { verify: granting(['inventory.sync']) });
 });
 
@@ -165,6 +167,7 @@ describe('device sync ledger', () => {
 
     expect((await postLedger(first)).body).toEqual({ stored: true });
     const afterFirst = await readLedger();
+    vi.setSystemTime(new Date('2026-09-26T12:01:00.000Z'));
     expect((await postLedger(second)).body).toEqual({ stored: true });
     const afterSecond = await readLedger();
     expect(afterSecond.attention.map((entry) => entry.id)).toEqual(['second']);

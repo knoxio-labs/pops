@@ -87,7 +87,20 @@ name: Inventory downloads, then creates, moves, discards and undoes against the 
 - tapOn:
     text: 'Move'
     index: 0
+- scrollUntilVisible:
+    element: 'History, Collapsed'
+    direction: DOWN
+- assertNotVisible: 'Moved, Today'
+- tapOn: 'History, Collapsed'
+- assertVisible: 'History, Expanded'
 - assertVisible: 'Moved, Today'
+- tapOn: 'History, Expanded'
+- assertNotVisible: 'Moved, Today'
+- tapOn: 'History, Collapsed'
+- assertVisible: 'Moved, Today'
+- scrollUntilVisible:
+    element: 'More'
+    direction: UP
 
 # Discard, with a reason, which the item's status line then states.
 - tapOn: 'More'

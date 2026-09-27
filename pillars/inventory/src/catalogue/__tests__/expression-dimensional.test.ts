@@ -9,7 +9,7 @@ import {
   expressionType,
 } from './expression-test-fixtures.js';
 
-import type { PersistedItemTypeField } from '../catalogue-types.js';
+import type { UnresolvedItemTypeField } from '../catalogue-types.js';
 import type { ExpressionSnapshotItem, SnapshotFieldValue } from '../expression-types.js';
 import type { PrimitiveKind } from '../value-types.js';
 
@@ -25,7 +25,7 @@ function over(left: unknown, right: unknown) {
   return { op: 'divide', left, right };
 }
 
-function measured(id: string, fixedUnit: string): PersistedItemTypeField {
+function measured(id: string, fixedUnit: string): UnresolvedItemTypeField {
   return expressionField({ id, key: id, kind: 'measurement', fixedUnit });
 }
 
@@ -44,7 +44,7 @@ function computed(
   kind: PrimitiveKind,
   fixedUnit: string | null,
   expressionVersion = 2
-): PersistedItemTypeField {
+): UnresolvedItemTypeField {
   return expressionField({
     expressionJson: JSON.stringify(expression),
     expressionVersion,
@@ -56,7 +56,7 @@ function computed(
   });
 }
 
-function validate(field: PersistedItemTypeField) {
+function validate(field: UnresolvedItemTypeField) {
   const [validated] = validateCatalogueExpressions(
     expressionCatalogue([expressionType('type', [...box, field])])
   );
