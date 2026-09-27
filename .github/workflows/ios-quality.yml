@@ -295,9 +295,12 @@ jobs:
       # below, which remains cold so the analyzer sees every source file. An
       # exact hit reuses products for unchanged iOS sources; a manifest-only
       # restore gives SwiftPM an incremental starting point and SwiftPM still
-      # validates every input before executing the tests.
-      - name: Cache host-toolchain package builds
-        uses: actions/cache@v6
+      # validates every input before executing the tests. Restore and save are
+      # separate so a successful host suite publishes its products before a
+      # later simulator failure can suppress a combined cache action's post job.
+      - name: Restore host-toolchain package builds
+        id: host-package-cache
+        uses: actions/cache/restore@v6
         with:
           path: clients/ios/Packages/*/.build
           key: host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved', 'clients/ios/Packages/*/Sources/**', 'clients/ios/Packages/*/Tests/**') }}
@@ -313,6 +316,13 @@ jobs:
       # step takes, not after the rest of the job's compile.
       - name: Test packages (host toolchain)
         run: mise run test:packages
+
+      - name: Save host-toolchain package builds
+        if: success() && steps.host-package-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: clients/ios/Packages/*/.build
+          key: ${{ steps.host-package-cache.outputs.cache-primary-key }}
 
       - name: Generate Pops.xcodeproj
         run: mise run generate
