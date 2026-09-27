@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import { isNotFoundError } from '../../inventory-api-helpers.js';
+import { isNotFoundError, isUnavailableError } from '../../inventory-api-helpers.js';
 import { usePendingItemIds } from '../../inventory-web/item-verbs.js';
 import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { useWebEvents } from '../../inventory-web/useWebEvents.js';
@@ -12,12 +12,47 @@ import {
   connectionsFor,
   displayItem,
   documentsFor,
+  itemDetailBannerState,
   paperlessFor,
   retryReads,
   statusFor,
 } from './use-item-detail-state';
 
 import type { ItemDetailModel } from './detail-model';
+import type { ItemDetailBannerState } from './use-item-detail-state';
+
+function itemDetailReadSignals(
+  detailQuery: ReturnType<typeof useWebItemDetail>,
+  events: ReturnType<typeof useWebEvents>,
+  sources: ReturnType<typeof useConnectionSources>,
+  auxiliary: ReturnType<typeof useAuxiliaryQueries>
+) {
+  const hasPending = [
+    detailQuery.isPending,
+    events.status === 'pending',
+    sources.graphQuery.isPending,
+    sources.related.isLoading,
+    auxiliary.documentsQuery.isPending,
+    auxiliary.paperlessQuery.isPending,
+    auxiliary.fixtureLinksQuery.isPending,
+    auxiliary.fixturesQuery.isPending,
+  ].some(Boolean);
+  const failures = [
+    { failed: events.status === 'error', error: events.error },
+    { failed: sources.graphQuery.isError, error: sources.graphQuery.error },
+    { failed: sources.related.isError, error: sources.related.error },
+    { failed: auxiliary.documentsQuery.isError, error: auxiliary.documentsQuery.error },
+    { failed: auxiliary.paperlessQuery.isError, error: auxiliary.paperlessQuery.error },
+    { failed: auxiliary.fixtureLinksQuery.isError, error: auxiliary.fixtureLinksQuery.error },
+    { failed: auxiliary.fixturesQuery.isError, error: auxiliary.fixturesQuery.error },
+  ].filter((failure) => failure.failed);
+  return {
+    hasPending,
+    hasUnavailable:
+      failures.length > 0 && failures.every((failure) => isUnavailableError(failure.error)),
+    hasError: failures.some((failure) => !isUnavailableError(failure.error)),
+  };
+}
 
 /** The stable read states exposed by the item-detail data hook. */
 export type ItemDetailStatus = 'loading' | 'error' | 'not-found' | 'ready';
@@ -27,6 +62,7 @@ export interface ItemDetailModelState {
   status: ItemDetailStatus;
   error: unknown | null;
   model: ItemDetailModel | null;
+  banner: ItemDetailBannerState | null;
   retry: () => void;
 }
 
@@ -60,9 +96,13 @@ export function useItemDetailModel(id: string): ItemDetailModelState {
   const primaryError = sources.primary.isError ? sources.primary.error : null;
   const error = detailQuery.error ?? primaryError ?? null;
   const status: ItemDetailStatus = statusFor(id, notFound, error, model);
+  const banner = itemDetailBannerState(
+    model,
+    itemDetailReadSignals(detailQuery, events, sources, auxiliary)
+  );
   const retry = useCallback(
     () => retryReads({ id, detailQuery, sources, auxiliary, events }),
     [auxiliary, detailQuery, events, id, sources]
   );
-  return { status, error, model, retry };
+  return { status, error, model, banner, retry };
 }

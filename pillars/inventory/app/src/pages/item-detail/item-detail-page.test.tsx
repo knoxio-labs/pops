@@ -7,8 +7,10 @@ import { AppContextProvider } from '@pops/navigation';
 
 import { buildWorld } from '../../foundation/model/placement-model';
 import { ShortcutProvider } from '../../foundation/shortcuts/shortcut-provider';
+import { InventoryApiError } from '../../inventory-api-helpers.js';
 import { listTrailState } from '../../inventory-web/list-trail';
 import { ItemDetailPage } from './item-detail-page';
+import { itemDetailBannerState } from './use-item-detail-state';
 
 import type { ReactElement } from 'react';
 
@@ -97,6 +99,7 @@ beforeEach(() => {
     status: 'ready',
     error: null,
     model,
+    banner: null,
     retry: vi.fn(),
   });
 });
@@ -116,6 +119,7 @@ describe('ItemDetailPage', () => {
       status: 'error',
       error: new Error('offline'),
       model: null,
+      banner: null,
       retry,
     });
     renderPage();
@@ -126,11 +130,96 @@ describe('ItemDetailPage', () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
+  it('renders the loading state before the item model exists', () => {
+    mocks.useItemDetailModel.mockReturnValue({
+      status: 'loading',
+      error: null,
+      model: null,
+      banner: null,
+      retry: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(screen.getByRole('status', { name: 'Loading item' })).toBeInTheDocument();
+  });
+
+  it('renders a partial banner while keeping the loaded item usable', () => {
+    const retry = vi.fn();
+    mocks.useItemDetailModel.mockReturnValue({
+      status: 'ready',
+      error: null,
+      model: { ...model, aggregate: null },
+      banner: 'partial',
+      retry,
+    });
+
+    renderPage();
+
+    expect(screen.getByText('Some item details are still loading.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Desk lamp' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('renders an unavailable banner with the approved offline copy', () => {
+    const retry = vi.fn();
+    mocks.useItemDetailModel.mockReturnValue({
+      status: 'ready',
+      error: null,
+      model,
+      banner: 'unavailable',
+      retry,
+    });
+
+    renderPage();
+
+    expect(screen.getByText('No connection. Showing what loaded.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('renders an error banner for a failed optional read', () => {
+    const retry = vi.fn();
+    mocks.useItemDetailModel.mockReturnValue({
+      status: 'ready',
+      error: null,
+      model,
+      banner: 'error',
+      retry,
+    });
+
+    renderPage();
+
+    expect(screen.getByText('Some item details did not load.')).toBeInTheDocument();
+    expect(
+      screen.getByText('The inventory service returned an error. Nothing was changed.')
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('uses the unavailable state for an unavailable lead read', () => {
+    mocks.useItemDetailModel.mockReturnValue({
+      status: 'error',
+      error: new InventoryApiError('inventory unavailable', 503),
+      model: null,
+      banner: null,
+      retry: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(screen.getByRole('heading', { name: 'This item is unavailable' })).toBeInTheDocument();
+    expect(screen.getByText('No connection. Showing what loaded.')).toBeInTheDocument();
+  });
+
   it('renders destroyed items as read-only', () => {
     mocks.useItemDetailModel.mockReturnValue({
       status: 'ready',
       error: null,
       model: { ...model, item: { ...item, lifecycle: 'destroyed' } },
+      banner: null,
       retry: vi.fn(),
     });
     renderPage();
@@ -143,10 +232,12 @@ describe('ItemDetailPage', () => {
       status: 'not-found',
       error: null,
       model: null,
+      banner: null,
       retry: vi.fn(),
     });
     renderPage('/inventory/items/missing');
     expect(screen.getByRole('heading', { name: 'This item no longer exists' })).toBeInTheDocument();
+    expect(screen.getByText(/Its code may belong to something else now\./)).toBeInTheDocument();
   });
 
   it('opens the edit form from the header without changing the item action contract', () => {
@@ -187,6 +278,7 @@ describe('ItemDetailPage', () => {
         ...model,
         item: { ...item, container: { access: 'open', full: false } },
       },
+      banner: null,
       retry: vi.fn(),
     });
     renderPage();
@@ -194,5 +286,26 @@ describe('ItemDetailPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Store here' }));
 
     expect(screen.getByTestId('store-here-target')).toHaveTextContent('Desk lamp');
+  });
+
+  it('keeps the partial boundary at any missing deferred read', () => {
+    expect(
+      itemDetailBannerState(model, { hasPending: false, hasUnavailable: false, hasError: false })
+    ).toBeNull();
+    expect(
+      itemDetailBannerState(
+        { ...model, eventCount: null },
+        { hasPending: false, hasUnavailable: false, hasError: false }
+      )
+    ).toBe('partial');
+    expect(
+      itemDetailBannerState(model, { hasPending: false, hasUnavailable: true, hasError: false })
+    ).toBe('unavailable');
+    expect(
+      itemDetailBannerState(model, { hasPending: false, hasUnavailable: true, hasError: true })
+    ).toBe('error');
+    expect(
+      itemDetailBannerState(null, { hasPending: true, hasUnavailable: true, hasError: true })
+    ).toBeNull();
   });
 });
