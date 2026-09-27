@@ -500,6 +500,25 @@ describe('the live repo', () => {
 });
 
 describe('the guard catches each way the wiring goes inert', () => {
+  it('keeps optional cancellation observation disjoint from required verdict inputs', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (source) =>
+      source.replace(
+        'const cancellationOnly = ["Promotion Quality"];',
+        'const cancellationOnly = ["Quality"];'
+      )
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'must not be both gated and cancellation-only'
+    );
+  });
+
+  it('requires a trigger for every cancellation-only workflow', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (source) => source.replace('      - "Promotion Quality"\n', ''));
+    expect(checkCiGateWiring(root).join('\n')).toContain('has no observer trigger');
+  });
+
   it('flags a workflow that fires the gate but is not in `gated`', () => {
     const root = cloneWorkflows();
     patch(root, 'ci-gate.yml', (s) => s.replace('              "iOS Quality",\n', ''));

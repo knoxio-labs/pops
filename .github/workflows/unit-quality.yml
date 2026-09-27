@@ -1,4 +1,5 @@
 name: Unit Quality
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Single disk-discovered matrix gating every buildable unit under
 # `pillars/` + `libs/` (maxdepth 1), TS and Rust. Replaces the per-lib

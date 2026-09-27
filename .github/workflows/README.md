@@ -5,7 +5,9 @@ Every workflow YAML file in this directory is documented here exactly once: as a
 ## `ci-gate.yml` — the one static aggregate context
 
 `ci-gate.yml` observes requested, in-progress and completed runs of nine quality
-workflows. It publishes an explicit `CI Gate` check against the observed head SHA;
+workflows. Promotion Quality is an optional cancellation-only observer input: its
+absence never blocks the aggregate, and its own required Promotion validation
+check carries its verdict. The wiring guard keeps those two sets disjoint. It publishes an explicit `CI Gate` check against the observed head SHA;
 its own implicit check belongs to the default branch. The workflow never checks
 out or executes pull request content despite holding `actions: write` and
 `checks: write`.
@@ -23,6 +25,10 @@ out or executes pull request content despite holding `actions: write` and
   description edits also rerun checks; there is no event filter for base-only edits.
 - Only PR and merge-group events publish admission verdicts; a manual dispatch
   or main push cannot overwrite a PR verdict on the same SHA.
+- Fork runs with empty PR associations resolve through the commit-to-PR API,
+  matching source repository, branch and head. Their run titles record the target
+  base explicitly; an older base cannot satisfy a retargeted PR. Ambiguous
+  associations block, and cancellation requires an explicit PR association.
 - Only runs for the same event, PR and base branch contribute; the latest run
   number and attempt wins. Completed runs pass only on `success` or `skipped`.
   Cancellations, unknown conclusions and failures block. Rerunning a failed
