@@ -134,6 +134,13 @@
       "when": 1790600000000,
       "tag": "0023_item_type_parent",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790700000000,
+      "tag": "0024_compact_item_photo_positions",
+      "breakpoints": true
     }
   ]
 }
