@@ -11,28 +11,36 @@ import { describeValues, valuesThatFit } from './sync-model.js';
 
 import type { ReactElement } from 'react';
 
+import type { RepairOutcome } from './repair/repair-outcome.js';
+import type { RepairPlan } from './repair/repair-plan.js';
 import type { ResolvedEntry } from './sync-model.js';
 
-/** Shows the result of a web repair after both sides agree. */
-export function SettledSheet({
-  entry,
+/** Shows a web-applied repair while the device-side decision remains outstanding. */
+export function AppliedSheet({
+  itemName,
+  outcome,
+  plan,
   device,
   now,
   remaining,
   onClose,
   onNext,
 }: {
-  entry: ResolvedEntry;
+  itemName: string;
+  outcome: Extract<RepairOutcome, { kind: 'applied' }>;
+  plan: RepairPlan;
   device: string;
   now: string;
   remaining: number;
   onClose: () => void;
   onNext?: () => void;
 }): ReactElement {
+  const nextOnDevice =
+    plan.primary?.outcome ?? plan.onDevice ?? 'Sync will finish this case on the device.';
   return (
     <SheetPanel
-      title={entry.itemName}
-      description={`Settled ${formatWhen(entry.at, now)}`}
+      title={itemName}
+      description={`Updated ${formatWhen(outcome.at, now)}`}
       onClose={onClose}
       className="rounded-xl"
       footer={
@@ -48,15 +56,13 @@ export function SettledSheet({
         >
           <CircleCheck className="mt-0.5 size-5 shrink-0 text-app-accent" aria-hidden />
           <div className="text-sm">
-            <p className="font-medium">{entry.outcome}.</p>
+            <p className="font-medium">{outcome.message}.</p>
             <p className="text-muted-foreground">
-              Moved from here, so both copies match. {device} closed the case when it next synced.
+              The change is saved in the web app. The device will finish this case on its next sync.
             </p>
           </div>
         </div>
-        <OnDevice device={device}>
-          Nothing left to do. The item no longer shows Needs attention.
-        </OnDevice>
+        <OnDevice device={device}>{nextOnDevice}</OnDevice>
       </div>
     </SheetPanel>
   );

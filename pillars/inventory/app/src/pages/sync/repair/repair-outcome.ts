@@ -1,4 +1,4 @@
 /** The local result shown after a web action has completed. */
 export type RepairOutcome =
-  | { kind: 'settled'; message: string; at: string }
+  | { kind: 'applied'; message: string; at: string }
   | { kind: 'follow-up'; message: string; at: string };

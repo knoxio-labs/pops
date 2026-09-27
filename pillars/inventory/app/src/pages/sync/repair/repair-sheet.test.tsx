@@ -118,6 +118,17 @@ describe('RepairSheet', () => {
       expect.objectContaining({ concept: 'code', message: 'Code set to T03' })
     );
     expect(screen.getByText('Code set to T03.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'The change is saved in the web app. The device will finish this case on its next sync.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Both copies then match, so either choice on the device closes the case. Print the new label afterwards.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing left to do/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
 
     const toast = mocks.showUndoToast.mock.calls[0]?.[0];
@@ -150,6 +161,13 @@ describe('RepairSheet', () => {
         entityId: 'item-case-ladder-deleted',
       })
     );
+    await waitFor(() => expect(screen.getByText('Restored Step ladder.')).toBeInTheDocument());
+    expect(
+      screen.getByText(
+        "It returns with its history. Choose Restore on Joao's iPhone to send the held change."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing left to do/)).not.toBeInTheDocument();
     const toast = mocks.showUndoToast.mock.calls[0]?.[0];
     if (toast === undefined) throw new Error('restore did not offer undo');
     await toast.onUndo();

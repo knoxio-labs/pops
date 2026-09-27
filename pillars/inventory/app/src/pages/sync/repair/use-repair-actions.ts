@@ -8,7 +8,7 @@ import { useRepairWrites } from './use-repair-writes.js';
 
 import type { ReactElement } from 'react';
 
-import type { RepairActionId, RepairCase, ResolvedEntry } from '../sync-model.js';
+import type { RepairActionId, RepairCase } from '../sync-model.js';
 import type { RepairOutcome } from './repair-outcome.js';
 import type { WebAction } from './repair-plan.js';
 
@@ -23,10 +23,16 @@ export interface RepairActions {
   refusal: string | null;
   /** The hidden single-file picker used by the upload action. */
   fileInput: ReactElement;
-  /** The applied action to show after the case has settled. */
-  outcome: ResolvedEntry | null;
+  /** The applied web action to show while the device-side follow-up remains. */
+  outcome: Extract<RepairOutcome, { kind: 'applied' }> | null;
   /** A successful action that still requires a device-side follow-up. */
   followUp: string | null;
+}
+
+function appliedOutcomeFor(
+  outcome: RepairOutcome | null
+): Extract<RepairOutcome, { kind: 'applied' }> | null {
+  return outcome?.kind === 'applied' ? outcome : null;
 }
 
 function navigateForAction(
@@ -55,18 +61,6 @@ function navigateForAction(
   return false;
 }
 
-function outcomeFor(repair: RepairCase, localOutcome: RepairOutcome | null): ResolvedEntry | null {
-  if (localOutcome === null || localOutcome.kind !== 'settled') return null;
-  return {
-    id: repair.id,
-    itemId: repair.itemId,
-    itemName: repair.itemName,
-    outcome: localOutcome.message,
-    at: localOutcome.at,
-    deviceId: repair.deviceId,
-  };
-}
-
 /** Binds navigation, safe web writes, and photo upload state for one repair sheet. */
 export function useRepairActions(input: {
   repair: RepairCase;
@@ -83,7 +77,7 @@ export function useRepairActions(input: {
   });
   const busy = writes.busy || upload.busy;
   const localOutcome = writes.outcome ?? upload.outcome;
-  const outcome = outcomeFor(repair, localOutcome);
+  const outcome = appliedOutcomeFor(localOutcome);
   const followUp = localOutcome?.kind === 'follow-up' ? localOutcome.message : null;
   const blockedReason = useCallback(
     (action: WebAction): string | null =>
