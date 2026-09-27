@@ -1,5 +1,4 @@
 name: Registry Generated Quality
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Preserves the module-registry `generated.ts` drift gate after
 # `module-registry-quality.yml` is folded into `unit-quality.yml`. unit-quality

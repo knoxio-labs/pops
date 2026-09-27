@@ -50,6 +50,7 @@ type PullRequest = typeof pullRequest;
 async function evaluate(
   options: {
     cancellationOnly?: string[];
+    workflows?: { id: number; name: string }[];
     trigger?: Run;
     runs?: Run[];
     candidates?: Run[];
@@ -73,6 +74,7 @@ async function evaluate(
   const listFiles = Symbol('files');
   const listAssociated = Symbol('associated');
   const listRuns = Symbol('runs');
+  const listWorkflows = Symbol('workflows');
   const listCandidates = Symbol('candidates');
   await execute(
     {
@@ -84,6 +86,7 @@ async function evaluate(
         },
         actions: {
           listWorkflowRunsForRepo: listRuns,
+          listRepoWorkflows: listWorkflows,
           listWorkflowRuns: listCandidates,
           getWorkflowRun: ({ run_id }: { run_id: number }) =>
             Promise.resolve({
@@ -97,6 +100,14 @@ async function evaluate(
         checks: { create },
       },
       paginate: (endpoint: symbol) => {
+        if (endpoint === listWorkflows)
+          return Promise.resolve(
+            options.workflows ??
+              [...(options.runs ?? []), trigger].map((candidate) => ({
+                id: candidate.workflow_id,
+                name: candidate.name,
+              }))
+          );
         if (endpoint === listAssociated) return Promise.resolve(options.associated ?? []);
         if (endpoint === listFiles) {
           if (options.failFiles) throw new Error('unavailable');
@@ -122,6 +133,22 @@ async function evaluate(
 }
 
 describe('CI Gate convergence', () => {
+  it('identifies a workflow by its registered ID when GitHub puts the run title in name', async () => {
+    const result = await evaluate({
+      trigger: { ...run, name: 'Quality for pull_request into main' },
+      workflows: [{ id: run.workflow_id, name: 'Quality' }],
+    });
+    expect(result.create).toHaveBeenCalledWith(expect.objectContaining({ conclusion: 'success' }));
+  });
+
+  it('cannot substitute a title that names a different registered workflow', async () => {
+    const result = await evaluate({
+      trigger: { ...run, name: 'Quality' },
+      workflows: [{ id: run.workflow_id, name: 'Other Workflow' }],
+    });
+    expect(result.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'in_progress' }));
+  });
+
   it('resolves fork PRs with empty run associations using source identity and the recorded base', async () => {
     const result = await evaluate({
       trigger: { ...run, pull_requests: [] },
@@ -394,7 +421,7 @@ describe('workflow admission wiring', () => {
   it('isolates cancellation-only and non-PR events from queued admission publications', () => {
     expect(source).toContain('github.event.workflow_run.event');
     expect(source).toContain(
-      "github.event.workflow_run.name == 'Promotion Quality' && 'cancellation' || 'admission'"
+      "github.event.workflow_run.path == '.github/workflows/promotion-quality.yml' && 'cancellation' || 'admission'"
     );
   });
 
@@ -413,8 +440,5 @@ describe('workflow admission wiring', () => {
     expect(workflow).toContain('github.event.pull_request.head.sha || github.sha');
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).toContain('types: [opened, synchronize, reopened, edited]');
-    expect(workflow).toContain(
-      'run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref'
-    );
   });
 });

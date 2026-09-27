@@ -1,5 +1,4 @@
 name: Rust Quality
-run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Self-contained Rust CI lane for the repo-root cargo workspace and the Rust
 # pillars it builds (currently `pillars/contacts`, the first Rust pillar).
