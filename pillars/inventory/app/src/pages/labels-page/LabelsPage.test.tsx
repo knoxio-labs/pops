@@ -34,6 +34,7 @@ interface FakeItem {
   quantity: number;
   revision: number;
   typeKey: string | null;
+  fields: Record<string, unknown>;
 }
 
 const BOX = '8c1e4f2a-5b7d-4a9e-b3c6-000000000001';
@@ -54,6 +55,7 @@ function item(id: string, name: string, code: string | null, extra: Partial<Fake
     quantity: 1,
     revision: 1,
     typeKey: null,
+    fields: {},
     ...extra,
   };
 }
@@ -187,7 +189,36 @@ describe('LabelsPage', () => {
 
     await screen.findByRole('button', { name: 'Print 1 label' });
     expect(screen.getByLabelText('Sheet')).toHaveValue('L7165');
-    expect(screen.getByRole('tab', { name: 'Item' })).toHaveAttribute('data-state', 'active');
+    expect(screen.getByRole('button', { name: 'Label shows: QR and code' })).toBeInTheDocument();
+  });
+
+  it('uses the stored contents preset in the label preview', async () => {
+    api.settingsList.mockResolvedValue(
+      ok({
+        data: [
+          { key: 'inventory.labelSheet', value: 'L7163' },
+          { key: 'inventory.labelShows', value: 'contents' },
+          { key: 'inventory.density', value: 'compact' },
+        ],
+      })
+    );
+
+    renderPage(`?ids=${BOX}`);
+
+    expect(await screen.findByRole('button', { name: 'Print 2 labels' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Label shows: Contents only' })).toBeInTheDocument();
+    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Espresso machine');
+    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Coffee cups ×6');
+  });
+
+  it('opens the label-shows entry point and applies a preset to the preview', async () => {
+    renderPage(`?ids=${BOX}`);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Label shows: Auto' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Contents only/ }));
+
+    expect(screen.getByRole('button', { name: 'Label shows: Contents only' })).toBeInTheDocument();
+    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Milk jug');
   });
 
   it('returns to the items page instead of the overview placeholder', () => {

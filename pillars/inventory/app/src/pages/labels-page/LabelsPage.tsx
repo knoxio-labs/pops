@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle, Button, PageHeader, Skeleton } fro
 
 import {
   DEFAULT_INVENTORY_DEFAULTS,
+  labelContentForShows,
   labelTemplateForShows,
   useInventoryDefaults,
 } from '../../inventory-web/useInventoryDefaults.js';
@@ -122,7 +123,11 @@ function LabelsContent({
   params: LabelParams;
   setIds: (ids: string[]) => void;
 }) {
-  const job = useLabelJob(data.subjects, { template: params.template, sheetId: params.sheetId });
+  const job = useLabelJob(data.subjects, {
+    content: params.content,
+    details: data.details,
+    sheetId: params.sheetId,
+  });
   const { save } = useSaveCode();
   const [addOpen, setAddOpen] = useState(false);
   const add = (ids: string[]) => setIds([...params.ids, ...ids]);
@@ -171,6 +176,7 @@ export function LabelsPage() {
   const stored = settings.data ?? DEFAULT_INVENTORY_DEFAULTS;
   const defaults: LabelPageDefaults = {
     template: labelTemplateForShows(stored.labelShows),
+    content: labelContentForShows(stored.labelShows),
     sheetId: loadSheetId() ?? stored.labelSheet,
   };
   const { params, setIds } = useIdsParam(defaults);

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_LABEL_CONTENT } from '@pops/inventory/labels';
+
 import { toCandidate } from './add-dialog';
 import { labelsHref, MAX_LABEL_IDS, parseIds, readLabelParams } from './label-params';
 import { codeSaveResult } from './useSaveCode';
@@ -22,10 +24,17 @@ describe('label page address', () => {
   it('reads the template, sheet and contents flag, with an unknown template as auto', () => {
     expect(
       readLabelParams(new URLSearchParams('ids=a&template=item&sheet=L7163&contents=1'))
-    ).toEqual({ ids: ['a'], template: 'item', sheetId: 'L7163', contents: true });
+    ).toEqual({
+      ids: ['a'],
+      template: 'item',
+      content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
+      sheetId: 'L7163',
+      contents: true,
+    });
     expect(readLabelParams(new URLSearchParams('template=poster'))).toEqual({
       ids: [],
       template: 'auto',
+      content: DEFAULT_LABEL_CONTENT,
       sheetId: null,
       contents: false,
     });
@@ -35,15 +44,29 @@ describe('label page address', () => {
     expect(
       readLabelParams(new URLSearchParams('ids=a'), {
         template: 'item',
+        content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
         sheetId: 'L7165',
       })
-    ).toEqual({ ids: ['a'], template: 'item', sheetId: 'L7165', contents: false });
+    ).toEqual({
+      ids: ['a'],
+      template: 'item',
+      content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
+      sheetId: 'L7165',
+      contents: false,
+    });
     expect(
       readLabelParams(new URLSearchParams('ids=a&template=container&sheet=L7163'), {
         template: 'item',
+        content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
         sheetId: 'L7165',
       })
-    ).toEqual({ ids: ['a'], template: 'container', sheetId: 'L7163', contents: false });
+    ).toEqual({
+      ids: ['a'],
+      template: 'container',
+      content: { kind: 'parts', parts: ['qr', 'name', 'code'], fields: [] },
+      sheetId: 'L7163',
+      contents: false,
+    });
   });
 
   it('links to the page with the ids, and the contents flag when asked', () => {

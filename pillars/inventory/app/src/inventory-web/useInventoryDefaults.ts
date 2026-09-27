@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 
 import {
   DEFAULT_SHEET_ID,
+  DEFAULT_LABEL_CONTENT,
   findPreset,
   presetById,
   type LabelPresetId,
+  type LabelContent,
   type LabelTemplateChoice,
 } from '@pops/inventory/labels';
 
@@ -51,6 +53,11 @@ export function labelTemplateForShows(shows: LabelPresetId): LabelTemplateChoice
   if (shows === 'qr-name-code') return 'container';
   if (shows === 'qr-code') return 'item';
   return 'auto';
+}
+
+/** Maps the stored label-show preset to the shared label-content choice. */
+export function labelContentForShows(shows: LabelPresetId): LabelContent {
+  return presetById(shows)?.content ?? DEFAULT_LABEL_CONTENT;
 }
 
 /**

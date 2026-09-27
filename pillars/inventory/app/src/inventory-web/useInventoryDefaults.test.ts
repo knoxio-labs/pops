@@ -11,6 +11,7 @@ vi.mock('../inventory-api/index.js', () => ({
 
 import {
   DEFAULT_INVENTORY_DEFAULTS,
+  labelContentForShows,
   labelTemplateForShows,
   parseInventoryDefaults,
   useInventoryDefaults,
@@ -68,6 +69,27 @@ describe('labelTemplateForShows', () => {
     expect(labelTemplateForShows('qr-name-code')).toBe('container');
     expect(labelTemplateForShows('qr-code')).toBe('item');
     expect(labelTemplateForShows('contents')).toBe('auto');
+  });
+});
+
+describe('labelContentForShows', () => {
+  it('maps every stored preset to its shared content choice', () => {
+    expect(labelContentForShows('auto')).toEqual({ kind: 'auto' });
+    expect(labelContentForShows('qr-name-code')).toEqual({
+      kind: 'parts',
+      parts: ['qr', 'name', 'code'],
+      fields: [],
+    });
+    expect(labelContentForShows('qr-code')).toEqual({
+      kind: 'parts',
+      parts: ['qr', 'code'],
+      fields: [],
+    });
+    expect(labelContentForShows('contents')).toEqual({
+      kind: 'parts',
+      parts: ['contents'],
+      fields: [],
+    });
   });
 });
 
