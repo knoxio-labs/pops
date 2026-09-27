@@ -1,5 +1,4 @@
 import AppCore
-import OpenAPIRuntime
 
 extension BFMInventoryTransport {
     public func fetchSnapshot(cursor: String?, limit: Int) async throws -> InventorySnapshotPage {
