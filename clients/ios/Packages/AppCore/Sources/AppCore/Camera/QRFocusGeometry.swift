@@ -1,3 +1,5 @@
+import Darwin
+
 /// The zoom a lens needs before a QR code framed at a comfortable size is also
 /// one it can focus on.
 ///
