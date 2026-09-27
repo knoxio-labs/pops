@@ -70,6 +70,14 @@ function SearchResultFooter({ isFetching }: { readonly isFetching: boolean }) {
   );
 }
 
+function itemSections(results: WebSearchResults): [SearchItemHit[], SearchItemHit[]] {
+  const exactId = results.exact?.id;
+  return [
+    results.items.filter((hit) => hit.tier !== 'other' && hit.item.id !== exactId),
+    results.items.filter((hit) => hit.tier === 'other' && hit.item.id !== exactId),
+  ];
+}
+
 /** Renders inventory results with exact-code treatment, ranked sections, and a sentinel. */
 export function ResultsList(props: ResultsListProps) {
   const sentinel = useInfiniteSentinel(
@@ -77,8 +85,7 @@ export function ResultsList(props: ResultsListProps) {
     props.isFetchingNextPage,
     props.onFetchNextPage
   );
-  const rankedItems = props.results.items.filter((hit) => hit.tier !== 'other');
-  const otherItems = props.results.items.filter((hit) => hit.tier === 'other');
+  const [rankedItems, otherItems] = itemSections(props.results);
   return (
     <div
       role="listbox"

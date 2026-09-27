@@ -86,4 +86,18 @@ describe('ResultsList', () => {
     expect(screen.getByRole('checkbox', { name: 'Select prefix' })).toBeChecked();
     expect(screen.getByRole('option', { name: /prefix/ })).toHaveAttribute('aria-selected', 'true');
   });
+
+  it('renders an exact item only in the exact-code section', () => {
+    const view = props();
+    const exact = view.results.exact;
+    if (exact === null) throw new Error('test fixture must contain an exact result');
+    view.results = {
+      ...view.results,
+      items: [{ kind: 'item', item: exact, tier: 'prefix', field: 'code' }, ...view.results.items],
+    };
+
+    render(<ResultsList {...view} />);
+
+    expect(document.querySelectorAll('#search-result-item-exact')).toHaveLength(1);
+  });
 });

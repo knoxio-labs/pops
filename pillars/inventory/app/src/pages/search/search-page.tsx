@@ -64,7 +64,7 @@ export function SearchPage() {
         <div className="flex min-w-0 flex-1 flex-col">
           <SearchBody state={state} />
         </div>
-        <div className="hidden min-h-0 overflow-hidden rounded-xl border bg-card lg:flex lg:w-2/5 lg:flex-col xl:w-1/3">
+        <div className="hidden min-h-0 overflow-hidden rounded-xl border bg-card lg:flex lg:max-xl:w-2/5 lg:flex-col xl:w-1/3">
           {preview}
         </div>
       </div>
