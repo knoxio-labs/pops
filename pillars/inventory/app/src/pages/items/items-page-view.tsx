@@ -84,6 +84,8 @@ function useItemsPageView(model: ItemsPageModel) {
   const itemsExport = useItemsExport();
   const verbs = useListVerbs({
     rows: itemRows.rows,
+    webItems: itemRows.webItems,
+    catalogue: model.catalogue.catalogue,
     world: model.world,
     selection: model.selection,
     contentCounts: itemRows.contentCounts,

@@ -27,6 +27,9 @@ const mocks = vi.hoisted(() => ({
   bulk: {
     pickUp: vi.fn(),
     move: vi.fn(),
+    changeType: vi.fn(),
+    editValues: vi.fn(),
+    setLifecycle: vi.fn(),
   },
 }));
 
@@ -145,6 +148,23 @@ function Harness({ value }: { value: ListVerbsInput }): ReactNode {
   );
 }
 
+function BulkActionHarness({ value }: { value: ListVerbsInput }): ReactNode {
+  const verbs = useListVerbs(value);
+  return (
+    <>
+      {(['set-type', 'set-field', 'retire', 'discard'] as const).map((id) => {
+        const action = verbs.actions.find((entry) => entry.id === id);
+        return (
+          <button key={id} type="button" onClick={action?.onSelect}>
+            {id}
+          </button>
+        );
+      })}
+      {verbs.overlays}
+    </>
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.useItemVerbs.mockReturnValue(mocks.single);
@@ -171,6 +191,11 @@ beforeEach(() => {
   });
   mocks.bulk.pickUp.mockImplementation(async (ids: readonly string[]) => appliedResult(ids));
   mocks.bulk.move.mockImplementation(async (ids: readonly string[]) => appliedResult(ids));
+  mocks.bulk.changeType.mockImplementation(async (ids: readonly string[]) => appliedResult(ids));
+  mocks.bulk.editValues.mockImplementation(async (writes: readonly { id: string }[]) =>
+    appliedResult(writes.map(({ id }) => id))
+  );
+  mocks.bulk.setLifecycle.mockImplementation(async (ids: readonly string[]) => appliedResult(ids));
 });
 
 describe('useTrackedWrites', () => {
@@ -207,6 +232,31 @@ describe('useTrackedWrites', () => {
 });
 
 describe('useListVerbs', () => {
+  it('binds the typed and lifecycle selection actions to live handlers', () => {
+    const { result } = renderHook(() => useListVerbs(input()), { wrapper });
+
+    for (const id of ['set-type', 'set-field', 'retire', 'discard'] as const) {
+      expect(result.current.actions.find((action) => action.id === id)?.onSelect).toEqual(
+        expect.any(Function)
+      );
+    }
+  });
+
+  it('executes the shared lifecycle dialog through the bulk verb and undo toast', async () => {
+    render(<BulkActionHarness value={input()} />, { wrapper });
+
+    fireEvent.click(screen.getByRole('button', { name: 'retire' }));
+    expect(screen.getByRole('dialog', { name: 'Retire 1 item?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retire 1 item' }));
+
+    await waitFor(() =>
+      expect(mocks.bulk.setLifecycle).toHaveBeenCalledWith(['itm-lamp'], 'retired', null)
+    );
+    expect(mocks.showUndoToast).toHaveBeenCalledWith(
+      expect.objectContaining({ concept: 'retired', message: 'Retired 1 item' })
+    );
+  });
+
   it('runs bulk pick up and offers one undo toast for applied ids', async () => {
     const { result } = renderHook(() => useListVerbs(input()), { wrapper });
     const action = result.current.actions.find((entry) => entry.id === 'pick-up');
