@@ -185,6 +185,52 @@ describe('useConnectionsPageModel', () => {
     expect(hook.result.current.readError).toBe(false);
   });
 
+  it('leaves the initial loading state after the unfiltered registry read succeeds', () => {
+    const pending = {
+      rows: [],
+      status: 'pending' as const,
+      error: null,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    };
+    const success = {
+      ...pending,
+      status: 'success' as const,
+    };
+    mocks.allConnections.mockReturnValue(pending);
+    const hook = renderHook(() => useConnectionsPageModel(), { wrapper: Wrapper });
+
+    expect(hook.result.current.initialLoading).toBe(true);
+
+    mocks.allConnections.mockReturnValue(success);
+    act(() => hook.rerender());
+
+    expect(hook.result.current.initialLoading).toBe(false);
+  });
+
+  it('retains the loaded state while the unfiltered registry refetches', () => {
+    const success = {
+      rows: [],
+      status: 'success' as const,
+      error: null,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    };
+    const pending = {
+      ...success,
+      status: 'pending' as const,
+    };
+    mocks.allConnections.mockReturnValue(success);
+    const hook = renderHook(() => useConnectionsPageModel(), { wrapper: Wrapper });
+
+    expect(hook.result.current.initialLoading).toBe(false);
+
+    mocks.allConnections.mockReturnValue(pending);
+    act(() => hook.rerender());
+
+    expect(hook.result.current.initialLoading).toBe(false);
+  });
+
   it('reports placement errors and retries connection and placement query families', () => {
     mocks.placement.mockReturnValue({
       world: buildWorld([], []),

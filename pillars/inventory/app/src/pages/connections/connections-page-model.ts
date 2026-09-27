@@ -139,7 +139,7 @@ function useResolvedConnectionSources(sources: ConnectionSources): ResolvedConne
     registry.status === 'error' || allConnections.status === 'error' || placement.isError;
   const readSuccess = registry.status === 'success' && allReady && placementReady;
   const world = useCommittedSnapshot(placement.world, placementReady);
-  const hasLoaded = useCommittedSnapshot(false, readSuccess);
+  const hasLoaded = useCommittedSnapshot(readSuccess, readSuccess);
   const resolvedRows = useMemo(() => connectionRows(registry.rows, world), [registry.rows, world]);
   const resolvedAllRows = useMemo(
     () => connectionRows(allConnections.rows, world),
