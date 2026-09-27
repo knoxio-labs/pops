@@ -299,7 +299,35 @@ describe('useStoreHere', () => {
     }
   });
 
-  it('counts a selected container contents read in the placement world', async () => {
+  it('surfaces a failed search read and retries it', async () => {
+    vi.useFakeTimers();
+    try {
+      const refetch = vi.fn();
+      mocks.useWebSearch.mockReturnValue({
+        results: searchResults(),
+        status: 'error',
+        error: null,
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+        refetch,
+      });
+      const { result } = renderStore();
+
+      act(() => result.current.setQuery('cable'));
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+
+      expect(result.current.status).toBe('error');
+      act(() => result.current.retry());
+      expect(refetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('paginates selected container contents into the placement world', async () => {
     const box = row(
       'box',
       'Box',
@@ -316,15 +344,71 @@ describe('useStoreHere', () => {
       isError: false,
       isLoading: false,
     });
-    mocks.webList.mockResolvedValue(
+    mocks.webList.mockImplementation(async ({ query }: { query: { cursor?: string } }) =>
+      ok(
+        query.cursor === undefined
+          ? page({
+              items: [
+                webItem('inside-one', {
+                  name: 'Inside box one',
+                  placement: { kind: 'container', itemId: 'box' },
+                }),
+              ],
+              nextCursor: 'contents-next',
+              total: 2,
+              unfilteredTotal: 2,
+            })
+          : page({
+              items: [
+                webItem('inside-two', {
+                  name: 'Inside box two',
+                  placement: { kind: 'container', itemId: 'box' },
+                }),
+              ],
+              total: 2,
+              unfilteredTotal: 2,
+            })
+      )
+    );
+    const { result } = renderStore();
+
+    act(() => result.current.toggle('box'));
+    await waitFor(() => expect(result.current.world.items.has('inside-two')).toBe(true));
+    expect(deepContents(result.current.world, 'box').map((item) => item.id)).toEqual([
+      'inside-one',
+      'inside-two',
+    ]);
+    expect(mocks.webList).toHaveBeenNthCalledWith(1, {
+      query: { within: 'box', limit: 200 },
+      signal: expect.any(AbortSignal),
+    });
+    expect(mocks.webList).toHaveBeenNthCalledWith(2, {
+      query: { within: 'box', limit: 200, cursor: 'contents-next' },
+      signal: expect.any(AbortSignal),
+    });
+  });
+
+  it('surfaces and retries a failed selected-content read', async () => {
+    const box = row(
+      'box',
+      'Box',
+      { kind: 'location', locationId: 'kitchen' },
+      {
+        container: { access: 'open', full: false },
+      }
+    );
+    mocks.useItemRows.mockImplementation(({ placementKind }: { placementKind?: string }) =>
+      itemRows(placementKind === 'hand' ? [] : [box])
+    );
+    mocks.usePlacementSources.mockReturnValue({
+      world: placementWorld([targetRow, box]),
+      isError: false,
+      isLoading: false,
+    });
+    mocks.webList.mockRejectedValueOnce(new Error('Contents failed')).mockResolvedValueOnce(
       ok(
         page({
-          items: [
-            webItem('inside', {
-              name: 'Inside box',
-              placement: { kind: 'container', itemId: 'box' },
-            }),
-          ],
+          items: [webItem('inside', { placement: { kind: 'container', itemId: 'box' } })],
           total: 1,
           unfilteredTotal: 1,
         })
@@ -333,12 +417,10 @@ describe('useStoreHere', () => {
     const { result } = renderStore();
 
     act(() => result.current.toggle('box'));
-    await waitFor(() => expect(result.current.world.items.has('inside')).toBe(true));
-    expect(deepContents(result.current.world, 'box').map((item) => item.id)).toEqual(['inside']);
-    expect(mocks.webList).toHaveBeenCalledWith({
-      query: { within: 'box', limit: 200 },
-      signal: expect.any(AbortSignal),
-    });
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.status).toBe('success'));
+    expect(result.current.world.items.has('inside')).toBe(true);
   });
 
   it('keeps a selected item in the world after the query changes', async () => {
@@ -427,6 +509,46 @@ describe('useStoreHere', () => {
 
     expect(result.current.selected).toEqual(new Set(['one']));
     expect(mocks.toastError).toHaveBeenCalledWith('The item changed while you were here.');
+  });
+
+  it('keeps refused selections and reports them when another item applies', async () => {
+    const applied = row('one', 'One');
+    const refused = row('two', 'Two');
+    mocks.useItemRows.mockImplementation(({ placementKind }: { placementKind?: string }) =>
+      itemRows(placementKind === 'hand' ? [applied, refused] : [targetRow, applied, refused])
+    );
+    const undo = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    const store = vi.fn().mockResolvedValue({
+      applied: ['one'],
+      refused: [
+        {
+          id: 'two',
+          refusal: {
+            kind: 'outcome',
+            outcome: { status: 'rejected', message: 'Two changed while you were here.' },
+          },
+        },
+      ],
+      undo,
+    });
+    mocks.useBulkItemVerbs.mockReturnValue({ store });
+    const { result } = renderStore();
+
+    act(() => {
+      result.current.toggle('one');
+      result.current.toggle('two');
+    });
+    await act(async () => {
+      await result.current.store([applied, refused]);
+    });
+
+    expect(result.current.selected).toEqual(new Set(['two']));
+    expect(mocks.showUndoToast).toHaveBeenCalledWith({
+      concept: 'move',
+      message: 'Stored 1 item in Kitchen 13.',
+      onUndo: undo,
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith('Two changed while you were here.');
   });
 
   it('reports a rejected store and keeps its selection', async () => {
@@ -597,6 +719,22 @@ describe('useStoreHere', () => {
     expect(mocks.toastError).toHaveBeenNthCalledWith(2, 'item closed-box is not loaded');
   });
 
+  it('reports a closed-target action attempted while offline', async () => {
+    mocks.useOnline.mockReturnValue(false);
+    const setAccess = vi.fn();
+    mocks.useItemVerbs.mockReturnValue({ setAccess });
+    const { result } = renderStore({ ...target, id: 'closed-box', state: 'closed' });
+
+    await act(async () => {
+      await result.current.openTarget();
+    });
+
+    expect(setAccess).not.toHaveBeenCalled();
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      'No connection. Changes are off until it is back.'
+    );
+  });
+
   it('retries only active failed placement source queries', () => {
     const queryClient = createTestQueryClient();
     const refetchQueries = vi.spyOn(queryClient, 'refetchQueries').mockResolvedValue();
@@ -633,7 +771,6 @@ describe('useStoreHere', () => {
     await act(async () => {
       await result.current.create('Offline item');
       await result.current.store([row('item', 'Item')]);
-      await result.current.openTarget();
     });
 
     expect(commit).not.toHaveBeenCalled();

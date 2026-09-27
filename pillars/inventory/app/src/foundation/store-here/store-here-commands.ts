@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { wirePlacement } from '../../inventory-web/item-verbs.js';
+import { OFFLINE_REASON } from '../feedback/state-banner.js';
 import { showUndoToast } from '../feedback/undo-toast.js';
 import { storeTarget } from './store-here-model.js';
 
@@ -132,9 +133,8 @@ function useStoreCommand(
               onUndo: result.undo,
             });
           }
-        } else if (result.refused[0] !== undefined) {
-          toast.error(refusalMessage(result.refused[0].refusal));
         }
+        result.refused.forEach(({ refusal }) => toast.error(refusalMessage(refusal)));
       } catch (error: unknown) {
         toast.error(errorMessage(error));
       } finally {
@@ -152,7 +152,11 @@ function useOpenTargetCommand(
 ): Pick<StoreHereCommands, 'openTarget'> {
   const { itemVerbs, online, target } = options;
   const openTarget = useCallback(async (): Promise<void> => {
-    if (!online || target.kind !== 'container') return;
+    if (target.kind !== 'container') return;
+    if (!online) {
+      toast.error(OFFLINE_REASON);
+      return;
+    }
     try {
       const result = await itemVerbs.setAccess(target.id, 'open');
       if (result.status === 'applied') {

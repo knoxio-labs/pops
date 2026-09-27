@@ -1,10 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 
-import {
-  LOCATION_TREE_QUERY_KEY,
-  PLACEMENT_SOURCES_QUERY_KEY,
-} from '../../inventory-web/queryKeys.js';
 import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
 import { useItemRows } from '../../inventory-web/useWebItems.js';
@@ -13,6 +9,7 @@ import { buildWorld } from '../model/placement-model.js';
 import { storeRefusal, storeTarget } from './store-here-model.js';
 import {
   readStatus,
+  retryStoreHereReads,
   searchRows,
   STORE_ROWS_LIMIT,
   STORE_SEARCH_LIMIT,
@@ -20,8 +17,6 @@ import {
   useDebouncedValue,
   useSelectedContents,
 } from './store-here-queries.js';
-
-import type { QueryClient } from '@tanstack/react-query';
 
 import type { ItemRows } from '../../inventory-web/useWebItems.js';
 import type { ItemRowModel, PlacementWorld, StoreHereTarget } from '../model/contracts.js';
@@ -55,6 +50,7 @@ interface StoreHereWorld {
   world: PlacementWorld;
   candidates: StoreCandidate[];
   candidateById: ReadonlyMap<string, StoreCandidate>;
+  selectedContents: ReturnType<typeof useSelectedContents>;
 }
 
 function useStoreHereSources(searchDebounceMs: number): StoreHereSources {
@@ -91,10 +87,10 @@ function useStoreHereWorld(
   );
   const world = useMemo(
     () =>
-      buildWorld(uniqueRows([rowsForWorld, selectedRows, contentItems]), [
+      buildWorld(uniqueRows([rowsForWorld, selectedRows, contentItems.rows]), [
         ...placement.world.locations.values(),
       ]),
-    [contentItems, placement.world.locations, rowsForWorld, selectedRows]
+    [contentItems.rows, placement.world.locations, rowsForWorld, selectedRows]
   );
   const candidateRows = query.trim() === '' ? blankRows : queriedRows;
   const destination = useMemo(() => storeTarget(target), [target]);
@@ -110,41 +106,27 @@ function useStoreHereWorld(
     [candidates]
   );
 
-  return { world, candidates, candidateById };
-}
-
-function retryFailedReads(
-  queryClient: QueryClient,
-  placementFailed: boolean,
-  hand: ItemRows,
-  all: ItemRows
-): void {
-  if (hand.status === 'error') hand.refetch();
-  if (all.status === 'error') all.refetch();
-  if (!placementFailed) return;
-
-  void queryClient.refetchQueries({
-    queryKey: LOCATION_TREE_QUERY_KEY,
-    type: 'active',
-    predicate: (query) => query.state.status === 'error',
-  });
-  void queryClient.refetchQueries({
-    queryKey: PLACEMENT_SOURCES_QUERY_KEY,
-    type: 'active',
-    predicate: (query) => query.state.status === 'error',
-  });
+  return { world, candidates, candidateById, selectedContents: contentItems };
 }
 
 function readStateStatus(
-  placementError: boolean,
-  placementLoading: boolean,
-  hand: ItemRows,
-  all: ItemRows
+  sources: StoreHereSources,
+  selectedContents: ReturnType<typeof useSelectedContents>
 ): StoreHereState['status'] {
-  const rowsStatus = readStatus(hand, all);
-  if (placementError || rowsStatus === 'error') return 'error';
-  if (placementLoading || rowsStatus === 'pending') return 'pending';
-  return 'success';
+  let placementStatus: StoreHereState['status'] = 'success';
+  if (sources.placement.isError) placementStatus = 'error';
+  else if (sources.placement.isLoading) placementStatus = 'pending';
+  const reads: Array<{ readonly status: 'pending' | 'error' | 'success' }> = [
+    { status: placementStatus },
+    sources.hand,
+    sources.all,
+    selectedContents,
+  ];
+  if (sources.query.trim() !== '') {
+    const searchStatus = sources.search.status === 'idle' ? 'pending' : sources.search.status;
+    reads.push({ status: searchStatus });
+  }
+  return readStatus(...reads);
 }
 
 /** Loads the reads, candidate world, query state, and selection for one sheet. */
@@ -156,14 +138,13 @@ export function useStoreHereState(
   const sources = useStoreHereSources(searchDebounceMs);
   const [selectedRows, setSelectedRows] = useState<ReadonlyMap<string, ItemRowModel>>(new Map());
   const selectedRowList = useMemo(() => [...selectedRows.values()], [selectedRows]);
-  const { world, candidates, candidateById } = useStoreHereWorld(target, sources, selectedRowList);
-  const selected = useMemo(() => new Set(selectedRows.keys()), [selectedRows]);
-  const status = readStateStatus(
-    sources.placement.isError,
-    sources.placement.isLoading,
-    sources.hand,
-    sources.all
+  const { world, candidates, candidateById, selectedContents } = useStoreHereWorld(
+    target,
+    sources,
+    selectedRowList
   );
+  const selected = useMemo(() => new Set(selectedRows.keys()), [selectedRows]);
+  const status = readStateStatus(sources, selectedContents);
   const toggle = useCallback(
     (id: string): void => {
       const candidate = candidateById.get(id);
@@ -186,8 +167,8 @@ export function useStoreHereState(
     });
   }, []);
   const retry = useCallback(
-    (): void => retryFailedReads(queryClient, sources.placement.isError, sources.hand, sources.all),
-    [queryClient, sources.all, sources.hand, sources.placement.isError]
+    (): void => retryStoreHereReads(queryClient, sources, selectedContents),
+    [queryClient, selectedContents, sources]
   );
 
   return {

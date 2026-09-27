@@ -59,18 +59,6 @@ export interface StoreHereBodyProps {
 }
 
 function Notices({ props, notice }: Pick<StoreHereBodyProps, 'props' | 'notice'>) {
-  if (props.status === 'error') {
-    return (
-      <StateBanner
-        kind="error"
-        title="Could not load items."
-        actionLabel="Retry"
-        onAction={props.onRetry}
-      />
-    );
-  }
-  if (props.status !== 'success') return null;
-
   return (
     <>
       {props.offline ? (
@@ -79,14 +67,22 @@ function Notices({ props, notice }: Pick<StoreHereBodyProps, 'props' | 'notice'>
           title="No connection. Nothing can be stored until it returns."
         />
       ) : null}
-      {notice === null ? null : (
+      {props.status === 'error' ? (
+        <StateBanner
+          kind="error"
+          title="Could not load items."
+          actionLabel="Retry"
+          onAction={props.onRetry}
+        />
+      ) : null}
+      {props.status === 'success' && notice !== null ? (
         <StateBanner
           kind={notice.tone === 'refuse' ? 'needs-attention' : 'stale'}
           title={notice.text}
           actionLabel={notice.tone === 'refuse' ? `Open ${props.target.name}` : undefined}
           onAction={notice.tone === 'refuse' ? props.onOpenTarget : undefined}
         />
-      )}
+      ) : null}
     </>
   );
 }
