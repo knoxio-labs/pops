@@ -1,5 +1,3 @@
-import Foundation
-
 /// An explicit value that supersedes a computed field, and the catalogue
 /// revision it was written against.
 public struct InventoryComputedOverride: Hashable, Sendable {

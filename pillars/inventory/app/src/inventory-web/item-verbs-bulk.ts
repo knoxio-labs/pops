@@ -24,16 +24,16 @@ export {
   type BulkResult,
   type BulkCatalogue,
   type ItemValueWrite,
+  type BulkTypeValues,
 } from './item-verbs-bulk-types.js';
 
 const EMPTY_TYPES: readonly CatalogueType[] = [];
 
 function usePublishedCatalogue(): BulkCatalogue {
   const query = useCatalogue();
-  return {
-    types: query.data?.types ?? EMPTY_TYPES,
-    revision: query.data?.revision.revision ?? null,
-  };
+  const types = query.data?.types ?? EMPTY_TYPES;
+  const revision = query.data?.revision.revision ?? null;
+  return useMemo(() => ({ types, revision }), [revision, types]);
 }
 
 async function setAccess(

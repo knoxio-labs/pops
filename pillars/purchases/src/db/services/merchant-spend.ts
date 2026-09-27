@@ -174,7 +174,7 @@ export function rollUpMerchantSpend(
   db: PurchasesDb,
   filter: PurchaseScopeFilter = {}
 ): MerchantSpendRollup {
-  const scope = purchaseFilterConditions(filter);
+  const scope = purchaseFilterConditions(db, filter);
 
   const orderQuery = db
     .select({
@@ -233,7 +233,7 @@ function presentBuckets(buckets: ReadonlyMap<string, MerchantBucket>): readonly 
       orderCount: bucket.orderCount,
       accounting: bucket.accounting,
     }))
-    .sort(compareMerchantSpend);
+    .toSorted(compareMerchantSpend);
 }
 
 /**
@@ -265,5 +265,5 @@ function totalsByCurrency(merchants: readonly MerchantSpend[]): readonly Currenc
 
   return [...byCurrency.entries()]
     .map(([currency, running]) => ({ currency, ...running }))
-    .sort((a, b) => (a.currency < b.currency ? -1 : 1));
+    .toSorted((a, b) => (a.currency < b.currency ? -1 : 1));
 }

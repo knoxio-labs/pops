@@ -338,6 +338,190 @@ describe('GET /purchases', () => {
     expect(res.body.items).toHaveLength(1);
   });
 
+  it('filters orders by the inventory item URI carried by a purchase item unit', async () => {
+    const inventoryItemUri = 'pops://inventory/item/item-1';
+    const matching = await requestOn(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        sourceOrderId: 'inventory-match',
+        checksum: 'inventory-match',
+        items: [
+          {
+            ref: 'tracked',
+            name: 'Tracked item',
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+            units: [{ inventoryItemUri }],
+          },
+        ],
+      });
+    const other = await requestOn(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        sourceOrderId: 'inventory-other',
+        checksum: 'inventory-other',
+        items: [
+          {
+            ref: 'other',
+            name: 'Other item',
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+            units: [{ inventoryItemUri: 'pops://inventory/item/item-2' }],
+          },
+        ],
+      });
+
+    const res = await requestOn(app).get(
+      `/purchases?inventoryItemUri=${encodeURIComponent(inventoryItemUri)}`
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.items.map((row: { id: string }) => row.id)).toEqual([
+      matching.body.purchase.id,
+    ]);
+    expect(res.body.items.map((row: { id: string }) => row.id)).not.toContain(
+      other.body.purchase.id
+    );
+  });
+
+  it('counts the whole inventory-scoped result, not only its requested page', async () => {
+    const inventoryItemUri = 'pops://inventory/item/item-1';
+    for (const suffix of ['one', 'two']) {
+      await requestOn(app)
+        .post('/purchases')
+        .send({
+          ...minimalOrder,
+          sourceOrderId: `inventory-${suffix}`,
+          checksum: `inventory-${suffix}`,
+          items: [
+            {
+              ref: 'tracked',
+              name: `Tracked ${suffix}`,
+              unitPriceCents: 100,
+              lineTotalCents: 100,
+              units: [{ inventoryItemUri }],
+            },
+          ],
+        });
+    }
+
+    const res = await requestOn(app).get(
+      `/purchases?inventoryItemUri=${encodeURIComponent(inventoryItemUri)}&limit=1`
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.total).toBe(2);
+  });
+
+  it('composes inventory scope with status filters and keyset paging', async () => {
+    const inventoryItemUri = 'pops://inventory/item/item-1';
+    const seeded: { id: string; orderedAt: string }[] = [];
+    for (const [index, orderedAt] of [
+      '2026-03-03T00:00:00.000Z',
+      '2026-03-02T00:00:00.000Z',
+      '2026-03-01T00:00:00.000Z',
+    ].entries()) {
+      const created = await requestOn(app)
+        .post('/purchases')
+        .send({
+          ...minimalOrder,
+          sourceOrderId: `inventory-keyset-${String(index)}`,
+          checksum: `inventory-keyset-${String(index)}`,
+          orderedAt,
+          items: [
+            {
+              ref: 'tracked',
+              name: 'Tracked item',
+              unitPriceCents: 100,
+              lineTotalCents: 100,
+              units: [{ inventoryItemUri }],
+            },
+          ],
+        });
+      expect(created.status).toBe(201);
+      const id = String(created.body.purchase.id);
+      setPurchaseStatus(opened.db, id, 'linked');
+      seeded.push({ id, orderedAt });
+    }
+
+    const excludedByStatus = await requestOn(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        sourceOrderId: 'inventory-awaiting',
+        checksum: 'inventory-awaiting',
+        orderedAt: '2026-03-04T00:00:00.000Z',
+        items: [
+          {
+            ref: 'tracked',
+            name: 'Tracked item',
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+            units: [{ inventoryItemUri }],
+          },
+        ],
+      });
+    expect(excludedByStatus.status).toBe(201);
+
+    const query = `inventoryItemUri=${encodeURIComponent(inventoryItemUri)}&sources=amazon&statuses=linked&limit=2`;
+    const first = await requestOn(app).get(`/purchases?${query}`);
+    expect(first.status).toBe(200);
+    expect(first.body.items.map((row: { id: string }) => row.id)).toEqual([
+      seeded[0]?.id,
+      seeded[1]?.id,
+    ]);
+    expect(first.body.total).toBe(3);
+
+    const anchor = first.body.items[1];
+    const second = await requestOn(app).get(
+      `/purchases?${query}&beforeOrderedAt=${encodeURIComponent(String(anchor.orderedAt))}&beforeId=${String(anchor.id)}`
+    );
+    expect(second.status).toBe(200);
+    expect(second.body.items.map((row: { id: string }) => row.id)).toEqual([seeded[2]?.id]);
+    expect(second.body).not.toHaveProperty('total');
+  });
+
+  it('rejects an inventory URI from another POPS namespace', async () => {
+    const res = await requestOn(app).get(
+      '/purchases?inventoryItemUri=pops://finance/transaction/transaction-1'
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  it('keeps an unscoped list unchanged when no inventory URI is sent', async () => {
+    for (const suffix of ['tracked', 'untracked']) {
+      await requestOn(app)
+        .post('/purchases')
+        .send({
+          ...minimalOrder,
+          sourceOrderId: `inventory-unscoped-${suffix}`,
+          checksum: `inventory-unscoped-${suffix}`,
+          items:
+            suffix === 'tracked'
+              ? [
+                  {
+                    ref: 'tracked',
+                    name: 'Tracked item',
+                    unitPriceCents: 100,
+                    lineTotalCents: 100,
+                    units: [{ inventoryItemUri: 'pops://inventory/item/item-1' }],
+                  },
+                ]
+              : undefined,
+        });
+    }
+
+    const res = await requestOn(app).get('/purchases');
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(2);
+    expect(res.body.total).toBe(2);
+  });
+
   it('rejects a status outside the vocabulary', async () => {
     const res = await requestOn(app).get('/purchases?statuses=probably_fine');
     expect(res.status).toBe(400);

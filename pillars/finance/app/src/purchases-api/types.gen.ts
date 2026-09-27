@@ -29,6 +29,10 @@ export type AnalyticsMerchantSpendData = {
     merchantEntityId?: string;
     merchantEntityName?: string;
     merchantUnattributed?: boolean;
+    /**
+     * Limits the list to orders with a purchase item unit linked to this inventory item URI.
+     */
+    inventoryItemUri?: string;
     from?: string;
     to?: string;
   };
@@ -195,6 +199,10 @@ export type AnalyticsProductLeaderboardData = {
     merchantEntityId?: string;
     merchantEntityName?: string;
     merchantUnattributed?: boolean;
+    /**
+     * Limits the list to orders with a purchase item unit linked to this inventory item URI.
+     */
+    inventoryItemUri?: string;
     from?: string;
     to?: string;
     minOrderCount?: number;
@@ -641,6 +649,10 @@ export type PurchaseListData = {
     merchantEntityId?: string;
     merchantEntityName?: string;
     merchantUnattributed?: boolean;
+    /**
+     * Limits the list to orders with a purchase item unit linked to this inventory item URI.
+     */
+    inventoryItemUri?: string;
     from?: string;
     to?: string;
     limit?: number;

@@ -1,5 +1,3 @@
-import Foundation
-
 internal enum CanonicalKey: String, CodingKey {
     case text
     case value

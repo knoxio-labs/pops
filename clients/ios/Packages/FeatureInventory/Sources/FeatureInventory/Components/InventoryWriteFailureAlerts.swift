@@ -2,11 +2,28 @@ import AppCore
 import SwiftUI
 
 extension View {
+    internal func inventoryScanFailureAlerts(_ failure: Binding<PopsError?>) -> some View {
+        modifier(InventoryScanFailureAlerts(failure: failure))
+    }
+
     /// Routes a failed Inventory write to the process-wide presenter.
     internal func inventoryWriteFailureAlerts(
         _ failure: Binding<InventoryWriteFailure?>
     ) -> some View {
         modifier(InventoryWriteFailureAlerts(failure: failure))
+    }
+}
+
+private struct InventoryScanFailureAlerts: ViewModifier {
+    @Binding var failure: PopsError?
+    @Environment(\.errorPresenter) private var errorPresenter
+
+    func body(content: Content) -> some View {
+        content.onChange(of: failure) { _, failure in
+            guard let failure else { return }
+            errorPresenter.present(failure, operation: "Scan item", context: .foreground)
+            self.failure = nil
+        }
     }
 }
 

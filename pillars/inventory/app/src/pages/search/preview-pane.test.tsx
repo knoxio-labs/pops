@@ -9,6 +9,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 
 const mocks = vi.hoisted(() => ({
   useItemRows: vi.fn(),
+  useItemPurchase: vi.fn(),
   useWebItemDetail: vi.fn(),
   usePurchasePreview: vi.fn(),
 }));
@@ -16,6 +17,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../inventory-web/useWebItems.js', () => ({ useItemRows: mocks.useItemRows }));
 vi.mock('../../inventory-web/useWebItemDetail.js', () => ({
   useWebItemDetail: mocks.useWebItemDetail,
+}));
+vi.mock('../../inventory-web/useItemPurchase.js', () => ({
+  useItemPurchase: mocks.useItemPurchase,
 }));
 vi.mock('../../inventory-web/usePurchasePreview.js', () => ({
   usePurchasePreview: mocks.usePurchasePreview,
@@ -29,6 +33,8 @@ import { PurchasePreview } from './purchase-preview.js';
 import type { ItemRowModel, LocationModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { PurchaseResult } from '../../inventory-web/purchase-model.js';
+
+const EMPTY_ITEM_FILTER = 'purchase-preview-empty';
 
 afterAll(() => {
   if (previousTimeZone === undefined) delete process.env.TZ;
@@ -122,6 +128,7 @@ beforeEach(() => {
   mocks.useWebItemDetail.mockReturnValue(
     detailResult({ merchant: 'Kmart', purchasedOn: '2026-09-12' })
   );
+  mocks.useItemPurchase.mockReturnValue({ status: 'success', purchase: null, error: null });
   mocks.usePurchasePreview.mockReturnValue({
     status: 'success',
     purchase: purchase(),
@@ -200,6 +207,28 @@ describe('search preview pane', () => {
     renderItemPreview(item('hdmi-1', 'HDMI cable'));
 
     expect(screen.getByText('No linked purchase')).toBeInTheDocument();
+  });
+
+  it('links found purchase provenance and formats its date in UTC', () => {
+    mocks.useWebItemDetail.mockReturnValue(detailResult(null));
+    mocks.useItemPurchase.mockReturnValue({
+      status: 'success',
+      purchase: {
+        id: 'po-4804',
+        merchant: 'Hardware Barn',
+        orderedAt: '2026-09-13T00:30:00.000Z',
+      },
+      error: null,
+    });
+
+    renderItemPreview(item('hdmi-1', 'HDMI cable'));
+
+    expect(screen.getByText('Hardware Barn, 13 Sept 2026')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Opens in Purchases' })).toHaveAttribute(
+      'href',
+      '/purchases/po-4804'
+    );
+    expect(screen.queryByText('No linked purchase')).not.toBeInTheDocument();
   });
 
   it('a container preview lists what is directly inside with its count', () => {
@@ -302,6 +331,22 @@ describe('search preview pane', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open in Purchases' }));
     expect(onOpenInPurchases).toHaveBeenCalledOnce();
+  });
+
+  it('does not fetch every item when no purchase line is tracked', () => {
+    mocks.usePurchasePreview.mockReturnValue({
+      status: 'success',
+      purchase: { ...purchase(), lines: [{ name: 'Cable ties', quantity: 1, priceCents: 200 }] },
+      error: null,
+    });
+
+    render(<PurchasePreview purchaseId="po-1203" currency="AUD" onOpenInPurchases={vi.fn()} />);
+
+    expect(mocks.useItemRows).toHaveBeenCalledWith(
+      { ids: EMPTY_ITEM_FILTER, includeInactive: true },
+      1
+    );
+    expect(screen.queryByText(/Tracked as/)).not.toBeInTheDocument();
   });
 
   it('a failed purchase says it did not load and still offers Open in Purchases', () => {

@@ -16,7 +16,11 @@ function bootWith(bundleMap: Readonly<Record<string, BundleEntry>>): BootRegistr
   return { manifests: [], registeredApps: [], remoteBundleUrls: [], bundleMap, source: 'registry' };
 }
 
-function renderActions(boot: BootRegistry): void {
+function renderActions(
+  boot: BootRegistry,
+  onOpenMobileSearch = vi.fn(),
+  onOpenCompactSearch?: () => void
+): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MemoryRouter>
@@ -25,7 +29,13 @@ function renderActions(boot: BootRegistry): void {
       </QueryClientProvider>
     </MemoryRouter>
   );
-  render(<TopBarActions onOpenMobileSearch={() => undefined} />, { wrapper });
+  render(
+    <TopBarActions
+      onOpenMobileSearch={onOpenMobileSearch}
+      onOpenCompactSearch={onOpenCompactSearch}
+    />,
+    { wrapper }
+  );
 }
 
 describe('TopBarActions', () => {
@@ -95,5 +105,33 @@ describe('TopBarActions', () => {
     });
 
     expect(importer).not.toHaveBeenCalled();
+  });
+
+  it('with a compact opener the search icon shows below lg and calls it instead of the mobile overlay', () => {
+    const mobile = vi.fn();
+    const compact = vi.fn();
+
+    renderActions(bootWith({}), mobile, compact);
+    const button = screen.getByTestId('mobile-search-btn');
+
+    expect(button).toHaveClass('lg:hidden');
+    expect(button).not.toHaveClass('md:hidden');
+    button.click();
+
+    expect(compact).toHaveBeenCalledOnce();
+    expect(mobile).not.toHaveBeenCalled();
+  });
+
+  it('without a compact opener the search icon is md:hidden and opens the mobile overlay', () => {
+    const mobile = vi.fn();
+
+    renderActions(bootWith({}), mobile);
+    const button = screen.getByTestId('mobile-search-btn');
+
+    expect(button).toHaveClass('md:hidden');
+    expect(button).not.toHaveClass('lg:hidden');
+    button.click();
+
+    expect(mobile).toHaveBeenCalledOnce();
   });
 });

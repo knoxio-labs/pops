@@ -20,4 +20,9 @@ describe('formatWhen', () => {
   it('never says minutes for a time after now', () => {
     expect(formatWhen('2026-09-25T10:50:00Z', now)).toBe('10:50');
   });
+
+  it('returns the source value when either timestamp is invalid', () => {
+    expect(formatWhen('not-a-date', now)).toBe('not-a-date');
+    expect(formatWhen('2026-09-25T10:45:00Z', 'not-a-date')).toBe('2026-09-25T10:45:00Z');
+  });
 });

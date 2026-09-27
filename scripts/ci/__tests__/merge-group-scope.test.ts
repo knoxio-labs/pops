@@ -309,6 +309,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
     const cacheInputs = isMapping(cache?.with) ? cache.with : undefined;
     expect(cacheInputs?.path).toBe('clients/ios/Packages/*/.build');
     expect(cacheInputs?.key).toMatch(/POPS_XCODE_VERSION/u);
+    expect(cacheInputs?.key).toMatch(/POPS_XCODE_BUILD/u);
     expect(cacheInputs?.key).toMatch(/Packages\/\*\/Sources/u);
     expect(cacheInputs?.key).toMatch(/Packages\/\*\/Tests/u);
     expect(JSON.stringify(cacheInputs)).not.toMatch(/DerivedData/u);

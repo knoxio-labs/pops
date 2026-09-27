@@ -13,6 +13,7 @@ import { useCatalogueLookups } from './useCatalogueLookups.js';
 
 import type { ItemRowModel } from '../foundation/model/model';
 import type { WebListData, WebListResponses } from '../inventory-api/types.gen.js';
+import type { WebItem } from './item-row-model.js';
 
 /** The filters `GET /web/items` accepts, everything but pagination. */
 export type WebItemsFilters = Omit<WebListData['query'], 'cursor' | 'limit'>;
@@ -55,6 +56,8 @@ export function useWebItems(filters: WebItemsFilters, limit: number = DEFAULT_LI
 /** The mapped, paged rows and server totals used by Items and Containers pages. */
 export interface ItemRows {
   readonly rows: ItemRowModel[];
+  /** The loaded wire items used by typed bulk actions that retain field values. */
+  readonly webItems?: readonly WebItem[];
   /** The filtered total from the first loaded page, or null before it loads. */
   readonly total: number | null;
   /** The unfiltered active baseline from the first loaded page, or null before it loads. */
@@ -121,6 +124,7 @@ export function useItemRows(query: WebItemsFilters, limit: number = DEFAULT_LIMI
     () => mapRows(pages, typeNameById, deletedPreviousPlaces),
     [deletedPreviousPlaces, pages, typeNameById]
   );
+  const webItems = useMemo(() => pages.flatMap((page) => page.items), [pages]);
   const contentCounts = useMemo(() => mergedContentCounts(pages), [pages]);
   const firstPage = pages[0];
   const error = listQuery.error instanceof InventoryApiError ? listQuery.error : null;
@@ -130,6 +134,7 @@ export function useItemRows(query: WebItemsFilters, limit: number = DEFAULT_LIMI
 
   return {
     rows,
+    webItems,
     total,
     unfilteredTotal,
     hiddenInactiveCount,

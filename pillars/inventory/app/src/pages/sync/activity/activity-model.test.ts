@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { serverKindGroupCounts } from './activity-counts.js';
 import {
   KIND_GROUP,
   NO_FILTER,
@@ -121,6 +122,19 @@ describe('Activity display model', () => {
       created: 1,
     });
     for (const group of Object.values(KIND_GROUP)) expect(group).not.toBe('all');
+  });
+
+  it('counts server kinds independently of the selected kind filter', () => {
+    expect(
+      serverKindGroupCounts({ moved: 3, stored: 2, edited: 4, lifecycle_changed: 1, created: 2 })
+    ).toEqual({
+      all: 12,
+      placement: 5,
+      containers: 0,
+      edits: 4,
+      lifecycle: 1,
+      created: 2,
+    });
   });
 
   it('renders structured values as JSON and deduplicates changed fields', () => {

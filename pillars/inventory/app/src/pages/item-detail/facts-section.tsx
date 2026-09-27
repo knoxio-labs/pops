@@ -1,75 +1,156 @@
-import { Calculator, Info } from 'lucide-react';
+import { cn } from '@pops/ui';
 
-import { EmptyState } from '@pops/ui';
+import { EmptyLine } from '../../foundation/item-page/section-parts';
+import { INVENTORY_ICONS } from '../../foundation/model/icons';
+import { FactRow } from './fact-row';
+import { StoredFieldEditor } from './stored-field-editor';
 
-import type { DetailFact } from '../../foundation/item-page';
+import type { ReactElement } from 'react';
 
-function FactValue({ fact }: { fact: DetailFact }) {
-  if (fact.origin === 'missing-inputs') {
-    return (
-      <span className="truncate text-muted-foreground">
-        Needs {(fact.missingInputs ?? []).join(', ')}
-      </span>
-    );
-  }
-  if (fact.value === null) return <span className="text-muted-foreground">Not set</span>;
-  return <span className={fact.mono ? 'truncate font-mono' : 'truncate'}>{fact.value}</span>;
-}
+import type { DetailFact } from './detail-model';
+import type { FactEditing } from './use-fact-editing';
 
-function FactOrigin({ fact }: { fact: DetailFact }) {
-  if (fact.origin === 'entered') return null;
-  return (
-    <span className="inline-flex shrink-0 items-center gap-1 text-2xs text-muted-foreground">
-      <Calculator className="size-3" aria-hidden />
-      {fact.origin === 'overridden' ? 'Overridden' : 'Calculated'}
-    </span>
-  );
-}
-
-/** Renders one read-only fact row in the facts rail. */
-export function FactRow({ fact, readOnly }: { fact: DetailFact; readOnly: boolean }) {
-  return (
-    <div
-      className="flex min-h-11 items-center gap-2 rounded-md border-l-2 border-transparent px-2 py-1"
-      data-fact-key={fact.key}
-      data-read-only={readOnly ? 'true' : 'false'}
-    >
-      <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="truncate text-xs text-muted-foreground">{fact.label}</span>
-        <span className="flex w-full min-w-0 items-baseline gap-1.5 text-sm">
-          <FactValue fact={fact} />
-          <FactOrigin fact={fact} />
-        </span>
-      </span>
-      {readOnly ? (
-        <Info className="size-3.5 shrink-0 text-muted-foreground" aria-label="Read only" />
-      ) : null}
-    </div>
-  );
-}
-
-/** Renders the mapped facts, including the intentionally quiet empty state. */
-export function FactsSection({
-  facts,
-  readOnly = false,
-}: {
+/** Props for the read-only facts block. */
+export interface FactsSectionProps {
   facts: readonly DetailFact[];
+  typeName: string | null;
+  layout?: 'grid' | 'list';
   readOnly?: boolean;
-}) {
-  if (facts.length === 0) {
+  onSetType?: () => void;
+  onQuantity?: (action: 'split' | 'change') => void;
+  editing?: FactEditing;
+}
+
+function NoFacts({
+  typeName,
+  readOnly,
+  onSetType,
+}: Pick<FactsSectionProps, 'typeName' | 'readOnly' | 'onSetType'>): ReactElement {
+  if (typeName === null) {
     return (
-      <EmptyState
-        icon={Info}
-        title="No facts recorded"
-        description="This item has no additional fields yet."
-        size="sm"
+      <EmptyLine
+        icon={INVENTORY_ICONS.type}
+        text="Untyped, so it has no fields yet."
+        actionLabel={readOnly ? undefined : 'Set type'}
+        onAction={readOnly ? undefined : onSetType}
       />
     );
   }
   return (
-    <div role="group" aria-label="Facts" className="grid min-w-0 grid-cols-1 gap-0.5">
+    <EmptyLine icon={INVENTORY_ICONS.type} text={`${typeName} has no fields beyond the name.`} />
+  );
+}
+
+function factEditor(
+  fact: DetailFact,
+  readOnly: boolean,
+  editing: FactEditing | undefined,
+  phase: ReturnType<FactEditing['phaseOf']>
+): ReactElement | undefined {
+  if (editing === undefined || readOnly || !fact.inline) return undefined;
+  if (phase !== 'editing' && phase !== 'saving') return undefined;
+  const field = editing.fieldOf(fact.key);
+  if (field === null) return undefined;
+  return (
+    <StoredFieldEditor
+      field={field}
+      drafts={editing.drafts}
+      error={editing.problem ?? undefined}
+      world={editing.world}
+      typeLabel={editing.typeLabel}
+      onText={(values) =>
+        editing.change({
+          ...editing.drafts,
+          text: { ...editing.drafts.text, [field.id]: values },
+        })
+      }
+      onRefs={(refs) =>
+        editing.change({
+          ...editing.drafts,
+          refs: { ...editing.drafts.refs, [field.id]: refs },
+        })
+      }
+      onBoolean={(value) =>
+        editing.change({
+          ...editing.drafts,
+          booleans: { ...editing.drafts.booleans, [field.id]: value },
+        })
+      }
+    />
+  );
+}
+
+function editHandler(
+  editing: FactEditing | undefined,
+  readOnly: boolean,
+  fact: DetailFact,
+  phase: ReturnType<FactEditing['phaseOf']>
+): ((key: string) => void) | undefined {
+  if (editing === undefined || readOnly || !fact.inline || phase === 'saving') return undefined;
+  if (phase === 'editing') return () => editing.save();
+  return editing.start;
+}
+
+function FactRowForFact({
+  fact,
+  readOnly,
+  inlineLabel,
+  onQuantity,
+  editing,
+}: {
+  fact: DetailFact;
+  readOnly: boolean;
+  inlineLabel: boolean;
+  onQuantity: FactsSectionProps['onQuantity'];
+  editing: FactEditing | undefined;
+}): ReactElement {
+  const phase = editing?.phaseOf(fact.key) ?? 'idle';
+  const onEdit = editHandler(editing, readOnly, fact, phase);
+  return (
+    <FactRow
+      fact={fact}
+      readOnly={readOnly}
+      inlineLabel={inlineLabel}
+      onQuantity={onQuantity}
+      phase={phase}
+      rejection={editing?.rejection?.key === fact.key ? editing.rejection.reason : undefined}
+      onEdit={onEdit}
+      onRevert={editing?.revert}
+      editor={factEditor(fact, readOnly, editing, phase)}
+    />
+  );
+}
+
+/** Renders the facts rail in list or wider grid form. */
+export function FactsSection({
+  facts,
+  typeName,
+  layout = 'grid',
+  readOnly = false,
+  onSetType,
+  onQuantity,
+  editing,
+}: FactsSectionProps): ReactElement {
+  if (facts.length === 0)
+    return <NoFacts typeName={typeName} readOnly={readOnly} onSetType={onSetType} />;
+  return (
+    <div
+      role="group"
+      aria-label="Facts"
+      className={cn(
+        'grid min-w-0 content-start gap-x-2 gap-y-0.5',
+        layout === 'grid' ? 'grid-cols-1 @xs:grid-cols-2 @lg:grid-cols-3' : 'grid-cols-1'
+      )}
+    >
       {facts.map((fact) => (
-        <FactRow key={fact.key} fact={fact} readOnly={readOnly} />
+        <FactRowForFact
+          key={fact.key}
+          fact={fact}
+          readOnly={readOnly}
+          inlineLabel={layout === 'list'}
+          onQuantity={onQuantity}
+          editing={editing}
+        />
       ))}
     </div>
   );

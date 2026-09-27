@@ -12,6 +12,7 @@ internal struct InventoryItemFormCase: Identifiable {
     internal let mode: InventoryItemFormMode
     internal let showsValidation: Bool
     internal let cancelling: Bool
+    internal let notCarried: [InventoryQueuedValue]
 
     internal init(
         id: String,
@@ -19,7 +20,8 @@ internal struct InventoryItemFormCase: Identifiable {
         draft: InventoryDraft,
         mode: InventoryItemFormMode = .create,
         showsValidation: Bool = false,
-        cancelling: Bool = false
+        cancelling: Bool = false,
+        notCarried: [InventoryQueuedValue] = []
     ) {
         self.id = id
         self.title = title
@@ -27,14 +29,29 @@ internal struct InventoryItemFormCase: Identifiable {
         self.mode = mode
         self.showsValidation = showsValidation
         self.cancelling = cancelling
+        self.notCarried = notCarried
     }
 
     @MainActor internal var view: some View {
-        InventoryItemFormView(
+        let form = InventoryItemFormView(
             draft: draft, mode: mode, showsValidation: showsValidation,
-            cancelling: cancelling
+            cancelling: cancelling, notCarried: notCarried
         )
         .id(id)
+        return Group {
+            if id == "type-tree" {
+                form.navigationDestination(isPresented: .constant(true)) {
+                    InventoryFormTypePicker(selection: .constant(nil as String?))
+                }
+            } else if id == "type-tree-search" {
+                form.navigationDestination(isPresented: .constant(true)) {
+                    InventoryFormTypePicker(
+                        selection: .constant("Pillowcase" as String?), query: "pillowcase")
+                }
+            } else {
+                form
+            }
+        }
     }
 
     internal static let all: [InventoryItemFormCase] = entry + identity + placement + endings
@@ -55,6 +72,19 @@ internal struct InventoryItemFormCase: Identifiable {
             draft: InventoryDraftFixtures.typed),
         InventoryItemFormCase(
             id: "untyped", title: "No type yet", draft: InventoryDraftFixtures.untyped),
+        InventoryItemFormCase(
+            id: "type-tree", title: "Type tree", draft: InventoryDraftFixtures.typed),
+        InventoryItemFormCase(
+            id: "type-tree-search", title: "Type tree search", draft: InventoryDraftFixtures.typed),
+        InventoryItemFormCase(
+            id: "type-parent-chosen", title: "Parent type chosen", draft: parentChosen),
+        InventoryItemFormCase(
+            id: "type-change-in-tree", title: "Type changed in tree", draft: changedType,
+            mode: .edit,
+            notCarried: [
+                InventoryQueuedValue(
+                    field: "Fitted", value: "Yes", fit: .changedKind(to: "not kept"))
+            ]),
         InventoryItemFormCase(
             id: "code-pending", title: "A code being suggested",
             draft: InventoryDraftFixtures.withCode(.suggesting)),
@@ -98,4 +128,16 @@ internal struct InventoryItemFormCase: Identifiable {
             id: "edit", title: "Editing an item that exists", draft: InventoryDraftFixtures.rich,
             mode: .edit),
     ]
+
+    private static let parentChosen = InventoryDraft(
+        internalID: "itm-type-parent", name: "Linen pillow", typeName: "Pillows")
+
+    private static let changedType = InventoryDraft(
+        internalID: "itm-sheet", name: "Linen sheet", typeName: "Quilt cover",
+        values: [
+            InventoryProperty("Destination", .text("Guest room")),
+            InventoryProperty("Material", .text("Cotton")),
+            InventoryProperty("Colour", .text("White")),
+            InventoryProperty("Pattern", .text("Plain")),
+        ], placement: .directLocation("Guest room"))
 }

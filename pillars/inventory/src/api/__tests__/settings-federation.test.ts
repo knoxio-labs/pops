@@ -52,6 +52,9 @@ describe('inventory federated /settings', () => {
     const byKey = new Map<string, string>(
       (res.body.data as { key: string; value: string }[]).map((row) => [row.key, row.value])
     );
+    expect(byKey.get('inventory.labelSheet')).toBe('L7160');
+    expect(byKey.get('inventory.labelShows')).toBe('auto');
+    expect(byKey.get('inventory.density')).toBe('compact');
     expect(byKey.get('inventory.defaultLimit')).toBe('50');
     expect(byKey.get('inventory.searchDefaultLimit')).toBe('20');
     expect(byKey.get('inventory.maxFileSizeBytes')).toBe('10485760');

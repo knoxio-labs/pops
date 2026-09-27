@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// What a vector's wire value must read back as, built with the domain's own
 /// canonical constructors from the JSON the producer wrote. It never goes

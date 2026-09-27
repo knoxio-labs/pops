@@ -1,10 +1,33 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@pops/pillar-sdk/client';
 
 import { InventoryApiError, unwrap } from './inventory-api-helpers';
 
+const reportResponseMock = vi.hoisted(() => vi.fn());
+
+vi.mock('./foundation/interruptions/interruption-store.js', () => ({
+  reportResponse: reportResponseMock,
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 describe('unwrap', () => {
+  it('reports the response on success and before throwing', () => {
+    const successResponse = { status: 200, url: '/inventory-api/type-catalogue' };
+    const failureResponse = { status: 401, url: '/inventory-api/type-catalogue' };
+
+    expect(unwrap({ data: { ok: true }, response: successResponse })).toEqual({ ok: true });
+    expect(reportResponseMock).toHaveBeenNthCalledWith(1, successResponse);
+
+    expect(() => unwrap({ error: { message: 'failed' }, response: failureResponse })).toThrow(
+      InventoryApiError
+    );
+    expect(reportResponseMock).toHaveBeenNthCalledWith(2, failureResponse);
+  });
+
   it('preserves structured catalogue validation details', () => {
     const response = new Response(null, { status: 400 });
 
