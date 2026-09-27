@@ -1,5 +1,5 @@
 appId: com.knoxiolabs.pops.local
-name: Inventory downloads, then creates, moves, discards and undoes against the real pillar, and drains a change made while it was unreachable
+name: Inventory automatically downloads, then creates, moves, discards and undoes against the real pillar, and drains a change made while it was unreachable
 ---
 # An unpaired launch, every time — the credentials live in the keychain,
 # outside what `clearState` empties.
@@ -29,12 +29,13 @@ name: Inventory downloads, then creates, moves, discards and undoes against the 
 # build registered it (`RootFeature.renderable`).
 - tapOn: 'Inventory'
 
-# Download: a replica that has never been filled says so, and the Sync page's
-# Download pages the pillar's snapshot and change feed into it.
-- assertVisible: 'Set up inventory on this phone'
-- tapOn: 'Start synchronization'
-- tapOn: 'Download'
-- assertVisible: 'Synced'
+# Pairing starts the first download on its own. Wait for the normal dashboard
+# rather than the first-run setup panel: the Browse tiles prove the replica
+# has completed its first download.
+- extendedWaitUntil:
+    visible: 'Items, \d+'
+    timeout: 60000
+- assertVisible: 'Locations, \d+'
 
 # Everything this flow creates carries the run's suffix, and the counts are
 # matched as any number, because the pillar's database outlives one attempt.
@@ -87,7 +88,20 @@ name: Inventory downloads, then creates, moves, discards and undoes against the 
 - tapOn:
     text: 'Move'
     index: 0
+- scrollUntilVisible:
+    element: 'History, Collapsed'
+    direction: DOWN
+- assertNotVisible: 'Moved, Today'
+- tapOn: 'History, Collapsed'
+- assertVisible: 'History, Expanded'
 - assertVisible: 'Moved, Today'
+- tapOn: 'History, Expanded'
+- assertNotVisible: 'Moved, Today'
+- tapOn: 'History, Collapsed'
+- assertVisible: 'Moved, Today'
+- scrollUntilVisible:
+    element: 'More'
+    direction: UP
 
 # Discard, with a reason, which the item's status line then states.
 - tapOn: 'More'

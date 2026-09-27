@@ -300,10 +300,10 @@ jobs:
         uses: actions/cache@v6
         with:
           path: clients/ios/Packages/*/.build
-          key: host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved', 'clients/ios/Packages/*/Sources/**', 'clients/ios/Packages/*/Tests/**') }}
+          key: host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_XCODE_BUILD }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved', 'clients/ios/Packages/*/Sources/**', 'clients/ios/Packages/*/Tests/**') }}
           restore-keys: |
-            host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved') }}-
-            host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-
+            host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_XCODE_BUILD }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved') }}-
+            host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_XCODE_BUILD }}-
 
       # The host-toolchain loop every package README documents (`swift test
       # --package-path Packages/<name>`), run for real rather than assumed to
@@ -355,9 +355,9 @@ jobs:
         uses: actions/cache@v6
         with:
           path: clients/ios/Tools/OpenAPIGenerator/.build
-          key: openapi-generator-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Tools/OpenAPIGenerator/Package.resolved') }}
+          key: openapi-generator-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_XCODE_BUILD }}-${{ hashFiles('clients/ios/Tools/OpenAPIGenerator/Package.resolved') }}
           restore-keys: |
-            openapi-generator-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-
+            openapi-generator-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_XCODE_BUILD }}-
 
       # The iOS half of ADR-040's regenerate-and-diff discipline, and the reason
       # `pillars/bfm/openapi/**` is in this workflow's path filter. Its TypeScript

@@ -2,27 +2,33 @@ import { Cable, Package, Plug, Unlink, Waypoints } from 'lucide-react';
 
 import { Badge, ButtonPrimitive, Checkbox, formatDate } from '@pops/ui';
 
-import { connectionEndName } from './connection-model.js';
+import { OFFLINE_REASON } from '../../foundation/feedback/state-banner.js';
+import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
+import {
+  connectionEndName,
+  fixtureKindLabel,
+  type ConnectionRow,
+  type ResolvedEnd,
+} from './connection-model.js';
 
 import type { ReactElement } from 'react';
 
 import type { SelectionApi } from '../../foundation/selection/use-selection.js';
-import type { WebConnectionRow } from '../../inventory-web/useConnectionsRegistry.js';
 
 /** The grid shared by the connection header and server-ordered rows. */
 export const CONNECTION_GRID = 'grid-cols-[1rem_minmax(0,1fr)_1rem_minmax(0,1fr)_5rem_5.5rem_7rem]';
 
 /** Props for one server-ordered connection registry row. */
 export interface ConnectionListRowProps {
-  row: WebConnectionRow;
+  row: ConnectionRow;
   room: string;
   selected: boolean;
   traced: boolean;
   online: boolean;
   disconnecting: boolean;
-  onOpen: (end: WebConnectionRow['item'] | WebConnectionRow['far']) => void;
-  onTrace: (row: WebConnectionRow) => void;
-  onDisconnect: (row: WebConnectionRow) => void;
+  onOpen: (end: ResolvedEnd) => void;
+  onTrace: (row: ConnectionRow) => void;
+  onDisconnect: (row: ConnectionRow) => void;
   onToggle: SelectionApi['onRowToggle'];
 }
 
@@ -30,10 +36,12 @@ function EndCell({
   end,
   onOpen,
 }: {
-  readonly end: WebConnectionRow['item'] | WebConnectionRow['far'];
+  readonly end: ResolvedEnd;
   readonly onOpen: ConnectionListRowProps['onOpen'];
 }): ReactElement {
   const isItem = end.kind === 'item';
+  const name = isItem ? end.item.name : end.fixture.name;
+  const code = isItem ? end.item.code : null;
   const Icon = isItem ? Package : Plug;
   return (
     <span className="flex min-w-0 items-center gap-2">
@@ -44,16 +52,16 @@ function EndCell({
           variant="ghost"
           size="xs"
           className="h-auto min-w-0 justify-start px-0 text-sm font-medium hover:bg-transparent hover:text-app-accent"
-          aria-label={`Open ${isItem ? 'item' : 'fixture'} ${end.name}`}
+          aria-label={`Open ${isItem ? 'item' : 'fixture'} ${name}`}
           onClick={() => onOpen(end)}
         >
-          <span className="truncate">{end.name}</span>
+          <span className="truncate">{name}</span>
         </ButtonPrimitive>
         {isItem ? (
-          <span className="truncate text-xs text-muted-foreground">{end.code ?? 'No code'}</span>
+          <span className="truncate text-xs text-muted-foreground">{code ?? 'No code'}</span>
         ) : (
           <Badge variant="outline" className="max-w-fit">
-            {end.type}
+            {fixtureKindLabel(end.fixture.kind, end.fixture.type)}
           </Badge>
         )}
       </span>
@@ -82,16 +90,22 @@ function RowActions({
       >
         <Waypoints className="size-4" aria-hidden />
       </ButtonPrimitive>
-      <ButtonPrimitive
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Disconnect ${row.item.name} from ${farName}`}
-        disabled={!online || disconnecting}
-        onClick={() => onDisconnect(row)}
+      <HintTooltip
+        label={`Disconnect ${row.item.name} from ${farName}`}
+        disabledReason={!online ? OFFLINE_REASON : undefined}
       >
-        <Unlink className="size-4" aria-hidden />
-      </ButtonPrimitive>
+        <ButtonPrimitive
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Disconnect ${row.item.name} from ${farName}`}
+          aria-disabled={!online || undefined}
+          disabled={!online || disconnecting}
+          onClick={online && !disconnecting ? () => onDisconnect(row) : undefined}
+        >
+          <Unlink className="size-4" aria-hidden />
+        </ButtonPrimitive>
+      </HintTooltip>
     </span>
   );
 }
@@ -134,7 +148,7 @@ export function ConnectionListRow({
           onToggle(row.id, event.shiftKey);
         }}
       />
-      <EndCell end={row.item} onOpen={onOpen} />
+      <EndCell end={{ kind: 'item', item: row.item }} onOpen={onOpen} />
       <Cable className="size-3.5 text-muted-foreground" aria-hidden />
       <EndCell end={row.far} onOpen={onOpen} />
       <span className="truncate text-xs text-muted-foreground">{room}</span>

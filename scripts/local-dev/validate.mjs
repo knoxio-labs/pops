@@ -55,8 +55,10 @@ export async function validate({
       const status = run('mise', args);
       if (status !== 0) return status;
     }
+    const docsStatus = run('node', ['scripts/ci/check-docs-model.mjs']);
+    if (docsStatus !== 0) return docsStatus;
   }
-  if (scope.unitPaths.length === 0) return sourcesUnchanged() ? 0 : 1;
+  if (scope.unitPaths.length === 0 && !scope.scripts) return sourcesUnchanged() ? 0 : 1;
   const checks = await discoverLocalTasks({
     cwd,
     units: discovered,

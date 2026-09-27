@@ -5,6 +5,8 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { ErrorBodySchema } from '@pops/types';
+
 import { requires } from './capabilities.js';
 import { MOBILE_PERIMETER_RESPONSES, MOBILE_REQUEST_RESPONSES } from './rest-mobile-responses.js';
 
@@ -37,8 +39,8 @@ export const MobileBarcodeProductSchema = z.object({
 /** The complete 200 response from `GET /mobile/barcode/lookup/:code`. */
 export const MobileBarcodeLookupOutcomeSchema = z.discriminatedUnion('outcome', [
   z.object({ outcome: z.literal('found'), product: MobileBarcodeProductSchema }),
-  z.object({ outcome: z.literal('not_found') }),
-  z.object({ outcome: z.literal('unavailable') }),
+  z.object({ outcome: z.literal('not_found'), reason: z.literal('unsupported').optional() }),
+  z.object({ outcome: z.literal('unavailable'), error: ErrorBodySchema.optional() }),
 ]);
 
 /** Inferred barcode product shape exposed to mobile consumers. */
@@ -53,6 +55,7 @@ export const mobileBarcodeContract = c.router({
     method: 'GET',
     path: '/mobile/barcode/lookup/:code',
     pathParams: z.object({ code: z.string().min(1) }),
+    headers: z.object({ 'x-pops-barcode-diagnostics': z.literal('1').optional() }),
     responses: {
       200: MobileBarcodeLookupOutcomeSchema,
       ...MOBILE_REQUEST_RESPONSES,

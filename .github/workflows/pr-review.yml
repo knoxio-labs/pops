@@ -1,7 +1,7 @@
 name: PR Review
 
-# The advisory reviewer, moved out of `agent-review.yml` and rewritten to
-# compound.
+# The compounding reviewer, moved out of `agent-review.yml` so its cancellable
+# model run is separate from the required findings gate.
 #
 # WHY IT IS ITS OWN WORKFLOW NOW. It used to be the last step of the
 # `agent-review` job, and `agent-review` is a REQUIRED context on `main`. Two
@@ -18,10 +18,11 @@ name: PR Review
 #     absent one, and the PR stays permanently blocked. It had to skip the LLM
 #     at STEP level and keep the job reporting either way.
 #
-# Splitting also matches what `agent-review.yml` already said it was: "the
-# guards decide whether a change may merge, the reviewer only comments". With
-# the reviewer gone that job is purely deterministic guards, and this one can be
-# cancelled, debounced and draft-skipped freely because nothing waits on it.
+# With the reviewer gone, `agent-review.yml` is purely deterministic guards.
+# This workflow can be cancelled, debounced and draft-skipped because its job
+# context is not required; `review-findings-gate.yml` separately waits for its
+# current-head state and blocks on open HIGH or MEDIUM findings. LOW suggestions
+# remain visible in the sticky comment without blocking merge.
 #
 # NO `merge_group:` TRIGGER, deliberately. A merge group has no pull request to
 # comment on, and this workflow is not a required context, so it has nothing to

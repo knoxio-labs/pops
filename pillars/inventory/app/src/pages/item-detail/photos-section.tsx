@@ -1,58 +1,91 @@
-import { Camera } from 'lucide-react';
+import { ImageOff } from 'lucide-react';
+import { useState } from 'react';
 
-import { Skeleton } from '@pops/ui';
+import type { ReactElement } from 'react';
 
-import { PhotoGallery } from '../../components/PhotoGallery';
-import { SortablePhotoGrid } from '../../components/SortablePhotoGrid';
+import type { DetailPhoto } from './detail-model';
 
-import type { DetailPhoto } from '../../foundation/item-page';
-
-/** The photos block used at the top of the facts rail. */
-export function PhotosSection({
-  photos,
-  isLoading,
-  isReordering,
-  readOnly,
-  onReorder,
-}: {
+/** Props for the read-only photo block in the facts rail. */
+export interface PhotosSectionProps {
+  itemId: string;
+  itemName: string;
   photos: readonly DetailPhoto[];
-  isLoading: boolean;
-  isReordering: boolean;
-  readOnly: boolean;
-  onReorder: (orderedIds: number[]) => void;
-}) {
-  if (isLoading) {
+  disabledReason?: string;
+}
+
+function LeadPhoto({ photo, itemName }: { photo: DetailPhoto; itemName: string }): ReactElement {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
     return (
-      <section aria-label="Photos" className="flex shrink-0 flex-col gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <Camera className="size-4" aria-hidden />
-          Photos
-        </h2>
-        <Skeleton className="aspect-video w-full rounded-lg" />
-      </section>
+      <div className="flex size-full flex-col items-center justify-center gap-1 bg-muted px-3 text-center text-muted-foreground">
+        <ImageOff className="size-6" aria-hidden />
+        <p className="text-xs font-medium text-foreground">Photo did not load</p>
+        <p className="text-2xs">The file is missing or damaged. Replace it or remove it.</p>
+      </div>
     );
   }
-
   return (
-    <section aria-label="Photos" className="flex shrink-0 flex-col gap-2">
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
-        <Camera className="size-4" aria-hidden />
-        Photos
-        {photos.length > 0 ? (
-          <span className="text-xs font-normal text-muted-foreground">{photos.length}</span>
-        ) : null}
-      </h2>
-      <PhotoGallery photos={[...photos]} baseUrl="/api/inventory/photos" />
-      {!readOnly && photos.length > 1 ? (
-        <SortablePhotoGrid
-          photos={[...photos]}
-          baseUrl="/api/inventory/photos"
-          isReordering={isReordering}
-          onReorder={onReorder}
+    <img
+      src={photo.url}
+      alt={photo.caption ?? `${itemName} photo`}
+      className="size-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function Thumbnail({ photo }: { photo: DetailPhoto }): ReactElement {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="size-11 overflow-hidden rounded-md border bg-muted">
+      {failed ? (
+        <span className="flex size-full items-center justify-center" title="Photo did not load">
+          <ImageOff className="size-4 text-muted-foreground" aria-hidden />
+        </span>
+      ) : (
+        <img
+          src={photo.thumbUrl}
+          alt={photo.caption ?? ''}
+          className="size-full object-cover"
+          onError={() => setFailed(true)}
         />
-      ) : null}
-      {readOnly ? (
-        <p className="text-xs text-muted-foreground">Photos are read-only for destroyed items.</p>
+      )}
+    </div>
+  );
+}
+
+/** Renders the lead photo and up to three read-only thumbnails. */
+export function PhotosSection({
+  itemId,
+  itemName,
+  photos,
+  disabledReason,
+}: PhotosSectionProps): ReactElement {
+  const [lead, ...rest] = photos;
+  return (
+    <section
+      aria-label="Photos"
+      className="flex w-full shrink-0 flex-col gap-2"
+      data-item-id={itemId}
+      title={disabledReason}
+    >
+      <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+        {lead ? (
+          <LeadPhoto key={lead.id} photo={lead} itemName={itemName} />
+        ) : (
+          <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+            No photos
+          </div>
+        )}
+      </div>
+      {lead && rest.length > 0 ? (
+        <ul aria-label="More photos" className="flex gap-1">
+          {rest.slice(0, 3).map((photo) => (
+            <li key={photo.id}>
+              <Thumbnail photo={photo} />
+            </li>
+          ))}
+        </ul>
       ) : null}
     </section>
   );
