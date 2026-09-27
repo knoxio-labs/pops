@@ -1,5 +1,5 @@
-import Foundation
 import AppCore
+import Foundation
 import Testing
 
 @testable import InventoryReplica
