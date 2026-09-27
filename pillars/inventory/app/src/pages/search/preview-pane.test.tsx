@@ -304,6 +304,22 @@ describe('search preview pane', () => {
     expect(onOpenInPurchases).toHaveBeenCalledOnce();
   });
 
+  it('does not fetch every item when no purchase line is tracked', () => {
+    mocks.usePurchasePreview.mockReturnValue({
+      status: 'success',
+      purchase: { ...purchase(), lines: [{ name: 'Cable ties', quantity: 1, priceCents: 200 }] },
+      error: null,
+    });
+
+    render(<PurchasePreview purchaseId="po-1203" currency="AUD" onOpenInPurchases={vi.fn()} />);
+
+    expect(mocks.useItemRows).toHaveBeenCalledWith(
+      { ids: 'purchase-preview-empty', includeInactive: true },
+      1
+    );
+    expect(screen.queryByText(/Tracked as/)).not.toBeInTheDocument();
+  });
+
   it('a failed purchase says it did not load and still offers Open in Purchases', () => {
     const onOpenInPurchases = vi.fn();
     mocks.usePurchasePreview.mockReturnValue({ status: 'error', purchase: null, error: {} });
