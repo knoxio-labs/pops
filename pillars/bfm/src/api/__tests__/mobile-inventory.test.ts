@@ -882,7 +882,7 @@ describe('sync ledger', () => {
     });
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('refuses a ledger report above the 256KB cap before it reaches inventory', async () => {
