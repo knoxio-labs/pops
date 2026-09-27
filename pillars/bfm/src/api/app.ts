@@ -25,6 +25,7 @@ import { createPillarErrorHandlers } from '@pops/pillar-express';
 
 import {
   MOBILE_INVENTORY_MEDIA_MAX_BYTES,
+  MOBILE_INVENTORY_LEDGER_MAX_BYTES,
   MOBILE_INVENTORY_MUTATIONS_MAX_BYTES,
 } from '../contract/rest-mobile-inventory.js';
 import { MOBILE_UPLOAD_MAX_BYTES } from '../contract/rest-schemas.js';
@@ -40,6 +41,7 @@ import { createIdentityMiddleware } from './middleware/identity.js';
 import { createMobileNoStore } from './mobile-no-store.js';
 import {
   CHALLENGE_PATH,
+  MOBILE_INVENTORY_LEDGER_PATH,
   MOBILE_INVENTORY_MEDIA_UPLOAD_PATH,
   MOBILE_INVENTORY_MUTATIONS_PATH,
   MOBILE_PATH_PREFIX,
@@ -196,6 +198,8 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
     MOBILE_INVENTORY_MUTATIONS_PATH,
     express.json({ limit: MOBILE_INVENTORY_MUTATIONS_MAX_BYTES })
   );
+
+  app.use(MOBILE_INVENTORY_LEDGER_PATH, express.json({ limit: MOBILE_INVENTORY_LEDGER_MAX_BYTES }));
 
   // A photo's bytes, base64 in JSON, on the same footing as the receipt
   // upload's own mount above — this is the outer envelope limit only; the

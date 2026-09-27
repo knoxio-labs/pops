@@ -2559,6 +2559,193 @@ export type MobileInventoryChangesResponses = {
 export type MobileInventoryChangesResponse =
   MobileInventoryChangesResponses[keyof MobileInventoryChangesResponses];
 
+export type MobileInventoryReportLedgerData = {
+  /**
+   * Body
+   */
+  body?: {
+    attention: Array<{
+      code?: {
+        holder: string;
+        suggested: string;
+        wanted: string;
+      };
+      held?: {
+        title: string;
+        values: Array<{
+          field: string;
+          fit: string;
+          replacement?: string;
+          value: string;
+        }>;
+      };
+      id: string;
+      itemId: string;
+      itemName: string;
+      kind: string;
+      mine?: {
+        at: string;
+        source: string;
+        value: string;
+      };
+      openedAt: string;
+      photo?: {
+        limit: string;
+        size: string;
+      };
+      problem: string;
+      refused?: {
+        at: string;
+        reason: string;
+      };
+      theirs?: {
+        at: string;
+        source: string;
+        value: string;
+      };
+    }>;
+    lastSyncAt?: string | null;
+    reportedAt: string;
+    resolved: Array<{
+      at: string;
+      dropped?: Array<{
+        field: string;
+        fit: string;
+        replacement?: string;
+        value: string;
+      }>;
+      id: string;
+      itemName: string;
+      outcome: string;
+    }>;
+    waiting: Array<{
+      id: string;
+      itemName: string;
+      reason: {
+        caseId?: string;
+        itemName?: string;
+        kind: string;
+        on?: string;
+        revision?: number;
+      };
+      since: string;
+      summary: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/inventory/sync/ledger';
+};
+
+export type MobileInventoryReportLedgerErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 413
+   */
+  413: {
+    code: 'payload_too_large';
+    maxBytes: number;
+    message: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryReportLedgerError =
+  MobileInventoryReportLedgerErrors[keyof MobileInventoryReportLedgerErrors];
+
+export type MobileInventoryReportLedgerResponses = {
+  /**
+   * 200
+   */
+  200: {
+    stored: boolean;
+  };
+};
+
+export type MobileInventoryReportLedgerResponse =
+  MobileInventoryReportLedgerResponses[keyof MobileInventoryReportLedgerResponses];
+
 export type MobileInventorySnapshotData = {
   body?: never;
   path?: never;

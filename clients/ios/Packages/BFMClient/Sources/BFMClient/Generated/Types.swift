@@ -116,6 +116,11 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /mobile/inventory/sync/changes`.
     /// - Remark: Generated from `#/paths//mobile/inventory/sync/changes/get(mobileInventory.changes)`.
     func mobileInventory_changes(_ input: Operations.MobileInventory_changes.Input) async throws -> Operations.MobileInventory_changes.Output
+    /// Store a device's latest sync ledger report
+    ///
+    /// - Remark: HTTP `POST /mobile/inventory/sync/ledger`.
+    /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)`.
+    func mobileInventory_reportLedger(_ input: Operations.MobileInventory_reportLedger.Input) async throws -> Operations.MobileInventory_reportLedger.Output
     /// One page of live items and locations; the first page fixes the high-water seq the feed resumes from
     ///
     /// - Remark: HTTP `GET /mobile/inventory/sync/snapshot`.
@@ -466,6 +471,19 @@ extension APIProtocol {
         try await mobileInventory_changes(Operations.MobileInventory_changes.Input(
             query: query,
             headers: headers
+        ))
+    }
+    /// Store a device's latest sync ledger report
+    ///
+    /// - Remark: HTTP `POST /mobile/inventory/sync/ledger`.
+    /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)`.
+    internal func mobileInventory_reportLedger(
+        headers: Operations.MobileInventory_reportLedger.Input.Headers = .init(),
+        body: Operations.MobileInventory_reportLedger.Input.Body? = nil
+    ) async throws -> Operations.MobileInventory_reportLedger.Output {
+        try await mobileInventory_reportLedger(Operations.MobileInventory_reportLedger.Input(
+            headers: headers,
+            body: body
         ))
     }
     /// One page of live items and locations; the first page fixes the high-water seq the feed resumes from
@@ -29201,6 +29219,2143 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             internal var serviceUnavailable: Operations.MobileInventory_changes.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Store a device's latest sync ledger report
+    ///
+    /// - Remark: HTTP `POST /mobile/inventory/sync/ledger`.
+    /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)`.
+    internal enum MobileInventory_reportLedger {
+        internal static let id: Swift.String = "mobileInventory.reportLedger"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileInventory_reportLedger.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileInventory_reportLedger.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileInventory_reportLedger.Input.Headers
+            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json`.
+                internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload`.
+                    internal struct AttentionPayloadPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/code`.
+                        internal struct CodePayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/code/holder`.
+                            internal var holder: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/code/suggested`.
+                            internal var suggested: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/code/wanted`.
+                            internal var wanted: Swift.String
+                            /// Creates a new `CodePayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - holder:
+                            ///   - suggested:
+                            ///   - wanted:
+                            internal init(
+                                holder: Swift.String,
+                                suggested: Swift.String,
+                                wanted: Swift.String
+                            ) {
+                                self.holder = holder
+                                self.suggested = suggested
+                                self.wanted = wanted
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case holder
+                                case suggested
+                                case wanted
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.holder = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .holder
+                                )
+                                self.suggested = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .suggested
+                                )
+                                self.wanted = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .wanted
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "holder",
+                                    "suggested",
+                                    "wanted"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/code`.
+                        internal var code: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.CodePayload?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held`.
+                        internal struct HeldPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/title`.
+                            internal var title: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload`.
+                            internal struct ValuesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/field`.
+                                internal var field: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/fit`.
+                                internal var fit: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/replacement`.
+                                internal var replacement: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/ValuesPayload/value`.
+                                internal var value: Swift.String
+                                /// Creates a new `ValuesPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - field:
+                                ///   - fit:
+                                ///   - replacement:
+                                ///   - value:
+                                internal init(
+                                    field: Swift.String,
+                                    fit: Swift.String,
+                                    replacement: Swift.String? = nil,
+                                    value: Swift.String
+                                ) {
+                                    self.field = field
+                                    self.fit = fit
+                                    self.replacement = replacement
+                                    self.value = value
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case field
+                                    case fit
+                                    case replacement
+                                    case value
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.field = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .field
+                                    )
+                                    self.fit = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .fit
+                                    )
+                                    self.replacement = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .replacement
+                                    )
+                                    self.value = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .value
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "field",
+                                        "fit",
+                                        "replacement",
+                                        "value"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/values`.
+                            internal typealias ValuesPayload = [Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.HeldPayload.ValuesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held/values`.
+                            internal var values: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.HeldPayload.ValuesPayload
+                            /// Creates a new `HeldPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - title:
+                            ///   - values:
+                            internal init(
+                                title: Swift.String,
+                                values: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.HeldPayload.ValuesPayload
+                            ) {
+                                self.title = title
+                                self.values = values
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case title
+                                case values
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.title = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .title
+                                )
+                                self.values = try container.decode(
+                                    Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.HeldPayload.ValuesPayload.self,
+                                    forKey: .values
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "title",
+                                    "values"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/held`.
+                        internal var held: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.HeldPayload?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/id`.
+                        internal var id: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/itemId`.
+                        internal var itemId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/itemName`.
+                        internal var itemName: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/kind`.
+                        internal var kind: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine`.
+                        internal struct MinePayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/at`.
+                            internal var at: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/source`.
+                            internal var source: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine/value`.
+                            internal var value: Swift.String
+                            /// Creates a new `MinePayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - at:
+                            ///   - source:
+                            ///   - value:
+                            internal init(
+                                at: Foundation.Date,
+                                source: Swift.String,
+                                value: Swift.String
+                            ) {
+                                self.at = at
+                                self.source = source
+                                self.value = value
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case at
+                                case source
+                                case value
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.at = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .at
+                                )
+                                self.source = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .source
+                                )
+                                self.value = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .value
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "at",
+                                    "source",
+                                    "value"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/mine`.
+                        internal var mine: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.MinePayload?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/openedAt`.
+                        internal var openedAt: Foundation.Date
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/photo`.
+                        internal struct PhotoPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/photo/limit`.
+                            internal var limit: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/photo/size`.
+                            internal var size: Swift.String
+                            /// Creates a new `PhotoPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - limit:
+                            ///   - size:
+                            internal init(
+                                limit: Swift.String,
+                                size: Swift.String
+                            ) {
+                                self.limit = limit
+                                self.size = size
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case limit
+                                case size
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.limit = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .limit
+                                )
+                                self.size = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .size
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "limit",
+                                    "size"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/photo`.
+                        internal var photo: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.PhotoPayload?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/problem`.
+                        internal var problem: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/refused`.
+                        internal struct RefusedPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/refused/at`.
+                            internal var at: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/refused/reason`.
+                            internal var reason: Swift.String
+                            /// Creates a new `RefusedPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - at:
+                            ///   - reason:
+                            internal init(
+                                at: Foundation.Date,
+                                reason: Swift.String
+                            ) {
+                                self.at = at
+                                self.reason = reason
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case at
+                                case reason
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.at = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .at
+                                )
+                                self.reason = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .reason
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "at",
+                                    "reason"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/refused`.
+                        internal var refused: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.RefusedPayload?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs`.
+                        internal struct TheirsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/at`.
+                            internal var at: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/source`.
+                            internal var source: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs/value`.
+                            internal var value: Swift.String
+                            /// Creates a new `TheirsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - at:
+                            ///   - source:
+                            ///   - value:
+                            internal init(
+                                at: Foundation.Date,
+                                source: Swift.String,
+                                value: Swift.String
+                            ) {
+                                self.at = at
+                                self.source = source
+                                self.value = value
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case at
+                                case source
+                                case value
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.at = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .at
+                                )
+                                self.source = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .source
+                                )
+                                self.value = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .value
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "at",
+                                    "source",
+                                    "value"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/AttentionPayload/theirs`.
+                        internal var theirs: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload?
+                        /// Creates a new `AttentionPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - held:
+                        ///   - id:
+                        ///   - itemId:
+                        ///   - itemName:
+                        ///   - kind:
+                        ///   - mine:
+                        ///   - openedAt:
+                        ///   - photo:
+                        ///   - problem:
+                        ///   - refused:
+                        ///   - theirs:
+                        internal init(
+                            code: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.CodePayload? = nil,
+                            held: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.HeldPayload? = nil,
+                            id: Swift.String,
+                            itemId: Swift.String,
+                            itemName: Swift.String,
+                            kind: Swift.String,
+                            mine: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.MinePayload? = nil,
+                            openedAt: Foundation.Date,
+                            photo: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.PhotoPayload? = nil,
+                            problem: Swift.String,
+                            refused: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.RefusedPayload? = nil,
+                            theirs: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload? = nil
+                        ) {
+                            self.code = code
+                            self.held = held
+                            self.id = id
+                            self.itemId = itemId
+                            self.itemName = itemName
+                            self.kind = kind
+                            self.mine = mine
+                            self.openedAt = openedAt
+                            self.photo = photo
+                            self.problem = problem
+                            self.refused = refused
+                            self.theirs = theirs
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case held
+                            case id
+                            case itemId
+                            case itemName
+                            case kind
+                            case mine
+                            case openedAt
+                            case photo
+                            case problem
+                            case refused
+                            case theirs
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decodeIfPresent(
+                                Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.held = try container.decodeIfPresent(
+                                Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.HeldPayload.self,
+                                forKey: .held
+                            )
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.itemId = try container.decode(
+                                Swift.String.self,
+                                forKey: .itemId
+                            )
+                            self.itemName = try container.decode(
+                                Swift.String.self,
+                                forKey: .itemName
+                            )
+                            self.kind = try container.decode(
+                                Swift.String.self,
+                                forKey: .kind
+                            )
+                            self.mine = try container.decodeIfPresent(
+                                Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.MinePayload.self,
+                                forKey: .mine
+                            )
+                            self.openedAt = try container.decode(
+                                Foundation.Date.self,
+                                forKey: .openedAt
+                            )
+                            self.photo = try container.decodeIfPresent(
+                                Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.PhotoPayload.self,
+                                forKey: .photo
+                            )
+                            self.problem = try container.decode(
+                                Swift.String.self,
+                                forKey: .problem
+                            )
+                            self.refused = try container.decodeIfPresent(
+                                Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.RefusedPayload.self,
+                                forKey: .refused
+                            )
+                            self.theirs = try container.decodeIfPresent(
+                                Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload.TheirsPayload.self,
+                                forKey: .theirs
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "held",
+                                "id",
+                                "itemId",
+                                "itemName",
+                                "kind",
+                                "mine",
+                                "openedAt",
+                                "photo",
+                                "problem",
+                                "refused",
+                                "theirs"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/attention`.
+                    internal typealias AttentionPayload = [Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayloadPayload]
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/attention`.
+                    internal var attention: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayload
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/lastSyncAt`.
+                    internal var lastSyncAt: Foundation.Date?
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/reportedAt`.
+                    internal var reportedAt: Foundation.Date
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload`.
+                    internal struct ResolvedPayloadPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/at`.
+                        internal var at: Foundation.Date
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload`.
+                        internal struct DroppedPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/field`.
+                            internal var field: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/fit`.
+                            internal var fit: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/replacement`.
+                            internal var replacement: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/DroppedPayload/value`.
+                            internal var value: Swift.String
+                            /// Creates a new `DroppedPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - field:
+                            ///   - fit:
+                            ///   - replacement:
+                            ///   - value:
+                            internal init(
+                                field: Swift.String,
+                                fit: Swift.String,
+                                replacement: Swift.String? = nil,
+                                value: Swift.String
+                            ) {
+                                self.field = field
+                                self.fit = fit
+                                self.replacement = replacement
+                                self.value = value
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case field
+                                case fit
+                                case replacement
+                                case value
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.field = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .field
+                                )
+                                self.fit = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .fit
+                                )
+                                self.replacement = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .replacement
+                                )
+                                self.value = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .value
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "field",
+                                    "fit",
+                                    "replacement",
+                                    "value"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/dropped`.
+                        internal typealias DroppedPayload = [Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayloadPayload.DroppedPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/dropped`.
+                        internal var dropped: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayloadPayload.DroppedPayload?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/id`.
+                        internal var id: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/itemName`.
+                        internal var itemName: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/ResolvedPayload/outcome`.
+                        internal var outcome: Swift.String
+                        /// Creates a new `ResolvedPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - at:
+                        ///   - dropped:
+                        ///   - id:
+                        ///   - itemName:
+                        ///   - outcome:
+                        internal init(
+                            at: Foundation.Date,
+                            dropped: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayloadPayload.DroppedPayload? = nil,
+                            id: Swift.String,
+                            itemName: Swift.String,
+                            outcome: Swift.String
+                        ) {
+                            self.at = at
+                            self.dropped = dropped
+                            self.id = id
+                            self.itemName = itemName
+                            self.outcome = outcome
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case at
+                            case dropped
+                            case id
+                            case itemName
+                            case outcome
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.at = try container.decode(
+                                Foundation.Date.self,
+                                forKey: .at
+                            )
+                            self.dropped = try container.decodeIfPresent(
+                                Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayloadPayload.DroppedPayload.self,
+                                forKey: .dropped
+                            )
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.itemName = try container.decode(
+                                Swift.String.self,
+                                forKey: .itemName
+                            )
+                            self.outcome = try container.decode(
+                                Swift.String.self,
+                                forKey: .outcome
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "at",
+                                "dropped",
+                                "id",
+                                "itemName",
+                                "outcome"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/resolved`.
+                    internal typealias ResolvedPayload = [Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayloadPayload]
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/resolved`.
+                    internal var resolved: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayload
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload`.
+                    internal struct WaitingPayloadPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/id`.
+                        internal var id: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/itemName`.
+                        internal var itemName: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/reason`.
+                        internal struct ReasonPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/reason/caseId`.
+                            internal var caseId: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/reason/itemName`.
+                            internal var itemName: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/reason/kind`.
+                            internal var kind: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/reason/on`.
+                            internal var on: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/reason/revision`.
+                            internal var revision: Swift.Int?
+                            /// Creates a new `ReasonPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - caseId:
+                            ///   - itemName:
+                            ///   - kind:
+                            ///   - on:
+                            ///   - revision:
+                            internal init(
+                                caseId: Swift.String? = nil,
+                                itemName: Swift.String? = nil,
+                                kind: Swift.String,
+                                on: Swift.String? = nil,
+                                revision: Swift.Int? = nil
+                            ) {
+                                self.caseId = caseId
+                                self.itemName = itemName
+                                self.kind = kind
+                                self.on = on
+                                self.revision = revision
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case caseId
+                                case itemName
+                                case kind
+                                case on
+                                case revision
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.caseId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .caseId
+                                )
+                                self.itemName = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .itemName
+                                )
+                                self.kind = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .kind
+                                )
+                                self.on = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .on
+                                )
+                                self.revision = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .revision
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "caseId",
+                                    "itemName",
+                                    "kind",
+                                    "on",
+                                    "revision"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/reason`.
+                        internal var reason: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.WaitingPayloadPayload.ReasonPayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/since`.
+                        internal var since: Foundation.Date
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/WaitingPayload/summary`.
+                        internal var summary: Swift.String
+                        /// Creates a new `WaitingPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - id:
+                        ///   - itemName:
+                        ///   - reason:
+                        ///   - since:
+                        ///   - summary:
+                        internal init(
+                            id: Swift.String,
+                            itemName: Swift.String,
+                            reason: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.WaitingPayloadPayload.ReasonPayload,
+                            since: Foundation.Date,
+                            summary: Swift.String
+                        ) {
+                            self.id = id
+                            self.itemName = itemName
+                            self.reason = reason
+                            self.since = since
+                            self.summary = summary
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case id
+                            case itemName
+                            case reason
+                            case since
+                            case summary
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.itemName = try container.decode(
+                                Swift.String.self,
+                                forKey: .itemName
+                            )
+                            self.reason = try container.decode(
+                                Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.WaitingPayloadPayload.ReasonPayload.self,
+                                forKey: .reason
+                            )
+                            self.since = try container.decode(
+                                Foundation.Date.self,
+                                forKey: .since
+                            )
+                            self.summary = try container.decode(
+                                Swift.String.self,
+                                forKey: .summary
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "id",
+                                "itemName",
+                                "reason",
+                                "since",
+                                "summary"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/waiting`.
+                    internal typealias WaitingPayload = [Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.WaitingPayloadPayload]
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/json/waiting`.
+                    internal var waiting: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.WaitingPayload
+                    /// Creates a new `JsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - attention:
+                    ///   - lastSyncAt:
+                    ///   - reportedAt:
+                    ///   - resolved:
+                    ///   - waiting:
+                    internal init(
+                        attention: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayload,
+                        lastSyncAt: Foundation.Date? = nil,
+                        reportedAt: Foundation.Date,
+                        resolved: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayload,
+                        waiting: Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.WaitingPayload
+                    ) {
+                        self.attention = attention
+                        self.lastSyncAt = lastSyncAt
+                        self.reportedAt = reportedAt
+                        self.resolved = resolved
+                        self.waiting = waiting
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case attention
+                        case lastSyncAt
+                        case reportedAt
+                        case resolved
+                        case waiting
+                    }
+                    internal init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self.attention = try container.decode(
+                            Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.AttentionPayload.self,
+                            forKey: .attention
+                        )
+                        self.lastSyncAt = try container.decodeIfPresent(
+                            Foundation.Date.self,
+                            forKey: .lastSyncAt
+                        )
+                        self.reportedAt = try container.decode(
+                            Foundation.Date.self,
+                            forKey: .reportedAt
+                        )
+                        self.resolved = try container.decode(
+                            Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.ResolvedPayload.self,
+                            forKey: .resolved
+                        )
+                        self.waiting = try container.decode(
+                            Operations.MobileInventory_reportLedger.Input.Body.JsonPayload.WaitingPayload.self,
+                            forKey: .waiting
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "attention",
+                            "lastSyncAt",
+                            "reportedAt",
+                            "resolved",
+                            "waiting"
+                        ])
+                    }
+                }
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/requestBody/content/application\/json`.
+                case json(Operations.MobileInventory_reportLedger.Input.Body.JsonPayload)
+            }
+            internal var body: Operations.MobileInventory_reportLedger.Input.Body?
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                headers: Operations.MobileInventory_reportLedger.Input.Headers = .init(),
+                body: Operations.MobileInventory_reportLedger.Input.Body? = nil
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/200/content/json/stored`.
+                        internal var stored: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - stored:
+                        internal init(stored: Swift.Bool) {
+                            self.stored = stored
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case stored
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.stored = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .stored
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "stored"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/200/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileInventory_reportLedger.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileInventory_reportLedger.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case bfm_request_invalid = "bfm.request.invalid"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content/json/code`.
+                        internal var code: Operations.MobileInventory_reportLedger.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileInventory_reportLedger.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_reportLedger.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/400/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileInventory_reportLedger.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileInventory_reportLedger.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case bfm_auth_invalidToken = "bfm.auth.invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content/json/code`.
+                        internal var code: Operations.MobileInventory_reportLedger.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileInventory_reportLedger.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_reportLedger.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/401/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileInventory_reportLedger.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileInventory_reportLedger.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case bfm_auth_deviceRevoked = "bfm.auth.device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case1/details`.
+                            internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case1/requestId`.
+                            internal var requestId: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case1/retryable`.
+                            internal var retryable: Swift.Bool
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - details:
+                            ///   - message:
+                            ///   - requestId:
+                            ///   - retryable:
+                            internal init(
+                                code: Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                                message: Swift.String,
+                                requestId: Swift.String,
+                                retryable: Swift.Bool
+                            ) {
+                                self.code = code
+                                self.details = details
+                                self.message = message
+                                self.requestId = requestId
+                                self.retryable = retryable
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case details
+                                case message
+                                case requestId
+                                case retryable
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.details = try container.decodeIfPresent(
+                                    OpenAPIRuntime.OpenAPIValueContainer.self,
+                                    forKey: .details
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                self.requestId = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .requestId
+                                )
+                                self.retryable = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .retryable
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "details",
+                                    "message",
+                                    "requestId",
+                                    "retryable"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case1`.
+                        case case1(Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/json/case2`.
+                        case case2(Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/403/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileInventory_reportLedger.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileInventory_reportLedger.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ContentTooLarge: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/413/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/413/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/413/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case payloadTooLarge = "payload_too_large"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/413/content/json/code`.
+                        internal var code: Operations.MobileInventory_reportLedger.Output.ContentTooLarge.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/413/content/json/maxBytes`.
+                        internal var maxBytes: Swift.Int
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/413/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - maxBytes:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileInventory_reportLedger.Output.ContentTooLarge.Body.JsonPayload.CodePayload,
+                            maxBytes: Swift.Int,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.maxBytes = maxBytes
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case maxBytes
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_reportLedger.Output.ContentTooLarge.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.maxBytes = try container.decode(
+                                Swift.Int.self,
+                                forKey: .maxBytes
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "maxBytes",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/413/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.ContentTooLarge.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.ContentTooLarge.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.ContentTooLarge.Body
+                /// Creates a new `ContentTooLarge`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.ContentTooLarge.Body) {
+                    self.body = body
+                }
+            }
+            /// 413
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/413`.
+            ///
+            /// HTTP response code: `413 contentTooLarge`.
+            case contentTooLarge(Operations.MobileInventory_reportLedger.Output.ContentTooLarge)
+            /// The associated value of the enum case if `self` is `.contentTooLarge`.
+            ///
+            /// - Throws: An error if `self` is not `.contentTooLarge`.
+            /// - SeeAlso: `.contentTooLarge`.
+            internal var contentTooLarge: Operations.MobileInventory_reportLedger.Output.ContentTooLarge {
+                get throws {
+                    switch self {
+                    case let .contentTooLarge(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "contentTooLarge",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct UpgradeRequired: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/426/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/426/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/426/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case clientTooOld = "client_too_old"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/426/content/json/code`.
+                        internal var code: Operations.MobileInventory_reportLedger.Output.UpgradeRequired.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/426/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileInventory_reportLedger.Output.UpgradeRequired.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_reportLedger.Output.UpgradeRequired.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/426/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.UpgradeRequired.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.UpgradeRequired.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.UpgradeRequired.Body
+                /// Creates a new `UpgradeRequired`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.UpgradeRequired.Body) {
+                    self.body = body
+                }
+            }
+            /// 426
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/426`.
+            ///
+            /// HTTP response code: `426 upgradeRequired`.
+            case upgradeRequired(Operations.MobileInventory_reportLedger.Output.UpgradeRequired)
+            /// The associated value of the enum case if `self` is `.upgradeRequired`.
+            ///
+            /// - Throws: An error if `self` is not `.upgradeRequired`.
+            /// - SeeAlso: `.upgradeRequired`.
+            internal var upgradeRequired: Operations.MobileInventory_reportLedger.Output.UpgradeRequired {
+                get throws {
+                    switch self {
+                    case let .upgradeRequired(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "upgradeRequired",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/429/content/json/code`.
+                        internal var code: Operations.MobileInventory_reportLedger.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileInventory_reportLedger.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_reportLedger.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/429/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileInventory_reportLedger.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileInventory_reportLedger.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/details`.
+                        internal var details: Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobileInventory_reportLedger.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobileInventory_reportLedger.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/details`.
+                        internal var details: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/application\/json`.
+                    case json(Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/sync/ledger/post(mobileInventory.reportLedger)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobileInventory_reportLedger.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

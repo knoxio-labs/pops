@@ -10,13 +10,13 @@ import AppCore
 internal enum InventoryItemFormSubmission {
     internal static func protocol2Create(
         _ draft: InventoryItemDraft, protocol2: InventoryProtocol2Draft,
-        type: InventoryCatalogueType
+        type: InventoryCatalogueType, catalogueRevision: Int
     ) -> [InventoryCommand] {
         let note = draft.note.trimmingCharacters(in: .whitespacesAndNewlines)
         let create = InventoryCommand.createProtocol2Item(
             .init(
                 id: draft.id, name: draft.trimmedName,
-                catalogueRevision: protocol2.catalogueRevision, typeId: protocol2.typeId,
+                catalogueRevision: catalogueRevision, typeId: protocol2.typeId,
                 values: protocol2.completeValues(for: type),
                 overrides: protocol2.overrideValues(for: type), note: note.isEmpty ? nil : note,
                 externalIds: draft.externalIds, quantity: draft.quantity,
@@ -26,18 +26,18 @@ internal enum InventoryItemFormSubmission {
 
     internal static func protocol2Edit(
         _ draft: InventoryItemDraft, protocol2: InventoryProtocol2Draft,
-        type: InventoryCatalogueType, original: InventoryItem
+        type: InventoryCatalogueType, original: InventoryItem, catalogueRevision: Int
     ) -> [InventoryCommand] {
         var commands: [InventoryCommand] = []
         if protocol2.typeId != original.typeId {
             commands.append(
                 .changeProtocol2ItemType(
-                    id: original.id, catalogueRevision: protocol2.catalogueRevision,
+                    id: original.id, catalogueRevision: catalogueRevision,
                     typeId: protocol2.typeId, values: protocol2.completeValues(for: type)))
         } else if !protocol2.patches(for: type).isEmpty {
             commands.append(
                 .editProtocol2Item(
-                    id: original.id, catalogueRevision: protocol2.catalogueRevision,
+                    id: original.id, catalogueRevision: catalogueRevision,
                     values: protocol2.patches(for: type)))
         }
         if let edit = editCommand(

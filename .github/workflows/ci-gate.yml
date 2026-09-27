@@ -8,132 +8,10 @@ run-name: >-
   ${{ github.event.workflow_run.head_branch }} (via ${{ github.event.workflow_run.name }}:
   ${{ github.event.workflow_run.conclusion }})
 
-# Single static-named aggregate over the quality workflows whose own jobs carry
-# DYNAMIC matrix names (`finance (pillar) — ts`, `@pops/app-food`, …) and so
-# cannot be listed individually in the branch ruleset. Alongside Lint / Format /
-# Module boundaries / Duplication + agent-review, the ruleset requires `CI Gate`
-# — the ONE static context that can carry every typecheck / test / build /
-# clippy / exports / extractability / bundle-map / cargo-deny / drift job. None
-# of those is required by name, and all of them block a merge through this
-# context. See .github/workflows/README.md.
-#
-# WHY workflow_run (not needs:): the gated jobs live across NINE separate
-# workflows, each with its OWN path filters. `needs:` only sees jobs in the
-# same run, and folding them into one workflow would (a) double-run every job
-# or (b) rename the existing required `Lint`/`Format`/… contexts and break the
-# ruleset. `workflow_run` OBSERVES the sibling workflows' results without re-
-# executing anything, so it adds zero CI cost and touches none of them.
-#
-# WHERE THE VERDICT IS PUBLISHED: GitHub attributes a `workflow_run` job's
-# IMPLICIT check run to the default branch's tip, never to
-# `github.event.workflow_run.head_sha`. Relying on it therefore produced a
-# post-hoc signal on `main` that appeared on no pull request at all, and that no
-# ruleset could require. So the job does NOT rely on its implicit check run: it
-# reads the aggregate and then POSTs an EXPLICIT check run named `CI Gate`
-# against the observed head SHA. That context lands on the pull request, and is
-# the one the branch ruleset can list. The job itself is named differently so
-# its implicit check run on main's tip can never be mistaken for the verdict.
-#
-# RUN LIST VS CHECK RUN: the paragraph above fixes where the VERDICT is
-# published. It does not fix where THIS RUN is filed. `gh run list` / the
-# Actions UI always attribute a `workflow_run` run to the default branch's
-# tip, regardless of which commit `github.event.workflow_run.head_sha` names —
-# so a run that fails while evaluating an unrelated PR branch still shows up
-# as a red `CI Gate` on `main`'s run list, with no visible link to the branch
-# it actually judged. `run-name` above states the evaluated SHA and branch in
-# the run's own title so that mismatch is visible without opening the log;
-# `core.setFailed` below is kept so a genuine failure still sorts to the top
-# of the list as red, but the run's status describes the commit named in its
-# title, never the branch column beside it. To read a commit's real gate
-# state, query the check run directly, never the run list:
-#   gh api repos/knoxio-labs/pops/commits/<sha>/check-runs \
-#     --jq '.check_runs[] | select(.name=="CI Gate")'
-#
-# ALWAYS REPORTS: `Quality` is gated and `quality.yml` carries no path filter,
-# so it runs on EVERY pull request — including docs-only ones. That is what
-# guarantees this workflow fires, and therefore that `CI Gate` reports, on every
-# pull request. A required context that never reports blocks its PR forever
-# (`strict_required_status_checks_policy` governs only the branch-up-to-date
-# requirement), so that unfiltered trigger is load-bearing, not incidental. It
-# is asserted by scripts/ci/check-ci-gate-wiring.mjs.
-#
-# CONVERGENCE: this fires on EACH listed workflow's completion and reads the
-# CURRENT conclusion of every gated workflow at the same head SHA via the API.
-# GitHub keeps the most-recent check run per name as the gate state, so the
-# verdict converges on the authoritative one:
-#   - a failure is sticky: the failed run stays at the SHA, so any later re-
-#     evaluation (triggered by a slower sibling finishing) still sees it -> RED,
-#     concluded immediately, because nothing can clear it;
-#   - no failure but a sibling still running -> IN PROGRESS, never green. Green
-#     here would let a PR merge minutes before the slowest gated workflow has an
-#     opinion, and take its failure post-merge;
-#   - all-pass: the last sibling to finish triggers a run that sees every gated
-#     workflow success/skipped -> GREEN.
-# Only a settled evaluation carries a `conclusion`, and it is posted in a single
-# call, so no evaluation leaves a half-written check run behind.
-#
-# THAT CONVERGENCE ASSUMES THE SIBLING'S RUN EVENTUALLY REGISTERS FOR THIS SHA.
-# It says nothing about a sibling whose run for THIS head SHA never comes into
-# existence at all, which the API reports identically to one genuinely
-# excluded by its own `paths:` filter — both are just an absent row. This was
-# reproduced directly, not hypothesised: commit `dec13a17` touched
-# `clients/ios/**`, so `ios-quality.yml` should have triggered, but its
-# previous run (for the commit `dec13a17` superseded) was still executing
-# under that workflow's `cancel-in-progress` concurrency group, and no new run
-# had registered yet. `listWorkflowRunsForRepo({ head_sha: "dec13a17..." })`
-# legitimately returned zero rows for "iOS Quality" — indistinguishable, from
-# this script's point of view, from a genuine path-filter exclusion — and CI
-# Gate check run `93839365599` published `success` at `2026-08-11T15:53:30Z`
-# reporting "iOS Quality: (did not run — path-filtered, treated as pass)".
-# PR-time convergence did NOT correct it: that branch's `ios-quality.yml` run
-# history holds exactly one run for the whole branch, against an EARLIER
-# commit — neither `dec13a17` nor the branch's eventual HEAD, nor an empty
-# commit pushed specifically to force a fresh registration, ever got one.
-#
-# WHY THIS DOES NOT REACH `main`: `merge_group` cannot carry a `paths:` filter
-# at all — GitHub rejects the key outright on that event — so every one of the
-# nine gated workflows is TRIGGERED unconditionally in the merge queue and
-# registers a run there regardless of the diff. Two of them (`ios-quality.yml`,
-# `docker-build.yml`) now scope their expensive jobs INSIDE that run, via a
-# `scope` job and `scripts/ci/merge-group-scope.mjs` — a skipped job still
-# leaves the workflow concluding `success`, so what this script reads is
-# unchanged, and the absent-run handling below is still never reached on a
-# merge group. Confirmed
-# on the same commit: the queue entry that carried it (head_sha `47a5fd1f...`,
-# the commit that actually landed on `main`) ran "iOS Quality" for real,
-# completing at `2026-08-11T17:04:02Z`, and the CI Gate evaluation that
-# followed (check run `93860105727`, `17:04:11Z`) reflects that REAL result,
-# not the absent-run branch. A premature PR-time `success` is therefore a
-# misleading EARLY SIGNAL something could act on too soon — never a way for an
-# unvalidated gated workflow to actually merge.
-#
-# A sibling workflow ABSENT from the API result at this head SHA is treated as
-# non-failing ONLY once its own `pull_request.paths` filter is checked against
-# this evaluation's diff — the `PATH_FILTERS` map and `matchesPathFilter` below,
-# mirroring what `_discover-units.yml` does for `pillars/`/`libs/`, and kept in
-# sync with each gated workflow's real trigger by
-# `scripts/ci/check-ci-gate-wiring.mjs`. A genuine exclusion (a filter is
-# declared and the diff doesn't match it) is a pass. Anything else — the filter
-# matches, the workflow carries no filter at all ("Quality"), the diff couldn't
-# be determined, or this evaluation is neither a `pull_request` nor a
-# `merge_group` event (the only two where the diff is trustworthy) — is
-# PENDING, never a pass. A gated workflow that then never actually registers a
-# run for this SHA (the concurrency-group race above) leaves CI Gate stuck
-# `in_progress` instead of reporting green — an empty commit or re-running the
-# missing workflow is then required to unstick it. That is the intended trade:
-# a required check that never turns green blocks its own PR, which cannot be
-# merged by accident, where a false green could be.
-#
-# MITIGATION: every gated workflow's own `concurrency:` block now runs with
-# `cancel-in-progress: false` (was `true`) for exactly this reason — cancelling
-# the superseded run and admitting the new one is not atomic on GitHub's side,
-# and that two-phase cancel+admit is what the dec13a17/901923b reproduction
-# above raced on. Without a cancellation to race, a superseded run is left to
-# finish (this repo is public, so the wasted wall-clock costs no Actions
-# minutes) and the next push's run still queues normally. This removes the
-# specific mechanism behind the reproduction above; it does not change what
-# this file does if a run is absent for some other reason — the pending-not-
-# pass handling above stays the correct backstop regardless of cause.
+# Explicit check runs attach this aggregate to the observed commit; workflow_run
+# jobs themselves attach to the default branch. Missing expected runs block.
+# Each quality run registers independently per SHA. Only after GitHub reports
+# its replacement do we cancel obsolete PR runs (POPS-1869).
 
 on:
   workflow_run:
@@ -142,22 +20,22 @@ on:
       - "FE Quality"
       - "Rust Quality"
       - "App Quality"
+      - "Promotion Quality"
       - "Quality"
       - "Registry Generated Quality"
       - "iOS Quality"
       - "Docker Build"
       - "E2E Tests"
-    types: [completed]
+    types: [requested, in_progress, completed]
 
-# Key on the observed head SHA, not the gate's own ref: every sibling
-# completion for the same commit collapses onto one evaluation lane, and a
-# newer commit's evaluation cancels a stale in-flight one.
+# Serialize publications for a commit; an interrupted API write can otherwise
+# overtake its successor. Each queued evaluation reads current sibling states.
 concurrency:
-  group: ci-gate-${{ github.event.workflow_run.head_sha }}
-  cancel-in-progress: true
+  group: ci-gate-${{ github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.event }}-${{ github.event.workflow_run.path == '.github/workflows/promotion-quality.yml' && 'cancellation' || 'admission' }}
+  cancel-in-progress: false
 
 permissions:
-  actions: read
+  actions: write
   checks: write
   contents: read
   pull-requests: read
@@ -187,7 +65,8 @@ jobs:
               "Docker Build",
               "E2E Tests",
             ];
-            const failing = new Set(["failure", "cancelled", "timed_out", "startup_failure", "action_required", "stale"]);
+            const cancellationOnly = ["Promotion Quality"];
+            const passing = new Set(["success", "skipped"]);
 
             // Mirrors each gated workflow's OWN `pull_request.paths` trigger —
             // "Quality" carries none and is deliberately absent here, since it
@@ -263,7 +142,12 @@ jobs:
               "iOS Quality": [
                 "clients/ios/**",
                 "pillars/bfm/**",
-                "pillars/inventory/**",
+                "pillars/inventory/src/**",
+                "pillars/inventory/migrations/**",
+                "pillars/inventory/scripts/**",
+                "pillars/inventory/package.json",
+                "pillars/inventory/mise.toml",
+                "pillars/inventory/tsconfig*.json",
                 "scripts/ios-e2e/**",
                 "pnpm-lock.yaml",
                 ".github/workflows/ios-quality.yml",
@@ -369,55 +253,120 @@ jobs:
 
             core.info(`Triggered by "${process.env.TRIGGERING_WORKFLOW}" (conclusion=${process.env.TRIGGERING_CONCLUSION}) at ${headSha}`);
 
-            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head_sha: headSha,
-              per_page: 100,
-            });
-
-            // The diff is only trustworthy for a `pull_request` evaluation
-            // with an identified PR (fetched below), or a `merge_group` one —
-            // where every gated workflow is TRIGGERED unconditionally (`paths:`
-            // is not a legal filter on that event) and therefore always has a
-            // run to read. A workflow that scopes itself inside that run still
-            // registers one and still concludes, so the absent-run path below
-            // is unreachable there either way.
-            // Anything else (a `push` to `main`, e.g.) keeps the pre-existing
-            // behavior below: an absent run is treated as filtered-out and
-            // passing. `main` is not gated by branch protection, so getting
-            // this wrong there does not admit a broken merge — see the
-            // CONVERGENCE / WHY THIS DOES NOT REACH `main` comment at the top
-            // of this file.
-            const triggeringEvent = context.payload.workflow_run.event;
-            const pullRequests = context.payload.workflow_run.pull_requests || [];
+            const triggeringRun = context.payload.workflow_run;
+            const triggeringEvent = triggeringRun.event;
+            if (triggeringEvent !== "pull_request" && triggeringEvent !== "merge_group") {
+              core.info("Only pull request and merge-group runs can publish an admission verdict.");
+              return;
+            }
+            let pullRequests = triggeringRun.pull_requests || [];
+            let pullRequest = null;
             let changedFiles = null;
-            if (triggeringEvent === "pull_request" && pullRequests.length > 0) {
-              try {
-                const files = await github.paginate(github.rest.pulls.listFiles, {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: pullRequests[0].number,
+            if (triggeringEvent === "pull_request") {
+              if (pullRequests.length === 0) {
+                const associated = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+                  ...context.repo,
+                  commit_sha: headSha,
                   per_page: 100,
                 });
-                changedFiles = files.map((f) => f.filename);
+                pullRequests = associated.filter((pr) => pr.state === "open" && pr.head.sha === headSha &&
+                  pr.head.repo?.id === triggeringRun.head_repository?.id && pr.head.ref === triggeringRun.head_branch);
+              }
+              if (pullRequests.length !== 1) {
+                core.setFailed("Cannot identify one pull request for this run; no verdict published.");
+                return;
+              }
+              const response = await github.rest.pulls.get({
+                ...context.repo,
+                pull_number: pullRequests[0].number,
+              });
+              pullRequest = response.data;
+              if (pullRequest.state !== "open" || pullRequest.head.sha !== headSha) {
+                core.info("Ignoring a closed or superseded pull request head.");
+                return;
+              }
+              try {
+                const files = await github.paginate(github.rest.pulls.listFiles, {
+                  ...context.repo,
+                  pull_number: pullRequest.number,
+                  per_page: 100,
+                });
+                changedFiles = files.length < 3000 ? files.map((file) => file.filename) : null;
               } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                core.warning(`Could not list changed files for PR #${pullRequests[0].number}: ${message}`);
+                core.warning(`Could not list changed files: ${error instanceof Error ? error.message : String(error)}`);
               }
             }
-            const diffIsTrustworthy = triggeringEvent === "pull_request" || triggeringEvent === "merge_group";
 
-            // Keep the newest run per gated workflow name (a re-run supersedes
-            // an earlier attempt for the same workflow at this SHA).
+            const workflows = await github.paginate(github.rest.actions.listRepoWorkflows, {
+              ...context.repo,
+              per_page: 100,
+            });
+            const workflowNames = new Map(workflows.map((workflow) => [workflow.id, workflow.name]));
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+              ...context.repo,
+              head_sha: headSha,
+              event: triggeringEvent,
+              per_page: 100,
+            });
             const latest = new Map();
-            for (const run of runs) {
-              if (!gated.includes(run.name)) continue;
-              const prev = latest.get(run.name);
-              if (!prev || run.run_number > prev.run_number || (run.run_number === prev.run_number && run.run_attempt > prev.run_attempt)) {
-                latest.set(run.name, run);
+            for (const run of [...runs, triggeringRun]) {
+              const name = workflowNames.get(run.workflow_id);
+              if ((!gated.includes(name) && !cancellationOnly.includes(name)) || run.event !== triggeringEvent || run.head_sha !== headSha) continue;
+              if (pullRequest) {
+                const associated = run.pull_requests.some((pr) =>
+                  pr.number === pullRequest.number && pr.base.ref === pullRequest.base.ref);
+                const forkRun = run.pull_requests.length === 0 &&
+                  run.head_repository?.id === pullRequest.head.repo?.id &&
+                  run.head_branch === pullRequest.head.ref &&
+                  run.display_title === `${name} for pull_request into ${pullRequest.base.ref}`;
+                if (!associated && !forkRun) continue;
+              }
+              const prev = latest.get(name);
+              if (!prev || run.run_number > prev.run_number || (run.run_number === prev.run_number &&
+                  (run.run_attempt > prev.run_attempt || (run.run_attempt === prev.run_attempt &&
+                    run.status === "completed" && prev.status !== "completed")))) {
+                latest.set(name, run);
               }
             }
+
+            // Registration is the precondition for cancellation, not its side effect.
+            // Never execute or check out PR content in this privileged observer.
+            for (const registered of pullRequest ? latest.values() : []) {
+              const { data: replacement } = await github.rest.actions.getWorkflowRun({
+                ...context.repo,
+                run_id: registered.id,
+              });
+              const current = await github.rest.pulls.get({
+                ...context.repo,
+                pull_number: pullRequest.number,
+              });
+              if (replacement.head_sha === current.data.head.sha && current.data.state === "open" &&
+                  replacement.event === "pull_request" &&
+                  replacement.head_repository?.id &&
+                  replacement.pull_requests.some((pr) => pr.number === pullRequest.number)) {
+                const candidates = await github.paginate(github.rest.actions.listWorkflowRuns, {
+                  ...context.repo,
+                  workflow_id: replacement.workflow_id,
+                  event: "pull_request",
+                  branch: replacement.head_branch,
+                  per_page: 100,
+                });
+                for (const run of candidates) {
+                  if (run.workflow_id !== replacement.workflow_id || run.id >= replacement.id || run.status === "completed" ||
+                      run.event !== "pull_request" ||
+                      run.head_repository?.id !== replacement.head_repository?.id ||
+                      !run.pull_requests.some((pr) => pr.number === pullRequest.number)) continue;
+                  try {
+                    await github.rest.actions.cancelWorkflowRun({ ...context.repo, run_id: run.id });
+                    core.info(`Cancelled superseded run ${run.id} after replacement ${replacement.id} registered.`);
+                  } catch (error) {
+                    core.warning(`Could not cancel run ${run.id}: ${error instanceof Error ? error.message : String(error)}`);
+                  }
+                }
+              }
+            }
+
+            if (cancellationOnly.includes(workflowNames.get(triggeringRun.workflow_id))) return;
 
             const lines = [];
             const failed = [];
@@ -425,7 +374,8 @@ jobs:
             for (const name of gated) {
               const run = latest.get(name);
               if (!run) {
-                const expected = diffIsTrustworthy ? matchesPathFilter(name, changedFiles) : false;
+                const expected = triggeringEvent === "merge_group" ? true
+                  : triggeringEvent === "pull_request" ? matchesPathFilter(name, changedFiles) : false;
                 if (expected === false) {
                   lines.push(`  - ${name}: (did not run — path-filtered, treated as pass)`);
                   continue;
@@ -445,29 +395,12 @@ jobs:
               }
               const c = run.conclusion;
               lines.push(`  - ${name}: ${c}`);
-              if (failing.has(c)) failed.push(`${name} (${c})`);
+              if (!passing.has(c)) failed.push(`${name} (${c ?? "missing conclusion"})`);
             }
 
             core.info("Gated workflow states at this commit:");
             for (const l of lines) core.info(l);
 
-            // A failure is conclusive immediately — it is sticky, so no later
-            // evaluation can clear it. Absence of failure is NOT: a sibling
-            // still in flight can fail next. Publishing `success` while one is
-            // pending would let a PR go green, and mergeable, minutes before
-            // the slowest gated workflow has an opinion — the failure would
-            // then arrive after the merge. So a pending gate stays
-            // `in_progress`, which reads as "Expected" and holds the merge
-            // until the last sibling's completion re-fires this and concludes.
-            //
-            // An in-progress check run from a settled sibling's completion
-            // does not strand a PR on its own: concurrency cancels this job
-            // only when a NEWER run for the same head SHA starts, and that
-            // successor publishes in turn. What CAN strand it is a gated
-            // workflow whose run for this SHA never registers at all — see
-            // the CONVERGENCE comment at the top of this file for why that
-            // happens and why it is the intended failure mode (stuck, not
-            // silently green).
             const settled = failed.length > 0 || pending.length === 0;
 
             const verdict = failed.length > 0
@@ -475,6 +408,17 @@ jobs:
               : pending.length > 0
                 ? `Quality gate PENDING — no failure yet; still in flight: ${pending.join(", ")}`
                 : "Quality gate PASSED — no gated workflow reported a failure at this commit.";
+
+            if (pullRequest) {
+              const { data: current } = await github.rest.pulls.get({
+                ...context.repo,
+                pull_number: pullRequest.number,
+              });
+              if (current.state !== "open" || current.head.sha !== headSha || current.base.ref !== pullRequest.base.ref) {
+                core.info("Pull request changed during evaluation; no verdict published.");
+                return;
+              }
+            }
 
             await github.rest.checks.create({
               owner: context.repo.owner,

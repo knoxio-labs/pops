@@ -8,7 +8,7 @@
 import { SERVICE_ACCOUNT_HEADER, type ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { loadPublishedCatalogue } from '../../catalogue/index.js';
-import { ACTOR_HEADER } from '../../contract/rest-sync.js';
+import { ACTOR_HEADER, PROTOCOL_HEADER } from '../../contract/rest-sync.js';
 import { runMutations } from '../../domain/commands/index.js';
 import { createAiClient, isPermutation, type AiClient } from '../ai/client.js';
 import { inventoryErrors } from '../errors.js';
@@ -21,6 +21,7 @@ import { toSyncEvents } from '../sync/events.js';
 import { readItemHistory } from '../sync/history.js';
 import { storeLedgerReport } from '../sync/ledger.js';
 import { readMinProtocol, readSyncState } from '../sync/meta.js';
+import { requireProtocol } from '../sync/protocol.js';
 import { readSnapshotPage } from '../sync/snapshot.js';
 import { projectItems, toSyncLocation } from '../sync/wire.js';
 
@@ -58,14 +59,18 @@ export interface SyncHandlerDeps {
 /** Handlers for `sync.*`: snapshot, change feed, item history and mutations. */
 export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
   return {
-    snapshot: ({ query }: SyncReq['snapshot']) =>
+    snapshot: ({ query, headers }: SyncReq['snapshot']) =>
       runSync(async () => {
-        const { page, catalogue, catalogueRevision, minimumProtocol } = db.transaction((tx) => ({
-          page: readSnapshotPage(tx, readSyncState(tx), query),
-          catalogue: readProtocol1Catalogue(tx),
-          catalogueRevision: loadPublishedCatalogue(tx)?.revision.revision ?? null,
-          minimumProtocol: readMinProtocol(tx),
-        }));
+        const { page, catalogue, catalogueRevision, minimumProtocol } = db.transaction((tx) => {
+          const minimumProtocol = readMinProtocol(tx);
+          const protocol = requireProtocol(headers[PROTOCOL_HEADER], minimumProtocol);
+          return {
+            page: readSnapshotPage(tx, readSyncState(tx), query, protocol),
+            catalogue: readProtocol1Catalogue(tx),
+            catalogueRevision: loadPublishedCatalogue(tx)?.revision.revision ?? null,
+            minimumProtocol,
+          };
+        });
         return {
           status: 200 as const,
           body: {
@@ -82,15 +87,17 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
         };
       }),
 
-    changes: ({ query }: SyncReq['changes']) =>
+    changes: ({ query, headers }: SyncReq['changes']) =>
       runSync(async () => {
         const { page, catalogue, catalogueRevision, minimumProtocol } = db.transaction((tx) => {
-          const rows = readChanges(tx, readSyncState(tx), query);
+          const minimumProtocol = readMinProtocol(tx);
+          const protocol = requireProtocol(headers[PROTOCOL_HEADER], minimumProtocol);
+          const rows = readChanges(tx, readSyncState(tx), query, protocol);
           return {
             page: { ...rows, syncEvents: toSyncEvents(tx, rows.events) },
             catalogue: readProtocol1Catalogue(tx),
             catalogueRevision: loadPublishedCatalogue(tx)?.revision.revision ?? null,
-            minimumProtocol: readMinProtocol(tx),
+            minimumProtocol,
           };
         });
         return {
