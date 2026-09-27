@@ -1,6 +1,7 @@
 import AppCore
 import Foundation
 import HTTPTypes
+import OpenAPIRuntime
 import Testing
 
 @testable import BFMClient
