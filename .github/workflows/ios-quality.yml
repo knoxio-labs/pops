@@ -121,9 +121,8 @@ on:
     inputs:
       full-validation:
         description: Run the simulator tests with analyzer rules and the Maestro flow
-        required: false
+        required: true
         type: boolean
-        default: false
   pull_request:
     paths:
       - "clients/ios/**"
