@@ -271,7 +271,11 @@ describe('the scope job is wired to the workflow it scopes', () => {
     const fullValidation = isMapping(inputs?.['full-validation'])
       ? inputs['full-validation']
       : undefined;
-    expect(fullValidation).toMatchObject({ required: false, type: 'boolean', default: false });
+    expect(fullValidation).toEqual({
+      description: 'Run the simulator tests with analyzer rules and the Maestro flow',
+      required: true,
+      type: 'boolean',
+    });
   });
 
   it('reports source lint before restoring or compiling host packages', () => {
