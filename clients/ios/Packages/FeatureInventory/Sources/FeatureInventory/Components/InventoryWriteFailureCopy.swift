@@ -21,13 +21,15 @@ extension InventoryCopy {
     private static func message(for error: InventoryCommandError) -> String {
         switch error {
         case .fieldConflict(let field, _, _, let source, _, _):
-            return "\(fieldName(field)) was changed on \(source.inSentence) first, so nothing changed here."
+            return
+                "\(fieldName(field)) was changed on \(source.inSentence) first, so nothing changed here."
         case .codeCollision(_, let heldByName, let suggestedCode):
             return "That code is already on \(heldByName). \(suggestedCode) is free."
         case .deletedElsewhere(let source, _):
             return "This was deleted on \(source.inSentence), so nothing changed."
         case .rejected(let reason, let serverMessage):
-            let trimmedMessage = serverMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmedMessage = serverMessage.trimmingCharacters(
+                in: .whitespacesAndNewlines)
             return trimmedMessage.isEmpty ? message(for: reason) : trimmedMessage
         case .nothingToUndo:
             return "There is nothing left to undo."
