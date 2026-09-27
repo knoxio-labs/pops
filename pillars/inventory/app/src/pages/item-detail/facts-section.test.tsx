@@ -50,6 +50,15 @@ function createEditing(phase: { current: FactPhase }): FactEditing {
 }
 
 describe('FactsSection', () => {
+  it('uses the size="sm" hit target for inline editing', () => {
+    const editing = createEditing({ current: 'idle' });
+    render(<FactsSection facts={[fact]} typeName="Hardware" editing={editing} />);
+
+    const editButton = screen.getByRole('button', { name: 'Edit Serial' });
+
+    expect(editButton).toHaveClass('h-9', 'before:absolute');
+  });
+
   it('opens the stable-key editor and saves it with Enter', () => {
     const phase = { current: 'idle' as FactPhase };
     const editing = createEditing(phase);
