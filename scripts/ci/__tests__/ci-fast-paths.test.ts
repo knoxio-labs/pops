@@ -17,6 +17,8 @@ describe('fast CI workflow wiring', () => {
     expect(appQuality).toContain('git merge-base --is-ancestor');
     expect(appQuality).toContain('select-affected-apps.mjs --all');
     expect(appQuality).toContain('github.event_name }}" = "merge_group"');
+    expect(appQuality).toContain('full-validation:');
+    expect(appQuality).toContain('inputs[\'full-validation\'] }}" = "true"');
   });
 
   it('keeps review cancellation while reducing the ordinary debounce', () => {
