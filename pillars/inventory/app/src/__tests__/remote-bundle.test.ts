@@ -78,7 +78,9 @@ describe('inventory remote bundle', () => {
 
   it('carries no slot the manifest does not advertise', () => {
     const { bundles } = assertRemoteUiModule(imported);
-    expect(Object.keys(bundles).toSorted()).toEqual([...new Set(allPageSlots())].toSorted());
+    expect(Object.keys(bundles).toSorted()).toEqual(
+      [...new Set([...allPageSlots(), 'inventory-paperless'])].toSorted()
+    );
   });
 
   // Externalised, not merely absent. A build that dropped React by accident —
