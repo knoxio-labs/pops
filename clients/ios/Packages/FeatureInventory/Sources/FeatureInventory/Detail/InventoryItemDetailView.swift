@@ -113,7 +113,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     }
 
     private var sections: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+        VStack(alignment: .leading, spacing: PopsSpacing.xl) {
             InventoryItemDetailSyncBanner(
                 detail: detail, resolve: { Task { await model.resolveConflict() } },
                 retry: refresh)

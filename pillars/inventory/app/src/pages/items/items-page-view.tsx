@@ -7,17 +7,23 @@ import { ItemsSummary } from '../../foundation/list-page/items-summary.js';
 import { ItemsToolbar } from '../../foundation/list-page/items-toolbar.js';
 import { filterChips } from '../../foundation/list-page/list-filters.js';
 import { SelectionDock } from '../../foundation/list-page/selection-dock.js';
+import { useItemsExport, type ItemsExport } from '../../foundation/list-page/use-export.js';
 import { useListPageKeys } from '../../foundation/list-page/use-list-page-keys.js';
-import { useListVerbs, useTrackedWrites } from '../../foundation/list-page/use-list-verbs.js';
+import {
+  useListVerbs,
+  useTrackedWrites,
+  type ListVerbs,
+} from '../../foundation/list-page/use-list-verbs.js';
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { itemsSearch } from '../../inventory-web/items-url-filters.js';
 import { listTrailState } from '../../inventory-web/list-trail.js';
+import { ExportMenu } from './export-menu.js';
 import { ItemsBanner } from './items-banners.js';
 import { ItemsListBody } from './items-cards.js';
 
 import type { ReactElement } from 'react';
 
-import type { ItemsPageModel } from './items-page.js';
+import type { ItemsPageModel } from './items-page-model.js';
 
 function ItemsToolbarSection({ model }: { model: ItemsPageModel }): ReactElement | null {
   if (!model.showToolbar) return null;
@@ -49,20 +55,46 @@ function ItemsToolbarSection({ model }: { model: ItemsPageModel }): ReactElement
   );
 }
 
+function ItemsPageActions({
+  model,
+  itemsExport,
+}: {
+  model: ItemsPageModel;
+  itemsExport: ItemsExport;
+}): ReactElement {
+  return (
+    <div className="flex items-center gap-2">
+      <ExportMenu
+        viewCount={model.itemRows.total}
+        selectedCount={model.selection.count}
+        busy={itemsExport.busy}
+        onView={() => void itemsExport.exportView(model.filters.queryFilters)}
+        onSelection={() => void itemsExport.exportSelection(model.selection.selectedIds)}
+        onTemplate={itemsExport.exportTemplate}
+      />
+      <NewItemButton offline={!model.online} onNavigate={model.navigate} />
+    </div>
+  );
+}
+
 function useItemsPageView(model: ItemsPageModel) {
   const location = useLocation();
   const { itemRows, navigate } = model;
   const tracked = useTrackedWrites();
+  const itemsExport = useItemsExport();
   const verbs = useListVerbs({
     rows: itemRows.rows,
     world: model.world,
     selection: model.selection,
-    contentCounts: model.itemRows.contentCounts,
+    contentCounts: itemRows.contentCounts,
     offline: !model.online,
     tracked,
+    extraHandlers: {
+      export: () => void itemsExport.exportSelection(model.selection.selectedIds),
+    },
   });
   useListPageKeys({
-    rows: model.itemRows.rows,
+    rows: itemRows.rows,
     selection: model.selection,
     extra: verbs.keyHandlers,
     trail: { listName: 'Items' },
@@ -79,57 +111,73 @@ function useItemsPageView(model: ItemsPageModel) {
     },
     [itemRows.rows, location.pathname, location.search, navigate]
   );
-  return { verbs, openItem };
+  return { verbs, itemsExport, openItem };
 }
 
-/** Renders the server-backed Items page using the prepared page model. */
+function ItemsPageContent({
+  model,
+  verbs,
+  onOpen,
+}: {
+  model: ItemsPageModel;
+  verbs: ListVerbs;
+  onOpen: (id: string) => void;
+}): ReactElement {
+  const { filters, itemRows } = model;
+  return (
+    <ItemsListBody
+      itemRows={itemRows}
+      filters={filters.filters}
+      online={model.online}
+      navigate={model.navigate}
+      world={model.world}
+      selection={model.selection}
+      pendingIds={model.pendingIds}
+      rejections={verbs.rejections}
+      onRowVerb={verbs.onRowVerb}
+      onSort={(sort) => filters.setFilters({ sort })}
+      total={model.total}
+      unfilteredTotal={model.unfilteredTotal}
+      hiddenInactiveCount={model.hiddenInactiveCount}
+      narrowed={model.narrowed}
+      onClearFilters={model.clearEmptyFilters}
+      onOpen={onOpen}
+    />
+  );
+}
+
+/** Renders the Items page around the server-backed model and its action hooks. */
 export function ItemsPageView({ model }: { model: ItemsPageModel }): ReactElement {
+  const { filters, itemRows, online, changed, duplicate } = model;
   const view = useItemsPageView(model);
   return (
     <InventoryPage
       title="Items"
       icon={INVENTORY_ICONS.item}
-      actions={<NewItemButton offline={!model.online} onNavigate={model.navigate} />}
+      actions={<ItemsPageActions model={model} itemsExport={view.itemsExport} />}
       banner={
         <ItemsBanner
-          online={model.online}
-          changed={model.changed}
-          duplicate={model.duplicate}
+          online={online}
+          changed={changed}
+          duplicate={duplicate}
           onDismiss={model.dismissDuplicate}
-          onCompare={(name) => model.filters.setFilters({ q: name })}
+          onCompare={(name) => filters.setFilters({ q: name })}
         />
       }
       toolbar={<ItemsToolbarSection model={model} />}
       dock={
         <SelectionDock
           selection={model.selection}
-          loadedCount={model.itemRows.rows.length}
+          loadedCount={itemRows.rows.length}
           carried={view.verbs.carried}
           actions={view.verbs.actions}
-          offline={!model.online}
+          offline={!online}
           anchorRef={view.verbs.dockAnchorRef}
         />
       }
       overlay={view.verbs.overlays}
     >
-      <ItemsListBody
-        itemRows={model.itemRows}
-        filters={model.filters.filters}
-        online={model.online}
-        navigate={model.navigate}
-        world={model.world}
-        selection={model.selection}
-        pendingIds={model.pendingIds}
-        rejections={view.verbs.rejections}
-        onRowVerb={view.verbs.onRowVerb}
-        onSort={(sort) => model.filters.setFilters({ sort })}
-        total={model.total}
-        unfilteredTotal={model.unfilteredTotal}
-        hiddenInactiveCount={model.hiddenInactiveCount}
-        narrowed={model.narrowed}
-        onClearFilters={model.clearEmptyFilters}
-        onOpen={view.openItem}
-      />
+      <ItemsPageContent model={model} verbs={view.verbs} onOpen={view.openItem} />
     </InventoryPage>
   );
 }
