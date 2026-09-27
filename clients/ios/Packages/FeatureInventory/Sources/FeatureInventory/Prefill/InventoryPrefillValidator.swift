@@ -2,6 +2,9 @@ import AppCore
 import Foundation
 
 private enum InventoryPrefillEvidenceTokens {
+    private static let explicitLabelMaximumLength = 24
+    private static let explicitLabelMaximumWordCount = 3
+
     static func sourceLines(_ lines: [String]) -> [[String]] {
         lines.reduce(into: [[String]]()) { evidence, line in
             let lineTokens = tokenize(line)
@@ -32,6 +35,10 @@ private enum InventoryPrefillEvidenceTokens {
 
         let label = trimmed[..<colon].trimmingCharacters(in: .whitespaces)
         guard !label.isEmpty,
+            label.count <= explicitLabelMaximumLength,
+            label.split(whereSeparator: { $0.isWhitespace }).count
+                <= explicitLabelMaximumWordCount,
+            label.contains(where: { $0.isLetter }),
             label.allSatisfy({ $0.isLetter || $0.isNumber || $0.isWhitespace || $0 == "-" })
         else { return false }
 

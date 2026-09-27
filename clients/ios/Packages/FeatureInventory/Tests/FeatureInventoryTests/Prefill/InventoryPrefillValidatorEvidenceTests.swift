@@ -46,6 +46,34 @@ internal struct InventoryPrefillValidatorEvidenceTests {
         )
     }
 
+    @Test("wrapped numeric colons remain part of the evidence span")
+    func validatesWrappedTextWithNumericColon() {
+        let name = InventoryPrefillTestSupport.field(id: "name")
+
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["name": .text("The Book of 20:20 Vision")],
+                fields: [name],
+                source: .text(["The Book of", "20:20 Vision"])
+            ) == ["name": [.string("The Book of 20:20 Vision")]]
+        )
+    }
+
+    @Test("wrapped subtitle colons remain part of the evidence span")
+    func validatesWrappedTextWithSubtitleColon() {
+        let name = InventoryPrefillTestSupport.field(id: "name")
+
+        #expect(
+            InventoryPrefillValidator.validate(
+                ["name": .text("The Book of Fellowship of the Ring: Extended Edition")],
+                fields: [name],
+                source: .text(["The Book of", "Fellowship of the Ring: Extended Edition"])
+            ) == [
+                "name": [.string("The Book of Fellowship of the Ring: Extended Edition")]
+            ]
+        )
+    }
+
     @Test("labelled OCR lines do not form one evidence span")
     func rejectsTextJoinedAcrossLabelledLines() {
         let name = InventoryPrefillTestSupport.field(id: "name")
