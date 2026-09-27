@@ -41,14 +41,24 @@ function insertCharges(raw: Database.Database, purchaseId: string, count: number
   return ids;
 }
 
-function insertUnconfirmedLink(raw: Database.Database, chargeId: string, linkId: string): void {
-  raw
-    .prepare(
-      `INSERT INTO purchase_charge_links
-         (id, charge_id, transaction_uri, amount_cents, link_type, confirmed_at)
-       VALUES (?, ?, ?, 100, 'exact', NULL)`
-    )
-    .run(linkId, chargeId, `pops://finance/transaction/${linkId}`);
+function insertUnconfirmedLinks(
+  raw: Database.Database,
+  chargeIds: readonly string[],
+  pinnedChargeId: string
+): void {
+  const insert = raw.prepare(
+    `INSERT INTO purchase_charge_links
+       (id, charge_id, transaction_uri, amount_cents, link_type, confirmed_at)
+     VALUES (?, ?, ?, 100, 'exact', NULL)`
+  );
+  const insertMany = raw.transaction((ids: readonly string[]) => {
+    for (const chargeId of ids) {
+      if (chargeId === pinnedChargeId) continue;
+      const linkId = `unconfirmed-${chargeId}`;
+      insert.run(linkId, chargeId, `pops://finance/transaction/${linkId}`);
+    }
+  });
+  insertMany(chargeIds);
 }
 
 function insertConfirmedLink(raw: Database.Database, chargeId: string, linkId: string): void {
@@ -61,10 +71,16 @@ function insertConfirmedLink(raw: Database.Database, chargeId: string, linkId: s
     .run(linkId, chargeId, `pops://finance/transaction/${linkId}`);
 }
 
-function insertRejection(raw: Database.Database, chargeId: string, transactionUri: string): void {
-  raw
-    .prepare(`INSERT INTO purchase_link_rejections (charge_id, transaction_uri) VALUES (?, ?)`)
-    .run(chargeId, transactionUri);
+function insertRejections(raw: Database.Database, chargeIds: readonly string[]): void {
+  const insert = raw.prepare(
+    `INSERT INTO purchase_link_rejections (charge_id, transaction_uri) VALUES (?, ?)`
+  );
+  const insertMany = raw.transaction((ids: readonly string[]) => {
+    for (const chargeId of ids) {
+      insert.run(chargeId, `pops://finance/transaction/${chargeId}`);
+    }
+  });
+  insertMany(chargeIds);
 }
 
 describe('sweep charge-scoped queries at real SQLite scale', () => {
@@ -99,11 +115,7 @@ describe('sweep charge-scoped queries at real SQLite scale', () => {
       const pinnedChargeId = chargeIds[Math.floor(chargeIds.length / 2)];
       if (pinnedChargeId === undefined) throw new Error('expected a mid-list charge id');
       insertConfirmedLink(opened.raw, pinnedChargeId, 'pinned-link');
-
-      for (const chargeId of chargeIds) {
-        if (chargeId === pinnedChargeId) continue;
-        insertUnconfirmedLink(opened.raw, chargeId, `unconfirmed-${chargeId}`);
-      }
+      insertUnconfirmedLinks(opened.raw, chargeIds, pinnedChargeId);
 
       const removed = tearDownUnconfirmedLinks(opened.db, chargeIds);
 
@@ -125,15 +137,13 @@ describe('sweep charge-scoped queries at real SQLite scale', () => {
       );
       const chargeIds = insertCharges(opened.raw, purchaseId, overLimitCount);
 
-      for (const chargeId of chargeIds) {
-        insertRejection(opened.raw, chargeId, `pops://finance/transaction/${chargeId}`);
-      }
+      insertRejections(opened.raw, chargeIds);
 
       // A charge outside the swept list: its rejection must never appear
       // among results scoped to `chargeIds`, chunked or not.
       const outsideCharge = insertCharges(opened.raw, purchaseId, 1)[0];
       if (outsideCharge === undefined) throw new Error('expected an out-of-scope charge id');
-      insertRejection(opened.raw, outsideCharge, 'pops://finance/transaction/outside');
+      insertRejections(opened.raw, [outsideCharge]);
 
       const rejections = listRejectedPairings(opened.db, chargeIds);
 
