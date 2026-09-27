@@ -52,8 +52,8 @@ function mergeWorld(source: PlacementWorld, rows: readonly ItemRowModel[]): Plac
 /** Reads the Overview queries and derives the placement and event models. */
 export function useOverviewReads(pickerItemId: string | null): OverviewReads {
   const summary = useWebSummary();
-  const openContainers = useItemRows({ isContainer: 'true', access: 'open', sort: 'name' }, 50);
-  const inHand = useItemRows({ placementKind: 'hand', sort: 'updated' }, 50);
+  const openContainers = useItemRows({ isContainer: 'true', access: 'open', sort: 'updated' }, 50);
+  const inHand = useItemRows({ placementKind: 'hand' }, 5);
   const events = useWebEvents({ limit: 12 });
   const catalogue = useCatalogueLookups();
   const attention = useSyncAttention();

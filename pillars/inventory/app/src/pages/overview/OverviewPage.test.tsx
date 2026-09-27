@@ -342,6 +342,31 @@ beforeEach(() => {
 });
 
 describe('OverviewPage', () => {
+  it('uses the server ordering and display limits for overview reads', () => {
+    renderPage();
+
+    expect(mocks.useItemRows).toHaveBeenNthCalledWith(
+      1,
+      { isContainer: 'true', access: 'open', sort: 'updated' },
+      50
+    );
+    expect(mocks.useItemRows).toHaveBeenNthCalledWith(2, { placementKind: 'hand' }, 5);
+  });
+
+  it('shows server totals in panel headers', () => {
+    currentOpen = rowsResult(
+      [openBox, item('closed-box', 'Closed box', { container: { access: 'closed', full: false } })],
+      { total: 4 }
+    );
+    currentHand = rowsResult([handItem, item('placed-item', 'Placed item')], { total: 6 });
+    renderPage();
+
+    expect(
+      screen.getByRole('heading', { name: 'Open containers' }).parentElement
+    ).toHaveTextContent('4');
+    expect(screen.getByRole('heading', { name: 'In hand' }).parentElement).toHaveTextContent('6');
+  });
+
   it('shows the count tiles and navigates from a tile', () => {
     renderPage();
 

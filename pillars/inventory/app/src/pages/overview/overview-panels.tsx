@@ -33,12 +33,11 @@ export function OpenContainersPanel({
   onClose: (item: ItemRowModel) => void;
 }): ReactElement {
   const openRows = rows.filter((item) => item.container?.access === 'open');
-  const displayTotal = Math.max(0, total - (rows.length - openRows.length));
   return (
     <OverviewPanel
       title="Open containers"
       icon={INVENTORY_ICONS.open}
-      count={displayTotal}
+      count={total}
       linkLabel="Containers"
       onLink={() => ctx.onNavigate('/inventory/containers?state=open')}
       empty={
@@ -79,13 +78,12 @@ export function InHandPanel({
   onMove: (item: ItemRowModel) => void;
 }): ReactElement {
   const inHandItems = items.filter((item) => item.placement.kind === 'in-hand');
-  const displayTotal = Math.max(0, total - (items.length - inHandItems.length));
   const visibleItems = inHandItems.slice(0, 5);
   return (
     <OverviewPanel
       title="In hand"
       icon={INVENTORY_ICONS.inHand}
-      count={displayTotal}
+      count={total}
       linkLabel="In hand"
       onLink={() => ctx.onNavigate('/inventory/in-hand')}
       empty={visibleItems.length === 0 ? <PanelEmpty>Nothing is in hand.</PanelEmpty> : undefined}
