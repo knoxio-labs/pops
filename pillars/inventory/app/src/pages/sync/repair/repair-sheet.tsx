@@ -12,6 +12,7 @@ import { useRepairActions } from './use-repair-actions.js';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { CasePosition, RepairCase } from '../sync-model.js';
+import type { AppliedRepair } from './repair-outcome.js';
 import type { WebAction } from './repair-plan.js';
 
 type PlannedAction = WebAction & { outcome?: string };
@@ -23,6 +24,7 @@ export interface RepairSheetProps {
   now: string;
   position: CasePosition | null;
   disabledReason?: string;
+  onApplied?: (applied: AppliedRepair) => void;
   onStep: (caseId: string) => void;
   onClose: () => void;
 }
@@ -148,11 +150,12 @@ export function RepairSheet({
   now,
   position,
   disabledReason,
+  onApplied,
   onStep,
   onClose,
 }: RepairSheetProps): ReactElement {
   const plan = planFor(repair, device);
-  const actions = useRepairActions({ repair, device, disabledReason });
+  const actions = useRepairActions({ repair, device, disabledReason, onApplied });
   useShortcutScope('detail', { dismiss: () => (onClose(), true) });
 
   if (actions.outcome !== null) {

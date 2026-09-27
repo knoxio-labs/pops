@@ -27,12 +27,30 @@ export interface CatalogueLookups {
   readonly error: unknown | null;
 }
 
+/** The published catalogue state needed by typed inventory writes. */
+export interface PublishedCatalogue {
+  readonly types: readonly CatalogueType[];
+  readonly revision: number | null;
+  readonly status: 'pending' | 'error' | 'success';
+}
+
 /** Reads the published catalogue through the cache key shared with the editor. */
 export function useCatalogue() {
   return useQuery({
     queryKey: PUBLISHED_CATALOGUE_QUERY_KEY,
     queryFn: async () => unwrap(await typesReadCatalogue()),
   });
+}
+
+/** Reads the published catalogue with the revision and load state used by write actions. */
+export function usePublishedCatalogue(): PublishedCatalogue {
+  const query = useCatalogue();
+  const types = query.data?.types ?? EMPTY_TYPES;
+  const revision = query.data?.revision.revision ?? null;
+  return useMemo(
+    () => ({ types, revision, status: query.status }),
+    [query.status, revision, types]
+  );
 }
 
 /** Provides the published catalogue and lookup helpers for web item mappers. */

@@ -7,23 +7,28 @@ import {
   referenceValueFor,
   typeReplacementFor,
 } from './repair-action-helpers.js';
-import { showAppliedResult, showVerbResult } from './repair-write-results.js';
+import { showAppliedResult, showBulkTypeResult, showVerbResult } from './repair-write-results.js';
 
 import type { useQueryClient } from '@tanstack/react-query';
 
+import type { BulkItemVerbs } from '../../../inventory-web/item-verbs-bulk.js';
 import type { useItemVerbs } from '../../../inventory-web/item-verbs.js';
 import type { VerbResult } from '../../../inventory-web/item-verbs.js';
 import type { useRevertEvent } from '../../../inventory-web/useRevertEvent.js';
 import type { RepairCase } from '../sync-model.js';
-import type { RepairOutcome } from './repair-outcome.js';
+import type { AppliedRepair, RepairOutcome } from './repair-outcome.js';
 import type { WebAction } from './repair-plan.js';
+import type { ChangeTypeWrite } from './repair-targets.js';
 
 /** Dependencies and state setters used while applying one repair action. */
 export interface RepairWriteContext {
   repair: RepairCase;
   verbs: ReturnType<typeof useItemVerbs>;
+  bulk?: BulkItemVerbs;
+  typeWrite?: ChangeTypeWrite | null;
   queryClient: ReturnType<typeof useQueryClient>;
   revert: ReturnType<typeof useRevertEvent>;
+  onApplied?: (applied: AppliedRepair) => void;
   setRefusal: (message: string | null) => void;
   setOutcome: (outcome: RepairOutcome | null) => void;
 }
@@ -107,7 +112,20 @@ async function performFittingWrite(context: RepairWriteContext): Promise<void> {
 }
 
 async function performTypeChangeWrite(context: RepairWriteContext): Promise<void> {
-  const { repair, verbs, setRefusal, setOutcome } = context;
+  const { repair, bulk, onApplied, setRefusal, setOutcome, typeWrite, verbs } = context;
+  if (bulk !== undefined) {
+    if (typeWrite?.kind !== 'change-type') return;
+    const result = await bulk.changeType([repair.itemId], typeWrite.typeKey, typeWrite.values);
+    showBulkTypeResult({
+      result,
+      repair,
+      replacement: typeWrite.replacement,
+      setRefusal,
+      setOutcome,
+      onApplied,
+    });
+    return;
+  }
   const replacement = typeReplacementFor(repair);
   if (replacement === null) return;
   const result = await verbs.changeType(repair.itemId, replacement.typeId, replacement.values);
