@@ -46,7 +46,7 @@ export function useItemPurchase(itemId: string | null): ItemPurchaseState {
       toItemPurchase(
         unwrap(
           await purchaseList({
-            query: { inventoryItemUri: `pops://inventory/item/${activeId}` },
+            query: { inventoryItemUri: `pops://inventory/item/${activeId}`, limit: 1 },
           })
         )
       ),

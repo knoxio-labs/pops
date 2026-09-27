@@ -326,7 +326,7 @@ describe('useItemPurchase', () => {
     await waitFor(() => expect(result.current.status).toBe('success'));
 
     expect(mocks.purchaseList).toHaveBeenCalledWith({
-      query: { inventoryItemUri: 'pops://inventory/item/inv-1' },
+      query: { inventoryItemUri: 'pops://inventory/item/inv-1', limit: 1 },
     });
     expect(result.current.purchase).toEqual({
       id: 'po-1',
