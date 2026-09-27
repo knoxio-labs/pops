@@ -3,17 +3,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   purchaseGet: vi.fn(),
+  purchaseList: vi.fn(),
   searchSearch: vi.fn(),
 }));
 
 vi.mock('../purchases-api/index.js', () => ({
   purchaseGet: (...args: unknown[]) => mocks.purchaseGet(...args),
+  purchaseList: (...args: unknown[]) => mocks.purchaseList(...args),
   searchSearch: (...args: unknown[]) => mocks.searchSearch(...args),
 }));
 
 import { InventoryApiError } from '../inventory-api-helpers';
 import { PurchasesApiError } from '../purchases-api-helpers';
 import { createTestQueryClient, withQueryClient } from './test-utils';
+import { useItemPurchase } from './useItemPurchase';
 import { usePurchasePreview } from './usePurchasePreview';
 import { PURCHASES_SEARCH_QUERY_KEY, usePurchasesSearch } from './usePurchasesSearch';
 
@@ -288,5 +291,81 @@ describe('usePurchasePreview', () => {
     expect(error).not.toBeInstanceOf(InventoryApiError);
     if (!(error instanceof PurchasesApiError)) throw new Error('expected a purchases API error');
     expect(error.failure).toBe('transport');
+  });
+});
+
+describe('useItemPurchase', () => {
+  it('is idle for a null inventory item id and sends nothing', () => {
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useItemPurchase(null), {
+      wrapper: withQueryClient(client),
+    });
+
+    expect(result.current).toEqual({ purchase: null, status: 'idle', error: null });
+    expect(mocks.purchaseList).not.toHaveBeenCalled();
+  });
+
+  it('maps the matching purchase into item provenance', async () => {
+    mocks.purchaseList.mockResolvedValue(
+      ok({
+        items: [
+          {
+            id: 'po-1',
+            merchantEntityName: 'Hardware Barn',
+            orderedAt: '2026-08-14T03:12:00.000Z',
+            source: 'hardware-barn',
+          },
+        ],
+      })
+    );
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useItemPurchase('inv-1'), {
+      wrapper: withQueryClient(client),
+    });
+
+    await waitFor(() => expect(result.current.status).toBe('success'));
+
+    expect(mocks.purchaseList).toHaveBeenCalledWith({
+      query: { inventoryItemUri: 'pops://inventory/item/inv-1' },
+    });
+    expect(result.current.purchase).toEqual({
+      id: 'po-1',
+      merchant: 'Hardware Barn',
+      orderedAt: '2026-08-14T03:12:00.000Z',
+    });
+  });
+
+  it('returns no purchase for a successful empty response', async () => {
+    mocks.purchaseList.mockResolvedValue(ok({ items: [] }));
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useItemPurchase('missing'), {
+      wrapper: withQueryClient(client),
+    });
+
+    await waitFor(() => expect(result.current.status).toBe('success'));
+
+    expect(result.current.purchase).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
+  it('maps a purchases API failure to PurchasesApiError', async () => {
+    mocks.purchaseList.mockResolvedValue({
+      data: undefined,
+      error: { message: 'purchases unavailable' },
+      response: { status: 503 },
+    });
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useItemPurchase('offline'), {
+      wrapper: withQueryClient(client),
+    });
+
+    await waitFor(() => expect(result.current.status).toBe('error'));
+
+    expect(result.current.error).toBeInstanceOf(PurchasesApiError);
+    if (!(result.current.error instanceof PurchasesApiError)) {
+      throw new Error('expected a purchases API error');
+    }
+    expect(result.current.error.status).toBe(503);
+    expect(result.current.error.failure).toBe('api');
   });
 });

@@ -11,12 +11,11 @@ import {
 import { ItemMark } from '../../foundation/badges/item-mark.js';
 import { PlacementPath } from '../../foundation/badges/placement-path.js';
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
-import { purchaseDateText } from '../../foundation/search/search-records.js';
 import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
 import { ShortcutHint } from '../../foundation/shortcuts/shortcut-hint.js';
-import { useWebItemDetail } from '../../inventory-web/useWebItemDetail.js';
 import { useItemRows } from '../../inventory-web/useWebItems.js';
-import { PreviewFact, PreviewFrame, PreviewList, renderPreviewListRows } from './preview-parts.js';
+import { ItemFacts } from './item-facts.js';
+import { PreviewFrame, PreviewList, renderPreviewListRows } from './preview-parts.js';
 
 import type { MouseEventHandler, ReactElement } from 'react';
 
@@ -47,21 +46,6 @@ type LegacyItemPreviewProps = {
   onPutBack: () => void;
   onMove: () => void;
 };
-
-function dayText(value: string): string {
-  return Number.isNaN(Date.parse(value)) ? value : purchaseDateText(value);
-}
-
-function provenanceText(
-  provenance: { merchant: string | null; purchasedOn: string | null } | null | undefined
-): string | null {
-  if (provenance === null || provenance === undefined) return null;
-  const parts = [
-    provenance.merchant ?? '',
-    provenance.purchasedOn === null ? '' : dayText(provenance.purchasedOn),
-  ].filter((part) => part !== '');
-  return parts.length === 0 ? null : parts.join(', ');
-}
 
 function VerbButton({
   label,
@@ -120,25 +104,6 @@ function ItemVerbs({ item, onOpen, onVerb, disabledReason }: ItemPreviewProps): 
         onClick={(event) => onVerb('move', event.currentTarget)}
       />
     </>
-  );
-}
-
-function ItemFacts({ item }: { item: ItemRowModel }): ReactElement {
-  const detail = useWebItemDetail(item.id, 1);
-  const provenance = detail.status === 'success' ? detail.data?.item.provenance : null;
-  const bought = provenanceText(provenance);
-
-  return (
-    <dl className="divide-y divide-border/60 rounded-lg border">
-      <PreviewFact label="Type">{item.typeName ?? 'None yet'}</PreviewFact>
-      <PreviewFact label="Quantity">{item.quantity}</PreviewFact>
-      <PreviewFact label="Code">{item.code ?? 'None'}</PreviewFact>
-      <PreviewFact label="Bought">
-        {bought ?? <span className="text-muted-foreground">No linked purchase</span>}
-      </PreviewFact>
-      <PreviewFact label="Changed">{dayText(item.updatedAt)}</PreviewFact>
-      {item.note ? <PreviewFact label="Note">{item.note}</PreviewFact> : null}
-    </dl>
   );
 }
 
