@@ -1,65 +1,217 @@
-import { ArrowUpRight, ShoppingBag } from 'lucide-react';
+import { ExternalLink, ShoppingBag } from 'lucide-react';
+import { useMemo, type ReactElement } from 'react';
 
-import { Button, formatCents, formatDate } from '@pops/ui';
+import { Button, formatCents, Skeleton } from '@pops/ui';
 
-import { ItemMark } from '../../foundation/badges/item-mark.js';
-import { PreviewActions, PreviewFact, PreviewFrame, PreviewList } from './preview-parts.js';
+import { INVENTORY_ICONS as I } from '../../foundation/model/icons.js';
+import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
+import { usePurchasePreview } from '../../inventory-web/usePurchasePreview.js';
+import { PreviewFrame, PreviewList } from './preview-parts.js';
 
+import type { PickerSubject } from '../../foundation/model/contracts.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { PurchaseResult } from '../../inventory-web/purchase-model.js';
 
-/** Props for a read-only purchase preview. */
+const longDay = new Intl.DateTimeFormat('en-AU', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** Props for the read-only purchase preview. */
 export interface PurchasePreviewProps {
-  readonly purchase: PurchaseResult;
-  readonly world: PlacementWorld;
-  readonly onOpen: () => void;
+  purchaseId: string;
+  currency: string;
+  onOpenInPurchases: () => void;
 }
 
-/** Renders purchase facts and the line items linked to inventory records. */
-export function PurchasePreview({ purchase, world, onOpen }: PurchasePreviewProps) {
+type LegacyPurchasePreviewProps = {
+  purchase: PurchaseResult;
+  world: PlacementWorld;
+  onOpen: () => void;
+};
+
+function purchaseDayText(value: string): string {
+  return Number.isNaN(Date.parse(value)) ? value : longDay.format(new Date(value));
+}
+
+function titleText(purchase: PurchaseResult): string {
+  return [purchase.merchant, purchase.orderNumber].filter((part) => part !== '').join(' ');
+}
+
+function purchaseMark(): ReactElement {
+  return (
+    <span className="flex size-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <ShoppingBag className="size-5" aria-hidden />
+    </span>
+  );
+}
+
+function purchaseActions(onOpenInPurchases: () => void): ReactElement {
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      suffix={<ExternalLink className="size-3.5" aria-hidden />}
+      onClick={onOpenInPurchases}
+    >
+      Open in Purchases
+    </Button>
+  );
+}
+
+function PurchaseSummary({
+  purchase,
+  currency,
+  world,
+  onOpenInPurchases,
+}: {
+  purchase: PurchaseResult;
+  currency: string;
+  world: PlacementWorld;
+  onOpenInPurchases: () => void;
+}): ReactElement {
   return (
     <PreviewFrame
-      title={
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-            <ShoppingBag className="size-5" aria-hidden />
-          </span>
-          <span className="truncate">{purchase.merchant}</span>
+      mark={purchaseMark()}
+      title={titleText(purchase)}
+      where={
+        <span className="text-xs text-muted-foreground">
+          {`${purchaseDayText(purchase.date)} · ${formatCents(purchase.totalCents, currency)} · Read only here`}
         </span>
       }
-      subtitle={purchase.orderNumber === '' ? 'Purchase' : `Order ${purchase.orderNumber}`}
+      actions={purchaseActions(onOpenInPurchases)}
     >
-      <PreviewActions>
-        <Button size="sm" onClick={onOpen} prefix={<ArrowUpRight className="size-4" aria-hidden />}>
-          Open purchase
-        </Button>
-      </PreviewActions>
-      <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
-        <PreviewFact label="Date" value={formatDate(purchase.date)} />
-        <PreviewFact label="Total" value={formatCents(purchase.totalCents, 'AUD')} />
-        <PreviewFact label="Lines" value={String(purchase.lines.length)} />
-      </dl>
-      <PreviewList title="Purchase lines">
+      <PreviewList title="Lines" count={purchase.lines.length} empty="">
         {purchase.lines.map((line, index) => {
-          const item = line.itemId === undefined ? undefined : world.items.get(line.itemId);
+          const tracked = line.itemId === undefined ? undefined : world.items.get(line.itemId);
           return (
-            <div
+            <li
               key={`${line.name}-${String(index)}`}
-              className="flex items-center gap-2 px-3 py-2 text-sm"
+              className="flex min-h-10 items-center gap-3 px-3 py-2 text-sm"
             >
-              {item !== undefined ? (
-                <ItemMark item={item} size="sm" />
-              ) : (
-                <span className="size-7 shrink-0 rounded-md bg-muted" aria-hidden />
-              )}
-              <span className="min-w-0 flex-1 truncate">{line.name}</span>
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                {line.quantity} × {formatCents(line.priceCents, 'AUD')}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">
+                  {line.quantity > 1 ? `${String(line.quantity)} × ` : ''}
+                  {line.name}
+                </span>
+                {tracked ? (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <I.item className="size-3.5" aria-hidden />
+                    Tracked as {tracked.name}
+                  </span>
+                ) : null}
               </span>
-            </div>
+              <span className="w-20 shrink-0 text-right tabular-nums">
+                {formatCents(line.priceCents * line.quantity, currency)}
+              </span>
+            </li>
           );
         })}
       </PreviewList>
     </PreviewFrame>
+  );
+}
+
+function PurchaseStatePreview({
+  error,
+  onOpenInPurchases,
+}: {
+  error: boolean;
+  onOpenInPurchases: () => void;
+}): ReactElement {
+  return (
+    <PreviewFrame
+      mark={purchaseMark()}
+      title="Purchase"
+      badges={error ? undefined : <Skeleton className="h-6 w-48" />}
+      where={<span className="text-xs text-muted-foreground">Read only here</span>}
+      actions={purchaseActions(onOpenInPurchases)}
+    >
+      <PreviewList title="Lines" count={0} empty="">
+        {error ? (
+          <li className="flex min-h-10 items-center px-3 py-2 text-sm">
+            This purchase did not load.
+          </li>
+        ) : (
+          Array.from({ length: 3 }, (_, index) => (
+            <li key={`skeleton-${String(index)}`} className="h-10">
+              <Skeleton className="h-10 w-full rounded-none" />
+            </li>
+          ))
+        )}
+      </PreviewList>
+    </PreviewFrame>
+  );
+}
+
+function LoadedPurchasePreview({
+  purchase,
+  currency,
+  onOpenInPurchases,
+}: {
+  purchase: PurchaseResult;
+  currency: string;
+  onOpenInPurchases: () => void;
+}): ReactElement {
+  const itemIds = useMemo(
+    () => purchase.lines.flatMap((line) => (line.itemId === undefined ? [] : [line.itemId])),
+    [purchase.lines]
+  );
+  const subject = useMemo<PickerSubject>(() => ({ kind: 'items', ids: itemIds }), [itemIds]);
+  const placement = usePlacementSources(subject);
+  return (
+    <PurchaseSummary
+      purchase={purchase}
+      currency={currency}
+      world={placement.world}
+      onOpenInPurchases={onOpenInPurchases}
+    />
+  );
+}
+
+function PurchasePreviewState({
+  purchaseId,
+  currency,
+  onOpenInPurchases,
+}: PurchasePreviewProps): ReactElement {
+  const preview = usePurchasePreview(purchaseId);
+  if (preview.status === 'pending') {
+    return <PurchaseStatePreview error={false} onOpenInPurchases={onOpenInPurchases} />;
+  }
+  if (preview.status !== 'success' || preview.purchase === null) {
+    return <PurchaseStatePreview error onOpenInPurchases={onOpenInPurchases} />;
+  }
+  return (
+    <LoadedPurchasePreview
+      purchase={preview.purchase}
+      currency={currency}
+      onOpenInPurchases={onOpenInPurchases}
+    />
+  );
+}
+
+function LegacyPurchasePreview({
+  purchase,
+  world,
+  onOpen,
+}: LegacyPurchasePreviewProps): ReactElement {
+  return (
+    <PurchaseSummary purchase={purchase} currency="AUD" world={world} onOpenInPurchases={onOpen} />
+  );
+}
+
+/** Renders a read-only purchase summary and resolves tracked inventory lines. */
+export function PurchasePreview(props: PurchasePreviewProps): ReactElement;
+export function PurchasePreview(props: LegacyPurchasePreviewProps): ReactElement;
+export function PurchasePreview(
+  props: PurchasePreviewProps | LegacyPurchasePreviewProps
+): ReactElement {
+  return 'purchaseId' in props ? (
+    <PurchasePreviewState {...props} />
+  ) : (
+    <LegacyPurchasePreview {...props} />
   );
 }
