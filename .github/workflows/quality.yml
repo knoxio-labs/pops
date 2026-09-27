@@ -78,6 +78,7 @@ name: Quality
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
   merge_group:
@@ -86,6 +87,10 @@ on:
       full-validation:
         type: boolean
         default: false
+
+concurrency:
+  group: quality-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   discover:

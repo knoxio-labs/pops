@@ -660,8 +660,8 @@ describe('the guard catches each way the wiring goes inert', () => {
     const root = cloneWorkflows();
     patch(root, 'ios-quality.yml', (s) =>
       s.replace(
-        '  pull_request:\n    paths:\n      - "clients/ios/**"\n',
-        '  pull_request:\n    paths:\n      - "clients/ios/**"\n      - "docs/**"\n'
+        '  pull_request:\n    types: [opened, synchronize, reopened, edited]\n    paths:\n',
+        '  pull_request:\n    types: [opened, synchronize, reopened, edited]\n    paths:\n      - "docs/**"\n'
       )
     );
     expect(checkCiGateWiring(root).join('\n')).toContain(

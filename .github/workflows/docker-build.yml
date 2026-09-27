@@ -7,6 +7,7 @@ on:
         type: boolean
         default: false
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "infra/docker*/**"
       - "infra/docker-compose*.yml"
@@ -84,6 +85,10 @@ on:
 # alone takes a minute or two — the work was never the problem, the queue
 # was. `fail-fast: false` so one broken Dockerfile does not hide the rest,
 # which is the whole point of validating them together.
+
+concurrency:
+  group: docker-build-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   changes:
