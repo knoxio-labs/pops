@@ -212,6 +212,11 @@ targets:
     platform: iOS
     sources:
       - AppTests
+      # Compile the canonical fake implementations into this hosted bundle so
+      # they resolve AppCore through the host. Linking the SwiftPM
+      # AppCoreFakes product would carry its static AppCore dependency into the
+      # bundle and create a second runtime identity for every AppCore type.
+      - Packages/AppCore/Sources/AppCoreFakes
     dependencies:
       # An application dependency is what makes this a *hosted* test bundle:
       # XcodeGen turns it into TEST_HOST and BUNDLE_LOADER, so the tests are
@@ -229,10 +234,6 @@ targets:
         link: false
       - package: AppCore
         link: false
-      # Not a dependency of the app target, so unlike the others here this one
-      # needs an actual link, not just an import path.
-      - package: AppCore
-        product: AppCoreFakes
       - package: FeatureInventory
         link: false
       - package: FeaturePurchases

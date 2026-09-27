@@ -64,6 +64,8 @@ It lives in this target rather than in `Packages/Auth` for the same reason `Keyc
 
 ## Running it
 
+`PopsTests` needs the canonical fakes from `Packages/AppCore/Sources/AppCoreFakes`, but it must not link the `AppCoreFakes` SwiftPM product. That product has a static dependency on `AppCore`; loading it into this hosted test bundle would put one `AppCore` copy in `Pops` and another in `PopsTests`, making equal-looking errors and concrete types different at runtime. `project.yml` therefore compiles the shared fake source directory directly into `PopsTests` while keeping `AppCore` import-only. `mise run lint` checks that graph without building, and the full simulator task checks the generated link inputs and Mach-O symbols before executing tests: `AppCore.o` and defined `AppCore` symbols must exist only in the host.
+
 ```bash
 mise run test:app     # this target alone, on the simulator
 mise run test         # every testable in one invocation, which is what CI invokes
