@@ -85,6 +85,26 @@ internal struct CatalogueLineageTests {
         #expect(try Self.lineage(in: replica) == Self.brightness)
     }
 
+    @Test("withLineage keeps the type parent")
+    func withLineageKeepsParent() throws {
+        let catalogue = Fixture.catalogue(2, Fixture.baseFields)
+        let parentTypeId = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+        let withParent = InventoryCatalogueSnapshot(
+            revision: catalogue.revision,
+            types: catalogue.types.map {
+                InventoryCatalogueType(
+                    id: $0.id, key: $0.key, label: $0.label, description: $0.description,
+                    sortOrder: $0.sortOrder, fields: $0.fields, capabilities: $0.capabilities,
+                    legacyLabels: $0.legacyLabels, presentation: $0.presentation,
+                    archivedAt: $0.archivedAt, replacedBy: $0.replacedBy,
+                    parentTypeId: parentTypeId)
+            })
+
+        let enriched = withParent.withLineage(from: catalogue)
+
+        #expect(enriched.types.first?.parentTypeId == parentTypeId)
+    }
+
     @Test("upgrading keeps every stored revision, with no lineage recorded")
     func upgradeKeepsRevisions() throws {
         let queue = try DatabaseQueue()

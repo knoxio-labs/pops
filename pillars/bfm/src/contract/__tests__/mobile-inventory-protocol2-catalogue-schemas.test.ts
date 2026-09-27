@@ -132,3 +132,32 @@ describe('replacement lineage on the phone catalogue', () => {
     ).toBe(false);
   });
 });
+
+describe('type parents on the phone catalogue', () => {
+  it('parses a type parent', () => {
+    const parentTypeId = randomUUID();
+    const body = descriptor(null);
+    const [type] = body.types;
+    if (type === undefined) throw new Error('fixture has no type');
+
+    const parsed = MobileInventoryCatalogueRevisionDescriptorSchema.parse({
+      ...body,
+      types: [{ ...type, parentTypeId }],
+    });
+
+    expect(parsed.types[0]?.parentTypeId).toBe(parentTypeId);
+  });
+
+  it('refuses a non-uuid parent', () => {
+    const body = descriptor(null);
+    const [type] = body.types;
+    if (type === undefined) throw new Error('fixture has no type');
+
+    expect(
+      MobileInventoryCatalogueRevisionDescriptorSchema.safeParse({
+        ...body,
+        types: [{ ...type, parentTypeId: 'not-a-uuid' }],
+      }).success
+    ).toBe(false);
+  });
+});

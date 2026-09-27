@@ -7,6 +7,7 @@ import Foundation
 /// `rest-sync.ts`.
 internal enum Protocol2Wire {
     internal static let bulbType = "59538480-6e82-5ccc-b7be-f1cfd15b9af6"
+    internal static let lampType = "7f4e3d2c-1b0a-4987-8654-3210fedcba98"
     internal static let lumens = "147a262c-bb7c-51bf-b617-16d354228d91"
     internal static let brightness = "3f1d8c2a-7b64-4e19-9a0e-5c2b7d4e8f61"
     internal static let efficacy = "2d8a3c1e-5b7f-4e2a-9c61-0f3d2b8a7e14"
@@ -86,15 +87,37 @@ internal enum Protocol2Wire {
     internal static func catalogue(
         revision: Int, minimumProtocol: Int = 2, fields: [String] = bulbFields
     ) -> String {
+        catalogueWithTypes(
+            revision: revision, minimumProtocol: minimumProtocol,
+            types: [
+                type(
+                    revision: revision, id: bulbType, key: "bulb", label: "Bulb", fields: fields)
+            ])
+    }
+
+    internal static func catalogueWithTypes(
+        revision: Int, minimumProtocol: Int = 2, types: [String]
+    ) -> String {
         """
         {"revision":{"revision":\(revision),\
         "baseRevision":\(revision > 1 ? String(revision - 1) : "null"),"status":"published",\
         "minimumProtocol":\(minimumProtocol),\
         "created":{"actor":{"kind":"web","label":"Web"},"at":"2026-09-01T00:00:00.000Z"},\
         "published":null,"abandoned":null},\
-        "types":[{"revision":\(revision),"id":"\(bulbType)","key":"bulb","label":"Bulb",\
-        "description":null,"sortOrder":0,"capabilities":[],"legacyLabels":[],"presentation":{},\
-        "archivedAt":null,"fields":[\(fields.joined(separator: ","))]}]}
+        "types":[\(types.joined(separator: ","))]}
+        """
+    }
+
+    internal static func type(
+        revision: Int = 2, id: String, key: String, label: String, sortOrder: Int = 0,
+        parentTypeId: String? = nil, fields: [String] = []
+    ) -> String {
+        """
+        {"revision":\(revision),"id":"\(id)","key":"\(key)","label":"\(label)",\
+        "description":null,"sortOrder":\(sortOrder),"capabilities":[],"legacyLabels":[],\
+        "presentation":{},"archivedAt":null,\
+        \(parentTypeId.map { "\"parentTypeId\":\"\($0)\"," } ?? "")\
+        "fields":[\(fields.joined(separator: ","))]}
         """
     }
 

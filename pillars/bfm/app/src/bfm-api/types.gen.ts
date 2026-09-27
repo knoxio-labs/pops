@@ -2983,6 +2983,7 @@ export type MobileInventoryCatalogueRevisionResponses = {
       key: string;
       label: string;
       legacyLabels: Array<string>;
+      parentTypeId?: string;
       presentation: {
         [key: string]: unknown;
       };

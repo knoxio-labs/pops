@@ -22,7 +22,7 @@ extension ReplicaSchema {
         }
     }
 
-    private static let typeColumns = [
+    static let typeColumns = [
         "revision", "id", "key", "label", "description", "sort_order", "capabilities",
         "legacy_labels", "presentation", "archived_at",
     ]
