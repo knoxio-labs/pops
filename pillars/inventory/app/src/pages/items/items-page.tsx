@@ -1,24 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { NewItemButton } from '../../foundation/frame/new-item-button.js';
-import { InventoryPage } from '../../foundation/frame/page-frame.js';
-import { ItemsSummary } from '../../foundation/list-page/items-summary.js';
-import { ItemsToolbar } from '../../foundation/list-page/items-toolbar.js';
 import {
-  filterChips,
   isNarrowed,
   placeFilterOptions,
   typeFilterOptions,
 } from '../../foundation/list-page/list-filters.js';
-import { SelectionDock } from '../../foundation/list-page/selection-dock.js';
-import { useListPageKeys } from '../../foundation/list-page/use-list-page-keys.js';
-import { useListVerbs, useTrackedWrites } from '../../foundation/list-page/use-list-verbs.js';
-import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { useSelection } from '../../foundation/selection/use-selection.js';
 import { usePendingItemIds } from '../../inventory-web/item-verbs.js';
-import { itemsQuery, itemsSearch } from '../../inventory-web/items-url-filters.js';
+import { itemsQuery } from '../../inventory-web/items-url-filters.js';
 import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
 import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { useChangedElsewhere } from '../../inventory-web/useChangedElsewhere.js';
@@ -26,8 +17,8 @@ import { useItemsUrlFilters } from '../../inventory-web/useItemsUrlFilters.js';
 import { useOnline } from '../../inventory-web/useOnline.js';
 import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
 import { useItemRows } from '../../inventory-web/useWebItems.js';
-import { ItemsBanner, findDuplicatePair } from './items-banners.js';
-import { ItemsListBody } from './items-cards.js';
+import { findDuplicatePair } from './items-banners.js';
+import { ItemsPageView } from './items-page-view.js';
 
 import type { ReactElement } from 'react';
 
@@ -115,98 +106,8 @@ function useItemsPageModel() {
   return { ...sources, ...useItemsPageDerived(sources) };
 }
 
-type ItemsPageModel = ReturnType<typeof useItemsPageModel>;
-
-function ItemsToolbarSection({ model }: { model: ItemsPageModel }): ReactElement | null {
-  if (!model.showToolbar) return null;
-  return (
-    <div className="shrink-0 space-y-2">
-      <ItemsToolbar
-        filters={model.filters.filters}
-        types={model.typeOptions}
-        places={model.placeOptions}
-        onFilters={model.filters.setFilters}
-        onClear={model.filters.clearFilters}
-        onView={(view) => model.filters.setFilters({ view })}
-        scope="items"
-      />
-      <ItemsSummary
-        shown={model.itemRows.total ?? 0}
-        total={model.itemRows.unfilteredTotal ?? 0}
-        hiddenInactive={model.itemRows.hiddenInactiveCount ?? 0}
-        noun="items"
-        chips={filterChips(
-          model.filters.filters,
-          model.typeOptions,
-          model.placeOptions,
-          model.filters.setFilters
-        )}
-        href={`/inventory/items${itemsSearch(model.filters.filters)}`}
-      />
-    </div>
-  );
-}
-
-function ItemsPageView({ model }: { model: ItemsPageModel }): ReactElement {
-  const { filters, itemRows, online, navigate, changed, duplicate } = model;
-  const tracked = useTrackedWrites();
-  const verbs = useListVerbs({
-    rows: itemRows.rows,
-    world: model.world,
-    selection: model.selection,
-    contentCounts: itemRows.contentCounts,
-    offline: !online,
-    tracked,
-  });
-  useListPageKeys({ rows: itemRows.rows, selection: model.selection, extra: verbs.keyHandlers });
-
-  return (
-    <InventoryPage
-      title="Items"
-      icon={INVENTORY_ICONS.item}
-      actions={<NewItemButton offline={!online} onNavigate={navigate} />}
-      banner={
-        <ItemsBanner
-          online={online}
-          changed={changed}
-          duplicate={duplicate}
-          onDismiss={model.dismissDuplicate}
-          onCompare={(name) => filters.setFilters({ q: name })}
-        />
-      }
-      toolbar={<ItemsToolbarSection model={model} />}
-      dock={
-        <SelectionDock
-          selection={model.selection}
-          loadedCount={itemRows.rows.length}
-          carried={verbs.carried}
-          actions={verbs.actions}
-          offline={!online}
-          anchorRef={verbs.dockAnchorRef}
-        />
-      }
-      overlay={verbs.overlays}
-    >
-      <ItemsListBody
-        itemRows={itemRows}
-        filters={filters.filters}
-        online={online}
-        navigate={navigate}
-        world={model.world}
-        selection={model.selection}
-        pendingIds={model.pendingIds}
-        rejections={verbs.rejections}
-        onRowVerb={verbs.onRowVerb}
-        onSort={(sort) => filters.setFilters({ sort })}
-        total={model.total}
-        unfilteredTotal={model.unfilteredTotal}
-        hiddenInactiveCount={model.hiddenInactiveCount}
-        narrowed={model.narrowed}
-        onClearFilters={model.clearEmptyFilters}
-      />
-    </InventoryPage>
-  );
-}
+/** Derived state and server data consumed by the Items page renderer. */
+export type ItemsPageModel = ReturnType<typeof useItemsPageModel>;
 
 /** Renders the server-backed Items browser and all of its non-selection states. */
 export function ItemsPage(): ReactElement {
