@@ -215,7 +215,7 @@ describe('ContainersPage', () => {
         container: { access: 'closed', full: false },
       })
     );
-    currentRows = rowsResult(manyClosed);
+    currentRows = rowsResult([closedBox]);
     currentClosedRows = rowsResult(manyClosed);
     currentSummary = {
       data: { ...summary, packing: { ...summary.packing, closed: 205 } },
