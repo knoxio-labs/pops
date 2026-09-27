@@ -25,7 +25,8 @@ import { DraftSession, typeByKey } from './test-helpers-acceptance-mcp.js';
 import { startAcceptanceStack, type AcceptanceStack } from './test-helpers-acceptance-stack.js';
 
 const PROTOCOL_HEADER = 'pops-inventory-protocol';
-const tooOldSchema = z.object({ code: z.literal('client_too_old') });
+const directTooOldSchema = z.object({ code: z.literal('inventory.sync.client_too_old') });
+const bfmTooOldSchema = z.object({ code: z.literal('client_too_old') });
 const snapshotSchema = z.object({ minimumProtocol: z.number().int() });
 const errorCodeSchema = z.object({ code: z.string() });
 
@@ -112,7 +113,7 @@ describe('S6 protocol-1 refusal and protocol-2 success at the BFM boundary', () 
   it('S6.1 Inventory refuses a protocol-1 sync client with 426 and serves protocol 2', async () => {
     const old = await stack.inventorySync('/sync/snapshot', 1);
     expect(old.status).toBe(426);
-    expect(tooOldSchema.parse(old.body).code).toBe('client_too_old');
+    expect(directTooOldSchema.parse(old.body).code).toBe('inventory.sync.client_too_old');
 
     const current = await stack.inventorySync('/sync/snapshot', 2);
     expect(current.status).toBe(200);
@@ -135,7 +136,7 @@ describe('S6 protocol-1 refusal and protocol-2 success at the BFM boundary', () 
     try {
       const snapshot = await bfm.get('/mobile/inventory/sync/snapshot');
       expect(snapshot.status).toBe(426);
-      expect(tooOldSchema.parse(snapshot.body).code).toBe('client_too_old');
+      expect(bfmTooOldSchema.parse(snapshot.body).code).toBe('client_too_old');
 
       const mutations = await bfm.post('/mobile/inventory/mutations', {
         mutations: [
@@ -163,12 +164,16 @@ describe('S6 protocol-1 refusal and protocol-2 success at the BFM boundary', () 
       body: { expectedMinimumProtocol: 2, minimumProtocol: 1 },
     });
     expect(downgrade.status).toBe(409);
-    expect(errorCodeSchema.parse(downgrade.body).code).toBe('protocol_minimum_downgrade');
+    expect(errorCodeSchema.parse(downgrade.body).code).toBe(
+      'inventory.catalogue.protocol_minimum_downgrade'
+    );
 
     const unsupported = await stack.inventory('/type-catalogue/protocol-rollout', {
       body: { expectedMinimumProtocol: 2, minimumProtocol: 3 },
     });
     expect(unsupported.status).toBe(400);
-    expect(errorCodeSchema.parse(unsupported.body).code).toBe('protocol_not_supported');
+    expect(errorCodeSchema.parse(unsupported.body).code).toBe(
+      'inventory.catalogue.protocol_not_supported'
+    );
   });
 });
