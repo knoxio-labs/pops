@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UNDO_WINDOW_MS, showUndoToast } from '../foundation/feedback/undo-toast';
+import { reportResponse, resetInterruption } from '../foundation/interruptions/interruption-store';
 import { InventoryLayout } from './InventoryLayout';
 
 const custom = vi.hoisted(() => vi.fn());
@@ -35,6 +36,7 @@ function renderLayout(initialEntry = '/inventory') {
 }
 
 beforeEach(() => {
+  resetInterruption();
   vi.useFakeTimers();
   vi.clearAllMocks();
   custom.mockReturnValue('toast');
@@ -117,5 +119,40 @@ describe('InventoryLayout', () => {
     expect(listener).toHaveBeenCalledOnce();
     expect(screen.getByTestId('location')).toHaveTextContent('/inventory');
     document.removeEventListener('keydown', listener);
+  });
+
+  it('shows the reload notice after a 426 and the signed out prompt after a 401 that follows a catalogue read', () => {
+    renderLayout();
+
+    act(() => {
+      reportResponse({ status: 426, url: '/inventory-api/sync/mutations' });
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Inventory was updated. Reload to keep making changes.'
+    );
+    expect(screen.getByRole('alert').parentElement).toHaveClass(
+      'pointer-events-none',
+      'fixed',
+      'right-4',
+      'bottom-4',
+      'z-40'
+    );
+
+    act(() => {
+      reportResponse({ status: 200, url: '/inventory-api/type-catalogue' });
+      reportResponse({ status: 401, url: '/inventory-api/type-catalogue' });
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('alertdialog', { name: 'Signed out' })).toBeInTheDocument();
+  });
+
+  it('a 401 before any catalogue read succeeded shows no Signed out prompt', () => {
+    renderLayout();
+
+    act(() => {
+      reportResponse({ status: 401, url: '/inventory-api/type-catalogue' });
+    });
+
+    expect(screen.queryByRole('alertdialog', { name: 'Signed out' })).not.toBeInTheDocument();
   });
 });
