@@ -7,7 +7,7 @@ import { ArrowUpRight, PackagePlus } from 'lucide-react';
 
 import { Button, EmptyState } from '@pops/ui';
 
-import { PlacementPath, ShortcutHint, useSelection } from '../foundation';
+import { INVENTORY_ICONS, PlacementPath, RowVerb, ShortcutHint, useSelection } from '../foundation';
 import { ContentsSelectionBar } from '../location-page/contents-bar';
 import { BoxedList, HereList } from '../location-page/contents-lists';
 import { placeContents } from '../location-page/contents-model';
@@ -35,6 +35,7 @@ export interface PlacePreviewProps {
   moveControl: ReactNode;
   menu: PlaceMenuHandlers;
   onOpen: () => void;
+  onRename: () => void;
   onStoreHere: () => void;
   onOpenItem?: (id: string) => void;
 }
@@ -48,7 +49,49 @@ function SectionTitle({ label, count }: { label: string; count: number }) {
   );
 }
 
-function Header({ api, place, moveControl, menu, onOpen, onStoreHere }: PlacePreviewProps) {
+function HeaderActions({
+  place,
+  moveControl,
+  menu,
+  onOpen,
+  onRename,
+  onStoreHere,
+}: Pick<
+  PlacePreviewProps,
+  'place' | 'moveControl' | 'menu' | 'onOpen' | 'onRename' | 'onStoreHere'
+>) {
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={onOpen}
+        prefix={<ArrowUpRight className="size-4" aria-hidden />}
+        suffix={<ShortcutHint id="list-open" />}
+      >
+        Open
+      </Button>
+      {moveControl}
+      <RowVerb
+        icon={INVENTORY_ICONS.edit}
+        label={`Rename ${place.name}`}
+        shortcutId="list-edit"
+        onClick={onRename}
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onStoreHere}
+        prefix={<PackagePlus className="size-4" aria-hidden />}
+      >
+        Store here
+      </Button>
+      <PlaceMenu name={place.name} handlers={menu} />
+    </div>
+  );
+}
+
+function Header({ api, place, ...props }: PlacePreviewProps) {
   const Icon = PLACE_ICONS[place.kind];
   return (
     <header className="space-y-1 border-b px-4 py-3">
@@ -64,27 +107,7 @@ function Header({ api, place, moveControl, menu, onOpen, onStoreHere }: PlacePre
           />
         )}
         <span className="flex-1" />
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onOpen}
-            prefix={<ArrowUpRight className="size-4" aria-hidden />}
-            suffix={<ShortcutHint id="list-open" />}
-          >
-            Open
-          </Button>
-          {moveControl}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onStoreHere}
-            prefix={<PackagePlus className="size-4" aria-hidden />}
-          >
-            Store here
-          </Button>
-          <PlaceMenu name={place.name} handlers={menu} />
-        </div>
+        <HeaderActions {...props} place={place} />
       </div>
       <div className="flex items-center gap-2">
         <Icon className="size-4.5 shrink-0 text-app-accent" aria-hidden />

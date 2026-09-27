@@ -20,6 +20,7 @@ import {
   Package,
   PackageCheck,
   PackageOpen,
+  Pencil,
   Plug,
   QrCode,
   RefreshCw,
@@ -45,6 +46,7 @@ export type InventoryConcept =
   | 'pickUp'
   | 'putBack'
   | 'move'
+  | 'edit'
   | 'takeOut'
   | 'code'
   | 'quantity'
@@ -75,6 +77,7 @@ export const INVENTORY_ICONS: Readonly<Record<InventoryConcept, LucideIcon>> = {
   pickUp: HandGrab,
   putBack: Undo2,
   move: MoveRight,
+  edit: Pencil,
   takeOut: LogOut,
   code: QrCode,
   quantity: Layers,

@@ -61,11 +61,14 @@ export function OpenContainersPanel({
             </>
           }
           verbs={
-            <RowVerb
-              icon={I.closed}
-              label={`Close ${container.name}`}
-              disabledReason={ctx.disabledReason}
-            />
+            <>
+              <RowVerb
+                icon={I.closed}
+                label={`Close ${container.name}`}
+                disabledReason={ctx.disabledReason}
+              />
+              <RowVerb icon={I.edit} label={`Edit ${container.name}`} shortcutId="list-edit" />
+            </>
           }
         />
       ))}
@@ -123,6 +126,7 @@ export function InHandPanel({ items, ctx }: { items: readonly ItemRowModel[]; ct
                 shortcutId="move"
                 disabledReason={ctx.disabledReason}
               />
+              <RowVerb icon={I.edit} label={`Edit ${item.name}`} shortcutId="list-edit" />
             </>
           }
         />

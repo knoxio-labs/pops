@@ -73,10 +73,10 @@ function Preview({
       verbs={verbs}
       initialSelection={props.initialSelection}
       onOpen={() => props.onOpenPlace?.(place.id)}
+      onRename={() => api.edits.startRename(place.id)}
       onStoreHere={onStoreHere}
       menu={{
         onNewInside: () => api.edits.startCreate(place.id),
-        onRename: () => api.edits.startRename(place.id),
         onDelete: () => api.edits.requestDelete(place.id),
       }}
       moveControl={

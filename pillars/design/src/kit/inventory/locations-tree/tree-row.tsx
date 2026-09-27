@@ -8,7 +8,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { ButtonPrimitive, cn } from '@pops/ui';
 
-import { DROP_TARGET_CLASS } from '../foundation';
+import { DROP_TARGET_CLASS, INVENTORY_ICONS, RowVerb } from '../foundation';
 import { PLACE_ICONS } from './fit-page';
 import { NameInput } from './name-input';
 import { PlaceMenu } from './place-menu';
@@ -39,6 +39,7 @@ export interface TreeRowProps {
   drop?: RowDropState;
   renaming?: { onCommit: (name: string) => string | null; onCancel: () => void };
   menu: PlaceMenuHandlers;
+  onRename: () => void;
   onSelect: () => void;
   onToggle: () => void;
   onOpen: () => void;
@@ -142,14 +143,22 @@ export function TreeRow(props: TreeRowProps) {
           <Label {...props} />
         )}
         {props.renaming || props.drop ? null : (
-          <PlaceMenu
-            name={row.node.name}
-            handlers={props.menu}
-            className={cn(
-              'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
-              props.selected && 'opacity-100'
-            )}
-          />
+          <>
+            <RowVerb
+              icon={INVENTORY_ICONS.edit}
+              label={`Rename ${row.node.name}`}
+              shortcutId="list-edit"
+              onClick={props.onRename}
+            />
+            <PlaceMenu
+              name={row.node.name}
+              handlers={props.menu}
+              className={cn(
+                'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
+                props.selected && 'opacity-100'
+              )}
+            />
+          </>
         )}
       </div>
       <DropLine position={props.drop?.position} />

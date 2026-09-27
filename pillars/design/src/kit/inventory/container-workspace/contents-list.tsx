@@ -87,6 +87,7 @@ function RowVerbs({ id, props }: { id: string; props: ContentsListProps }) {
         disabledReason={reason}
         onClick={() => props.onExit([id], 'pick-up')}
       />
+      <RowVerb icon={I.edit} label="Edit" shortcutId="list-edit" disabledReason={reason} />
     </>
   );
 }

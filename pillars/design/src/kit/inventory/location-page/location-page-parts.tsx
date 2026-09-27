@@ -7,10 +7,12 @@ import { FolderPlus, PackagePlus, Search } from 'lucide-react';
 
 import { Button, Input } from '@pops/ui';
 
-import { Segmented, locationPath } from '../foundation';
+import { INVENTORY_ICONS, Segmented, locationPath } from '../foundation';
 import { MovePlaceButton } from '../locations-tree/move-controls';
 import { PlaceMenu } from '../locations-tree/place-menu';
 import { tallyPlace } from '../locations-tree/tree-model';
+
+import type { LucideIcon } from 'lucide-react';
 
 import type { LocationModel, PlacementWorld } from '../foundation';
 import type { LocationsApi } from '../locations-tree/use-locations';
@@ -46,7 +48,7 @@ export interface PlaceActionsProps {
 
 /** The place's verbs, for the page header. */
 export function PlaceActions({ api, place, ...props }: PlaceActionsProps) {
-  const ghost = (label: string, Icon: typeof FolderPlus, onClick: () => void) => (
+  const ghost = (label: string, Icon: LucideIcon, onClick: () => void) => (
     <Button
       variant="ghost"
       size="sm"
@@ -62,6 +64,7 @@ export function PlaceActions({ api, place, ...props }: PlaceActionsProps) {
         props.showPlaces();
         api.edits.startCreate(place.id);
       })}
+      {ghost('Rename', INVENTORY_ICONS.edit, () => api.edits.startRename(place.id))}
       <MovePlaceButton
         world={api.world}
         place={place}
@@ -75,7 +78,6 @@ export function PlaceActions({ api, place, ...props }: PlaceActionsProps) {
       <PlaceMenu
         name={place.name}
         handlers={{
-          onRename: () => api.edits.startRename(place.id),
           onDelete: () => api.edits.requestDelete(place.id),
         }}
       />

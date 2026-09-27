@@ -126,6 +126,7 @@ export function ContentsItemRow({
               shortcutId="move"
               onClick={() => ctx.onMove?.(item.id)}
             />
+            <RowVerb icon={I.edit} label={`Edit ${item.name}`} shortcutId="list-edit" />
           </>
         }
       />
