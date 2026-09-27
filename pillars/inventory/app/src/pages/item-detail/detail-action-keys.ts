@@ -4,8 +4,8 @@ import type { NavigateFunction } from 'react-router';
 
 import type { ItemRowModel } from '../../foundation/model';
 import type { ShortcutHandlers } from '../../foundation/shortcuts/shortcut-provider';
+import type { DetailTrailPosition } from './detail-trail';
 import type { DetailVerb, DetailVerbs, MenuEntry } from './detail-verbs';
-import type { DetailTrailPosition } from './use-detail-actions';
 
 /** Dependencies used to build the item-detail keyboard shortcut handlers. */
 export interface DetailKeyHandlerContext {
