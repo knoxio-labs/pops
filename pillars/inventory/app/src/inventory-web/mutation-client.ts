@@ -1,5 +1,5 @@
-import { ApiError, unwrap } from '@pops/pillar-sdk/client';
 import { MAX_MUTATION_BATCH } from '@pops/inventory';
+import { ApiError, unwrap } from '@pops/pillar-sdk/client';
 
 /**
  * A mutation client over `POST /sync/mutations` (Inventory ADR-002 D9/D10):
