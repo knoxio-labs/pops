@@ -2,10 +2,13 @@
 
 `@pops/barcode` is the credentialled ISBN lookup service. It validates and
 normalises a scanned code, asks injected book-source adapters for a product,
-and caches successful products and misses in its own SQLite database.
+and caches complete products and misses in its own SQLite database.
 
 The lookup uses Open Library followed by Google Books without changing this
-pillar's contract or lookup policy.
+pillar's contract or lookup policy. A hit missing author or language metadata
+is enriched from later providers and is returned without a long-lived cache
+entry when enrichment remains incomplete. Open Library also falls back to its
+ISBN search index when an edition record has no usable author links.
 
 Every valid request still returns HTTP 200 with `found`, `not_found`, or
 `unavailable`. The latter may carry an ADR-054 `error` envelope with a safe
