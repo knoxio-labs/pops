@@ -4,6 +4,7 @@ import { Button, ButtonPrimitive, SheetPanel } from '@pops/ui';
 
 import { HintTooltip } from '../../../foundation/shortcuts/hint-tooltip.js';
 import { useShortcutScope } from '../../../foundation/shortcuts/shortcut-provider.js';
+import { AppliedSheet } from '../outcome-sheets.js';
 import { planFor } from './repair-plan.js';
 import { RepairContent } from './repair-sheet-content.js';
 import { useRepairActions } from './use-repair-actions.js';
@@ -153,6 +154,22 @@ export function RepairSheet({
   const plan = planFor(repair, device);
   const actions = useRepairActions({ repair, device, disabledReason });
   useShortcutScope('detail', { dismiss: () => (onClose(), true) });
+
+  if (actions.outcome !== null) {
+    const nextId = position?.nextId ?? null;
+    return (
+      <AppliedSheet
+        itemName={repair.itemName}
+        outcome={actions.outcome}
+        plan={plan}
+        device={device}
+        now={now}
+        remaining={position === null ? 0 : Math.max(0, position.total - position.index - 1)}
+        onClose={onClose}
+        onNext={nextId === null ? undefined : () => onStep(nextId)}
+      />
+    );
+  }
 
   return (
     <SheetPanel
