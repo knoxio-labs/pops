@@ -9,6 +9,7 @@ import {
   archivedCase,
   codeCase,
   deletedCase,
+  photoCase,
   placementCase,
 } from '../../../foundation/test-fixtures/sync.js';
 import { RepairSheet } from './repair-sheet.js';
@@ -116,6 +117,26 @@ describe('RepairSheet', () => {
     expect(mocks.showUndoToast).toHaveBeenCalledWith(
       expect.objectContaining({ concept: 'code', message: 'Code set to T03' })
     );
+    expect(screen.getByText('Code set to T03.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'The change is saved in the web app. The device will finish this case on its next sync.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Both copies then match, so either choice on the device closes the case. Print the new label afterwards.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing left to do/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+
+    const toast = mocks.showUndoToast.mock.calls[0]?.[0];
+    if (toast === undefined) throw new Error('code change did not offer undo');
+    await toast.onUndo();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Use code T03' })).toBeInTheDocument()
+    );
   });
 
   it('opens the holder search without making a write', async () => {
@@ -140,6 +161,13 @@ describe('RepairSheet', () => {
         entityId: 'item-case-ladder-deleted',
       })
     );
+    await waitFor(() => expect(screen.getByText('Restored Step ladder.')).toBeInTheDocument());
+    expect(
+      screen.getByText(
+        "It returns with its history. Choose Restore on Joao's iPhone to send the held change."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing left to do/)).not.toBeInTheDocument();
     const toast = mocks.showUndoToast.mock.calls[0]?.[0];
     if (toast === undefined) throw new Error('restore did not offer undo');
     await toast.onUndo();
@@ -147,6 +175,21 @@ describe('RepairSheet', () => {
       seq: 42,
       entityId: 'item-case-ladder-deleted',
     });
+  });
+
+  it('keeps a photo repair open after the upload and shows the device follow-up', async () => {
+    mocks.add.mockResolvedValue([{ fileName: 'drill.jpg', status: 'attached' }]);
+    renderSheet(photoCase);
+
+    fireEvent.change(screen.getByLabelText('Choose a photo'), {
+      target: { files: [new File(['photo'], 'drill.jpg', { type: 'image/jpeg' })] },
+    });
+
+    await waitFor(() => expect(screen.getByText('Photo sent.')).toBeInTheDocument());
+    expect(screen.getByText("Or choose Retry or Remove on Joao's iPhone.")).toBeInTheDocument();
+    expect(screen.queryByText(/both copies match/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing left to do/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
   });
 
   it('keeps writes disabled when the device report does not identify the item', () => {

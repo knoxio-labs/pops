@@ -5,10 +5,12 @@ import { useRepairPhotoUploads } from '../../../foundation/photos/use-repair-pho
 import type { ChangeEvent, ReactElement } from 'react';
 
 import type { RepairPhotoUploadResult } from '../../../foundation/photos/use-repair-photo-uploads.js';
+import type { RepairOutcome } from './repair-outcome.js';
 
 interface RepairUpload {
   busy: boolean;
   refusal: string | null;
+  outcome: RepairOutcome | null;
   fileInput: ReactElement;
   open: () => void;
 }
@@ -29,14 +31,19 @@ export function useRepairUpload(input: {
   const [fileInputNode, setFileInputNode] = useState<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<RepairOutcome | null>(null);
 
   const upload = useCallback(
     async (file: File): Promise<void> => {
       setRefusal(null);
+      setOutcome(null);
       setBusy(true);
       try {
         const [result] = await uploads.add([file]);
         setRefusal(uploadRefusal(result));
+        if (result?.status === 'attached') {
+          setOutcome({ kind: 'follow-up', message: 'Photo sent', at: new Date().toISOString() });
+        }
       } catch (error: unknown) {
         setRefusal(`Not saved. ${error instanceof Error ? error.message : 'The upload failed.'}`);
       } finally {
@@ -64,5 +71,5 @@ export function useRepairUpload(input: {
     onChange: onFileChange,
   });
 
-  return { busy, refusal, fileInput, open };
+  return { busy, refusal, outcome, fileInput, open };
 }
