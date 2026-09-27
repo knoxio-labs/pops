@@ -60,7 +60,12 @@ describe('inventory palette commands', () => {
       id: 'to-container-box-k13',
       label: 'Kitchen 13',
       target: { kind: 'container', containerId: 'box-k13' },
+      action: { kind: 'open-item', id: 'box-k13' },
     });
+
+    expect(
+      placementArgumentCommand({ kind: 'location', locationId: 'loc-kitchen' }, coreWorld)
+    ).toMatchObject({ action: { kind: 'open-location', id: 'loc-kitchen' } });
   });
 
   it('includes codes and type names in record matching fields', () => {

@@ -73,7 +73,10 @@ export function placementArgumentCommand(
     icon,
     keywords: [detailForPlacement(world, target)],
     detail: detailForPlacement(world, target),
-    action: { kind: 'open-location', id: label },
+    action:
+      target.kind === 'location'
+        ? { kind: 'open-location', id: target.locationId }
+        : { kind: 'open-item', id: target.containerId },
     target,
   };
 }
