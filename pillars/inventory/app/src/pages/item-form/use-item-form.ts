@@ -1,13 +1,13 @@
 import { useCallback, useReducer, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
+import { usePhotoUploads } from '../../foundation/photos/use-photo-uploads';
 import { useShortcutScope } from '../../foundation/shortcuts/shortcut-provider';
 import { draftReducer } from './form-draft';
 import { deriveForm, hasStagedWork } from './form-view';
 import { useCodeAssist } from './use-code-assist';
 import { useFormSaveActions } from './use-form-save-actions';
 import { useOnline } from './use-online';
-import { usePhotoUploads } from './use-photo-uploads';
 
 import type { Dispatch } from 'react';
 
