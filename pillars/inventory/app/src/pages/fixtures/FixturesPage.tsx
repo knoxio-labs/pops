@@ -16,7 +16,7 @@ import { useFixturesPageModel } from './fixtures-page-model.js';
 import type { ReactElement } from 'react';
 
 import type { FixtureFilter } from './fixture-filter.js';
-import type { FixtureFormDialogProps } from './fixture-form-dialog.js';
+import type { FixtureFormDialogProps } from './fixture-form-types.js';
 import type { FixtureListRow } from './fixture-model.js';
 
 function staleBanner(model: ReturnType<typeof useFixturesPageModel>): ReactElement | null {

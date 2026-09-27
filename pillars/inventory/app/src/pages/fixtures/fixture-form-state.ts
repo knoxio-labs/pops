@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 
 import { isFixtureKind } from './fixture-kinds.js';
 
-import type { FixtureDraft, FixtureFormDialogProps } from './fixture-form-dialog.js';
+import type { FixtureDraft, FixtureFormDialogProps } from './fixture-form-types.js';
 
 function initialDraft(fixture: FixtureFormDialogProps['fixture']): FixtureDraft {
   let kind: FixtureDraft['kind'] = 'power';

@@ -6,7 +6,7 @@ import * as inventoryApi from '../../inventory-api/index.js';
 import { markConnectionsWrittenHere } from '../../inventory-web/useConnectionsChanged.js';
 
 import type { FixturesCreateData } from '../../inventory-api/types.gen.js';
-import type { FixtureDraft } from './fixture-form-dialog.js';
+import type { FixtureDraft } from './fixture-form-types.js';
 import type { FixtureDetail } from './fixture-model.js';
 
 const FIXTURES_QUERY_PREFIX = ['inventory', 'fixtures'] as const;

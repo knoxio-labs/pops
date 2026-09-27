@@ -20,7 +20,7 @@ import { fixtureLocationOptions } from './fixture-model.js';
 import type { ReactElement } from 'react';
 
 import type { LocationModel } from '../../foundation/model/model.js';
-import type { FixtureDraft, FixtureFormDialogProps } from './fixture-form-dialog.js';
+import type { FixtureDraft, FixtureFormDialogProps } from './fixture-form-types.js';
 
 function RoomField({
   draft,

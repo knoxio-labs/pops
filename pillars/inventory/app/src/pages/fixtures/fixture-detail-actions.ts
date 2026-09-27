@@ -7,7 +7,7 @@ import { InventoryApiError } from '../../inventory-api-helpers.js';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { SelectionApi } from '../../foundation/selection/use-selection.js';
-import type { FixtureDraft } from './fixture-form-dialog.js';
+import type { FixtureDraft } from './fixture-form-types.js';
 import type { FixtureDetail } from './fixture-model.js';
 import type { useFixtureDetailPageModel } from './fixtures-page-model.js';
 

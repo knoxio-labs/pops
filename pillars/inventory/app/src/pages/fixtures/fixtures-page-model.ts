@@ -20,7 +20,7 @@ import type { FixtureKind } from './fixture-kinds.js';
 export { useFixtureDetailPageModel } from './fixture-detail-model.js';
 export { useFixtureMutations } from './fixture-mutations.js';
 export { fixtureQueryKey } from './fixture-query-keys.js';
-export type { FixtureDraft } from './fixture-form-dialog.js';
+export type { FixtureDraft } from './fixture-form-types.js';
 export type { SaveFixtureInput } from './fixture-mutations.js';
 
 const FIXTURES_QUERY_PREFIX = ['inventory', 'fixtures'] as const;

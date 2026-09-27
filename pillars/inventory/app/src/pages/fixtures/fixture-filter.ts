@@ -1,7 +1,9 @@
 import { isFixtureKind } from './fixture-kinds.js';
 
+import type { FixturesListResponse } from '../../inventory-api/types.gen.js';
 import type { FixtureKind } from './fixture-kinds.js';
-import type { FixtureListRow } from './fixture-model.js';
+
+type FixtureListRow = FixturesListResponse['data'][number];
 
 /** The URL and server filter state for the fixture list. */
 export interface FixtureFilter {
