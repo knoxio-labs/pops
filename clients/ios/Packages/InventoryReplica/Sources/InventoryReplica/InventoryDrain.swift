@@ -123,13 +123,7 @@ internal final class InventoryDrain: Sendable {
                     for waiter in waiting { waiter.resume() }
                 }
             }
-            tasks.watcher = Task { [weak self, reachability] in
-                var wasSatisfied = false
-                for await satisfied in reachability.updates() {
-                    if satisfied, !wasSatisfied { self?.request() }
-                    wasSatisfied = satisfied
-                }
-            }
+            tasks.watcher = reachabilityWatcher(reachability)
         }
     }
 
