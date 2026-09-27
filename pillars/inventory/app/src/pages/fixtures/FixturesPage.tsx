@@ -1,26 +1,26 @@
-import { Cable, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { Button } from '@pops/ui';
+import { Button, Tabs, TabsList, TabsTrigger } from '@pops/ui';
 
 import { OFFLINE_REASON, StateBanner } from '../../foundation/feedback/state-banner.js';
 import { InventoryPage } from '../../foundation/frame/page-frame.js';
 import { OfflineBanner } from '../../foundation/list-page/list-states.js';
+import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
 import { FixtureFormDialog } from './fixture-form-dialog.js';
-import { isFixtureKind } from './fixture-kinds.js';
 import { FixturesList } from './fixtures-list.js';
 import { useFixturesPageModel } from './fixtures-page-model.js';
 
 import type { ReactElement } from 'react';
 
+import type { FixtureFilter } from './fixture-filter.js';
 import type { FixtureFormDialogProps } from './fixture-form-dialog.js';
-import type { FixtureFilter, FixtureListRow } from './fixture-model.js';
+import type { FixtureListRow } from './fixture-model.js';
 
 function staleBanner(model: ReturnType<typeof useFixturesPageModel>): ReactElement | null {
-  const group = model.changed.groups[0];
-  if (!model.changed.stale || group === undefined) return null;
+  if (!model.changed.stale) return null;
   return (
     <StateBanner
       kind="stale"
@@ -43,12 +43,27 @@ function NewFixtureButton({ online, onNew }: { online: boolean; onNew: () => voi
       New fixture
     </Button>
   );
-  return online ? (
-    button
-  ) : (
-    <HintTooltip label="New fixture" disabledReason={OFFLINE_REASON}>
+  return (
+    <HintTooltip label="Record a fixture" disabledReason={!online ? OFFLINE_REASON : undefined}>
       {button}
     </HintTooltip>
+  );
+}
+
+function ConnectionsTabs(): ReactElement {
+  const navigate = useNavigate();
+  return (
+    <Tabs
+      value="fixtures"
+      onValueChange={(value) => {
+        if (value === 'connections') void navigate('/inventory/connections');
+      }}
+    >
+      <TabsList aria-label="Connections and fixtures">
+        <TabsTrigger value="connections">Connections</TabsTrigger>
+        <TabsTrigger value="fixtures">Fixtures</TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -70,6 +85,8 @@ function FixtureOverlay({
       open={formOpen}
       onOpenChange={onOpenChange}
       locations={model.locations.locations}
+      locationsStatus={model.locations.status}
+      onRetryLocations={model.retryLocations}
       fixture={editing}
       disabledReason={model.online ? undefined : OFFLINE_REASON}
       onSave={onSave}
@@ -81,13 +98,11 @@ function updateFixtureFilter(
   filters: ReturnType<typeof useFixturesPageModel>['filters'],
   patch: Partial<FixtureFilter>
 ): void {
-  if (patch.q !== undefined) filters.setQueryDraft(patch.q);
-  if (patch.kind !== undefined) {
-    filters.setKindDraft(patch.kind === null || isFixtureKind(patch.kind) ? patch.kind : null);
-  }
+  if (patch.query !== undefined) filters.setQueryDraft(patch.query);
+  if (patch.kind !== undefined) filters.setKindDraft(patch.kind);
 }
 
-/** Renders the server-filtered Fixtures list and its create/edit dialog. */
+/** Renders the Connections Fixtures tab and its create/edit dialog. */
 export function FixturesPage(): ReactElement {
   const model = useFixturesPageModel();
   const navigate = useNavigate();
@@ -102,17 +117,20 @@ export function FixturesPage(): ReactElement {
     setFormOpen(true);
   };
   const save = async (
-    draft: Parameters<typeof model.mutations.save>[0]['draft']
-  ): Promise<void> => {
-    await model.mutations.save({ draft });
+    draft: Parameters<FixtureFormDialogProps['onSave']>[0]
+  ): ReturnType<FixtureFormDialogProps['onSave']> => {
+    const saved = await model.mutations.save({ id: editing?.id, draft });
+    if (editing === undefined) void navigate(`/inventory/fixtures/${saved.id}`);
+    return saved;
   };
 
   return (
     <InventoryPage
-      title="Fixtures"
-      icon={Cable}
-      description="The fixed points inventory items wire into."
+      title="Connections"
+      icon={INVENTORY_ICONS.connection}
+      description="What plugs into, feeds or pairs with what, across the house."
       actions={<NewFixtureButton online={model.online} onNew={openNew} />}
+      tabs={<ConnectionsTabs />}
       banner={!model.online ? <OfflineBanner /> : staleBanner(model)}
       bodyClassName="gap-3"
       overlay={
@@ -128,9 +146,12 @@ export function FixturesPage(): ReactElement {
       <FixturesList
         rows={model.fixtures.rows}
         total={model.fixtures.total}
+        unfilteredTotal={model.unfilteredTotal}
+        queryDraft={model.filters.queryDraft}
         filter={model.filters.filter}
         locations={model.locations.locations}
-        status={model.fixtures.status}
+        status={model.status}
+        hasLoaded={model.hasLoaded}
         hasNextPage={model.fixtures.hasNextPage}
         onLoadMore={model.fixtures.fetchNextPage}
         onFilterChange={(patch) => updateFixtureFilter(model.filters, patch)}

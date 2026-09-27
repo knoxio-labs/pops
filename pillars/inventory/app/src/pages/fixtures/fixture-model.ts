@@ -1,8 +1,13 @@
 import { locationPath } from '../../foundation/model/placement-model.js';
+import { isFiltered } from './fixture-filter.js';
 
 import type { LocationModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { FixturesGetResponses, FixturesListResponse } from '../../inventory-api/types.gen.js';
+import type { FixtureFilter } from './fixture-filter.js';
+
+export { isFiltered, NO_FIXTURE_FILTER, wiredSummary } from './fixture-filter.js';
+export type { FixtureFilter } from './fixture-filter.js';
 
 /** One server-owned row in the fixture list. */
 export type FixtureListRow = FixturesListResponse['data'][number];
@@ -20,27 +25,9 @@ export function fixtureDetailStatus(loading: boolean, error: unknown): FixtureDe
   return 'success';
 }
 
-/** The list filters shown by the fixture browser. */
-export interface FixtureFilter {
-  readonly q: string;
-  readonly kind: string | null;
-}
-
-/** The unfiltered fixture browser state. */
-export const NO_FIXTURE_FILTER: FixtureFilter = { q: '', kind: null };
-
 /** Returns whether a fixture list filter narrows the server request. */
 export function isFixtureFiltered(filter: FixtureFilter): boolean {
-  return filter.q.trim().length > 0 || filter.kind !== null;
-}
-
-/** Summarizes the server-provided wired item names without inventing rows client-side. */
-export function wiredSummary(row: Pick<FixtureListRow, 'wiredCount' | 'wiredNames'>): string {
-  if (row.wiredCount === 0) return 'Nothing wired';
-  const names = row.wiredNames.slice(0, 2);
-  if (names.length === 0) return `${row.wiredCount} wired`;
-  if (names.length >= row.wiredCount) return names.join(', ');
-  return `${names.join(', ')} and ${row.wiredCount - names.length} more`;
+  return isFiltered(filter);
 }
 
 /** Resolves a fixture's room label from the already-loaded location tree. */
@@ -48,8 +35,7 @@ export function fixtureRoomName(
   locations: ReadonlyMap<string, LocationModel>,
   locationId: string | null
 ): string {
-  if (locationId === null) return 'No room assigned';
-  return locations.get(locationId)?.name ?? 'Unknown place';
+  return locationId === null ? '' : (locations.get(locationId)?.name ?? '');
 }
 
 /** Resolves a fixture's full room path for the detail facts rail. */
@@ -57,10 +43,10 @@ export function fixtureRoomPath(
   locations: ReadonlyMap<string, LocationModel>,
   locationId: string | null
 ): string {
-  if (locationId === null) return 'No room assigned';
+  if (locationId === null) return 'an unknown place';
   const world: PlacementWorld = { items: new Map(), locations };
   const path = locationPath(world, locationId).map((location) => location.name);
-  return path.length > 0 ? path.join(' / ') : 'Unknown place';
+  return path.length > 0 ? path.join(' / ') : 'an unknown place';
 }
 
 /** Converts a location tree lookup into the option labels used by the fixture form. */

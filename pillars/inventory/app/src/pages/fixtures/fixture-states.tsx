@@ -1,7 +1,6 @@
-import { AlertCircle, Cable, Plug, SearchX } from 'lucide-react';
-import { Link } from 'react-router';
+import { Plug, SearchX } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle, Button, EmptyState, Skeleton } from '@pops/ui';
+import { Button, EmptyState, Skeleton } from '@pops/ui';
 
 import { ListBody, ListError, ListSkeleton } from '../../foundation/list-page/list-states.js';
 
@@ -75,43 +74,5 @@ export function FixtureDetailLoading(): ReactElement {
         </div>
       </div>
     </div>
-  );
-}
-
-/** Renders a missing fixture route or a retryable fixture detail failure. */
-export function FixtureDetailProblem({
-  variant,
-  error,
-  onRetry,
-}: {
-  variant: 'error' | 'not-found';
-  error?: unknown;
-  onRetry?: () => void;
-}): ReactElement {
-  const notFound = variant === 'not-found';
-  const message =
-    error instanceof Error && error.message.length > 0
-      ? error.message
-      : 'The inventory service did not answer.';
-  return (
-    <ListBody className="flex min-h-80 items-center justify-center gap-4 text-center">
-      <span className="flex size-12 items-center justify-center rounded-full bg-muted">
-        {notFound ? (
-          <Cable className="size-6 text-muted-foreground" aria-hidden />
-        ) : (
-          <AlertCircle className="size-6 text-muted-foreground" aria-hidden />
-        )}
-      </span>
-      <Alert variant={notFound ? 'destructive' : 'default'} className="max-w-xl text-left">
-        <AlertTitle>{notFound ? 'Fixture not found' : 'Fixture did not load'}</AlertTitle>
-        <AlertDescription>{notFound ? "This fixture doesn't exist." : message}</AlertDescription>
-      </Alert>
-      <div className="flex gap-2">
-        {!notFound && onRetry ? <Button onClick={onRetry}>Retry</Button> : null}
-        <Button asChild variant={notFound || !onRetry ? 'default' : 'ghost'}>
-          <Link to="/inventory/connections/fixtures">Back to fixtures</Link>
-        </Button>
-      </div>
-    </ListBody>
   );
 }

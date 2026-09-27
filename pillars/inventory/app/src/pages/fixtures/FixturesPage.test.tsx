@@ -34,11 +34,11 @@ const fixture = {
 function pageModel(overrides: Record<string, unknown> = {}) {
   return {
     filters: {
-      url: { q: '', kind: null },
+      url: { query: '', kind: 'all' },
       queryDraft: '',
-      kindDraft: null,
-      filter: { q: '', kind: null },
-      serverFilter: { q: '', kind: null },
+      kindDraft: 'all',
+      filter: { query: '', kind: 'all' },
+      serverFilter: { query: '', kind: 'all' },
       setQueryDraft: vi.fn(),
       setKindDraft: vi.fn(),
       clearFilters: vi.fn(),
@@ -51,6 +51,7 @@ function pageModel(overrides: Record<string, unknown> = {}) {
       fetchNextPage: vi.fn(),
       refetch: vi.fn(),
     },
+    unfilteredTotal: 1,
     locations: {
       locations: [{ id: 'room-1', name: 'Office', parentId: null, kind: 'room' as const }],
       status: 'success' as const,
@@ -58,7 +59,12 @@ function pageModel(overrides: Record<string, unknown> = {}) {
     },
     online: true,
     changed: { stale: false, groups: [], reload: vi.fn() },
-    mutations: { save: vi.fn().mockResolvedValue(undefined) },
+    mutations: {
+      save: vi.fn().mockResolvedValue({ ...fixture, notes: null }),
+    },
+    hasLoaded: true,
+    status: 'success' as const,
+    retryLocations: vi.fn(),
     retry: vi.fn(),
     ...overrides,
   };
@@ -85,10 +91,10 @@ describe('FixturesPage', () => {
     const model = pageModel();
     renderPage(model);
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Filter fixtures' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Filter by fixture or wired item' }), {
       target: { value: 'desk' },
     });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Fixture kind' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Kind' }), {
       target: { value: 'light' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Edit Desk outlet' }));
@@ -128,6 +134,7 @@ describe('FixturesPage', () => {
         fetchNextPage: vi.fn(),
         refetch: vi.fn(),
       },
+      unfilteredTotal: 0,
     });
     renderPage(empty);
     const emptyActions = screen.getAllByRole('button', { name: 'New fixture' });
@@ -146,6 +153,8 @@ describe('FixturesPage', () => {
         fetchNextPage: vi.fn(),
         refetch: retry,
       },
+      hasLoaded: false,
+      status: 'error' as const,
       retry,
     });
     mocks.useFixturesPageModel.mockReturnValue(errored);

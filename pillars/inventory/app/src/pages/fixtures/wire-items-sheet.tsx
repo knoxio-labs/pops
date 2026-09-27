@@ -1,8 +1,9 @@
 import { Cable } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 
-import { Button, Sheet } from '@pops/ui';
+import { Button, Sheet, useDebouncedValue } from '@pops/ui';
 
+import { InventoryApiError } from '../../inventory-api-helpers.js';
 import { useItemRows } from '../../inventory-web/useWebItems.js';
 import { wireItemRefusal, WireItemsContent } from './wire-items-source.js';
 
@@ -13,26 +14,29 @@ import type { WireItemsSheetProps, WireItemsState } from './wire-items-types.js'
 
 function useWireItemsState(props: WireItemsSheetProps): WireItemsState {
   const [queryDraft, setQueryDraft] = useState('');
-  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
+  const [selected, setSelected] = useState<readonly { id: string; name: string }[]>([]);
   const [wiring, setWiring] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const itemRows = useItemRows({ includeInactive: true, q: queryDraft.trim(), sort: 'name' });
-  const candidates = useMemo(
-    () => itemRows.rows.filter((item) => item.container === null),
-    [itemRows.rows]
+  const debouncedQuery = useDebouncedValue(queryDraft, 200).trim();
+  const query = useMemo(
+    () => ({
+      ...(debouncedQuery.length > 0 ? { q: debouncedQuery } : {}),
+      isContainer: 'false' as const,
+      includeInactive: true,
+      sort: 'name' as const,
+    }),
+    [debouncedQuery]
   );
-  const selected = useMemo(
-    () => candidates.filter((item) => selectedIds.has(item.id)),
-    [candidates, selectedIds]
-  );
+  const itemRows = useItemRows(query, 50);
+  const candidates = itemRows.rows;
+  const selectedIds = useMemo(() => new Set(selected.map((item) => item.id)), [selected]);
   const toggle = useCallback(
     (item: ItemRowModel): void => {
       if (wireItemRefusal(item, props.wiredIds) !== null) return;
-      setSelectedIds((current) => {
-        const next = new Set(current);
-        if (next.has(item.id)) next.delete(item.id);
-        else next.add(item.id);
-        return next;
+      setSelected((current) => {
+        const index = current.findIndex((picked) => picked.id === item.id);
+        if (index >= 0) return current.filter((picked) => picked.id !== item.id);
+        return [...current, { id: item.id, name: item.name }];
       });
     },
     [props.wiredIds]
@@ -42,10 +46,12 @@ function useWireItemsState(props: WireItemsSheetProps): WireItemsState {
     setWiring(true);
     setError(null);
     try {
-      await props.onWire(selected.map((item) => item.id));
+      await props.onWire(selected);
       props.onOpenChange(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'The selected items were not wired.');
+      if (!(cause instanceof InventoryApiError && cause.status === 409)) {
+        setError(cause instanceof Error ? cause.message : 'The selected items were not wired.');
+      }
     } finally {
       setWiring(false);
     }
@@ -80,7 +86,10 @@ function WireItemsFooter({
   readonly onCancel: () => void;
   readonly onWire: () => void;
 }): ReactElement {
-  const label = `Wire ${selectedCount > 0 ? selectedCount : ''} item${selectedCount === 1 ? '' : 's'}`;
+  const label =
+    selectedCount === 0
+      ? 'Wire items'
+      : `Wire ${selectedCount} item${selectedCount === 1 ? '' : 's'}`;
   return (
     <>
       <Button variant="outline" onClick={onCancel}>
@@ -105,7 +114,7 @@ function WireItemsSheetPanel({ props }: { readonly props: WireItemsSheetProps })
       open
       onOpenChange={props.onOpenChange}
       title={`Wire items to ${props.fixture.name}`}
-      description="Choose active, unwired items. Containers and inactive records are refused."
+      description="Choose what plugs into or hangs from this fixture."
       footer={
         <WireItemsFooter
           online={props.online}

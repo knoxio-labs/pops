@@ -43,13 +43,15 @@ describe('fixture display model', () => {
     const byId = new Map(locations.map((location) => [location.id, location] as const));
 
     expect(fixtureRoomName(byId, 'room-1')).toBe('Office');
-    expect(fixtureRoomName(byId, 'missing')).toBe('Unknown place');
-    expect(fixtureRoomName(byId, null)).toBe('No room assigned');
+    expect(fixtureRoomName(byId, 'missing')).toBe('');
+    expect(fixtureRoomName(byId, null)).toBe('');
     expect(fixtureRoomPath(byId, 'room-1')).toBe('Home / Office');
+    expect(fixtureRoomPath(byId, 'missing')).toBe('an unknown place');
+    expect(fixtureRoomPath(byId, null)).toBe('an unknown place');
   });
 
   it('only treats a non-empty query or kind as a narrowed result', () => {
-    expect(isFixtureFiltered({ q: '   ', kind: null })).toBe(false);
-    expect(isFixtureFiltered({ q: '', kind: 'power' })).toBe(true);
+    expect(isFixtureFiltered({ query: '   ', kind: 'all' })).toBe(false);
+    expect(isFixtureFiltered({ query: '', kind: 'power' })).toBe(true);
   });
 });

@@ -1,16 +1,9 @@
 import { Cable, Search, X } from 'lucide-react';
 
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  EmptyState,
-  Skeleton,
-  TextInput,
-} from '@pops/ui';
+import { Alert, AlertDescription, AlertTitle, EmptyState, Skeleton, TextInput } from '@pops/ui';
 
 import { OFFLINE_REASON } from '../../foundation/feedback/state-banner.js';
+import { ListError } from '../../foundation/list-page/list-states.js';
 import { WireItemOption } from './wire-item-option.js';
 
 import type { ReactElement } from 'react';
@@ -20,8 +13,8 @@ import type { WireItemsState } from './wire-items-types.js';
 
 /** Returns the refusal reason for an item that cannot be wired to the fixture. */
 export function wireItemRefusal(item: ItemRowModel, wiredIds: ReadonlySet<string>): string | null {
-  if (wiredIds.has(item.id)) return 'Already wired to this fixture.';
-  if (item.lifecycle !== 'active') return 'Inactive items cannot be wired.';
+  if (wiredIds.has(item.id)) return 'Already wired here.';
+  if (item.lifecycle !== 'active') return `${item.name} is ${item.lifecycle}.`;
   return null;
 }
 
@@ -55,11 +48,6 @@ function WireItemsCandidateList({ state }: { readonly state: WireItemsState }): 
           onToggle={() => state.toggle(item)}
         />
       ))}
-      {state.itemRows.hasNextPage ? (
-        <Button variant="ghost" size="sm" onClick={state.itemRows.fetchNextPage}>
-          Load more items
-        </Button>
-      ) : null}
     </div>
   );
 }
@@ -75,17 +63,7 @@ function WireItemsSourceState({ state }: { readonly state: WireItemsState }): Re
     );
   }
   if (state.itemRows.status === 'error') {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Items did not load</AlertTitle>
-        <AlertDescription className="flex items-center justify-between gap-3">
-          <span>The inventory service did not answer.</span>
-          <Button size="sm" variant="outline" onClick={state.itemRows.refetch}>
-            Retry
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
+    return <ListError noun="items" onRetry={state.itemRows.refetch} />;
   }
   if (state.candidates.length === 0) {
     return <WireItemsEmpty filtered={state.queryDraft.trim().length > 0} />;

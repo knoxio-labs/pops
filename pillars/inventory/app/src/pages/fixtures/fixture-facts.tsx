@@ -41,16 +41,18 @@ export function FixtureFacts(props: FixtureFactsProps): ReactElement {
         <div>
           <dt className="text-xs font-medium text-muted-foreground">Note</dt>
           <dd className={props.fixture.notes === null ? 'text-muted-foreground' : undefined}>
-            {props.fixture.notes ?? 'No note recorded'}
+            {props.fixture.notes ?? 'None'}
           </dd>
         </div>
         <div>
           <dt className="text-xs font-medium text-muted-foreground">Recorded</dt>
-          <dd>{new Date(props.fixture.createdAt).toLocaleDateString()}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium text-muted-foreground">Last edited</dt>
-          <dd>{new Date(props.fixture.lastEditedTime).toLocaleDateString()}</dd>
+          <dd>
+            {new Date(props.fixture.createdAt).toLocaleDateString('en-AU', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+          </dd>
         </div>
       </dl>
       <Button

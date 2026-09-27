@@ -3,28 +3,30 @@ import { Cable, Unlink } from 'lucide-react';
 import { Button, EmptyState } from '@pops/ui';
 
 import { OFFLINE_REASON } from '../../foundation/feedback/state-banner.js';
-import { buildWorld } from '../../foundation/model/placement-model.js';
+import { ListError } from '../../foundation/list-page/list-states.js';
 import { ItemList, ItemRow, RowVerb } from '../../foundation/rows/item-row.js';
 import { SelectionBar } from '../../foundation/selection/selection-bar.js';
 
 import type { ReactElement } from 'react';
 
-import type { LocationModel, ItemRowModel } from '../../foundation/model/model.js';
+import type { ItemRowModel } from '../../foundation/model/model.js';
+import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { SelectionApi } from '../../foundation/selection/use-selection.js';
 
 /** Props for the wired-item list and its selection actions. */
 export interface FixtureWiredItemsProps {
   readonly fixtureName: string;
   readonly items: readonly ItemRowModel[];
-  readonly locations: readonly LocationModel[];
+  readonly total: number | null;
+  readonly status: 'pending' | 'error' | 'success';
+  readonly world: PlacementWorld;
   readonly selection: SelectionApi;
   readonly online: boolean;
   readonly disconnectingIds: ReadonlySet<string>;
-  readonly hasNextPage: boolean;
-  readonly onLoadMore: () => void;
   readonly onOpen: (id: string) => void;
   readonly onWire: () => void;
   readonly onDisconnect: (ids: readonly string[]) => void;
+  readonly onRetry: () => void;
 }
 
 function disconnectDisabledReason(
@@ -38,21 +40,19 @@ function disconnectDisabledReason(
 
 function WiredItemsEmpty({
   online,
-  disabledReason,
   onWire,
 }: {
   readonly online: boolean;
-  readonly disabledReason: string | undefined;
   readonly onWire: () => void;
 }): ReactElement {
   return (
     <div className="flex min-h-64 flex-1 items-center justify-center rounded-xl border border-dashed bg-card">
       <EmptyState
         icon={Cable}
-        title="Nothing wired yet"
-        description="Wire an inventory item to make this fixture part of its trace."
+        title="Nothing is wired to this fixture"
+        description="Wire the lamp, charger or router that uses it, so tracing that item ends here."
         action={
-          <Button onClick={onWire} disabled={!online} title={disabledReason}>
+          <Button onClick={onWire} disabled={!online} title={!online ? OFFLINE_REASON : undefined}>
             Wire items
           </Button>
         }
@@ -62,23 +62,21 @@ function WiredItemsEmpty({
 }
 
 function WiredItemList({
-  fixtureName,
   items,
   world,
   selection,
   online,
   disconnectingIds,
-  hasNextPage,
-  onLoadMore,
   onOpen,
   onDisconnect,
-}: Omit<FixtureWiredItemsProps, 'locations' | 'onWire'> & {
-  readonly world: ReturnType<typeof buildWorld>;
-}): ReactElement {
+}: Pick<
+  FixtureWiredItemsProps,
+  'items' | 'world' | 'selection' | 'online' | 'disconnectingIds' | 'onOpen' | 'onDisconnect'
+>): ReactElement {
   return (
     <div className="min-h-0 flex-1 overflow-auto">
       <ItemList
-        label={`Items wired to ${fixtureName}`}
+        label="Wired items"
         onKeyDown={(event) => {
           if (selection.onKey(event)) event.preventDefault();
         }}
@@ -104,80 +102,62 @@ function WiredItemList({
           />
         ))}
       </ItemList>
-      {hasNextPage ? (
-        <div className="flex justify-center p-2">
-          <Button variant="ghost" size="sm" onClick={onLoadMore}>
-            Load more wired items
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }
 
 function WiredItemsHeader({
   fixtureName,
-  itemCount,
+  total,
   online,
-  disabledReason,
   onWire,
 }: {
   readonly fixtureName: string;
-  readonly itemCount: number;
+  readonly total: number;
   readonly online: boolean;
-  readonly disabledReason: string | undefined;
   readonly onWire: () => void;
 }): ReactElement {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 id="wired-items-title" className="text-base font-semibold">
-          Wired items
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {itemCount} item{itemCount === 1 ? '' : 's'} wired to {fixtureName}.
-        </p>
-      </div>
+      <h2 id="wired-items-title" className="text-base font-semibold">
+        Wired to this fixture: {total}
+      </h2>
       <Button
         onClick={onWire}
         disabled={!online}
-        title={disabledReason}
+        title={!online ? OFFLINE_REASON : undefined}
         prefix={<Cable className="size-4" aria-hidden />}
       >
         Wire items
       </Button>
+      <span className="sr-only">{fixtureName}</span>
     </div>
+  );
+}
+
+function WiredItemsError({ onRetry }: { readonly onRetry: () => void }): ReactElement {
+  return (
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3" aria-label="Wired items">
+      <ListError noun="wired items" onRetry={onRetry} />
+    </section>
   );
 }
 
 /** Renders wired items, selection, wiring entry, and guarded disconnect actions. */
 export function FixtureWiredItems(props: FixtureWiredItemsProps): ReactElement {
-  const world = buildWorld(props.items, props.locations);
+  if (props.status === 'error' || props.total === null)
+    return <WiredItemsError onRetry={props.onRetry} />;
   const disabledReason = props.online ? undefined : OFFLINE_REASON;
-  const disconnectAction = {
-    id: 'disconnect',
-    label: 'Disconnect',
-    icon: Unlink,
-    disabledReason,
-    onSelect: () => props.onDisconnect(props.selection.selectedIds),
-  };
   const content =
     props.items.length === 0 ? (
-      <WiredItemsEmpty
-        online={props.online}
-        disabledReason={disabledReason}
-        onWire={props.onWire}
-      />
+      <WiredItemsEmpty online={props.online} onWire={props.onWire} />
     ) : (
       <WiredItemList
-        fixtureName={props.fixtureName}
         items={props.items}
-        world={world}
+        world={props.world}
         selection={props.selection}
         online={props.online}
         disconnectingIds={props.disconnectingIds}
-        hasNextPage={props.hasNextPage}
-        onLoadMore={props.onLoadMore}
         onOpen={props.onOpen}
         onDisconnect={props.onDisconnect}
       />
@@ -189,16 +169,23 @@ export function FixtureWiredItems(props: FixtureWiredItemsProps): ReactElement {
     >
       <WiredItemsHeader
         fixtureName={props.fixtureName}
-        itemCount={props.items.length}
+        total={props.total}
         online={props.online}
-        disabledReason={disabledReason}
         onWire={props.onWire}
       />
       <SelectionBar
         count={props.selection.count}
         loadedCount={props.items.length}
         coverage={props.selection.coverage}
-        actions={[disconnectAction]}
+        actions={[
+          {
+            id: 'disconnect',
+            label: `Disconnect ${props.selection.count}`,
+            icon: Unlink,
+            disabledReason,
+            onSelect: () => props.onDisconnect(props.selection.selectedIds),
+          },
+        ]}
         onSelectAll={props.selection.onHeaderToggle}
         onClear={props.selection.clearSelection}
       />

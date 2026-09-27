@@ -11,6 +11,7 @@ vi.mock('../../inventory-web/useWebItems.js', () => ({
   useItemRows: (...args: unknown[]) => mocks.useItemRows(...args),
 }));
 
+import { InventoryApiError } from '../../inventory-api-helpers.js';
 import { WireItemsSheet } from './wire-items-sheet.js';
 
 import type { ItemRowModel } from '../../foundation/model/model.js';
@@ -42,7 +43,7 @@ const rows = [
 ];
 
 function renderSheet(overrides: Partial<ComponentProps<typeof WireItemsSheet>> = {}) {
-  const onWire = vi.fn().mockResolvedValue(undefined);
+  const onWire = overrides.onWire ?? vi.fn().mockResolvedValue(undefined);
   const onOpenChange = vi.fn();
   render(
     <WireItemsSheet
@@ -81,13 +82,15 @@ describe('WireItemsSheet', () => {
   it('shows refusal reasons and wires only selected active items', async () => {
     const { onWire, onOpenChange } = renderSheet();
 
-    expect(screen.getByText('Inactive items cannot be wired.')).toBeInTheDocument();
-    expect(screen.getByText('Already wired to this fixture.')).toBeInTheDocument();
+    expect(screen.getByText('Retired lamp is retired.')).toBeInTheDocument();
+    expect(screen.getByText('Already wired here.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('option', { name: /Active lamp/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Wire 1 item' }));
 
-    await waitFor(() => expect(onWire).toHaveBeenCalledWith(['item-active']));
+    await waitFor(() =>
+      expect(onWire).toHaveBeenCalledWith([{ id: 'item-active', name: 'Active lamp' }])
+    );
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -115,5 +118,18 @@ describe('WireItemsSheet', () => {
     expect(screen.getByText('Items did not load')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the sheet open after a conflict from the sequential wire action', async () => {
+    const onOpenChange = vi.fn();
+    const onWire = vi.fn().mockRejectedValue(new InventoryApiError('already wired', 409));
+    renderSheet({ onOpenChange, onWire });
+
+    fireEvent.click(screen.getByRole('option', { name: /Active lamp/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wire 1 item' }));
+
+    await waitFor(() => expect(onWire).toHaveBeenCalledOnce());
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

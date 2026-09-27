@@ -52,10 +52,26 @@ function item(id: string, name: string): ItemRowModel {
   };
 }
 
+function placement(items: readonly ItemRowModel[] = [item('item-1', 'Desk lamp')]) {
+  const locations = [{ id: 'room-1', name: 'Office', parentId: null, kind: 'room' as const }];
+  return {
+    locations,
+    world: {
+      items: new Map(items.map((value) => [value.id, value] as const)),
+      locations: new Map(locations.map((value) => [value.id, value] as const)),
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+  };
+}
+
 function pageModel(overrides: Record<string, unknown> = {}) {
   return {
     id: 'fixture-1',
     fixture,
+    fixtureStatus: 'success' as const,
+    fixtureError: null,
     items: {
       items: [item('item-1', 'Desk lamp')],
       total: 1,
@@ -64,11 +80,7 @@ function pageModel(overrides: Record<string, unknown> = {}) {
       hasNextPage: false,
       fetchNextPage: vi.fn(),
     },
-    locations: {
-      locations: [{ id: 'room-1', name: 'Office', parentId: null, kind: 'room' as const }],
-      status: 'success' as const,
-      refetch: vi.fn(),
-    },
+    placement: placement(),
     online: true,
     changed: { stale: false, groups: [], reload: vi.fn() },
     mutations: { save: vi.fn().mockResolvedValue(undefined) },
@@ -76,8 +88,10 @@ function pageModel(overrides: Record<string, unknown> = {}) {
       connectFixture: vi.fn().mockResolvedValue(undefined),
       disconnectFixture: vi.fn().mockResolvedValue(undefined),
     },
-    status: 'success' as const,
-    error: null,
+    retryFixture: vi.fn(),
+    retryLocations: vi.fn(),
+    retryPlacement: vi.fn(),
+    retryItems: vi.fn(),
     refetch: vi.fn(),
     ...overrides,
   };
@@ -109,7 +123,7 @@ describe('FixtureDetailPage', () => {
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Desk lamp' }));
     const selection = screen.getByRole('region', { name: 'Selection' });
-    fireEvent.click(within(selection).getByRole('button', { name: 'Disconnect' }));
+    fireEvent.click(within(selection).getByRole('button', { name: 'Disconnect 1' }));
 
     await waitFor(() =>
       expect(model.connectionMutations.disconnectFixture).toHaveBeenCalledWith(
@@ -125,6 +139,39 @@ describe('FixtureDetailPage', () => {
     );
   });
 
+  it('stops disconnecting after the first rejection and keeps the selection', async () => {
+    const firstDisconnect = vi.fn().mockRejectedValue(new Error('disconnect failed'));
+    const secondItem = item('item-2', 'Desk monitor');
+    const model = pageModel({
+      items: {
+        items: [item('item-1', 'Desk lamp'), secondItem],
+        total: 2,
+        status: 'success' as const,
+        error: null,
+        hasNextPage: false,
+        fetchNextPage: vi.fn(),
+      },
+      placement: placement([item('item-1', 'Desk lamp'), secondItem]),
+      connectionMutations: {
+        connectFixture: vi.fn().mockResolvedValue(undefined),
+        disconnectFixture: firstDisconnect,
+      },
+    });
+    renderPage(model);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Desk lamp' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Desk monitor' }));
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Selection' })).getByRole('button', {
+        name: 'Disconnect 2',
+      })
+    );
+
+    await waitFor(() => expect(firstDisconnect).toHaveBeenCalledOnce());
+    expect(mocks.showUndoToast).not.toHaveBeenCalled();
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+  });
+
   it('keeps edit and disconnect actions refused while offline', () => {
     const model = pageModel({ online: false });
     renderPage(model);
@@ -136,13 +183,13 @@ describe('FixtureDetailPage', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Desk lamp' }));
     expect(
       within(screen.getByRole('region', { name: 'Selection' })).getByRole('button', {
-        name: 'Disconnect',
+        name: 'Disconnect 1',
       })
     ).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('renders loading, stale, not-found, and retryable error states from the model', () => {
-    const loading = pageModel({ status: 'pending', fixture: undefined });
+    const loading = pageModel({ fixtureStatus: 'pending', fixture: undefined });
     mocks.useFixtureDetailPageModel.mockReturnValue(loading);
     const { rerender } = render(
       <MemoryRouter initialEntries={['/inventory/fixtures/fixture-1']}>
@@ -166,8 +213,8 @@ describe('FixtureDetailPage', () => {
 
     const notFound = pageModel({
       fixture: undefined,
-      status: 'error',
-      error: new InventoryApiError('missing', 404),
+      fixtureStatus: 'error',
+      fixtureError: new InventoryApiError('missing', 404),
     });
     mocks.useFixtureDetailPageModel.mockReturnValue(notFound);
     rerender(
@@ -177,12 +224,12 @@ describe('FixtureDetailPage', () => {
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getByText('Fixture not found')).toBeInTheDocument();
+    expect(screen.getByText('This fixture did not load')).toBeInTheDocument();
 
     const transientError = pageModel({
       fixture: undefined,
-      status: 'error',
-      error: new InventoryApiError('service unavailable', 503),
+      fixtureStatus: 'error',
+      fixtureError: new InventoryApiError('service unavailable', 503),
     });
     mocks.useFixtureDetailPageModel.mockReturnValue(transientError);
     rerender(
@@ -192,7 +239,28 @@ describe('FixtureDetailPage', () => {
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getByText('Fixture did not load')).toBeInTheDocument();
+    expect(screen.getByText('This fixture did not load')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('keeps the detail frame and retries wired items inside the wired section', () => {
+    const retryItems = vi.fn();
+    const model = pageModel({
+      items: {
+        items: [],
+        total: null,
+        status: 'error' as const,
+        error: new InventoryApiError('items unavailable', 503),
+        hasNextPage: false,
+        fetchNextPage: vi.fn(),
+      },
+      retryItems,
+    });
+    renderPage(model);
+
+    expect(screen.getByRole('heading', { name: 'Desk outlet' })).toBeInTheDocument();
+    expect(screen.getByText('Wired items did not load')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retryItems).toHaveBeenCalledOnce();
   });
 });
