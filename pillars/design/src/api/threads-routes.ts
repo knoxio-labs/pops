@@ -9,7 +9,6 @@ import {
   isThreadStatus,
   listThreads,
   setThreadStatus,
-  THREAD_STATUSES,
   type DesignDb,
   type ListThreadsFilter,
   type ThreadStatus,
@@ -25,7 +24,7 @@ const MAX_AUTHOR_LENGTH = 60;
 function requireIdentity(res: Response): DesignPrincipal | null {
   const principal = readPrincipal(res);
   if (!principal) {
-    fail(res, 403, 'no identity: is this surface behind Cloudflare Access?');
+    fail(res, 403, 'design.auth.required', 'This request requires an authenticated identity.');
     return null;
   }
   return principal;
@@ -47,7 +46,7 @@ function authorOf(principal: DesignPrincipal, fields: Record<string, unknown>): 
 function readListFilter(req: Request, res: Response): ListThreadsFilter | null {
   const status = query(req, 'status');
   if (status !== undefined && !isThreadStatus(status)) {
-    fail(res, 400, `status must be one of ${THREAD_STATUSES.join(', ')}`);
+    fail(res, 400, 'design.request.invalid', 'The thread status filter is invalid.');
     return null;
   }
   const filter: ListThreadsFilter = {};
@@ -62,7 +61,7 @@ function readListFilter(req: Request, res: Response): ListThreadsFilter | null {
 function readStatus(fields: Record<string, unknown>, res: Response): ThreadStatus | null {
   const status = str(fields['status']);
   if (status === undefined || !isThreadStatus(status)) {
-    fail(res, 400, `status must be one of ${THREAD_STATUSES.join(', ')}`);
+    fail(res, 400, 'design.request.invalid', 'The thread status is invalid.');
     return null;
   }
   return status;
@@ -99,7 +98,7 @@ function mountCreateRoute(router: Router, db: DesignDb): void {
     const anchor = str(fields['anchor']);
     const text = str(fields['body']);
     if (!route || !anchorKind || !anchor || !text) {
-      fail(res, 400, 'route, anchorKind, anchor and body are required');
+      fail(res, 400, 'design.request.invalid', 'The thread request is incomplete.');
       return;
     }
     const id = createThread(db, {
@@ -124,7 +123,7 @@ function mountUpdateRoutes(router: Router, db: DesignDb): void {
     const fields = body(req);
     const text = str(fields['body']);
     if (!text) {
-      fail(res, 400, 'body is required');
+      fail(res, 400, 'design.request.invalid', 'A message body is required.');
       return;
     }
     const appended = addMessage(db, {
@@ -134,7 +133,7 @@ function mountUpdateRoutes(router: Router, db: DesignDb): void {
       now: new Date().toISOString(),
     });
     if (!appended) {
-      fail(res, 404, 'thread not found');
+      fail(res, 404, 'design.thread.not_found', 'The comment thread was not found.');
       return;
     }
     res.status(201).json({ ok: true });
@@ -152,7 +151,7 @@ function mountUpdateRoutes(router: Router, db: DesignDb): void {
       now: new Date().toISOString(),
     });
     if (!updated) {
-      fail(res, 404, 'thread not found');
+      fail(res, 404, 'design.thread.not_found', 'The comment thread was not found.');
       return;
     }
     res.json({ ok: true });

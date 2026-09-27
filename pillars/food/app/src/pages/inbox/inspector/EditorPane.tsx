@@ -124,8 +124,6 @@ function EditorTab(props: EditorTabBodyProps): ReactElement {
       else toast.error(t('inbox.inspector.editor.savedFailed'));
       onSaved();
     },
-    onError: (err: Error) =>
-      toast.error(t('inbox.inspector.editor.saveError', { message: err.message })),
   });
   return (
     <div className="space-y-2">

@@ -405,7 +405,7 @@ describe('inventory catalogue draft management', () => {
     types.manage.patchDraft.mockResolvedValueOnce({
       kind: 'conflict',
       pillar: 'inventory',
-      code: 'catalogue_draft_conflict',
+      code: 'inventory.catalogue.draft_conflict',
       message: 'Catalogue draft 5 is at version 4, not 3',
       details: { currentDraftVersion: 4 },
     });
@@ -429,7 +429,7 @@ describe('inventory catalogue draft management', () => {
     types.manage.publishDraft.mockResolvedValueOnce({
       kind: 'conflict',
       pillar: 'inventory',
-      code: 'catalogue_migration_required',
+      code: 'inventory.catalogue.migration_required',
       message: 'Publication requires a named value migration',
     });
 

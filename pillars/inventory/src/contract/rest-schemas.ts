@@ -6,6 +6,10 @@
  */
 import { z } from 'zod';
 
+import { ErrorBodySchema } from '@pops/types';
+
+export { ErrorBodySchema } from '@pops/types';
+
 /**
  * Numeric path params arrive as strings on the wire — coerce them.
  * Used for the auto-increment ids (photos, documents, uploaded files).
@@ -28,16 +32,6 @@ export const PaginationMetaSchema = z.object({
   limit: z.number(),
   offset: z.number(),
   hasMore: z.boolean(),
-});
-
-/**
- * Error envelope. `messageKey` carries the i18n key the FE resolves to a
- * localised string.
- */
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
-  messageKey: z.string().optional(),
 });
 
 /** Bare `{ message }` body returned by delete/disconnect-style mutations. */

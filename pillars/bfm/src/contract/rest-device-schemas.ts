@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ErrorBodySchema } from '@pops/types';
+
 /**
  * Wire schemas for the device-facing surface — the routes a phone reaches on
  * bfm's own hostname, where Cloudflare Access is bypassed (POPS-1389).
@@ -74,7 +76,7 @@ export type PairedDevice = z.infer<typeof PairedDeviceSchema>;
  * Why a pairing attempt was refused — two codes, on two statuses, and the
  * split between them is the security property this route turns on.
  *
- * - **`invalid_request` (400)** — the request itself is wrong: a body that
+ * - **`bfm.request.invalid` (400)** — the request itself is wrong: a body that
  *   does not match the schema, or a `publicKey` that is not a P-256 SPKI key.
  *   This is the app's own bug and retrying the same bytes cannot fix it.
  * - **`pairing_rejected` (403)** — the code did not buy a device. Unknown,
@@ -106,9 +108,8 @@ export type PairedDevice = z.infer<typeof PairedDeviceSchema>;
  * answers exactly the same shape, and `rest/request-validation.ts` builds one
  * constant for both — so the 400 is the surface's, not this route's.
  */
-export const DeviceInvalidRequestErrorSchema = z.object({
-  code: z.literal('invalid_request'),
-  message: z.string(),
+export const DeviceInvalidRequestErrorSchema = ErrorBodySchema.extend({
+  code: z.literal('bfm.request.invalid'),
 });
 
 export const PairingRejectedErrorSchema = z.object({

@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type FeaturesListData = {
   body?: never;
   path?: never;
@@ -15,31 +23,19 @@ export type FeaturesListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type FeaturesListError = FeaturesListErrors[keyof FeaturesListErrors];
@@ -85,31 +81,19 @@ export type FeaturesGetManifestsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type FeaturesGetManifestsError =
@@ -158,31 +142,19 @@ export type FeaturesIsEnabledErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type FeaturesIsEnabledError = FeaturesIsEnabledErrors[keyof FeaturesIsEnabledErrors];
@@ -217,31 +189,19 @@ export type FeaturesSetEnabledErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type FeaturesSetEnabledError = FeaturesSetEnabledErrors[keyof FeaturesSetEnabledErrors];
@@ -276,31 +236,19 @@ export type FeaturesClearUserPreferenceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type FeaturesClearUserPreferenceError =
@@ -336,31 +284,19 @@ export type FeaturesSetUserPreferenceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type FeaturesSetUserPreferenceError =
@@ -389,31 +325,19 @@ export type ServiceAccountsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type ServiceAccountsListError = ServiceAccountsListErrors[keyof ServiceAccountsListErrors];
@@ -454,31 +378,19 @@ export type ServiceAccountsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type ServiceAccountsCreateError =
@@ -522,31 +434,19 @@ export type ServiceAccountsRevokeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type ServiceAccountsRevokeError =
@@ -575,31 +475,19 @@ export type SettingsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsListError = SettingsListErrors[keyof SettingsListErrors];
@@ -629,31 +517,19 @@ export type SettingsAggregateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsAggregateError = SettingsAggregateErrors[keyof SettingsAggregateErrors];
@@ -694,31 +570,19 @@ export type SettingsGetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetManyError = SettingsGetManyErrors[keyof SettingsGetManyErrors];
@@ -752,31 +616,19 @@ export type SettingsResetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetError = SettingsResetErrors[keyof SettingsResetErrors];
@@ -814,31 +666,19 @@ export type SettingsSetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetManyError = SettingsSetManyErrors[keyof SettingsSetManyErrors];
@@ -887,31 +727,19 @@ export type SettingsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsDeleteError = SettingsDeleteErrors[keyof SettingsDeleteErrors];
@@ -953,31 +781,19 @@ export type SettingsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetError = SettingsGetErrors[keyof SettingsGetErrors];
@@ -1027,31 +843,19 @@ export type SettingsSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetError = SettingsSetErrors[keyof SettingsSetErrors];
@@ -1102,31 +906,19 @@ export type SettingsEnsureErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsEnsureError = SettingsEnsureErrors[keyof SettingsEnsureErrors];
@@ -1176,31 +968,19 @@ export type SettingsResetKeyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetKeyError = SettingsResetKeyErrors[keyof SettingsResetKeyErrors];
@@ -1252,24 +1032,15 @@ export type UsersGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type UsersGetError = UsersGetErrors[keyof UsersGetErrors];

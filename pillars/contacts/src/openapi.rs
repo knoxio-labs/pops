@@ -21,7 +21,7 @@
 use serde_json::{Map, Value};
 use utoipa::OpenApi;
 
-use crate::api::{ErrorBody, PaginationMeta};
+use crate::api::{ErrorBody, ErrorCode, PaginationMeta};
 use crate::entities::addresses_model::{Address, CreateAddressBody};
 use crate::entities::addresses_routes::{AddressListResponse, AddressMutation};
 use crate::entities::model::{CreateEntityBody, Entity, EntityLookup, UpdateEntityBody};
@@ -85,6 +85,7 @@ use crate::search::routes::{
         AddressMutation,
         PaginationMeta,
         ErrorBody,
+        ErrorCode,
         SearchRequest,
         SearchQuery,
         SearchResponse,

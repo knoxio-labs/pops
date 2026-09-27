@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Shared zod schemas for the cerebrum ts-rest contract.
  *
@@ -5,18 +7,10 @@
  * response/error envelope shapes have a single definition reused across
  * domains.
  */
-import { z } from 'zod';
+import { ErrorBodySchema } from '@pops/types';
 
-/**
- * Wire error envelope. Mirrors the inventory/food pillars: `message` is the
- * EN-AU fallback, `messageKey` is the i18n lookup the FE resolves, `code` is
- * the originating error class name.
- */
-export const errorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
-  messageKey: z.string().optional(),
-});
+/** Shared ADR-054 wire error envelope. */
+export const errorBodySchema = ErrorBodySchema;
 export type ErrorBody = z.infer<typeof errorBodySchema>;
 
 const TEMPLATE_FIELD_TYPES = [

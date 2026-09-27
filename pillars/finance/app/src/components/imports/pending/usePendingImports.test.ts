@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('usePendingImports errors', () => {
-  it('toasts when discard fails, and still leaves the list settled', async () => {
+  it('leaves discard failures to the global handler and keeps navigation unchanged', async () => {
     draftsDiscard.mockResolvedValue({ data: undefined, error: { message: 'boom', code: 'Bad' } });
     const { result } = renderHook(() => usePendingImports(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -49,18 +49,19 @@ describe('usePendingImports errors', () => {
       await expect(result.current.discard('draft-1')).rejects.toThrow();
     });
 
-    expect(mockToastError).toHaveBeenCalledOnce();
+    expect(mockToastError).not.toHaveBeenCalled();
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it('toasts when take-over fails, and does not navigate', async () => {
+  it('leaves take-over failures to the global handler and does not navigate', async () => {
     draftsClaim.mockResolvedValue({ data: undefined, error: { message: 'boom', code: 'Bad' } });
     const { result } = renderHook(() => usePendingImports(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => result.current.takeOver('draft-1'));
 
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledOnce());
+    await waitFor(() => expect(draftsClaim).toHaveBeenCalledOnce());
+    expect(mockToastError).not.toHaveBeenCalled();
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 });

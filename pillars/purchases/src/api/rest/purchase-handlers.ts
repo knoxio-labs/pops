@@ -16,6 +16,7 @@ import {
   listTagVocabulary,
 } from '../../db/index.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
+import { purchaseErrorBody } from '../errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { makePurchaseInventoryHandlers } from './purchase-inventory-handlers.js';
@@ -44,7 +45,7 @@ const ITEMS_BY_TAG_DEFAULT_LIMIT = 200;
 function notFound(id: string) {
   return {
     status: 404 as const,
-    body: { message: `Purchase ${id} not found`, code: 'NOT_FOUND' },
+    body: purchaseErrorBody('not_found', { message: `Purchase ${id} not found` }),
   };
 }
 

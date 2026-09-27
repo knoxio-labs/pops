@@ -5,8 +5,8 @@ import SwiftUI
 
 /// The three things that stop a change from syncing, per ADR-002's per-
 /// replica state machine. Session expired and app too old block until acted
-/// on; storage full is an alert, because reading still works while it is
-/// outstanding.
+/// on; storage full is recorded through the shared error presenter, because
+/// reading still works while it is outstanding.
 internal enum InventorySyncInterruptionCopy {
     internal static func line(_ reason: InventoryBlockReason) -> String {
         switch reason {
@@ -39,8 +39,7 @@ internal enum InventorySyncInterruptionCopy {
 }
 
 extension View {
-    /// Presents the blocking sheet whenever `store.status()` reports the
-    /// replica blocked, and the storage-full alert whenever `isFull` is set.
+    /// Presents the blocking sheet whenever `store.status()` reports the replica blocked.
     /// Attached once, at the feature's root, rather than by each screen: an
     /// interruption is about the whole replica, not about whichever screen
     /// happens to be on top.
@@ -55,21 +54,6 @@ extension View {
     /// to wait for and nothing a screen underneath needs to gate on.
     internal func inventoryAnnouncesStorageFullOnEntry() -> some View {
         modifier(InventoryStorageFullOnEntryModifier())
-    }
-
-    /// The alert Storage full shows: read still works, so this can be put
-    /// off rather than blocking the screen underneath.
-    ///
-    /// No "Free up space" action: iOS has no public URL that opens
-    /// Settings > General > iPhone Storage directly, so there is nothing
-    /// this button could open that "Not now" does not already cover —
-    /// dismissing and leaving the person to open Settings themselves.
-    internal func inventoryStorageFullAlert(isPresented: Binding<Bool>) -> some View {
-        alert("Storage full", isPresented: isPresented) {
-            Button("Not now", role: .cancel) {}
-        } message: {
-            Text(InventoryCopy.storageFullMessage)
-        }
     }
 }
 
@@ -104,15 +88,21 @@ internal struct InventorySyncInterruptionsModifier: ViewModifier {
 
 internal struct InventoryStorageFullOnEntryModifier: ViewModifier {
     @Environment(\.inventoryStorageFullOnEntry) private var storageFullOnEntry
-    @State private var presented = false
+    @Environment(\.errorPresenter) private var errorPresenter
 
     func body(content: Content) -> some View {
         content
             .task {
                 guard storageFullOnEntry else { return }
-                presented = true
+                errorPresenter.present(
+                    PopsError(
+                        code: "ios.storage.full",
+                        message: InventoryCopy.storageFullMessage,
+                        retryable: false,
+                        kind: .client),
+                    operation: "Open inventory storage",
+                    context: .background)
             }
-            .inventoryStorageFullAlert(isPresented: $presented)
     }
 }
 

@@ -373,7 +373,7 @@ describe('re-uploading the same photograph', () => {
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(409);
-    expect(second.body.code).toBe('ALREADY_IMPORTED');
+    expect(second.body.code).toBe('purchases.receipt.already_imported');
   });
 
   it('refuses a second photograph even when its inferred currency differs from the first (POPS-3570 regression)', async () => {
@@ -417,7 +417,7 @@ describe('re-uploading the same photograph', () => {
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(409);
-    expect(second.body.code).toBe('ALREADY_IMPORTED');
+    expect(second.body.code).toBe('purchases.receipt.already_imported');
   });
 
   it('keeps two genuine shops that differ only in time', async () => {
@@ -560,7 +560,7 @@ describe('the shapes a receipt arrives in other than a photograph', () => {
 
     expect(first.body.kind).toBe('created');
     expect(second.status).toBe(409);
-    expect(second.body.code).toBe('ALREADY_IMPORTED');
+    expect(second.body.code).toBe('purchases.receipt.already_imported');
     expect(calls).toBe(1);
   });
 
@@ -574,7 +574,7 @@ describe('the shapes a receipt arrives in other than a photograph', () => {
 
     expect(photographed.body.kind).toBe('created');
     expect(invoiced.status).toBe(409);
-    expect(invoiced.body.code).toBe('ALREADY_IMPORTED');
+    expect(invoiced.body.code).toBe('purchases.receipt.already_imported');
     expect(invoiced.body.message).toContain('another upload of the same receipt');
   });
 
@@ -636,7 +636,7 @@ describe('uploads it declines before the model sees them', () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
     const response = await upload(appWith(saying(GOOD_READING)), png.toString('base64'));
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('NOT_THE_STATED_TYPE');
+    expect(response.body.code).toBe('purchases.receipt.invalid_media_type');
   });
 
   it('refuses a JPEG claiming to be a PDF, and a PDF claiming to be a JPEG', async () => {
@@ -645,11 +645,11 @@ describe('uploads it declines before the model sees them', () => {
     // an image" and became "are these the bytes you said they were".
     const asPdf = await upload(appWith(saying(GOOD_READING)), JPEG_BASE64, 'application/pdf');
     expect(asPdf.status).toBe(400);
-    expect(asPdf.body.code).toBe('NOT_THE_STATED_TYPE');
+    expect(asPdf.body.code).toBe('purchases.receipt.invalid_media_type');
 
     const asJpeg = await upload(appWith(saying(GOOD_READING)), PDF_BASE64, 'image/jpeg');
     expect(asJpeg.status).toBe(400);
-    expect(asJpeg.body.code).toBe('NOT_THE_STATED_TYPE');
+    expect(asJpeg.body.code).toBe('purchases.receipt.invalid_media_type');
   });
 
   it('refuses base64 that is not base64, the same way as a mislabelled file', async () => {
@@ -658,7 +658,7 @@ describe('uploads it declines before the model sees them', () => {
     // refused by its shape before anything decodes it, not discovered after.
     const response = await upload(appWith(saying(GOOD_READING)), 'not base64 at all!!');
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('NOT_THE_STATED_TYPE');
+    expect(response.body.code).toBe('purchases.receipt.invalid_media_type');
     expect(readdirSync(receiptDir)).toHaveLength(0);
   });
 
@@ -673,7 +673,7 @@ describe('uploads it declines before the model sees them', () => {
     // that failed somewhere they cannot see.
     const response = await upload(appWith(null));
     expect(response.status).toBe(503);
-    expect(response.body.code).toBe('VISION_UNAVAILABLE');
+    expect(response.body.code).toBe('purchases.receipt.vision_unavailable');
   });
 });
 

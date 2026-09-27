@@ -36,6 +36,7 @@ export interface InHandPageProps {
   /** Drawn over the list: an open picker, anchored under a row. */
   overlay?: ReactNode;
   toast?: ReactNode;
+  onEdit?: (id: string) => void;
 }
 
 const I = INVENTORY_ICONS;
@@ -81,7 +82,14 @@ function selectionActions(disabledReason?: string): SelectionBarAction[] {
   ];
 }
 
-function List({ world, items: given, initialSelection, disabledReason, overlay }: InHandPageProps) {
+function List({
+  world,
+  items: given,
+  initialSelection,
+  disabledReason,
+  overlay,
+  onEdit,
+}: InHandPageProps) {
   const items = useMemo(() => orderInHand(given), [given]);
   const order = useMemo(() => items.map((entry) => entry.id), [items]);
   const selection = useSelection(order, initialSelection);
@@ -102,6 +110,7 @@ function List({ world, items: given, initialSelection, disabledReason, overlay }
                 focused={selection.state.focusedId === item.id}
                 disabledReason={disabledReason}
                 onToggle={selection.onRowToggle}
+                onEdit={onEdit}
               />
             ))}
           </ItemList>

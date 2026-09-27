@@ -37,6 +37,7 @@ export interface ItemsPageProps {
   exportOpen?: boolean;
   pendingIds?: ReadonlySet<string>;
   rejections?: Readonly<Record<string, string>>;
+  onEdit?: (id: string) => void;
 }
 
 /** The offline banner every list page shows the same way. */
@@ -120,6 +121,7 @@ export function ItemsPage(props: ItemsPageProps) {
         population={items.length}
         pendingIds={props.pendingIds}
         rejections={props.rejections}
+        onEdit={props.onEdit}
       />
     </InventoryPage>
   );

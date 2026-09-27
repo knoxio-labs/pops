@@ -26,6 +26,14 @@ export interface DeleteBatchConfirmProps {
   onConfirmed?: () => void;
 }
 
+function useBatchDetail(batchId: number | null, isOpen: boolean) {
+  return useQuery({
+    queryKey: ['food', 'batches', 'get', { id: batchId ?? 0 }],
+    queryFn: async () => unwrap(await batchesGet({ path: { id: batchId ?? 0 } })).data,
+    enabled: isOpen && batchId !== null,
+  });
+}
+
 export function DeleteBatchConfirm({
   batchId,
   isOpen,
@@ -33,11 +41,7 @@ export function DeleteBatchConfirm({
   onConfirmed,
 }: DeleteBatchConfirmProps): ReactElement {
   const queryClient = useQueryClient();
-  const detail = useQuery({
-    queryKey: ['food', 'batches', 'get', { id: batchId ?? 0 }],
-    queryFn: async () => unwrap(await batchesGet({ path: { id: batchId ?? 0 } })).data,
-    enabled: isOpen && batchId !== null,
-  });
+  const detail = useBatchDetail(batchId, isOpen);
   const [error, setError] = useState<string | null>(null);
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   if (isOpen !== prevIsOpen) {
@@ -46,6 +50,7 @@ export function DeleteBatchConfirm({
   }
 
   const deleteMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: BatchesDeleteInput) => unwrap(await batchesDelete({ path: input })),
     onSuccess: (res) => {
       if (res.ok) {

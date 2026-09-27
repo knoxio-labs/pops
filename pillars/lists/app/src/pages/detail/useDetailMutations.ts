@@ -37,22 +37,26 @@ function useDetailMutationHooks(onError: (message: string) => void) {
   const handleError = (err: Error) => onError(err.message);
   return {
     update: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async ({ id, ...body }: UpdateInput): Promise<UpdateResult> =>
         unwrap(await listUpdate({ path: { id }, body })),
       onSuccess: () => void invalidate(),
       onError: handleError,
     }),
     archive: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async ({ id }: { id: number }) => unwrap(await listArchive({ path: { id } })),
       onSuccess: () => void invalidate(),
       onError: handleError,
     }),
     unarchive: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async ({ id }: { id: number }) => unwrap(await listUnarchive({ path: { id } })),
       onSuccess: () => void invalidate(),
       onError: handleError,
     }),
     del: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async ({ id }: { id: number }) => unwrap(await listDelete({ path: { id } })),
       onSuccess: () => void invalidate(),
       onError: handleError,

@@ -214,16 +214,15 @@ describe('HistoryPage', () => {
   });
 
   describe('delete error', () => {
-    it('shows error toast on failure', async () => {
+    it('leaves the failure toast to the global mutation handler', async () => {
       mockWatchHistoryDelete.mockResolvedValue({ error: { message: 'Server error' } });
       const user = userEvent.setup();
       renderPage();
       const deleteButtons = await screen.findAllByLabelText('Delete watch event');
       await user.click(deleteButtons[0]!);
       await user.click(screen.getByText('Remove'));
-      await waitFor(() =>
-        expect(mockToastError).toHaveBeenCalledWith('Failed to delete watch event: Server error')
-      );
+      await waitFor(() => expect(mockWatchHistoryDelete).toHaveBeenCalledOnce());
+      expect(mockToastError).not.toHaveBeenCalled();
     });
   });
 

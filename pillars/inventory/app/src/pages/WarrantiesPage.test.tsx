@@ -77,7 +77,12 @@ function mockWarranties(items: WarrantyApiItem[]): void {
 function mockWarrantiesUnavailable(message = 'unavailable'): void {
   reportsWarrantiesMock.mockImplementation(async () => ({
     data: undefined,
-    error: { message },
+    error: {
+      code: 'inventory.reports.unavailable',
+      message,
+      requestId: 'req-warranties',
+      retryable: true,
+    },
     response: { status: 500 },
   }));
 }
@@ -88,9 +93,17 @@ function mockWarrantiesPending(): void {
   );
 }
 
-function mockPaperless(status: PaperlessPayload['data']): void {
+function mockPaperless(status: Partial<PaperlessPayload['data']>): void {
   paperlessStatusMock.mockImplementation(async () => ({
-    data: { data: status } satisfies PaperlessPayload,
+    data: {
+      data: {
+        configured: false,
+        available: false,
+        baseUrl: null,
+        documentCount: null,
+        ...status,
+      },
+    } satisfies PaperlessPayload,
     error: undefined,
   }));
 }
@@ -144,12 +157,14 @@ describe('WarrantiesPage', () => {
     expect(link.closest('a')).toHaveAttribute('href', '/inventory/items');
   });
 
-  it('shows error state with retry button', async () => {
+  it('shows the API error code with a retry button', async () => {
     mockWarrantiesUnavailable();
     renderPage();
-    expect(await screen.findByText(/Could not load warranties/)).toBeInTheDocument();
+    expect(await screen.findByLabelText('Error code')).toHaveTextContent(
+      'inventory.reports.unavailable'
+    );
     const callsBefore = reportsWarrantiesMock.mock.calls.length;
-    fireEvent.click(screen.getByText('Retry'));
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     await waitFor(() =>
       expect(reportsWarrantiesMock.mock.calls.length).toBeGreaterThan(callsBefore)
     );

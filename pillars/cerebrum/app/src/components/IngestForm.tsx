@@ -10,7 +10,7 @@
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Textarea, TextInput } from '@pops/ui';
+import { Button, ErrorState, Textarea, TextInput } from '@pops/ui';
 
 import { BulkResultList } from './BulkResultList';
 import { BulkSegmentPreview } from './BulkSegmentPreview';
@@ -134,9 +134,7 @@ function IngestFormFields({
       <IngestAdvancedSection model={model} />
       {!model.advancedTouched && <BulkSegmentPreview segments={model.segments} />}
       {model.submitError && (
-        <div className="text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
-          {model.submitError}
-        </div>
+        <ErrorState error={model.submitError} className="items-start px-4 py-3" />
       )}
       <FormActions
         isValid={model.isValid}

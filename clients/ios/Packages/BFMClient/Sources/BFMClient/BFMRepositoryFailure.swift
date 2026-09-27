@@ -17,6 +17,9 @@ internal enum BFMRepositoryFailure {
     /// to the mismatch they might have carried, because "not answering" is
     /// the reading that costs least when it is wrong.
     internal static func failure(_ error: ClientError, operation: String) -> RepositoryError {
+        if let runtime = PopsError.runtimeFailureDetails(from: error) {
+            return repositoryError(for: runtime.popsError, statusCode: runtime.statusCode)
+        }
         switch error.response?.status.code {
         case 401, 403:
             return .unauthorized
@@ -30,6 +33,56 @@ internal enum BFMRepositoryFailure {
                 BFMClientError.transportFailure(error, operation: operation).description
             )
         }
+    }
+
+    /// Keeps a decoded ADR-054 body intact while restoring the legacy semantic
+    /// result for a response whose body was not usable and therefore received
+    /// an `ios.http.*` fallback code from the middleware.
+    internal static func repositoryError(for popsError: PopsError) -> RepositoryError {
+        repositoryError(for: popsError, statusCode: nil)
+    }
+
+    internal static func repositoryError(
+        for popsError: PopsError, statusCode: Int?
+    ) -> RepositoryError {
+        if statusCode == 409, !popsError.code.contains(".") {
+            return .conflict(popsError.code)
+        }
+
+        guard let fallbackStatus = fallbackStatusCode(in: popsError.code) else {
+            switch popsError.code {
+            case "invalid_token", "device_revoked", "capability_not_granted":
+                return .unauthorized
+            case "upstream_unavailable", "upstream_degraded", "upstream_misconfigured":
+                return .unavailable
+            case "upstream_contract_mismatch":
+                return .contractMismatch
+            case "upstream_conflict":
+                return .conflict(popsError.code)
+            default:
+                return .transport(popsError)
+            }
+        }
+
+        switch statusCode ?? fallbackStatus {
+        case 401, 403:
+            return .unauthorized
+        case 500...599:
+            return .unavailable
+        default:
+            return .transport(popsError)
+        }
+    }
+
+    internal static func statusCode(in error: ClientError) -> Int? {
+        if let runtime = error.underlyingError as? BFMRuntimePopsError {
+            return runtime.statusCode
+        }
+        return error.response?.status.code
+    }
+
+    internal static func code(in error: ClientError) -> String? {
+        PopsError.runtimeFailure(from: error)?.code
     }
 
     /// The BFM's upstream vocabulary, collapsed onto what a screen can do
@@ -58,5 +111,15 @@ internal enum BFMRepositoryFailure {
         default:
             return .transport("\(operation): upstream \(code)")
         }
+    }
+
+    private static func fallbackStatusCode(in code: String) -> Int? {
+        guard let rawStatus = code.split(separator: ".").last,
+            code.hasPrefix("ios.http."),
+            let status = Int(rawStatus)
+        else {
+            return nil
+        }
+        return status
     }
 }

@@ -11,6 +11,7 @@ import {
   decideInventoryProposal,
   listInventoryProposals,
 } from '../../db/index.js';
+import { purchaseErrorBody } from '../errors.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { toPurchaseItemDetailBody } from './serializers.js';
 
@@ -31,10 +32,9 @@ type ProposalDecisionBody = z.infer<typeof InventoryProposalDecisionSchema>;
 function itemNotFound(purchaseId: string, itemId: string) {
   return {
     status: 404 as const,
-    body: {
+    body: purchaseErrorBody('not_found', {
       message: `Item ${itemId} not found on purchase ${purchaseId}`,
-      code: 'NOT_FOUND',
-    },
+    }),
   };
 }
 
@@ -49,10 +49,9 @@ function itemNotFound(purchaseId: string, itemId: string) {
 export function proposalNotFound(purchaseId: string, itemId: string) {
   return {
     status: 404 as const,
-    body: {
+    body: purchaseErrorBody('not_found', {
       message: `No inventory proposal on item ${itemId} of purchase ${purchaseId} matches this answer`,
-      code: 'NOT_FOUND',
-    },
+    }),
   };
 }
 

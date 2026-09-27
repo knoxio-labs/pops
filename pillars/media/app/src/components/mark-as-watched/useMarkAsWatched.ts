@@ -61,9 +61,6 @@ function useUndoMutation(mediaId: number) {
       void queryClient.invalidateQueries({ queryKey: ['media', 'watchHistory'] });
       invalidateCross();
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to undo: ${err.message}`);
-    },
   });
 
   const handleUndo = (entryId: number, watchlistRemoved: boolean) => {
@@ -120,9 +117,6 @@ function useLogMutation({
       invalidateCross();
       setShowDatePicker(false);
       setCustomDate('');
-    },
-    onError: (err: Error) => {
-      toast.error(`Failed to log watch: ${err.message}`);
     },
   });
 }

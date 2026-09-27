@@ -1,3 +1,5 @@
+import { defineErrors } from '@pops/pillar-express';
+
 /**
  * `GET /service-accounts/self` — service-account introspection for sibling
  * pillars.
@@ -33,14 +35,20 @@ export interface ServiceAccountSelfPayload {
   scopes: string[];
 }
 
+const serviceAccountErrors = defineErrors('registry', {
+  required: {
+    area: 'auth',
+    status: 401,
+    message: 'This endpoint requires service-account credentials.',
+    retryable: false,
+  },
+});
+
 export function createServiceAccountSelfHandler(): RequestHandler {
   return (_req: Request, res: Response): void => {
     const { serviceAccount } = readPrincipal(res);
     if (!serviceAccount) {
-      res.status(401).json({
-        message: 'This endpoint requires a service-account X-API-Key.',
-      });
-      return;
+      return serviceAccountErrors.required();
     }
     const payload: ServiceAccountSelfPayload = {
       id: serviceAccount.id,

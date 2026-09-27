@@ -80,7 +80,7 @@ describe('PUT /media/:sha256', () => {
       .send(bytes);
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'hash_mismatch' });
+    expect(res.body).toMatchObject({ code: 'inventory.media.hash_mismatch' });
   });
 
   it('answers 400 invalid_sha256 for a malformed path param', async () => {
@@ -90,7 +90,7 @@ describe('PUT /media/:sha256', () => {
       .send(Buffer.from('irrelevant'));
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'invalid_sha256' });
+    expect(res.body).toMatchObject({ code: 'inventory.media.invalid_sha256' });
   });
 
   it('answers 415 for an unsupported content type', async () => {
@@ -103,7 +103,7 @@ describe('PUT /media/:sha256', () => {
       .send(bytes);
 
     expect(res.status).toBe(415);
-    expect(res.body).toEqual({ error: 'unsupported_media_type' });
+    expect(res.body).toMatchObject({ code: 'inventory.media.unsupported_media_type' });
   });
 
   it('answers 415 when the bytes are not a decodable image, despite a matching hash', async () => {
@@ -116,7 +116,7 @@ describe('PUT /media/:sha256', () => {
       .send(bytes);
 
     expect(res.status).toBe(415);
-    expect(res.body).toEqual({ error: 'unsupported_media_type' });
+    expect(res.body).toMatchObject({ code: 'inventory.media.unsupported_media_type' });
   });
 
   it('answers 413 when the body exceeds the upload cap', async () => {
@@ -129,7 +129,7 @@ describe('PUT /media/:sha256', () => {
       .send(oversized);
 
     expect(res.status).toBe(413);
-    expect(res.body).toEqual({ error: 'payload_too_large' });
+    expect(res.body).toMatchObject({ code: 'inventory.media.payload_too_large' });
   });
 });
 
@@ -175,7 +175,7 @@ describe('GET /media/:sha256', () => {
     const res = await requestOn(app()).get(`/media/${'a'.repeat(64)}`);
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'media_not_found' });
+    expect(res.body).toMatchObject({ code: 'inventory.media.not_found' });
   });
 
   it('returns 400 for an unrecognised variant', async () => {
@@ -186,13 +186,13 @@ describe('GET /media/:sha256', () => {
     const res = await requestOn(app()).get(`/media/${sha256}?variant=huge`);
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'invalid_variant' });
+    expect(res.body).toMatchObject({ code: 'inventory.media.invalid_variant' });
   });
 
   it('returns 400 for a malformed sha256 path param', async () => {
     const res = await requestOn(app()).get('/media/not-a-hash');
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'invalid_sha256' });
+    expect(res.body).toMatchObject({ code: 'inventory.media.invalid_sha256' });
   });
 });

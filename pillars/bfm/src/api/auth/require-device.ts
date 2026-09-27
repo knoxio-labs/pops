@@ -28,8 +28,8 @@
  * uncoalesced instant because its response promises the exact value it wrote
  * — see `api/mobile/bootstrap.ts`.
  */
-import { DEVICE_REVOKED_ERROR } from '../../contract/rest-schemas.js';
 import { findDeviceById, touchDeviceIfStale } from '../../db/index.js';
+import { bfmErrorBody } from '../errors.js';
 import { AccessTokenError, verifyAccessToken } from './access-token.js';
 
 import type { KeyObject } from 'node:crypto';
@@ -67,8 +67,8 @@ function readBearerToken(req: Request): string | null {
 
 /**
  * A refusal carries its status and its body together, so the pairing the
- * contract promises — 401 is always `invalid_token`, 403 always
- * `device_revoked` — is unrepresentable the other way round. Passing them as
+ * contract promises — 401 is always `bfm.auth.invalid_token`, 403 always
+ * `bfm.auth.device_revoked` — is unrepresentable the other way round. Passing them as
  * two arguments let a future edit ship a combination the OpenAPI document says
  * cannot occur, and nothing would have failed.
  */
@@ -86,10 +86,13 @@ function refuse(res: Response, refusal: MobileRefusal): void {
   res.status(refusal.status).json(refusal.body);
 }
 
-const INVALID_TOKEN: MobileRefusal = {
-  status: 401,
-  body: { code: 'invalid_token', message: 'Missing or invalid access token.' },
-};
+function invalidToken(): MobileRefusal {
+  return { status: 401, body: bfmErrorBody('invalid_token') };
+}
+
+function deviceRevoked(): MobileRefusal {
+  return { status: 403, body: bfmErrorBody('device_revoked') };
+}
 
 /**
  * How stale `lastSeenAt` must be before a request bothers to move it.
@@ -114,7 +117,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     const token = readBearerToken(req);
     if (token === null) {
-      refuse(res, INVALID_TOKEN);
+      refuse(res, invalidToken());
       return;
     }
 
@@ -129,7 +132,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
         next(error);
         return;
       }
-      refuse(res, INVALID_TOKEN);
+      refuse(res, invalidToken());
       return;
     }
 
@@ -142,7 +145,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
     // through refresh gets it a truthful `credentialsRejected` instead of a
     // revocation that never happened.
     if (device === undefined) {
-      refuse(res, INVALID_TOKEN);
+      refuse(res, invalidToken());
       return;
     }
 
@@ -156,7 +159,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
       console.warn(
         `[bfm-api] rejected a request from revoked device ${device.id} (revoked at ${device.revokedAt})`
       );
-      refuse(res, { status: 403, body: DEVICE_REVOKED_ERROR });
+      refuse(res, deviceRevoked());
       return;
     }
 

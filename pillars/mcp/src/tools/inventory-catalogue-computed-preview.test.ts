@@ -108,7 +108,7 @@ describe('inventory.catalogue.previewComputedField', () => {
     types.manage.previewComputedField.mockResolvedValueOnce({
       kind: 'conflict',
       pillar: 'inventory',
-      code: 'catalogue_draft_conflict',
+      code: 'inventory.catalogue.draft_conflict',
       message: 'Catalogue draft 5 is at version 4, not 3',
     });
 
@@ -213,7 +213,7 @@ describe('inventory.catalogue.previewComputedFieldOnPublished', () => {
     types.manage.previewComputedFieldOnPublished.mockResolvedValueOnce({
       kind: 'conflict',
       pillar: 'inventory',
-      code: 'catalogue_conflict',
+      code: 'inventory.catalogue.conflict',
       message: 'The published catalogue has changed',
     });
 

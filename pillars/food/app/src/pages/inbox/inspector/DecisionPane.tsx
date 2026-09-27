@@ -131,8 +131,6 @@ function ArchivedControls({ draft, onMutated }: ArchivedControlsProps): ReactEle
         toast.error(t(`inbox.inspector.decision.undo.error.${res.reason}` as const));
       }
     },
-    onError: (err: Error) =>
-      toast.error(t('inbox.inspector.decision.undo.error.generic', { message: err.message })),
   });
   return (
     <div className="space-y-3" data-testid="inspector-archived-controls">
@@ -186,8 +184,6 @@ function RerunPipelineButton({
       toast.success(t('inbox.inspector.decision.rerun.success'));
       onRequeued();
     },
-    onError: (err: Error) =>
-      toast.error(t('inbox.inspector.decision.rerun.error', { message: err.message })),
   });
   return (
     <Button

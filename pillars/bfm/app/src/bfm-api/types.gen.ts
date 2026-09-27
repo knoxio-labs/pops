@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type DeviceChallengeData = {
   /**
    * Body
@@ -21,8 +29,11 @@ export type DeviceChallengeErrors = {
    * 400
    */
   400: {
-    code: 'invalid_request';
+    code: 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 429
@@ -68,8 +79,11 @@ export type DevicePairErrors = {
    * 400
    */
   400: {
-    code: 'invalid_request';
+    code: 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
@@ -123,8 +137,11 @@ export type DeviceRefreshErrors = {
    * 400
    */
   400: {
-    code: 'invalid_request';
+    code: 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
@@ -137,8 +154,11 @@ export type DeviceRefreshErrors = {
    * 403
    */
   403: {
-    code: 'device_revoked';
+    code: 'bfm.auth.device_revoked';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 429
@@ -201,23 +221,32 @@ export type MobileBarcodeLookupErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -289,16 +318,22 @@ export type MobileBootstrapErrors = {
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -361,23 +396,32 @@ export type MobileContactsCreateMerchantErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -396,38 +440,32 @@ export type MobileContactsCreateMerchantErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -463,23 +501,32 @@ export type MobileContactsSearchMerchantsErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -498,38 +545,32 @@ export type MobileContactsSearchMerchantsErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -566,23 +607,32 @@ export type MobileContactsGetMerchantErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -593,19 +643,16 @@ export type MobileContactsGetMerchantErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -620,38 +667,32 @@ export type MobileContactsGetMerchantErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -686,23 +727,32 @@ export type MobileContactsGetMerchantAddressesErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -713,19 +763,16 @@ export type MobileContactsGetMerchantAddressesErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -740,38 +787,32 @@ export type MobileContactsGetMerchantAddressesErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -813,23 +854,32 @@ export type MobileContactsCreateMerchantAddressErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -840,19 +890,16 @@ export type MobileContactsCreateMerchantAddressErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -867,38 +914,32 @@ export type MobileContactsCreateMerchantAddressErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -931,23 +972,32 @@ export type MobileFinanceListAccountsErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -966,38 +1016,32 @@ export type MobileFinanceListAccountsErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -1047,23 +1091,32 @@ export type MobileFinanceGetAccountErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -1074,19 +1127,16 @@ export type MobileFinanceGetAccountErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -1101,38 +1151,32 @@ export type MobileFinanceGetAccountErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -1188,23 +1232,32 @@ export type MobileFinanceListTransactionsErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -1223,38 +1276,32 @@ export type MobileFinanceListTransactionsErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -1298,23 +1345,32 @@ export type MobileFinanceGetTransactionErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -1325,19 +1381,16 @@ export type MobileFinanceGetTransactionErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -1352,38 +1405,32 @@ export type MobileFinanceGetTransactionErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -1436,23 +1483,32 @@ export type MobileInventorySuggestCodesErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -1478,38 +1534,32 @@ export type MobileInventorySuggestCodesErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -1546,23 +1596,32 @@ export type MobileInventoryItemHistoryErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -1573,19 +1632,16 @@ export type MobileInventoryItemHistoryErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -1607,38 +1663,32 @@ export type MobileInventoryItemHistoryErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -1740,23 +1790,32 @@ export type MobileInventoryGetMediaErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -1767,19 +1826,16 @@ export type MobileInventoryGetMediaErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -1794,38 +1850,32 @@ export type MobileInventoryGetMediaErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -1868,23 +1918,32 @@ export type MobileInventoryPutMediaErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -1903,19 +1962,16 @@ export type MobileInventoryPutMediaErrors = {
    * 415
    */
   415: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -1930,38 +1986,32 @@ export type MobileInventoryPutMediaErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -2015,23 +2065,32 @@ export type MobileInventoryMutationsErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -2065,38 +2124,32 @@ export type MobileInventoryMutationsErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -2199,23 +2252,32 @@ export type MobileInventoryChangesErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -2248,38 +2310,32 @@ export type MobileInventoryChangesErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -2498,6 +2554,193 @@ export type MobileInventoryChangesResponses = {
 export type MobileInventoryChangesResponse =
   MobileInventoryChangesResponses[keyof MobileInventoryChangesResponses];
 
+export type MobileInventoryReportLedgerData = {
+  /**
+   * Body
+   */
+  body?: {
+    attention: Array<{
+      code?: {
+        holder: string;
+        suggested: string;
+        wanted: string;
+      };
+      held?: {
+        title: string;
+        values: Array<{
+          field: string;
+          fit: string;
+          replacement?: string;
+          value: string;
+        }>;
+      };
+      id: string;
+      itemId: string;
+      itemName: string;
+      kind: string;
+      mine?: {
+        at: string;
+        source: string;
+        value: string;
+      };
+      openedAt: string;
+      photo?: {
+        limit: string;
+        size: string;
+      };
+      problem: string;
+      refused?: {
+        at: string;
+        reason: string;
+      };
+      theirs?: {
+        at: string;
+        source: string;
+        value: string;
+      };
+    }>;
+    lastSyncAt?: string | null;
+    reportedAt: string;
+    resolved: Array<{
+      at: string;
+      dropped?: Array<{
+        field: string;
+        fit: string;
+        replacement?: string;
+        value: string;
+      }>;
+      id: string;
+      itemName: string;
+      outcome: string;
+    }>;
+    waiting: Array<{
+      id: string;
+      itemName: string;
+      reason: {
+        caseId?: string;
+        itemName?: string;
+        kind: string;
+        on?: string;
+        revision?: number;
+      };
+      since: string;
+      summary: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/inventory/sync/ledger';
+};
+
+export type MobileInventoryReportLedgerErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 413
+   */
+  413: {
+    code: 'payload_too_large';
+    maxBytes: number;
+    message: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryReportLedgerError =
+  MobileInventoryReportLedgerErrors[keyof MobileInventoryReportLedgerErrors];
+
+export type MobileInventoryReportLedgerResponses = {
+  /**
+   * 200
+   */
+  200: {
+    stored: boolean;
+  };
+};
+
+export type MobileInventoryReportLedgerResponse =
+  MobileInventoryReportLedgerResponses[keyof MobileInventoryReportLedgerResponses];
+
 export type MobileInventorySnapshotData = {
   body?: never;
   path?: never;
@@ -2513,23 +2756,32 @@ export type MobileInventorySnapshotErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -2562,38 +2814,32 @@ export type MobileInventorySnapshotErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -2761,23 +3007,32 @@ export type MobileInventoryCatalogueRevisionErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -2796,38 +3051,32 @@ export type MobileInventoryCatalogueRevisionErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -2946,23 +3195,32 @@ export type MobileInventoryCatalogueErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -2988,38 +3246,32 @@ export type MobileInventoryCatalogueErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -3077,23 +3329,32 @@ export type MobilePurchasesListPurchasesErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -3112,38 +3373,32 @@ export type MobilePurchasesListPurchasesErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -3238,23 +3493,32 @@ export type MobilePurchasesCreateManualPurchaseErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -3273,38 +3537,32 @@ export type MobilePurchasesCreateManualPurchaseErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -3453,23 +3711,32 @@ export type MobilePurchasesSaveReceiptDraftErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -3488,38 +3755,32 @@ export type MobilePurchasesSaveReceiptDraftErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -3647,23 +3908,32 @@ export type MobilePurchasesExtractReceiptErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -3690,38 +3960,32 @@ export type MobilePurchasesExtractReceiptErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -3808,23 +4072,32 @@ export type MobilePurchasesGetReceiptErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -3835,19 +4108,16 @@ export type MobilePurchasesGetReceiptErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -3862,38 +4132,32 @@ export type MobilePurchasesGetReceiptErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -3930,23 +4194,32 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -3957,38 +4230,32 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 415
    */
   415: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -4003,38 +4270,32 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -4079,23 +4340,32 @@ export type MobilePurchasesSearchPurchasesErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -4114,38 +4384,32 @@ export type MobilePurchasesSearchPurchasesErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -4206,23 +4470,32 @@ export type MobilePurchasesGetMonthSummaryErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -4241,38 +4514,32 @@ export type MobilePurchasesGetMonthSummaryErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -4324,23 +4591,32 @@ export type MobilePurchasesPurchaseTagsErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -4359,38 +4635,32 @@ export type MobilePurchasesPurchaseTagsErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -4427,23 +4697,32 @@ export type MobilePurchasesGetPurchaseErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -4454,19 +4733,16 @@ export type MobilePurchasesGetPurchaseErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -4481,38 +4757,32 @@ export type MobilePurchasesGetPurchaseErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -4640,23 +4910,32 @@ export type MobilePurchasesUpdatePurchaseErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor' | 'invalid_request';
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 401
    */
   401: {
-    code: 'invalid_token';
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
     message: string;
+    requestId: string;
+    retryable: boolean;
   };
   /**
    * 403
    */
   403:
     | {
-        code: 'device_revoked';
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
         message: string;
+        requestId: string;
+        retryable: boolean;
       }
     | {
         capability: string;
@@ -4667,38 +4946,32 @@ export type MobilePurchasesUpdatePurchaseErrors = {
    * 404
    */
   404: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 409
    */
   409: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
@@ -4713,38 +4986,32 @@ export type MobilePurchasesUpdatePurchaseErrors = {
    * 502
    */
   502: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
-    code:
-      | 'upstream_unavailable'
-      | 'upstream_degraded'
-      | 'upstream_contract_mismatch'
-      | 'upstream_misconfigured'
-      | 'upstream_invalid_request'
-      | 'upstream_conflict'
-      | 'purchase_locked'
-      | 'purchase_stale'
-      | 'upstream_unsupported_media'
-      | 'not_found';
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
     message: string;
-    pillar: string;
+    requestId: string;
     retryable: boolean;
   };
 };
@@ -4849,10 +5116,7 @@ export type OperatorListDevicesErrors = {
   /**
    * 401
    */
-  401: {
-    code: string;
-    message: string;
-  };
+  401: ErrorBody;
 };
 
 export type OperatorListDevicesError = OperatorListDevicesErrors[keyof OperatorListDevicesErrors];
@@ -4889,17 +5153,11 @@ export type OperatorRevokeDeviceErrors = {
   /**
    * 401
    */
-  401: {
-    code: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type OperatorRevokeDeviceError =
@@ -4935,17 +5193,11 @@ export type OperatorIssuePairingCodeErrors = {
   /**
    * 401
    */
-  401: {
-    code: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 429
    */
-  429: {
-    code: string;
-    message: string;
-  };
+  429: ErrorBody;
 };
 
 export type OperatorIssuePairingCodeError =

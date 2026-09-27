@@ -1,4 +1,5 @@
 import { createDocumentsClient, type DocumentsClient } from '../documents/client.js';
+import { inventoryError } from '../errors.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -23,13 +24,13 @@ export function makePaperlessHandlers(documents: DocumentsClient = createDocumen
     search: async ({ query }: Req['search']) => {
       const documentsFound = await documents.searchPaperlessDocuments(query.query);
       if (documentsFound === null) {
-        return {
-          status: 412 as const,
-          body: {
-            message: 'Paperless-ngx is not configured',
-            messageKey: 'inventory.paperless.notConfigured',
-          },
-        };
+        throw inventoryError({
+          area: 'paperless',
+          reason: 'not_configured',
+          status: 412,
+          message: 'Paperless-ngx is not configured',
+          details: { messageKey: 'inventory.paperless.notConfigured' },
+        });
       }
       return { status: 200 as const, body: { data: documentsFound } };
     },

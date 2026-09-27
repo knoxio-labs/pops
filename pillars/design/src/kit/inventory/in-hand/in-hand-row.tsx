@@ -26,6 +26,7 @@ export interface InHandRowProps {
   disabledReason?: string;
   onToggle?: (id: string, shiftKey: boolean) => void;
   onMove?: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
 function Origin({ item, world }: { item: ItemRowModel; world: PlacementWorld }) {
@@ -57,6 +58,45 @@ function putBackState(item: ItemRowModel, world: PlacementWorld, offline?: strin
   return { label: `Put back in ${targetName(world, route.to)}`, reason: offline };
 }
 
+function Actions({
+  item,
+  putBack,
+  disabledReason,
+  onMove,
+  onEdit,
+}: {
+  item: ItemRowModel;
+  putBack: ReturnType<typeof putBackState>;
+  disabledReason?: string;
+  onMove?: (id: string) => void;
+  onEdit?: (id: string) => void;
+}) {
+  return (
+    <span className="flex items-center gap-0.5">
+      <RowVerb
+        icon={INVENTORY_ICONS.putBack}
+        label={putBack.label}
+        shortcutId="put-back"
+        disabledReason={putBack.reason}
+      />
+      <RowVerb
+        icon={INVENTORY_ICONS.move}
+        label={`Move ${item.name}`}
+        shortcutId="move"
+        disabledReason={disabledReason}
+        onClick={() => onMove?.(item.id)}
+      />
+      <RowVerb
+        icon={INVENTORY_ICONS.edit}
+        label={`Edit ${item.name}`}
+        shortcutId="list-edit"
+        disabledReason={disabledReason}
+        onClick={() => onEdit?.(item.id)}
+      />
+    </span>
+  );
+}
+
 /** The row. */
 export function InHandRow({
   item,
@@ -66,6 +106,7 @@ export function InHandRow({
   disabledReason,
   onToggle,
   onMove,
+  onEdit,
 }: InHandRowProps) {
   const putBack = putBackState(item, world, disabledReason);
   return (
@@ -96,21 +137,13 @@ export function InHandRow({
       <span className="hidden lg:inline-flex">
         <CodeBadge code={item.code} />
       </span>
-      <span className="flex items-center gap-0.5">
-        <RowVerb
-          icon={INVENTORY_ICONS.putBack}
-          label={putBack.label}
-          shortcutId="put-back"
-          disabledReason={putBack.reason}
-        />
-        <RowVerb
-          icon={INVENTORY_ICONS.move}
-          label={`Move ${item.name}`}
-          shortcutId="move"
-          disabledReason={disabledReason}
-          onClick={() => onMove?.(item.id)}
-        />
-      </span>
+      <Actions
+        item={item}
+        putBack={putBack}
+        disabledReason={disabledReason}
+        onMove={onMove}
+        onEdit={onEdit}
+      />
     </div>
   );
 }

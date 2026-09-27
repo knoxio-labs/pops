@@ -1,4 +1,5 @@
 name: E2E Tests
+run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
 
 # Playwright against the shell and the app bundles it mounts. No pillar
 # backend is started: every spec fulfils the REST surface it exercises at the
@@ -33,6 +34,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "pillars/**"
       - "libs/**"
@@ -46,10 +48,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: fe-test-e2e-${{ github.workflow }}-${{ github.ref }}
-  # Cancelling a superseded run and admitting its replacement is not atomic on
-  # GitHub's side, and `CI Gate` reads an absent run as pending forever. See
-  # the MITIGATION note in ci-gate.yml.
+  group: fe-test-e2e-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 jobs:

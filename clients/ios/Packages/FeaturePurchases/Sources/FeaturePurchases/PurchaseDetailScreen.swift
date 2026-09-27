@@ -5,6 +5,7 @@ import SwiftUI
 internal struct PurchaseDetailScreen: View {
     internal let dependencies: AppDependencies
     @State private var model: PurchaseDetailViewModel
+    @Environment(\.errorPresenter) private var errorPresenter
 
     internal init(id: Purchase.ID, dependencies: AppDependencies) {
         self.dependencies = dependencies
@@ -34,6 +35,18 @@ internal struct PurchaseDetailScreen: View {
         .tint(.popsPurchases)
         .accessibilityIdentifier(PurchaseDetailAccessibility.root)
         .task { await model.load() }
+        .onChange(of: refreshFailure) { _, failure in
+            guard let failure else { return }
+            errorPresenter.present(
+                failure.popsError,
+                operation: "Refresh purchase details",
+                context: .foreground)
+        }
+    }
+
+    private var refreshFailure: PurchaseDetailFailure? {
+        guard case .loaded(_, let failure) = model.phase else { return nil }
+        return failure
     }
 }
 
@@ -104,24 +117,6 @@ internal struct PurchaseDetailPage: View {
     }
 
     @ViewBuilder private var notices: some View {
-        if let refresh {
-            PopsNotice(
-                symbol: PurchaseDetailCopy.symbol(for: refresh),
-                tint: .popsWarning,
-                text: PurchaseDetailCopy.refreshNotice(for: refresh)
-            ) {
-                Button {
-                    Task { await model.refresh() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.popsSubheadline.weight(.semibold))
-                        .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Retry")
-            }
-        }
         if let edit = detail.edit {
             PurchaseDetailEditedNotice(edit: edit) { showsOriginal = true }
         }

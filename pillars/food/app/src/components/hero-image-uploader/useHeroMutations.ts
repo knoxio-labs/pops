@@ -79,7 +79,6 @@ export function useHeroMutations(opts: MutationOptions): MutationState {
       onUploaded(res.data.heroImagePath);
       toast.success(uploadedMsg);
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   const removeMutation = useMutation({
@@ -88,7 +87,6 @@ export function useHeroMutations(opts: MutationOptions): MutationState {
       onRemoved();
       toast.success(removedMsg);
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   const uploadFile = useCallback(

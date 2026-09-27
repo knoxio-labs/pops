@@ -78,7 +78,7 @@ const catalogueCreateDraft: ToolDef = {
 const cataloguePatchDraft: ToolDef = {
   name: 'inventory.catalogue.patchDraft',
   description:
-    'Read inventory.catalogue.readDraft first, then apply validated operations at its exact draft and base revisions, atomically, and preview publication compatibility. Refused with catalogue_draft_conflict when expectedDraftVersion is stale; the returned draft carries the next revision.draftVersion.',
+    'Read inventory.catalogue.readDraft first, then apply validated operations at its exact draft and base revisions, atomically, and preview publication compatibility. Refused with inventory.catalogue.draft_conflict when expectedDraftVersion is stale; the returned draft carries the next revision.draftVersion.',
   inputSchema: catalogueDraftOperationInputSchema,
   scope: INVENTORY_TYPES_MANAGE_SCOPE,
   handler: async (args) => {

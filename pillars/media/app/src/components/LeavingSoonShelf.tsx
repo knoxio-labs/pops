@@ -113,9 +113,6 @@ export function LeavingSoonShelf() {
       void queryClient.invalidateQueries({ queryKey: ['media', 'rotation'] });
       void refetch();
     },
-    onError: () => {
-      toast.error('Failed to cancel leaving status');
-    },
   });
 
   if (!rotationEnabled) return null;

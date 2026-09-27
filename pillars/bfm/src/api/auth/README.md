@@ -41,7 +41,7 @@ a paired phone                        bfm
                                           ▼
                                       require-device.ts
                                           │ token intact and current?  no ─► 401
-                                          │ device row still trusted?  no ─► 403 device_revoked
+                                          │ device row still trusted?  no ─► 403 bfm.auth.device_revoked
                                           │ lastSeenAt stale?         yes ─► touched
                                           ▼
                                       require-capability.ts
@@ -62,7 +62,7 @@ a phone whose ten minutes lapsed     bfm
                                       refresh-exchange.ts
                                           │ nonce live + unspent?     no ─► 401 challenge_expired
                                           │ token known?              no ─► 401 invalid_grant
-                                          │ device still trusted?     no ─► 403 device_revoked
+                                          │ device still trusted?     no ─► 403 bfm.auth.device_revoked
                                           │ token already spent?     YES ─► burn the family,
                                           │                                 401 invalid_grant
                                           │ token expired?            no ─┐
@@ -118,7 +118,7 @@ They ask the phone to do different things, and it cannot guess which.
 - **401** — the token is missing, expired, tampered with, or signed by another
   deployment. The handset still holds a refresh token, so the recovery is to
   mint a new access token and retry.
-- **403 `device_revoked`** — the signature is ours and current, but an operator
+- **403 `bfm.auth.device_revoked`** — the signature is ours and current, but an operator
   revoked the device. No amount of refreshing helps; the app returns to pairing
   and wipes its keychain.
 - **403 `capability_not_granted`** — the credential is entirely good and this

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { runWithRequestId } from '../../server/request-context.js';
 import { buildRouteMap, type OpenApiDocument } from '../openapi-route-map.js';
 import { performRestCall, type RestCallContext } from '../rest-call.js';
 import { discoveredPillar, fakeFetch, type FakeFetchHandler } from './fixtures.js';
@@ -165,6 +166,15 @@ describe('performRestCall — request building', () => {
     expect(calls[0]?.headers['authorization']).toBe('Bearer t');
     expect(calls[0]?.headers['content-type']).toBe('application/json');
   });
+
+  it('forwards the current asynchronous request id', async () => {
+    const { fetchImpl, calls } = recordingRest(() => jsonOk({ data: null }));
+    await runWithRequestId('req-outbound', () =>
+      performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl))
+    );
+
+    expect(calls[0]?.headers['X-Request-Id']).toBe('req-outbound');
+  });
 });
 
 describe('performRestCall — response / error mapping', () => {
@@ -291,7 +301,34 @@ describe('performRestCall — response / error mapping', () => {
   it('maps an unmapped 5xx → unavailable', async () => {
     const { fetchImpl } = recordingRest(() => jsonOk({ message: 'boom' }, 503));
     const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
-    expect(result).toEqual({ kind: 'unavailable', pillar: 'registry' });
+    expect(result).toEqual({ kind: 'unavailable', pillar: 'registry', message: 'boom' });
+  });
+
+  it('carries request metadata from the shared error envelope', async () => {
+    const { fetchImpl } = recordingRest(() =>
+      jsonOk(
+        {
+          code: 'registry.resource.unavailable',
+          message: 'Try again later.',
+          requestId: 'req-producer',
+          retryable: true,
+          details: { operation: 'get' },
+        },
+        503
+      )
+    );
+
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+
+    expect(result).toEqual({
+      kind: 'unavailable',
+      pillar: 'registry',
+      code: 'registry.resource.unavailable',
+      message: 'Try again later.',
+      requestId: 'req-producer',
+      retryable: true,
+      details: { operation: 'get' },
+    });
   });
 
   it('maps 502 and 504 → unavailable, same as 503', async () => {

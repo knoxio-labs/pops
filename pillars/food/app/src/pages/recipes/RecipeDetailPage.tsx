@@ -104,9 +104,6 @@ function useArchiveFlow(_slug: string): ArchiveFlow {
       void queryClient.invalidateQueries({ queryKey: ['food', 'recipes', 'list'] });
       void navigate('/food/recipes');
     },
-    onError: (err: Error) => {
-      toast.error(t('recipes.detail.archive.error', { message: err.message }));
-    },
   });
   return {
     open: useCallback(() => setOpen(true), []),

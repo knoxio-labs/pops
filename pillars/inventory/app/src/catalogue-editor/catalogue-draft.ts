@@ -1,8 +1,8 @@
 import type { CatalogueDescriptor } from './types';
 
 const STALE_DRAFT_CODES: ReadonlySet<string> = new Set([
-  'catalogue_conflict',
-  'catalogue_draft_conflict',
+  'inventory.catalogue.conflict',
+  'inventory.catalogue.draft_conflict',
 ]);
 
 /**

@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
 import {
   LEGACY_REGISTRY_PATHS,
   REGISTRY_PATHS,
@@ -68,6 +69,24 @@ const openapiDocument: unknown = JSON.parse(
   )
 );
 
+const registryErrors = defineErrors('registry', {
+  invalid: {
+    area: 'uri',
+    status: 400,
+    message: 'The URI resolution request is invalid.',
+    retryable: false,
+  },
+});
+
+const registryRequestErrors = defineErrors('registry', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The request is invalid.',
+    retryable: false,
+  },
+});
+
 /**
  * Mount the registry handshake/discovery routes, DUAL-SERVED on the canonical
  * slash path and the legacy dotted alias.
@@ -96,8 +115,11 @@ function mountRegistryRoutes(app: Express, db: CoreDb): void {
 
 export function createCoreApiApp(deps: CoreApiDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'registry' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json({ limit: '512kb' }));
+  app.use(errors.bodyParser);
 
   const handlers = makeRequestHandler(deps);
 
@@ -127,12 +149,9 @@ export function createCoreApiApp(deps: CoreApiDeps): Express {
     const rawUri = typeof body === 'object' && body !== null ? Reflect.get(body, 'uri') : undefined;
     const uri = typeof rawUri === 'string' ? rawUri : undefined;
     if (!uri) {
-      res.status(400).json({
-        kind: 'malformed',
-        uri: typeof rawUri === 'string' ? rawUri : '',
-        reason: 'request body must be { uri: string }',
+      return registryErrors.invalid({
+        issues: [{ path: ['uri'], message: 'Expected a non-empty string.' }],
       });
-      return;
     }
     void handlers
       .resolveUri(uri)
@@ -172,7 +191,29 @@ export function createCoreApiApp(deps: CoreApiDeps): Express {
   // root-relative (e.g. `/settings/:key`, `/users`) AFTER the raw
   // registry routes. This is the only contract surface; the pillar serves no
   // tRPC.
-  createExpressEndpoints(coreContract, makeCoreRestHandlers(deps), app);
+  createExpressEndpoints(coreContract, makeCoreRestHandlers(deps), app, {
+    requestValidationErrorHandler: (error, _req, _res, next) => {
+      try {
+        registryRequestErrors.invalid({ issues: validationIssues(error) });
+      } catch (failure) {
+        next(failure);
+      }
+    },
+  });
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
+}
+
+function validationIssues(error: {
+  pathParams?: { issues: readonly unknown[] } | null;
+  headers?: { issues: readonly unknown[] } | null;
+  query?: { issues: readonly unknown[] } | null;
+  body?: { issues: readonly unknown[] } | null;
+}): unknown[] {
+  return [error.pathParams, error.headers, error.query, error.body].flatMap((value) =>
+    value === null || value === undefined ? [] : [...value.issues]
+  );
 }

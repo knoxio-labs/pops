@@ -57,5 +57,16 @@
   "cerebrum.emit.dateRangeRequiredForSummary": "Date range is required for summary mode",
 
   "core.corrections.revisionFailed": "Failed to revise ChangeSet: {{detail}}",
-  "core.corrections.revisionFailedGeneric": "Failed to revise ChangeSet"
+  "core.corrections.revisionFailedGeneric": "Failed to revise ChangeSet",
+
+  "web.net.offline": "The request could not reach the server",
+  "web.net.timeout": "The request timed out",
+  "web.client.unknown": "Something went wrong",
+  "web.client.render_failed": "Something went wrong",
+  "web.error.code": "Error code",
+  "web.error.copyDetails": "Copy details",
+  "web.error.notAvailable": "Not available",
+  "web.error.requestId": "Request ID",
+  "web.error.retry": "Try again",
+  "web.error.showDetails": "Show details"
 }

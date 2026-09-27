@@ -56,8 +56,11 @@ Three things hold it, because the failure is silent — flipping that line produ
 
 Two things it does that the generated client does not:
 
+- **Every final non-2xx response is decoded once.** The outer middleware preserves a dotted ADR-054 code, message, request id and retryability as `PopsError`; a non-envelope response falls back to `ios.http.<status>`. It runs outside authentication so a refresh still gets first chance to recover a 401. Legacy underscore-code envelopes are replayed to the generated status mapping during rollout.
 - **An undocumented status is an error.** The generator models any status the contract does not describe as a `.undocumented` case — a value, not a throw. Left alone, a 502 from a reverse proxy arrives at a call site as a successful call whose body nobody read.
 - **The response becomes a domain type.** `BFMHealth` rather than `Operations.Health.Output.Ok.Body.JsonPayload`, whose name is a function of the contract and of the generator's naming strategy.
+
+`URLError.timedOut` becomes `ios.net.timeout`; other URL transport failures become `ios.net.offline`. A successful response the generated client cannot decode becomes `ios.decode.failed`. These classifications use fixed messages and never retain a request body, typed input or header, so bearer and refresh tokens cannot enter an error value.
 
 It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's unauthenticated perimeter; `init(baseURL:middlewares:)` is how a caller hands it `Auth`'s `AuthenticatingMiddleware`, which is what a `/mobile/*` call needs. Nothing in this package knows which of the two it was given.
 

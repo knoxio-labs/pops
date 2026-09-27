@@ -342,6 +342,7 @@ export type {
   EntityUsageListErrors,
   EntityUsageListResponse,
   EntityUsageListResponses,
+  ErrorBody,
   GiftCardDetailsGetData,
   GiftCardDetailsGetError,
   GiftCardDetailsGetErrors,

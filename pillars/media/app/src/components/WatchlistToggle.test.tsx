@@ -148,7 +148,7 @@ describe('WatchlistToggle', () => {
       await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Added to watchlist'));
     });
 
-    it('rolls back the optimistic status and toasts on error', async () => {
+    it('rolls back the optimistic status without a duplicate local toast', async () => {
       setupNotOnWatchlist();
       watchlistAddMock.mockResolvedValue({
         data: undefined,
@@ -160,9 +160,8 @@ describe('WatchlistToggle', () => {
 
       await user.click(await screen.findByRole('button', { name: 'Add to watchlist' }));
 
-      await waitFor(() =>
-        expect(mockToastError).toHaveBeenCalledWith('Failed to add: Server error')
-      );
+      await waitFor(() => expect(watchlistAddMock).toHaveBeenCalledOnce());
+      expect(mockToastError).not.toHaveBeenCalled();
       expect(
         queryClient.getQueryData<WatchlistStatus>([
           'media',
@@ -222,7 +221,7 @@ describe('WatchlistToggle', () => {
       await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Removed from watchlist'));
     });
 
-    it('rolls back the optimistic status and toasts on error', async () => {
+    it('rolls back the optimistic status without a duplicate local toast', async () => {
       setupOnWatchlist();
       watchlistRemoveMock.mockResolvedValue({
         data: undefined,
@@ -234,9 +233,8 @@ describe('WatchlistToggle', () => {
 
       await user.click(await screen.findByRole('button', { name: 'Remove from watchlist' }));
 
-      await waitFor(() =>
-        expect(mockToastError).toHaveBeenCalledWith('Failed to remove: Network error')
-      );
+      await waitFor(() => expect(watchlistRemoveMock).toHaveBeenCalledOnce());
+      expect(mockToastError).not.toHaveBeenCalled();
       expect(
         queryClient.getQueryData<WatchlistStatus>([
           'media',

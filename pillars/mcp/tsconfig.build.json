@@ -12,6 +12,7 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/test-helpers*.ts"],
   "references": [
+    { "path": "../../libs/pillar-express/tsconfig.build.json" },
     { "path": "../../libs/sdk/tsconfig.build.json" },
     { "path": "../../libs/types/tsconfig.build.json" }
   ]

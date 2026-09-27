@@ -19,6 +19,7 @@ import {
   nameMerchant,
   type MerchantResolver,
 } from '../contacts/merchant.js';
+import { purchaseErrorBody } from '../errors.js';
 import { findDraftInconsistency, toCreatePurchaseInput } from './draft-mapping.js';
 import {
   ensureDraftSource,
@@ -75,12 +76,11 @@ export function makeReceiptDraftHandlers(
       if (prepared.kind === 'duplicate') {
         return {
           status: 409 as const,
-          body: {
+          body: purchaseErrorBody('already_imported', {
             message:
               `This upload has already been read as purchase ${prepared.purchaseId}. ` +
               'Extracting it again would let it be saved as a second one.',
-            code: 'ALREADY_IMPORTED',
-          },
+          }),
         };
       }
       const { parts, goodParts, stored } = prepared;
@@ -128,7 +128,7 @@ export function makeReceiptDraftHandlers(
       if (inconsistency !== null) {
         return {
           status: 400 as const,
-          body: { message: inconsistency.message, code: 'INCONSISTENT_TOTAL' },
+          body: purchaseErrorBody('inconsistent_total', { message: inconsistency.message }),
         };
       }
 
@@ -138,10 +138,9 @@ export function makeReceiptDraftHandlers(
       if (contentKey === null) {
         return {
           status: 400 as const,
-          body: {
+          body: purchaseErrorBody('not_stored', {
             message: 'One of these documents is not a receipt this pillar stored',
-            code: 'NOT_A_STORED_RECEIPT',
-          },
+          }),
         };
       }
       const alreadySaved = findPurchaseBySourceOrderId(db, RECEIPT_SOURCE_ID, contentKey);
@@ -158,10 +157,9 @@ export function makeReceiptDraftHandlers(
         }
         return {
           status: 409 as const,
-          body: {
+          body: purchaseErrorBody('already_imported', {
             message: `This receipt has already been saved as purchase ${alreadySaved.id}`,
-            code: 'ALREADY_IMPORTED',
-          },
+          }),
         };
       }
 

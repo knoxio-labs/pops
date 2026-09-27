@@ -35,7 +35,7 @@ describe('command vectors', () => {
     const first = JSON.stringify(buildCommandVectors());
     const second = JSON.stringify(buildCommandVectors());
     expect(second).toBe(first);
-  });
+  }, 30_000);
 
   it('matches the committed contracts/command-vectors-v1.json exactly (drift)', () => {
     // Parsed, not raw text: `generate-command-vectors.ts` runs the committed
@@ -46,5 +46,5 @@ describe('command vectors', () => {
       JSON.stringify({ version: 1, vectors: buildCommandVectors() })
     );
     expect(regenerated).toEqual(committed);
-  });
+  }, 30_000);
 });

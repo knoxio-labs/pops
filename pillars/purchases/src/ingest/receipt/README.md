@@ -288,8 +288,9 @@ three outcomes would lose the distinction the whole feature rests on:
 | `needs-review` | read, but the figures disagree with the stated total | no; the upload is kept and returned |
 | `unreadable`   | nothing usable came back                             | no; the upload is kept              |
 
-Two refusals happen before a model call is spent: `503` when no model is
-configured, and `400` (`NOT_THE_STATED_TYPE`) when the bytes are not the
+Two refusals happen before a model call is spent: `503`
+(`purchases.receipt.vision_unavailable`) when no model is configured, and
+`400` (`purchases.receipt.invalid_media_type`) when the bytes are not the
 media type the upload claimed. Both are answers the user can act on
 immediately, where the same facts discovered inside the model come back as
 confusion that costs money.

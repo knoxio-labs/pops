@@ -23,6 +23,7 @@ export function makeFixturesHandlers(db: InventoryDb, documents: DocumentsClient
         const offset = query.offset ?? DEFAULT_OFFSET;
         const { rows, total } = service.listFixtures(db, {
           search: query.search,
+          withinLocationId: query.withinLocationId,
           locationId: query.locationId,
           type: query.type,
           limit,

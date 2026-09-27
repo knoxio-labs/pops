@@ -25,6 +25,7 @@ export interface PaperlessStatus {
   configured: boolean;
   available: boolean;
   baseUrl: string | null;
+  documentCount: number | null;
 }
 
 /** Mirrors one entry of the `paperless.search` response `data` array. */
@@ -54,7 +55,7 @@ export interface DocumentsClient {
   /**
    * Whether paperless-ngx is configured + reachable, per the documents
    * pillar. Degrades to `{ configured: false, available: false, baseUrl:
-   * null }` when `documents` itself is unreachable — a conservative "assume
+   * null, documentCount: null }` when `documents` itself is unreachable — a conservative "assume
    * not usable" rather than claiming knowledge inventory doesn't have.
    */
   getPaperlessStatus(): Promise<PaperlessStatus>;
@@ -96,7 +97,7 @@ export function createDocumentsClient(
       const result = await handleFactory().paperless.status();
       if (!isOk(result)) {
         warnDegraded('paperless.status', result);
-        return { configured: false, available: false, baseUrl: null };
+        return { configured: false, available: false, baseUrl: null, documentCount: null };
       }
       return result.value.data;
     },

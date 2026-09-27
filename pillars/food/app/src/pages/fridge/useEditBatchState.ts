@@ -60,6 +60,7 @@ export function useEditBatchState({ batchId, isOpen, onClose }: UseEditBatchArgs
   }
 
   const editMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id, ...body }: BatchesEditInput) =>
       unwrap(await batchesEdit({ path: { id }, body })),
     onSuccess: (res) => {

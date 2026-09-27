@@ -22,7 +22,6 @@ function useDeleteEntityMutation(setDeletingId: (id: string | null) => void) {
       toast.success('Entity deleted');
       setDeletingId(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ENTITIES_KEY }),
   });
 }

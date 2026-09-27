@@ -17,6 +17,7 @@ internal struct InventorySyncView: View {
     @State private var model: InventorySyncViewModel
     @State private var generation = 0
     @State private var showsResolved = false
+    @Environment(\.errorPresenter) private var errorPresenter
 
     internal init(model: InventorySyncViewModel) {
         _model = State(initialValue: model)
@@ -42,17 +43,28 @@ internal struct InventorySyncView: View {
         .inventoryUndoCapsule($model.undoOffer) { offer in
             Task { await model.undo(offer) }
         }
-        .alert(
-            InventoryCopy.failureTitle,
-            isPresented: Binding(
-                get: { model.failure != nil }, set: { if !$0 { model.failure = nil } }),
-            presenting: model.failure
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { failure in
-            Text(InventoryCopy.message(for: failure))
+        .onChange(of: model.failure) { _, failure in
+            guard let failure else { return }
+            errorPresenter.present(
+                PopsError(
+                    repositoryError: failure,
+                    fallbackMessage: InventoryCopy.message(for: failure)),
+                operation: "Sync inventory",
+                context: .foreground)
+            model.failure = nil
         }
-        .inventoryStorageFullAlert(isPresented: $model.storageFull)
+        .onChange(of: model.storageFull) { _, isFull in
+            guard isFull else { return }
+            errorPresenter.present(
+                PopsError(
+                    code: "ios.storage.full",
+                    message: InventoryCopy.storageFullMessage,
+                    retryable: false,
+                    kind: .client),
+                operation: "Download inventory",
+                context: .foreground)
+            model.storageFull = false
+        }
     }
 
     @ViewBuilder private func loaded(_ page: InventorySyncPage) -> some View {

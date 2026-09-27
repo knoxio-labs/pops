@@ -41,6 +41,7 @@ public struct InventoryFlowView: View {
             InventoryDashboardView(model: model)
                 .navigationTitle(FeatureInventory.displayName)
                 .popsTitleDisplay(large: true)
+                .errorDiagnosticsMenu()
                 .safeAreaInset(edge: .bottom, alignment: .trailing) {
                     if model.dashboard.map({ !$0.isFirstRun }) ?? false {
                         controls

@@ -219,7 +219,7 @@ describe('POST /receipts/draft', () => {
   it('rejects a draft whose lines do not sum to its stated total', async () => {
     const response = await saveDraft(appWith(saying(GOOD_READING)), { totalCents: 999_999 });
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('INCONSISTENT_TOTAL');
+    expect(response.body.code).toBe('purchases.purchase.inconsistent_total');
 
     const list = await requestOn(appWith(saying(GOOD_READING))).get('/purchases');
     expect(list.body.items).toEqual([]);
@@ -275,7 +275,7 @@ describe('POST /receipts/draft', () => {
 
     const second = await saveDraft(app, { idempotencyKey: 'draft-key-2' });
     expect(second.status).toBe(409);
-    expect(second.body.code).toBe('ALREADY_IMPORTED');
+    expect(second.body.code).toBe('purchases.receipt.already_imported');
 
     const list = await requestOn(app).get('/purchases');
     expect(list.body.items).toHaveLength(1);
@@ -342,7 +342,7 @@ describe('POST /purchases/manual', () => {
   it('rejects an inconsistent manual entry before writing anything', async () => {
     const response = await createManual(appWith(null), { totalCents: 999 });
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('INCONSISTENT_TOTAL');
+    expect(response.body.code).toBe('purchases.purchase.inconsistent_total');
   });
 
   it('replays a repeated idempotency key as the purchase it already created', async () => {

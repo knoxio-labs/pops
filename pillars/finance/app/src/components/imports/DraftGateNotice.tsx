@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Alert, AlertDescription, AlertTitle, Button } from '@pops/ui';
+import { Alert, AlertDescription, AlertTitle, Button, ErrorState } from '@pops/ui';
 
 import type { DraftGate } from './hooks/useDraftHydration';
 
@@ -12,13 +12,18 @@ import type { DraftGate } from './hooks/useDraftHydration';
 export function DraftGateNotice({
   gate,
   onDiscard,
+  onRetry,
   onTakeOver,
 }: {
   gate: DraftGate;
   onDiscard: () => void;
+  onRetry: () => void;
   onTakeOver: () => void;
 }) {
   const { t } = useTranslation('finance');
+  if (gate.status === 'error') {
+    return <ErrorState error={gate.error} onRetry={onRetry} />;
+  }
   if (gate.status === 'unusable') {
     return (
       <Alert variant="destructive">

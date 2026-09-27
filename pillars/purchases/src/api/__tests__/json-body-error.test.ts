@@ -12,9 +12,10 @@
 import express from 'express';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { createBodyParserErrorHandler, createRequestIdMiddleware } from '@pops/pillar-express';
+
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { JSON_BODY_LIMIT_BYTES, createPurchasesApiApp } from '../app.js';
-import { jsonBodyErrorHandler } from '../middleware/json-body-error.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 import { PASSED_THROUGH_STATUS, passThroughErrorReporter } from './helpers.js';
 import { createTestTransport } from './test-http.js';
@@ -72,7 +73,12 @@ describe('a body over the JSON limit', () => {
 
     expect(res.status).toBe(413);
     expect(res.headers['content-type']).toMatch(/^application\/json/);
-    expect(res.body).toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+    expect(res.body).toMatchObject({
+      code: 'purchases.request.body_too_large',
+      requestId: expect.any(String),
+      retryable: false,
+    });
+    expect(res.headers['x-request-id']).toBe(res.body.requestId);
     expect(typeof res.body.message).toBe('string');
     expect(res.body.message.length).toBeGreaterThan(0);
   });
@@ -81,10 +87,11 @@ describe('a body over the JSON limit', () => {
 describe('an error that is not a body-parser failure', () => {
   it('is passed through to the next handler unchanged, not answered here', async () => {
     const unrelated = express();
+    unrelated.use(createRequestIdMiddleware());
     unrelated.get('/boom', (_req, _res, next) => {
       next(new Error('something unrelated went wrong'));
     });
-    unrelated.use(jsonBodyErrorHandler);
+    unrelated.use(createBodyParserErrorHandler({ pillar: 'purchases' }));
     unrelated.use(passThroughErrorReporter);
 
     const res = await requestOn(unrelated).get('/boom');

@@ -105,7 +105,7 @@ describe('service-accounts REST — error mapping', () => {
       status: 400,
       body: {
         message: new ServiceAccountNameAlreadyExistsError('taken').message,
-        code: 'ValidationError',
+        code: 'registry.request.invalid',
       },
     });
   });

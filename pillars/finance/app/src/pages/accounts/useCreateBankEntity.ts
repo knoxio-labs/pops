@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type UseFormReturn } from 'react-hook-form';
-import { toast } from 'sonner';
 
 import { unwrap } from '../../contacts-api-helpers.js';
 import { entitiesCreate } from '../../contacts-api/index.js';
@@ -28,7 +27,6 @@ export function useCreateBankEntity(form: UseFormReturn<AccountFormValues>) {
         queryKey: ['contacts', 'entities', 'list', 'all', BANK_ENTITY_TYPE],
       });
     },
-    onError: (err: Error) => toast.error(err.message),
   });
   return (name: string) => mutation.mutate(name);
 }

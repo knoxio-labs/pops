@@ -273,6 +273,14 @@ cell issues, and valid rows commit without rolling back other rows. Omit
 `true` to return `valid` outcomes while rolling back all item, event, mutation,
 and sequence writes.
 
+### Web Items browser
+
+The shell mounts the Items browser at `/inventory/items`. Search, type,
+placement, inactive, sort, view and page state live in the URL; the page sends
+those filters to `GET /web/items` and renders the server's totals and pages
+without client-side filtering or sorting. Table, compact and card views share
+the same URL state and keep scrolling within the list body.
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`
@@ -289,6 +297,14 @@ location returns `404`, and a tombstone without a matching deletion event
 returns a `null` deletion source.
 
 ## Who may call it
+
+Every request receives an `X-Request-Id`; an incoming value is preserved and a
+missing value is minted by inventory. User-visible failures use ADR-054's flat
+`{ code, message, requestId, retryable, details? }` envelope. Inventory codes
+are dotted lowercase values under `inventory.*`, including
+`inventory.codes.name_required` and the `inventory.sync.*` protocol failures.
+Unknown failures are logged with the request ID and returned as the redacted
+`inventory.internal` error.
 
 An inbound service-account gate covers the whole contract surface
 ([ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md)),
@@ -343,7 +359,7 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
 (`POST /codes/suggest`).
 
 - Every one of those routes needs `Pops-Inventory-Protocol: <n>`; missing or
-  below `sync_meta.min_protocol` is `426 client_too_old`, checked by
+  below `sync_meta.min_protocol` is `426 inventory.sync.client_too_old`, checked by
   `src/api/sync/protocol.ts` ahead of the handlers.
 - Protocol and catalogue revision are independent. Catalogue, snapshot, feed and
   mutation shapes carry `catalogueRevision`; a phone downloads an immutable
@@ -382,8 +398,8 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
   pins the high-water `seq` of the first page; the change feed then serves
   every row (tombstones included) and every event after a `seq`. A cursor or
   feed position from another `sync_meta.epoch`, or a `since` above the latest
-  `seq`, is `409 resync_required`; a cursor this server did not issue is
-  `400 invalid_cursor`.
+  `seq`, is `409 inventory.sync.resync_required`; a cursor this server did not issue is
+  `400 inventory.sync.invalid_cursor`.
 - `POST /sync/mutations` runs up to 50 mutations through the command layer
   in order, one transaction each, and answers one outcome per mutation.
   `Pops-Actor: device:<deviceId>;label=<percent-encoded label>` names the

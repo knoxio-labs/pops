@@ -110,7 +110,7 @@ it('refuses a third answer to a two-unit line rather than minting a third asset'
 
   const conflict = await decide({ decision: 'declined' }).expect(409);
 
-  expect(conflict.body.code).toBe('PROPOSAL_ALREADY_DECIDED');
+  expect(conflict.body.code).toBe('purchases.inventory_proposal.already_decided');
   expect(getPurchase(opened.db, purchaseId)?.items[0]?.units).toHaveLength(2);
 });
 
@@ -120,7 +120,7 @@ it('refuses an answer routed through the wrong order', async () => {
     .send({ decision: 'declined' })
     .expect(404);
 
-  expect(res.body.code).toBe('NOT_FOUND');
+  expect(res.body.code).toBe('purchases.resource.not_found');
 });
 
 it('refuses an accept that names something other than a pops URI', async () => {

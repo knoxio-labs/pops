@@ -44,6 +44,7 @@ function useCreateDialog() {
   const [open, setOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const mutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: CreateIngredientInput) =>
       unwrap(await ingredientsCreate({ body: input })),
     onSuccess: () => {

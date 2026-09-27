@@ -27,13 +27,16 @@ type UploadResult =
 /**
  * Every code the pillar sends with a 409 for a receipt it already holds.
  *
- * `ALREADY_IMPORTED` comes from the two checks the receipt route makes before
- * it calls the model. `DUPLICATE_PURCHASE` comes from the write itself, when a
+ * `purchases.receipt.already_imported` comes from the checks before the model.
+ * `purchases.purchase.duplicate` comes from the write itself, when a
  * second upload of the same bytes gets past those checks because the first had
  * not committed yet — the concurrent case, which is the one a user hits by
  * submitting twice rather than by re-uploading later.
  */
-const DUPLICATE_CODES = new Set(['ALREADY_IMPORTED', 'DUPLICATE_PURCHASE']);
+const DUPLICATE_CODES = new Set([
+  'purchases.receipt.already_imported',
+  'purchases.purchase.duplicate',
+]);
 
 /**
  * Read off the code rather than the status so the answer does not depend on a

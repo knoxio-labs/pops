@@ -3,10 +3,11 @@ import { FileText, Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Button, formatDate, SearchPickerDialog, Select } from '@pops/ui';
+import { Button, formatDate, SearchPickerDialog, Select, toastError } from '@pops/ui';
 
 import { unwrap } from '../inventory-api-helpers.js';
 import { documentsLink, paperlessSearch } from '../inventory-api/index.js';
+import { linkDocumentError } from './link-document-error';
 
 import type { ComponentPropsWithoutRef } from 'react';
 
@@ -107,6 +108,7 @@ function useLinkDocumentMutation(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ itemId, paperlessDocumentId, documentType, title }: LinkDocumentInput) =>
       unwrap(
         await documentsLink({
@@ -121,13 +123,9 @@ function useLinkDocumentMutation(
       setOpen(false);
       setSearch('');
     },
-    onError: (err: Error) => {
+    onError: (error: Error) => {
       setLinkingId(null);
-      if (err.message.toLowerCase().includes('conflict')) {
-        toast.error('This document is already linked to this item');
-      } else {
-        toast.error(`Failed to link: ${err.message}`);
-      }
+      toastError(linkDocumentError(error));
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['inventory', 'documents'] }),
   });

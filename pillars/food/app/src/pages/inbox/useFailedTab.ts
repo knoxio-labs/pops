@@ -46,11 +46,10 @@ function useRetryMutation(queryInput: QueryInput, t: Translate) {
       );
       return { snapshot };
     },
-    onError: (err: Error, _input, ctx) => {
+    onError: (_error: Error, _input, ctx) => {
       if (ctx?.snapshot !== undefined) {
         qc.setQueryData<ListFailedOutput>(listKey, ctx.snapshot);
       }
-      toast.error(t('inbox.failed.retry.error', { message: err.message }));
     },
     onSuccess: () => {
       toast.success(t('inbox.failed.retry.success'));

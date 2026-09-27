@@ -1244,6 +1244,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/reports/entries': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Active inventory report entries with provenance and effective placement */
+    get: operations['webReports.entries'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/reports/values': {
     parameters: {
       query?: never;
@@ -1316,6 +1333,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    ErrorBody: {
+      code: string;
+      details?: unknown;
+      message: string;
+      requestId: string;
+      retryable: boolean;
+    };
     ExpressionV1:
       | {
           /** @enum {string} */
@@ -1438,11 +1462,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 426 */
@@ -1451,11 +1471,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -1500,11 +1516,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1513,11 +1525,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1526,11 +1534,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -1569,11 +1573,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1582,11 +1582,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1595,11 +1591,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -1637,11 +1629,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1650,11 +1638,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1663,11 +1647,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -1676,6 +1656,7 @@ export interface operations {
     parameters: {
       query?: {
         search?: string;
+        withinLocationId?: string;
         locationId?: string;
         type?: string;
         limit?: number;
@@ -1702,6 +1683,8 @@ export interface operations {
               name: string;
               notes: string | null;
               type: string;
+              wiredCount: number;
+              wiredNames: string[];
             }[];
             total: number;
           };
@@ -1754,11 +1737,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1767,11 +1746,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1780,11 +1755,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -1970,11 +1941,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1983,11 +1950,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -1996,11 +1959,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2041,11 +2000,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2054,11 +2009,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2067,11 +2018,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2109,11 +2056,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2122,11 +2065,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2135,11 +2074,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2191,11 +2126,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2204,11 +2135,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2217,11 +2144,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2378,11 +2301,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2391,11 +2310,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2404,11 +2319,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2561,11 +2472,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2574,11 +2481,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2587,11 +2490,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2629,11 +2528,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2642,11 +2537,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2655,11 +2546,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2746,11 +2633,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2759,11 +2642,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2772,11 +2651,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2861,11 +2736,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2874,11 +2745,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2887,11 +2754,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -2926,11 +2789,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2939,11 +2798,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -2952,11 +2807,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3048,11 +2899,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3061,11 +2908,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3074,11 +2917,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3161,11 +3000,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3174,11 +3009,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3187,11 +3018,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3230,11 +3057,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3243,11 +3066,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3256,11 +3075,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3351,11 +3166,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3364,11 +3175,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3377,11 +3184,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3432,11 +3235,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3445,11 +3244,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3458,11 +3253,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3510,11 +3301,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3523,11 +3310,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3536,11 +3319,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3634,11 +3413,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3647,11 +3422,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3660,11 +3431,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3739,11 +3506,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3752,11 +3515,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3765,11 +3524,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3829,11 +3584,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3842,11 +3593,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3855,11 +3602,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3910,11 +3653,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -3923,11 +3662,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -3936,11 +3671,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3988,11 +3719,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4001,11 +3728,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4014,11 +3737,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4085,11 +3804,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4098,11 +3813,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4111,11 +3822,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4153,11 +3860,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4166,11 +3869,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4179,11 +3878,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4222,11 +3917,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4251,6 +3942,7 @@ export interface operations {
               available: boolean;
               baseUrl: string | null;
               configured: boolean;
+              documentCount: number | null;
             };
           };
         };
@@ -4290,11 +3982,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4303,11 +3991,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4316,11 +4000,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4369,11 +4049,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4382,11 +4058,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4395,11 +4067,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4658,11 +4326,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4696,11 +4360,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4709,11 +4369,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4722,11 +4378,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4766,11 +4418,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4779,11 +4427,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4792,11 +4436,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4837,11 +4477,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4850,11 +4486,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4863,11 +4495,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4910,11 +4538,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4923,11 +4547,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -4936,11 +4556,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4981,11 +4597,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4994,11 +4606,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5007,11 +4615,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5060,11 +4664,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5073,11 +4673,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5086,11 +4682,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5138,11 +4730,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5151,11 +4739,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5164,11 +4748,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5215,11 +4795,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5228,11 +4804,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5241,11 +4813,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5524,11 +5092,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -5537,11 +5101,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 426 */
@@ -5550,11 +5110,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5675,11 +5231,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -5688,11 +5240,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 426 */
@@ -5701,11 +5249,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5820,11 +5364,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 403 */
@@ -5833,11 +5373,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 426 */
@@ -5846,11 +5382,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -5981,11 +5513,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 426 */
@@ -5994,11 +5522,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6194,11 +5718,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6207,11 +5727,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 426 */
@@ -6220,11 +5736,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6384,18 +5896,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6404,18 +5905,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6470,18 +5960,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6637,18 +6116,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 401 */
@@ -6657,18 +6125,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -6677,18 +6134,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -6837,18 +6283,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -6857,18 +6292,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7166,47 +6590,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 401 */
@@ -7215,18 +6599,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7235,18 +6608,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7255,47 +6617,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7454,18 +6776,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7474,18 +6785,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7494,18 +6794,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -7729,47 +7018,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 401 */
@@ -7778,18 +7027,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -7798,18 +7036,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -7818,47 +7045,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8037,47 +7224,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 401 */
@@ -8086,18 +7233,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -8106,18 +7242,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -8126,47 +7251,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8388,47 +7473,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 401 */
@@ -8437,18 +7482,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -8457,18 +7491,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -8477,47 +7500,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8576,18 +7559,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 401 */
@@ -8596,18 +7568,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8640,18 +7601,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8692,18 +7642,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 401 */
@@ -8712,18 +7651,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -8732,18 +7660,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -8964,47 +7881,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 401 */
@@ -9013,18 +7890,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -9033,18 +7899,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -9053,47 +7908,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-            preview?: {
-              baseRevision: number;
-              compatibility: {
-                affectedIds: string[];
-                affectedItems: number;
-                changes: {
-                  /** @enum {string} */
-                  classification:
-                    | 'compatible'
-                    | 'protocol_gated'
-                    | 'migration_required'
-                    | 'forbidden';
-                  code: string;
-                  definitionId: string;
-                }[];
-                /** @enum {string} */
-                classification:
-                  | 'compatible'
-                  | 'protocol_gated'
-                  | 'migration_required'
-                  | 'forbidden';
-                discardedOverrides: {
-                  /** Format: uuid */
-                  fieldId: string;
-                  items: number;
-                }[];
-              };
-              draftRevision: number;
-            };
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9255,18 +8070,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -9275,18 +8079,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            currentDraftVersion?: number;
-            issues?: {
-              code: string;
-              definitionId: string | null;
-              message: string;
-              path: string;
-            }[];
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9368,11 +8161,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 426 */
@@ -9381,11 +8170,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9423,11 +8208,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -9436,11 +8217,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 409 */
@@ -9449,11 +8226,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9500,11 +8273,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9578,11 +8347,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9708,11 +8473,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -9916,11 +8677,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -10016,11 +8773,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -10286,11 +9039,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -10299,11 +9048,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -10373,11 +9118,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -10474,10 +9215,47 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'webReports.entries': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
           'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
+            entries: {
+              code: string | null;
+              effectiveLocationId: string | null;
+              isContainer: boolean;
+              itemId: string;
+              name: string;
+              photos: number;
+              place: string | null;
+              purchasePrice: number | null;
+              purchasedOn: string | null;
+              quantity: number;
+              receiptId: number | null;
+              replacementValue: number | null;
+              room: {
+                key: string;
+                label: string;
+              };
+              typeKey: string | null;
+              warrantyExpires: string | null;
+            }[];
           };
         };
       };
@@ -10537,11 +9315,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -10889,11 +9663,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };

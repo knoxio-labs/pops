@@ -167,9 +167,8 @@ export function useBatchSeasonLog({ showId, seasonNum, season, episodes }: UseBa
         `Marked ${result.data.logged} episode${result.data.logged !== 1 ? 's' : ''} as watched`
       );
     },
-    onError: (err, _vars, context) => {
+    onError: (_error, _vars, context) => {
       rollbackOptimistic(queryClient, showId, context);
-      toast.error(`Failed to mark season: ${err.message}`);
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['media', 'watchHistory'] });

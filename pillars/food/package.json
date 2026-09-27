@@ -56,6 +56,7 @@
     "@anthropic-ai/sdk": "^0.125.0",
     "@mozilla/readability": "^0.6.0",
     "@pops/ai-telemetry": "workspace:*",
+    "@pops/pillar-express": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/types": "workspace:*",
     "@ts-rest/core": "3.53.0-rc.1",

@@ -83,7 +83,15 @@ export const handlers: MockHandlers = {
   'GET /purchases/{id}': ({ params }) =>
     params['id'] === ORDER_ID
       ? { body: ORDER }
-      : { status: 404, body: { code: 'NOT_FOUND', message: 'No such purchase' } },
+      : {
+          status: 404,
+          body: {
+            code: 'purchases.resource.not_found',
+            message: 'No such purchase',
+            requestId: 'standalone-purchases-not-found',
+            retryable: false,
+          },
+        },
   'POST /purchases': created<PurchaseCreateResponses[201]>(ORDER),
   'PATCH /purchases/{id}': ok(ORDER),
   'DELETE /purchases/{id}': acknowledged,

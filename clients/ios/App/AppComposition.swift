@@ -35,6 +35,7 @@ import InventoryReplica
 internal final class AppComposition {
     internal let session: SessionStore
     internal let shell: AppShellModel
+    internal let errorPresenter = AppErrorPresenter()
     /// The process-wide network path shared by network-aware features.
     internal let networkReachability = NetworkPathReachability()
 

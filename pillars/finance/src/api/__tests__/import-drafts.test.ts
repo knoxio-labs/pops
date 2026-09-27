@@ -205,7 +205,7 @@ describe('write', () => {
       })
     ).rejects.toMatchObject({
       status: 409,
-      body: { code: 'DraftOwnedElsewhere', messageKey: 'finance.importDrafts.ownedElsewhere' },
+      body: { code: 'finance.import_drafts.owned_elsewhere', retryable: false },
     });
 
     const after = await client().importDrafts.get(draft.id);
@@ -250,14 +250,20 @@ describe('claim, heartbeat, release', () => {
 
     await expect(
       client().importDrafts.claim(draft.id, { ownerToken: TAB_B })
-    ).rejects.toMatchObject({ status: 409, body: { code: 'DraftOwnedElsewhere' } });
+    ).rejects.toMatchObject({
+      status: 409,
+      body: { code: 'finance.import_drafts.owned_elsewhere' },
+    });
 
     const taken = await client().importDrafts.claim(draft.id, { ownerToken: TAB_B, force: true });
     expect(taken.data.state).toBe('open');
 
     await expect(
       client().importDrafts.heartbeat(draft.id, { ownerToken: TAB_A })
-    ).rejects.toMatchObject({ status: 409, body: { code: 'DraftOwnedElsewhere' } });
+    ).rejects.toMatchObject({
+      status: 409,
+      body: { code: 'finance.import_drafts.owned_elsewhere' },
+    });
     const beat = await client().importDrafts.heartbeat(draft.id, { ownerToken: TAB_B });
     expect(beat.data.state).toBe('open');
   });
@@ -318,7 +324,7 @@ describe('unusable', () => {
 
     await expect(client().importDrafts.get(draft.id)).rejects.toMatchObject({
       status: 409,
-      body: { code: 'DraftUnusable', messageKey: 'finance.importDrafts.unusable' },
+      body: { code: 'finance.import_drafts.unusable', retryable: false },
     });
   });
 

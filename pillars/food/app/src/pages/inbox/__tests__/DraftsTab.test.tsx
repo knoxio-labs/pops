@@ -247,12 +247,22 @@ describe('DraftsTab', () => {
   });
 
   it('surfaces an error state', async () => {
-    inboxListMock.mockResolvedValue({ error: { message: 'boom' }, response: { status: 500 } });
+    inboxListMock.mockResolvedValue({
+      error: {
+        code: 'food.inbox.drafts_unavailable',
+        message: 'Drafts unavailable',
+        requestId: 'req-drafts',
+        retryable: true,
+      },
+      response: { status: 503 },
+    });
     render(
       <Wrapper>
         <StatefulHost now={FIXED_NOW} />
       </Wrapper>
     );
-    expect(await screen.findByText(/Couldn’t load drafts.*boom/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText('Error code')).toHaveTextContent(
+      'food.inbox.drafts_unavailable'
+    );
   });
 });

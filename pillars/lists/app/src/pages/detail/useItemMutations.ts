@@ -56,33 +56,39 @@ function useItemMutationHooks(
   const handleError = (err: Error) => onError(err.message);
   return {
     add: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async (input: AddInput) =>
         unwrap(await itemsAdd({ path: { listId }, body: input })),
       onError: handleError,
       onSettled,
     }),
     check: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async ({ id }: { id: number }) => unwrap(await itemsCheck({ path: { id } })),
       onError: handleError,
       onSettled,
     }),
     uncheck: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async ({ id }: { id: number }) => unwrap(await itemsUncheck({ path: { id } })),
       onError: handleError,
       onSettled,
     }),
     update: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async ({ id, ...body }: UpdatePatch & { id: number }) =>
         unwrap(await itemsUpdate({ path: { id }, body })),
       onError: handleError,
       onSettled,
     }),
     remove: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async ({ id }: { id: number }) => unwrap(await itemsRemove({ path: { id } })),
       onError: handleError,
       onSettled,
     }),
     reorder: useMutation({
+      meta: { errorHandled: true },
       mutationFn: async (orderedIds: readonly number[]): Promise<ReorderResult> =>
         unwrap(await itemsReorder({ path: { listId }, body: { orderedIds: [...orderedIds] } })),
       onError: handleError,

@@ -1,33 +1,13 @@
-/**
- * The one place a {@link GatewayFailure} becomes an HTTP answer for the phone.
- *
- * The classification switch is total over every failure kind — no default arm
- * — so a kind added to the gateway fails the build here rather than falling
- * through to something plausible. The point of the gateway keeping seven kinds
- * apart is lost the moment one of them is quietly folded into another on the
- * way out.
- *
- * Two SDK-level failures never reach this switch as their own kind: the
- * pillar SDK's `refused` (a producer 4xx this SDK does not otherwise
- * recognise — 413, 422, ...) and `rate-limited` (429) both fold onto an
- * existing `GatewayFailure` kind one step earlier, in `gateway.ts`'s
- * `toGatewayFailure` — see that function's header for why a seventh and
- * eighth kind is not the fix here. What this file still guarantees for both:
- * `refused` answers `retryable: false` on a status that is not 503, and
- * `rate-limited` answers `retryable: true` with the producer's `Retry-After`
- * (when it sent one) preserved in the message rather than dropped.
- */
+import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
+
+import { bfmErrorBody } from '../errors.js';
+
 import type { MobileUpstreamError } from '../../contract/rest-schemas.js';
 import type { GatewayFailure } from '../pillars/gateway.js';
 
-/** The statuses the mobile transaction routes declare for an upstream fault. */
+/** The statuses mobile resource routes declare for an upstream failure. */
 export type UpstreamErrorStatus = 404 | 502 | 503;
 
-/**
- * Everything {@link classify} can produce, which is one status wider than most
- * routes declare: only a route that asked a producer for a particular
- * representation can meaningfully answer 415.
- */
 type ClassifiedStatus = UpstreamErrorStatus | 415;
 
 export interface UpstreamErrorResponse {
@@ -37,141 +17,98 @@ export interface UpstreamErrorResponse {
 
 interface Classification {
   readonly status: ClassifiedStatus;
-  readonly code: MobileUpstreamError['code'];
-  readonly summary: string;
+  readonly fallback: 'unavailable' | 'contract_mismatch' | 'misconfigured';
 }
 
+const GATEWAY_UPSTREAM_UNAVAILABLE_CODE = 'gateway.upstream_unavailable';
+
 function classify(failure: GatewayFailure): Classification {
-  const target = failure.pillar;
   switch (failure.kind) {
     case 'unavailable':
-      return { status: 503, code: 'upstream_unavailable', summary: `${target} did not answer` };
     case 'degraded':
-      return {
-        status: 503,
-        code: 'upstream_degraded',
-        summary: `${target} is ${failure.reason}`,
-      };
-    case 'contract-mismatch':
-      return {
-        status: 502,
-        code: 'upstream_contract_mismatch',
-        summary: `${target} answered with a contract this pillar cannot call`,
-      };
+      return { status: 503, fallback: 'unavailable' };
     case 'gateway-misconfigured':
-      return {
-        status: 502,
-        code: 'upstream_misconfigured',
-        summary: `${target} rejected this pillar's credential`,
-      };
-    case 'invalid-request':
-      // Finance refusing a query bfm built is bfm's bug, never the app's — so
-      // it is a 502 rather than the 400 the gateway's own status suggests. A
-      // 400 would tell the phone to stop asking for something it asked for
-      // perfectly correctly.
-      return {
-        status: 502,
-        code: 'upstream_invalid_request',
-        summary: `${target} rejected a request this pillar built`,
-      };
-    case 'conflict':
-      return {
-        status: 502,
-        code: 'upstream_conflict',
-        summary: `${target} reported a conflict on a read`,
-      };
-    case 'unsupported-media':
-      return {
-        status: 415,
-        code: 'upstream_unsupported_media',
-        summary: `${target} cannot represent that record in the form this route asked for`,
-      };
+      return { status: 502, fallback: 'misconfigured' };
     case 'not-found':
-      // Deliberately not "no such transaction". Three pillars' worth of
-      // routes reach this arm now, and a receipt that is not on disk is not a
-      // missing transaction — naming the wrong noun in a crash report sends
-      // whoever reads it to the wrong pillar.
-      return { status: 404, code: 'not_found', summary: `${target} has no such record` };
+      return { status: 404, fallback: 'contract_mismatch' };
+    case 'unsupported-media':
+      return { status: 415, fallback: 'contract_mismatch' };
+    case 'contract-mismatch':
+    case 'invalid-request':
+    case 'conflict':
     case 'protocol-too-old':
-      // Reached only if a route calls this generic classifier on a
-      // `protocol-too-old` failure instead of the inventory-specific handling
-      // in `api/inventory/protocol-error.ts` — a route that is not part of
-      // the sync relay has no business seeing this kind at all, so it folds
-      // to the same 502 a genuine contract fault gets rather than being given
-      // a status this switch's callers were never built to declare.
-      return {
-        status: 502,
-        code: 'upstream_contract_mismatch',
-        summary: `${target} answered with a protocol version this pillar does not carry`,
-      };
+      return { status: 502, fallback: 'contract_mismatch' };
   }
 }
 
-/**
- * Retrying is worth it exactly when nobody answered, or answered mid-recovery.
- * Every other status means the request reached something that will keep giving
- * the same answer until a human changes something, and a phone retrying that
- * is a phone burning a battery on a fault it cannot affect.
- */
-function isRetryable(status: UpstreamErrorStatus): boolean {
-  return status === 503;
-}
+type UpstreamDetails = Readonly<Record<string, unknown>> & {
+  readonly upstream: { readonly pillar: string; readonly status: number };
+};
 
-/**
- * Compose the operator-facing message.
- *
- * `detail` is never rendered — the app draws its own copy from `code`. It is
- * carried because a contract skew, a rejected service-account key or a
- * misrouted URL is otherwise invisible from outside this pillar's logs, and a
- * crash report is often the only place anyone will see it.
- */
-function describe(summary: string, failure: GatewayFailure): string {
-  return failure.detail === undefined ? summary : `${summary}: ${failure.detail}`;
-}
-
-/**
- * For a route that addresses one resource by path, where 404 is a fact about
- * the user's data and the route declares it.
- */
-export function toUpstreamErrorResponse(failure: GatewayFailure): UpstreamErrorResponse {
-  const { status, code, summary } = classify(failure);
-
-  // A route that did not ask for a representation cannot receive a refusal to
-  // produce one; a producer answering 415 to it is a contract fault, and folds
-  // the way the collection mapper below folds a 404. The narrowed return type
-  // is what stops a 415 reaching a route whose OpenAPI document — and
-  // therefore the generated Swift client — has no case for it.
-  if (status === 415) return contractFault(failure, summary);
-
+function upstreamDetails(failure: GatewayFailure): UpstreamDetails {
   return {
-    status,
-    body: {
-      code,
+    ...failure.details,
+    upstream: {
       pillar: failure.pillar,
-      retryable: isRetryable(status),
-      message: describe(summary, failure),
+      status: failure.upstreamStatus ?? failure.status,
     },
   };
 }
 
-/**
- * The answer for a producer response that is well-formed HTTP and impossible
- * for the route that received it. Always a 502: nothing the phone does changes
- * it, and it is bfm or the producer that has to change.
- */
-function contractFault(failure: GatewayFailure, summary: string): UpstreamErrorResponse {
+function fallbackBody(
+  fallback: Classification['fallback'],
+  failure: GatewayFailure
+): MobileUpstreamError {
+  const details = upstreamDetails(failure);
+  if (fallback === 'unavailable') {
+    return {
+      code: GATEWAY_UPSTREAM_UNAVAILABLE_CODE,
+      message: 'The upstream service is unavailable.',
+      requestId: getRequestId() ?? mintRequestId(),
+      retryable: true,
+      details,
+    };
+  }
+  const envelope =
+    fallback === 'contract_mismatch'
+      ? bfmErrorBody('contract_mismatch')
+      : bfmErrorBody('misconfigured');
+  return { ...envelope, details };
+}
+
+function relayBody(
+  failure: GatewayFailure,
+  fallback: Classification['fallback']
+): MobileUpstreamError {
+  if (failure.code === undefined) return fallbackBody(fallback, failure);
+  const fallbackEnvelope = fallbackBody(fallback, failure);
+  return {
+    code: failure.code,
+    message: failure.message ?? fallbackEnvelope.message,
+    requestId: failure.requestId ?? fallbackEnvelope.requestId,
+    retryable: failure.retryable ?? fallbackEnvelope.retryable,
+    details: upstreamDetails(failure),
+  };
+}
+
+function contractFault(failure: GatewayFailure): UpstreamErrorResponse {
   return {
     status: 502,
-    body: {
-      code: 'upstream_contract_mismatch',
-      pillar: failure.pillar,
-      retryable: false,
-      message: describe(summary, failure),
-    },
+    body: relayBody(failure, 'contract_mismatch'),
   };
 }
 
-/** The statuses a route that fetches stored bytes declares for an upstream fault. */
+/** Map a gateway failure for a mobile route that addresses one resource. */
+export function toUpstreamErrorResponse(failure: GatewayFailure): UpstreamErrorResponse {
+  const classified = classify(failure);
+  if (classified.status === 415) return contractFault(failure);
+  return {
+    status: classified.status,
+    body: relayBody(failure, classified.fallback),
+  };
+}
+
+/** The statuses a route that fetches stored bytes declares for an upstream failure. */
 export type ReceiptBytesErrorStatus = UpstreamErrorStatus | 415;
 
 export interface ReceiptBytesErrorResponse {
@@ -179,32 +116,17 @@ export interface ReceiptBytesErrorResponse {
   readonly body: MobileUpstreamError;
 }
 
-/**
- * The mapping for a route that asked a producer for one representation of one
- * resource, and so can meaningfully be told "not in that form".
- *
- * The only mapper that lets a 415 through. Everywhere else it is a contract
- * fault, because everywhere else bfm never asked for a representation.
- */
+/** Map a gateway failure for a route that requests a specific representation. */
 export function toReceiptBytesErrorResponse(failure: GatewayFailure): ReceiptBytesErrorResponse {
-  const { status, code, summary } = classify(failure);
-  if (status !== 415) return toUpstreamErrorResponse(failure);
-
+  const classified = classify(failure);
+  if (classified.status !== 415) return toUpstreamErrorResponse(failure);
   return {
-    status,
-    body: {
-      code,
-      pillar: failure.pillar,
-      // Settled, not transient. This is the whole reason the kind survives to
-      // here: the app draws a placeholder once instead of asking again for a
-      // picture that does not exist.
-      retryable: false,
-      message: describe(summary, failure),
-    },
+    status: 415,
+    body: relayBody(failure, classified.fallback),
   };
 }
 
-/** The statuses `PATCH /mobile/purchases/:id` declares for an upstream fault. */
+/** The statuses `PATCH /mobile/purchases/:id` declares for an upstream failure. */
 export type PurchaseUpdateErrorStatus = UpstreamErrorStatus | 409;
 
 export interface PurchaseUpdateErrorResponse {
@@ -212,52 +134,20 @@ export interface PurchaseUpdateErrorResponse {
   readonly body: MobileUpstreamError;
 }
 
-/**
- * The one mapper that answers a real 409. Every other route in this pillar
- * only ever reads, so `classify`'s `conflict` case treats a 409 as a contract
- * fault (folded to 502) — a producer should not be able to conflict on a
- * GET. This route WRITES, and `purchases` answers 409 for exactly two
- * meaningful reasons (the edit is locked, or it is stale): both are facts
- * about the user's own edit, not a fault, and the phone needs the real
- * status to show its conflict UI rather than a generic upstream failure.
- *
- * `purchases`' own error code — carried on `GatewayFailure.code` since the
- * pillar SDK's `CallFailure` widened to keep it (POPS-4334) — is what tells
- * the two 409s apart: `purchase_locked` and `purchase_stale` reach the phone
- * as distinct `MobileUpstreamError.code`s, so it can offer the right
- * recovery for each rather than one generic conflict. A `purchases` build
- * old enough to send no `code` at all still gets a 409, folded to the
- * pre-existing `upstream_conflict`.
- */
-const PURCHASE_UPDATE_CONFLICT_CODES = new Set(['purchase_locked', 'purchase_stale']);
-
-function purchaseUpdateConflictCode(
-  failure: Extract<GatewayFailure, { kind: 'conflict' }>
-): 'purchase_locked' | 'purchase_stale' | 'upstream_conflict' {
-  const code = failure.code;
-  return code !== undefined && PURCHASE_UPDATE_CONFLICT_CODES.has(code)
-    ? (code as 'purchase_locked' | 'purchase_stale')
-    : 'upstream_conflict';
-}
-
+/** Preserve a producer conflict on the purchase update route. */
 export function toPurchaseUpdateErrorResponse(
   failure: GatewayFailure
 ): PurchaseUpdateErrorResponse {
   if (failure.kind === 'conflict') {
     return {
       status: 409,
-      body: {
-        code: purchaseUpdateConflictCode(failure),
-        pillar: failure.pillar,
-        retryable: false,
-        message: describe(`${failure.pillar} refused the edit`, failure),
-      },
+      body: relayBody(failure, 'contract_mismatch'),
     };
   }
   return toUpstreamErrorResponse(failure);
 }
 
-/** The subset a collection route can answer — 404 is not among them. */
+/** The subset a collection route can answer; a collection has no resource-level 404. */
 export type CollectionUpstreamErrorStatus = Exclude<UpstreamErrorStatus, 404>;
 
 export interface CollectionUpstreamErrorResponse {
@@ -265,40 +155,17 @@ export interface CollectionUpstreamErrorResponse {
   readonly body: MobileUpstreamError;
 }
 
-/**
- * The same mapping for a route that addresses no single resource.
- *
- * A list has nothing to be "not found". A 404 from finance on a collection
- * means the path bfm built is not one finance serves — a contract fault, not a
- * fact about anybody's data — so it folds into the same 502 a shape mismatch
- * gets.
- *
- * The narrowed return type is the load-bearing part. A collection route does
- * not declare 404, so emitting one would put a status in the response that the
- * OpenAPI document does not carry, which means the generated Swift client has
- * no case for it: the app would meet a status it cannot decode, at runtime, on
- * a handset. `Exclude<…, 404>` makes that a compile error here instead.
- */
+/** Map a gateway failure for a collection route, folding an upstream 404 to 502. */
 export function toCollectionUpstreamErrorResponse(
   failure: GatewayFailure
 ): CollectionUpstreamErrorResponse {
+  if (failure.kind === 'not-found') {
+    return { status: 502, body: contractFault(failure).body };
+  }
   const mapped = toUpstreamErrorResponse(failure);
-  if (mapped.status !== 404) return { status: mapped.status, body: mapped.body };
-
-  return {
-    status: 502,
-    body: {
-      ...mapped.body,
-      code: 'upstream_contract_mismatch',
-      retryable: false,
-      // Still through `describe`, so the gateway's detail survives the fold.
-      // This is the arm where it matters most: a 404 on a collection usually
-      // means a base URL pointing somewhere unexpected, and the detail is the
-      // only thing that says where.
-      message: describe(
-        `${failure.pillar} does not serve the collection this pillar asked for`,
-        failure
-      ),
-    },
-  };
+  if (mapped.status === 404) {
+    return { status: 502, body: contractFault(failure).body };
+  }
+  if (mapped.status === 502) return { status: 502, body: mapped.body };
+  return { status: 503, body: mapped.body };
 }

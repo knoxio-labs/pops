@@ -36,6 +36,8 @@ What that costs is that the enumeration is no longer the loop. A package added u
 
 On top of those, the run fails if it executed zero tests, and fails if anything skipped. That is not defensive decoration. The `Pops` scheme declared an empty test-target list until the app target existed, and a lane that runs nothing while reporting success is a green check nobody would think to question.
 
+CI sets `POPS_IOS_TEST_DIAGNOSTICS=never`. Xcode 27 otherwise tries to collect a simulator sysdiagnose after a failed assertion and, on the hosted runner, waits exactly 600 seconds before reporting that diagnostic collection itself timed out. The result bundle already contains the failed test and assertion that `app-test-lane.sh` prints, so the CI lane skips only that ten-minute post-failure delay. Local runs leave the variable unset and retain Xcode's normal diagnostic collection.
+
 `mise run test:app` narrows the same scheme to `PopsTests` with `-only-testing`, for a developer changing the app target who does not want to wait on six packages' suites. CI never invokes it — it reaches that target through `mise run test`. Which of the two places a new suite belongs is decided by the rule in [AppTests/README.md](AppTests/README.md); the short version is that a suite goes in the app target only if it needs an app bundle or an entitlement.
 
 `mise run verify:release-carries-no-host` builds Release and fails if the result names a BFM host — see [Where the BFM base URL comes from](#where-the-bfm-base-url-comes-from).
@@ -59,7 +61,7 @@ mise run lint     # both tools; the single command the CI job invokes
 mise run format   # rewrites the sources; the fixer for the half of `lint` that has one
 ```
 
-`mise run lint` is a single task rather than a documented pair of commands on purpose. The iOS CI job invokes this task and nothing else, so that there is never a second copy of the command to drift from — a hand-copied pair in a workflow file is how a green local run stops meaning anything. It runs two tools, both of them, even when the first has already failed, so one run tells you everything.
+`mise run lint` is a single task rather than a documented set of commands on purpose. The iOS CI job invokes this task and nothing else, so that there is never a second copy of the command to drift from — a hand-copied list in a workflow file is how a green local run stops meaning anything. It runs both source tools and the install-free static guards, even when an earlier check has already failed, so one run tells you everything. One of those guards rejects `try?` on awaited repository calls in Feature packages: user-action failures must reach the shared error presenter, while best-effort cache, asset and background work remains explicit at its non-repository seam.
 
 They divide the work along a line worth knowing before adding a rule to either: **`.swift-format` owns what the code looks like** and rewrites it; **`.swiftlint.yml` owns what the code may do** and rewrites nothing. A defect belongs to exactly one of them, and where both had an opinion the loser was switched off rather than left to report the same thing twice.
 

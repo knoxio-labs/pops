@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type AiAlertsListData = {
   body?: never;
   path?: never;
@@ -91,24 +99,15 @@ export type AiAlertsCreateRuleErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type AiAlertsCreateRuleError = AiAlertsCreateRuleErrors[keyof AiAlertsCreateRuleErrors];
@@ -175,24 +174,15 @@ export type AiAlertsDeleteRuleErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type AiAlertsDeleteRuleError = AiAlertsDeleteRuleErrors[keyof AiAlertsDeleteRuleErrors];
@@ -222,24 +212,15 @@ export type AiAlertsGetRuleErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type AiAlertsGetRuleError = AiAlertsGetRuleErrors[keyof AiAlertsGetRuleErrors];
@@ -286,24 +267,15 @@ export type AiAlertsUpdateRuleErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type AiAlertsUpdateRuleError = AiAlertsUpdateRuleErrors[keyof AiAlertsUpdateRuleErrors];
@@ -346,24 +318,15 @@ export type AiAlertsSetRuleEnabledErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type AiAlertsSetRuleEnabledError =
@@ -446,24 +409,15 @@ export type AiAlertsAcknowledgeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type AiAlertsAcknowledgeError = AiAlertsAcknowledgeErrors[keyof AiAlertsAcknowledgeErrors];
@@ -536,24 +490,15 @@ export type AiBudgetsUpsertErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type AiBudgetsUpsertError = AiBudgetsUpsertErrors[keyof AiBudgetsUpsertErrors];
@@ -862,24 +807,15 @@ export type AiProvidersUpsertErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type AiProvidersUpsertError = AiProvidersUpsertErrors[keyof AiProvidersUpsertErrors];
@@ -1045,10 +981,7 @@ export type AiIngestRecordErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 403
    */
@@ -1119,10 +1052,7 @@ export type CodesRankErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 403
    */
@@ -1160,31 +1090,19 @@ export type JobsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsListError = JobsListErrors[keyof JobsListErrors];
@@ -1231,31 +1149,19 @@ export type JobsListDeadLetterErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsListDeadLetterError = JobsListDeadLetterErrors[keyof JobsListDeadLetterErrors];
@@ -1306,31 +1212,19 @@ export type JobsReplayDeadLetterErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsReplayDeadLetterError =
@@ -1367,31 +1261,19 @@ export type JobsDrainErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsDrainError = JobsDrainErrors[keyof JobsDrainErrors];
@@ -1419,31 +1301,19 @@ export type JobsQueuesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsQueuesError = JobsQueuesErrors[keyof JobsQueuesErrors];
@@ -1470,31 +1340,19 @@ export type JobsStatsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsStatsError = JobsStatsErrors[keyof JobsStatsErrors];
@@ -1539,31 +1397,19 @@ export type JobsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsGetError = JobsGetErrors[keyof JobsGetErrors];
@@ -1608,31 +1454,19 @@ export type JobsCancelErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsCancelError = JobsCancelErrors[keyof JobsCancelErrors];
@@ -1667,31 +1501,19 @@ export type JobsRetryErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type JobsRetryError = JobsRetryErrors[keyof JobsRetryErrors];
@@ -1729,31 +1551,19 @@ export type SettingsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsListError = SettingsListErrors[keyof SettingsListErrors];
@@ -1788,31 +1598,19 @@ export type SettingsGetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetManyError = SettingsGetManyErrors[keyof SettingsGetManyErrors];
@@ -1846,31 +1644,19 @@ export type SettingsResetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetError = SettingsResetErrors[keyof SettingsResetErrors];
@@ -1908,31 +1694,19 @@ export type SettingsSetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetManyError = SettingsSetManyErrors[keyof SettingsSetManyErrors];
@@ -1974,31 +1748,19 @@ export type SettingsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetError = SettingsGetErrors[keyof SettingsGetErrors];
@@ -2046,31 +1808,19 @@ export type SettingsSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetError = SettingsSetErrors[keyof SettingsSetErrors];
@@ -2119,31 +1869,19 @@ export type SettingsEnsureErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsEnsureError = SettingsEnsureErrors[keyof SettingsEnsureErrors];
@@ -2191,31 +1929,19 @@ export type SettingsResetKeyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    message: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetKeyError = SettingsResetKeyErrors[keyof SettingsResetKeyErrors];

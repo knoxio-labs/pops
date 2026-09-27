@@ -142,7 +142,7 @@ describe('the full-size receipt', () => {
 
     expect(res.status).toBe(404);
     expect(MobileUpstreamErrorSchema.safeParse(res.body).success).toBe(true);
-    expect(res.body.code).toBe('not_found');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
     expect(res.body.retryable).toBe(false);
   });
 
@@ -156,7 +156,7 @@ describe('the full-size receipt', () => {
     const res = await get(app, token, full());
 
     expect(res.body.message).not.toContain('transaction');
-    expect(res.body.message).toContain('purchases');
+    expect(res.body.details.upstream.pillar).toBe('purchases');
   });
 
   it('folds a producer 415 into a 502, because this route asked for no representation', async () => {
@@ -172,7 +172,7 @@ describe('the full-size receipt', () => {
     const res = await get(app, token, full());
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
     expect(res.body.retryable).toBe(false);
   });
 
@@ -195,7 +195,7 @@ describe('the full-size receipt', () => {
     const res = await get(app, token, full());
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_misconfigured');
+    expect(res.body.code).toBe('bfm.upstream.misconfigured');
   });
 
   it('refuses a producer body with an empty payload rather than drawing nothing', async () => {
@@ -207,7 +207,7 @@ describe('the full-size receipt', () => {
     const res = await get(app, token, full());
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 });
 
@@ -247,11 +247,11 @@ describe('the thumbnail', () => {
 
     expect(res.status).toBe(415);
     expect(MobileUpstreamErrorSchema.safeParse(res.body).success).toBe(true);
-    expect(res.body.code).toBe('upstream_unsupported_media');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
     expect(res.body.retryable).toBe(false);
   });
 
-  it('keeps the producer’s own reason in the operator-facing message', async () => {
+  it('does not expose an unstructured legacy producer reason as a user-safe message', async () => {
     const { app, token } = open({
       thumbnail: {
         kind: 'refused',
@@ -263,7 +263,7 @@ describe('the thumbnail', () => {
 
     const res = await get(app, token, thumb());
 
-    expect(res.body.message).toContain('RECEIPT_UNDECODABLE');
+    expect(res.body.message).not.toContain('RECEIPT_UNDECODABLE');
   });
 
   it('still answers 404 for a receipt that is not stored at all', async () => {
@@ -274,7 +274,7 @@ describe('the thumbnail', () => {
     const res = await get(app, token, thumb());
 
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('not_found');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('does not fold a non-415 producer refusal into 415', async () => {
@@ -287,7 +287,7 @@ describe('the thumbnail', () => {
     const res = await get(app, token, thumb());
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_invalid_request');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 });
 

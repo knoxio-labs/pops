@@ -33,7 +33,6 @@ export function useTagRuleMutations(args: MutationsArgs) {
       toast.message('Rejection recorded');
       props.onOpenChange(false);
     },
-    onError: (e: Error) => toast.error(e.message),
   });
 
   /**

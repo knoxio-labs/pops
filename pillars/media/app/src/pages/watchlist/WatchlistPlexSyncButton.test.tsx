@@ -109,7 +109,7 @@ describe('WatchlistPlexSyncButton', () => {
     expect(button).toHaveTextContent('Syncing…');
   });
 
-  it('surfaces the start mutation error path via the hook (error toast)', async () => {
+  it('leaves start failures to the global mutation handler', async () => {
     setupIdle();
     plexStartSyncJobMock.mockResolvedValue({
       data: undefined,
@@ -120,10 +120,7 @@ describe('WatchlistPlexSyncButton', () => {
     const button = screen.getByTestId('watchlist-plex-sync-button');
     await waitFor(() => expect(button).not.toBeDisabled());
     fireEvent.click(button);
-    await waitFor(() =>
-      expect(mockToastError).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to start Watchlist sync')
-      )
-    );
+    await waitFor(() => expect(plexStartSyncJobMock).toHaveBeenCalledOnce());
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 });

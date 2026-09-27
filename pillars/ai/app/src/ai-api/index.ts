@@ -146,6 +146,7 @@ export type {
   CodesRankErrors,
   CodesRankResponse,
   CodesRankResponses,
+  ErrorBody,
   JobsCancelData,
   JobsCancelError,
   JobsCancelErrors,

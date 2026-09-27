@@ -1,3 +1,4 @@
+import { readCurrentRequestId } from '../request-context.js';
 /**
  * Idiomatic-REST transport for the server-side pillar SDK.
  *
@@ -69,7 +70,7 @@ export async function performRestCall(ctx: RestCallContext): Promise<CallResult<
 
   const inputRecord = toRecord(ctx.input);
   const url = buildUrl(ctx.discovered.baseUrl, route, inputRecord);
-  const headers = await buildHeaders(ctx.authHeaders);
+  const headers = await buildHeaders(ctx.authHeaders, readCurrentRequestId());
   const init: RequestInit & { method: string } = { method: route.method, headers };
   if (route.hasBody) {
     init.body = JSON.stringify(buildBody(route, ctx.input, inputRecord));
@@ -158,15 +159,18 @@ function buildBody(
 }
 
 async function buildHeaders(
-  authHeaders?: () => Record<string, string> | Promise<Record<string, string>>
+  authHeaders: (() => Record<string, string> | Promise<Record<string, string>>) | undefined,
+  requestId: string | undefined
 ): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
     'content-type': 'application/json',
     accept: 'application/json',
   };
-  if (!authHeaders) return headers;
-  const extra = await authHeaders();
-  for (const [k, v] of Object.entries(extra)) headers[k] = v;
+  if (authHeaders) {
+    const extra = await authHeaders();
+    for (const [k, v] of Object.entries(extra)) headers[k] = v;
+  }
+  if (requestId !== undefined) headers['X-Request-Id'] = requestId;
   return headers;
 }
 

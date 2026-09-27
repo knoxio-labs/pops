@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type AnalyticsMerchantSpendData = {
   body?: never;
   path?: never;
@@ -31,10 +39,7 @@ export type AnalyticsMerchantSpendErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
 };
 
 export type AnalyticsMerchantSpendError =
@@ -108,10 +113,7 @@ export type AnalyticsMonthSummaryErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
 };
 
 export type AnalyticsMonthSummaryError =
@@ -204,10 +206,7 @@ export type AnalyticsProductLeaderboardErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
 };
 
 export type AnalyticsProductLeaderboardError =
@@ -455,10 +454,7 @@ export type ProductDeleteAliasErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ProductDeleteAliasError = ProductDeleteAliasErrors[keyof ProductDeleteAliasErrors];
@@ -494,17 +490,11 @@ export type ProductUpdateAliasErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ProductUpdateAliasError = ProductUpdateAliasErrors[keyof ProductUpdateAliasErrors];
@@ -572,10 +562,7 @@ export type ProductDeleteErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ProductDeleteError = ProductDeleteErrors[keyof ProductDeleteErrors];
@@ -609,10 +596,7 @@ export type ProductRenameErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ProductRenameError = ProductRenameErrors[keyof ProductRenameErrors];
@@ -677,10 +661,7 @@ export type PurchaseListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
 };
 
 export type PurchaseListError = PurchaseListErrors[keyof PurchaseListErrors];
@@ -842,17 +823,11 @@ export type PurchaseCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type PurchaseCreateError = PurchaseCreateErrors[keyof PurchaseCreateErrors];
@@ -1147,17 +1122,11 @@ export type PurchaseCreateManualErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type PurchaseCreateManualError =
@@ -1367,10 +1336,7 @@ export type PurchaseDeleteErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type PurchaseDeleteError = PurchaseDeleteErrors[keyof PurchaseDeleteErrors];
@@ -1399,10 +1365,7 @@ export type PurchaseGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type PurchaseGetError = PurchaseGetErrors[keyof PurchaseGetErrors];
@@ -1625,31 +1588,19 @@ export type PurchaseUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 502
    */
-  502: {
-    code?: string;
-    message: string;
-  };
+  502: ErrorBody;
 };
 
 export type PurchaseUpdateError = PurchaseUpdateErrors[keyof PurchaseUpdateErrors];
@@ -1857,10 +1808,7 @@ export type PurchaseEraseCaptureLocationErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type PurchaseEraseCaptureLocationError =
@@ -1897,17 +1845,11 @@ export type PurchaseAttachDocumentErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type PurchaseAttachDocumentError =
@@ -1987,17 +1929,11 @@ export type PurchasePatchItemErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type PurchasePatchItemError = PurchasePatchItemErrors[keyof PurchasePatchItemErrors];
@@ -2079,25 +2015,15 @@ export type PurchaseCreateInventoryItemErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 502
    */
-  502: {
-    code?: string;
-    inventoryItemUri: string | null;
-    message: string;
-  };
+  502: ErrorBody;
 };
 
 export type PurchaseCreateInventoryItemError =
@@ -2150,24 +2076,15 @@ export type PurchaseDecideInventoryProposalErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type PurchaseDecideInventoryProposalError =
@@ -2226,24 +2143,15 @@ export type ReceiptUploadErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type ReceiptUploadError = ReceiptUploadErrors[keyof ReceiptUploadErrors];
@@ -2585,17 +2493,11 @@ export type ReceiptSaveDraftErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type ReceiptSaveDraftError = ReceiptSaveDraftErrors[keyof ReceiptSaveDraftErrors];
@@ -2818,24 +2720,15 @@ export type ReceiptExtractErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type ReceiptExtractError = ReceiptExtractErrors[keyof ReceiptExtractErrors];
@@ -2976,17 +2869,11 @@ export type ReceiptReadErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ReceiptReadError = ReceiptReadErrors[keyof ReceiptReadErrors];
@@ -3024,24 +2911,15 @@ export type ReceiptThumbnailErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 415
    */
-  415: {
-    code?: string;
-    message: string;
-  };
+  415: ErrorBody;
 };
 
 export type ReceiptThumbnailError = ReceiptThumbnailErrors[keyof ReceiptThumbnailErrors];
@@ -3083,10 +2961,7 @@ export type ReconcileConfirmErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ReconcileConfirmError = ReconcileConfirmErrors[keyof ReconcileConfirmErrors];
@@ -3278,10 +3153,7 @@ export type ReconcileRejectErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ReconcileRejectError = ReconcileRejectErrors[keyof ReconcileRejectErrors];
@@ -3313,10 +3185,7 @@ export type ReconcileSweepErrors = {
   /**
    * 503
    */
-  503: {
-    code?: string;
-    message: string;
-  };
+  503: ErrorBody;
 };
 
 export type ReconcileSweepError = ReconcileSweepErrors[keyof ReconcileSweepErrors];
@@ -3359,10 +3228,7 @@ export type ReconcileUnlinkErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ReconcileUnlinkError = ReconcileUnlinkErrors[keyof ReconcileUnlinkErrors];
@@ -3413,10 +3279,7 @@ export type SearchSearchErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
 };
 
 export type SearchSearchError = SearchSearchErrors[keyof SearchSearchErrors];
@@ -3484,17 +3347,11 @@ export type SourceDeleteErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-  };
+  409: ErrorBody;
 };
 
 export type SourceDeleteError = SourceDeleteErrors[keyof SourceDeleteErrors];
@@ -3523,10 +3380,7 @@ export type SourceGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type SourceGetError = SourceGetErrors[keyof SourceGetErrors];
@@ -3570,10 +3424,7 @@ export type SourceUpsertErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
 };
 
 export type SourceUpsertError = SourceUpsertErrors[keyof SourceUpsertErrors];

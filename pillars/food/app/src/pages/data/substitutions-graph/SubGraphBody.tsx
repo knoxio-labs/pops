@@ -5,11 +5,14 @@
  */
 import { useTranslation } from 'react-i18next';
 
+import { ErrorState } from '@pops/ui';
+
 import { EdgeDetailPanel } from './EdgeDetailPanel';
 import { ForceGraphCanvas, type ForceGraphInternalProps } from './ForceGraphCanvas';
 import { NodeDetailPanel } from './NodeDetailPanel';
 import { RadialFocusView } from './RadialFocusView';
 
+import type { FoodApiError } from '../../../food-api-helpers.js';
 import type { SubGraphEdge, SubGraphNode, SubGraphView } from './types';
 
 const CANVAS_W = 720;
@@ -19,7 +22,7 @@ const TABLE_HREF = '/food/data/substitutions';
 export interface SubGraphBodyProps {
   view: SubGraphView;
   isLoading: boolean;
-  isError: boolean;
+  error: FoodApiError | null;
   focusedNode: SubGraphNode | null;
   focusedEdge: SubGraphEdge | null;
   focusedSlug: string | null;
@@ -37,8 +40,8 @@ export function SubGraphBody(props: SubGraphBodyProps): React.ReactElement {
       <p className="text-muted-foreground p-6 text-sm">{t('data.substitutions.graph.loading')}</p>
     );
   }
-  if (props.isError) {
-    return <p className="text-destructive p-6 text-sm">{t('data.substitutions.graph.error')}</p>;
+  if (props.error !== null) {
+    return <ErrorState error={props.error} />;
   }
   if (props.view.edges.length === 0) {
     return <EmptyState onClearFilters={props.onClearFilters} />;

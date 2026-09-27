@@ -11,8 +11,7 @@
  * These assert the **body** rather than the status, because a swapped call
  * still returns 400 — the status is exactly the part that stays right when the
  * arguments are wrong. One representative throw site per module the reversal
- * touched, driven through the real `mapHttpError` so the assertion covers the
- * whole path from throw to envelope.
+ * touched, inspected as the shared failure the final middleware serializes.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -24,19 +23,17 @@ import {
 } from '../../modules/corrections/add-op-guards.js';
 import { assertPersistableEntityId } from '../../modules/imports/commit-validation.js';
 import { translateCorrectionError } from '../../rest/corrections-handlers-support.js';
-import { mapHttpError } from '../../rest/error-mapping.js';
 import { ValidationError } from '../errors.js';
 
 import type { ChangeSetOp } from '../../../contract/index.js';
 
 /** The 400 body a throwing call produces, or the failure if it did not throw. */
-function wireBodyOf(fn: () => unknown): { message: string; code?: string } {
+function wireBodyOf(fn: () => unknown): { message: string; code: string } {
   try {
     fn();
   } catch (err) {
-    const mapped = mapHttpError(err);
-    if (mapped === null) throw err;
-    return mapped.body;
+    if (!(err instanceof ValidationError)) throw err;
+    return { message: err.message, code: err.code };
   }
   throw new Error('expected the call to throw');
 }
@@ -60,7 +57,7 @@ describe('ValidationError', () => {
       wireBodyOf(() => {
         throw new ValidationError('Upload is empty.');
       })
-    ).toMatchObject({ message: 'Upload is empty.', code: 'ValidationError' });
+    ).toMatchObject({ message: 'Upload is empty.', code: 'finance.request.invalid' });
   });
 
   it('still puts the message on the wire when structured details are supplied', () => {

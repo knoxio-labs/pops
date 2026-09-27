@@ -44,7 +44,11 @@ describe('the /jobs surface with no Redis configured', () => {
     for (const path of ['/jobs', '/jobs/stats', '/jobs/queues', '/jobs/dead-letter']) {
       const res = await requestOn(app).get(path);
       expect(res.status, path).toBe(503);
-      expect(res.body).toMatchObject({ code: 'ServiceUnavailableError' });
+      expect(res.body).toMatchObject({
+        code: 'ai.upstream.unavailable',
+        requestId: expect.any(String),
+        retryable: true,
+      });
     }
   });
 

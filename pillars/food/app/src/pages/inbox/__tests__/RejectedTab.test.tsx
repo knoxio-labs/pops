@@ -124,7 +124,7 @@ describe('RejectedTab', () => {
     });
   });
 
-  it('rolls back the optimistic removal + surfaces an error toast on failure', async () => {
+  it('rolls back the optimistic removal without a duplicate local error toast', async () => {
     mockList([makeRow()]);
     let rejectUnreject: (e: unknown) => void = () => {};
     inboxUnrejectMock.mockReturnValue(
@@ -145,11 +145,29 @@ describe('RejectedTab', () => {
       expect(screen.queryByText('Banana pancakes')).not.toBeInTheDocument();
     });
     rejectUnreject(new Error('boom'));
-    // Rollback: the row reappears + the error toast surfaces.
+    // Rollback: the row reappears; the shell owns the failure toast.
     expect(await screen.findByText('Banana pancakes')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText(/Couldn’t undo: boom/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Couldn’t undo: boom/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the API error code when the rejected list cannot load', async () => {
+    inboxListRejectedMock.mockResolvedValue({
+      error: {
+        code: 'food.inbox.rejected_unavailable',
+        message: 'Rejected ingests unavailable',
+        requestId: 'req-rejected',
+        retryable: true,
+      },
+      response: { status: 503 },
     });
+    render(
+      <Wrapper>
+        <RejectedTab now={FIXED_NOW} />
+      </Wrapper>
+    );
+    expect(await screen.findByLabelText('Error code')).toHaveTextContent(
+      'food.inbox.rejected_unavailable'
+    );
   });
 
   it('passes filter chip toggles into the query input', async () => {

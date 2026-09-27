@@ -23,6 +23,7 @@ export {
 } from './sdk.gen';
 export type {
   ClientOptions,
+  ErrorBody,
   ItemsAddData,
   ItemsAddError,
   ItemsAddErrors,

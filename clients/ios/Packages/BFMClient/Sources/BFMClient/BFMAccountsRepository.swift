@@ -61,10 +61,10 @@ public struct BFMAccountsRepository: AccountsRepository {
             throw RepositoryError.transport("\(ListAccounts.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: ListAccounts.id)
+                try upstream.body.json.code, operation: ListAccounts.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: ListAccounts.id)
+                try upstream.body.json.code, operation: ListAccounts.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport("\(ListAccounts.id): undocumented status \(statusCode)")
         }
@@ -82,6 +82,7 @@ public struct BFMAccountsRepository: AccountsRepository {
         do {
             output = try await client.generated.mobileFinance_getAccount(path: .init(id: id))
         } catch let error as ClientError {
+            if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
             throw BFMRepositoryFailure.failure(error, operation: GetAccount.id)
         }
 
@@ -117,10 +118,10 @@ extension BFMAccountsRepository {
             throw RepositoryError.transport("\(GetAccount.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetAccount.id)
+                try upstream.body.json.code, operation: GetAccount.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetAccount.id)
+                try upstream.body.json.code, operation: GetAccount.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport("\(GetAccount.id): undocumented status \(statusCode)")
         }

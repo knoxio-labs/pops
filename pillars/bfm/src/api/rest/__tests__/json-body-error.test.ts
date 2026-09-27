@@ -48,8 +48,10 @@ describe('a JSON-parse refusal under a device-facing path', () => {
 
     expect(sent.status).toBe(400);
     expect(sent.body).toEqual({
-      code: 'invalid_request',
+      code: 'bfm.request.invalid',
       message: expect.any(String),
+      requestId: expect.any(String),
+      retryable: false,
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -58,7 +60,12 @@ describe('a JSON-parse refusal under a device-facing path', () => {
     const { sent, next } = handle(jsonParseFailure(), '/mobile/purchases/receipts');
 
     expect(sent.status).toBe(400);
-    expect(sent.body).toEqual({ code: 'invalid_request', message: expect.any(String) });
+    expect(sent.body).toEqual({
+      code: 'bfm.request.invalid',
+      message: expect.any(String),
+      requestId: expect.any(String),
+      retryable: false,
+    });
     expect(next).not.toHaveBeenCalled();
   });
 });

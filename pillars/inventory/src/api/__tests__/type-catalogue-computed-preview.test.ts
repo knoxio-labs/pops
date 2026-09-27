@@ -510,7 +510,7 @@ describe('computed-field preview', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.issues).toEqual([
+    expect(response.body.details.issues).toEqual([
       expect.objectContaining({
         definitionId: fixture.ids.totalFieldId,
         path: 'expression.right',
@@ -528,8 +528,8 @@ describe('computed-field preview', () => {
 
     expect(response.status).toBe(409);
     expect(response.body).toMatchObject({
-      code: 'catalogue_draft_conflict',
-      currentDraftVersion: fixture.draft.revision.draftVersion + 1,
+      code: 'inventory.catalogue.draft_conflict',
+      details: { currentDraftVersion: fixture.draft.revision.draftVersion + 1 },
     });
   });
 
@@ -543,7 +543,7 @@ describe('computed-field preview', () => {
     const response = await preview(fixture, body);
 
     expect(response.status).toBe(status);
-    expect(response.body.code).toBe(code);
+    expect(response.body.code).toBe(`inventory.catalogue.${code}`);
   });
 
   it('refuses a stored field and an item of another type', async () => {
@@ -553,9 +553,9 @@ describe('computed-field preview', () => {
     const otherType = await preview(fixture, { itemId: fixture.partId });
 
     expect(stored.status).toBe(400);
-    expect(stored.body.code).toBe('preview_field_not_computed');
+    expect(stored.body.code).toBe('inventory.catalogue.preview_field_not_computed');
     expect(otherType.status).toBe(400);
-    expect(otherType.body.code).toBe('preview_item_type_mismatch');
+    expect(otherType.body.code).toBe('inventory.catalogue.preview_item_type_mismatch');
   });
 });
 
@@ -672,6 +672,6 @@ describe('computed-field preview without a draft', () => {
     const response = await previewOnPublished(fixture);
 
     expect(response.status).toBe(409);
-    expect(response.body.code).toBe('catalogue_conflict');
+    expect(response.body.code).toBe('inventory.catalogue.conflict');
   });
 });

@@ -17,6 +17,7 @@ import {
   inventoryUnlinkTargets,
   planPurchaseUpdate,
 } from '../../db/index.js';
+import { purchaseErrorBody } from '../errors.js';
 import { createInventoryLinkClearer, type InventoryLinkClearer } from '../inventory/client.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { toPurchaseDetailBody } from './serializers.js';
@@ -31,7 +32,7 @@ type UpdateBody = z.infer<typeof UpdatePurchaseBodySchema>;
 function notFound(id: string) {
   return {
     status: 404 as const,
-    body: { message: `Purchase ${id} not found`, code: 'NOT_FOUND' },
+    body: purchaseErrorBody('not_found', { message: `Purchase ${id} not found` }),
   };
 }
 

@@ -8,10 +8,10 @@
  * the server, and a recipe outside the first fetched page is reachable.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ReactElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const recipesListMock = vi.hoisted(() => vi.fn());
 const planAddEntryMock = vi.hoisted(() => vi.fn());
@@ -39,6 +39,35 @@ const firstPage: Recipe[] = Array.from({ length: 25 }, (_, i) => ({
 const beyondFirstPage: Recipe = { id: 900, slug: 'zucchini-fritters', title: 'Zucchini Fritters' };
 
 const allRecipes = [...firstPage, beyondFirstPage];
+let queryClient: QueryClient | null = null;
+
+function createDeferred<Value>(): {
+  promise: Promise<Value>;
+  resolve: (value: Value) => void;
+} {
+  let resolvePromise: ((value: Value) => void) | null = null;
+  const promise = new Promise<Value>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return {
+    promise,
+    resolve: (value) => {
+      if (resolvePromise === null) throw new Error('deferred promise did not initialise');
+      resolvePromise(value);
+    },
+  };
+}
+
+function settleFocusScopeCleanup(): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, 0));
+}
+
+afterEach(async () => {
+  cleanup();
+  queryClient?.clear();
+  queryClient = null;
+  await settleFocusScopeCleanup();
+});
 
 function primeRecipes(): void {
   recipesListMock.mockImplementation(({ body }: { body: { search?: string; limit: number } }) => {
@@ -53,8 +82,12 @@ function primeRecipes(): void {
 
 function renderModal(): { user: ReturnType<typeof userEvent.setup>; modal: () => HTMLElement } {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { gcTime: Infinity, retry: false },
+      mutations: { gcTime: Infinity, retry: false },
+    },
   });
+  queryClient = client;
   const ui: ReactElement = (
     <QueryClientProvider client={client}>
       <AddPlanEntryModal date="2026-06-15" slot="dinner" isOpen onClose={() => undefined} />
@@ -99,12 +132,14 @@ describe('AddPlanEntryFields — recipe picker', () => {
   it('says it is loading while a search is in flight, instead of showing nothing', async () => {
     const { user } = renderModal();
     const field = await screen.findByLabelText('Recipe');
-    recipesListMock.mockImplementation(() => new Promise(() => undefined));
+    const pendingSearch = createDeferred<{ data: { items: Recipe[]; nextCursor: null } }>();
+    recipesListMock.mockImplementation(() => pendingSearch.promise);
 
     await user.type(field, 'zucchini');
 
     expect(await screen.findByText('Loading…')).toBeInTheDocument();
     expect(screen.queryByText('No recipes match.')).not.toBeInTheDocument();
+    pendingSearch.resolve({ data: { items: [], nextCursor: null } });
   });
 
   it('submits the recipe picked from the suggestions', async () => {

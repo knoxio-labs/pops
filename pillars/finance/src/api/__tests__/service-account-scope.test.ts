@@ -83,7 +83,12 @@ describe('a live credential whose grant does not cover the operation', () => {
     );
 
     expect(response.status).toBe(403);
-    expect(response.body).toMatchObject({ message: expect.stringContaining('not authorised') });
+    expect(response.body).toMatchObject({
+      code: 'finance.auth.forbidden',
+      message: expect.stringContaining('not authorised'),
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it('403s an account granted a neighbouring pillar entirely', async () => {
@@ -148,6 +153,10 @@ describe('failing closed', () => {
     );
 
     expect(response.status).toBe(401);
+    expect(response.body).toMatchObject({
+      code: 'finance.auth.invalid',
+      retryable: false,
+    });
   });
 
   it('503s rather than admitting a caller it could not verify', async () => {
@@ -157,6 +166,10 @@ describe('failing closed', () => {
     );
 
     expect(response.status).toBe(503);
+    expect(response.body).toMatchObject({
+      code: 'finance.auth.unavailable',
+      retryable: true,
+    });
   });
 
   it('leaks neither the key nor the registry detail to the caller', async () => {

@@ -50,9 +50,6 @@ export function ListNewModal(): ReactElement {
       toast.success(t('new.toast.created'));
       void navigate(`/lists/${id}`);
     },
-    onError: (err: Error) => {
-      toast.error(t('new.toast.error', { message: err.message }));
-    },
   });
 
   const closeModal = useCallback(() => {

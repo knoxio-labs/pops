@@ -60,6 +60,7 @@ export type {
   AnalyticsProductLeaderboardResponse,
   AnalyticsProductLeaderboardResponses,
   ClientOptions,
+  ErrorBody,
   ProductDeleteAliasData,
   ProductDeleteAliasError,
   ProductDeleteAliasErrors,

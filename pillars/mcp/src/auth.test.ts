@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
+import type { ErrorBody } from '@pops/types';
+
 const originalToken = process.env['MCP_INBOUND_TOKEN'];
 
 function restoreToken(): void {
@@ -153,9 +155,13 @@ describe('inboundAuth middleware over HTTP', () => {
     const res = await fetch(`${baseUrl}/mcp`, { method: 'POST' });
     expect(res.status).toBe(401);
     expect(res.headers.get('www-authenticate')).toContain('Bearer');
-    const body = (await res.json()) as { error: string; reached?: boolean };
-    expect(body.error).toBe('unauthorized');
-    expect(body.reached).toBeUndefined();
+    const body = (await res.json()) as ErrorBody;
+    expect(body).toEqual({
+      code: 'mcp.auth.unauthorized',
+      message: 'A valid bearer token is required.',
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it('returns 401 for a wrong token', async () => {

@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
-import { toast } from 'sonner';
 
 import { unwrap } from '../../media-api-helpers.js';
 import { watchHistoryDelete, watchHistoryLog } from '../../media-api/index.js';
@@ -34,9 +33,6 @@ function useLogMutation(queryClient: QueryClient, removeToggling: (id: number) =
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['media', 'tvShows', 'listSeasons'] });
     },
-    onError: (err: Error) => {
-      toast.error(`Failed to log watch: ${err.message}`);
-    },
     onSettled: (_data, _err, variables) => {
       if (variables) removeToggling(variables.mediaId);
     },
@@ -53,9 +49,6 @@ function useDeleteMutation(
       unwrap(await watchHistoryDelete({ path: { id: variables.id } })),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['media', 'tvShows', 'listSeasons'] });
-    },
-    onError: (err: Error) => {
-      toast.error(`Failed to remove watch: ${err.message}`);
     },
     onSettled: (_data, _err, variables) => {
       if (!variables) return;

@@ -75,10 +75,12 @@ internal struct InventoryGroundedRowLabel: View {
 
     internal var body: some View {
         HStack(spacing: PopsSpacing.md) {
-            Image(systemName: symbol)
-                .font(.popsHeadline)
-                .foregroundStyle(tone)
-                .frame(width: markSize, height: markSize)
+            InventorySelectableMark {
+                Image(systemName: symbol)
+                    .font(.popsHeadline)
+                    .foregroundStyle(tone)
+                    .frame(width: markSize, height: markSize)
+            }
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Text(title)
                     .font(.popsHeadline)

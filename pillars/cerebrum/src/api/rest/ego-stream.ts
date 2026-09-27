@@ -15,6 +15,8 @@
  */
 import { Router, type Router as ExpressRouter, type Request, type Response } from 'express';
 
+import { PopsError } from '@pops/pillar-express';
+
 import { egoChatBodySchema } from '../../contract/rest-ego-schemas.js';
 import {
   persistAssistantError,
@@ -111,18 +113,42 @@ interface ResolvedTurn {
   history: Message[];
 }
 
+function streamError(err: unknown, requestId: string | undefined): Record<string, unknown> {
+  if (err instanceof PopsError) {
+    return {
+      type: 'error',
+      code: err.code,
+      message: err.message,
+      requestId,
+      retryable: err.retryable,
+    };
+  }
+  console.error('[cerebrum] ego stream failure', { requestId, error: err });
+  return {
+    type: 'error',
+    code: 'cerebrum.internal.failure',
+    message: 'The service could not complete the request.',
+    requestId,
+    retryable: false,
+  };
+}
+
 /**
  * Resolve the conversation, snapshot the prior history, and persist the user
  * turn. The history snapshot is taken BEFORE the user turn is appended so the
  * engine sees the prior turns plus the new `message` arg. Emits an SSE `error`
  * frame + ends the response on failure (returns null).
  */
-function resolveAndPersistUserTurn(
-  deps: EgoHandlerDeps,
-  persistence: ConversationPersistence,
-  res: Response,
-  input: ReturnType<typeof egoChatBodySchema.parse>
-): ResolvedTurn | null {
+interface ResolveTurnParams {
+  deps: EgoHandlerDeps;
+  persistence: ConversationPersistence;
+  res: Response;
+  input: ReturnType<typeof egoChatBodySchema.parse>;
+  requestId: string | undefined;
+}
+
+function resolveAndPersistUserTurn(params: ResolveTurnParams): ResolvedTurn | null {
+  const { deps, persistence, res, input, requestId } = params;
   const appContext: AppContext | undefined = input.appContext ?? undefined;
   try {
     const conversation = resolveConversation({
@@ -143,10 +169,7 @@ function resolveAndPersistUserTurn(
     });
     return { conversation, history };
   } catch (err) {
-    writeSseEvent(res, {
-      type: 'error',
-      message: err instanceof Error ? err.message : 'Internal server error',
-    });
+    writeSseEvent(res, streamError(err, requestId));
     res.end();
     return null;
   }
@@ -155,11 +178,20 @@ function resolveAndPersistUserTurn(
 async function handleStreamRequest(
   deps: EgoHandlerDeps,
   req: Request,
-  res: Response
+  res: Response,
+  next: (error: unknown) => void
 ): Promise<void> {
   const parsed = egoChatBodySchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ message: 'Invalid request body', details: parsed.error.issues });
+    next(
+      new PopsError({
+        code: 'cerebrum.request.invalid',
+        status: 400,
+        message: 'The request is invalid.',
+        retryable: false,
+        details: { issues: parsed.error.issues },
+      })
+    );
     return;
   }
   const input = parsed.data;
@@ -167,7 +199,13 @@ async function handleStreamRequest(
   setSseHeaders(res);
 
   const persistence = new ConversationPersistence({ db: deps.db });
-  const resolved = resolveAndPersistUserTurn(deps, persistence, res, input);
+  const resolved = resolveAndPersistUserTurn({
+    deps,
+    persistence,
+    res,
+    input,
+    requestId: req.requestId,
+  });
   if (!resolved) return;
   const { conversation, history } = resolved;
   const appContext: AppContext | undefined = input.appContext ?? undefined;
@@ -184,9 +222,9 @@ async function handleStreamRequest(
     });
     await pipeStreamEvents({ req, res, persistence, preparation, conversation });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Internal server error';
-    persistAssistantError(persistence, conversation.id, message);
-    writeSseEvent(res, { type: 'error', conversationId: conversation.id, message });
+    const failure = streamError(err, req.requestId);
+    persistAssistantError(persistence, conversation.id, String(failure['message']));
+    writeSseEvent(res, { ...failure, conversationId: conversation.id });
   }
 
   res.end();
@@ -195,8 +233,8 @@ async function handleStreamRequest(
 /** Build the SSE router. Mount in `app.ts` before `createExpressEndpoints`. */
 export function makeEgoStreamRouter(deps: EgoHandlerDeps): ExpressRouter {
   const router: ExpressRouter = Router();
-  router.post('/ego/chat/stream', (req: Request, res: Response) => {
-    void handleStreamRequest(deps, req, res);
+  router.post('/ego/chat/stream', (req: Request, res: Response, next) => {
+    void handleStreamRequest(deps, req, res, next);
   });
   return router;
 }

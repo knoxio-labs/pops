@@ -12,6 +12,8 @@
 import express, { type Express } from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
+
 import { createTestTransport } from '../__tests__/test-http.js';
 
 interface MockPaperlessClient {
@@ -28,8 +30,22 @@ const { createDocumentsFilesRouter } = await import('./router.js');
 
 function app(): Express {
   const a = express();
+  const errors = createPillarErrorHandlers({ pillar: 'documents' });
+  a.use(errors.requestId);
   a.use(createDocumentsFilesRouter());
+  a.use(errors.final);
   return a;
+}
+
+function expectErrorBody(
+  body: unknown,
+  expected: { readonly code: string; readonly message: string; readonly retryable: boolean }
+): void {
+  expect(body).toEqual({
+    ...expected,
+    requestId: expect.any(String),
+    details: expect.any(Object),
+  });
 }
 
 beforeEach(() => {
@@ -46,14 +62,23 @@ describe('GET /documents/:id/thumbnail', () => {
   it('returns 400 for a non-numeric id', async () => {
     const res = await requestOn(app()).get('/documents/abc/thumbnail');
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid document id');
+    expectErrorBody(res.body, {
+      code: 'documents.thumbnail.invalid_id',
+      message: 'The document id is invalid.',
+      retryable: false,
+    });
   });
 
   it('returns 503 when Paperless is not configured', async () => {
     mockGetPaperlessClient.mockReturnValue(null);
     const res = await requestOn(app()).get('/documents/42/thumbnail');
     expect(res.status).toBe(503);
-    expect(res.body.error).toContain('not configured');
+    expect(res.body).toEqual({
+      code: 'documents.paperless.not_configured',
+      message: 'Paperless-ngx is not configured.',
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   describe('when Paperless is configured', () => {
@@ -98,14 +123,22 @@ describe('GET /documents/:id/thumbnail', () => {
       fetchThumbnail.mockResolvedValue({ ok: false, status: 404 });
       const res = await requestOn(app()).get('/documents/999/thumbnail');
       expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Document not found');
+      expectErrorBody(res.body, {
+        code: 'documents.thumbnail.not_found',
+        message: 'The document thumbnail was not found.',
+        retryable: false,
+      });
     });
 
     it('returns 502 on other upstream errors', async () => {
       fetchThumbnail.mockResolvedValue({ ok: false, status: 500 });
       const res = await requestOn(app()).get('/documents/42/thumbnail');
       expect(res.status).toBe(502);
-      expect(res.body.error).toContain('Failed to fetch thumbnail');
+      expectErrorBody(res.body, {
+        code: 'documents.thumbnail.upstream_failure',
+        message: 'The document thumbnail could not be fetched.',
+        retryable: true,
+      });
     });
 
     it('returns 502 when the client throws PaperlessApiError', async () => {
@@ -113,7 +146,11 @@ describe('GET /documents/:id/thumbnail', () => {
       fetchThumbnail.mockRejectedValue(new PaperlessApiError(0, 'Network error: timeout'));
       const res = await requestOn(app()).get('/documents/42/thumbnail');
       expect(res.status).toBe(502);
-      expect(res.body.error).toContain('Paperless error');
+      expectErrorBody(res.body, {
+        code: 'documents.thumbnail.upstream_failure',
+        message: 'The document thumbnail could not be fetched.',
+        retryable: true,
+      });
     });
   });
 });

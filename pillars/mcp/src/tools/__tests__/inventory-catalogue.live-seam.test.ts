@@ -81,20 +81,20 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
 
     const unknownType = await catalogueGetType.handler({ typeId: crypto.randomUUID() });
     expect(unknownType.isError).toBe(true);
-    expect(text(unknownType)).toMatch(/catalogue_type_unknown/);
+    expect(text(unknownType)).toMatch(/inventory\.catalogue\.type_unknown/);
 
     const unknownRevision = await catalogueGetType.handler({
       typeId: first.id,
       revision: revision + 1000,
     });
     expect(unknownRevision.isError).toBe(true);
-    expect(text(unknownRevision)).toMatch(/catalogue_revision_unknown/);
+    expect(text(unknownRevision)).toMatch(/inventory\.catalogue\.revision_unknown/);
   });
 
   it('reports a missing draft as not-found through the real REST boundary', async () => {
     const result = await readDraft.handler({});
     expect(result.isError).toBe(true);
-    expect(text(result)).toMatch(/catalogue_draft_missing/);
+    expect(text(result)).toMatch(/inventory\.catalogue\.draft_missing/);
   });
 
   it('completes readDraft -> patch -> preview -> publish, survives a stale conflict, and recovers', async () => {
@@ -139,7 +139,7 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
       operations: [{ kind: 'put_type', key: 'seam_widget_stale', label: 'Stale' }],
     });
     expect(stale.isError).toBe(true);
-    expect(text(stale)).toMatch(/catalogue_draft_conflict/);
+    expect(text(stale)).toMatch(/inventory\.catalogue\.draft_conflict/);
 
     // Recovery: read the current draft, then retry with its real expectedDraftVersion.
     const currentBeforeRetry = draftRevision(ok(await readDraft.handler({})));
@@ -171,10 +171,10 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     // The draft is consumed by publication.
     const afterPublish = await readDraft.handler({});
     expect(afterPublish.isError).toBe(true);
-    expect(text(afterPublish)).toMatch(/catalogue_draft_missing/);
+    expect(text(afterPublish)).toMatch(/inventory\.catalogue\.draft_missing/);
   });
 
-  it('surfaces catalogue_migration_required as an actionable failure when publishing without a migration', async () => {
+  it('surfaces inventory.catalogue.migration_required as an actionable failure when publishing without a migration', async () => {
     const published = ok(await catalogueGet.handler({}));
     const baseRevision = (published['revision'] as { revision: number }).revision;
     const types = published['types'] as {
@@ -211,7 +211,7 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
       expectedDraftVersion: patched.draftVersion,
     });
     expect(publishWithoutMigration.isError).toBe(true);
-    expect(text(publishWithoutMigration)).toMatch(/catalogue_migration_required/);
+    expect(text(publishWithoutMigration)).toMatch(/inventory\.catalogue\.migration_required/);
 
     await abandonDraft.handler({
       revision: patched.revision,
@@ -327,7 +327,7 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
       expectedDraftVersion: created.draftVersion,
     });
     expect(unknownItem.isError).toBe(true);
-    expect(text(unknownItem)).toMatch(/preview_item_unknown/);
+    expect(text(unknownItem)).toMatch(/inventory\.catalogue\.preview_item_unknown/);
     expect(draftRevision(ok(await readDraft.handler({})))).toEqual(created);
 
     const stale = await previewComputedField.handler({

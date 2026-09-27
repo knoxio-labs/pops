@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -12,6 +13,7 @@ internal struct PurchaseStagingGrid: View {
     @State private var viewing: StagedPage?
     @State private var targeted: DropTarget?
     @State private var discarding = false
+    @Environment(\.errorPresenter) private var errorPresenter
 
     internal init(
         model: PurchaseStagingModel,
@@ -74,14 +76,17 @@ internal struct PurchaseStagingGrid: View {
             Button("Discard", role: .destructive, action: onCancel)
             Button("Keep picking", role: .cancel) {}
         }
-        .alert(
-            "Couldn't add receipt",
-            isPresented: refusalPresented,
-            presenting: model.refusal
-        ) { _ in
-            Button("OK") { model.acknowledgeRefusal() }
-        } message: { problem in
-            Text(ReceiptCaptureCopy.message(for: problem))
+        .onChange(of: model.refusal) { _, problem in
+            guard let problem else { return }
+            errorPresenter.present(
+                PopsError(
+                    code: "ios.purchases.receipt_\(problem.code)",
+                    message: ReceiptCaptureCopy.message(for: problem),
+                    retryable: true,
+                    kind: .client),
+                operation: "Add receipt",
+                context: .foreground)
+            model.acknowledgeRefusal()
         }
         .popsMotion(value: model.receipts)
         .popsMotion(value: model.pending)
@@ -222,11 +227,5 @@ extension PurchaseStagingGrid {
 
     private func note(_ over: Bool, as target: DropTarget) {
         targeted = PurchaseStagingGridLogic.highlight(after: over, on: target, current: targeted)
-    }
-
-    private var refusalPresented: Binding<Bool> {
-        Binding(
-            get: { model.refusal != nil },
-            set: { presented in if !presented { model.acknowledgeRefusal() } })
     }
 }

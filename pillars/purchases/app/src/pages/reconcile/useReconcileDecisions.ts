@@ -57,6 +57,7 @@ export function useReconcileDecisions(onDecided: (entry: QueueEntry) => void): R
   const [lastOutcome, setLastOutcome] = useState<DecisionOutcome | null>(null);
 
   const mutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: applyDecision,
     onSuccess: async (kind, variables) => {
       setLastOutcome({ kind, status: 'ok', message: null });

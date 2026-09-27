@@ -10,6 +10,8 @@ import { createHash } from 'node:crypto';
 import { stat } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 
+import { inventoryError, sendInventoryError } from '../errors.js';
+
 import type { Response } from 'express';
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -35,7 +37,16 @@ async function sendFileWithErrorHandling(res: Response, filePath: string): Promi
       if (err && !res.headersSent) {
         res.removeHeader('Cache-Control');
         res.removeHeader('ETag');
-        res.status(500).json({ error: 'Failed to send file' });
+        sendInventoryError(
+          res.req,
+          res,
+          inventoryError({
+            area: 'files',
+            reason: 'send_failed',
+            status: 500,
+            message: 'The file could not be sent.',
+          })
+        );
       }
       resolvePromise(true);
     });

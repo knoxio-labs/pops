@@ -171,7 +171,7 @@ describe('S2 evolve a published type via MCP', () => {
 
     const refused = await draft.publish();
     expect(refused.ok).toBe(false);
-    expect(refused.ok ? '' : refused.message).toMatch(/catalogue_migration_required/);
+    expect(refused.ok ? '' : refused.message).toMatch(/inventory\.catalogue\.migration_required/);
 
     const after = await draft.mustPublish({
       note: 'S2 require size',

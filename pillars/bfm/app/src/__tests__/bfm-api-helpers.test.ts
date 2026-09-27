@@ -20,7 +20,13 @@ describe('unwrap', () => {
   it('throws BfmApiError carrying the server message', () => {
     expect(() =>
       unwrap({ error: { message: 'pairing code expired' }, response: responseWith(410) })
-    ).toThrow(new BfmApiError('pairing code expired', 410));
+    ).toThrowError(
+      expect.objectContaining<Partial<BfmApiError>>({
+        kind: 'client',
+        message: 'pairing code expired',
+        status: 410,
+      })
+    );
   });
 
   it('attaches the HTTP status to the thrown error', () => {

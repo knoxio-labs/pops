@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type ExpressionV1 =
   | {
       op: 'literal';
@@ -95,19 +103,11 @@ export type CodesSuggestErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 426
    */
-  426: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  426: ErrorBody;
 };
 
 export type CodesSuggestError = CodesSuggestErrors[keyof CodesSuggestErrors];
@@ -142,27 +142,15 @@ export type ConnectionsDisconnectErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConnectionsDisconnectError =
@@ -197,27 +185,15 @@ export type ConnectionsConnectErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConnectionsConnectError = ConnectionsConnectErrors[keyof ConnectionsConnectErrors];
@@ -258,27 +234,15 @@ export type DocumentsUnlinkErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DocumentsUnlinkError = DocumentsUnlinkErrors[keyof DocumentsUnlinkErrors];
@@ -299,6 +263,7 @@ export type FixturesListData = {
   path?: never;
   query?: {
     search?: string;
+    withinLocationId?: string;
     locationId?: string;
     type?: string;
     limit?: number;
@@ -320,6 +285,8 @@ export type FixturesListResponses = {
       name: string;
       notes: string | null;
       type: string;
+      wiredCount: number;
+      wiredNames: Array<string>;
     }>;
     total: number;
   };
@@ -346,27 +313,15 @@ export type FixturesCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type FixturesCreateError = FixturesCreateErrors[keyof FixturesCreateErrors];
@@ -407,27 +362,15 @@ export type FixturesListItemsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type FixturesListItemsError = FixturesListItemsErrors[keyof FixturesListItemsErrors];
@@ -586,27 +529,15 @@ export type FixturesDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type FixturesDeleteError = FixturesDeleteErrors[keyof FixturesDeleteErrors];
@@ -635,27 +566,15 @@ export type FixturesGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type FixturesGetError = FixturesGetErrors[keyof FixturesGetErrors];
@@ -700,27 +619,15 @@ export type FixturesUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type FixturesUpdateError = FixturesUpdateErrors[keyof FixturesUpdateErrors];
@@ -849,27 +756,15 @@ export type ItemsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ItemsCreateError = ItemsCreateErrors[keyof ItemsCreateErrors];
@@ -1015,27 +910,15 @@ export type ItemsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ItemsDeleteError = ItemsDeleteErrors[keyof ItemsDeleteErrors];
@@ -1064,27 +947,15 @@ export type ItemsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ItemsGetError = ItemsGetErrors[keyof ItemsGetErrors];
@@ -1164,27 +1035,15 @@ export type ItemsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ItemsUpdateError = ItemsUpdateErrors[keyof ItemsUpdateErrors];
@@ -1276,27 +1135,15 @@ export type ConnectionsGraphErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConnectionsGraphError = ConnectionsGraphErrors[keyof ConnectionsGraphErrors];
@@ -1339,27 +1186,15 @@ export type ConnectionsTraceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConnectionsTraceError = ConnectionsTraceErrors[keyof ConnectionsTraceErrors];
@@ -1433,27 +1268,15 @@ export type DocumentsLinkErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DocumentsLinkError = DocumentsLinkErrors[keyof DocumentsLinkErrors];
@@ -1531,27 +1354,15 @@ export type FixturesDisconnectErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type FixturesDisconnectError = FixturesDisconnectErrors[keyof FixturesDisconnectErrors];
@@ -1587,27 +1398,15 @@ export type FixturesConnectErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type FixturesConnectError = FixturesConnectErrors[keyof FixturesConnectErrors];
@@ -1686,27 +1485,15 @@ export type PhotosUploadErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PhotosUploadError = PhotosUploadErrors[keyof PhotosUploadErrors];
@@ -1750,27 +1537,15 @@ export type PhotosAttachErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PhotosAttachError = PhotosAttachErrors[keyof PhotosAttachErrors];
@@ -1812,27 +1587,15 @@ export type PhotosReorderErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PhotosReorderError = PhotosReorderErrors[keyof PhotosReorderErrors];
@@ -1915,27 +1678,15 @@ export type DocumentFilesUploadErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DocumentFilesUploadError = DocumentFilesUploadErrors[keyof DocumentFilesUploadErrors];
@@ -2004,27 +1755,15 @@ export type LocationsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LocationsCreateError = LocationsCreateErrors[keyof LocationsCreateErrors];
@@ -2084,27 +1823,15 @@ export type LocationsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LocationsDeleteError = LocationsDeleteErrors[keyof LocationsDeleteErrors];
@@ -2143,27 +1870,15 @@ export type LocationsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LocationsGetError = LocationsGetErrors[keyof LocationsGetErrors];
@@ -2204,27 +1919,15 @@ export type LocationsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LocationsUpdateError = LocationsUpdateErrors[keyof LocationsUpdateErrors];
@@ -2285,27 +1988,15 @@ export type LocationsDeleteStatsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LocationsDeleteStatsError =
@@ -2341,27 +2032,15 @@ export type LocationsGetPathErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LocationsGetPathError = LocationsGetPathErrors[keyof LocationsGetPathErrors];
@@ -2395,11 +2074,7 @@ export type PaperlessSearchErrors = {
   /**
    * 412
    */
-  412: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  412: ErrorBody;
 };
 
 export type PaperlessSearchError = PaperlessSearchErrors[keyof PaperlessSearchErrors];
@@ -2437,6 +2112,7 @@ export type PaperlessStatusResponses = {
       available: boolean;
       baseUrl: string | null;
       configured: boolean;
+      documentCount: number | null;
     };
   };
 };
@@ -2461,27 +2137,15 @@ export type PhotosRemoveErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PhotosRemoveError = PhotosRemoveErrors[keyof PhotosRemoveErrors];
@@ -2516,27 +2180,15 @@ export type PhotosUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PhotosUpdateError = PhotosUpdateErrors[keyof PhotosUpdateErrors];
@@ -2770,11 +2422,7 @@ export type SearchSearchErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type SearchSearchError = SearchSearchErrors[keyof SearchSearchErrors];
@@ -2809,27 +2457,15 @@ export type SettingsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsListError = SettingsListErrors[keyof SettingsListErrors];
@@ -2864,27 +2500,15 @@ export type SettingsGetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetManyError = SettingsGetManyErrors[keyof SettingsGetManyErrors];
@@ -2918,27 +2542,15 @@ export type SettingsResetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetError = SettingsResetErrors[keyof SettingsResetErrors];
@@ -2976,27 +2588,15 @@ export type SettingsSetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetManyError = SettingsSetManyErrors[keyof SettingsSetManyErrors];
@@ -3032,27 +2632,15 @@ export type SettingsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetError = SettingsGetErrors[keyof SettingsGetErrors];
@@ -3094,27 +2682,15 @@ export type SettingsSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetError = SettingsSetErrors[keyof SettingsSetErrors];
@@ -3157,27 +2733,15 @@ export type SettingsEnsureErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsEnsureError = SettingsEnsureErrors[keyof SettingsEnsureErrors];
@@ -3219,27 +2783,15 @@ export type SettingsResetKeyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetKeyError = SettingsResetKeyErrors[keyof SettingsResetKeyErrors];
@@ -3277,27 +2829,15 @@ export type SyncChangesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
   /**
    * 426
    */
-  426: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  426: ErrorBody;
 };
 
 export type SyncChangesError = SyncChangesErrors[keyof SyncChangesErrors];
@@ -3531,27 +3071,15 @@ export type SyncItemEventsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 426
    */
-  426: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  426: ErrorBody;
 };
 
 export type SyncItemEventsError = SyncItemEventsErrors[keyof SyncItemEventsErrors];
@@ -3719,27 +3247,15 @@ export type SyncReportLedgerErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 403
    */
-  403: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  403: ErrorBody;
   /**
    * 426
    */
-  426: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  426: ErrorBody;
 };
 
 export type SyncReportLedgerError = SyncReportLedgerErrors[keyof SyncReportLedgerErrors];
@@ -3784,19 +3300,11 @@ export type SyncMutationsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 426
    */
-  426: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  426: ErrorBody;
 };
 
 export type SyncMutationsError = SyncMutationsErrors[keyof SyncMutationsErrors];
@@ -3896,27 +3404,15 @@ export type SyncSnapshotErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
   /**
    * 426
    */
-  426: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  426: ErrorBody;
 };
 
 export type SyncSnapshotError = SyncSnapshotErrors[keyof SyncSnapshotErrors];
@@ -4082,33 +3578,11 @@ export type TypesReadCatalogueErrors = {
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type TypesReadCatalogueError = TypesReadCatalogueErrors[keyof TypesReadCatalogueErrors];
@@ -4242,18 +3716,7 @@ export type TypesReadAuditErrors = {
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
 };
 
 export type TypesReadAuditError = TypesReadAuditErrors[keyof TypesReadAuditErrors];
@@ -4304,48 +3767,15 @@ export type TypesManageCreateDraftErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TypesManageCreateDraftError =
@@ -4477,33 +3907,11 @@ export type TypesManageReadDraftErrors = {
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type TypesManageReadDraftError =
@@ -4739,99 +4147,19 @@ export type TypesManagePatchDraftErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  409: ErrorBody;
 };
 
 export type TypesManagePatchDraftError =
@@ -4987,48 +4315,15 @@ export type TypesManageAbandonDraftErrors = {
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TypesManageAbandonDraftError =
@@ -5273,99 +4568,19 @@ export type TypesManagePreviewComputedFieldErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  409: ErrorBody;
 };
 
 export type TypesManagePreviewComputedFieldError =
@@ -5544,99 +4759,19 @@ export type TypesManagePreviewDraftErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  409: ErrorBody;
 };
 
 export type TypesManagePreviewDraftError =
@@ -5734,99 +4869,19 @@ export type TypesManagePublishDraftErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  409: ErrorBody;
 };
 
 export type TypesManagePublishDraftError =
@@ -5970,33 +5025,11 @@ export type TypesReadValidateItemErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
 };
 
 export type TypesReadValidateItemError =
@@ -6032,18 +5065,7 @@ export type TypesManageReadProtocolRolloutErrors = {
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
 };
 
 export type TypesManageReadProtocolRolloutError =
@@ -6080,48 +5102,15 @@ export type TypesManageActivateProtocolRolloutErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TypesManageActivateProtocolRolloutError =
@@ -6262,99 +5251,19 @@ export type TypesManagePreviewComputedFieldOnPublishedErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  400: ErrorBody;
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-    preview?: {
-      baseRevision: number;
-      compatibility: {
-        affectedIds: Array<string>;
-        affectedItems: number;
-        changes: Array<{
-          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-          code: string;
-          definitionId: string;
-        }>;
-        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
-        discardedOverrides: Array<{
-          fieldId: string;
-          items: number;
-        }>;
-      };
-      draftRevision: number;
-    };
-  };
+  409: ErrorBody;
 };
 
 export type TypesManagePreviewComputedFieldOnPublishedError =
@@ -6436,33 +5345,11 @@ export type TypesReadTypeErrors = {
   /**
    * 401
    */
-  401: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  401: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    currentDraftVersion?: number;
-    issues?: Array<{
-      code: string;
-      definitionId: string | null;
-      message: string;
-      path: string;
-    }>;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type TypesReadTypeError = TypesReadTypeErrors[keyof TypesReadTypeErrors];
@@ -6596,19 +5483,11 @@ export type TypesCatalogueErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 426
    */
-  426: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  426: ErrorBody;
 };
 
 export type TypesCatalogueError = TypesCatalogueErrors[keyof TypesCatalogueErrors];
@@ -6680,27 +5559,15 @@ export type DocumentFilesRemoveUploadErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DocumentFilesRemoveUploadError =
@@ -6732,11 +5599,7 @@ export type WebChangesHeadErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebChangesHeadError = WebChangesHeadErrors[keyof WebChangesHeadErrors];
@@ -6780,11 +5643,7 @@ export type WebConnectionsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebConnectionsListError = WebConnectionsListErrors[keyof WebConnectionsListErrors];
@@ -6854,11 +5713,7 @@ export type WebEventsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebEventsListError = WebEventsListErrors[keyof WebEventsListErrors];
@@ -6975,11 +5830,7 @@ export type WebListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebListError = WebListErrors[keyof WebListErrors];
@@ -7159,11 +6010,7 @@ export type WebBatchCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebBatchCreateError = WebBatchCreateErrors[keyof WebBatchCreateErrors];
@@ -7218,19 +6065,11 @@ export type WebGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type WebGetError = WebGetErrors[keyof WebGetErrors];
@@ -7473,11 +6312,7 @@ export type WebLocationsGoneErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type WebLocationsGoneError = WebLocationsGoneErrors[keyof WebLocationsGoneErrors];
@@ -7514,11 +6349,7 @@ export type WebMovingGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebMovingGetError = WebMovingGetErrors[keyof WebMovingGetErrors];
@@ -7593,6 +6424,44 @@ export type WebMovingGetResponses = {
 
 export type WebMovingGetResponse = WebMovingGetResponses[keyof WebMovingGetResponses];
 
+export type WebReportsEntriesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/web/reports/entries';
+};
+
+export type WebReportsEntriesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    entries: Array<{
+      code: string | null;
+      effectiveLocationId: string | null;
+      isContainer: boolean;
+      itemId: string;
+      name: string;
+      photos: number;
+      place: string | null;
+      purchasePrice: number | null;
+      purchasedOn: string | null;
+      quantity: number;
+      receiptId: number | null;
+      replacementValue: number | null;
+      room: {
+        key: string;
+        label: string;
+      };
+      typeKey: string | null;
+      warrantyExpires: string | null;
+    }>;
+  };
+};
+
+export type WebReportsEntriesResponse =
+  WebReportsEntriesResponses[keyof WebReportsEntriesResponses];
+
 export type WebReportsValuesData = {
   body?: never;
   path?: never;
@@ -7607,11 +6476,7 @@ export type WebReportsValuesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebReportsValuesError = WebReportsValuesErrors[keyof WebReportsValuesErrors];
@@ -7670,11 +6535,7 @@ export type WebSearchListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type WebSearchListError = WebSearchListErrors[keyof WebSearchListErrors];

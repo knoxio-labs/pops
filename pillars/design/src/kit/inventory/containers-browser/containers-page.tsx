@@ -38,6 +38,7 @@ export interface ContainersPageProps {
   seed?: BrowserSeed;
   status?: ListStatus;
   offline?: boolean;
+  onEdit?: (id: string) => void;
 }
 
 function rowsFor(items: readonly ItemRowModel[], segment: ContainerSegment): ItemRowModel[] {
@@ -97,6 +98,7 @@ export function ContainersPage(props: ContainersPageProps) {
         population={population}
         noun="containers"
         secondColumn={{ header: 'Holds', Cell: HoldsCell }}
+        onEdit={props.onEdit}
       />
     </InventoryPage>
   );

@@ -140,6 +140,14 @@ pnpm --filter @pops/design test         # the playground's units and render smok
 
 `mise tasks` (from this directory's `mise.toml`) wraps the same set plus `lint`.
 
+## Comment API errors
+
+The comment API returns ADR-054 failures as
+`{ code, message, requestId, retryable, details? }` with registered `design.*`
+codes. The browser client treats any non-success response as unavailable or
+refused according to its status; it no longer depends on the retired
+`{ error }` body.
+
 ## Tests
 
 `src/registry/catalog.test.ts` runs discovery against the checked-in surface and fails on any contract error, so a screen or experiment committed in the wrong shape fails CI without the test knowing it by name. `src/test/render-smoke.test.tsx` mounts every screen, step, state and variant once. The rest are unit tests over the pure modules: the screen collector, the schemas, the lineage rules, the address grammar, the viewport maths, the theme encoding and the comment anchors.

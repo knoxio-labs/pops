@@ -1,9 +1,8 @@
-import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { Button, PageHeader } from '@pops/ui';
-
+import { NewItemButton } from '../../foundation/frame/new-item-button.js';
+import { InventoryPage } from '../../foundation/frame/page-frame.js';
 import { ItemsSummary } from '../../foundation/list-page/items-summary.js';
 import { ItemsToolbar } from '../../foundation/list-page/items-toolbar.js';
 import {
@@ -12,7 +11,9 @@ import {
   placeFilterOptions,
   typeFilterOptions,
 } from '../../foundation/list-page/list-filters.js';
+import { SelectionDock } from '../../foundation/list-page/selection-dock.js';
 import { useListPageKeys } from '../../foundation/list-page/use-list-page-keys.js';
+import { useListVerbs, useTrackedWrites } from '../../foundation/list-page/use-list-verbs.js';
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { useSelection } from '../../foundation/selection/use-selection.js';
@@ -26,27 +27,9 @@ import { useOnline } from '../../inventory-web/useOnline.js';
 import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
 import { useItemRows } from '../../inventory-web/useWebItems.js';
 import { ItemsBanner, findDuplicatePair } from './items-banners.js';
-import { ItemsBody } from './items-body.js';
+import { ItemsListBody } from './items-cards.js';
 
 import type { ReactElement } from 'react';
-
-function NewItemButton({
-  offline,
-  onNavigate,
-}: {
-  offline: boolean;
-  onNavigate: (path: string) => void;
-}): ReactElement {
-  return (
-    <Button
-      disabled={offline}
-      onClick={() => onNavigate('/inventory/items/new')}
-      prefix={<Plus className="size-4" aria-hidden />}
-    >
-      New item
-    </Button>
-  );
-}
 
 function useItemsPageSources() {
   const navigate = useNavigate();
@@ -62,7 +45,6 @@ function useItemsPageSources() {
     queryKeys: [[...WEB_ITEMS_QUERY_KEY, 'list']],
     enabled: itemRows.status === 'success',
   });
-  useListPageKeys({ rows: itemRows.rows, selection });
   const [dismissedDuplicate, setDismissedDuplicate] = useState(false);
 
   return {
@@ -167,44 +149,62 @@ function ItemsToolbarSection({ model }: { model: ItemsPageModel }): ReactElement
 
 function ItemsPageView({ model }: { model: ItemsPageModel }): ReactElement {
   const { filters, itemRows, online, navigate, changed, duplicate } = model;
+  const tracked = useTrackedWrites();
+  const verbs = useListVerbs({
+    rows: itemRows.rows,
+    world: model.world,
+    selection: model.selection,
+    contentCounts: itemRows.contentCounts,
+    offline: !online,
+    tracked,
+  });
+  useListPageKeys({ rows: itemRows.rows, selection: model.selection, extra: verbs.keyHandlers });
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <PageHeader
-        title="Items"
-        icon={<INVENTORY_ICONS.item className="size-6 text-muted-foreground" aria-hidden />}
-        actions={<NewItemButton offline={!online} onNavigate={navigate} />}
-      />
-      <ItemsBanner
-        online={online}
-        changed={changed}
-        duplicate={duplicate}
-        onDismiss={model.dismissDuplicate}
-        onCompare={(name) => filters.setFilters({ q: name })}
-      />
-      <ItemsToolbarSection model={model} />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <ItemsBody
-          status={itemRows.status}
-          rows={itemRows.rows}
-          total={model.total}
-          unfilteredTotal={model.unfilteredTotal}
-          hiddenInactiveCount={model.hiddenInactiveCount}
-          narrowed={model.narrowed}
-          view={filters.filters.view}
-          sort={filters.filters.sort}
-          world={model.world}
-          selection={model.selection}
-          pendingIds={model.pendingIds}
+    <InventoryPage
+      title="Items"
+      icon={INVENTORY_ICONS.item}
+      actions={<NewItemButton offline={!online} onNavigate={navigate} />}
+      banner={
+        <ItemsBanner
           online={online}
-          onNavigate={navigate}
-          onRetry={itemRows.refetch}
-          onClear={model.clearEmptyFilters}
-          onSort={(sort) => filters.setFilters({ sort })}
-          onLoadMore={itemRows.fetchNextPage}
+          changed={changed}
+          duplicate={duplicate}
+          onDismiss={model.dismissDuplicate}
+          onCompare={(name) => filters.setFilters({ q: name })}
         />
-      </div>
-    </div>
+      }
+      toolbar={<ItemsToolbarSection model={model} />}
+      dock={
+        <SelectionDock
+          selection={model.selection}
+          loadedCount={itemRows.rows.length}
+          carried={verbs.carried}
+          actions={verbs.actions}
+          offline={!online}
+          anchorRef={verbs.dockAnchorRef}
+        />
+      }
+      overlay={verbs.overlays}
+    >
+      <ItemsListBody
+        itemRows={itemRows}
+        filters={filters.filters}
+        online={online}
+        navigate={navigate}
+        world={model.world}
+        selection={model.selection}
+        pendingIds={model.pendingIds}
+        rejections={verbs.rejections}
+        onRowVerb={verbs.onRowVerb}
+        onSort={(sort) => filters.setFilters({ sort })}
+        total={model.total}
+        unfilteredTotal={model.unfilteredTotal}
+        hiddenInactiveCount={model.hiddenInactiveCount}
+        narrowed={model.narrowed}
+        onClearFilters={model.clearEmptyFilters}
+      />
+    </InventoryPage>
   );
 }
 

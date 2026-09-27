@@ -23,10 +23,11 @@ extension InventoryItemFormModel {
             return
         }
         let typeId = currentDraft.typeId
+        let includeName = draft.trimmedName.isEmpty
         prefillStatus = .running
         fillTask = Task {
             let values = await scan.engine.fill(
-                source: .text(lines), type: type, draft: currentDraft)
+                source: .text(lines), type: type, draft: currentDraft, includeName: includeName)
             guard !Task.isCancelled else { return }
             applySuggestions(values, forTypeId: typeId)
         }
@@ -92,10 +93,12 @@ extension InventoryItemFormModel {
             draft.name = product.title
         }
         let typeId = currentDraft.typeId
+        let includeName = draft.trimmedName.isEmpty
         let source = InventoryPrefillSource.product(InventoryBarcodeFacts.facts(product))
         prefillStatus = .running
         fillTask = Task {
-            let values = await scan.engine.fill(source: source, type: type, draft: currentDraft)
+            let values = await scan.engine.fill(
+                source: source, type: type, draft: currentDraft, includeName: includeName)
             guard !Task.isCancelled else { return }
             applySuggestions(values, forTypeId: typeId)
         }

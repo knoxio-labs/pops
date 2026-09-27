@@ -2,10 +2,11 @@ import AppCore
 
 extension InventoryCopy {
     /// Why a write or an Undo did not land: who won a conflict, which code is
-    /// taken, or what the server refused, in one short sentence. Never the
-    /// server's own diagnostic `message`, which is written for a log.
+    /// taken, or what the server refused, in one short sentence. A non-empty
+    /// server rejection message is safe to show verbatim; the reason-specific
+    /// copy is a fallback for older or local responses without one.
     ///
-    /// `.storageFull` answers with the Storage full alert's own message. No
+    /// `.storageFull` answers with the shared Storage full message. No
     /// screen shows it through the one-line alert: `inventoryWriteFailureAlerts`
     /// routes it to `inventoryStorageFullAlert`, the same approved alert the
     /// Sync page shows, before this function is ever called.
@@ -20,17 +21,20 @@ extension InventoryCopy {
     private static func message(for error: InventoryCommandError) -> String {
         switch error {
         case .fieldConflict(let field, _, _, let source, _, _):
-            "\(fieldName(field)) was changed on \(source.inSentence) first, so nothing changed here."
+            return
+                "\(fieldName(field)) was changed on \(source.inSentence) first, so nothing changed here."
         case .codeCollision(_, let heldByName, let suggestedCode):
-            "That code is already on \(heldByName). \(suggestedCode) is free."
+            return "That code is already on \(heldByName). \(suggestedCode) is free."
         case .deletedElsewhere(let source, _):
-            "This was deleted on \(source.inSentence), so nothing changed."
-        case .rejected(let reason, _):
-            message(for: reason)
+            return "This was deleted on \(source.inSentence), so nothing changed."
+        case .rejected(let reason, let serverMessage):
+            let trimmedMessage = serverMessage.trimmingCharacters(
+                in: .whitespacesAndNewlines)
+            return trimmedMessage.isEmpty ? message(for: reason) : trimmedMessage
         case .nothingToUndo:
-            "There is nothing left to undo."
+            return "There is nothing left to undo."
         case .repairNotFound:
-            "That was already settled."
+            return "That was already settled."
         }
     }
 

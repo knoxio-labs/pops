@@ -6,10 +6,10 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { ButtonPrimitive } from '@pops/ui';
+import { ErrorState } from '@pops/ui';
 
 import { nudgesAct, nudgesDismiss, nudgesList } from '../cerebrum-api';
-import { unwrap } from '../cerebrum-api-helpers';
+import { CerebrumApiError, unwrap } from '../cerebrum-api-helpers';
 import { ContradictionsPanel } from '../components/ContradictionsPanel';
 import { NudgeCard } from '../components/NudgeCard';
 
@@ -29,7 +29,7 @@ function useNudgeMutations() {
 
 export function NudgesPage() {
   const nudgesInput = { status: 'pending', limit: 50 } as const;
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['cerebrum', 'nudges', 'list', nudgesInput],
     queryFn: async () => unwrap(await nudgesList({ body: nudgesInput })),
   });
@@ -40,17 +40,8 @@ export function NudgesPage() {
     return <div className="p-6 text-muted-foreground">Loading nudges...</div>;
   }
 
-  if (isError) {
-    const message =
-      (error as { message?: string } | null)?.message ?? 'An unexpected error occurred.';
-    return (
-      <div className="p-6 text-center" data-testid="nudges-error">
-        <p className="text-destructive mb-3">Failed to load nudges. {message}</p>
-        <ButtonPrimitive variant="outline" size="sm" onClick={() => void refetch()}>
-          Retry
-        </ButtonPrimitive>
-      </div>
-    );
+  if (isError && error instanceof CerebrumApiError) {
+    return <ErrorState error={error} />;
   }
 
   const nudges = data?.nudges ?? [];

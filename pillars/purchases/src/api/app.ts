@@ -19,14 +19,12 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
 import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { purchasesContract } from '../contract/rest.js';
 import { makeRequestHandler, type PurchasesApiDeps } from './handlers.js';
-import { jsonBodyErrorHandler } from './middleware/json-body-error.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
-import { unmatchedRouteHandler } from './middleware/unmatched-route.js';
-import { createRequestValidationErrorHandler } from './rest/error-mapping.js';
 import { makePurchasesRestHandlers } from './rest/handlers.js';
 
 /**
@@ -86,9 +84,11 @@ export function resolveJsonBodyLimitBytes(env: NodeJS.ProcessEnv = process.env):
 
 export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'purchases' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json({ limit: resolveJsonBodyLimitBytes() }));
-  app.use(jsonBodyErrorHandler);
+  app.use(errors.bodyParser);
 
   const handlers = makeRequestHandler(deps);
 
@@ -118,12 +118,15 @@ export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
     // own error body. Every route declaring a 400 declares `ErrorBody`, so
     // without this the document promises one shape and the server sends
     // another — see `rest/error-mapping.ts`.
-    requestValidationErrorHandler: createRequestValidationErrorHandler(),
+    requestValidationErrorHandler: (error, request, response, next) => {
+      errors.validation(error, request as Request, response, next);
+    },
   });
 
   // Mounted after the raw probes and the whole contract surface, so what
   // reaches it is a method and path nothing else claimed.
-  app.use(unmatchedRouteHandler);
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
 }

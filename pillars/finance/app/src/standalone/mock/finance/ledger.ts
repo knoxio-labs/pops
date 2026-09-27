@@ -2,7 +2,7 @@ import { ENTITY_USAGE } from '../../fixtures/entities';
 import { BUDGETS, CURRENCIES, NUDGES, WISHLIST } from '../../fixtures/overview';
 import { TAG_VOCABULARY } from '../../fixtures/rules';
 import { TRANSACTIONS, type FixtureTransaction } from '../../fixtures/transactions';
-import { created, done, notFound, ok, page } from '../respond';
+import { created, done, financeNotFound, ok, page } from '../respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
@@ -40,7 +40,7 @@ const listTransactions: MockHandler = (request) => {
 
 const transactionById: MockHandler = ({ params }) => {
   const found = TRANSACTIONS.find((t) => t.id === params['id']);
-  if (found === undefined) return notFound('transaction');
+  if (found === undefined) return financeNotFound('transaction');
   const body: TransactionsGetResponses[200] = { data: found };
   return { body };
 };
@@ -77,7 +77,7 @@ function snapshotOf(t: FixtureTransaction): TransactionsDeleteResponses[200]['sn
 
 const deleteTransaction: MockHandler = ({ params }) => {
   const found = TRANSACTIONS.find((t) => t.id === params['id']);
-  if (found === undefined) return notFound('transaction');
+  if (found === undefined) return financeNotFound('transaction');
   const body: TransactionsDeleteResponses[200] = {
     message: 'deleted',
     snapshot: snapshotOf(found),

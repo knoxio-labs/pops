@@ -288,8 +288,18 @@ describe('transactions — filters & pagination', () => {
       .catch((error: unknown) => error);
 
     const body = (failure as { body?: Record<string, unknown> }).body ?? {};
-    expect(Object.keys(body).toSorted()).toEqual(['code', 'message', 'messageKey']);
-    expect(body['messageKey']).toBe('common.validationFailed');
+    expect(Object.keys(body).toSorted()).toEqual([
+      'code',
+      'details',
+      'message',
+      'requestId',
+      'retryable',
+    ]);
+    expect(body).toMatchObject({
+      code: 'finance.request.invalid',
+      retryable: false,
+      details: { issues: expect.any(Array) },
+    });
   });
 
   it('refuses an anchor date that is not a date', async () => {

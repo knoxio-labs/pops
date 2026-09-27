@@ -104,6 +104,9 @@ extension BFMBootstrapService {
     /// whose diagnostic goes through ``BFMClientError``'s sanitiser so no
     /// request header reaches it.
     private static func failure(_ error: ClientError) -> RepositoryError {
+        if let popsError = PopsError.runtimeFailure(from: error) {
+            return BFMRepositoryFailure.repositoryError(for: popsError)
+        }
         let status = error.response?.status.code
         if status == 401 || status == 403 { return .unauthorized }
         if let gateway = gateway(status) { return gateway }

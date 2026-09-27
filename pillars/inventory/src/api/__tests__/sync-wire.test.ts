@@ -228,7 +228,12 @@ describe('item rows on the wire', () => {
       ...paperless(),
       getPaperlessStatus: () => {
         asked += 1;
-        return Promise.resolve({ configured: false, available: false, baseUrl: null });
+        return Promise.resolve({
+          configured: false,
+          available: false,
+          baseUrl: null,
+          documentCount: null,
+        });
       },
     };
     const target = harness(counting);
@@ -322,6 +327,6 @@ describe('GET /sync/items/:id/events', () => {
       .set(PROTOCOL)
       .query({ cursor: page.body.nextCursor });
     expect(response.status).toBe(400);
-    expect(response.body).toMatchObject({ code: 'invalid_cursor' });
+    expect(response.body).toMatchObject({ code: 'inventory.sync.invalid_cursor' });
   });
 });

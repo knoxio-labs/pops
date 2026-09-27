@@ -132,7 +132,7 @@ describe('FailedTab', () => {
     });
   });
 
-  it('rolls back optimistic removal + surfaces error toast on Retry failure', async () => {
+  it('rolls back optimistic removal without a duplicate local error toast', async () => {
     mockList([makeRow()]);
     mockCodes(['InstagramRateLimited']);
     let rejectRetry: (e: unknown) => void = () => {};
@@ -153,11 +153,29 @@ describe('FailedTab', () => {
       expect(screen.queryByRole('button', { name: /Retry ingest/i })).not.toBeInTheDocument();
     });
     rejectRetry(new Error('queue down'));
-    // Rollback: the row comes back + the error toast surfaces.
+    // Rollback: the row comes back; the shell owns the failure toast.
     expect(await screen.findByRole('button', { name: /Retry ingest/i })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText(/Couldn’t re-queue: queue down/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Couldn’t re-queue: queue down/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the API error code when the failed-ingest list cannot load', async () => {
+    inboxListFailedMock.mockResolvedValue({
+      error: {
+        code: 'food.inbox.failed_unavailable',
+        message: 'Failed ingests unavailable',
+        requestId: 'req-failed',
+        retryable: true,
+      },
+      response: { status: 503 },
     });
+    render(
+      <Wrapper>
+        <FailedTab now={FIXED_NOW} />
+      </Wrapper>
+    );
+    expect(await screen.findByLabelText('Error code')).toHaveTextContent(
+      'food.inbox.failed_unavailable'
+    );
   });
 
   it('renders the empty state when listFailed returns []', async () => {

@@ -359,7 +359,10 @@ describe('ReconcileQueuePage — decisions', () => {
     const user = userEvent.setup();
     reconcileConfirmMock.mockResolvedValue({
       data: undefined,
-      error: { message: 'No link between charge charge-1 and tx-1.', code: 'link_not_found' },
+      error: {
+        message: 'No link between charge charge-1 and tx-1.',
+        code: 'purchases.reconciliation.link_not_found',
+      },
     });
     queueReturns([entryAt(1)]);
     renderQueue();

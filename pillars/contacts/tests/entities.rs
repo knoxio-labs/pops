@@ -169,7 +169,9 @@ async fn duplicate_name_create_is_a_409() {
     create_contact(&app, json!({ "name": "Dup" })).await;
     let (status, body) = send(&app, post("/entities", json!({ "name": "Dup" }))).await;
     assert_eq!(status, StatusCode::CONFLICT);
-    assert_eq!(body["code"], "ConflictError");
+    assert_eq!(body["code"], "contacts.entity.name_conflict");
+    assert_eq!(body["retryable"], false);
+    assert!(body["requestId"].as_str().is_some());
     assert!(body["message"].as_str().unwrap().contains("Dup"));
 }
 
@@ -184,7 +186,7 @@ async fn case_variant_name_create_is_a_409() {
         StatusCode::CONFLICT,
         "a case-variant create collides with the existing contact: {body}"
     );
-    assert_eq!(body["code"], "ConflictError");
+    assert_eq!(body["code"], "contacts.entity.name_conflict");
 
     let (status, list) = send(&app, get("/entities")).await;
     assert_eq!(status, StatusCode::OK);
@@ -198,8 +200,9 @@ async fn case_variant_name_create_is_a_409() {
 #[tokio::test]
 async fn empty_name_create_is_a_400() {
     let app = app().await;
-    let (status, _) = send(&app, post("/entities", json!({ "name": "   " }))).await;
+    let (status, body) = send(&app, post("/entities", json!({ "name": "   " }))).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["code"], "contacts.request.invalid");
 }
 
 #[tokio::test]
@@ -237,7 +240,66 @@ async fn get_unknown_id_is_a_404() {
     let app = app().await;
     let (status, body) = send(&app, get("/entities/nope")).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body["code"], "NotFoundError");
+    assert_eq!(body["code"], "contacts.resource.not_found");
+    assert_eq!(body["retryable"], false);
+    assert!(body["requestId"].as_str().is_some());
+}
+
+#[tokio::test]
+async fn failure_echoes_incoming_request_id_in_header_and_body() {
+    let app = app().await;
+    let request = Request::builder()
+        .uri("/entities/nope")
+        .header("x-request-id", "edge-request-42")
+        .body(Body::empty())
+        .unwrap();
+
+    let (status, headers, bytes) = send_raw(&app, request).await;
+    let body: Value = serde_json::from_slice(&bytes).unwrap();
+
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(headers["x-request-id"], "edge-request-42");
+    assert_eq!(body["requestId"], "edge-request-42");
+}
+
+#[tokio::test]
+async fn failure_mints_request_id_when_header_is_absent() {
+    let app = app().await;
+    let (status, headers, bytes) = send_raw(&app, get("/entities/nope")).await;
+    let body: Value = serde_json::from_slice(&bytes).unwrap();
+    let request_id = body["requestId"].as_str().expect("request id in body");
+
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(headers["x-request-id"], request_id);
+    uuid::Uuid::parse_str(request_id).expect("minted request id is a UUID");
+}
+
+#[tokio::test]
+async fn database_failure_is_generic_and_keeps_request_id() {
+    let (app, pool) = app_with_pool().await;
+    pool.close().await;
+    let request = Request::builder()
+        .uri("/entities")
+        .header("x-request-id", "failed-db-request")
+        .body(Body::empty())
+        .unwrap();
+
+    let (status, headers, bytes) = send_raw(&app, request).await;
+    let body: Value = serde_json::from_slice(&bytes).unwrap();
+
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(headers["x-request-id"], "failed-db-request");
+    assert_eq!(
+        body,
+        json!({
+            "code": "contacts.internal",
+            "message": "An unexpected error occurred",
+            "requestId": "failed-db-request",
+            "retryable": false
+        })
+    );
+    assert!(!String::from_utf8_lossy(&bytes).contains("pool"));
+    assert!(!String::from_utf8_lossy(&bytes).contains("sqlx"));
 }
 
 #[tokio::test]

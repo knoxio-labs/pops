@@ -53,7 +53,10 @@ internal struct InventoryDestinationPickerSheet: View {
         self.effect = effect
         self.isLoading = state.isLoading
         self.onChoose = onChoose
-        _path = State(initialValue: state.path)
+        _path = State(
+            initialValue: state.path.isEmpty
+                ? InventoryDestinationPickerState.initialPath(for: tree, offered: offered)
+                : state.path)
         _query = State(initialValue: state.query)
         _filter = State(initialValue: state.filter)
         _selection = State(initialValue: state.selection)

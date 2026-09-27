@@ -41,6 +41,7 @@ internal enum Catalog {
     /// offered; then pairing, which a paired phone never sees again.
     static let surfaces: [DesignSurface] =
         ShellSurfaces.surfaces
+        + ErrorPresentationSurfaces.surfaces
         + TransactionsSurfaces.surfaces
         + [PurchasesHomeSurface.surface]
         + [PurchasesArchiveSurface.surface]

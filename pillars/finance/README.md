@@ -44,6 +44,16 @@ single source of truth:
 `src/contract/api-types.generated.ts`. No hand-authored OpenAPI, no
 hand-authored paths; CI gates on drift.
 
+Every non-2xx response uses ADR-054's flat error envelope: `code`, `message`,
+`requestId`, `retryable`, and optional `details`. Finance codes are registered
+under the dotted lowercase `finance.*` namespace. Incoming `X-Request-Id`
+values are preserved; otherwise the API mints one and returns it in both the
+response header and body. Unknown failures are logged with that ID and exposed
+only as `finance.internal`, without implementation details or stack traces.
+Contract routes declare the shared envelope for request validation, auth,
+not-found, conflict, oversized-body, internal, and dependency-unavailable
+statuses; domain routes additionally declare `412` or `422` where applicable.
+
 ## Who may call it
 
 Auth splits by whether the caller presents a credential, and the split is the

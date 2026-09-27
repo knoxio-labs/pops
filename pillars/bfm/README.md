@@ -348,9 +348,10 @@ see that pillar's README. Nothing serves the bytes `receiptUri` names yet
 (POPS-2475), so the phone can key a cache on it and cannot draw it.
 
 **Edit conflicts preserve machine-readable reasons.** BFM carries the
-producer's error code through its gateway. Purchase updates distinguish
-`purchase_locked` from `purchase_stale` on a `409`; other conflict codes map to
-`upstream_conflict`. These decisions do not depend on the producer's message.
+producer's ADR-054 error envelope through its gateway, including its code,
+message, retry decision and request id. BFM adds
+`details.upstream = { pillar, status }`, so purchase updates retain the exact
+producer refusal while still identifying the failed hop.
 
 **Detail carries every receipt page.** `receiptUris` contains all receipt-kind
 purchase document URIs in the order purchases returns them, or an empty array
@@ -425,16 +426,10 @@ asserted in `src/api/__tests__/mobile-receipt-drafts.test.ts`,
   20mb. Because bfm's own ceiling sits strictly under purchases', a real phone
   can never actually make purchases answer with its own `413` through this
   route — bfm is always the one that refuses first. If purchases' `413` is
-  reachable at all today, it is not modeled as its own outcome: the SDK's
-  cross-pillar mapping (`libs/sdk/src/client/rest-call.ts`) has no case for it,
-  so it folds into the same `unavailable` a dead `purchases` process produces —
-  `503 upstream_unavailable, retryable: true` on the mobile surface — which is
-  wrong in the same direction as retrying a request that will never fit. That
-  gap is pinned by a live-seam test
-  (`src/api/purchases/__tests__/receipt-upload.live-seam.test.ts`, "a body
-  purchases refuses at its own ceiling") rather than fixed here, since the
-  mapping it exposes is shared by every cross-pillar call in the repo, not
-  specific to receipts.
+  reachable at all today, the SDK preserves it as a producer refusal. This
+  route has no mobile `413`, so BFM answers `502` while retaining the
+  producer's ADR-054 code, message, retry decision and request id, and records
+  the original `413` under `details.upstream.status`.
 - **The capture block travels unchanged too, and is judged nowhere.** The body
   may carry `capture`: the handset's own clock at the shutter (`capturedAt`,
   offset required), the IANA zone it was in, and where it was standing

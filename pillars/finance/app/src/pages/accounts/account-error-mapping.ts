@@ -1,5 +1,7 @@
 import { type UseFormReturn } from 'react-hook-form';
 
+import { toastError } from '@pops/ui';
+
 import { FinanceApiError } from '../../finance-api-helpers.js';
 
 import type { AccountFormValues } from './types';
@@ -40,4 +42,22 @@ export function mapAccountApiError(err: unknown, form: UseFormReturn<AccountForm
     return true;
   }
   return false;
+}
+
+/** Maps account validation failures to the form and presents every other failure consistently. */
+export function handleAccountApiError(
+  error: unknown,
+  form: UseFormReturn<AccountFormValues>
+): void {
+  if (mapAccountApiError(error, form)) return;
+  toastError(
+    error instanceof FinanceApiError
+      ? error
+      : new FinanceApiError({
+          code: 'web.client.unknown',
+          kind: 'client',
+          message: 'Failed to save account',
+          retryable: false,
+        })
+  );
 }

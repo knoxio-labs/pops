@@ -1,62 +1,61 @@
-/**
- * HTTP-shaped domain errors used by the food pillar's REST handlers.
- *
- * Each error carries an optional `messageKey` so the frontend can resolve a
- * localised string while the EN-AU fallback lives in `message`; `mapHttpError`
- * plumbs it through the REST error envelope.
- */
-export class HttpError extends Error {
-  /** i18n key the frontend uses to resolve a localised message. */
-  public readonly messageKey?: string;
+import { defineErrors, PopsError } from '@pops/pillar-express';
 
-  constructor(
-    public readonly statusCode: number,
-    message: string,
-    public readonly details?: unknown,
-    messageKey?: string
-  ) {
-    super(message);
-    this.name = 'HttpError';
-    this.messageKey = messageKey;
+/** Registered domain failures emitted by the food REST handlers. */
+export const foodDomainErrors = defineErrors('food', {
+  not_found: {
+    area: 'resource',
+    status: 404,
+    message: 'The requested resource was not found.',
+    retryable: false,
+  },
+  conflict: {
+    area: 'resource',
+    status: 409,
+    message: 'The request conflicts with existing state.',
+    retryable: false,
+  },
+  failure: {
+    area: 'internal',
+    status: 500,
+    message: 'The service could not complete the request.',
+    retryable: false,
+  },
+});
+
+function codeForStatus(status: number): string {
+  if (status === 400) return 'food.request.invalid';
+  if (status === 404) return 'food.resource.not_found';
+  if (status === 409) return 'food.resource.conflict';
+  return 'food.internal.failure';
+}
+
+/** A food domain failure serialized by the shared ADR-054 middleware. */
+export class HttpError extends PopsError {
+  readonly statusCode: number;
+
+  constructor(statusCode: number, message: string, _details?: unknown, _messageKey?: string) {
+    super({ code: codeForStatus(statusCode), status: statusCode, message, retryable: false });
+    this.statusCode = statusCode;
   }
 }
 
+/** A requested food resource does not exist. */
 export class NotFoundError extends HttpError {
   constructor(resource: string, id: string) {
-    super(404, `${resource} '${id}' not found`, undefined, 'common.notFound');
-    this.name = 'NotFoundError';
+    super(404, `${resource} '${id}' not found`);
   }
 }
 
+/** A food request is structurally valid but invalid for the domain. */
 export class ValidationError extends HttpError {
-  /**
-   * `message` comes first, and is required, because it is the only one of the
-   * two the client ever sees: the envelope `mapHttpError` builds carries
-   * `message` and `code`, and never `details`.
-   *
-   * Until POPS-3043 this class took `(details: unknown)` alone, so every 400 it
-   * raised said `Validation failed` whatever the caller wrote — there was no
-   * argument that could change it. Six pillars declared it that way and 22
-   * call sites passed an explanation the client never saw; POPS-3037 fixed the
-   * finance half, and POPS-3005 first found the shape.
-   *
-   * Do not give `message` a default: a default is exactly how the generic
-   * string comes back by omission. Do not "tidy" the order back either —
-   * `details: unknown` cannot refuse a string, so a swapped call compiles,
-   * reads correctly, and returns a 400 body reading `Validation failed`.
-   *
-   * @param message What the client is shown. Required.
-   * @param details Structured context for logs. It does NOT reach the client.
-   */
   constructor(message: string, details?: unknown) {
-    super(400, message, details, 'common.validationFailed');
-    this.name = 'ValidationError';
+    super(400, message, details);
   }
 }
 
+/** A food write conflicts with existing domain state. */
 export class ConflictError extends HttpError {
   constructor(message: string) {
-    super(409, message, undefined, 'common.conflict');
-    this.name = 'ConflictError';
+    super(409, message);
   }
 }

@@ -94,7 +94,6 @@ function useCreateDimension(args: {
       args.setDialogOpen(false);
       toast.success('Dimension created');
     },
-    onError: (err) => toast.error(err.message),
   });
 
   const handleCreateDimension = useCallback(

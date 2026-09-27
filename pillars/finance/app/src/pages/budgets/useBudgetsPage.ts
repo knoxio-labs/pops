@@ -41,7 +41,6 @@ function useBudgetMutations(args: UseBudgetMutationsArgs) {
       toast.success('Budget created');
       args.setIsDialogOpen(false);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   const updateMutation = useMutation({
@@ -52,7 +51,6 @@ function useBudgetMutations(args: UseBudgetMutationsArgs) {
       args.setIsDialogOpen(false);
       args.setEditingBudget(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   const deleteMutation = useMutation({
@@ -62,7 +60,6 @@ function useBudgetMutations(args: UseBudgetMutationsArgs) {
       toast.success('Budget deleted');
       args.setDeletingId(null);
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   return { createMutation, updateMutation, deleteMutation };

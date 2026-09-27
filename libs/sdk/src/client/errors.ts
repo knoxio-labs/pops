@@ -62,10 +62,12 @@ type ProducerFailureDetails = {
   message?: string;
   code?: string;
   details?: Record<string, unknown>;
+  requestId?: string;
+  retryable?: boolean;
 };
 
 export type CallFailure =
-  | { kind: 'unavailable'; pillar: string }
+  | ({ kind: 'unavailable'; pillar: string } & ProducerFailureDetails)
   | { kind: 'degraded'; pillar: string; reason: 'reconciling' }
   | {
       kind: 'contract-mismatch';

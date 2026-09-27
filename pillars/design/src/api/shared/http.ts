@@ -3,9 +3,16 @@
  */
 import type { Request, Response } from 'express';
 
-/** Error envelope. One field, because the overlay only ever shows the text. */
-export function fail(res: Response, status: number, error: string): void {
-  res.status(status).json({ error });
+import type { ErrorBody } from '@pops/types';
+
+/** Return a user-safe ADR-054 error envelope from a design API route. */
+export function fail(res: Response, status: number, code: string, message: string): void {
+  const requestId: unknown = res.locals['requestId'];
+  if (typeof requestId !== 'string' || requestId.length === 0) {
+    throw new Error('Design API error response is missing request context.');
+  }
+  const body: ErrorBody = { code, message, requestId, retryable: false };
+  res.status(status).json(body);
 }
 
 /**

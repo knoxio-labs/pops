@@ -419,7 +419,7 @@ describe('runtime catalogue update — search and containment', () => {
       },
     });
     expect(refused.status, JSON.stringify(refused.body)).toBe(409);
-    expect(refused.body.code).toBe('migration_containment_in_use');
+    expect(refused.body.code).toBe('inventory.catalogue.migration_containment_in_use');
     // The rejected publish changed nothing: the crate still holds its widget.
     expect(await childrenOf(crate.id)).toEqual([crateWidget.id]);
     expect(await containerIdOf(crateWidget.id)).toBe(crate.id);

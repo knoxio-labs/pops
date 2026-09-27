@@ -27,6 +27,7 @@ extension View {
 @MainActor
 internal struct PurchaseCapturePresentationModifier: ViewModifier {
     @State private var flow: PurchaseCaptureFlow
+    @Environment(\.errorPresenter) private var errorPresenter
     private let isAvailable: Bool
     private let merchantDirectory: PurchaseCaptureMerchantDirectory
 
@@ -92,10 +93,10 @@ internal struct PurchaseCapturePresentationModifier: ViewModifier {
                 if let handEntry = flow.handEntry {
                     PurchaseHandEntryView(
                         model: handEntry,
-                        searchMerchants: merchantDirectory.search,
-                        merchantPreview: merchantDirectory.merchant,
-                        addressesForMerchant: merchantDirectory.addresses,
-                        addressPreview: merchantDirectory.address,
+                        searchMerchants: merchantPresentation.search,
+                        merchantPreview: merchantPresentation.merchant,
+                        addressesForMerchant: merchantPresentation.addresses,
+                        addressPreview: merchantPresentation.address,
                         onFinished: { flow.finish(savedIDs: $0) })
                 }
             }
@@ -141,14 +142,20 @@ internal struct PurchaseCapturePresentationModifier: ViewModifier {
             if let review = flow.review {
                 PurchaseReviewView(
                     model: review,
-                    searchMerchants: merchantDirectory.search,
-                    merchantPreview: merchantDirectory.merchant,
-                    addressesForMerchant: merchantDirectory.addresses,
-                    addressPreview: merchantDirectory.address,
+                    searchMerchants: merchantPresentation.search,
+                    merchantPreview: merchantPresentation.merchant,
+                    addressesForMerchant: merchantPresentation.addresses,
+                    addressPreview: merchantPresentation.address,
                     onCancel: flow.cancel,
                     onFinished: { flow.finish(savedIDs: $0) })
             }
         }
+    }
+
+    private var merchantPresentation: PurchaseCaptureMerchantPresentation {
+        PurchaseCaptureMerchantPresentation(
+            directory: merchantDirectory,
+            errorPresenter: errorPresenter)
     }
 
     private var cameraRefusalPresented: Binding<Bool> {

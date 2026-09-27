@@ -306,6 +306,18 @@ importers:
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../sdk
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../types
+      '@ts-rest/core':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@types/node@24.13.3)
+      '@ts-rest/express':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.13.3))(express@5.2.1(supports-color@10.2.2))
+      zod:
+        specifier: ^4.6.2
+        version: 4.6.5
     devDependencies:
       '@types/express':
         specifier: ^5.0.4
@@ -893,6 +905,9 @@ importers:
 
   pillars/bfm:
     dependencies:
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -1051,6 +1066,9 @@ importers:
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -1260,9 +1278,15 @@ importers:
       '@pops/locales':
         specifier: workspace:*
         version: link:../../libs/locales
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../../libs/types
       '@pops/ui':
         specifier: workspace:*
         version: link:../../libs/ui
@@ -1423,6 +1447,9 @@ importers:
 
   pillars/documents:
     dependencies:
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -1708,6 +1735,9 @@ importers:
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -2156,6 +2186,9 @@ importers:
 
   pillars/lists:
     dependencies:
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -2323,9 +2356,15 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(supports-color@10.2.2)(zod@4.6.5)
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../../libs/types
       dotenv:
         specifier: ^18.0.1
         version: 18.0.1
@@ -2354,6 +2393,9 @@ importers:
 
   pillars/media:
     dependencies:
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -2530,6 +2572,9 @@ importers:
 
   pillars/orchestrator:
     dependencies:
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -2740,6 +2785,9 @@ importers:
 
   pillars/registry:
     dependencies:
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk

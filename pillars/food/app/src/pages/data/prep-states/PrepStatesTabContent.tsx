@@ -9,7 +9,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
 import {
   Button,
@@ -49,7 +48,6 @@ export function PrepStatesTabContent() {
       void qc.invalidateQueries({ queryKey: ['food', 'prepStates', 'list'] });
       setAddOpen(false);
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   const rows = list.data?.items ?? [];

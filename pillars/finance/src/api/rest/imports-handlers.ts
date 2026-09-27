@@ -65,14 +65,11 @@ function requireProcessSession(
     throw new NotFoundError('Import session', sessionId);
   }
   if (progress.status !== 'completed' || !progress.result) {
-    throw new PreconditionError('Import session not ready', 'finance.import.sessionNotReady');
+    throw new PreconditionError('Import session not ready');
   }
   const result = progress.result;
   if (!isProcessImportOutput(result)) {
-    throw new PreconditionError(
-      'Import session result is not a process result',
-      'finance.import.sessionNotProcessResult'
-    );
+    throw new PreconditionError('Import session result is not a process result');
   }
   return { progress, result };
 }

@@ -1,4 +1,30 @@
 {
+  "components": {
+    "schemas": {
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "details": {},
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "requestId", "retryable"],
+        "type": "object"
+      }
+    }
+  },
   "info": {
     "description": "OpenAPI projection of the documents pillar's REST contract. Authored as a ts-rest contract (src/contract/rest.ts); consumed by the pillar SDK to build its operationId route map.",
     "title": "@pops/documents",
@@ -63,20 +89,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
@@ -86,20 +99,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
@@ -169,20 +169,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
@@ -216,9 +203,15 @@
                         },
                         "configured": {
                           "type": "boolean"
+                        },
+                        "documentCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
                         }
                       },
-                      "required": ["configured", "available", "baseUrl"],
+                      "required": ["configured", "available", "baseUrl", "documentCount"],
                       "type": "object"
                     }
                   },

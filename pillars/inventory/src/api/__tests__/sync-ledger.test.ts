@@ -367,9 +367,9 @@ describe('device sync ledger', () => {
     const body = report();
     const noKey = await postLedger(body, 'phone-1', "Joao's iPhone", PROTOCOL);
     expect(noKey.status).toBe(403);
-    expect(noKey.body).toEqual({
+    expect(noKey.body).toMatchObject({
       message: 'A ledger report must come from a device',
-      code: 'device_actor_required',
+      code: 'inventory.sync.device_actor_required',
     });
 
     const service = await postLedger(body, 'phone-1', "Joao's iPhone", {
@@ -377,7 +377,12 @@ describe('device sync ledger', () => {
       'x-api-key': SYNC_KEY,
     });
     expect(service.status).toBe(403);
-    expect(service.body).toEqual(noKey.body);
+    expect(service.body).toMatchObject({
+      code: noKey.body.code,
+      message: noKey.body.message,
+      retryable: noKey.body.retryable,
+      requestId: expect.any(String),
+    });
     expect((await readLedger()).devices).toEqual([]);
   });
 

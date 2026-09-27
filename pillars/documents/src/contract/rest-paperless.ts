@@ -42,6 +42,7 @@ export const documentsPaperlessContract = c.router({
           configured: z.boolean(),
           available: z.boolean(),
           baseUrl: z.string().nullable(),
+          documentCount: z.number().int().nonnegative().nullable(),
         }),
       }),
     },

@@ -105,6 +105,20 @@ mise setup             # Install dependencies + tools
 mise tasks             # Discover the available dev/test/db tasks
 ```
 
+Use `mise check` for a change: it lints and checks formatting across the workspace,
+then typechecks and tests the changed units and their dependents. Preview the
+selection with `mise check -- --plan`; request the entire workspace with
+`mise check -- --all`. Full typechecking is also available as `mise typecheck`.
+Successful typechecks can be reused only while their exact inputs are unchanged.
+
+`mise dev -- pillars/shell pillars/finance` starts the selected services and their
+library watchers together. For source-mode UI feedback, set
+`POPS_PILLAR_UI_SOURCE=finance` when starting the shell. The normal API services
+still supply data. Alternatively, `mise dev:ui -- --pillar finance` watches and
+publishes validated remote bundles for the running shell. See
+[local development tooling](scripts/local-dev/README.md) for scoping, cache
+invalidation, setup and supervisor behaviour.
+
 For local development, the dev Docker Compose stack (`infra/docker-compose.dev.yml`) builds and runs every pillar plus the shell from source. Each pillar applies its own migrations on startup and owns its own SQLite file:
 
 ```bash

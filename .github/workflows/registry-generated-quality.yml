@@ -1,4 +1,5 @@
 name: Registry Generated Quality
+run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
 
 # Preserves the module-registry `generated.ts` drift gate after
 # `module-registry-quality.yml` is folded into `unit-quality.yml`. unit-quality
@@ -28,6 +29,7 @@ on:
       - ".github/workflows/registry-generated-quality.yml"
       - ".github/actions/**"
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "libs/module-registry/**"
       - "libs/types/**"
@@ -39,15 +41,8 @@ on:
   # lane re-runs this for every entry.
   merge_group:
 
-# cancel-in-progress is deliberately OFF — see the matching note in
-# ios-quality.yml and the CONVERGENCE comment in ci-gate.yml: cancelling a
-# superseded run and admitting the new one is not atomic, and the race can
-# drop the new run's registration entirely rather than merely delaying it,
-# which leaves the required `CI Gate` check stuck `in_progress`. A superseded
-# run is left to finish instead; `queue: single` (the default) still caps
-# this group at one pending run.
 concurrency:
-  group: registry-generated-${{ github.workflow }}-${{ github.ref }}
+  group: registry-generated-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 env:

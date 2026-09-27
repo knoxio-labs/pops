@@ -9,6 +9,10 @@
  */
 import { z } from 'zod';
 
+import { ErrorBodySchema } from '@pops/types';
+
+export { ErrorBodySchema } from '@pops/types';
+
 /** String identity (uuid style). Path + body alike. */
 export const NonEmptyString = z.string().min(1);
 
@@ -31,13 +35,6 @@ export const PaginationMetaSchema = z.object({
   hasMore: z.boolean(),
 });
 
-/** Error envelope. `messageKey` carries the i18n key the FE resolves to a localised string. */
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
-  messageKey: z.string().optional(),
-});
-
 /** Bare `{ message }` body returned by delete-style mutations. */
 export const MessageSchema = z.object({ message: z.string() });
 
@@ -49,8 +46,13 @@ export const MessageSchema = z.object({ message: z.string() });
  */
 export const ERR_RESPONSES = {
   400: ErrorBodySchema,
+  401: ErrorBodySchema,
+  403: ErrorBodySchema,
   404: ErrorBodySchema,
   409: ErrorBodySchema,
+  413: ErrorBodySchema,
+  500: ErrorBodySchema,
+  503: ErrorBodySchema,
 } as const;
 
 /**

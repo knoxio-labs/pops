@@ -49,6 +49,12 @@ describe('POST /api/threads: validation', () => {
     const res = await create(app, { body: '   ' });
 
     expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      code: 'design.request.invalid',
+      message: 'The thread request is incomplete.',
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it('400s a non-string field rather than coercing it', async () => {

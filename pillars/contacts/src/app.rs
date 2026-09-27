@@ -1,6 +1,7 @@
 //! Router assembly + shared application state.
 
 use axum::http::header::CONTENT_TYPE;
+use axum::middleware;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
@@ -35,6 +36,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(crate::entities::addresses_routes::router())
         .merge(crate::search::router())
         .with_state(state)
+        .layer(middleware::from_fn(crate::api::request_id_layer))
 }
 
 #[cfg(test)]

@@ -72,7 +72,7 @@ const ALL_NS = Object.keys(EN_AU_BUNDLES).toSorted();
  * Namespaces whose catalog exists on disk but is deliberately not registered
  * with i18next. Anything else appearing here is drift, not a decision.
  */
-const UNREGISTERED_NS = ['errors'];
+const UNREGISTERED_NS: readonly string[] = [];
 
 const REGISTERED_NS = [...NAMESPACES].toSorted();
 
@@ -123,6 +123,7 @@ describe('i18n initialization', () => {
     for (const locale of SUPPORTED_LOCALES) {
       expect(Object.keys(i18n.store.data[locale] ?? {}).toSorted()).toEqual([
         'common',
+        'errors',
         'navigation',
         'shell',
         'ui',
@@ -272,11 +273,17 @@ describe('translation lookups', () => {
     expect(i18n.t('ui:fileUpload.dragSingle')).toBe('Drag a file here, or click to browse');
   });
 
+  it('resolves shared error presentation keys', () => {
+    expect(i18n.t('errors:web.error.copyDetails')).toBe('Copy details');
+    expect(i18n.t('errors:web.client.unknown')).toBe('Something went wrong');
+  });
+
   it('resolves pt-BR translations', async () => {
     await i18n.changeLanguage('pt-BR');
     expect(i18n.t('common:save')).toBe('Salvar');
     expect(i18n.t('shell:settings')).toBe('Configurações');
     expect(i18n.t('navigation:finance')).toBe('Finanças');
+    expect(i18n.t('errors:web.error.retry')).toBe('Tentar novamente');
   });
 });
 

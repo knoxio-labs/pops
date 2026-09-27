@@ -91,7 +91,9 @@ const DRAFT_CONFLICT_RECOVERY =
  */
 export function mapDraftCallResult<T>(result: CallResult<T>, scope?: string): CallToolResult {
   const mapped = mapCallResult(result, scope);
-  if (result.kind !== 'conflict' || result.code !== 'catalogue_draft_conflict') return mapped;
+  if (result.kind !== 'conflict' || result.code !== 'inventory.catalogue.draft_conflict') {
+    return mapped;
+  }
   const [first] = mapped.content;
   const reason = first?.type === 'text' ? first.text : 'Catalogue draft version conflict.';
   return toolError(`${reason}\n${DRAFT_CONFLICT_RECOVERY}`);

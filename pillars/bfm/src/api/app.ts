@@ -21,8 +21,11 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
+
 import {
   MOBILE_INVENTORY_MEDIA_MAX_BYTES,
+  MOBILE_INVENTORY_LEDGER_MAX_BYTES,
   MOBILE_INVENTORY_MUTATIONS_MAX_BYTES,
 } from '../contract/rest-mobile-inventory.js';
 import { MOBILE_UPLOAD_MAX_BYTES } from '../contract/rest-schemas.js';
@@ -37,6 +40,7 @@ import { createIdentityMiddleware } from './middleware/identity.js';
 import { createMobileNoStore } from './mobile-no-store.js';
 import {
   CHALLENGE_PATH,
+  MOBILE_INVENTORY_LEDGER_PATH,
   MOBILE_INVENTORY_MEDIA_UPLOAD_PATH,
   MOBILE_INVENTORY_MUTATIONS_PATH,
   MOBILE_PATH_PREFIX,
@@ -103,7 +107,9 @@ export interface CreateBfmApiAppOptions {
 
 export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOptions = {}): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'bfm' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
 
   // FIRST, ahead of everything, including the guard.
   //
@@ -188,6 +194,8 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
     express.json({ limit: MOBILE_INVENTORY_MUTATIONS_MAX_BYTES })
   );
 
+  app.use(MOBILE_INVENTORY_LEDGER_PATH, express.json({ limit: MOBILE_INVENTORY_LEDGER_MAX_BYTES }));
+
   // A photo's bytes, base64 in JSON, on the same footing as the receipt
   // upload's own mount above — this is the outer envelope limit only; the
   // authoritative 8 MB cap on the DECODED bytes is enforced in the handler,
@@ -203,7 +211,7 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // reaches it. `express.json()` throws before any route matches, so its
   // refusal reaches an error handler rather than a handler — and left to
   // Express's default that is a `400` with an empty body, not the
-  // `invalid_request` these routes declare.
+  // `bfm.request.invalid` these routes declare.
   app.use(createJsonBodyErrorHandler());
 
   app.get('/openapi', (_req: Request, res: Response) => {

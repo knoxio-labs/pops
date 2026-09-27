@@ -38,6 +38,7 @@ export function useMarkCookedMutation(args: Args): Result {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: MarkCookedInput) => unwrap(await cookMarkCooked({ body: input })),
     onSuccess: (result, input) => {
       if (result.ok) {

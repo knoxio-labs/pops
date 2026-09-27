@@ -6,6 +6,9 @@
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ErrorState } from '@pops/ui';
+
+import { FoodApiError } from '../../food-api-helpers.js';
 import { DEFAULT_SINCE_DAYS } from './inbox-types.js';
 import { RejectedFilters, type RejectedFiltersState } from './RejectedFilters.js';
 import { RejectedRowCard } from './RejectedRow.js';
@@ -39,11 +42,7 @@ export function RejectedTab({ initialFilters, now }: Props = {}): ReactElement {
         t={t}
       />
       {isLoading && <p className="text-sm text-muted-foreground">{t('inbox.rejected.loading')}</p>}
-      {isError && (
-        <p className="text-sm text-destructive">
-          {t('inbox.rejected.error', { message: error?.message ?? '' })}
-        </p>
-      )}
+      {isError && error instanceof FoodApiError && <ErrorState error={error} />}
       {!isLoading && !isError && rows.length === 0 && (
         <p className="rounded-md border bg-card p-6 text-sm text-muted-foreground">
           {t('inbox.rejected.empty')}

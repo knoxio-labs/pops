@@ -1,5 +1,5 @@
 /**
- * Which paths answer `{ code: 'invalid_request', message }`, and the body
+ * Which paths answer an ADR-054 `bfm.request.invalid` envelope, and the body
  * itself.
  *
  * Shared by two error handlers that reshape two different failures on the
@@ -10,9 +10,6 @@
  * and ts-rest's/Express's native one for the other.
  */
 import { DEVICE_FACING_PATHS, MOBILE_PATH_PREFIX } from '../paths.js';
-
-import type { DeviceInvalidRequestError } from '../../contract/rest-device-schemas.js';
-import type { MobileRequestError } from '../../contract/rest-schemas.js';
 
 /**
  * All either handler reads off the request. Declared structurally rather than
@@ -27,13 +24,8 @@ export type PathOnlyRequest = { readonly path: string };
  * routes' `MobileRequestErrorSchema` and the device routes' own 400. The two
  * are independent shapes that happen to agree on this value, so annotating it
  * twice is what keeps them from drifting apart silently: drop
- * `invalid_request` from either and this stops compiling.
+ * `bfm.request.invalid` from either and this stops compiling.
  */
-export const INVALID_REQUEST: MobileRequestError & DeviceInvalidRequestError = {
-  code: 'invalid_request',
-  message: 'This request does not match what the server accepts.',
-};
-
 function isUnderPrefix(path: string, prefix: string): boolean {
   // Whole-segment match, the same rule `app.use` applies when mounting the
   // perimeter — so `/mobiles` is not treated as `/mobile`.

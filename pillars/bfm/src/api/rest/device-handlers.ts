@@ -17,9 +17,9 @@
  * status in `contract/rest-device-schemas.ts`. This file is the mapping and
  * nothing more.
  */
-import { DEVICE_REVOKED_ERROR } from '../../contract/rest-schemas.js';
 import { completePairingExchange } from '../auth/pairing-exchange.js';
 import { completeRefreshExchange } from '../auth/refresh-exchange.js';
+import { bfmErrorBody, invalidRequestBody } from '../errors.js';
 
 import type { KeyObject } from 'node:crypto';
 
@@ -87,14 +87,7 @@ export function makeDeviceHandlers(deps: DeviceHandlerDeps) {
       if (result.outcome === 'invalid-key') {
         return {
           status: 400 as const,
-          body: {
-            code: 'invalid_request' as const,
-            // Names the field and the expectation, and nothing about the
-            // bytes. The app author needs to know which of the four fields is
-            // wrong; the parser's reason would add only what a malformed key
-            // already tells whoever sent it.
-            message: 'publicKey must be the base64 SPKI/DER encoding of a P-256 public key.',
-          },
+          body: invalidRequestBody(),
         };
       }
 
@@ -151,7 +144,7 @@ export function makeDeviceHandlers(deps: DeviceHandlerDeps) {
       }
 
       if (result.outcome === 'device-revoked') {
-        return { status: 403 as const, body: DEVICE_REVOKED_ERROR };
+        return { status: 403 as const, body: bfmErrorBody('device_revoked') };
       }
 
       if (result.outcome === 'rejected') {

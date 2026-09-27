@@ -1,50 +1,26 @@
-/**
- * Helpers for the generated Hey API ai SDK.
- *
- * Lives outside `src/ai-api/` because codegen wipes that
- * directory on every regeneration. Anything hand-authored here is safe.
- *
- * `unwrap` turns a Hey API `{ data, error, response }` result into its
- * data payload, throwing `AiApiError` (carrying the HTTP status)
- * on failure. The status lets call sites distinguish:
- *   - 404            → "not found"   (isNotFoundError)
- *   - 5xx / no status → "unavailable" (isUnavailableError)
- */
+import { ApiError, unwrap as unwrapApi } from '@pops/pillar-sdk/client';
 
-interface SdkErrorBody {
-  message?: unknown;
-}
+import type { ApiResult } from '@pops/pillar-sdk/client';
 
-export class AiApiError extends Error {
-  readonly status: number | undefined;
-  constructor(message: string, status: number | undefined) {
-    super(message);
-    this.name = 'AiApiError';
-    this.status = status;
-  }
-}
+export { ApiError as AiApiError };
 
-export function unwrap<T>(result: { data?: T; error?: unknown; response?: Response }): T {
-  if (result.error !== undefined) {
-    const body = result.error as SdkErrorBody;
-    const message =
-      typeof body.message === 'string' && body.message.length > 0
-        ? body.message
-        : 'ai API request failed';
-    throw new AiApiError(message, result.response?.status);
-  }
-  if (result.data === undefined) {
-    throw new AiApiError('ai API returned no data', result.response?.status);
-  }
-  return result.data;
+/** Returns an AI client payload or throws the shared browser {@link ApiError}. */
+export function unwrap<T>(result: ApiResult<T>): T {
+  return unwrapApi(result, {
+    fallbackMessage: 'ai API request failed',
+    noDataMessage: 'ai API returned no data',
+  });
 }
 
 /** True when the failure was a 404 (entity missing). */
-export function isNotFoundError(err: unknown): boolean {
-  return err instanceof AiApiError && err.status === 404;
+export function isNotFoundError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
 }
 
-/** True when the pillar was unreachable or errored server-side (no status / 5xx). */
-export function isUnavailableError(err: unknown): boolean {
-  return err instanceof AiApiError && (err.status === undefined || err.status >= 500);
+/** True when the pillar was unreachable or errored server-side. */
+export function isUnavailableError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.kind === 'offline' || error.kind === 'timeout' || error.kind === 'server')
+  );
 }

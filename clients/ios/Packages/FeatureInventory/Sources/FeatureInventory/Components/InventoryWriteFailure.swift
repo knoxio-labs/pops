@@ -1,6 +1,6 @@
 import AppCore
 
-/// Why a write or an Undo did not land, kept precise enough for the alert to
+/// Why a write or an Undo did not land, kept precise enough for the presenter to
 /// say who won a conflict or why the server refused, rather than one sentence
 /// for every failure.
 internal enum InventoryWriteFailure: Hashable, Sendable {

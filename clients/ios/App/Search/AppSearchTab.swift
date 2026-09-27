@@ -8,6 +8,7 @@ import SwiftUI
 /// The app's one universal search screen: every pillar `AppSearchModel`
 /// found searchable, asked together, behind its own `NavigationStack`.
 internal struct AppSearchTab: View {
+    @Environment(\.errorPresenter) private var errorPresenter
     @Bindable private var model: AppSearchModel<InventorySearchProvider, PurchasesSearchProvider>
     private let dependencies: AppDependencies
     private let entityRouter: any EntityRouter
@@ -50,21 +51,25 @@ internal struct AppSearchTab: View {
                 barcodeLookup: dependencies.barcodeLookup
             )
             .purchasesDestinations(dependencies: dependencies)
+            .errorDiagnosticsMenu()
         }
         .task {
             await model.loadTags()
             await model.loadInventoryTypes()
         }
-        .alert(
-            "Couldn't download Inventory", isPresented: downloadFailedBinding,
-            actions: {}, message: { Text("Check your connection and try again.") }
-        )
-    }
-
-    private var downloadFailedBinding: Binding<Bool> {
-        Binding(
-            get: { model.inventoryDownloadFailed },
-            set: { isPresented in if !isPresented { model.clearInventoryDownloadFailure() } })
+        .onChange(of: model.inventoryDownloadFailed) { _, failed in
+            guard failed else { return }
+            errorPresenter.present(
+                PopsError(
+                    code: "ios.inventory.download_failed",
+                    message:
+                        "Inventory could not be downloaded. Check your connection and try again.",
+                    retryable: true,
+                    kind: .offline),
+                operation: "Download inventory",
+                context: .foreground)
+            model.clearInventoryDownloadFailure()
+        }
     }
 
     /// Pushes Inventory's scanner, or `nil` while Inventory cannot be searched.

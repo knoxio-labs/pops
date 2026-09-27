@@ -133,11 +133,17 @@ describe('a request presenting no credential', () => {
   });
 
   it('is 401ed when the pillar requires a credential', async () => {
-    const response = await request(appWith(verifierReturning({ outcome: 'rejected' }), true)).get(
-      '/orders'
-    );
+    const response = await request(appWith(verifierReturning({ outcome: 'rejected' }), true))
+      .get('/orders')
+      .set('X-Request-Id', '01JSCOPEREQUESTID0000000000');
 
     expect(response.status).toBe(401);
+    expect(response.body).toMatchObject({
+      code: 'widgets.auth.invalid',
+      message: 'Missing or invalid service-account credentials.',
+      requestId: '01JSCOPEREQUESTID0000000000',
+      retryable: false,
+    });
   });
 
   it('still reaches an unscoped path when the pillar requires a credential', async () => {
@@ -146,6 +152,22 @@ describe('a request presenting no credential', () => {
     );
 
     expect(response.status).toBe(200);
+  });
+});
+
+describe('a credential without the required scope', () => {
+  it('returns the shared error envelope', async () => {
+    const response = await request(appWith(verifierReturning(grantedScopes(['widgets.sources']))))
+      .get('/orders')
+      .set('x-api-key', KEY);
+
+    expect(response.status).toBe(403);
+    expect(response.body).toMatchObject({
+      code: 'widgets.auth.forbidden',
+      requestId: expect.any(String),
+      retryable: false,
+      details: { requiredScope: 'widgets.orders.list' },
+    });
   });
 });
 

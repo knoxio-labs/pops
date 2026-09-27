@@ -11,6 +11,7 @@ import { loadPublishedCatalogue } from '../../catalogue/index.js';
 import { ACTOR_HEADER } from '../../contract/rest-sync.js';
 import { runMutations } from '../../domain/commands/index.js';
 import { createAiClient, isPermutation, type AiClient } from '../ai/client.js';
+import { inventoryErrors } from '../errors.js';
 import { resolveActor } from '../sync/actor.js';
 import { readProtocol1Catalogue } from '../sync/catalogue.js';
 import { readChanges } from '../sync/changes.js';
@@ -38,24 +39,11 @@ type SyncReq = ServerInferRequest<typeof inventorySyncContract>;
 type TypesReq = ServerInferRequest<typeof inventoryTypesContract>;
 type CodesReq = ServerInferRequest<typeof inventoryCodesContract>;
 
-type RefusalStatus = Exclude<SyncRequestError['status'], 426>;
-type Refusal = {
-  [S in RefusalStatus]: { status: S; body: { message: string; code: string } };
-}[RefusalStatus];
-
 /**
- * Run a handler body, answering a {@link SyncRequestError} with its status;
- * anything else propagates to Express. A 426 is the protocol gate's alone.
+ * Run a sync handler while leaving failures to the shared Express pipeline.
  */
-async function runSync<T>(fn: () => Promise<T> | T): Promise<T | Refusal> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (!(error instanceof SyncRequestError)) throw error;
-    const { status } = error;
-    if (status === 426) throw error;
-    return { status, body: { message: error.message, code: error.code } };
-  }
+async function runSync<T>(fn: () => T | Promise<T>): Promise<T> {
+  return await fn();
 }
 
 /** What the sync handlers read and write through. */
@@ -185,6 +173,7 @@ export function makeTypesHandlers(db: InventoryDb) {
 export function makeCodesHandlers(db: InventoryDb, ai: AiClient = createAiClient()) {
   return {
     suggest: async ({ body }: CodesReq['suggest']) => {
+      if (body.name.trim() === '') inventoryErrors.name_required();
       const deterministic = suggestCodes(db, body);
       if (deterministic.length === 0) {
         return { status: 200 as const, body: { suggestions: [] } };

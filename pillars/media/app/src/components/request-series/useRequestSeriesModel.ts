@@ -58,6 +58,7 @@ function useSubmit({
 }) {
   const queryClient = useQueryClient();
   const addSeries = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: AddSeriesInput) => unwrap(await arrAddSeries({ body: input })),
     onSuccess: () => {
       state.setSuccess(true);

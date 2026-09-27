@@ -140,7 +140,12 @@ beforeEach(() => {
   api.readCatalogue.mockResolvedValue({ data: published, error: undefined });
   api.readDraft.mockResolvedValue({
     data: undefined,
-    error: { code: 'catalogue_draft_missing', message: 'No catalogue draft exists' },
+    error: {
+      code: 'inventory.catalogue.draft_missing',
+      message: 'No catalogue draft exists',
+      requestId: 'request-draft-missing',
+      retryable: false,
+    },
     response: new Response(null, { status: 404 }),
   });
   api.createDraft.mockResolvedValue({ data: draft(), error: undefined });
@@ -279,7 +284,7 @@ describe('TypeCataloguePage', () => {
       .mockResolvedValueOnce({ data: draft(), error: undefined })
       .mockResolvedValueOnce({ data: recovered, error: undefined });
     api.patchDraft.mockRejectedValue(
-      new InventoryApiError('Draft revision is stale', 409, 'catalogue_conflict')
+      new InventoryApiError('Draft revision is stale', 409, 'inventory.catalogue.conflict')
     );
     renderPage();
 
@@ -307,7 +312,7 @@ describe('TypeCataloguePage', () => {
       .mockRejectedValueOnce(new InventoryApiError('Draft reload failed', 503))
       .mockResolvedValueOnce({ data: recovered, error: undefined });
     api.patchDraft.mockRejectedValue(
-      new InventoryApiError('Draft revision is stale', 409, 'catalogue_conflict')
+      new InventoryApiError('Draft revision is stale', 409, 'inventory.catalogue.conflict')
     );
     renderPage();
 
@@ -364,9 +369,11 @@ describe('TypeCataloguePage', () => {
       .mockResolvedValueOnce({
         data: undefined,
         error: {
-          code: 'catalogue_draft_conflict',
-          currentDraftVersion: 3,
+          code: 'inventory.catalogue.draft_conflict',
+          details: { currentDraftVersion: 3 },
           message: 'Catalogue draft 2 is at version 3, not 2',
+          requestId: 'request-draft-conflict',
+          retryable: false,
         },
         response: new Response(null, { status: 409 }),
       })
@@ -528,7 +535,7 @@ describe('TypeCataloguePage', () => {
   it('surfaces a forbidden catalogue error and preserves the unsaved edit', async () => {
     api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
     api.patchDraft.mockRejectedValue(
-      new InventoryApiError('You cannot edit this catalogue', 403, 'catalogue_forbidden')
+      new InventoryApiError('You cannot edit this catalogue', 403, 'inventory.catalogue.forbidden')
     );
     renderPage();
 

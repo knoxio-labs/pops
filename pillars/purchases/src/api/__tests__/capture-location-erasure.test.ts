@@ -92,5 +92,5 @@ it('is idempotent — a second call still succeeds', async () => {
 
 it('answers 404 for a purchase that does not exist', async () => {
   const res = await eraseLocation('no-such-purchase').expect(404);
-  expect(res.body.code).toBe('NOT_FOUND');
+  expect(res.body.code).toBe('purchases.resource.not_found');
 });

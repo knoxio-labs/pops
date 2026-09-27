@@ -1,4 +1,5 @@
 import AppCore
+import OpenAPIRuntime
 
 extension BFMInventoryTransport {
     /// Relays a barcode lookup and reduces every non-answer to unavailable.
@@ -33,7 +34,7 @@ extension BFMInventoryTransport {
             case .badRequest, .unauthorized, .forbidden, .tooManyRequests, .undocumented:
                 return .unavailable
             }
-        } catch {
+        } catch is ClientError {
             return .unavailable
         }
     }

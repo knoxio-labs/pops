@@ -106,7 +106,6 @@ function useSourceMutations(onClose: () => void) {
       invalidateRotation();
       onClose();
     },
-    onError: () => toast.error('Failed to create source'),
   });
   const updateMutation = useMutation({
     mutationFn: async (input: UpdateSourceInput) =>
@@ -127,7 +126,6 @@ function useSourceMutations(onClose: () => void) {
       invalidateRotation();
       onClose();
     },
-    onError: () => toast.error('Failed to update source'),
   });
   return { createMutation, updateMutation };
 }

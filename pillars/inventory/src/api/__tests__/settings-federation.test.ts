@@ -106,7 +106,7 @@ describe('inventory federated /settings', () => {
 
     expect(res.body).toMatchObject({
       message: new UnknownSettingKeyError(['inventory.notAThing']).message,
-      code: 'ValidationError',
+      code: 'inventory.request.invalid',
     });
   });
 });
