@@ -210,4 +210,33 @@ describe('useSearchKeyboardNav', () => {
     act(() => fireKey(container, 'Escape'));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it('disabled, it attaches no key handler and keeps selectedIndex at -1', () => {
+    container = createContainer(3);
+    const onSelect = vi.fn();
+    const onClose = vi.fn();
+    const { result } = renderHook(() => {
+      const ref = useRef<HTMLElement>(container);
+      return useSearchKeyboardNav({
+        resultCount: 3,
+        onSelect,
+        onClose,
+        containerRef: ref,
+        enabled: false,
+      });
+    });
+
+    const down = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true });
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    const preventDown = vi.spyOn(down, 'preventDefault');
+    const preventEscape = vi.spyOn(escape, 'preventDefault');
+    container.dispatchEvent(down);
+    container.dispatchEvent(escape);
+
+    expect(result.current.selectedIndex).toBe(-1);
+    expect(preventDown).not.toHaveBeenCalled();
+    expect(preventEscape).not.toHaveBeenCalled();
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

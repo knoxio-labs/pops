@@ -1,6 +1,5 @@
 import AppCore
 import Auth
-import FeatureInventory
 import FeaturePurchases
 import Foundation
 import SwiftUI

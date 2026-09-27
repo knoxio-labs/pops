@@ -8,7 +8,14 @@
  */
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm';
 
-import { purchaseDocuments, purchases, purchaseShipments, purchaseTags } from '../schema.js';
+import {
+  purchaseDocuments,
+  purchaseItemUnits,
+  purchaseItems,
+  purchases,
+  purchaseShipments,
+  purchaseTags,
+} from '../schema.js';
 import { computeAccounting, type PurchaseAccounting } from './accounting.js';
 import { nowIso, type PurchasesDb } from './internal.js';
 import { blankMerchantLabel, nameLabelCondition } from './merchant-identity.js';
@@ -49,6 +56,11 @@ export interface PurchaseScopeFilter {
   readonly to?: string;
   /** The order's own currency, which the merchant roll-up also groups on. */
   readonly currency?: string;
+  /**
+   * The inventory item URI carried by one of the order's purchase item units.
+   * The scope selects the whole order, not only the matching line or unit.
+   */
+  readonly inventoryItemUri?: string;
   /** One merchant group, spelled the way the roll-up keys one. */
   readonly merchant?: MerchantFilter;
 }
@@ -97,7 +109,10 @@ export interface PurchaseDetail {
  * "which orders are in scope" is how a merchant headline comes to disagree
  * with the list it is a headline for.
  */
-export function purchaseFilterConditions(filter: PurchaseScopeFilter): readonly SQL[] {
+export function purchaseFilterConditions(
+  db: PurchasesDb,
+  filter: PurchaseScopeFilter
+): readonly SQL[] {
   return [
     ...(filter.sources && filter.sources.length > 0
       ? [inArray(purchases.source, [...filter.sources])]
@@ -107,6 +122,18 @@ export function purchaseFilterConditions(filter: PurchaseScopeFilter): readonly 
       : []),
     ...orderedAtWindow(filter),
     ...(filter.currency === undefined ? [] : [eq(purchases.currency, filter.currency)]),
+    ...(filter.inventoryItemUri === undefined
+      ? []
+      : [
+          inArray(
+            purchases.id,
+            db
+              .select({ purchaseId: purchaseItems.purchaseId })
+              .from(purchaseItems)
+              .innerJoin(purchaseItemUnits, eq(purchaseItemUnits.itemId, purchaseItems.id))
+              .where(eq(purchaseItemUnits.inventoryItemUri, filter.inventoryItemUri))
+          ),
+        ]),
     ...(filter.merchant === undefined ? [] : merchantConditions(filter.merchant)),
   ];
 }
@@ -176,7 +203,7 @@ export function listPurchases(
   db: PurchasesDb,
   filter: ListPurchasesFilter = {}
 ): readonly PurchaseRow[] {
-  const conditions = [...purchaseFilterConditions(filter)];
+  const conditions = [...purchaseFilterConditions(db, filter)];
   const keyset = buildKeysetCondition(filter.beforeOrderedAt, filter.beforeId);
   if (keyset !== undefined) conditions.push(keyset);
 

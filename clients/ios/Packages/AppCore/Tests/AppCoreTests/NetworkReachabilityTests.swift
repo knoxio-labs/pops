@@ -1,8 +1,6 @@
 import AppCoreFakes
 import Testing
 
-@testable import AppCore
-
 @Suite("Network reachability streams")
 internal struct NetworkReachabilityTests {
     @Test("a stream starts with the current value then yields each change")

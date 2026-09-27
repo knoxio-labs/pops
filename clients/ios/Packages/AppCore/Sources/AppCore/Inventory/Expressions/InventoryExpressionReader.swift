@@ -1,5 +1,3 @@
-import Foundation
-
 /// `expression-reader.ts`: follows a read's reference path from the root
 /// item, recording every field it reads, and stops at the first item or
 /// field that is not there.

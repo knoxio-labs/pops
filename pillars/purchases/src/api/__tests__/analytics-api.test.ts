@@ -130,6 +130,49 @@ describe('GET /analytics/merchant-spend', () => {
     expect(both.body.totals[0].orderCount).toBe(2);
   });
 
+  it('scopes merchant spend to purchases containing an inventory item unit', async () => {
+    const inventoryItemUri = 'pops://inventory/item/item-1';
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'tracked',
+        merchantEntityName: 'Tracked merchant',
+        totalCents: 1200,
+        items: [
+          {
+            name: 'Tracked item',
+            unitPriceCents: 1200,
+            lineTotalCents: 1200,
+            units: [{ inventoryItemUri }],
+          },
+        ],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'untracked',
+        merchantEntityName: 'Other merchant',
+        totalCents: 3400,
+      })
+    );
+
+    const res = await requestOn(app).get(
+      `/analytics/merchant-spend?inventoryItemUri=${encodeURIComponent(inventoryItemUri)}`
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.totals).toEqual([
+      expect.objectContaining({
+        orderCount: 1,
+        accounting: expect.objectContaining({ totalCents: 1200 }),
+      }),
+    ]);
+    expect(res.body.merchants).toEqual([
+      expect.objectContaining({ merchant: expect.objectContaining({ name: 'Tracked merchant' }) }),
+    ]);
+  });
+
   it('rejects a malformed period rather than silently ignoring it', async () => {
     // A bound the server cannot parse must not fall through to "no bound" —
     // that answers a different question than the one asked, and the response
@@ -343,6 +386,50 @@ describe('GET /analytics/product-leaderboard', () => {
     // The withheld product is still counted, so the response cannot be read
     // as "this is everything that was bought".
     expect(res.body.coverage.productCount).toBe(2);
+  });
+
+  it('scopes the product leaderboard to purchases containing an inventory item unit', async () => {
+    const inventoryItemUri = 'pops://inventory/item/item-1';
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'tracked-product',
+        items: [
+          {
+            name: 'Tracked product',
+            sku: { value: 'TRACKED', scheme: 'merchant' },
+            unitPriceCents: 900,
+            lineTotalCents: 900,
+            units: [{ inventoryItemUri }],
+          },
+        ],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'untracked-product',
+        items: [
+          {
+            name: 'Tracked product',
+            sku: { value: 'TRACKED', scheme: 'merchant' },
+            unitPriceCents: 900,
+            lineTotalCents: 900,
+          },
+        ],
+      })
+    );
+
+    const res = await requestOn(app).get(
+      `/analytics/product-leaderboard?inventoryItemUri=${encodeURIComponent(inventoryItemUri)}`
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(1);
+    expect(res.body.products[0]).toEqual(
+      expect.objectContaining({ orderCount: 1, landedCostCents: 900 })
+    );
+    expect(res.body.coverage.lineCount).toBe(1);
   });
 
   it('defaults minOrderCount to 1 and says so', async () => {

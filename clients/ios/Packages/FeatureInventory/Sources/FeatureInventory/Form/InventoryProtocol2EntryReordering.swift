@@ -1,4 +1,3 @@
-import AppCore
 import SwiftUI
 
 internal enum InventoryProtocol2EntryReordering {

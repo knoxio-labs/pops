@@ -1,6 +1,5 @@
 import AppCore
 import Auth
-import FeatureInventory
 import Foundation
 import InventoryReplica
 import Testing

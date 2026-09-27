@@ -11,6 +11,7 @@ import { ConnectionsTabSection, OverviewSections } from './sections';
 import type { ReactElement } from 'react';
 
 import type { DetailTab, ItemDetailModel } from './detail-model';
+import type { FactEditing } from './use-fact-editing';
 
 function TabLabel({
   label,
@@ -36,11 +37,15 @@ export function FactsRail({
   readOnly,
   onSetType,
   mobile = false,
+  editing,
+  onQuantity,
 }: {
   model: ItemDetailModel;
   readOnly: boolean;
   onSetType: () => void;
   mobile?: boolean;
+  editing?: FactEditing;
+  onQuantity?: (action: 'split' | 'change') => void;
 }): ReactElement {
   const disabledReason = readOnly ? 'Nothing can change on this item.' : undefined;
   const aggregate = model.aggregate;
@@ -67,6 +72,8 @@ export function FactsRail({
           typeName={aggregate.type?.label ?? model.item.typeName}
           readOnly={readOnly}
           onSetType={onSetType}
+          editing={editing}
+          onQuantity={onQuantity}
         />
       )}
     </aside>
@@ -108,17 +115,28 @@ function TabPanels({
   readOnly,
   onSetType,
   onLinksChanged,
+  editing,
+  onQuantity,
 }: {
   itemId: string;
   model: ItemDetailModel;
   readOnly: boolean;
   onSetType: () => void;
   onLinksChanged: () => void;
+  editing?: FactEditing;
+  onQuantity?: (action: 'split' | 'change') => void;
 }): ReactElement {
   return (
     <>
       <TabsContent value="facts" className="min-h-0 overflow-y-auto p-4 @2xl:hidden">
-        <FactsRail model={model} readOnly={readOnly} onSetType={onSetType} mobile />
+        <FactsRail
+          model={model}
+          readOnly={readOnly}
+          onSetType={onSetType}
+          mobile
+          editing={editing}
+          onQuantity={onQuantity}
+        />
       </TabsContent>
       <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto p-4">
         <OverviewSections
@@ -152,6 +170,8 @@ export function DetailTabs({
   onSetType,
   onTab,
   onLinksChanged,
+  editing,
+  onQuantity,
 }: {
   itemId: string;
   model: ItemDetailModel;
@@ -160,6 +180,8 @@ export function DetailTabs({
   onSetType: () => void;
   onTab: (tab: DetailTab) => void;
   onLinksChanged: () => void;
+  editing?: FactEditing;
+  onQuantity?: (action: 'split' | 'change') => void;
 }): ReactElement {
   const tabValue = tab === 'facts' ? 'facts' : tab;
   return (
@@ -177,6 +199,8 @@ export function DetailTabs({
         readOnly={readOnly}
         onSetType={onSetType}
         onLinksChanged={onLinksChanged}
+        editing={editing}
+        onQuantity={onQuantity}
       />
     </Tabs>
   );

@@ -1,163 +1,173 @@
-import { ArrowUpRight, MoveRight } from 'lucide-react';
-
-import { Button as UiButton, formatDate } from '@pops/ui';
+import { Button } from '@pops/ui';
 
 import {
-  CodeBadge,
   ContainerStateBadge,
+  CodeBadge,
   LifecycleBadge,
   QuantityBadge,
+  SyncBadge,
   TypeLabel,
 } from '../../foundation/badges/badges.js';
 import { ItemMark } from '../../foundation/badges/item-mark.js';
 import { PlacementPath } from '../../foundation/badges/placement-path.js';
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
-import { PreviewActions, PreviewFact, PreviewFrame, PreviewList } from './preview-parts.js';
+import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
+import { ShortcutHint } from '../../foundation/shortcuts/shortcut-hint.js';
+import { useItemRows } from '../../inventory-web/useWebItems.js';
+import { ItemFacts } from './item-facts.js';
+import { PreviewFrame, PreviewList, renderPreviewListRows } from './preview-parts.js';
+
+import type { MouseEventHandler, ReactElement } from 'react';
 
 import type { ItemRowModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 
-/** Props for an inventory item or container preview. */
+const I = INVENTORY_ICONS;
+
+/** A placement action exposed by an item preview. */
+export type PreviewVerb = 'pick-up' | 'put-back' | 'move';
+
+/** Props for the item and container preview. */
 export interface ItemPreviewProps {
-  readonly item: ItemRowModel;
-  readonly world: PlacementWorld;
-  readonly onOpen: () => void;
-  readonly onPickUp: () => void;
-  readonly onPutBack: () => void;
-  readonly onMove: () => void;
+  item: ItemRowModel;
+  world: PlacementWorld;
+  onOpen: () => void;
+  /** `anchor` is the clicked verb button: the Move picker opens from it. */
+  onVerb: (verb: PreviewVerb, anchor: HTMLElement) => void;
+  /** Explains why mutation verbs are unavailable, such as while offline. */
+  disabledReason?: string;
 }
 
-function containerContents(world: PlacementWorld, item: ItemRowModel): ItemRowModel[] {
-  if (item.container === null) return [];
-  return [...world.items.values()]
-    .filter(
-      (candidate) =>
-        candidate.placement.kind === 'container' && candidate.placement.containerId === item.id
-    )
-    .toSorted((left, right) => left.name.localeCompare(right.name));
-}
+type LegacyItemPreviewProps = {
+  item: ItemRowModel;
+  world: PlacementWorld;
+  onOpen: () => void;
+  onPickUp: () => void;
+  onPutBack: () => void;
+  onMove: () => void;
+};
 
-function ItemActions({
-  inHand,
-  onOpen,
-  onPickUp,
-  onPutBack,
-  onMove,
+function VerbButton({
+  label,
+  icon: Icon,
+  disabledReason,
+  onClick,
 }: {
-  readonly inHand: boolean;
-  readonly onOpen: () => void;
-  readonly onPickUp: () => void;
-  readonly onPutBack: () => void;
-  readonly onMove: () => void;
-}) {
-  const ActionIcon = inHand ? INVENTORY_ICONS.putBack : INVENTORY_ICONS.pickUp;
+  label: string;
+  icon: typeof I.move;
+  disabledReason: string | undefined;
+  onClick: MouseEventHandler<HTMLButtonElement>;
+}): ReactElement {
+  const disabled = disabledReason !== undefined;
+  const button = (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      aria-disabled={disabled || undefined}
+      className={disabled ? 'opacity-50' : undefined}
+      onClick={disabled ? undefined : onClick}
+      prefix={<Icon className="size-4" aria-hidden />}
+    >
+      {label}
+    </Button>
+  );
+  if (!disabled) return button;
   return (
-    <PreviewActions>
-      <UiButton size="sm" onClick={onOpen} prefix={<ArrowUpRight className="size-4" aria-hidden />}>
+    <HintTooltip label={label} disabledReason={disabledReason}>
+      {button}
+    </HintTooltip>
+  );
+}
+
+function ItemVerbs({ item, onOpen, onVerb, disabledReason }: ItemPreviewProps): ReactElement {
+  const inHand = item.placement.kind === 'in-hand';
+  const placementVerb: PreviewVerb = inHand ? 'put-back' : 'pick-up';
+  const placementLabel = inHand ? 'Put back' : 'Pick up';
+  const PlacementIcon = inHand ? I.putBack : I.pickUp;
+
+  return (
+    <>
+      <Button type="button" size="sm" suffix={<ShortcutHint id="list-open" />} onClick={onOpen}>
         Open
-      </UiButton>
-      <UiButton
-        size="sm"
-        variant="outline"
-        onClick={inHand ? onPutBack : onPickUp}
-        prefix={<ActionIcon className="size-4" aria-hidden />}
-      >
-        {inHand ? 'Put back' : 'Pick up'}
-      </UiButton>
-      <UiButton
-        size="sm"
-        variant="outline"
-        onClick={onMove}
-        prefix={<MoveRight className="size-4" aria-hidden />}
-      >
-        Move
-      </UiButton>
-    </PreviewActions>
+      </Button>
+      <VerbButton
+        label={placementLabel}
+        icon={PlacementIcon}
+        disabledReason={disabledReason}
+        onClick={(event) => onVerb(placementVerb, event.currentTarget)}
+      />
+      <VerbButton
+        label="Move"
+        icon={I.move}
+        disabledReason={disabledReason}
+        onClick={(event) => onVerb('move', event.currentTarget)}
+      />
+    </>
   );
 }
 
-function ItemFacts({
-  item,
-  world,
-}: {
-  readonly item: ItemRowModel;
-  readonly world: PlacementWorld;
-}) {
+function ItemContents({ item }: { item: ItemRowModel }): ReactElement {
+  const contents = useItemRows({ containingItemId: item.id }, 50);
+  const count = contents.total ?? contents.rows.length;
   return (
-    <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
-      <PreviewFact label="Type" value={<TypeLabel typeName={item.typeName} />} />
-      <PreviewFact
-        label="Container"
-        value={item.container === null ? 'No' : <ContainerStateBadge container={item.container} />}
-      />
-      <PreviewFact
-        label="Quantity"
-        value={item.quantity > 1 ? <QuantityBadge quantity={item.quantity} /> : '1'}
-      />
-      <PreviewFact label="Code" value={<CodeBadge code={item.code} showNone />} />
-      <PreviewFact
-        label="Lifecycle"
-        value={
-          item.lifecycle === 'active' ? 'Active' : <LifecycleBadge lifecycle={item.lifecycle} />
-        }
-      />
-      <PreviewFact
-        label="Placement"
-        value={<PlacementPath world={world} placement={item.placement} maxSegments={4} />}
-      />
-      <PreviewFact label="Changed" value={formatDate(item.updatedAt)} />
-    </dl>
-  );
-}
-
-function ItemContents({ contents }: { readonly contents: readonly ItemRowModel[] }) {
-  if (contents.length === 0) return null;
-  return (
-    <PreviewList title={`Direct contents · ${contents.length}`}>
-      {contents.map((content) => (
-        <div key={content.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-          <ItemMark item={content} size="sm" />
-          <span className="truncate">{content.name}</span>
-          <QuantityBadge quantity={content.quantity} />
-        </div>
-      ))}
+    <PreviewList title="Inside" count={count} empty="Empty. Store here from the container page.">
+      {renderPreviewListRows({
+        status: contents.status,
+        rows: contents.rows,
+        refetch: contents.refetch,
+      })}
     </PreviewList>
   );
 }
 
-/** Renders item facts, placement actions, notes, and direct container contents. */
-export function ItemPreview({
-  item,
-  world,
-  onOpen,
-  onPickUp,
-  onPutBack,
-  onMove,
-}: ItemPreviewProps) {
-  const inHand = item.placement.kind === 'in-hand';
-  const contents = containerContents(world, item);
+function ItemPreviewView(props: ItemPreviewProps): ReactElement {
+  const { item, world, onOpen, onVerb, disabledReason } = props;
   return (
     <PreviewFrame
-      title={
-        <span className="flex min-w-0 items-center gap-3">
-          <ItemMark item={item} size="md" />
-          <span className="truncate">{item.name}</span>
-        </span>
+      mark={<ItemMark item={item} size="md" />}
+      title={item.name}
+      badges={
+        <>
+          <TypeLabel typeName={item.typeName} />
+          <QuantityBadge quantity={item.quantity} />
+          <ContainerStateBadge container={item.container} />
+          <LifecycleBadge lifecycle={item.lifecycle} />
+          <SyncBadge sync={item.sync} />
+          <CodeBadge code={item.code} />
+        </>
       }
-      subtitle={item.container === null ? 'Inventory item' : 'Container'}
+      where={<PlacementPath world={world} placement={item.placement} maxSegments={5} />}
+      actions={
+        <ItemVerbs
+          item={item}
+          world={world}
+          onOpen={onOpen}
+          onVerb={onVerb}
+          disabledReason={disabledReason}
+        />
+      }
     >
-      <ItemActions
-        inHand={inHand}
-        onOpen={onOpen}
-        onPickUp={onPickUp}
-        onPutBack={onPutBack}
-        onMove={onMove}
-      />
-      <ItemFacts item={item} world={world} />
-      {item.note !== null ? (
-        <p className="mt-5 rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">{item.note}</p>
-      ) : null}
-      <ItemContents contents={contents} />
+      {item.container === null ? <ItemFacts item={item} /> : <ItemContents item={item} />}
     </PreviewFrame>
+  );
+}
+
+/** Renders an item or container preview with facts, contents, and placement verbs. */
+export function ItemPreview(props: ItemPreviewProps): ReactElement;
+export function ItemPreview(props: LegacyItemPreviewProps): ReactElement;
+export function ItemPreview(props: ItemPreviewProps | LegacyItemPreviewProps): ReactElement {
+  if ('onVerb' in props) return <ItemPreviewView {...props} />;
+  return (
+    <ItemPreviewView
+      item={props.item}
+      world={props.world}
+      onOpen={props.onOpen}
+      onVerb={(verb) => {
+        if (verb === 'pick-up') props.onPickUp();
+        else if (verb === 'put-back') props.onPutBack();
+        else props.onMove();
+      }}
+    />
   );
 }
