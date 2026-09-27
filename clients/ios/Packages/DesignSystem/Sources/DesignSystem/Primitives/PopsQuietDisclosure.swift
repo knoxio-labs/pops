@@ -19,6 +19,18 @@ public struct PopsQuietDisclosure<Content: View>: View {
         self._isExpanded = State(initialValue: initiallyExpanded)
     }
 
+    internal var accessibilityValue: String {
+        isExpanded ? "Expanded" : "Collapsed"
+    }
+
+    internal var accessibilityHint: String {
+        isExpanded ? "Hide section" : "Show section"
+    }
+
+    internal var minimumHeight: CGFloat {
+        PopsSize.touchTarget
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.zero) {
             Button {
@@ -29,13 +41,13 @@ public struct PopsQuietDisclosure<Content: View>: View {
                     Spacer(minLength: PopsSpacing.sm)
                     Text(isExpanded ? "Hide" : "Show").font(.popsCaption)
                 }
-                .frame(minHeight: PopsSize.touchTarget)
+                .frame(minHeight: minimumHeight)
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(title)
-            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-            .accessibilityHint(isExpanded ? "Hide section" : "Show section")
+            .accessibilityValue(accessibilityValue)
+            .accessibilityHint(accessibilityHint)
             if isExpanded {
                 content
             }
