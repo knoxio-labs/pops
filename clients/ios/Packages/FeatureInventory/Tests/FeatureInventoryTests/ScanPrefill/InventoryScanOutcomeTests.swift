@@ -148,20 +148,43 @@ internal struct InventoryScanOutcomeTests {
         defer { opened.loading.cancel() }
 
         #expect(await opened.form.handleScannedBarcode("5012345678900") == .miss)
-        #expect(opened.form.prefillStatus == .lookupUnavailable)
+        #expect(opened.form.scanFailure?.code == "ios.barcode.unavailable")
         #expect(await generator.requests.isEmpty)
     }
 
-    @Test("offline scan records no lookup and starts no generation")
-    func offlineSkipsRemoteWork() async {
+    @Test("an offline inventory replica does not suppress a live barcode lookup")
+    func staleReplicaDoesNotSuppressLookup() async {
         let generator = ScanPrefillGenerator()
         let opened = await ScanPrefillFixture.open(
             status: .offline(lastRefreshAt: nil), generator: generator)
         defer { opened.loading.cancel() }
 
+        #expect(await opened.form.handleScannedBarcode("5012345678900") == .found)
+        await opened.form.fillTask?.value
+        #expect(await opened.lookup.codes == ["5012345678900"])
+        #expect(opened.form.scanFailure == nil)
+        #expect(await generator.requests.count == 1)
+    }
+
+    @Test("lookup failures preserve reportable diagnostics while keeping text capture available")
+    func structuredFailureIsPreserved() async {
+        let failure = PopsError(
+            code: "bfm.auth.invalid_token", message: "Reconnect Pops to look up barcodes.",
+            requestID: "barcode-request-42", retryable: false, kind: .client)
+        let opened = await ScanPrefillFixture.open(lookUp: { _ in throw failure })
+        defer { opened.loading.cancel() }
         #expect(await opened.form.handleScannedBarcode("5012345678900") == .miss)
-        #expect(await opened.lookup.codes.isEmpty)
-        #expect(await generator.requests.isEmpty)
+        #expect(opened.form.scanFailure == failure)
+        #expect(opened.form.prefillStatus == .lookupFailed(failure))
+        #expect(opened.form.draft.identifiers.contains { $0.value == "5012345678900" })
+    }
+
+    @Test("cancellation is not reported as a barcode failure")
+    func cancellationIsSilent() async {
+        let opened = await ScanPrefillFixture.open(lookUp: { _ in throw CancellationError() })
+        defer { opened.loading.cancel() }
+        #expect(await opened.form.handleScannedBarcode("5012345678900") == .miss)
+        #expect(opened.form.scanFailure == nil)
     }
 
     @Test("clearing the type while lookup is suspended turns completion into a miss")

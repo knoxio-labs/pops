@@ -115,14 +115,14 @@ describe('createGoogleBooksSource', () => {
   });
 
   it.each([
-    ['volumes-429.json', 429],
-    ['volumes-500.json', 500],
-  ] as const)('returns unavailable for a provider failure', async (name, status) => {
+    ['volumes-429.json', 429, 'rate_limited'],
+    ['volumes-500.json', 500, 'http_error'],
+  ] as const)('returns unavailable for a provider failure', async (name, status, failureClass) => {
     const { fetcher } = makeFetcher(() => response(name, status));
 
     await expect(
       googleBooksSource(fetcher).lookUp(ISBN, new AbortController().signal)
-    ).resolves.toEqual({ kind: 'unavailable' });
+    ).resolves.toEqual({ kind: 'unavailable', failureClass, status });
   });
 
   it('returns unavailable for malformed JSON', async () => {
@@ -130,7 +130,7 @@ describe('createGoogleBooksSource', () => {
 
     await expect(
       googleBooksSource(fetcher).lookUp(ISBN, new AbortController().signal)
-    ).resolves.toEqual({ kind: 'unavailable' });
+    ).resolves.toEqual({ kind: 'unavailable', failureClass: 'invalid_response' });
   });
 
   it('returns unavailable for a network error', async () => {
@@ -140,7 +140,7 @@ describe('createGoogleBooksSource', () => {
 
     await expect(
       googleBooksSource(fetcher).lookUp(ISBN, new AbortController().signal)
-    ).resolves.toEqual({ kind: 'unavailable' });
+    ).resolves.toEqual({ kind: 'unavailable', failureClass: 'network_error' });
   });
 
   it('uses the file key before the environment key', async () => {
@@ -165,7 +165,7 @@ describe('createGoogleBooksSource', () => {
 
     await expect(
       createGoogleBooksSource({ fetch: fetcher }).lookUp(ISBN, new AbortController().signal)
-    ).resolves.toEqual({ kind: 'unavailable' });
+    ).resolves.toEqual({ kind: 'unavailable', failureClass: 'misconfigured' });
     expect(calls).toEqual([]);
   });
 
@@ -180,6 +180,9 @@ describe('createGoogleBooksSource', () => {
     const resultPromise = googleBooksSource(fetcher).lookUp(ISBN, new AbortController().signal);
     await vi.advanceTimersByTimeAsync(4_000);
 
-    await expect(resultPromise).resolves.toEqual({ kind: 'unavailable' });
+    await expect(resultPromise).resolves.toEqual({
+      kind: 'unavailable',
+      failureClass: 'timeout',
+    });
   });
 });

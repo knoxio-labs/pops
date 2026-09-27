@@ -111,6 +111,32 @@ internal struct DrainTriggerTests {
         #expect(arrival.1, "nothing is sent while the path is down")
     }
 
+    @Test("a path that recovers while its watcher starts refreshes an offline replica")
+    func watcherStartupRecoveryRefreshesOfflineReplica() async throws {
+        let reachability = ScriptedNetworkReachability(satisfied: false)
+        let replica = try Fixture.downloaded(items: [Fixture.item("lamp", revision: 4)])
+        var script = FakeSyncTransport.Script()
+        script.changes = { _, _ in throw RepositoryError.unavailable }
+        let transport = FakeSyncTransport(script)
+        let online = OnlineInventoryStore(replica: replica, transport: transport)
+
+        await online.refresh()
+        #expect(try replica.read(.replicaStatus) == .offline(lastRefreshAt: Fixture.created))
+
+        transport.update { $0.changes = { _, _ in Fixture.changes() } }
+        let drain = InventoryDrain(
+            replica: replica, online: online, reachability: reachability, clock: ManualDrainClock(),
+            now: { Fixture.created })
+        drain.start()
+        reachability.set(true)
+
+        #expect(
+            await eventually {
+                transport.calls.changesSince == [10, 10]
+                    && (try? replica.read(.replicaStatus)) == .current
+            })
+    }
+
     @Test("a local-first store given a network path sends what it logs")
     func localFirstStoreDrains() async throws {
         let (submissions, submitted) = AsyncStream<[String]>.makeStream()
@@ -130,5 +156,15 @@ internal struct DrainTriggerTests {
         _ = try await store.perform(.setItemQuantity(id: "lamp", quantity: 2))
 
         #expect(await arrivals.next() == ["mutation-1"])
+    }
+
+    private func eventually(
+        _ condition: @escaping @Sendable () -> Bool
+    ) async -> Bool {
+        for _ in 0..<100 {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return false
     }
 }

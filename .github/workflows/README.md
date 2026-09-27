@@ -143,12 +143,14 @@ its PR forever.
 
 ### Main admission without a merge queue
 
-Main's merge queue stays **off**. Its required status checks use strict
-up-to-date protection: if main advances before a PR merges, merge current main
-into the PR branch and rerun validation. Do not bypass the rule or force-push.
-This avoids a serialized admission queue, but competing promotions can still
-need reruns. Check the effective branch rules through GitHub; workflow triggers
-alone do not prove a queue or a required check is enabled.
+Main's merge queue stays **off**. Base movement alone does not require updating
+a conflict-free PR or repeating passing validation. Merge when required checks
+and review gates pass and GitHub permits it. Update the branch to resolve
+conflicts, address an integration failure, or satisfy an effective GitHub
+protection requirement. Do not bypass protection or force-push. Check the
+effective branch rules through GitHub; workflow triggers alone do not prove
+a queue or a required check is enabled. Strict up-to-date protection, when
+enabled, still requires a branch update before GitHub permits merging.
 
 `Promotion validation` is a required terminal job in `promotion-quality.yml`.
 A PR from `promotion/**` or `integration/**` to main calls the existing Quality,
@@ -179,7 +181,7 @@ Keep batches small and coherent. From a clean, current integration checkout:
 mise exec -- node scripts/ci/integration-promote.mjs
 ```
 
-The helper checks the repository/account and strict required promotion gate,
+The helper checks the repository/account and required promotion gate,
 refuses a stale source or empty candidate, creates
 `promotion/<workstream>/<source-sha>`, merges current main and creates a unique
 snapshot commit so integration-head checks cannot be reused. It runs `mise lint`
@@ -191,8 +193,8 @@ The candidate freezes **membership**, not its head: later integration commits
 do not restart its checks. Fixes and current-main merges use ordinary commits
 on the candidate and trigger validation again. A promotion gets its own review
 of the combined diff; earlier small-PR reviews do not waive open findings.
-Merge with `gh pr merge --squash` only after all required checks pass and the
-branch is up to date. Confirm the PR actually reports `MERGED`.
+Merge with `gh pr merge --squash` only after all required checks and review
+gates pass and GitHub permits it. Confirm the PR actually reports `MERGED`.
 
 After promotion, synchronize main back into integration through a PR using
 `gh pr merge --merge` before the next snapshot, preserving ancestry after the
@@ -213,7 +215,7 @@ Two consequences worth stating, because both look like bugs from the outside:
 - **`github.base_ref` is empty on a merge group.** Anything that needs the base
   reads `github.event.merge_group.base_ref` instead, which is a full
   `refs/heads/…` ref rather than a bare branch name (`agent-review.yml`'s
-  isolation litmus). Anything that needs a PR number — the advisory LLM review —
+  isolation litmus). Anything that needs a PR number — the compounding LLM review —
   is explicitly `github.event_name == 'pull_request'`, since
   `github.event.pull_request.draft == false` is *true* when the payload has no
   pull request at all: GitHub coerces both sides of `null == false` to `0`.
@@ -280,10 +282,10 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `promotion-quality.yml` | every PR targeting main; full validation for `promotion/**` and `integration/**` targeting main | Calls existing validation workflows with full scope. Required `Promotion validation` rejects any full lane that is not successful; ordinary PRs retain affected checks. |
 | `ios-quality.yml`                | PR on `clients/ios/**`, `pillars/bfm/**`, inventory server inputs, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; reusable with `full-validation: true`; every merge group, **scoped by a `scope` job to that same filter** | `xcode-27`; selects the Xcode pinned in `clients/ios/mise.toml`, lints first, then runs host and simulator tests and a Release build that verifies no BFM host is embedded. The reusable full lane and merge-group lane add compiler-log analysis (`lint:analyze`, ~19.5 min of the job) and the Maestro UI flow against a real BFM and a real inventory pillar. A reusable promotion call does not suppress an iOS-relevant promotion's native quick PR run; both verdicts are retained. No push trigger (POPS-4152). A PR whose base is not `main` (a stacked PR) skips the macOS job. Caches host SwiftPM build products, but no iOS DerivedData; the header says why |
 | `ios-testflight.yml`             | push to `main`; dispatch with a `sha` on `main` | an `ubuntu-latest` `pick` job (`scripts/ci/testflight-ship-sha.mjs`) chooses the newest pushed commit whose iOS Quality job ran and passed — the merge-group run, or with the queue off (POPS-4439) the `pull_request` run on the head of the PR it landed from — then `xcode-27`, environment `main` (branch-restricted to `main`); archives `Pops` and `PopsPlayground` at that commit with CalVer from `clients/ios/scripts/release-version.sh` and uploads both to TestFlight through `mise run release:testflight`. Each export still fails by default; the exact duplicate-build response is accepted only when `scripts/ci/testflight-upload.mjs` proves the same scheme, bundle id, version, build number and source commit already completed in App Store Connect. Not gated: it runs after merge |
-| `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the advisory reviewer that used to be its last step is now `pr-review.yml` |
-| `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. Debounced for 15 seconds by default and `cancel-in-progress: true`, so a burst still collapses to the newest head without adding a minute to every ordinary review. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN` regardless, and a skip is safe here specifically because this job is neither required nor gated |
+| `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the compounding reviewer that used to be its last step is now `pr-review.yml` |
+| `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group; its own job context is **not** required or listed in `ci-gate.yml` | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. HIGH and MEDIUM defects feed the required `review-findings-gate.yml`; LOW maintainability suggestions remain advisory. Debounced for 15 seconds by default and `cancel-in-progress: true`, so a burst still collapses to the newest head without adding a minute to every ordinary review. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN`; `pr-review-dependabot.yml` supplies the current-head state the required gate expects |
 | `pr-review-dependabot.yml`       | every non-draft, Dependabot-authored PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the substitute for the row above, only for the PRs it cannot run on (POPS-3343): posts the identical sticky-comment contract with zero findings, via the same `pr-review.mjs publish` code path, but never calls a model or reads the diff — a prose line above the state marker says so |
-| `review-findings-gate.yml`       | every PR, drafts included; every merge group; **required**                                    | blocks a merge while `pr-review.yml`'s (or, on a Dependabot PR, `pr-review-dependabot.yml`'s) sticky comment carries an open finding for the head commit (POPS-2661); polls for the debounced review, passes through on a merge group, and passes without polling on a design-surface-only diff because no review will ever come |
+| `review-findings-gate.yml`       | every PR, drafts included; every merge group; **required**                                    | blocks a merge while `pr-review.yml`'s (or, on a Dependabot PR, `pr-review-dependabot.yml`'s) sticky comment carries an open HIGH or MEDIUM finding for the head commit (POPS-2661). LOW is advisory; missing, malformed and unknown severity values block. The gate polls for the debounced review, passes through on a merge group, and passes without polling on a design-surface-only diff because no review will ever come |
 | `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group, **scoped by a `scope` job to that same filter** | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |
 | `pillar-schema-coverage.yml`     | PR/push on `pillars/*/src/db/**`, migrations                  | per-pillar coverage, an injected-table self-test, and a static `Pillar schema coverage` aggregator job               |
