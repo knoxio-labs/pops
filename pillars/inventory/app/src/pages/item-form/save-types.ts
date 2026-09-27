@@ -31,4 +31,5 @@ export type SaveResult =
       readonly status: 'refused';
       readonly refusal: SaveRefusal;
       readonly initial?: ItemDraft;
+      readonly revision?: number;
     };

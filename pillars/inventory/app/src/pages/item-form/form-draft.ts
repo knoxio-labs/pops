@@ -3,7 +3,7 @@ import { EMPTY_DRAFTS } from './field-model';
 
 import type { Placement } from '../../foundation/model/model';
 import type { CodeAction, CodeEntry } from './code-assist';
-import type { FieldDrafts, ReferenceChoice } from './field-model';
+import type { FieldDrafts, FormFieldDef, FormTypeDef, ReferenceChoice } from './field-model';
 
 /** Everything typed in the item form before the server accepts it. */
 export interface ItemDraft {
@@ -130,18 +130,48 @@ export function draftAfterSaveAndNew(saved: ItemDraft): ItemDraft {
   return blankDraft(saved.placement, saved.typeId);
 }
 
-/** Serialises draft values into the existing sync command's fields payload. */
-export function draftFields(draft: ItemDraft): Record<string, unknown> {
+function fieldValue(draft: ItemDraft, field: FormFieldDef): unknown | null {
+  const override = draft.overrides[field.id];
+  if (override !== undefined) return override;
+  if (field.kind === 'boolean') {
+    const value = draft.fields.booleans[field.id];
+    return value ?? null;
+  }
+  if (field.kind === 'reference') {
+    const ids = (draft.fields.refs[field.id] ?? []).map((choice) => choice.id);
+    return protocolValue(ids);
+  }
+  const values = (draft.fields.text[field.id] ?? []).filter((value) => value.trim() !== '');
+  return protocolValue(values);
+}
+
+function protocolValue(values: readonly unknown[]): unknown | null {
+  if (values.length === 0) return null;
+  if (values.length === 1) return values[0] ?? null;
+  return values;
+}
+
+/** Serialises the selected type's draft values into protocol-1 field keys. */
+export function draftFields(draft: ItemDraft, type: FormTypeDef | null): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
-  for (const [fieldId, values] of Object.entries(draft.fields.text)) {
-    const filtered = values.filter((value) => value.trim() !== '');
-    if (filtered.length > 0) fields[fieldId] = filtered.length === 1 ? filtered[0] : filtered;
+  for (const field of type?.fields ?? []) {
+    const value = fieldValue(draft, field);
+    if (value !== null) fields[field.key] = value;
   }
-  for (const [fieldId, choices] of Object.entries(draft.fields.refs)) {
-    const ids = choices.map((choice) => choice.id);
-    if (ids.length > 0) fields[fieldId] = ids.length === 1 ? ids[0] : ids;
+  return fields;
+}
+
+/** Returns a protocol-1 per-key patch, including nulls for fields the user cleared. */
+export function draftFieldPatch(
+  draft: ItemDraft,
+  initial: ItemDraft,
+  type: FormTypeDef | null
+): Record<string, unknown | null> {
+  const fields: Record<string, unknown | null> = {};
+  for (const field of type?.fields ?? []) {
+    const value = fieldValue(draft, field);
+    const previous = fieldValue(initial, field);
+    if (JSON.stringify(value) !== JSON.stringify(previous)) fields[field.key] = value;
   }
-  for (const [fieldId, value] of Object.entries(draft.fields.booleans)) fields[fieldId] = value;
-  for (const [fieldId, value] of Object.entries(draft.overrides)) fields[fieldId] = value;
   return fields;
 }
