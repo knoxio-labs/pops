@@ -18,6 +18,7 @@ import type { NavigateFunction } from 'react-router';
 import type { ItemRowModel, PlacementTarget, PlacementWorld } from '../../foundation/model';
 import type { ShortcutHandlers } from '../../foundation/shortcuts/shortcut-provider';
 import type { DetailDialog, DoneAct } from './detail-dialogs';
+import type { DetailTrailPosition } from './detail-trail';
 
 /** The placement and item state needed by item-detail actions. */
 export interface DetailActionModel {
@@ -26,25 +27,6 @@ export interface DetailActionModel {
 }
 
 /** Optional router state retained while moving between neighbouring detail pages. */
-export interface DetailTrailState {
-  listTrail: {
-    listName: string;
-    href: string;
-    ids: readonly string[];
-  };
-}
-
-/** The current item position in the list that opened its detail page. */
-export interface DetailTrailPosition {
-  listName: string;
-  href: string;
-  index: number;
-  total: number;
-  previousId: string | null;
-  nextId: string | null;
-  trailState?: DetailTrailState;
-}
-
 /** State and handlers used by the item-detail header, dialogs, picker, and keyboard scope. */
 export interface DetailActions {
   verbs: DetailVerbs;
