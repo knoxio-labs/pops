@@ -811,6 +811,128 @@ describe('mutations', () => {
   });
 });
 
+describe('sync ledger', () => {
+  it('relays the latest report, normalising an omitted lastSyncAt for inventory', async () => {
+    const report = {
+      reportedAt: '2026-09-19T01:00:00.000Z',
+      attention: [
+        {
+          id: 'case-1',
+          kind: 'field',
+          itemId: 'item-1',
+          itemName: 'Box',
+          openedAt: '2026-09-19T00:00:00.000Z',
+          problem: 'The field was archived on the server.',
+          mine: { value: 'blue', source: 'device', at: '2026-09-19T00:00:00.000Z' },
+          theirs: { value: 'green', source: 'server', at: '2026-09-19T00:00:01.000Z' },
+          code: { wanted: 'BOX-1', holder: 'item-2', suggested: 'BOX-2' },
+          held: {
+            title: 'Held values',
+            values: [{ field: 'colour', value: 'blue', fit: 'archived', replacement: 'colour-2' }],
+          },
+          photo: { size: '9MB', limit: '8MB' },
+          refused: { at: '2026-09-19T00:00:02.000Z', reason: 'too_large' },
+        },
+      ],
+      waiting: [
+        {
+          id: 'change-1',
+          itemName: 'Box',
+          summary: 'Waiting for the catalogue',
+          since: '2026-09-19T00:00:00.000Z',
+          reason: {
+            kind: 'catalogue',
+            on: 'cat-2',
+            revision: 7,
+            caseId: 'case-1',
+            itemName: 'Box',
+          },
+        },
+      ],
+      resolved: [
+        {
+          id: 'case-0',
+          itemName: 'Cable',
+          outcome: 'kept_mine',
+          at: '2026-09-18T23:00:00.000Z',
+          dropped: [{ field: 'length', value: '2m', fit: 'record-gone' }],
+        },
+      ],
+    };
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/sync/ledger', report);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ stored: true });
+    expect(fake.ledgerCalls).toEqual([{ ...report, lastSyncAt: null }]);
+  });
+
+  it('maps a malformed inventory acknowledgement to a contract mismatch', async () => {
+    const fake = createInventoryFake({ ledgerResult: { kind: 'ok', value: { stored: 'yes' } } });
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/sync/ledger', {
+      reportedAt: '2026-09-19T01:00:00.000Z',
+      lastSyncAt: null,
+      attention: [],
+      waiting: [],
+      resolved: [],
+    });
+
+    expect(res.status).toBe(502);
+    expect(res.body.code).toBe('upstream_contract_mismatch');
+  });
+
+  it('refuses a ledger report above the 256KB cap before it reaches inventory', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/sync/ledger', {
+      reportedAt: '2026-09-19T01:00:00.000Z',
+      lastSyncAt: null,
+      attention: [],
+      waiting: [],
+      resolved: [
+        {
+          id: 'case-1',
+          itemName: 'Box',
+          outcome: 'kept_mine',
+          at: '2026-09-19T00:00:00.000Z',
+          dropped: [{ field: 'notes', value: 'x'.repeat(300 * 1024), fit: 'fits' }],
+        },
+      ],
+    });
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      code: 'payload_too_large',
+      maxBytes: 256 * 1024,
+      message: expect.any(String),
+    });
+    expect(fake.ledgerCalls).toEqual([]);
+  });
+
+  it('refuses a device without inventory.write', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.read']);
+
+    const res = await post(app, token, '/mobile/inventory/sync/ledger', {
+      reportedAt: '2026-09-19T01:00:00.000Z',
+      lastSyncAt: null,
+      attention: [],
+      waiting: [],
+      resolved: [],
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('capability_not_granted');
+    expect(res.body.capability).toBe('inventory.write');
+    expect(fake.ledgerCalls).toEqual([]);
+  });
+});
+
 describe('code suggestions', () => {
   it('forwards the name, type and stem, and answers the suggestions unchanged', async () => {
     const fake = createInventoryFake({
