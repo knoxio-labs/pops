@@ -26,7 +26,6 @@ export interface DetailActionModel {
   world: PlacementWorld;
 }
 
-/** Optional router state retained while moving between neighbouring detail pages. */
 /** State and handlers used by the item-detail header, dialogs, picker, and keyboard scope. */
 export interface DetailActions {
   verbs: DetailVerbs;
