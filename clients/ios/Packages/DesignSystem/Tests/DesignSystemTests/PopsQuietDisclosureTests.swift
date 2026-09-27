@@ -85,7 +85,9 @@ internal struct PopsQuietDisclosureTests {
                         .flatMap(Self.accessibilityValue(of:)) == "Expanded"
                 )
             } else {
-                Self.expectAccessibilityState()
+                withKnownIssue("The package test host has no connected UIWindowScene.") {
+                    Self.expectAccessibilityState()
+                }
             }
         #else
             Self.expectAccessibilityState()
