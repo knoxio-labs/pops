@@ -22,6 +22,12 @@ out or executes pull request content despite holding `actions: write` and
   including completed replacements, so coalesced observer events cannot strand old work.
   Merge-group runs are never cancelled by this mechanism. If cancellation fails,
   obsolete work may finish, but it cannot contribute to another SHA's verdict.
+- Validation jobs and the promotion terminal use `!cancelled()` when they must
+  survive failed or skipped dependencies. Scope predicates still apply, and
+  admission still rejects failed or skipped required lanes. Unlike job-level
+  `always()`, this lets superseded runs stop and release runner capacity after
+  cancellation; cleanup steps such as report uploads keep their own conditions.
+  See [GitHub workflow cancellation](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-cancellation).
 - Cancellation-only and non-PR events have separate observer concurrency groups,
   so their no-verdict evaluations cannot replace a queued admission publication.
 - Gate evaluations for one SHA serialize without cancelling each other's API
