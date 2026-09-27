@@ -2618,6 +2618,9 @@ export type SettingsGetData = {
   body?: never;
   path: {
     key:
+      | 'inventory.labelSheet'
+      | 'inventory.labelShows'
+      | 'inventory.density'
       | 'inventory.defaultLimit'
       | 'inventory.searchDefaultLimit'
       | 'inventory.suggestCodes'
@@ -2668,6 +2671,9 @@ export type SettingsSetData = {
   };
   path: {
     key:
+      | 'inventory.labelSheet'
+      | 'inventory.labelShows'
+      | 'inventory.density'
       | 'inventory.defaultLimit'
       | 'inventory.searchDefaultLimit'
       | 'inventory.suggestCodes'
@@ -2719,6 +2725,9 @@ export type SettingsEnsureData = {
   };
   path: {
     key:
+      | 'inventory.labelSheet'
+      | 'inventory.labelShows'
+      | 'inventory.density'
       | 'inventory.defaultLimit'
       | 'inventory.searchDefaultLimit'
       | 'inventory.suggestCodes'
@@ -2769,6 +2778,9 @@ export type SettingsResetKeyData = {
   };
   path: {
     key:
+      | 'inventory.labelSheet'
+      | 'inventory.labelShows'
+      | 'inventory.density'
       | 'inventory.defaultLimit'
       | 'inventory.searchDefaultLimit'
       | 'inventory.suggestCodes'

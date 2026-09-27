@@ -6690,6 +6690,9 @@
             "required": true,
             "schema": {
               "enum": [
+                "inventory.labelSheet",
+                "inventory.labelShows",
+                "inventory.density",
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
                 "inventory.suggestCodes",
@@ -6772,6 +6775,9 @@
             "required": true,
             "schema": {
               "enum": [
+                "inventory.labelSheet",
+                "inventory.labelShows",
+                "inventory.density",
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
                 "inventory.suggestCodes",
@@ -6875,6 +6881,9 @@
             "required": true,
             "schema": {
               "enum": [
+                "inventory.labelSheet",
+                "inventory.labelShows",
+                "inventory.density",
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
                 "inventory.suggestCodes",
@@ -6975,6 +6984,9 @@
             "required": true,
             "schema": {
               "enum": [
+                "inventory.labelSheet",
+                "inventory.labelShows",
+                "inventory.density",
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
                 "inventory.suggestCodes",

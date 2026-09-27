@@ -16,8 +16,29 @@ export interface LabelParams {
   contents: boolean;
 }
 
+/** Stored defaults used when the URL does not explicitly choose a template or sheet. */
+export interface LabelPageDefaults {
+  template: LabelTemplateChoice;
+  sheetId: string | null;
+}
+
+/** Defaults used by standalone links before the inventory settings query resolves. */
+export const DEFAULT_LABEL_PAGE_DEFAULTS: LabelPageDefaults = {
+  template: 'auto',
+  sheetId: null,
+};
+
 function isTemplateChoice(value: string | null): value is LabelTemplateChoice {
   return value === 'auto' || value === 'container' || value === 'item';
+}
+
+function templateFromSearch(
+  search: URLSearchParams,
+  fallback: LabelTemplateChoice
+): LabelTemplateChoice {
+  const template = search.get('template');
+  if (template === null) return fallback;
+  return isTemplateChoice(template) ? template : 'auto';
 }
 
 /** The ids in `ids=`, trimmed, without blanks or repeats, capped at {@link MAX_LABEL_IDS}. */
@@ -30,13 +51,15 @@ export function parseIds(raw: string | null): string[] {
   return [...new Set(ids)].slice(0, MAX_LABEL_IDS);
 }
 
-/** Reads the label page's parameters; an unknown template reads as `auto`. */
-export function readLabelParams(search: URLSearchParams): LabelParams {
-  const template = search.get('template');
+/** Reads the label page's parameters; explicit URL choices win over stored defaults. */
+export function readLabelParams(
+  search: URLSearchParams,
+  defaults: LabelPageDefaults = DEFAULT_LABEL_PAGE_DEFAULTS
+): LabelParams {
   return {
     ids: parseIds(search.get('ids')),
-    template: isTemplateChoice(template) ? template : 'auto',
-    sheetId: search.get('sheet'),
+    template: templateFromSearch(search, defaults.template),
+    sheetId: search.get('sheet') ?? defaults.sheetId,
     contents: search.get('contents') === '1',
   };
 }

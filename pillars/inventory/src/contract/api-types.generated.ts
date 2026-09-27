@@ -4550,6 +4550,9 @@ export interface operations {
       header?: never;
       path: {
         key:
+          | 'inventory.labelSheet'
+          | 'inventory.labelShows'
+          | 'inventory.density'
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
@@ -4609,6 +4612,9 @@ export interface operations {
       header?: never;
       path: {
         key:
+          | 'inventory.labelSheet'
+          | 'inventory.labelShows'
+          | 'inventory.density'
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
@@ -4676,6 +4682,9 @@ export interface operations {
       header?: never;
       path: {
         key:
+          | 'inventory.labelSheet'
+          | 'inventory.labelShows'
+          | 'inventory.density'
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
@@ -4742,6 +4751,9 @@ export interface operations {
       header?: never;
       path: {
         key:
+          | 'inventory.labelSheet'
+          | 'inventory.labelShows'
+          | 'inventory.density'
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'

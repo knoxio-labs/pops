@@ -31,6 +31,21 @@ describe('label page address', () => {
     });
   });
 
+  it('uses stored defaults only when the URL does not provide them', () => {
+    expect(
+      readLabelParams(new URLSearchParams('ids=a'), {
+        template: 'item',
+        sheetId: 'L7165',
+      })
+    ).toEqual({ ids: ['a'], template: 'item', sheetId: 'L7165', contents: false });
+    expect(
+      readLabelParams(new URLSearchParams('ids=a&template=container&sheet=L7163'), {
+        template: 'item',
+        sheetId: 'L7165',
+      })
+    ).toEqual({ ids: ['a'], template: 'container', sheetId: 'L7163', contents: false });
+  });
+
   it('links to the page with the ids, and the contents flag when asked', () => {
     expect(labelsHref(['a', 'b'])).toBe('/inventory/labels?ids=a%2Cb');
     expect(labelsHref(['a'], { contents: true })).toBe('/inventory/labels?ids=a&contents=1');

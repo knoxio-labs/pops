@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   codesSuggest: vi.fn(),
   syncMutations: vi.fn(),
   searchSearch: vi.fn(),
+  settingsList: vi.fn(),
 }));
 
 vi.mock('../../inventory-api/index.js', () => ({
@@ -17,6 +18,7 @@ vi.mock('../../inventory-api/index.js', () => ({
   codesSuggest: (...args: unknown[]) => api.codesSuggest(...args),
   syncMutations: (...args: unknown[]) => api.syncMutations(...args),
   searchSearch: (...args: unknown[]) => api.searchSearch(...args),
+  settingsList: (...args: unknown[]) => api.settingsList(...args),
 }));
 
 import { LabelsPage } from './LabelsPage';
@@ -112,6 +114,15 @@ beforeEach(() => {
     ok({ outcomes: [mutationOutcome(body)] })
   );
   api.searchSearch.mockResolvedValue(ok({ hits: [] }));
+  api.settingsList.mockResolvedValue(
+    ok({
+      data: [
+        { key: 'inventory.labelSheet', value: 'L7160' },
+        { key: 'inventory.labelShows', value: 'auto' },
+        { key: 'inventory.density', value: 'compact' },
+      ],
+    })
+  );
 });
 
 afterEach(() => {
@@ -159,6 +170,24 @@ function addressIds(): string[] {
 }
 
 describe('LabelsPage', () => {
+  it('uses stored label defaults when the URL leaves them unset', async () => {
+    api.settingsList.mockResolvedValue(
+      ok({
+        data: [
+          { key: 'inventory.labelSheet', value: 'L7165' },
+          { key: 'inventory.labelShows', value: 'qr-code' },
+          { key: 'inventory.density', value: 'compact' },
+        ],
+      })
+    );
+
+    renderPage(`?ids=${GRINDER}`);
+
+    await screen.findByRole('button', { name: 'Print 1 label' });
+    expect(screen.getByLabelText('Sheet')).toHaveValue('L7165');
+    expect(screen.getByRole('tab', { name: 'Item' })).toHaveAttribute('data-state', 'active');
+  });
+
   it('returns to the items page instead of the overview placeholder', () => {
     renderPage(`?ids=${GRINDER}`);
     expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute(
