@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   usePaperlessState: vi.fn(),
   useLocationModels: vi.fn(),
   downloadCsv: vi.fn(),
+  downloadOverviewCsv: vi.fn(),
 }));
 
 vi.mock('../../inventory-web/useChangedElsewhere.js', () => ({
@@ -45,8 +46,8 @@ vi.mock('./report-model.js', async () => {
   const actual = await vi.importActual<typeof import('./report-model.js')>('./report-model.js');
   return { ...actual, downloadCsv: mocks.downloadCsv };
 });
-vi.mock('../ReportDashboardPage.js', () => ({
-  ReportDashboardPage: () => <div>Reports overview</div>,
+vi.mock('./overview-csv.js', () => ({
+  downloadOverviewCsv: (...args: unknown[]) => mocks.downloadOverviewCsv(...args),
 }));
 
 const locations: LocationModel[] = [
@@ -80,6 +81,20 @@ function reportEntry(id: string, overrides: Partial<ReportEntry> = {}): ReportEn
     itemId: id,
     name: overrides.name ?? id,
   };
+}
+
+function overviewReport() {
+  return valuesReport({
+    groups: [valuesGroup({ key: 'garage', label: 'Garage', records: 1, share: 1, value: 100 })],
+    totals: {
+      purchase: 40,
+      records: 1,
+      replacement: 100,
+      units: 1,
+      unvalued: 0,
+      withoutPhoto: 0,
+    },
+  });
 }
 
 function queryState<T>(
@@ -144,12 +159,129 @@ afterEach(() => {
 });
 
 describe('ReportsPage', () => {
-  it('renders the overview page inside the shared shell by default', () => {
+  it('renders the overview figures and panels inside the shared shell by default', () => {
+    mocks.useValueReport.mockReturnValue(queryState({ data: overviewReport() }));
+    mocks.useReportEntries.mockReturnValue(
+      queryState({ data: [reportEntry('soon', { warrantyExpires: '2026-10-01' })] })
+    );
+
     renderReports();
 
     expect(screen.getByRole('heading', { name: 'Reports' })).toBeInTheDocument();
-    expect(screen.getByText('Reports overview')).toBeInTheDocument();
+    expect(screen.getByText('Replacement value')).toBeInTheDocument();
+    expect(screen.getByText('Value by room')).toBeInTheDocument();
+    expect(screen.getByText('Ending in 90 days')).toBeInTheDocument();
+    expect(screen.getByText('What an insurer would ask about')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Print' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeEnabled();
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('data-state', 'active');
+  });
+
+  it('opens the detail tabs and preserves item links from overview panels', async () => {
+    mocks.useValueReport.mockReturnValue(
+      queryState({
+        data: valuesReport({
+          groups: [
+            valuesGroup({ key: 'garage', label: 'Garage', records: 1, share: 1, value: 100 }),
+          ],
+          totals: {
+            purchase: 40,
+            records: 1,
+            replacement: 100,
+            units: 1,
+            unvalued: 1,
+            withoutPhoto: 1,
+          },
+        }),
+      })
+    );
+    mocks.useReportEntries.mockReturnValue(
+      queryState({ data: [reportEntry('soon', { warrantyExpires: '2026-10-01' })] })
+    );
+    renderReports();
+
+    expect(screen.getByRole('link', { name: 'Open soon' })).toHaveAttribute(
+      'href',
+      '/inventory/items/soon'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'All values' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('tab=values'));
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Overview' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/inventory/reports')
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'All warranties' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('tab=warranties'));
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Overview' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/inventory/reports')
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /No replacement value/ }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('tab=insurance&gaps=1')
+    );
+  });
+
+  it('keeps overview actions available for loaded data', () => {
+    mocks.useValueReport.mockReturnValue(queryState({ data: overviewReport() }));
+    mocks.useReportEntries.mockReturnValue(queryState({ data: [reportEntry('item')] }));
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+
+    renderReports();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Print' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+
+    expect(print).toHaveBeenCalledOnce();
+    expect(mocks.downloadOverviewCsv).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['loading', queryState({ isPending: true }), queryState<ReportEntry[]>({ isPending: true })],
+    ['error', queryState({ isError: true }), queryState<ReportEntry[]>({ data: [] })],
+    ['empty', queryState({ data: valuesReport() }), queryState<ReportEntry[]>({ data: [] })],
+  ] as const)('handles overview %s without enabling export or print', (_state, values, entries) => {
+    mocks.useValueReport.mockReturnValue(values);
+    mocks.useReportEntries.mockReturnValue(entries);
+
+    renderReports();
+
+    expect(screen.getByRole('button', { name: 'Print' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+    if (_state === 'loading') {
+      expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    }
+    if (_state === 'error') expect(screen.getByText('Reports did not load')).toBeInTheDocument();
+    if (_state === 'empty') expect(screen.getByText('Nothing to report yet')).toBeInTheDocument();
+  });
+
+  it('retries both overview reads after an error', () => {
+    const valueRefetch = vi.fn();
+    const entryRefetch = vi.fn();
+    mocks.useValueReport.mockReturnValue(queryState({ isError: true, refetch: valueRefetch }));
+    mocks.useReportEntries.mockReturnValue(queryState({ isError: true, refetch: entryRefetch }));
+
+    renderReports();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(valueRefetch).toHaveBeenCalledOnce();
+    expect(entryRefetch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps loaded overview data visible during a refetch', () => {
+    mocks.useValueReport.mockReturnValue(queryState({ data: overviewReport(), isFetching: true }));
+    mocks.useReportEntries.mockReturnValue(queryState({ data: [reportEntry('item')] }));
+
+    renderReports();
+
+    expect(screen.getByText('Value by room')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeEnabled();
   });
 
   it('loads Values with the URL-selected server query', () => {
@@ -410,11 +542,14 @@ describe('ReportsPage', () => {
   });
 
   it('shows offline before stale state and provides a stale reload action', () => {
+    mocks.useValueReport.mockReturnValue(queryState({ data: overviewReport() }));
+    mocks.useReportEntries.mockReturnValue(queryState({ data: [reportEntry('item')] }));
     mocks.useOnline.mockReturnValue(false);
     mocks.useChangedElsewhere.mockReturnValue({ stale: true, groups: [], reload: vi.fn() });
     renderReports();
 
     expect(screen.getByText('No connection. Showing what loaded.')).toBeInTheDocument();
+    expect(screen.getByText('Value by room')).toBeInTheDocument();
     expect(
       screen.queryByText('Reports changed elsewhere since this page loaded.')
     ).not.toBeInTheDocument();
@@ -423,6 +558,9 @@ describe('ReportsPage', () => {
     mocks.useOnline.mockReturnValue(true);
     mocks.useChangedElsewhere.mockReturnValue({ stale: true, groups: [], reload });
     const view = renderReports();
+    expect(
+      screen.getByText('Reports changed elsewhere since this page loaded.')
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
     expect(reload).toHaveBeenCalledOnce();
     view.unmount();
