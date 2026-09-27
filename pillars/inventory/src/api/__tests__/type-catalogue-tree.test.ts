@@ -139,7 +139,12 @@ function apiFor(mode: 'web' | 'service' | 'none', scopes: readonly string[] = []
     identityResolver: identity(mode, scopes),
     documents: {
       getPaperlessStatus: () =>
-        Promise.resolve({ configured: false, available: false, baseUrl: null }),
+        Promise.resolve({
+          configured: false,
+          available: false,
+          baseUrl: null,
+          documentCount: null,
+        }),
       searchPaperlessDocuments: () => Promise.resolve([]),
       paperlessDocumentMissing: () => Promise.resolve(null),
     },
