@@ -37,7 +37,7 @@ function useHarness(
     nodesRef,
     linksRef,
     transformRef,
-    itemId: 'item-1',
+    itemId: 'item:item-1',
     onNavigate,
   });
 }
@@ -47,7 +47,7 @@ function node(id: string, x: number, isFixture = false): GraphNode {
 }
 
 describe('useGraphInteraction', () => {
-  it('does not navigate when a fixture node is clicked', () => {
+  it('navigates when a fixture node is clicked', () => {
     const canvas = makeCanvas();
     const onNavigate = vi.fn();
     renderHook(() => useHarness(canvas, [node('fixture-1', 20, true)], onNavigate));
@@ -55,17 +55,17 @@ describe('useGraphInteraction', () => {
     fireEvent.mouseDown(canvas, { clientX: 20, clientY: 20 });
     fireEvent.mouseUp(canvas, { clientX: 20, clientY: 20 });
 
-    expect(onNavigate).not.toHaveBeenCalled();
+    expect(onNavigate).toHaveBeenCalledWith('fixture-1');
   });
 
   it('navigates when an item node is clicked', () => {
     const canvas = makeCanvas();
     const onNavigate = vi.fn();
-    renderHook(() => useHarness(canvas, [node('item-2', 20)], onNavigate));
+    renderHook(() => useHarness(canvas, [node('item:item-2', 20)], onNavigate));
 
     fireEvent.mouseDown(canvas, { clientX: 20, clientY: 20 });
     fireEvent.mouseUp(canvas, { clientX: 20, clientY: 20 });
 
-    expect(onNavigate).toHaveBeenCalledWith('item-2');
+    expect(onNavigate).toHaveBeenCalledWith('item:item-2');
   });
 });

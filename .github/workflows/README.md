@@ -35,9 +35,8 @@ out or executes pull request content despite holding `actions: write` and
   matching source repository, branch and head. Admission then requires a run title
   that records the target base explicitly; a missing or older base stays pending.
   Workflow identity comes from its registered ID, because the run API may put a
-  custom title in both `name` and `display_title`. Fork PRs set that base-bearing
-  title; same-repository events retain the canonical workflow name, allowing the
-  observer to roll out while the previous name-based observer is still on main. Ambiguous
+  custom title in both `name` and `display_title`. Every registered workflow records
+  its event and target branch in that title. Ambiguous
   associations block, and cancellation requires an explicit PR association.
 - Only runs for the same event, PR and base branch contribute; the latest run
   number and attempt wins. Completed runs pass only on `success` or `skipped`.
@@ -142,97 +141,69 @@ stays gated and unfiltered: it is what guarantees the context reports on every
 PR, docs-only ones included, and a required context that never reports blocks
 its PR forever.
 
-### The merge queue, and the `merge_group` trigger it depends on
+### Main admission without a merge queue
 
-`main` is behind a **merge queue** — the `merge_queue` rule on the `main` branch
-ruleset, which is where to check it rather than take this paragraph's word for
-it. A pull request is never merged on the strength of its own run: the queue
-rebuilds it on top of `main`'s current tip as a temporary
-`gh-readonly-queue/main/...` ref, re-runs the required checks against that, and
-merges only if they pass there. Two PRs that are each green against a base that
-does not contain the other — different files, no textual conflict, an
-incompatibility only a compiler can see — are what this exists to stop.
+Main's merge queue stays **off**. Base movement alone does not require updating
+a conflict-free PR or repeating passing validation. Merge when required checks
+and review gates pass and GitHub permits it. Update the branch to resolve
+conflicts, address an integration failure, or satisfy an effective GitHub
+protection requirement. Do not bypass protection or force-push. Check the
+effective branch rules through GitHub; workflow triggers alone do not prove
+a queue or a required check is enabled. Strict up-to-date protection, when
+enabled, still requires a branch update before GitHub permits merging.
 
-The triggers below went in one commit ahead of that rule, and the order is not
-cosmetic: a queue whose required checks do not declare `merge_group` holds its
-first entry until the check-response timeout evicts it, and every entry behind
-it. Trigger first, rule second.
+`Promotion validation` is a required terminal job in `promotion-quality.yml`.
+A PR from `promotion/**` or `integration/**` to main calls the existing Quality,
+Unit, App, Rust, FE, browser, Docker, registry and iOS workflows with
+`full-validation: true`. Discovery selects every unit/app; Docker builds and
+smoke-probes every image; iOS includes simulator tests, analyzer, Release and
+Maestro against real BFM/inventory processes. Every full lane must succeed;
+missing, skipped, cancelled and failed lanes block promotion. Reusable validation
+requires an explicit `full-validation` input; callers cannot silently omit it. Ordinary PRs
+retain affected checks and receive an explicit non-promotion result.
+Publishing and deployment are separate workflows.
 
-**Every workflow behind a required context therefore triggers on `merge_group`.**
-`quality.yml` and `agent-review.yml` for the five directly-required contexts,
-and all nine of the workflows `ci-gate.yml` aggregates, or `CI Gate` would go
-green on the merge group having observed nothing. Deleting a `merge_group:`
-trigger from any of them does not turn a check off, it makes that check never
-report on the queue's ref — and an entry whose required check never reports sits
-until the queue's check-response timeout evicts it. A queue that evicts
-everything is indistinguishable, from the outside, from a repo where nothing can
-merge.
+The existing `merge_group` triggers remain available for compatibility, but
+are dormant while the queue is off. Enabling a queue is a separate process
+change: do not infer full promotion coverage from those triggers.
 
-**A merge-group TRIGGER cannot be path-filtered, so the scoping moved into a
-job.** `paths:` is accepted only on `push`, `pull_request` and
-`pull_request_target`; under `merge_group` it is a workflow syntax error, and
-`dorny/paths-filter` has no diff base on the event either. Every workflow's
-`merge_group` trigger is therefore unconditional and always registers a run.
-What the two expensive ones do inside that run is scoped:
-`ios-quality.yml` and `docker-build.yml` each open with a cheap `ubuntu-latest`
-`scope` job that runs `scripts/ci/merge-group-scope.mjs`, which reads **that
-workflow's own `on.pull_request.paths`** off disk and answers it against
-`git diff <merge_group.base_sha>..<merge_group.head_sha>`. The expensive jobs
-are conditioned on its `selected` output. Every other gated workflow's queue
-lane still runs what a push to `main` runs.
+### Integration workstreams and frozen promotion
 
-One implementation, not one glob list per workflow: widening a workflow's
-`pull_request.paths` widens its queue lane in the same edit, and the two cannot
-drift. The helper is the only thing in the fleet whose wrong answer is
-invisible — a skip that should have been a build leaves the workflow concluding
-`success` and `CI Gate` aggregating it — so it has no tolerant branch at all.
-An unresolvable base, a base that is not an ancestor of the head, an **empty
-diff** (the signature of a wrong base, and the input that would deselect every
-lane at once), a missing or unparseable workflow, a `pull_request` trigger with
-no `paths:` — each exits non-zero, which skips the expensive job *and* fails the
-workflow. A red queue entry costs one re-queue; a wrong skip merges a commit
-nothing compiled. Its `--self-test` proves both directions (it selects a
-touching diff, it deselects a non-touching one) and every refusal above, and it
-runs in the `scope` job itself immediately before the answer it qualifies, not
-only in `agent-review.yml`'s preflight.
+Small related PRs target `integration/<workstream>`. These protected branches
+require affected deterministic checks and the review-findings gate. Expensive
+iOS compilation is deferred to main admission. A green integration merge is
+neither full validation nor completion of its implementation ticket. Unrelated
+fixes can still target main directly.
 
-The corollary is that a workflow's declared `pull_request.paths` is now
-load-bearing in two lanes. `ios-quality.yml`'s path filter covers
-`clients/ios/**`, `pillars/bfm/**`, the inventory server inputs,
-`scripts/ios-e2e/**` — the two processes and the harness because its UI-flow
-step boots a real BFM and a real inventory pillar — and `pnpm-lock.yaml`,
-since a lockfile bump changes what those boots resolve. The inventory web app,
-docs, snapshots and Dockerfile are excluded because the flow builds none of
-them. It deliberately does not cover the BFM's transitive `libs/*` (today just
-`libs/sdk` and `libs/types`, per `pnpm list --filter "@pops/bfm..." --depth
-Infinity`): that pair is touched far more often than the lockfile, both libs
-are already gated by `unit-quality.yml` (which runs the BFM's own typecheck and
-vitest suite against them), and this job's header explains the trade in full.
+Keep batches small and coherent. From a clean, current integration checkout:
 
-**What it costs and what it saves**, measured on the 39 completed merge-queue
-entries immediately before the scoping change. Each entry's `ios-quality.yml`
-run took a median of 20 minutes end to end (mean 20.1 minutes, 90th percentile
-28 minutes), and **33 of the 39 touched no iOS path at all** — so five compiles
-in six were spent on a merge group the job had nothing to say about. The `scope`
-job that now decides between them takes 32 seconds, of which its self-test and
-its answer are one second and the rest is checkout plus a warm-cache `pnpm
-install`.
+```sh
+mise exec -- node scripts/ci/integration-promote.mjs
+```
 
-**The queue groups entries, and that is the other half of the cost.** With
-`min_entries_to_merge: 1` the queue formed a group per entry, so each PR bought
-its own run of everything. Measured on the 15 merges after the `scope` job
-landed, the queue leg — first merge-group run created to merged — split cleanly
-in two: a median of **2.9 minutes** for the entries `scope` deselected iOS on,
-against **85.8 minutes** for the entries it selected. The spread is not the
-queue. That was dominated by the full iOS suite. A selected merge-group lane
-runs the host and simulator tests, Release build, compiler-log analysis and
-Maestro flow against the exact merge candidate.
+The helper checks the repository/account and required promotion gate,
+refuses a stale source or empty candidate, creates
+`promotion/<workstream>/<source-sha>`, merges current main and creates a unique
+snapshot commit so integration-head checks cannot be reused. It runs `mise lint`
+and `mise typecheck`, pushes through normal hooks and opens the main PR. On
+success it returns to integration; on failure it leaves the candidate checkout
+for diagnosis. It never deletes or force-pushes a branch.
 
-`check_response_timeout_minutes` is 75, raised from 60. A check that does not
-report inside that window evicts its entry, and the worst in-queue
-`ios-quality.yml` run observed was 52 minutes end to end — which at 60 left
-eight minutes of margin, less than a cold macOS runner acquisition can spend
-before the job even starts. At 75 that margin is 23.
+The candidate freezes **membership**, not its head: later integration commits
+do not restart its checks. Fixes and current-main merges use ordinary commits
+on the candidate and trigger validation again. A promotion gets its own review
+of the combined diff; earlier small-PR reviews do not waive open findings.
+Merge with `gh pr merge --squash` only after all required checks and review
+gates pass and GitHub permits it. Confirm the PR actually reports `MERGED`.
+
+After promotion, synchronize main back into integration through a PR using
+`gh pr merge --merge` before the next snapshot, preserving ancestry after the
+squash. Integration protection permits merge commits for this purpose; main
+remains squash-only. Continue independent work while a candidate validates.
+
+Measure push-to-integration, full-validation duration, base-update reruns and
+push-to-main separately. Batching amortizes validation across related PRs;
+it does not promise lower delivery latency for every individual change.
 
 Two consequences worth stating, because both look like bugs from the outside:
 
@@ -244,7 +215,7 @@ Two consequences worth stating, because both look like bugs from the outside:
 - **`github.base_ref` is empty on a merge group.** Anything that needs the base
   reads `github.event.merge_group.base_ref` instead, which is a full
   `refs/heads/…` ref rather than a bare branch name (`agent-review.yml`'s
-  isolation litmus). Anything that needs a PR number — the advisory LLM review —
+  isolation litmus). Anything that needs a PR number — the compounding LLM review —
   is explicitly `github.event_name == 'pull_request'`, since
   `github.event.pull_request.draft == false` is *true* when the payload has no
   pull request at all: GitHub coerces both sides of `null == false` to `0`.
@@ -263,7 +234,8 @@ unit when `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.base.json`,
 `mise.ci.toml`, `Cargo.toml` or `Cargo.lock` changed). The header explains why
 the scan stops at maxdepth 1.
 
-The diff's base differs by event: `pull_request` (and `merge_group`) diff from
+Calls with `full-validation: true` select every unit and client directory. For affected checks,
+the diff's base differs by event: `pull_request` diffs from
 `merge-base(origin/<base_ref>, HEAD)`, the PR's fork point. `push` diffs from
 `github.event.before` instead — `origin/<branch>` is refreshed by the same
 checkout that fetches the run's own commit, so on a push it already includes
@@ -307,12 +279,13 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
+| `promotion-quality.yml` | every PR targeting main; full validation for `promotion/**` and `integration/**` targeting main | Calls existing validation workflows with full scope. Required `Promotion validation` rejects any full lane that is not successful; ordinary PRs retain affected checks. |
 | `ios-quality.yml`                | PR on `clients/ios/**`, `pillars/bfm/**`, inventory server inputs, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; reusable with `full-validation: true`; every merge group, **scoped by a `scope` job to that same filter** | `xcode-27`; selects the Xcode pinned in `clients/ios/mise.toml`, lints first, then runs host and simulator tests and a Release build that verifies no BFM host is embedded. The reusable full lane and merge-group lane add compiler-log analysis (`lint:analyze`, ~19.5 min of the job) and the Maestro UI flow against a real BFM and a real inventory pillar. A reusable promotion call does not suppress an iOS-relevant promotion's native quick PR run; both verdicts are retained. No push trigger (POPS-4152). A PR whose base is not `main` (a stacked PR) skips the macOS job. Caches host SwiftPM build products, but no iOS DerivedData; the header says why |
 | `ios-testflight.yml`             | push to `main`; dispatch with a `sha` on `main` | an `ubuntu-latest` `pick` job (`scripts/ci/testflight-ship-sha.mjs`) chooses the newest pushed commit whose iOS Quality job ran and passed — the merge-group run, or with the queue off (POPS-4439) the `pull_request` run on the head of the PR it landed from — then `xcode-27`, environment `main` (branch-restricted to `main`); archives `Pops` and `PopsPlayground` at that commit with CalVer from `clients/ios/scripts/release-version.sh` and uploads both to TestFlight through `mise run release:testflight`. Each export still fails by default; the exact duplicate-build response is accepted only when `scripts/ci/testflight-upload.mjs` proves the same scheme, bundle id, version, build number and source commit already completed in App Store Connect. Not gated: it runs after merge |
-| `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the advisory reviewer that used to be its last step is now `pr-review.yml` |
-| `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. Debounced for 15 seconds by default and `cancel-in-progress: true`, so a burst still collapses to the newest head without adding a minute to every ordinary review. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN` regardless, and a skip is safe here specifically because this job is neither required nor gated |
+| `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the compounding reviewer that used to be its last step is now `pr-review.yml` |
+| `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group; its own job context is **not** required or listed in `ci-gate.yml` | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. HIGH and MEDIUM defects feed the required `review-findings-gate.yml`; LOW maintainability suggestions remain advisory. Debounced for 15 seconds by default and `cancel-in-progress: true`, so a burst still collapses to the newest head without adding a minute to every ordinary review. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN`; `pr-review-dependabot.yml` supplies the current-head state the required gate expects |
 | `pr-review-dependabot.yml`       | every non-draft, Dependabot-authored PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the substitute for the row above, only for the PRs it cannot run on (POPS-3343): posts the identical sticky-comment contract with zero findings, via the same `pr-review.mjs publish` code path, but never calls a model or reads the diff — a prose line above the state marker says so |
-| `review-findings-gate.yml`       | every PR, drafts included; every merge group; **required**                                    | blocks a merge while `pr-review.yml`'s (or, on a Dependabot PR, `pr-review-dependabot.yml`'s) sticky comment carries an open finding for the head commit (POPS-2661); polls for the debounced review, passes through on a merge group, and passes without polling on a design-surface-only diff because no review will ever come |
+| `review-findings-gate.yml`       | every PR, drafts included; every merge group; **required**                                    | blocks a merge while `pr-review.yml`'s (or, on a Dependabot PR, `pr-review-dependabot.yml`'s) sticky comment carries an open HIGH or MEDIUM finding for the head commit (POPS-2661). LOW is advisory; missing, malformed and unknown severity values block. The gate polls for the debounced review, passes through on a merge group, and passes without polling on a design-surface-only diff because no review will ever come |
 | `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group, **scoped by a `scope` job to that same filter** | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |
 | `pillar-schema-coverage.yml`     | PR/push on `pillars/*/src/db/**`, migrations                  | per-pillar coverage, an injected-table self-test, and a static `Pillar schema coverage` aggregator job               |
@@ -331,8 +304,11 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 existing. `shell`, `mcp`, `orchestrator` and `docs` all have one, so the four
 images in the static `apps` matrix are also built by the `pillars` job.
 
-What stops an image that fails Docker Build reaching GHCR is the merge queue, and only the merge queue — `publish-images.yml` has no `needs`, no `workflow_run` and no check of its own, so on a push to `main` it runs alongside everything else rather than after it. The coupling is the ruleset: `main` accepts nothing except through the merge queue, the queue requires `CI Gate`, and `ci-gate.yml` gates `Docker Build`, so a commit whose Docker Build fails in its merge group never becomes a push to `main` and never publishes. Three consequences follow, and all three are deliberate rather than overlooked (POPS-2677):
+Main admission gates image validation through `CI Gate` for affected ordinary
+PRs and through `Promotion validation` for every promotion image. The publisher
+has no dependency on those jobs: it runs after main advances. Ordinary PR image
+checks remain path-scoped, so their green result is not proof that every image
+was smoke-probed. Promotions provide that full sweep.
 
-- **The queue's Docker Build is path-scoped.** It builds and smoke-probes (`scripts/ci/smoke-image.mjs`) only when the merge group touches its filter — Dockerfiles, `infra/docker*`, the compose files, pillar nginx config, `pnpm-lock.yaml`/`pnpm-workspace.yaml`, `tsconfig.base.json`, its own workflow, `.github/actions/**`, or the smoke script. `publish-images.yml` rebuilds every image on every push regardless. So a change outside that filter that breaks an image's *build* fails that image's publish job and pushes nothing for it, but one that builds and then fails to boot is published without the smoke probe ever having run on it.
-- **`workflow_dispatch` is ungated.** It builds whatever ref it is dispatched on.
-- **A `v*` tag is gated only by where it points.** `release.yml` tags `HEAD` of `main`, which the queue already admitted, and then dispatches this workflow at that tag. A tag pushed by hand onto a commit that never went through the queue publishes with no gate at all.
+- `workflow_dispatch` publishing is independent of PR admission.
+- A manually pushed tag is gated only by the commit it points to.

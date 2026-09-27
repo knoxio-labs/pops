@@ -71,8 +71,11 @@ function projectRange(
   }
 }
 
-/** Loads an item's stored values and projects revision 1 back to legacy protocol-1 fields. */
-export function loadProtocol1Fields(db: CommandDb, itemId: string): Protocol1Fields {
+function loadLegacyFields(
+  db: CommandDb,
+  itemId: string,
+  cardinality: 'reject' | 'omit'
+): Protocol1Fields {
   const item = db.select({ typeId: items.typeId }).from(items).where(eq(items.id, itemId)).get();
   if (!item?.typeId) return {};
   const type = resolveProtocol1TypeById(db, item.typeId);
@@ -84,13 +87,38 @@ export function loadProtocol1Fields(db: CommandDb, itemId: string): Protocol1Fie
     .all();
   const fields: Record<string, Protocol1FieldValue> = {};
   const definitions = new Map(type.fields.map((field) => [field.id, field]));
+  const multipleValueFieldIds = new Set(
+    rows.filter((row) => row.ordinal !== 0).map((row) => row.fieldId)
+  );
   for (const row of rows) {
     if (row.ordinal !== 0) {
-      throw new Protocol1ValueError(row.fieldId, 'has cardinality unsupported by protocol 1');
+      if (cardinality === 'reject') {
+        throw new Protocol1ValueError(row.fieldId, 'has cardinality unsupported by protocol 1');
+      }
+      continue;
     }
+    if (multipleValueFieldIds.has(row.fieldId)) continue;
     const field = definitions.get(row.fieldId);
     if (field) fields[field.key] = projectValue(field, row.valueJson);
   }
   projectRange(fields, type);
   return fields;
+}
+
+/** Loads stored values and strictly projects them onto legacy protocol-1 fields. */
+export function loadProtocol1Fields(db: CommandDb, itemId: string): Protocol1Fields {
+  return loadLegacyFields(db, itemId, 'reject');
+}
+
+/**
+ * Builds the requested protocol's legacy projection. Protocol 2 omits a
+ * complete field when its canonical values cannot fit protocol 1's shape;
+ * protocol 1 remains strict.
+ */
+export function loadLegacyFieldsForProtocol(
+  db: CommandDb,
+  itemId: string,
+  protocol: number
+): Protocol1Fields {
+  return loadLegacyFields(db, itemId, protocol >= 2 ? 'omit' : 'reject');
 }

@@ -33,8 +33,9 @@ export async function validate({
   concurrency = 4,
 }) {
   const receiptFile = join(cwd, 'tmp/local-dev/validation/success.json');
-  const initialSources = repositoryFingerprint(cwd);
-  const units = (await discoverUnits({ cwd }))
+  const initialSources = planOnly ? undefined : repositoryFingerprint(cwd);
+  const discovered = await discoverUnits({ cwd });
+  const units = discovered
     .map((unit) => ({ ...unit, unitPath: relative(cwd, unit.unitPath) }))
     .filter((unit) => !unit.unitPath.startsWith('clients/'));
   const checkable = new Set(
@@ -54,10 +55,13 @@ export async function validate({
       const status = run('mise', args);
       if (status !== 0) return status;
     }
+    const docsStatus = run('node', ['scripts/ci/check-docs-model.mjs']);
+    if (docsStatus !== 0) return docsStatus;
   }
-  if (scope.unitPaths.length === 0) return sourcesUnchanged() ? 0 : 1;
+  if (scope.unitPaths.length === 0 && !scope.scripts) return sourcesUnchanged() ? 0 : 1;
   const checks = await discoverLocalTasks({
     cwd,
+    units: discovered,
     taskNames: ['typecheck'],
     unitPaths: scope.unitPaths,
   });
@@ -85,7 +89,7 @@ export async function validate({
     invalidateReceipt(receiptFile);
     const buildStatus = run('mise', ['build']);
     if (buildStatus !== 0) return buildStatus;
-    const prerequisites = await prepareTasks({ cwd, descriptors: checks });
+    const prerequisites = await prepareTasks({ cwd, descriptors: checks, units: discovered });
     if (prerequisites.length > 0) {
       const preparation = await runTasks(prerequisites, { concurrency: 1 });
       if (preparation.status !== 0) return preparation.status;
@@ -129,6 +133,7 @@ export async function validate({
     }
     const tests = await discoverLocalTasks({
       cwd,
+      units: discovered,
       taskNames: ['test'],
       unitPaths: scope.unitPaths,
     });

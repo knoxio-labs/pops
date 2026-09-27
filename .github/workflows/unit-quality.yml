@@ -1,5 +1,5 @@
 name: Unit Quality
-run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('{0} for pull_request into {1}', github.workflow, github.base_ref) || github.workflow }}
+run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.base_ref || github.event.merge_group.base_ref || github.ref_name }}
 
 # Single disk-discovered matrix gating every buildable unit under
 # `pillars/` + `libs/` (maxdepth 1), TS and Rust. Replaces the per-lib
@@ -27,6 +27,11 @@ run-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.h
 # running nothing. The "exactly one package" guard makes that loud.
 
 on:
+  workflow_call:
+    inputs:
+      full-validation:
+        type: boolean
+        required: true
   pull_request:
     types: [opened, synchronize, reopened, edited]
     paths:
@@ -66,6 +71,8 @@ env:
 jobs:
   discover:
     uses: ./.github/workflows/_discover-units.yml
+    with:
+      full-validation: ${{ inputs.full-validation || false }}
 
   ts:
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — ts
