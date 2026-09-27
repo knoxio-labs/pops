@@ -7,7 +7,7 @@ export function roomOf(world: PlacementWorld, itemId: string): { id: string; nam
   const locationId = effectiveLocationId(world, itemId);
   if (locationId === null) return { id: 'in-hand', name: 'In hand' };
   const path = locationPath(world, locationId);
-  const room = path[1] ?? path[0];
+  const room = path.find((node) => node.kind === 'room') ?? path[0];
   return room === undefined
     ? { id: 'unknown', name: 'Unknown place' }
     : { id: room.id, name: room.name };

@@ -13,3 +13,6 @@ losing the user's query or focus. Refused options remain visible, expose
 Fixture kinds are strict server-text matches. Unknown stored types keep their
 original label and use the generic fixture mark. `ConnectionsTabs` is a
 controlled visual tab only; the page owns navigation through `onChange`.
+
+`roomOf` selects the first location whose semantic kind is `room`, so nested
+areas and storage do not change the room label used by secondary pages.
