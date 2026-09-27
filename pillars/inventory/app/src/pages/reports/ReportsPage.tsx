@@ -5,9 +5,8 @@ import { OFFLINE_TITLE, StateBanner } from '../../foundation/feedback/state-bann
 import { useChangedElsewhere } from '../../inventory-web/useChangedElsewhere.js';
 import { useOnline } from '../../inventory-web/useOnline.js';
 import { useValueReport } from '../../inventory-web/useValueReport.js';
-import { InsuranceReportPage } from '../InsuranceReportPage.js';
-import { ReportDashboardPage } from '../ReportDashboardPage.js';
-import { WarrantiesPage } from '../WarrantiesPage.js';
+import { OverviewReportRoute } from './overview-route.js';
+import { InsuranceReportRoute, WarrantiesReportRoute } from './report-routes.js';
 import { downloadValuesCsv } from './reports-csv.js';
 import {
   isValueReportEmpty,
@@ -22,6 +21,8 @@ import { ReportsShell } from './reports-shell.js';
 import { ValuesTab } from './values-tab.js';
 
 import type { ReactElement, ReactNode } from 'react';
+
+import type { InsuranceGapReason } from './insurance-model.js';
 
 function pageBanner(online: boolean, changed: ReturnType<typeof useChangedElsewhere>): ReactNode {
   if (!online) {
@@ -45,18 +46,55 @@ function pageBanner(online: boolean, changed: ReturnType<typeof useChangedElsewh
   );
 }
 
-function legacyReport(tab: Exclude<ReportTab, 'values'>): ReactElement {
-  if (tab === 'warranties') return <WarrantiesPage />;
-  if (tab === 'insurance') return <InsuranceReportPage />;
-  return <ReportDashboardPage />;
-}
-
 interface ValuesReportRouteProps {
   readonly url: ReportsUrlState;
   readonly banner: ReactNode;
   readonly updateUrl: (patch: ReportsUrlPatch) => void;
   readonly onTabChange: (tab: ReportTab) => void;
   readonly onOpenItem: (id: string) => void;
+}
+
+function withInsuranceGaps(current: URLSearchParams, reason: InsuranceGapReason): URLSearchParams {
+  const next = new URLSearchParams(current);
+  next.set('tab', 'insurance');
+  next.delete('by');
+  next.delete('basis');
+  next.delete('group');
+  next.delete('locationId');
+  next.delete('sort');
+  next.set('gaps', '1');
+  next.set('reason', reason);
+  return next;
+}
+
+function useReportNavigation(
+  url: ReportsUrlState,
+  setSearchParams: ReturnType<typeof useSearchParams>[1]
+) {
+  const updateUrl = useCallback(
+    (patch: ReportsUrlPatch): void => {
+      setSearchParams((current) => writeReportsUrl(current, patch), { replace: true });
+    },
+    [setSearchParams]
+  );
+  const onTabChange = useCallback(
+    (tab: ReportTab): void => {
+      if (tab === 'values') {
+        updateUrl({ tab });
+        return;
+      }
+      updateUrl(
+        url.tab === 'values' ? { tab, by: 'room', basis: 'replacement', group: null } : { tab }
+      );
+    },
+    [updateUrl, url.tab]
+  );
+  const onOpenInsuranceGaps = useCallback(
+    (reason: InsuranceGapReason) =>
+      setSearchParams((current) => withInsuranceGaps(current, reason), { replace: true }),
+    [setSearchParams]
+  );
+  return { onOpenInsuranceGaps, onTabChange, updateUrl };
 }
 
 function valuesReportBlockedReason(report: ReturnType<typeof useValueReport>): string | undefined {
@@ -122,24 +160,7 @@ export function ReportsPage(): ReactElement {
   const online = useOnline();
   const changed = useChangedElsewhere({ queryKeys: REPORTS_QUERY_KEYS });
   const navigate = useNavigate();
-  const updateUrl = useCallback(
-    (patch: ReportsUrlPatch): void => {
-      setSearchParams((current) => writeReportsUrl(current, patch), { replace: true });
-    },
-    [setSearchParams]
-  );
-  const onTabChange = useCallback(
-    (tab: ReportTab): void => {
-      if (tab === 'values') {
-        updateUrl({ tab });
-        return;
-      }
-      updateUrl(
-        url.tab === 'values' ? { tab, by: 'room', basis: 'replacement', group: null } : { tab }
-      );
-    },
-    [updateUrl, url.tab]
-  );
+  const { onOpenInsuranceGaps, onTabChange, updateUrl } = useReportNavigation(url, setSearchParams);
   const banner = pageBanner(online, changed);
   if (url.tab === 'values') {
     return (
@@ -152,9 +173,17 @@ export function ReportsPage(): ReactElement {
       />
     );
   }
+  if (url.tab === 'warranties') {
+    return <WarrantiesReportRoute banner={banner} onTabChange={onTabChange} />;
+  }
+  if (url.tab === 'insurance') {
+    return <InsuranceReportRoute banner={banner} onTabChange={onTabChange} />;
+  }
   return (
-    <ReportsShell tab={url.tab} onTabChange={onTabChange} banner={banner}>
-      {legacyReport(url.tab)}
-    </ReportsShell>
+    <OverviewReportRoute
+      banner={banner}
+      onTabChange={onTabChange}
+      onOpenInsuranceGaps={onOpenInsuranceGaps}
+    />
   );
 }

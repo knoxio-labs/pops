@@ -101,7 +101,11 @@ extension InventoryItemFormModel {
             draft.name = product.title
         }
         let source = InventoryPrefillSource.product(InventoryBarcodeFacts.facts(product))
-        startPrefill(source: source, type: type, currentDraft: currentDraft)
+        let deterministicValues = InventoryBarcodeFacts.deterministicValues(
+            product, fields: type.fields)
+        startPrefill(
+            source: source, type: type, currentDraft: currentDraft,
+            initialValues: deterministicValues)
         return .found
     }
 
