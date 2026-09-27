@@ -1,4 +1,4 @@
-import { ItemsTable } from '../../foundation/list-page/items-table.js';
+import { ItemsTable } from '../../foundation/items-table/items-table.js';
 import {
   EmptyFiltered,
   EmptyInventory,

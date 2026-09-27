@@ -273,6 +273,14 @@ cell issues, and valid rows commit without rolling back other rows. Omit
 `true` to return `valid` outcomes while rolling back all item, event, mutation,
 and sequence writes.
 
+### Web Items browser
+
+The shell mounts the Items browser at `/inventory/items`. Search, type,
+placement, inactive, sort, view and page state live in the URL; the page sends
+those filters to `GET /web/items` and renders the server's totals and pages
+without client-side filtering or sorting. Table, compact and card views share
+the same URL state and keep scrolling within the list body.
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`

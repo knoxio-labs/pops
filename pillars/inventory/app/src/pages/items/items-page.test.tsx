@@ -53,6 +53,55 @@ const activeRow: ItemRowModel = {
   updatedAt: '2026-09-20T09:00:00.000Z',
 };
 
+const originalIntersectionObserver = globalThis.IntersectionObserver;
+const observers: TestIntersectionObserver[] = [];
+
+class TestIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | null;
+  readonly rootMargin = '';
+  readonly scrollMargin = '';
+  readonly thresholds: readonly number[] = [];
+  private readonly callback: IntersectionObserverCallback;
+  private target: Element | null = null;
+
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+    this.callback = callback;
+    this.root = options?.root instanceof Element ? options.root : null;
+    observers.push(this);
+  }
+
+  observe(target: Element): void {
+    this.target = target;
+  }
+
+  unobserve(target: Element): void {
+    if (this.target === target) this.target = null;
+  }
+
+  disconnect(): void {
+    this.target = null;
+  }
+
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+
+  trigger(): void {
+    if (this.target === null) return;
+    const bounds = this.target.getBoundingClientRect();
+    const entry: IntersectionObserverEntry = {
+      boundingClientRect: bounds,
+      intersectionRatio: 1,
+      intersectionRect: bounds,
+      isIntersecting: true,
+      rootBounds: null,
+      target: this.target,
+      time: 0,
+    };
+    this.callback([entry], this);
+  }
+}
+
 function catalogueType(key: string, label: string): CatalogueType {
   return {
     id: `type-${key}`,
@@ -135,12 +184,19 @@ function renderPage(initialEntry = '/inventory/items'): void {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
+  observers.length = 0;
+  globalThis.IntersectionObserver = TestIntersectionObserver;
   currentRows = rowsResult();
   currentOnline = true;
   currentChanged = { groups: [], stale: false, reload: vi.fn() };
 });
 
 afterEach(() => {
+  if (originalIntersectionObserver === undefined) {
+    Reflect.deleteProperty(globalThis, 'IntersectionObserver');
+  } else {
+    globalThis.IntersectionObserver = originalIntersectionObserver;
+  }
   vi.useRealTimers();
 });
 
@@ -195,8 +251,17 @@ describe('ItemsPage', () => {
     currentRows = rowsResult({ total: 3, fetchNextPage });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Load 2 more' }));
+    const observer = observers.at(-1);
+    if (observer === undefined) throw new Error('The table footer observer was not created');
+    act(() => observer.trigger());
     expect(fetchNextPage).toHaveBeenCalledOnce();
+  });
+
+  it('compact view renders 32px rows', () => {
+    renderPage('/inventory/items?view=compact');
+
+    const row = screen.getByRole('grid', { name: 'items' }).querySelector('[role="row"] > div');
+    expect(row).toHaveClass('h-8');
   });
 
   it('an empty inventory offers New item, Bulk entry and Import CSV', () => {
@@ -280,7 +345,10 @@ describe('ItemsPage', () => {
     currentOnline = false;
     renderPage();
     expect(screen.getByText('No connection. Showing what loaded.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New item' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'New item' })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
   });
 
   it('the stale banner Reload calls reload and the rows stay until then', () => {
