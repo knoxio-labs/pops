@@ -1,5 +1,3 @@
-import Foundation
-
 /// How the drain waits out its backoff. `SystemDrainClock` really sleeps;
 /// tests decide when a sleep ends.
 public protocol InventoryDrainClock: Sendable {

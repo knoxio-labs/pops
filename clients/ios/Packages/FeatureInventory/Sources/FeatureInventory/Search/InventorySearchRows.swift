@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// Inventory record and place results rendered with Inventory's selection behavior.

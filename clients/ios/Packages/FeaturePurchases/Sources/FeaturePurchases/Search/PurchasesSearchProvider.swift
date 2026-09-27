@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// Answers universal search from the BFM, waiting out an offline phone
 /// before it sends anything.

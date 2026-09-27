@@ -2,8 +2,6 @@ import AppCore
 import InventoryReplica
 import Testing
 
-@testable import BFMClient
-
 /// POPS-4510: a publication leaves an unchanged item's values at the
 /// revision they were written under, so a page can carry values naming
 /// revisions older than the one it pins. The phone fetches each such revision

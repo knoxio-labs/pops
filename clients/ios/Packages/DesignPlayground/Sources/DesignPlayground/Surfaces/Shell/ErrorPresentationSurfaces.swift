@@ -1,5 +1,3 @@
-import SwiftUI
-
 @MainActor
 internal enum ErrorPresentationSurfaces {
     internal static let surfaces: [DesignSurface] = [

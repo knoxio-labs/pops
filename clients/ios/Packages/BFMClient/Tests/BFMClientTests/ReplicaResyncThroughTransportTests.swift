@@ -1,9 +1,6 @@
 import AppCore
-import Foundation
 import InventoryReplica
 import Testing
-
-@testable import BFMClient
 
 /// A `409 resync_required` answered through ``BFMInventoryTransport``
 /// (POPS-4404): the replica the phone holds is replaced only in the
