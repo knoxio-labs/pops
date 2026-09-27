@@ -72,40 +72,26 @@ internal struct InventoryItemDetailHistorySection: View {
 
     @ViewBuilder internal var body: some View {
         if !activity.isEmpty {
-            InventoryItemDetailGroup("History") {
+            PopsQuietDisclosure("History") {
                 ForEach(activity.prefix(Self.shownCount)) { entry in
                     Button {
                         viewing = entry
                     } label: {
-                        line(entry.title, trailing: entry.when)
+                        PopsQuietDetailLine(entry.title, trailing: entry.when)
                     }
                     .buttonStyle(.plain)
                 }
                 if activity.count > Self.shownCount {
                     NavigationLink(value: InventoryItemHistoryRoute(itemId: itemId)) {
-                        line("All history", trailing: "\(activity.count)")
+                        PopsQuietDetailLine("All history", trailing: "\(activity.count)")
                     }
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, PopsSpacing.xxl)
             .sheet(item: $viewing) { entry in
                 InventoryHistoryEventSheet(entry: entry) { onUndo(entry) }
             }
         }
-    }
-
-    private func line(_ title: String, trailing: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
-            Text(title)
-                .font(.popsBody)
-                .foregroundStyle(Color.popsForeground)
-                .lineLimit(1)
-            Spacer(minLength: PopsSpacing.sm)
-            Text(trailing)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-            InventoryItemDetailDisclosure()
-        }
-        .contentShape(.rect)
     }
 }
