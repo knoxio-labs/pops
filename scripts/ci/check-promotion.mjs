@@ -22,6 +22,32 @@ export function promotionFailures(required, results) {
   return lanes.filter((lane) => results[lane]?.result !== 'success');
 }
 
+/** Parse workflow inputs strictly so missing or malformed wiring cannot waive admission.
+ * @param {string | undefined} required
+ * @param {string | undefined} rawResults
+ * @returns {string[]}
+ */
+export function checkPromotionEnvironment(required, rawResults) {
+  if (required !== 'true' && required !== 'false') {
+    throw new Error('PROMOTION_REQUIRED must be true or false.');
+  }
+  if (!rawResults) throw new Error('PROMOTION_RESULTS is required.');
+  /** @type {unknown} */
+  const parsed = JSON.parse(rawResults);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('PROMOTION_RESULTS must be an object.');
+  }
+  /** @type {Record<string, {result: string}>} */
+  const results = {};
+  for (const [lane, verdict] of Object.entries(parsed)) {
+    if (!verdict || typeof verdict !== 'object' || typeof verdict.result !== 'string') {
+      throw new Error(`Missing lane result: ${lane}`);
+    }
+    results[lane] = { result: verdict.result };
+  }
+  return promotionFailures(required === 'true', results);
+}
+
 if (import.meta.main && process.argv.includes('--self-test')) {
   const success = Object.fromEntries(lanes.map((lane) => [lane, { result: 'success' }]));
   assert.deepEqual(promotionFailures(true, success), []);
@@ -34,9 +60,9 @@ if (import.meta.main && process.argv.includes('--self-test')) {
   }
   console.log('Promotion validation self-test passed.');
 } else if (import.meta.main) {
-  const failures = promotionFailures(
-    process.env.PROMOTION_REQUIRED === 'true',
-    JSON.parse(process.env.PROMOTION_RESULTS ?? '{}')
+  const failures = checkPromotionEnvironment(
+    process.env.PROMOTION_REQUIRED,
+    process.env.PROMOTION_RESULTS
   );
   if (failures.length) {
     console.error(`Promotion validation failed: ${failures.join(', ')}`);
