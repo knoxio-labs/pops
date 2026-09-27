@@ -1,10 +1,9 @@
 /** Query and rank the inventory web search surface. */
 import { and, asc, desc, eq, getTableColumns, isNull, ne, or, sql } from 'drizzle-orm';
 
-import { resolvePublishedType } from '../../catalogue/index.js';
 import { catalogueRevisions, itemTypes, items, type ItemRow } from '../../db/index.js';
 import { MAX_CONTAINMENT_DEPTH } from '../../domain/commands/index.js';
-import { countRows } from './items-page-filters.js';
+import { countRows, typeKeyCondition } from './items-page-filters.js';
 import { withinSql } from './placement-scope.js';
 import {
   readWebSearchCursor,
@@ -86,8 +85,7 @@ function baseConditions(db: CommandDb, query: NormalizedWebSearchQuery): SQL[] {
   const conditions: SQL[] = [isNull(items.deletedAt)];
   if (query.activeOnly) conditions.push(eq(items.lifecycle, 'active'));
   if (query.typeKey !== null) {
-    const type = resolvePublishedType(db, { key: query.typeKey });
-    conditions.push(type === null ? sql`0` : eq(items.typeId, type.id));
+    conditions.push(typeKeyCondition(db, query.typeKey));
   }
   if (query.within !== null) conditions.push(withinSql(db, query.within) ?? sql`0`);
   return conditions;

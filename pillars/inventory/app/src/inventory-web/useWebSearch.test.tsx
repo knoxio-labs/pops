@@ -72,6 +72,7 @@ const catalogue: Catalogue = {
       key: 'cable',
       label: 'Cables',
       legacyLabels: [],
+      parentTypeId: null,
       presentation: {},
       replacedBy: null,
       revision: 3,

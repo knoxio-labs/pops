@@ -99,7 +99,7 @@ export function readComputedDependents(
 export function rebuildComputedDependencyIndex(db: CommandDb, catalogue: PersistedCatalogue): void {
   db.delete(itemComputedDependencies).run();
   const computedTypeIds = catalogue.types
-    .filter((type) => type.fields.some((field) => field.storage === 'computed'))
+    .filter((type) => type.effectiveFields.some((field) => field.storage === 'computed'))
     .map((type) => type.id);
   if (computedTypeIds.length > 0) {
     const ids = db

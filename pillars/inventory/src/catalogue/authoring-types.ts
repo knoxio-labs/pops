@@ -112,6 +112,7 @@ export interface CatalogueTypeWire {
   readonly id: string;
   readonly key: string;
   readonly label: string;
+  readonly parentTypeId: string | null;
   readonly description: string | null;
   readonly sortOrder: number;
   readonly capabilities: string[];

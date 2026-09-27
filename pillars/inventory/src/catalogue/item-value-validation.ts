@@ -123,7 +123,7 @@ export function validateItemFieldValuesForType(
   existingItemId?: string
 ): readonly CanonicalItemFieldValueInput[] {
   assertTypeAssignable(db, type, existingItemId);
-  const definitions = new Map(type.fields.map((field) => [field.id, field]));
+  const definitions = new Map(type.effectiveFields.map((field) => [field.id, field]));
   const seen = new Set<string>();
   const validated: CanonicalItemFieldValueInput[] = [];
   for (const entry of fields) {
@@ -135,7 +135,7 @@ export function validateItemFieldValuesForType(
     if (!field) throw new ItemFieldSetError('field_unknown', entry.fieldId, 'is not declared');
     validated.push(validateEntry(db, field, entry, existingItemId));
   }
-  const missing = type.fields.find(
+  const missing = type.effectiveFields.find(
     (field) =>
       field.storage === 'stored' &&
       field.required &&
