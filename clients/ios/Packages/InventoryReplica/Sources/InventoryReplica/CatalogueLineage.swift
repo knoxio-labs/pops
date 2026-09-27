@@ -22,7 +22,8 @@ extension InventoryCatalogueSnapshot {
                     },
                     capabilities: type.capabilities, legacyLabels: type.legacyLabels,
                     presentation: type.presentation, archivedAt: type.archivedAt,
-                    replacedBy: type.replacedBy ?? types[type.id]?.replacedBy)
+                    replacedBy: type.replacedBy ?? types[type.id]?.replacedBy,
+                    parentTypeId: type.parentTypeId)
             })
     }
 
