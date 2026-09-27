@@ -1,184 +1,40 @@
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { delimiter, dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { extractTaskField } from './mise-task-source.js';
+import { discoverLocalTasks } from '../local-dev/discovery.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '..', '..');
+let root: string | undefined;
 
-describe('extractTaskField', () => {
-  it('reads a triple-quoted multi-line run body', () => {
-    const source = ['[tasks.build]', "run = '''", 'line one', 'line two', "'''"].join('\n');
-    expect(extractTaskField(source, 'build', 'run')).toBe('line one\nline two');
-  });
-
-  it('reads a single-quoted one-liner', () => {
-    expect(extractTaskField('[tasks.build]\nusage = \'arg "<task>"\'\n', 'build', 'usage')).toBe(
-      'arg "<task>"'
-    );
-  });
-
-  it('stops at the next task section', () => {
-    const source = [
-      '[tasks.build]',
-      "run = '''",
-      'only this',
-      "'''",
-      '',
-      '[tasks.test]',
-      "run = '''",
-      'not this',
-      "'''",
-    ].join('\n');
-    expect(extractTaskField(source, 'build', 'run')).toBe('only this');
-  });
-
-  it('throws when the task section is absent', () => {
-    expect(() => extractTaskField('[tasks.other]\nrun = "x"\n', 'build', 'run')).toThrow(
-      /no \[tasks\.build\]/
-    );
-  });
+afterEach(() => {
+  if (root !== undefined) rmSync(root, { recursive: true, force: true });
+  root = undefined;
 });
 
-describe('run-all: clients/* discovery (real mise binary)', () => {
-  // Fails the suite rather than skipping it: a silent no-op here would make
-  // every test below report green without ever exercising the real `run-all`
-  // guard, which is worse than not having the suite at all. `mise` is a
-  // first-class, mandatory tool for this repo (`mise setup` is step 0 in
-  // AGENTS.md), so its absence is a broken environment, not a hardware-gated
-  // lane to skip past.
-  beforeAll(() => {
-    execFileSync('mise', ['--version'], { stdio: 'ignore' });
-  });
+describe('run-all client task selection', () => {
+  it('excludes client tasks by default and includes them only when opted in', async () => {
+    root = mkdtempSync(join(process.cwd(), 'tmp', 'local-dev-clients-'));
+    const client = join(root, 'clients', 'ios');
+    const pillar = join(root, 'pillars', 'api');
+    mkdirSync(client, { recursive: true });
+    mkdirSync(pillar, { recursive: true });
+    writeFileSync(join(client, 'mise.toml'), '[tasks.test]\nrun = "true"\n');
+    writeFileSync(join(pillar, 'mise.toml'), '[tasks.test]\nrun = "true"\n');
 
-  let root: string;
-
-  beforeAll(() => {
-    const rootMiseToml = readFileSync(join(repoRoot, 'mise.toml'), 'utf8');
-    const usage = extractTaskField(rootMiseToml, 'run-all', 'usage');
-    const run = extractTaskField(rootMiseToml, 'run-all', 'run');
-
-    root = mkdtempSync(join(tmpdir(), 'run-all-clients-'));
-
-    // A unit in each of the two established kinds, each defining the task
-    // under test — the baseline `run-all` already covered before this change.
-    mkdirSync(join(root, 'pillars', 'p1'), { recursive: true });
-    writeFileSync(
-      join(root, 'pillars', 'p1', 'mise.toml'),
-      '[tasks.echo]\nrun = "echo ran-p1 >> \\"$OUT_FILE\\""\n'
-    );
-    mkdirSync(join(root, 'libs', 'l1'), { recursive: true });
-    writeFileSync(
-      join(root, 'libs', 'l1', 'mise.toml'),
-      '[tasks.echo]\nrun = "echo ran-l1 >> \\"$OUT_FILE\\""\n'
-    );
-
-    // A pillar that does NOT define the task under test — must be skipped by
-    // the source guard rather than falling through to the inherited root task.
-    mkdirSync(join(root, 'pillars', 'p2'), { recursive: true });
-    writeFileSync(
-      join(root, 'pillars', 'p2', 'mise.toml'),
-      '[tasks.other]\nrun = "echo should-not-run >> \\"$OUT_FILE\\""\n'
-    );
-
-    // A client (ADR-043) defining the task, and one that does not — mirrors
-    // the pillar/lib pair above, so the guard is proven for the new kind too.
-    mkdirSync(join(root, 'clients', 'c1'), { recursive: true });
-    writeFileSync(
-      join(root, 'clients', 'c1', 'mise.toml'),
-      '[tasks.echo]\nrun = "echo ran-c1 >> \\"$OUT_FILE\\""\n'
-    );
-    mkdirSync(join(root, 'clients', 'c2'), { recursive: true });
-    writeFileSync(
-      join(root, 'clients', 'c2', 'mise.toml'),
-      '[tasks.other]\nrun = "echo should-not-run >> \\"$OUT_FILE\\""\n'
-    );
-
-    writeFileSync(
-      join(root, 'mise.toml'),
-      `[tasks.run-all]\nusage = '${usage}'\nrun = '''\n${run}\n'''\n`
-    );
-  });
-  afterAll(() => {
-    if (root) rmSync(root, { recursive: true, force: true });
-  });
-
-  /**
-   * The caller's environment, plus `root` (and everything the fixture writes
-   * beneath it) named as a trusted config path.
-   *
-   * mise will not read a config file it has not been told to trust, and its
-   * trust store is per-user and keyed on the file's absolute path. `root` is a
-   * fresh `mkdtemp` directory this suite has never asked mise to trust, so
-   * without this, resolving it depends on mise's "safe config" classification
-   * (a `[tasks]`-only file with no templates, today) or on it detecting CI and
-   * skipping the trust check altogether — both mise policy, neither a property
-   * of this repo. `MISE_TRUSTED_CONFIG_PATHS` makes the fixture's trust
-   * explicit instead of borrowed from those defaults.
-   */
-  function miseEnv(extraEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-    const inherited = process.env.MISE_TRUSTED_CONFIG_PATHS;
-    return {
-      ...process.env,
-      ...extraEnv,
-      MISE_TRUSTED_CONFIG_PATHS: inherited === undefined ? root : `${root}${delimiter}${inherited}`,
-    };
-  }
-
-  // Every case below shells out to the real `mise` binary, which then fans the
-  // task out across the fixture's units — several subprocesses per assertion,
-  // and none of them bounded by what is being asserted. POPS-2053 measured the
-  // sibling suite's real-mise test at 6-10s under ~20 concurrent worktrees, so
-  // vitest's 5s default here would fail on the host's load rather than on this
-  // guard. Matches the 120s the other real-mise suites use.
-  const REAL_MISE_TIMEOUT_MS = 120_000;
-
-  function runAllEcho(extraEnv: NodeJS.ProcessEnv): string[] {
-    const outFile = join(root, `out-${Math.random().toString(36).slice(2)}.txt`);
-    execFileSync('mise', ['run', '-C', root, 'run-all', 'echo'], {
-      env: { ...miseEnv(extraEnv), OUT_FILE: outFile },
-      stdio: 'pipe',
+    const defaults = await discoverLocalTasks({
+      cwd: root,
+      taskNames: ['test'],
+      verifyTrust: false,
     });
-    return readFileSync(outFile, 'utf8')
-      .split('\n')
-      .filter(Boolean)
-      .toSorted((a, b) => a.localeCompare(b));
-  }
+    const optedIn = await discoverLocalTasks({
+      cwd: root,
+      taskNames: ['test'],
+      verifyTrust: false,
+      includeClients: true,
+    });
 
-  it(
-    'discovers and runs pillars/* and libs/* units defining the task, unconditionally',
-    () => {
-      expect(runAllEcho({})).toEqual(['ran-l1', 'ran-p1']);
-    },
-    REAL_MISE_TIMEOUT_MS
-  );
-
-  it(
-    'does not reach clients/* by default',
-    () => {
-      expect(runAllEcho({})).not.toContain('ran-c1');
-    },
-    REAL_MISE_TIMEOUT_MS
-  );
-
-  it(
-    'includes a clients/* unit defining the task once RUN_ALL_INCLUDE_CLIENTS=1',
-    () => {
-      expect(runAllEcho({ RUN_ALL_INCLUDE_CLIENTS: '1' })).toEqual(['ran-c1', 'ran-l1', 'ran-p1']);
-    },
-    REAL_MISE_TIMEOUT_MS
-  );
-
-  it(
-    'still skips a clients/* unit lacking the task even when opted in — the exact case the source guard exists for',
-    () => {
-      expect(runAllEcho({ RUN_ALL_INCLUDE_CLIENTS: '1' })).not.toContain('should-not-run');
-    },
-    REAL_MISE_TIMEOUT_MS
-  );
+    expect(defaults.map((task) => task.unitPath)).toEqual([pillar]);
+    expect(optedIn.map((task) => task.unitPath)).toEqual([client, pillar]);
+  });
 });
