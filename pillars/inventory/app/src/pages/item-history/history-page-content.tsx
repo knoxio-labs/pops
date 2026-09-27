@@ -2,6 +2,11 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { Skeleton } from '@pops/ui';
 
+import {
+  OFFLINE_REASON,
+  OFFLINE_TITLE,
+  StateBanner,
+} from '../../foundation/feedback/state-banner.js';
 import { LoadError } from '../../foundation/frame/load-error.js';
 import { undoEvent } from '../overview/overview-event-actions.js';
 import { HistoryFilters } from './history-filters.js';
@@ -11,6 +16,15 @@ import { HistoryPageLayout } from './history-page-layout.js';
 import type { EventModel } from '../../foundation/model/model.js';
 import type { WebEvent } from '../../inventory-web/useWebEvents.js';
 import type { HistoryFilter } from './history-model.js';
+
+const HISTORY_REFRESH_ERROR_REASON =
+  'History could not be refreshed. Undo is off until it refreshes.';
+
+function undoDisabledReason(isOnline: boolean, hasCachedError: boolean): string | undefined {
+  if (!isOnline) return OFFLINE_REASON;
+  if (hasCachedError) return HISTORY_REFRESH_ERROR_REASON;
+  return undefined;
+}
 
 /** The query controls needed by the history page without exposing React Query internals. */
 export interface HistoryQueryState {
@@ -27,6 +41,10 @@ export interface HistoryPageContentProps {
   events: readonly EventModel[];
   sourceById: ReadonlyMap<string, WebEvent>;
   history: HistoryQueryState;
+  /** Whether the query has data to keep visible after a failed refetch. */
+  hasCachedData: boolean;
+  /** Whether writes are currently allowed by the browser connection state. */
+  isOnline: boolean;
   revertEvent: (event: Pick<WebEvent, 'seq' | 'entityId'>) => Promise<void>;
   navigate: (path: string) => void | Promise<void>;
 }
@@ -56,7 +74,8 @@ function HistoryReady({
   history,
   revertEvent,
   navigate,
-}: HistoryPageContentProps) {
+  disabledReason,
+}: HistoryPageContentProps & { disabledReason?: string }) {
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [openId, setOpenId] = useState<string | null>(null);
   const counts = useMemo(() => filterCounts(events), [events]);
@@ -64,13 +83,14 @@ function HistoryReady({
   const openEvent = events.find((event) => event.id === openId) ?? null;
   const onUndo = useCallback(
     async (eventId: string) => {
+      if (disabledReason !== undefined) return;
       const event = events.find((entry) => entry.id === eventId);
       const source = sourceById.get(eventId);
       if (event === undefined || source === undefined) return;
       setOpenId(null);
       await undoEvent({ model: event, source }, revertEvent, navigate);
     },
-    [events, navigate, revertEvent, sourceById]
+    [disabledReason, events, navigate, revertEvent, sourceById]
   );
 
   return (
@@ -83,6 +103,7 @@ function HistoryReady({
         openId={openId}
         hasNextPage={history.hasNextPage}
         isFetchingNextPage={history.isFetchingNextPage}
+        disabledReason={disabledReason}
         onOpen={setOpenId}
         onUndo={(eventId) => void onUndo(eventId)}
         onClose={() => setOpenId(null)}
@@ -93,10 +114,34 @@ function HistoryReady({
   );
 }
 
+function HistoryStatus({
+  isOnline,
+  hasCachedError,
+  onRetry,
+}: Pick<HistoryPageContentProps, 'isOnline'> & {
+  hasCachedError: boolean;
+  onRetry: () => void;
+}) {
+  if (!isOnline) {
+    return <StateBanner kind="offline" title={OFFLINE_TITLE} detail={OFFLINE_REASON} />;
+  }
+  if (!hasCachedError) return null;
+  return (
+    <StateBanner
+      kind="error"
+      title="History could not be refreshed."
+      detail="Showing what loaded. Undo is off until it refreshes."
+      actionLabel="Retry"
+      onAction={onRetry}
+    />
+  );
+}
+
 /** Renders loading, retry, filter, list, detail, pagination, and undo states. */
 export function HistoryPageContent(props: HistoryPageContentProps) {
-  if (props.history.isPending) return <HistoryLoading />;
-  if (props.history.isError) {
+  if (props.history.isPending && !props.hasCachedData) return <HistoryLoading />;
+  if (!props.hasCachedData) {
+    if (!props.history.isError) return <HistoryLoading />;
     return (
       <LoadError
         title="This history could not be loaded"
@@ -105,5 +150,15 @@ export function HistoryPageContent(props: HistoryPageContentProps) {
       />
     );
   }
-  return <HistoryReady {...props} />;
+  const disabledReason = undoDisabledReason(props.isOnline, props.history.isError);
+  return (
+    <>
+      <HistoryStatus
+        isOnline={props.isOnline}
+        hasCachedError={props.history.isError}
+        onRetry={() => void props.history.refetch()}
+      />
+      <HistoryReady {...props} disabledReason={disabledReason} />
+    </>
+  );
 }

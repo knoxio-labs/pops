@@ -25,10 +25,17 @@ export interface HistoryEventRowProps {
   selected: boolean;
   onOpen: (id: string) => void;
   onUndo?: (id: string) => void;
+  disabledReason?: string;
 }
 
 /** Renders one selectable item-history event with its optional Undo action. */
-export function HistoryEventRow({ event, selected, onOpen, onUndo }: HistoryEventRowProps) {
+export function HistoryEventRow({
+  event,
+  selected,
+  onOpen,
+  onUndo,
+  disabledReason,
+}: HistoryEventRowProps) {
   return (
     <li className={cn('flex min-h-11 items-center gap-2 pr-1', selected && 'bg-app-accent/10')}>
       <ButtonPrimitive
@@ -53,6 +60,7 @@ export function HistoryEventRow({ event, selected, onOpen, onUndo }: HistoryEven
         <VerbButton
           label="Undo"
           variant="ghost"
+          disabledReason={disabledReason}
           onClick={() => onUndo(event.id)}
           className="shrink-0"
         />

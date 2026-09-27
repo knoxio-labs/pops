@@ -1,6 +1,7 @@
-import { Button, SheetPanel } from '@pops/ui';
+import { SheetPanel } from '@pops/ui';
 
 import { dateTime } from '../../foundation/item-page/section-parts.js';
+import { VerbButton } from '../../foundation/item-page/verb-button.js';
 
 import type { ReactNode } from 'react';
 
@@ -20,11 +21,18 @@ export interface HistoryEventDetailProps {
   event: EventModel | null;
   onClose: () => void;
   onUndo?: (id: string) => void;
+  disabledReason?: string;
   className?: string;
 }
 
 /** Shows an item's selected history event and its immutable audit details. */
-export function HistoryEventDetail({ event, onClose, onUndo, className }: HistoryEventDetailProps) {
+export function HistoryEventDetail({
+  event,
+  onClose,
+  onUndo,
+  disabledReason,
+  className,
+}: HistoryEventDetailProps) {
   if (event === null) return null;
 
   return (
@@ -35,9 +43,12 @@ export function HistoryEventDetail({ event, onClose, onUndo, className }: Histor
       className={className}
       footer={
         event.undoable ? (
-          <Button variant="outline" onClick={() => onUndo?.(event.id)}>
-            Undo this change
-          </Button>
+          <VerbButton
+            label="Undo this change"
+            variant="outline"
+            disabledReason={disabledReason}
+            onClick={() => onUndo?.(event.id)}
+          />
         ) : undefined
       }
     >

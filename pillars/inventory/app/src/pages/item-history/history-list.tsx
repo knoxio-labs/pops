@@ -14,6 +14,7 @@ export interface HistoryListProps {
   selectedId: string | null;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  disabledReason?: string;
   onOpen: (id: string) => void;
   onUndo: (id: string) => void;
   onClearFilter: () => void;
@@ -74,7 +75,8 @@ function HistoryGroups({
   selectedId,
   onOpen,
   onUndo,
-}: Pick<HistoryListProps, 'events' | 'selectedId' | 'onOpen' | 'onUndo'>) {
+  disabledReason,
+}: Pick<HistoryListProps, 'events' | 'selectedId' | 'onOpen' | 'onUndo' | 'disabledReason'>) {
   return (
     <>
       {groupByMonth(events).map((group) => (
@@ -90,6 +92,7 @@ function HistoryGroups({
                 selected={event.id === selectedId}
                 onOpen={onOpen}
                 onUndo={onUndo}
+                disabledReason={disabledReason}
               />
             ))}
           </ul>
@@ -106,6 +109,7 @@ export function HistoryList({
   selectedId,
   hasNextPage,
   isFetchingNextPage,
+  disabledReason,
   onOpen,
   onUndo,
   onClearFilter,
@@ -125,7 +129,13 @@ export function HistoryList({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border bg-card">
-      <HistoryGroups events={events} selectedId={selectedId} onOpen={onOpen} onUndo={onUndo} />
+      <HistoryGroups
+        events={events}
+        selectedId={selectedId}
+        onOpen={onOpen}
+        onUndo={onUndo}
+        disabledReason={disabledReason}
+      />
       {hasNextPage ? (
         <div className="flex justify-center border-t p-3">
           <LoadMoreButton isFetchingNextPage={isFetchingNextPage} onLoadMore={onLoadMore} />

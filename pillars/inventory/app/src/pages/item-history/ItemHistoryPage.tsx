@@ -5,6 +5,7 @@ import { cn } from '@pops/ui';
 
 import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import { toEventModel } from '../../inventory-web/event-model.js';
+import { useOnline } from '../../inventory-web/useOnline.js';
 import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
 import { useRevertEvent } from '../../inventory-web/useRevertEvent.js';
 import { useWebItemHistory } from '../../inventory-web/useWebItemDetail.js';
@@ -41,6 +42,7 @@ export function ItemHistoryPage() {
     [id]
   );
   const placement = usePlacementSources(subject);
+  const isOnline = useOnline();
   const history = useWebItemHistory(id);
   const revertEvent = useRevertEvent();
   const pages = history.data?.pages ?? EMPTY_HISTORY_PAGES;
@@ -72,6 +74,8 @@ export function ItemHistoryPage() {
         events={events}
         sourceById={sourceById}
         history={history}
+        hasCachedData={history.data !== undefined}
+        isOnline={isOnline}
         revertEvent={revertEvent}
         navigate={navigate}
       />

@@ -16,12 +16,16 @@ const mocks = vi.hoisted(() => ({
   revertEvent: vi.fn(),
   undoEvent: vi.fn(),
   usePlacementSources: vi.fn(),
+  useOnline: vi.fn(),
   useRevertEvent: vi.fn(),
   useWebItemHistory: vi.fn(),
 }));
 
 vi.mock('../../inventory-web/usePlacementSources.js', () => ({
   usePlacementSources: (...args: unknown[]) => mocks.usePlacementSources(...args),
+}));
+vi.mock('../../inventory-web/useOnline.js', () => ({
+  useOnline: () => mocks.useOnline(),
 }));
 vi.mock('../../inventory-web/useRevertEvent.js', () => ({
   useRevertEvent: () => mocks.useRevertEvent(),
@@ -161,6 +165,7 @@ beforeEach(() => {
     isLoading: false,
     world: buildWorld([], [{ id: 'study', name: 'Study', parentId: null, kind: 'room' }]),
   });
+  mocks.useOnline.mockReturnValue(true);
   mocks.useRevertEvent.mockReturnValue(mocks.revertEvent);
   mocks.useWebItemHistory.mockReturnValue(query());
 });
@@ -241,6 +246,42 @@ describe('ItemHistoryPage', () => {
     expect(
       screen.getByRole('heading', { name: 'This history could not be loaded' })
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(mocks.refetch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps cached history visible and disables Undo while offline', () => {
+    mocks.useOnline.mockReturnValue(false);
+    renderPage();
+
+    expect(screen.getByText('Moved to Study')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('No connection. Showing what loaded.');
+
+    const rowUndo = screen.getByRole('button', { name: 'Undo' });
+    expect(rowUndo).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(rowUndo);
+    expect(mocks.undoEvent).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Moved to Study/ }));
+    const detail = screen.getByRole('region', { name: 'Moved to Study' });
+    const detailUndo = within(detail).getByRole('button', { name: 'Undo this change' });
+    expect(detailUndo).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(detailUndo);
+    expect(mocks.undoEvent).not.toHaveBeenCalled();
+  });
+
+  it('keeps cached history visible and disables Undo when a refetch fails', () => {
+    mocks.useWebItemHistory.mockReturnValue(query({ isError: true }));
+    renderPage();
+
+    expect(screen.getByText('Moved to Study')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('History could not be refreshed.');
+
+    const undo = screen.getByRole('button', { name: 'Undo' });
+    expect(undo).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(undo);
+    expect(mocks.undoEvent).not.toHaveBeenCalled();
+
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(mocks.refetch).toHaveBeenCalledOnce();
   });

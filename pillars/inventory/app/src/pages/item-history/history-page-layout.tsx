@@ -13,6 +13,7 @@ export interface HistoryPageLayoutProps {
   openId: string | null;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  disabledReason?: string;
   onOpen: (id: string) => void;
   onUndo: (id: string) => void;
   onClose: () => void;
@@ -28,6 +29,7 @@ export function HistoryPageLayout({
   openId,
   hasNextPage,
   isFetchingNextPage,
+  disabledReason,
   onOpen,
   onUndo,
   onClose,
@@ -45,6 +47,7 @@ export function HistoryPageLayout({
           selectedId={openId}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
+          disabledReason={disabledReason}
           onOpen={onOpen}
           onUndo={onUndo}
           onClearFilter={onClearFilter}
@@ -56,6 +59,7 @@ export function HistoryPageLayout({
           event={openEvent}
           onClose={onClose}
           onUndo={onUndo}
+          disabledReason={disabledReason}
           className="min-w-0"
         />
       ) : null}
