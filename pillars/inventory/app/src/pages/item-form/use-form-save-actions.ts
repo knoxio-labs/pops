@@ -6,25 +6,10 @@ import { deriveForm, placementTargetName } from './form-view';
 import { useItemSave } from './save-item';
 import { saveRequest } from './save-request';
 
-import type { Dispatch } from 'react';
-
-import type { DraftAction, ItemDraft } from './form-draft';
-import type { ItemFormOpening } from './form-opening';
+import type { ItemDraft } from './form-draft';
+import type { FormSaveActionsOptions } from './form-save-options';
 import type { JustCreated, SaveRefusal, SaveResult } from './save-types';
-import type { FormSources } from './use-form-sources';
 import type { PhotoUploads } from './use-photo-uploads';
-
-/** Inputs for the form's create, edit and save-and-new actions. */
-export interface FormSaveActionsOptions {
-  readonly opening: ItemFormOpening;
-  readonly sources: FormSources;
-  readonly draft: ItemDraft;
-  readonly initial: ItemDraft;
-  readonly setInitial: (draft: ItemDraft) => void;
-  readonly offline: boolean;
-  readonly dispatch: Dispatch<DraftAction>;
-  readonly photos: PhotoUploads;
-}
 
 /** Save actions and transient save feedback returned by the form action hook. */
 export interface FormSaveActions {
