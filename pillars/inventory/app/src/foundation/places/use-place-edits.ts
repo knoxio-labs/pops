@@ -6,12 +6,9 @@ import { useCreateEdits, useMoveEdit, useRenameEdits } from './use-place-edit-ac
 
 import type { PlacementWorld } from '../model/placement-model.js';
 import type { DeleteMode, DeletePlan } from './delete-plan.js';
+import type { PendingDelete } from './place-edit-types.js';
 
-/** A place deletion waiting for its outcome to be confirmed. */
-export interface PendingDelete {
-  placeId: string;
-  mode: DeleteMode;
-}
+export type { PendingDelete } from './place-edit-types.js';
 
 /** Inputs for the shared place edit and delete controller. */
 export interface PlaceEditsOptions {

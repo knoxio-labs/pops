@@ -8,7 +8,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { usePlaceMutations } from '../../inventory-web/usePlaceMutations.js';
 import type { PlacementWorld } from '../model/placement-model.js';
 import type { DeleteMode, DeletePlan } from './delete-plan.js';
-import type { PendingDelete } from './use-place-edits.js';
+import type { PendingDelete } from './place-edit-types.js';
 
 type PlaceMutations = ReturnType<typeof usePlaceMutations>;
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
