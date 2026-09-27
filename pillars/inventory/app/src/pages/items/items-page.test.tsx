@@ -508,6 +508,19 @@ describe('ItemsPage', () => {
     expect(dismiss).toHaveBeenCalledWith('type-garden');
   });
 
+  it('uses singular copy when one item matches the arrived type', () => {
+    currentArrival = {
+      arrival: {
+        type: catalogueType('garden', 'Garden tools'),
+        matches: 1,
+      },
+      dismiss: vi.fn(),
+    };
+    renderPage();
+
+    expect(screen.getByText('1 untyped item looks like Garden tools')).toBeInTheDocument();
+  });
+
   it('a failed read shows the error and Retry refetches', () => {
     const refetch = vi.fn();
     currentRows = rowsResult({ status: 'error', refetch });

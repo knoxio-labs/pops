@@ -137,7 +137,7 @@ export function TypeArrivedBanner({
     <BannerFrame
       icon={INVENTORY_ICONS.type}
       tone="accent"
-      title={`${matches} untyped items look like ${typeLabel}`}
+      title={`${matches} ${matches === 1 ? 'untyped item looks like' : 'untyped items look like'} ${typeLabel}`}
       detail={`${typeLabel} was published. Review them before anything changes.`}
     >
       <Button size="sm" variant="ghost" onClick={onNotNow}>

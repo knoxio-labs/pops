@@ -64,6 +64,9 @@ describe('type-arrived copy', () => {
     expect(describeArrival('applied', type, 5, 5)).toBe(
       'Revision 8 published Garden tools. 5 items are now Garden tools.'
     );
+    expect(describeArrival('applied', type, 1, 1)).toBe(
+      'Revision 8 published Garden tools. 1 item is now Garden tools.'
+    );
     expect(describeArrival('applied', type, 5, 4)).toBe(
       'Revision 8 published Garden tools. 4 items are now Garden tools. 1 left untyped.'
     );
