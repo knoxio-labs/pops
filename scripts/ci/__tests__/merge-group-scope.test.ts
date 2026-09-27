@@ -234,6 +234,26 @@ describe('the scope job is wired to the workflow it scopes', () => {
     );
   });
 
+  it.each([
+    ['pull_request', undefined, 100],
+    ['pull_request', false, 100],
+    ['pull_request', true, 120],
+    ['merge_group', undefined, 120],
+    ['merge_group', false, 120],
+  ])('budgets the %s full=%s iOS job at %s minutes', (event, full, expected) => {
+    const expression = jobsOf('ios-quality.yml').get('quality')?.['timeout-minutes'];
+    if (typeof expression !== 'string') throw new Error('Missing lane-specific timeout expression');
+    const evaluate = new Function(
+      'github',
+      'inputs',
+      `return (${expression.replace(/^\s*\$\{\{\s*|\s*\}\}\s*$/gu, '').replace(/==/gu, '===')});`
+    ) as (
+      github: { event_name: string },
+      inputs: { 'full-validation': boolean | undefined }
+    ) => unknown;
+    expect(evaluate({ event_name: event }, { 'full-validation': full })).toBe(expected);
+  });
+
   it('runs the analyzer and Maestro in every explicit full lane', () => {
     const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
     const namedStep = (name: string) => steps.find((step) => step.name === name);
@@ -250,7 +270,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
       "success() && (github.event_name == 'merge_group' || inputs['full-validation'] == true)"
     );
     expect(fullSuite?.run).toBe('mise run --skip-deps lint:analyze');
-    expect(fullSuite?.['timeout-minutes']).toBe(40);
+    expect(fullSuite?.['timeout-minutes']).toBe(60);
     const debugArtifact = namedStep('Simulator test log and result bundle');
     expect(debugArtifact?.if).toBe('failure()');
     expect(debugArtifact?.uses).toBe('actions/upload-artifact@v7');

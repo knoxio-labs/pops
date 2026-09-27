@@ -2,6 +2,10 @@
 
 Every workflow YAML file in this directory is documented here exactly once: as a row in [The rest](#the-rest) below, or — where a row is not enough — under its own `##` section. The sectioned ones are `ci-gate.yml` and the two reusable `workflow_call`-only helpers no event triggers on its own, `_discover-units.yml` and `_extractability-sandbox-matrix.yml`. `scripts/ci/__tests__/workflow-readme-coverage.test.ts` asserts that split against disk, so a new workflow cannot land undocumented and a deleted one cannot leave a row behind. Every job runs on `ubuntu-latest` except the build job of `ios-quality.yml` and `ios-testflight.yml`, which need macOS to compile Swift at all.
 
+The iOS analyzer step streams its output and retains `analyze.log` plus its input `compiler.log` in the `ios-analyzer-debug` failure artifact, including partial output on its 60-minute timeout. Native PR jobs retain 100 minutes; full-validation and merge-group jobs allow 120 minutes. The exit status and file-coverage floor remain enforced by `clients/ios/scripts/analyzer-lane.sh`.
+
+The analyzer floor measured on September 27 at candidate `7246154a5` counted 1,547 Swift files, compared with 649–699 in four successful September 18 runs lasting 17m02s–23m58s. Scaling those durations by the 2.21–2.38× file-count growth projects roughly 38–57 minutes; this is a capacity estimate, not a measured current runtime. The previous 40-minute bound cut off the full candidate run. The 60-minute analyzer allowance leaves room for that projection, while the simulator retains its separate 25-minute limit.
+
 ## `ci-gate.yml` — the one static aggregate context
 
 `ci-gate.yml` observes requested, in-progress and completed runs of nine quality
