@@ -1,3 +1,5 @@
+import { useEffect, useState, useSyncExternalStore } from 'react';
+
 /** The server-side connection kinds understood by the registry page. */
 export type ConnectionKind = 'all' | 'item' | 'fixture';
 
@@ -27,13 +29,18 @@ export function isConnectionKind(value: string): value is ConnectionKind {
   return value === 'all' || value === 'item' || value === 'fixture';
 }
 
+/** Parses an unknown kind into the server's default connection filter. */
+export function parseConnectionKind(value: string | null | undefined): ConnectionKind {
+  return value !== undefined && value !== null && isConnectionKind(value) ? value : 'all';
+}
+
 /** Returns whether a string is a supported Connections page view. */
 export function isConnectionView(value: string): value is ConnectionView {
   return value === 'list' || value === 'graph';
 }
 
 function readQuery(value: string | null): string {
-  return (value ?? '').trim().slice(0, MAX_QUERY_LENGTH);
+  return (value ?? '').slice(0, MAX_QUERY_LENGTH);
 }
 
 /** Parses the Connections page state from search parameters. */
@@ -43,7 +50,7 @@ export function parseConnectionsUrl(params: URLSearchParams): ConnectionsUrlStat
   const trace = params.get('trace');
   return {
     q: readQuery(params.get('q')),
-    kind: kindParam !== null && isConnectionKind(kindParam) ? kindParam : 'all',
+    kind: parseConnectionKind(kindParam),
     view: viewParam !== null && isConnectionView(viewParam) ? viewParam : 'list',
     trace: trace === null || trace.length === 0 ? null : trace,
   };
@@ -84,4 +91,39 @@ export function writeConnectionsUrl(
   }
 
   return next;
+}
+
+type SnapshotListener = () => void;
+
+interface SnapshotStore<T> {
+  readonly getSnapshot: () => T;
+  readonly subscribe: (listener: SnapshotListener) => () => void;
+  readonly set: (value: T) => void;
+}
+
+function createSnapshotStore<T>(initial: T): SnapshotStore<T> {
+  let snapshot = initial;
+  const listeners = new Set<SnapshotListener>();
+
+  return {
+    getSnapshot: () => snapshot,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    set: (value) => {
+      if (Object.is(snapshot, value)) return;
+      snapshot = value;
+      for (const listener of listeners) listener();
+    },
+  };
+}
+
+/** Keeps the last committed page read visible while a newer read is pending. */
+export function useCommittedSnapshot<T>(value: T, commit: boolean): T {
+  const [store] = useState(() => createSnapshotStore(value));
+  useEffect(() => {
+    if (commit) store.set(value);
+  }, [commit, store, value]);
+  return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 }
