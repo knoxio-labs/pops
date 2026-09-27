@@ -128,6 +128,14 @@ candidates it already computed. Its registry service account needs
 missing grant degrades gracefully here, but is still worth fixing before
 release.
 
+## Error responses
+
+Every failed REST request uses the ADR-054 envelope
+`{ code, message, requestId, retryable, details? }`. Codes are registered under
+`ai.*`; incoming `X-Request-Id` values are echoed and otherwise minted at the
+API boundary. Unknown failures are logged with that id and returned as a safe
+`ai.internal` response.
+
 ## Commands
 
 ```bash

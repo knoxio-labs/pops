@@ -54,7 +54,7 @@ internal struct PurchaseCapturePresentationTests {
     }
 
     @Test("merchant closures preserve directory identities and scope address lookup")
-    func merchantDirectoryMapping() async {
+    func merchantDirectoryMapping() async throws {
         let repository = InMemoryMerchantDirectoryRepository(
             entries: [MerchantDirectoryEntry(id: "merchant-1", name: "Corner Shop")],
             addressesByMerchantID: [
@@ -63,19 +63,51 @@ internal struct PurchaseCapturePresentationTests {
         let directory = PurchaseCaptureMerchantDirectory(repository: repository)
 
         #expect(
-            await directory.search("corner")
+            try await directory.search("corner")
                 == [ReceiptMerchantChoice(id: "merchant-1", name: "Corner Shop")])
         #expect(
-            await directory.merchant("merchant-1")
+            try await directory.merchant("merchant-1")
                 == ReceiptMerchantChoice(id: "merchant-1", name: "Corner Shop"))
         #expect(
-            await directory.addresses(for: "merchant-1")
+            try await directory.addresses(for: "merchant-1")
                 == [ReceiptAddressChoice(id: "address-1", value: "1 Main Street")])
         #expect(
-            await directory.address(merchantID: "merchant-1", addressID: "address-1")
+            try await directory.address(merchantID: "merchant-1", addressID: "address-1")
                 == ReceiptAddressChoice(id: "address-1", value: "1 Main Street"))
         #expect(
-            await directory.address(merchantID: "merchant-other", addressID: "address-1") == nil)
+            try await directory.address(merchantID: "merchant-other", addressID: "address-1")
+                == nil)
+    }
+
+    @Test("merchant repository failures leave the directory seam")
+    func merchantDirectoryFailure() async {
+        let directory = PurchaseCaptureMerchantDirectory(repository: FailingMerchantDirectory())
+
+        await #expect(throws: RepositoryError.unavailable) {
+            try await directory.search("corner")
+        }
+        await #expect(throws: RepositoryError.unavailable) {
+            try await directory.merchant("merchant-1")
+        }
+        await #expect(throws: RepositoryError.unavailable) {
+            try await directory.addresses(for: "merchant-1")
+        }
+    }
+
+    @Test("merchant repository failures reach the shared presenter")
+    func merchantFailurePresentation() async {
+        let errorPresenter = RecordingErrorPresenter()
+        let presentation = PurchaseCaptureMerchantPresentation(
+            directory: PurchaseCaptureMerchantDirectory(repository: FailingMerchantDirectory()),
+            errorPresenter: errorPresenter)
+
+        let choices = await presentation.search("corner")
+
+        #expect(choices.isEmpty)
+        #expect(errorPresenter.presented.count == 1)
+        #expect(errorPresenter.presented.first?.error.code == "ios.repository.unavailable")
+        #expect(errorPresenter.presented.first?.operation == "Search merchants")
+        #expect(errorPresenter.presented.first?.context == .foreground)
     }
 
     private func render(isAvailable: Bool) -> Data? {
@@ -117,6 +149,47 @@ private struct CapturePresentationProbe: View {
 private struct PresentationCamera: CameraAuthorizing {
     func currentAccess() -> CameraAccess { .authorized }
     func requestAccess() async -> CameraAccess { .authorized }
+}
+
+private struct FailingMerchantDirectory: MerchantDirectoryRepository {
+    func search(_ query: String) async throws -> [MerchantDirectoryEntry] {
+        throw RepositoryError.unavailable
+    }
+
+    func get(_ id: String) async throws -> MerchantDirectoryEntry? {
+        throw RepositoryError.unavailable
+    }
+
+    func create(name: String) async throws -> MerchantDirectoryEntry {
+        throw RepositoryError.unavailable
+    }
+
+    func addresses(forMerchant merchantID: String) async throws -> [MerchantAddressEntry] {
+        throw RepositoryError.unavailable
+    }
+
+    func createAddress(forMerchant id: String, value: String) async throws
+        -> MerchantAddressEntry
+    {
+        throw RepositoryError.unavailable
+    }
+}
+
+@MainActor
+private final class RecordingErrorPresenter: ErrorPresenter {
+    struct Record {
+        let error: PopsError
+        let operation: String
+        let context: ErrorPresentationContext
+    }
+
+    private(set) var presented: [Record] = []
+
+    func present(_ error: PopsError, operation: String, context: ErrorPresentationContext) {
+        presented.append(Record(error: error, operation: operation, context: context))
+    }
+
+    func showRecentErrors() {}
 }
 
 @Suite("Capture flow destinations")

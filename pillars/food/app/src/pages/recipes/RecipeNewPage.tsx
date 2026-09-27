@@ -43,9 +43,6 @@ export function RecipeNewPage(): ReactElement {
       // edit page surfaces compile errors inline via its `issues` prop.
       void navigate(`/food/recipes/${result.slug}/edit`);
     },
-    onError: (err: Error) => {
-      toast.error(t('recipes.new.error', { message: err.message }));
-    },
   });
 
   const onSave = useCallback(() => {

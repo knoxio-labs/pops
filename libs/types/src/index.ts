@@ -45,6 +45,8 @@ export type { AiToolDescriptor, AiToolHandler, AiToolResult } from './ai-tool.js
 export type { MigrationDescriptor } from './migration.js';
 export type { SearchAdapterDescriptor } from './search-adapter.js';
 export type { IngestSourceDescriptor } from './ingest-source.js';
+export { ErrorBodySchema } from './error-envelope.js';
+export type { ErrorBody } from './error-envelope.js';
 export {
   assertModuleManifest,
   ModuleCaptureOverlayConfigSchema,

@@ -13,10 +13,39 @@
  */
 import { type Router as ExpressRouter, Router } from 'express';
 
+import { defineErrors, PopsError } from '@pops/pillar-express';
+
 import { getPaperlessClient } from '../modules/paperless/index.js';
 import { PaperlessApiError } from '../modules/paperless/types.js';
 
 const THUMBNAIL_CACHE_CONTROL = 'public, max-age=3600';
+
+const thumbnailErrors = defineErrors('documents', {
+  invalid_id: {
+    area: 'thumbnail',
+    status: 400,
+    message: 'The document id is invalid.',
+    retryable: false,
+  },
+  not_configured: {
+    area: 'paperless',
+    status: 503,
+    message: 'Paperless-ngx is not configured.',
+    retryable: false,
+  },
+  not_found: {
+    area: 'thumbnail',
+    status: 404,
+    message: 'The document thumbnail was not found.',
+    retryable: false,
+  },
+  upstream_failure: {
+    area: 'thumbnail',
+    status: 502,
+    message: 'The document thumbnail could not be fetched.',
+    retryable: true,
+  },
+});
 
 /** Build the documents pillar's raw file-serving router. */
 export function createDocumentsFilesRouter(): ExpressRouter {
@@ -25,37 +54,33 @@ export function createDocumentsFilesRouter(): ExpressRouter {
   router.get('/documents/:id/thumbnail', async (req, res): Promise<void> => {
     const { id } = req.params;
     if (!/^\d+$/.test(id)) {
-      res.status(400).json({ error: `Invalid document id: ${id}` });
-      return;
+      return thumbnailErrors.invalid_id({ id });
     }
 
     const client = getPaperlessClient();
     if (!client) {
-      res.status(503).json({ error: 'Paperless-ngx is not configured' });
-      return;
+      return thumbnailErrors.not_configured();
     }
 
     try {
       const response = await client.fetchThumbnail(Number(id));
       if (!response.ok) {
         if (response.status === 404) {
-          res.status(404).json({ error: 'Document not found' });
-          return;
+          return thumbnailErrors.not_found({ id });
         }
-        res.status(502).json({ error: 'Failed to fetch thumbnail from Paperless' });
-        return;
+        return thumbnailErrors.upstream_failure({ upstreamStatus: response.status });
       }
 
       const contentType = response.headers.get('content-type') ?? 'image/png';
       res.set({ 'Content-Type': contentType, 'Cache-Control': THUMBNAIL_CACHE_CONTROL });
       res.send(Buffer.from(await response.arrayBuffer()));
     } catch (err) {
+      if (err instanceof PopsError) throw err;
       if (err instanceof PaperlessApiError) {
-        res.status(502).json({ error: `Paperless error: ${err.message}` });
-        return;
+        return thumbnailErrors.upstream_failure({ upstreamStatus: err.status });
       }
       console.error('[documents] Thumbnail proxy error:', err);
-      res.status(502).json({ error: 'Failed to fetch thumbnail' });
+      return thumbnailErrors.upstream_failure();
     }
   });
 

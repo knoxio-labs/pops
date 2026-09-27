@@ -10,6 +10,7 @@ import SwiftUI
 /// deliberately leaves there.
 public struct AccountsListView: View {
     @State private var model: AccountsListViewModel
+    @Environment(\.errorPresenter) private var errorPresenter
 
     public init(model: AccountsListViewModel) {
         _model = State(wrappedValue: model)
@@ -24,8 +25,15 @@ public struct AccountsListView: View {
             .background(Color.popsBackground)
             .task { await model.loadAccounts() }
             .onChange(of: model.refreshFailure) { _, failure in
-                announce(failure.map { AccountsCopy.message(for: $0) })
+                guard let failure else { return }
+                errorPresenter.present(
+                    PopsError(
+                        repositoryError: failure,
+                        fallbackMessage: AccountsCopy.message(for: failure)),
+                    operation: "Refresh accounts",
+                    context: .foreground)
             }
+            .errorDiagnosticsMenu()
     }
 
     @ViewBuilder private var content: some View {
@@ -45,11 +53,6 @@ public struct AccountsListView: View {
             scrollingContent
         }
     }
-
-    private func announce(_ message: String?) {
-        guard let message else { return }
-        AccessibilityNotification.Announcement(message).post()
-    }
 }
 
 extension AccountsListView {
@@ -58,7 +61,6 @@ extension AccountsListView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 header
                 searchField
-                refreshBanner
                 sections
             }
             .padding(PopsSpacing.lg)
@@ -142,18 +144,5 @@ extension AccountsListView {
     private var hasArchivedAccounts: Bool {
         guard case .loaded(let accounts) = model.state else { return false }
         return accounts.contains { $0.archived }
-    }
-
-    @ViewBuilder private var refreshBanner: some View {
-        if let failure = model.refreshFailure {
-            PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text(AccountsCopy.message(for: failure))
-                        .font(.popsBody)
-                        .foregroundStyle(Color.popsDestructive)
-                    PopsButton(AccountsCopy.retry) { Task { await model.refresh() } }
-                }
-            }
-        }
     }
 }

@@ -72,6 +72,7 @@ public struct BFMTransactionsRepository: TransactionsRepository {
         do {
             output = try await client.generated.mobileFinance_getTransaction(path: .init(id: id))
         } catch let error as ClientError {
+            if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
             throw Self.failure(error, operation: GetTransaction.id)
         }
 
@@ -128,6 +129,9 @@ extension BFMTransactionsRepository {
                 query: .init(cursor: cursor)
             )
         } catch let error as ClientError {
+            if BFMRepositoryFailure.code(in: error) == "invalid_cursor" {
+                return .cursorRejected
+            }
             throw Self.failure(error, operation: ListTransactions.id)
         }
 
@@ -156,10 +160,10 @@ extension BFMTransactionsRepository {
             throw RepositoryError.transport("\(ListTransactions.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: ListTransactions.id)
+                try upstream.body.json.code, operation: ListTransactions.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: ListTransactions.id)
+                try upstream.body.json.code, operation: ListTransactions.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(ListTransactions.id): undocumented status \(statusCode)"
@@ -255,10 +259,10 @@ extension BFMTransactionsRepository {
             throw RepositoryError.transport("\(GetTransaction.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetTransaction.id)
+                try upstream.body.json.code, operation: GetTransaction.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetTransaction.id)
+                try upstream.body.json.code, operation: GetTransaction.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(GetTransaction.id): undocumented status \(statusCode)"

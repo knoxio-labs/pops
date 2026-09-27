@@ -6,6 +6,9 @@
 import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ErrorState } from '@pops/ui';
+
+import { FoodApiError } from '../../food-api-helpers.js';
 import { DraftRow } from './DraftRow.js';
 import { DEFAULT_DRAFTS_FILTERS, type DraftsFiltersState } from './drafts-filters.js';
 import { DraftsFilters } from './DraftsFilters.js';
@@ -27,11 +30,7 @@ export function DraftsTab({ filters, onFiltersChange, now }: Props): ReactElemen
     <section className="space-y-4" data-testid="drafts-tab">
       <DraftsFilters value={filters} onChange={onFiltersChange} onClear={onClear} t={t} />
       {isLoading && <p className="text-sm text-muted-foreground">{t('inbox.drafts.loading')}</p>}
-      {isError && (
-        <p className="text-sm text-destructive">
-          {t('inbox.drafts.error', { message: error?.message ?? '' })}
-        </p>
-      )}
+      {isError && error instanceof FoodApiError && <ErrorState error={error} />}
       {!isLoading && !isError && rows.length === 0 && (
         <EmptyState filtersChanged={filtersChanged} onClear={onClear} t={t} />
       )}

@@ -11,10 +11,11 @@
 import { createPurchase, getPurchase, upsertSource } from '../../db/index.js';
 import { tryMapServiceError } from './error-mapping.js';
 
+import type { ErrorBody } from '@pops/types';
+
 import type { PurchaseDetail, PurchasesDb } from '../../db/index.js';
 import type { CreatePurchaseInput } from '../../db/services/purchase-input.js';
 import type { UpsertSourceInput } from '../../db/services/sources.js';
-import type { ErrorBody } from './error-mapping.js';
 
 export type DraftPersisted =
   | { readonly kind: 'written'; readonly detail: PurchaseDetail }

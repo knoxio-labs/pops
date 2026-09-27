@@ -142,6 +142,7 @@ export function useFinalReview() {
   const [commitKey] = useState(() => crypto.randomUUID());
   const queryClient = useQueryClient();
   const commitMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (vars: CommitBody): Promise<CommitResponse> =>
       unwrap(await importsCommitImport({ body: vars })),
     onSuccess: (response) => {

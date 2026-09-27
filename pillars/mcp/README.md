@@ -67,6 +67,11 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 Point the URL at the gateway's published `host:3011`. Drop the `Authorization` header only when the server runs without `MCP_INBOUND_TOKEN`.
 
+HTTP authentication failures use the ADR-054 envelope
+`{ code, message, requestId, retryable, details? }`. The registered code is
+`mcp.auth.unauthorized`; the response never distinguishes a missing token from
+an invalid one. All HTTP responses echo or mint `X-Request-Id`.
+
 ## Acceptance suite
 
 `src/acceptance/` is the inventory-types acceptance suite (POPS-4354):

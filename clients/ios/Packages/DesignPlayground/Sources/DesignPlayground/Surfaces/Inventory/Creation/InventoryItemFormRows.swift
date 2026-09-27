@@ -71,10 +71,10 @@ internal struct InventoryFormNoteRow: View {
 
 /// The inventory code, typed or suggested.
 ///
-/// Suggest sits beside the field as an icon, because a code is optional and a
-/// sheet for an optional value turns an offer into a step. What came back is a
-/// footer under the group, which is where the system puts anything a form has
-/// to say about a value it already holds.
+/// Suggest sits beside the field as a named action, because a code is optional
+/// and a sheet for an optional value turns an offer into a step. What came back
+/// is a footer under the group, which is where the system puts anything a form
+/// has to say about a value it already holds.
 internal struct InventoryFormCodeRow: View {
     internal let entry: InventoryCodeEntry
     @State private var code: String
@@ -93,19 +93,33 @@ internal struct InventoryFormCodeRow: View {
     @ViewBuilder private var suggest: some View {
         switch entry.assist {
         case .suggesting:
-            ProgressView()
-                .accessibilityLabel("Looking for a free code")
+            HStack(spacing: PopsSpacing.xs) {
+                ProgressView()
+                Text("Suggesting…")
+                    .font(.popsSubheadline)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Looking for a free code")
         case .offline, .unavailable:
-            InventorySymbol.offline.image
-                .foregroundStyle(Color.popsMutedForeground)
-                .accessibilityLabel("Offline, so no code can be suggested")
+            Label {
+                Text("Unavailable")
+            } icon: {
+                InventorySymbol.offline.image
+            }
+            .font(.popsSubheadline)
+            .foregroundStyle(Color.popsMutedForeground)
+            .accessibilityLabel("Offline, so no code can be suggested")
         case .idle, .offered, .accepted, .rejected, .edited, .collision:
             Button {
             } label: {
-                InventorySymbol.suggest.image
+                Label {
+                    Text("Suggest code")
+                } icon: {
+                    InventorySymbol.suggest.image
+                }
+                .font(.popsSubheadline.weight(.semibold))
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel("Suggest a code")
         }
     }
 }

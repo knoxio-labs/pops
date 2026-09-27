@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -12,6 +13,7 @@ import SwiftUI
 /// and a screen that titled itself would have to be untitled again.
 public struct TransactionDetailView: View {
     @State private var model: TransactionDetailViewModel
+    @Environment(\.errorPresenter) private var errorPresenter
 
     private let presentation: TransactionDetailPresentation
 
@@ -30,8 +32,12 @@ public struct TransactionDetailView: View {
             // fetch reads as the screen having simply stopped filling in.
             .onChange(of: model.failure) { _, failure in
                 guard let failure else { return }
-                AccessibilityNotification.Announcement(TransactionsCopy.detailFailure(failure))
-                    .post()
+                errorPresenter.present(
+                    PopsError(
+                        repositoryError: failure,
+                        fallbackMessage: TransactionsCopy.detailFailure(failure)),
+                    operation: "Load transaction details",
+                    context: .foreground)
             }
     }
 
@@ -71,7 +77,6 @@ extension TransactionDetailView {
     private func record(_ content: TransactionDetailContent) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                failureBanner
                 TransactionDetailCard(content: content)
             }
             .padding(PopsSpacing.lg)
@@ -83,20 +88,5 @@ extension TransactionDetailView {
         // are records — which is why the flow goes on to assert a line only
         // the fetched one has.
         .accessibilityIdentifier(TransactionsAccessibility.detail)
-    }
-
-    /// The reason the rest of the record is missing, over content that is still
-    /// true. Keeping that content is the point — see the model's ``failure``.
-    @ViewBuilder private var failureBanner: some View {
-        if let failure = model.failure {
-            PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text(TransactionsCopy.detailFailure(failure))
-                        .font(.popsBody)
-                        .foregroundStyle(Color.popsDestructive)
-                    PopsButton(TransactionsCopy.retry) { Task { await model.load() } }
-                }
-            }
-        }
     }
 }

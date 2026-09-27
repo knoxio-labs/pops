@@ -60,7 +60,6 @@ export function useEntityFormDialog() {
       toast.success('Entity created');
       dialog.closeDialog();
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   const updateMutation = useMutation({
@@ -70,7 +69,6 @@ export function useEntityFormDialog() {
       toast.success('Entity updated');
       dialog.closeDialog();
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
   const identityMutations = useEntityIdentityMutations(dialog.setEditingEntity);

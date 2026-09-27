@@ -15,6 +15,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc
 # resolution to that subgraph; unrelated pillars never need to exist in
 # this image's build context.
 COPY pillars/orchestrator/package.json ./pillars/orchestrator/
+COPY libs/pillar-express/package.json ./libs/pillar-express/
 COPY libs/sdk/package.json ./libs/sdk/
 COPY libs/types/package.json ./libs/types/
 
@@ -26,6 +27,9 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 COPY libs/sdk/src ./libs/sdk/src
 COPY libs/sdk/tsconfig.json ./libs/sdk/tsconfig.json
 COPY libs/sdk/tsconfig.build.json ./libs/sdk/tsconfig.build.json
+COPY libs/pillar-express/src ./libs/pillar-express/src
+COPY libs/pillar-express/tsconfig.json ./libs/pillar-express/tsconfig.json
+COPY libs/pillar-express/tsconfig.build.json ./libs/pillar-express/tsconfig.build.json
 # @pops/types
 COPY libs/types/src ./libs/types/src
 COPY libs/types/tsconfig.json ./libs/types/tsconfig.json

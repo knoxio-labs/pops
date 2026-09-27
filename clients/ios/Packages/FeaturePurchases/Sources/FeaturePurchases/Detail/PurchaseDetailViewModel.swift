@@ -20,6 +20,34 @@ internal enum PurchaseDetailFailure: Hashable, Sendable {
     }
 }
 
+extension PurchaseDetailFailure {
+    internal var popsError: PopsError {
+        PopsError(
+            code: "ios.purchases.detail_\(code)",
+            message: PurchaseDetailCopy.refreshNotice(for: self),
+            retryable: PurchaseDetailCopy.isRetryable(self),
+            kind: kind)
+    }
+
+    private var code: String {
+        switch self {
+        case .offline: "offline"
+        case .unreachable: "unreachable"
+        case .notFound: "not_found"
+        case .unauthorized: "unauthorized"
+        case .contractMismatch: "contract_mismatch"
+        }
+    }
+
+    private var kind: PopsError.Kind {
+        switch self {
+        case .offline: .offline
+        case .unreachable: .server
+        case .notFound, .unauthorized, .contractMismatch: .client
+        }
+    }
+}
+
 internal enum PurchaseDetailPhase: Hashable, Sendable {
     case loading
     case loaded(PurchaseDetail, refresh: PurchaseDetailFailure?)
@@ -172,7 +200,12 @@ internal final class PurchaseDetailViewModel {
         let pages = await withTaskGroup(of: PurchaseReceiptThumbnail?.self) { group in
             for (index, sha256) in requests {
                 group.addTask {
-                    guard let image = try? await repository.receiptThumbnail(sha256: sha256) else {
+                    let image: ReceiptImage
+                    do {
+                        guard let loaded = try await repository.receiptThumbnail(sha256: sha256)
+                        else { return nil }
+                        image = loaded
+                    } catch {
                         return nil
                     }
                     return PurchaseReceiptThumbnail(pageIndex: index, image: image)

@@ -7,7 +7,7 @@ import { AlertCircle, CheckCircle2, ExternalLink, Loader2, RefreshCw } from 'luc
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
-import { Badge, Button, Card } from '@pops/ui';
+import { Badge, Button, Card, ErrorState } from '@pops/ui';
 
 import { EnrichmentChips } from './EnrichmentChips';
 
@@ -87,11 +87,7 @@ function BulkRow({
   return (
     <Card className="p-4 space-y-3">
       <BulkRowHeader row={row} onRetry={onRetry} />
-      {row.error && (
-        <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
-          {row.error}
-        </p>
-      )}
+      {row.error && <ErrorState error={row.error} className="items-start px-3 py-2 text-left" />}
       {row.result && <EnrichmentChips engramId={row.result.id} />}
     </Card>
   );

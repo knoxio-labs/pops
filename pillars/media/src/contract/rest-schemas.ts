@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Shared zod building blocks for the media REST contract.
  *
@@ -9,7 +11,7 @@
  * These schemas describe the actual wire shapes the handlers serve, so the
  * OpenAPI projection is an honest description of what the server does.
  */
-import { z } from 'zod';
+import { ErrorBodySchema } from '@pops/types';
 
 /** Numeric identity. SQLite autoincrement ids arrive as strings on the wire; coerced. */
 export const IdParam = z.coerce.number().int();
@@ -31,15 +33,7 @@ export const PaginationMetaSchema = z.object({
   hasMore: z.boolean(),
 });
 
-/**
- * Error envelope. `messageKey` carries the i18n key the FE resolves to a
- * localised string.
- */
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
-  messageKey: z.string().optional(),
-});
+export { ErrorBodySchema };
 
 /** Bare `{ message }` body returned by delete-style mutations. */
 export const MessageSchema = z.object({ message: z.string() });

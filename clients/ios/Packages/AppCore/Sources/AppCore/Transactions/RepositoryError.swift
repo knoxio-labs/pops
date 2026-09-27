@@ -22,8 +22,46 @@ public enum RepositoryError: Error, Hashable, Sendable {
     case conflict(String)
     /// The request never got an answer. The payload is a diagnostic, not
     /// something to show a user.
-    case transport(String)
+    case transport(RepositoryTransportError)
     /// The composition root never bound an implementation. Reachable only
     /// through ``AppDependencies/unbound``.
     case dependencyNotBound
+
+    /// Preserves the source-compatible string constructor used by existing repositories.
+    public static func transport(_ diagnostic: String) -> RepositoryError {
+        .transport(RepositoryTransportError(diagnostic: diagnostic))
+    }
+
+    /// Carries a structured runtime failure through the established transport case.
+    public static func transport(_ popsError: PopsError) -> RepositoryError {
+        .transport(RepositoryTransportError(popsError: popsError))
+    }
+}
+
+/// The diagnostic payload retained by ``RepositoryError/transport(_:)``.
+public struct RepositoryTransportError: Hashable, Sendable, CustomStringConvertible {
+    /// A credential-free diagnostic retained for compatibility with existing logging.
+    public let diagnostic: String
+    /// The structured failure, when the runtime could classify one safely.
+    public let popsError: PopsError?
+
+    /// Creates a legacy diagnostic payload.
+    public init(diagnostic: String) {
+        self.diagnostic = diagnostic
+        self.popsError = nil
+    }
+
+    /// Creates a payload backed by a structured POPS failure.
+    public init(popsError: PopsError) {
+        self.diagnostic = popsError.code
+        self.popsError = popsError
+    }
+
+    /// The credential-free diagnostic used for string interpolation.
+    public var description: String { diagnostic }
+
+    /// Returns whether the credential-free diagnostic contains a string.
+    public func contains(_ other: String) -> Bool {
+        diagnostic.contains(other)
+    }
 }

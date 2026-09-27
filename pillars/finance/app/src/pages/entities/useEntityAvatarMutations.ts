@@ -75,7 +75,6 @@ export function useEntityAvatarMutations(
       onChanged(toPageEntity(res.data));
       toast.success('Avatar uploaded');
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
 
@@ -86,7 +85,6 @@ export function useEntityAvatarMutations(
       onChanged(toPageEntity(res.data));
       toast.success('Avatar removed');
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
 
@@ -97,7 +95,6 @@ export function useEntityAvatarMutations(
       onChanged(toPageEntity(res.data));
       toast.success('Colour rerolled');
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
 

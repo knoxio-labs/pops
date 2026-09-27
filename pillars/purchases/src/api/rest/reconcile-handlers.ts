@@ -10,6 +10,7 @@ import {
   unlinkCharge,
 } from '../../db/index.js';
 import { nowIso } from '../../db/services/internal.js';
+import { purchaseErrorBody } from '../errors.js';
 import { toPurchaseChargeLinkBody } from './serializers.js';
 
 import type { z } from 'zod';
@@ -33,12 +34,11 @@ export type SweepTrigger = (scope: { source?: string }) => Promise<SweepOutcome>
 function missingLink(decision: Decision) {
   return {
     status: 404 as const,
-    body: {
+    body: purchaseErrorBody('link_not_found', {
       message:
         `No link between charge ${decision.chargeId} and ${decision.transactionUri}. ` +
         `A sweep may have re-derived it since the queue was read.`,
-      code: 'link_not_found',
-    },
+    }),
   };
 }
 
@@ -128,7 +128,9 @@ export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
         // sweep that ran and found nothing.
         return {
           status: 503 as const,
-          body: { message: 'No sweep runner is configured', code: 'sweep_unavailable' },
+          body: purchaseErrorBody('sweep_unavailable', {
+            message: 'No sweep runner is configured',
+          }),
         };
       }
 

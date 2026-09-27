@@ -51,7 +51,7 @@ export function ImportPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const requested = params.get('draft');
-  const { gate, takeOver, discard } = useDraftHydration(requested);
+  const { gate, retry, takeOver, discard } = useDraftHydration(requested);
   const draftId = useImportStore((state) => state.draftId);
   const ready = gate.status === 'ready';
   const saveFailedShown = useRef(false);
@@ -90,7 +90,12 @@ export function ImportPage() {
     <div className="space-y-6">
       <PageHeader title={t('import.title')} description={t('import.description')} />
 
-      <DraftGateNotice gate={gate} onDiscard={() => void discard()} onTakeOver={takeOver} />
+      <DraftGateNotice
+        gate={gate}
+        onDiscard={() => void discard()}
+        onRetry={retry}
+        onTakeOver={takeOver}
+      />
       {ready && <ImportWizard />}
       {lease.takenOverAt !== null && (
         <ImportTakenOverNotice

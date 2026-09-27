@@ -108,7 +108,11 @@ describe('paperless.search', () => {
     const result = await handlers.search({ query: { query: 'bill' } });
 
     expect(result.status).toBe(412);
-    expect(result.body).toMatchObject({ messageKey: 'documents.paperless.notConfigured' });
+    expect(result.body).toMatchObject({
+      code: 'documents.paperless.not_configured',
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it('maps search results to the wire shape with a thumbnail URL', async () => {
@@ -186,7 +190,11 @@ describe('paperless.get', () => {
     const result = await handlers.get({ params: { id: 42 } });
 
     expect(result.status).toBe(404);
-    expect(result.body).toMatchObject({ messageKey: 'documents.paperless.notFound' });
+    expect(result.body).toMatchObject({
+      code: 'documents.paperless.not_found',
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it('returns 412 rather than 404 when Paperless is not configured', async () => {
@@ -196,7 +204,11 @@ describe('paperless.get', () => {
     const result = await handlers.get({ params: { id: 42 } });
 
     expect(result.status).toBe(412);
-    expect(result.body).toMatchObject({ messageKey: 'documents.paperless.notConfigured' });
+    expect(result.body).toMatchObject({
+      code: 'documents.paperless.not_configured',
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it.each([

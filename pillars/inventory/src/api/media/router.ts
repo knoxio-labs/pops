@@ -15,6 +15,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 import { Router, type Request, type Response } from 'express';
 
+import { inventoryError, sendInventoryError } from '../errors.js';
 import { PayloadTooLargeError, readRawBody } from './read-raw-body.js';
 import {
   MediaHashMismatchError,
@@ -52,6 +53,65 @@ function sha256Param(req: Request): string | null {
   return typeof value === 'string' && isValidSha256(value) ? value : null;
 }
 
+interface MediaErrorSpec {
+  reason: string;
+  status: number;
+  message: string;
+}
+
+function sendMediaError(req: Request, res: Response, spec: MediaErrorSpec): void {
+  sendInventoryError(req, res, inventoryError({ area: 'media', ...spec }));
+}
+
+async function readUpload(req: Request, res: Response): Promise<Buffer | null> {
+  try {
+    return await readRawBody(req, MEDIA_UPLOAD_LIMIT_BYTES);
+  } catch (err) {
+    if (!(err instanceof PayloadTooLargeError)) throw err;
+    res.once('finish', () => req.socket.destroy());
+    sendMediaError(req, res, {
+      reason: 'payload_too_large',
+      status: 413,
+      message: 'The media payload is too large.',
+    });
+    return null;
+  }
+}
+
+async function storeUpload(
+  req: Request,
+  res: Response,
+  upload: { deps: CreateInventoryMediaRouterDeps; sha256: string; bytes: Buffer }
+): Promise<void> {
+  try {
+    const result = await storeMedia(
+      upload.deps.db,
+      upload.deps.imagesDir(),
+      upload.sha256,
+      upload.bytes
+    );
+    res.status(result.alreadyStored ? 200 : 201).json(result);
+  } catch (err) {
+    if (err instanceof MediaHashMismatchError) {
+      sendMediaError(req, res, {
+        reason: 'hash_mismatch',
+        status: 400,
+        message: 'The media hash does not match the payload.',
+      });
+      return;
+    }
+    if (err instanceof UnsupportedMediaTypeError) {
+      sendMediaError(req, res, {
+        reason: 'unsupported_media_type',
+        status: 415,
+        message: 'The media type is not supported.',
+      });
+      return;
+    }
+    throw err;
+  }
+}
+
 async function handlePut(
   deps: CreateInventoryMediaRouterDeps,
   req: Request,
@@ -59,74 +119,77 @@ async function handlePut(
 ): Promise<void> {
   const sha256 = sha256Param(req);
   if (sha256 === null) {
-    res.status(400).json({ error: 'invalid_sha256' });
+    sendMediaError(req, res, {
+      reason: 'invalid_sha256',
+      status: 400,
+      message: 'The media hash is invalid.',
+    });
     return;
   }
 
   if (!req.is(ALLOWED_UPLOAD_CONTENT_TYPES)) {
-    res.status(415).json({ error: 'unsupported_media_type' });
+    sendMediaError(req, res, {
+      reason: 'unsupported_media_type',
+      status: 415,
+      message: 'The media type is not supported.',
+    });
     return;
   }
 
-  let bytes: Buffer;
-  try {
-    bytes = await readRawBody(req, MEDIA_UPLOAD_LIMIT_BYTES);
-  } catch (err) {
-    if (err instanceof PayloadTooLargeError) {
-      // The client may still be writing bytes past the cap; once the 413 is
-      // flushed, drop the connection rather than leaving them to confuse a
-      // pooled keep-alive socket's next request.
-      res.once('finish', () => req.socket.destroy());
-      res.status(413).json({ error: 'payload_too_large' });
-      return;
-    }
-    throw err;
-  }
+  const bytes = await readUpload(req, res);
+  if (bytes === null) return;
 
   if (bytes.length === 0) {
-    res.status(400).json({ error: 'empty_body' });
+    sendMediaError(req, res, {
+      reason: 'empty_body',
+      status: 400,
+      message: 'The media payload is empty.',
+    });
     return;
   }
 
-  try {
-    const result = await storeMedia(deps.db, deps.imagesDir(), sha256, bytes);
-    res.status(result.alreadyStored ? 200 : 201).json(result);
-  } catch (err) {
-    if (err instanceof MediaHashMismatchError) {
-      res.status(400).json({ error: 'hash_mismatch' });
-      return;
-    }
-    if (err instanceof UnsupportedMediaTypeError) {
-      res.status(415).json({ error: 'unsupported_media_type' });
-      return;
-    }
-    throw err;
-  }
+  await storeUpload(req, res, { deps, sha256, bytes });
 }
 
 function handleGet(deps: CreateInventoryMediaRouterDeps, req: Request, res: Response): void {
   const sha256 = sha256Param(req);
   if (sha256 === null) {
-    res.status(400).json({ error: 'invalid_sha256' });
+    sendMediaError(req, res, {
+      reason: 'invalid_sha256',
+      status: 400,
+      message: 'The media hash is invalid.',
+    });
     return;
   }
 
   const variantParam = req.query['variant'] ?? 'full';
   if (!isMediaVariant(variantParam)) {
-    res.status(400).json({ error: 'invalid_variant' });
+    sendMediaError(req, res, {
+      reason: 'invalid_variant',
+      status: 400,
+      message: 'The media variant is invalid.',
+    });
     return;
   }
 
   const record = getMedia(deps.db, sha256);
   if (record === null) {
-    res.status(404).json({ error: 'media_not_found' });
+    sendMediaError(req, res, {
+      reason: 'not_found',
+      status: 404,
+      message: 'The media was not found.',
+    });
     return;
   }
 
   const imagesDir = deps.imagesDir();
   const filePath = mediaVariantPath(imagesDir, sha256, variantParam);
   if (!existsSync(filePath)) {
-    res.status(404).json({ error: 'media_not_found' });
+    sendMediaError(req, res, {
+      reason: 'not_found',
+      status: 404,
+      message: 'The media was not found.',
+    });
     return;
   }
 

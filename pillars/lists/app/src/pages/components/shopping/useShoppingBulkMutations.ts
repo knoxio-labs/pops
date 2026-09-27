@@ -69,6 +69,7 @@ interface BulkMutationOptions<TResult> {
 
 function useBulkMutation<TResult>(opts: BulkMutationOptions<TResult>) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: opts.mutationFn,
     onMutate: (): RollbackContext => snapshotAndUpdate(opts.qc, opts.listId, opts.optimistic),
     onError: (err: Error, _vars, context) => {

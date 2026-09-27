@@ -59,7 +59,7 @@ mise run lint     # both tools; the single command the CI job invokes
 mise run format   # rewrites the sources; the fixer for the half of `lint` that has one
 ```
 
-`mise run lint` is a single task rather than a documented pair of commands on purpose. The iOS CI job invokes this task and nothing else, so that there is never a second copy of the command to drift from — a hand-copied pair in a workflow file is how a green local run stops meaning anything. It runs two tools, both of them, even when the first has already failed, so one run tells you everything.
+`mise run lint` is a single task rather than a documented set of commands on purpose. The iOS CI job invokes this task and nothing else, so that there is never a second copy of the command to drift from — a hand-copied list in a workflow file is how a green local run stops meaning anything. It runs both source tools and the install-free static guards, even when an earlier check has already failed, so one run tells you everything. One of those guards rejects `try?` on awaited repository calls in Feature packages: user-action failures must reach the shared error presenter, while best-effort cache, asset and background work remains explicit at its non-repository seam.
 
 They divide the work along a line worth knowing before adding a rule to either: **`.swift-format` owns what the code looks like** and rewrites it; **`.swiftlint.yml` owns what the code may do** and rewrites nothing. A defect belongs to exactly one of them, and where both had an opinion the loser was switched off rather than left to report the same thing twice.
 

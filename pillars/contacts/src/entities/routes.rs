@@ -677,7 +677,7 @@ fn validate_type(ty: &str) -> Result<(), ApiError> {
 }
 
 fn db_error(err: sqlx::Error) -> ApiError {
-    ApiError::internal(err.to_string())
+    ApiError::database(err)
 }
 
 fn repo_error(err: repo::RepoError) -> ApiError {

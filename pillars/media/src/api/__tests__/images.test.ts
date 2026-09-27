@@ -148,7 +148,11 @@ describe('GET /media/images — tier 1 (cached file)', () => {
     const res = await requestOn(app()).get('/media/images/movie/550/backdrop.jpg');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toBe('Image not found');
+    expect(res.body).toMatchObject({
+      code: 'media.image.not_found',
+      message: 'The image was not found.',
+      retryable: false,
+    });
   });
 });
 
@@ -156,19 +160,31 @@ describe('GET /media/images — validation', () => {
   it('returns 400 for an invalid media type', async () => {
     const res = await requestOn(app()).get('/media/images/tvshow/550/poster.jpg');
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid media type');
+    expect(res.body).toMatchObject({
+      code: 'media.request.invalid',
+      message: expect.stringContaining('Invalid media type'),
+      retryable: false,
+    });
   });
 
   it('returns 400 for a non-numeric id', async () => {
     const res = await requestOn(app()).get('/media/images/movie/abc/poster.jpg');
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid id');
+    expect(res.body).toMatchObject({
+      code: 'media.request.invalid',
+      message: expect.stringContaining('Invalid id'),
+      retryable: false,
+    });
   });
 
   it('returns 400 for an unknown filename', async () => {
     const res = await requestOn(app()).get('/media/images/movie/550/malicious.exe');
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid filename');
+    expect(res.body).toMatchObject({
+      code: 'media.request.invalid',
+      message: expect.stringContaining('Invalid filename'),
+      retryable: false,
+    });
   });
 
   it('accepts season_N.jpg as a valid filename', async () => {
@@ -186,7 +202,11 @@ describe('GET /media/images — tier 3 (404 / CDN fallback, no network)', () => 
     const res = await requestOn(app()).get('/media/images/movie/9999/poster.jpg');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toBe('Image not found');
+    expect(res.body).toMatchObject({
+      code: 'media.image.not_found',
+      message: 'The image was not found.',
+      retryable: false,
+    });
     expect(getTmdbClientMock).not.toHaveBeenCalled();
     expect(imageCache.downloadMovieImages).not.toHaveBeenCalled();
   });

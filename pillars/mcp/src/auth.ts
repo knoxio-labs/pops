@@ -12,7 +12,22 @@
  */
 import { timingSafeEqual } from 'node:crypto';
 
+import { defineErrors } from '@pops/pillar-express';
+import { getRequestId, mintRequestId, REQUEST_ID_HEADER } from '@pops/pillar-sdk/server';
+
 import type { RequestHandler } from 'express';
+
+import type { ErrorBody } from '@pops/types';
+
+/** Registered failures for inbound MCP authentication. */
+export const inboundAuthErrors = defineErrors('mcp', {
+  unauthorized: {
+    area: 'auth',
+    status: 401,
+    message: 'A valid bearer token is required.',
+    retryable: false,
+  },
+});
 
 /**
  * Resolve the inbound shared secret from the environment. Whitespace-only or
@@ -93,5 +108,17 @@ export const inboundAuth: RequestHandler = (req, res, next) => {
     return;
   }
   res.setHeader('WWW-Authenticate', 'Bearer realm="pops-mcp"');
-  res.status(401).json({ error: 'unauthorized', message: decision.reason });
+  const localRequestId: unknown = res.locals['requestId'];
+  const requestId =
+    typeof localRequestId === 'string' && localRequestId.length > 0
+      ? localRequestId
+      : (getRequestId() ?? mintRequestId());
+  res.setHeader(REQUEST_ID_HEADER, requestId);
+  const body: ErrorBody = {
+    code: 'mcp.auth.unauthorized',
+    message: 'A valid bearer token is required.',
+    requestId,
+    retryable: false,
+  };
+  res.status(401).json(body);
 };

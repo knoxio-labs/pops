@@ -92,14 +92,14 @@ function orderOf(row: PurchaseListResponses[200]['items'][number]): PurchaseGetR
 
 const orderCreated: MockHandler = () => {
   const [row] = ENTITY_PURCHASES;
-  if (row === undefined) return notFound('purchase');
+  if (row === undefined) return notFound('purchase', 'purchases.resource.not_found');
   const body: PurchaseCreateResponses[201] = orderOf(row);
   return { status: 201, body };
 };
 
 const orderSaved: MockHandler = () => {
   const [row] = ENTITY_PURCHASES;
-  if (row === undefined) return notFound('purchase');
+  if (row === undefined) return notFound('purchase', 'purchases.resource.not_found');
   return { body: orderOf(row) };
 };
 
@@ -128,15 +128,18 @@ export const purchasesHandlers: MockHandlers = {
   'GET /purchases': listPurchases,
   'POST /purchases': orderCreated,
   'POST /purchases/manual': orderSaved,
-  'GET /purchases/{id}': () => notFound('purchase'),
-  'PATCH /purchases/{id}': () => notFound('purchase'),
+  'GET /purchases/{id}': () => notFound('purchase', 'purchases.resource.not_found'),
+  'PATCH /purchases/{id}': () => notFound('purchase', 'purchases.resource.not_found'),
   'DELETE /purchases/{id}': acknowledged,
   'DELETE /purchases/{id}/capture/location': acknowledged,
-  'POST /purchases/{id}/documents': () => notFound('purchase'),
+  'POST /purchases/{id}/documents': () => notFound('purchase', 'purchases.resource.not_found'),
   'GET /purchases/{id}/inventory-proposals': ok({ proposals: [] }),
-  'PATCH /purchases/{id}/items/{itemId}': () => notFound('purchase'),
-  'POST /purchases/{id}/items/{itemId}/inventory-item': () => notFound('purchase'),
-  'POST /purchases/{id}/items/{itemId}/inventory-proposal': () => notFound('purchase'),
+  'PATCH /purchases/{id}/items/{itemId}': () =>
+    notFound('purchase', 'purchases.resource.not_found'),
+  'POST /purchases/{id}/items/{itemId}/inventory-item': () =>
+    notFound('purchase', 'purchases.resource.not_found'),
+  'POST /purchases/{id}/items/{itemId}/inventory-proposal': () =>
+    notFound('purchase', 'purchases.resource.not_found'),
   'GET /items': ok({ items: [], pagination: { total: 0, limit: 50, offset: 0, hasMore: false } }),
   'GET /items/tags': ok({ tags: [] }),
 
@@ -152,9 +155,9 @@ export const purchasesHandlers: MockHandlers = {
   }),
 
   'GET /products': ok({ products: [] }),
-  'PATCH /products/{productId}': () => notFound('product'),
+  'PATCH /products/{productId}': () => notFound('product', 'purchases.resource.not_found'),
   'DELETE /products/{productId}': acknowledged,
-  'PATCH /products/aliases/{aliasId}': () => notFound('alias'),
+  'PATCH /products/aliases/{aliasId}': () => notFound('alias', 'purchases.resource.not_found'),
   'DELETE /products/aliases/{aliasId}': acknowledged,
   'POST /products/proposals': ok({
     confirmed: 0,
@@ -195,11 +198,11 @@ export const purchasesHandlers: MockHandlers = {
   'POST /receipts': ok(unreadable),
   'POST /receipts/extract': ok(unreadable),
   'POST /receipts/draft': orderSaved,
-  'GET /receipts/{sha256}': () => notFound('receipt'),
-  'GET /receipts/{sha256}/thumbnail': () => notFound('receipt'),
+  'GET /receipts/{sha256}': () => notFound('receipt', 'purchases.resource.not_found'),
+  'GET /receipts/{sha256}/thumbnail': () => notFound('receipt', 'purchases.resource.not_found'),
 
   'GET /sources': ok({ items: [] }),
-  'GET /sources/{id}': () => notFound('source'),
+  'GET /sources/{id}': () => notFound('source', 'purchases.resource.not_found'),
   'PUT /sources/{id}': sourceUpserted,
   'DELETE /sources/{id}': acknowledged,
 

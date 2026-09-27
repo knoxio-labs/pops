@@ -90,7 +90,7 @@ describe('useEntityAvatarMutations', () => {
     );
   });
 
-  it('surfaces an upload failure as an error toast rather than a changed entity', async () => {
+  it('leaves upload failures to the global handler without reporting a changed entity', async () => {
     entitiesUploadAvatarMock.mockResolvedValue({
       data: undefined,
       error: { message: "Unsupported content type 'image/gif'" },
@@ -103,9 +103,8 @@ describe('useEntityAvatarMutations', () => {
 
     result.current.uploadAvatar('ent-1', new File([], 'a.gif', { type: 'image/gif' }));
 
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("Unsupported content type 'image/gif'")
-    );
+    await waitFor(() => expect(entitiesUploadAvatarMock).toHaveBeenCalledOnce());
+    expect(toast.error).not.toHaveBeenCalled();
     expect(onChanged).not.toHaveBeenCalled();
   });
 

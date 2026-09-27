@@ -1,8 +1,8 @@
 import { type QueryClient } from '@tanstack/react-query';
 
 import { MAX_MUTATION_BATCH } from '@pops/inventory';
+import { ApiError, unwrap } from '@pops/pillar-sdk/client';
 
-import { InventoryApiError } from '../inventory-api-helpers.js';
 /**
  * A mutation client over `POST /sync/mutations` (Inventory ADR-002 D9/D10):
  * builds the wire envelope for one {@link InventoryCommand}, sends it as a
@@ -85,16 +85,6 @@ export function buildMutationEnvelope(input: InventoryCommandInput): InventoryMu
   };
 }
 
-function mutationError(result: { error?: unknown; response?: Response }): InventoryApiError | null {
-  if (result.error === undefined) return null;
-  const body = result.error as { message?: unknown };
-  const message =
-    typeof body.message === 'string' && body.message.length > 0
-      ? body.message
-      : 'inventory mutation failed';
-  return new InventoryApiError(message, result.response?.status);
-}
-
 /**
  * Send one to {@link MAX_MUTATION_BATCH} commands in one request and return
  * outcomes in the order supplied. The server still applies each command
@@ -109,21 +99,25 @@ export async function sendInventoryMutations(
     );
   }
 
-  const result = await syncMutations({
-    body: { mutations: inputs.map((input) => buildMutationEnvelope(input)) },
-    headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
-  });
-  const failure = mutationError(result);
-  if (failure !== null) throw failure;
-  const outcomes = result.data?.outcomes;
-  if (outcomes === undefined) {
-    throw new InventoryApiError('inventory mutation returned no outcomes', result.response?.status);
-  }
+  const data = await unwrap(
+    syncMutations({
+      body: { mutations: inputs.map((input) => buildMutationEnvelope(input)) },
+      headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
+    }),
+    {
+      fallbackMessage: 'inventory mutation failed',
+      noDataMessage: 'inventory mutation returned no data',
+    }
+  );
+  const outcomes = data.outcomes;
   if (outcomes.length !== inputs.length) {
-    throw new InventoryApiError(
-      `inventory mutation returned ${String(outcomes.length)} outcomes for ${String(inputs.length)} mutations`,
-      result.response?.status
-    );
+    throw new ApiError({
+      code: 'web.client.invalid_response',
+      kind: 'client',
+      message: `inventory mutation returned ${String(outcomes.length)} outcomes for ${String(inputs.length)} mutations`,
+      retryable: false,
+      status: 200,
+    });
   }
   return outcomes;
 }
@@ -131,7 +125,7 @@ export async function sendInventoryMutations(
 /**
  * Send one command as a one-mutation batch and return its outcome.
  *
- * Throws {@link InventoryApiError} for a transport-level failure (400 malformed
+ * Throws {@link ApiError} for a transport-level failure (400 malformed
  * batch, 426 protocol too old) -- the same failure mode as every other call
  * through this app's generated client. A `conflict`, `rejected` or `deferred`
  * result is not thrown: it is data the caller renders, exactly as `applied` is.
@@ -140,15 +134,25 @@ export async function sendInventoryMutation(
   input: InventoryCommandInput
 ): Promise<InventoryMutationOutcome> {
   const envelope = buildMutationEnvelope(input);
-  const result = await syncMutations({
-    body: { mutations: [envelope] },
-    headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
-  });
-  const failure = mutationError(result);
-  if (failure !== null) throw failure;
-  const outcome = result.data?.outcomes[0];
+  const data = await unwrap(
+    syncMutations({
+      body: { mutations: [envelope] },
+      headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
+    }),
+    {
+      fallbackMessage: 'inventory mutation failed',
+      noDataMessage: 'inventory mutation returned no data',
+    }
+  );
+  const outcome = data.outcomes[0];
   if (outcome === undefined) {
-    throw new InventoryApiError('inventory mutation returned no outcome', result.response?.status);
+    throw new ApiError({
+      code: 'web.client.no_data',
+      kind: 'client',
+      message: 'inventory mutation returned no outcome',
+      retryable: false,
+      status: 200,
+    });
   }
   return outcome;
 }

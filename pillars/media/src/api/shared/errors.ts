@@ -1,73 +1,80 @@
-/**
- * HTTP-shaped domain errors used by the media REST handlers.
- *
- * Each error carries an optional `messageKey` so the frontend can resolve a
- * translated string while the EN-AU fallback lives in `message`; the REST
- * error mapping plumbs it through the wire error body as a top-level `messageKey`.
- */
-export class HttpError extends Error {
-  /** i18n key the frontend uses to resolve a localised message. */
-  public readonly messageKey?: string;
+import { defineErrors, PopsError } from '@pops/pillar-express';
 
-  constructor(
-    public readonly statusCode: number,
-    message: string,
-    public readonly details?: unknown,
-    messageKey?: string
-  ) {
-    super(message);
-    this.name = 'HttpError';
-    this.messageKey = messageKey;
+/** Registered domain failures emitted by the media REST handlers. */
+export const mediaDomainErrors = defineErrors('media', {
+  not_found: {
+    area: 'resource',
+    status: 404,
+    message: 'The requested resource was not found.',
+    retryable: false,
+  },
+  conflict: {
+    area: 'resource',
+    status: 409,
+    message: 'The request conflicts with existing state.',
+    retryable: false,
+  },
+  unavailable: {
+    area: 'upstream',
+    status: 502,
+    message: 'The upstream service is unavailable.',
+    retryable: true,
+  },
+  failure: {
+    area: 'internal',
+    status: 500,
+    message: 'The service could not complete the request.',
+    retryable: false,
+  },
+});
+
+function codeForStatus(status: number): string {
+  if (status === 400) return 'media.request.invalid';
+  if (status === 404) return 'media.resource.not_found';
+  if (status === 409) return 'media.resource.conflict';
+  if (status === 502) return 'media.upstream.unavailable';
+  return 'media.internal.failure';
+}
+
+/** A media domain failure serialized by the shared ADR-054 middleware. */
+export class HttpError extends PopsError {
+  readonly statusCode: number;
+
+  constructor(statusCode: number, message: string, _details?: unknown, _messageKey?: string) {
+    super({
+      code: codeForStatus(statusCode),
+      status: statusCode,
+      message,
+      retryable: statusCode === 502,
+    });
+    this.statusCode = statusCode;
   }
 }
 
+/** A requested media resource does not exist. */
 export class NotFoundError extends HttpError {
   constructor(resource: string, id: string) {
-    super(404, `${resource} '${id}' not found`, undefined, 'common.notFound');
-    this.name = 'NotFoundError';
+    super(404, `${resource} '${id}' not found`);
   }
 }
 
+/** A media request is structurally valid but invalid for the domain. */
 export class ValidationError extends HttpError {
-  /**
-   * `message` comes first, and is required, because it is the only one of the
-   * two the client ever sees: the envelope `mapHttpError` builds carries
-   * `message` and `code`, and never `details`.
-   *
-   * Until POPS-3043 this class took `(details: unknown)` alone, so every 400 it
-   * raised said `Validation failed` whatever the caller wrote — there was no
-   * argument that could change it. Six pillars declared it that way and 22
-   * call sites passed an explanation the client never saw; POPS-3037 fixed the
-   * finance half, and POPS-3005 first found the shape.
-   *
-   * Do not give `message` a default: a default is exactly how the generic
-   * string comes back by omission. Do not "tidy" the order back either —
-   * `details: unknown` cannot refuse a string, so a swapped call compiles,
-   * reads correctly, and returns a 400 body reading `Validation failed`.
-   *
-   * @param message What the client is shown. Required.
-   * @param details Structured context for logs. It does NOT reach the client.
-   */
   constructor(message: string, details?: unknown) {
-    super(400, message, details, 'common.validationFailed');
-    this.name = 'ValidationError';
+    super(400, message, details);
   }
 }
 
+/** A media write conflicts with existing domain state. */
 export class ConflictError extends HttpError {
   constructor(message: string) {
-    super(409, message, undefined, 'common.conflict');
-    this.name = 'ConflictError';
+    super(409, message);
   }
 }
 
-/**
- * An upstream metadata provider (TMDB / TheTVDB) failed. Maps to 502 so the
- * FE can tell a dependency outage apart from a 4xx caller error.
- */
+/** A retryable media metadata-provider failure. */
 export class BadGatewayError extends HttpError {
   constructor(message: string) {
-    super(502, message, undefined, 'common.upstreamError');
-    this.name = 'BadGatewayError';
+    super(502, message);
   }
 }

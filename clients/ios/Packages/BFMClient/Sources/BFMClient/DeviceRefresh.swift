@@ -1,3 +1,4 @@
+import AppCore
 import HTTPTypes
 import OpenAPIRuntime
 
@@ -175,10 +176,84 @@ extension BFMHTTPClient {
         _ error: ClientError,
         operation: String
     ) -> BFMClientError {
+        if let runtime = PopsError.runtimeFailureDetails(from: error) {
+            return runtimeRefreshFailure(runtime, error: error, operation: operation)
+        }
         guard let refusal = refusal(readableFrom: error.response) else {
             return .transportFailure(error, operation: operation)
         }
         return .refreshRefused(refusal)
+    }
+
+    private static func runtimeRefreshFailure(
+        _ runtime: BFMRuntimeFailure,
+        error: ClientError,
+        operation: String
+    ) -> BFMClientError {
+        guard let statusCode = runtime.statusCode else {
+            return .transportFailure(error, operation: operation)
+        }
+        if operation == Operations.Device_challenge.id {
+            return challengeFailure(
+                statusCode: statusCode,
+                retryAfterSeconds: runtime.retryAfterSeconds)
+        }
+        if let refusal = refusal(for: runtime.popsError.code) {
+            return .refreshRefused(refusal)
+        }
+        if Self.isHTTPFallback(runtime.popsError.code), statusCode == 401 || statusCode == 403 {
+            return .transportFailure(error, operation: operation)
+        }
+        return statusFailure(
+            statusCode: statusCode,
+            retryAfterSeconds: runtime.retryAfterSeconds,
+            operation: operation)
+    }
+
+    private static func challengeFailure(
+        statusCode: Int,
+        retryAfterSeconds: Int?
+    ) -> BFMClientError {
+        switch statusCode {
+        case 400:
+            .refreshRefused(.invalidRequest)
+        case 429:
+            .refreshRefused(.rateLimited(retryAfterSeconds: retryAfterSeconds))
+        default:
+            .undocumentedResponse(operation: Operations.Device_challenge.id, statusCode: statusCode)
+        }
+    }
+
+    private static func statusFailure(
+        statusCode: Int,
+        retryAfterSeconds: Int?,
+        operation: String
+    ) -> BFMClientError {
+        switch statusCode {
+        case 400:
+            .refreshRefused(.invalidRequest)
+        case 429:
+            .refreshRefused(.rateLimited(retryAfterSeconds: retryAfterSeconds))
+        default:
+            .undocumentedResponse(operation: operation, statusCode: statusCode)
+        }
+    }
+
+    private static func refusal(for code: String) -> DeviceRefreshRefusal? {
+        switch code {
+        case "challenge_expired":
+            .challengeExpired
+        case "invalid_grant":
+            .invalidGrant
+        case "device_revoked", "bfm.auth.device_revoked":
+            .deviceRevoked
+        default:
+            nil
+        }
+    }
+
+    private static func isHTTPFallback(_ code: String) -> Bool {
+        code.hasPrefix("ios.http.")
     }
 
     /// The refusal a status means, for a response whose *body* the generated

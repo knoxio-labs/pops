@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 
 import { useAllEntities } from '../../lib/useAllEntities';
-import { mapAccountApiError } from './account-error-mapping';
+import { handleAccountApiError } from './account-error-mapping';
 import {
   loanTermsFieldsDirty,
   loanTermsPartiallyFilled,
@@ -74,9 +74,7 @@ export function useAccountFormDialog() {
         })
       : createMutation.mutateAsync(values);
     mutation.catch((err: unknown) => {
-      if (!mapAccountApiError(err, dialog.form)) {
-        toast.error(err instanceof Error ? err.message : 'Failed to save account');
-      }
+      handleAccountApiError(err, dialog.form);
     });
   };
 

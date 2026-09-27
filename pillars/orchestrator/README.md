@@ -80,6 +80,13 @@ pillars/orchestrator/
     └── pillars/            GET /pillars — registry-first fleet view
 ```
 
+## Error responses
+
+HTTP failures use `{ code, message, requestId, retryable, details? }` with
+registered `orchestrator.*` codes. Search validation exposes structured issues;
+unexpected search and aggregation failures are logged and returned without
+their internal messages or stacks.
+
 ## Commands
 
 ```bash

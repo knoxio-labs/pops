@@ -72,6 +72,7 @@ export function useAddPlanEntry({ date, slot, isOpen, onAdded, onClose }: Opts) 
     enabled: isOpen,
   });
   const addEntry = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: PlanAddEntryInput) => unwrap(await planAddEntry({ body: input })),
     onSuccess: (res) => {
       if (res.ok) {

@@ -71,7 +71,9 @@ describe('a device-facing route (POST /devices/challenge)', () => {
 
       expect(res.status).toBe(400);
       expect(res.body).not.toEqual({});
-      expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('invalid_request');
+      expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('bfm.request.invalid');
+      expect(res.body.requestId).toBe(res.headers['x-request-id']);
+      expect(res.body.retryable).toBe(false);
     }
   );
 
@@ -102,7 +104,9 @@ describe('a /mobile route (POST /mobile/purchases/receipts)', () => {
 
       expect(res.status).toBe(400);
       expect(res.body).not.toEqual({});
-      expect(MobileRequestErrorSchema.parse(res.body).code).toBe('invalid_request');
+      expect(MobileRequestErrorSchema.parse(res.body).code).toBe('bfm.request.invalid');
+      expect(res.body.requestId).toBe(res.headers['x-request-id']);
+      expect(res.body.retryable).toBe(false);
     }
   );
 

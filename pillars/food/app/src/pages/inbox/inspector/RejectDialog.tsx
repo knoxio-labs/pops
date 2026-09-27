@@ -58,8 +58,6 @@ function useRejectMutation(args: {
         toast.error(t(`inbox.inspector.decision.reject.error.${res.reason}` as const));
       }
     },
-    onError: (err: Error) =>
-      toast.error(t('inbox.inspector.decision.reject.error.generic', { message: err.message })),
   });
 }
 

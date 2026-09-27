@@ -11,11 +11,45 @@
  * drift-detection test will fail until `pnpm gen:nginx` is re-run.
  */
 
-export const NGINX_CONF_HEAD = `server {
+export const NGINX_CONF_HEAD = `map $http_x_request_id $pops_request_id {
+    default $http_x_request_id;
+    "" $request_id;
+}
+
+log_format pops_json escape=json '{"timestamp":"$time_iso8601","remoteAddress":"$remote_addr","request":"$request","status":$status,"bytesSent":$body_bytes_sent,"requestTime":$request_time,"upstreamAddress":"$upstream_addr","upstreamStatus":"$upstream_status","requestId":"$pops_request_id"}';
+
+server {
     listen 80;
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
+
+    access_log /var/log/nginx/access.log pops_json;
+    add_header X-Request-Id $pops_request_id always;
+    proxy_set_header X-Request-Id $pops_request_id;
+
+    # These pages apply to failures nginx creates while reaching an upstream.
+    # Keep proxy interception disabled so a pillar's own 502/503/504 envelope
+    # and every other pillar-owned error body pass through unchanged.
+    proxy_intercept_errors off;
+    error_page 502 = @gateway_502;
+    error_page 503 = @gateway_503;
+    error_page 504 = @gateway_504;
+
+    location @gateway_502 {
+        default_type application/json;
+        return 502 '{"code":"gateway.upstream_unavailable","message":"The upstream service is unavailable.","requestId":"$pops_request_id","retryable":true}';
+    }
+
+    location @gateway_503 {
+        default_type application/json;
+        return 503 '{"code":"gateway.upstream_unavailable","message":"The upstream service is unavailable.","requestId":"$pops_request_id","retryable":true}';
+    }
+
+    location @gateway_504 {
+        default_type application/json;
+        return 504 '{"code":"gateway.upstream_unavailable","message":"The upstream service timed out.","requestId":"$pops_request_id","retryable":true}';
+    }
 
     # Bulk endpoints post the whole batch in one body — a two-year bank
     # statement reaches ~1.3MB at /finance-api/imports/process — so nginx's
@@ -42,6 +76,7 @@ export const NGINX_CONF_HEAD = `server {
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        add_header X-Request-Id $pops_request_id always;
         try_files $uri @missing;
     }
 
@@ -50,6 +85,7 @@ export const NGINX_CONF_HEAD = `server {
     # and the browser. A chunk that 404s once would stay broken for that long.
     location @missing {
         add_header Cache-Control "no-store" always;
+        add_header X-Request-Id $pops_request_id always;
         return 404;
     }
 
@@ -65,6 +101,7 @@ export const NGINX_CONF_HEAD = `server {
         default_type application/javascript;
         expires 1y;
         add_header Cache-Control "public, immutable";
+        add_header X-Request-Id $pops_request_id always;
         try_files $uri @missing;
     }
 `;

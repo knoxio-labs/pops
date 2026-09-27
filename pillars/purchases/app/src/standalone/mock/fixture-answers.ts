@@ -23,7 +23,15 @@ import type {
  */
 
 function notFound(what: string): MockResponse {
-  return { status: 404, body: { code: 'NOT_FOUND', message: `No such ${what}` } };
+  return {
+    status: 404,
+    body: {
+      code: 'purchases.resource.not_found',
+      message: `No such ${what}`,
+      requestId: 'standalone-purchases-not-found',
+      retryable: false,
+    },
+  };
 }
 
 /** The sha256 of {@link RECEIPT_IMAGE}'s bytes, which is what names a stored receipt. */

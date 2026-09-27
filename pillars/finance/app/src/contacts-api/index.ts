@@ -107,6 +107,7 @@ export type {
   EntityMutation,
   EntityResponse,
   ErrorBody,
+  ErrorCode,
   HealthGetData,
   HealthGetResponse,
   HealthGetResponses,

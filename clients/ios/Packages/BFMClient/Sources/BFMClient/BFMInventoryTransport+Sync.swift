@@ -49,10 +49,10 @@ extension BFMInventoryTransport {
                 for: .rateLimited, operation: operation)
         case .badGateway(let upstream):
             return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: operation)
+                for: .upstream(code: try upstream.body.json.code), operation: operation)
         case .serviceUnavailable(let upstream):
             return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: operation)
+                for: .upstream(code: try upstream.body.json.code), operation: operation)
         case .undocumented(let status, _):
             return BFMInventoryFailureMapping.repositoryError(
                 for: .undocumented(status), operation: operation)
@@ -114,10 +114,10 @@ extension BFMInventoryTransport {
                 for: .rateLimited, operation: operation)
         case .badGateway(let upstream):
             return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: operation)
+                for: .upstream(code: try upstream.body.json.code), operation: operation)
         case .serviceUnavailable(let upstream):
             return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: operation)
+                for: .upstream(code: try upstream.body.json.code), operation: operation)
         case .undocumented(let status, _):
             return BFMInventoryFailureMapping.repositoryError(
                 for: .undocumented(status), operation: operation)

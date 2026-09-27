@@ -67,6 +67,7 @@ function useRenameMutation(
   t: TFunction
 ) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: RenameInput) => unwrap(await ingredientsRename({ body: input })),
     onSuccess: async () => {
       await invalidate();
@@ -87,6 +88,7 @@ function useChangeParentMutation(
   t: TFunction
 ) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id, newParentId }: ChangeParentInput) =>
       unwrap(await ingredientsChangeParent({ path: { id }, body: { newParentId } })),
     onSuccess: async () => {
@@ -121,6 +123,7 @@ function useDeleteMutation({
   t,
 }: UseDeleteMutationArgs) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id }: DeleteInput) => unwrap(await ingredientsDelete({ path: { id } })),
     onSuccess: async (result) => {
       if (result.ok) {

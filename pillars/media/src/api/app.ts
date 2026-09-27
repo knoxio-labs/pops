@@ -21,6 +21,8 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
+
 import { mediaContract } from '../contract/rest.js';
 import { type MediaApiDeps, makeRequestHandler } from './handlers.js';
 import { createImagesRouter } from './images/router.js';
@@ -56,8 +58,11 @@ const openapiDocument: unknown = JSON.parse(
 
 export function createMediaApiApp(deps: MediaApiDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'media' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(errors.bodyParser);
 
   const handlers = makeRequestHandler(deps);
 
@@ -77,9 +82,16 @@ export function createMediaApiApp(deps: MediaApiDeps): Express {
     res.json(openapiDocument);
   });
 
-  createExpressEndpoints(mediaContract, makeMediaRestHandlers(deps), app);
+  createExpressEndpoints(mediaContract, makeMediaRestHandlers(deps), app, {
+    requestValidationErrorHandler: (error, req, res, next) => {
+      errors.validation(error, req as Request, res as Response, next);
+    },
+  });
 
   app.use(createImagesRouter({ mediaDb: deps.mediaDb.db }));
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
 }

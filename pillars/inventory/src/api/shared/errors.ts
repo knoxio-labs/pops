@@ -1,23 +1,32 @@
-/**
- * HTTP-shaped domain errors used by inventory-api handlers.
- *
- * Each error carries an optional `messageKey` so the frontend can resolve a
- * translated string while the EN-AU fallback lives in `message`. The REST
- * error mapper carries `messageKey` into the response body (see
- * `../rest/error-mapping.ts`).
- */
-export class HttpError extends Error {
+import { PopsError } from '@pops/pillar-express';
+
+function codeForStatus(statusCode: number): string {
+  if (statusCode === 404) return 'inventory.resource.not_found';
+  if (statusCode === 409) return 'inventory.resource.conflict';
+  return 'inventory.request.invalid';
+}
+
+/** HTTP-shaped domain error serialized by the shared ADR-054 handler. */
+export class HttpError extends PopsError {
   /** i18n key the frontend uses to resolve a localised message. */
   public readonly messageKey?: string;
 
   constructor(
     public readonly statusCode: number,
     message: string,
-    public readonly details?: unknown,
+    details?: unknown,
     messageKey?: string
   ) {
-    super(message);
-    this.name = 'HttpError';
+    super({
+      code: codeForStatus(statusCode),
+      status: statusCode,
+      message,
+      retryable: false,
+      details: {
+        ...(details === undefined ? {} : { context: details }),
+        ...(messageKey === undefined ? {} : { messageKey }),
+      },
+    });
     this.messageKey = messageKey;
   }
 }
@@ -25,15 +34,12 @@ export class HttpError extends Error {
 export class NotFoundError extends HttpError {
   constructor(resource: string, id: string) {
     super(404, `${resource} '${id}' not found`, undefined, 'common.notFound');
-    this.name = 'NotFoundError';
   }
 }
 
 export class ValidationError extends HttpError {
   /**
-   * `message` comes first, and is required, because it is the only one of the
-   * two the client ever sees: the envelope `mapHttpError` builds carries
-   * `message` and `code`, and never `details`.
+   * `message` comes first and is required because it is the user-safe fallback.
    *
    * Until POPS-3043 this class took `(details: unknown)` alone, so every 400 it
    * raised said `Validation failed` whatever the caller wrote — there was no
@@ -47,17 +53,15 @@ export class ValidationError extends HttpError {
    * reads correctly, and returns a 400 body reading `Validation failed`.
    *
    * @param message What the client is shown. Required.
-   * @param details Structured context for logs. It does NOT reach the client.
+   * @param details Structured context carried in the ADR-054 envelope.
    */
   constructor(message: string, details?: unknown) {
     super(400, message, details, 'common.validationFailed');
-    this.name = 'ValidationError';
   }
 }
 
 export class ConflictError extends HttpError {
   constructor(message: string) {
     super(409, message, undefined, 'common.conflict');
-    this.name = 'ConflictError';
   }
 }

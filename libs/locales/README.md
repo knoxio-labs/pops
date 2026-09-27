@@ -10,7 +10,7 @@ Each pillar app owns its namespace in `pillars/<pillar>/app/src/locales/{en-AU,p
 
 ## Consumers
 
-- `pillars/shell/src/i18n/index.ts` — the shell's i18next initialisation. It imports the four shared namespaces statically and registers them at init.
+- `pillars/shell/src/i18n/index.ts` — the shell's i18next initialisation. It imports the five shared namespaces statically and registers them at init.
 - `libs/ui` — `src/test-setup.ts` bootstraps `ui` so component tests render copy instead of keys.
 - `pillars/inventory/app` — its test setup and two upload tests read `ui`.
 - `pillars/design/src/i18n.ts` — the playground registers `common` and `ui`.
@@ -18,7 +18,7 @@ Each pillar app owns its namespace in `pillars/<pillar>/app/src/locales/{en-AU,p
 
 ## A file here is not live until the shell registers it
 
-Adding `<locale>/<namespace>.json` does nothing by itself. The shell's i18n module must import it, list the namespace in `NAMESPACES`, and add it under `resources`. `errors.json` is the standing example: keys mirroring backend error codes, registered with no i18next instance.
+Adding `<locale>/<namespace>.json` does nothing by itself. The shell's i18n module must import it, list the namespace in `NAMESPACES`, and add it under `resources`. `errors.json` contains keys mirroring backend error codes plus shared error-presentation copy.
 
 Forgetting that registration fails `pillars/shell/src/i18n/index.test.ts`, which compares the files on disk against `NAMESPACES` and against the `resources` map for both locales. `errors` is named in that test's allowlist of deliberately-unregistered catalogues; nothing else is.
 

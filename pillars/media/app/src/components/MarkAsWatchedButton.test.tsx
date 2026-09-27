@@ -140,7 +140,7 @@ describe('MarkAsWatchedButton', () => {
     await waitFor(() => expect(watchHistoryListMock.mock.calls.length).toBeGreaterThan(1));
   });
 
-  it('shows error toast on log failure', async () => {
+  it('leaves log failures to the global mutation handler', async () => {
     watchHistoryLogMock.mockResolvedValue({
       data: undefined,
       error: { message: 'DB error' },
@@ -151,9 +151,8 @@ describe('MarkAsWatchedButton', () => {
 
     await user.click(await screen.findByLabelText('Mark as watched'));
 
-    await waitFor(() =>
-      expect(mockToastError).toHaveBeenCalledWith('Failed to log watch: DB error')
-    );
+    await waitFor(() => expect(watchHistoryLogMock).toHaveBeenCalledOnce());
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it('undo calls delete with entry ID', async () => {

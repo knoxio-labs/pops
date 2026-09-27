@@ -62,7 +62,6 @@ export function useRotationButtonsModel(tmdbId: number) {
       toast.success('Added to rotation queue');
       invalidateRotation();
     },
-    onError: () => toast.error('Failed to add to queue'),
   });
 
   const removeFromQueueMutation = useMutation({
@@ -72,7 +71,6 @@ export function useRotationButtonsModel(tmdbId: number) {
       toast.success('Removed from queue');
       invalidateRotation();
     },
-    onError: () => toast.error('Failed to remove from queue'),
   });
 
   const removeExclusionMutation = useMutation({
@@ -82,7 +80,6 @@ export function useRotationButtonsModel(tmdbId: number) {
       toast.success('Exclusion removed');
       invalidateRotation();
     },
-    onError: () => toast.error('Failed to remove exclusion'),
   });
 
   return {

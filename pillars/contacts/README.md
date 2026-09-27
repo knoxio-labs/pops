@@ -36,6 +36,14 @@ The HTTP surface:
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.
 
+Every route error uses the ADR-054 envelope: `code`, `message`, `requestId`,
+`retryable`, and optional `details`. Contacts codes are stable dotted values
+under `contacts.*` and are enumerated in OpenAPI. The request-id layer echoes
+an incoming `X-Request-Id` or mints one, then returns it in both the response
+header and error body. Database diagnostics are logged with that id; clients
+receive only `contacts.internal` and a generic message, never SQLite or `sqlx`
+error text.
+
 ## OpenAPI emit and cross-language consumption
 
 The committed JSON is generated, never hand-authored. The `emit-openapi` binary

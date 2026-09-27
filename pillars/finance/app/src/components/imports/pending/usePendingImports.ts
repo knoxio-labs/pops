@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { toast } from 'sonner';
 
 import { unwrap } from '../../../finance-api-helpers.js';
 import {
@@ -45,7 +44,6 @@ export function usePendingImports() {
     mutationFn: async (draftId: string) => {
       unwrap({ ...(await importDraftsDiscard({ path: { id: draftId } })), data: null });
     },
-    onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
 
@@ -63,7 +61,6 @@ export function usePendingImports() {
       void invalidate();
       void navigate(draftUrl(draftId));
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   return {

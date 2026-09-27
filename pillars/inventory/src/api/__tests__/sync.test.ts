@@ -190,7 +190,7 @@ describe('the change feed', () => {
       .set(PROTOCOL)
       .query({ since: highWaterSeq + 1, epoch });
     expect(response.status).toBe(409);
-    expect(response.body).toMatchObject({ code: 'resync_required' });
+    expect(response.body).toMatchObject({ code: 'inventory.sync.resync_required' });
   });
 
   it('409s an epoch the server does not hold', async () => {
@@ -199,7 +199,7 @@ describe('the change feed', () => {
       .set(PROTOCOL)
       .query({ since: 0, epoch: 'not-this-epoch' });
     expect(response.status).toBe(409);
-    expect(response.body).toMatchObject({ code: 'resync_required' });
+    expect(response.body).toMatchObject({ code: 'inventory.sync.resync_required' });
   });
 
   it('409s a snapshot cursor issued before the epoch rotated', async () => {
@@ -223,7 +223,7 @@ describe('cursors', () => {
   ])('400s a foreign snapshot cursor: %s', async (_label, cursor) => {
     const response = await h.api.get('/sync/snapshot').set(PROTOCOL).query({ cursor });
     expect(response.status).toBe(400);
-    expect(response.body).toMatchObject({ code: 'invalid_cursor' });
+    expect(response.body).toMatchObject({ code: 'inventory.sync.invalid_cursor' });
   });
 });
 
@@ -231,7 +231,7 @@ describe('the protocol header', () => {
   it('426s a request without it', async () => {
     const response = await h.api.get('/sync/snapshot');
     expect(response.status).toBe(426);
-    expect(response.body).toMatchObject({ code: 'client_too_old' });
+    expect(response.body).toMatchObject({ code: 'inventory.sync.client_too_old' });
   });
 
   it('426s a protocol below the server minimum, on every sync sub-router', async () => {
@@ -256,7 +256,7 @@ describe('the protocol header', () => {
   it('400s a value that is not a number', async () => {
     const response = await h.api.get('/types').set({ 'Pops-Inventory-Protocol': 'v1' });
     expect(response.status).toBe(400);
-    expect(response.body).toMatchObject({ code: 'invalid_protocol' });
+    expect(response.body).toMatchObject({ code: 'inventory.sync.invalid_protocol' });
   });
 
   it('leaves routes outside the protocol alone', async () => {

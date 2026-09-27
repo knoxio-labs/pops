@@ -180,7 +180,7 @@ interface SaveResult {
   notice?: string;
 }
 
-export function useSaveDocumentMutation(unknownErrorMessage: string) {
+export function useSaveDocumentMutation() {
   const { t } = useTranslation('cerebrum');
   return useMutation({
     mutationFn: async (request: SaveDocumentRequest): Promise<SaveResult | undefined> =>
@@ -193,6 +193,5 @@ export function useSaveDocumentMutation(unknownErrorMessage: string) {
       }
       toast.success(result?.notice ?? t('query.saveDocument.empty'));
     },
-    onError: (err: Error) => toast.error(extractMessage(err, unknownErrorMessage)),
   });
 }

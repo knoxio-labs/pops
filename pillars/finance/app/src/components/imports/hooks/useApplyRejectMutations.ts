@@ -123,7 +123,6 @@ function useRejectAndAi(
       toast.success('Proposal rejected — feedback recorded');
       onClose();
     },
-    onError: (err: Error) => toast.error(err.message),
   });
   const reviseMutation = useMutation({
     mutationFn: async (vars: ReviseChangeSetInput): Promise<ReviseChangeSetOutput> =>

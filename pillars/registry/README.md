@@ -173,6 +173,13 @@ pillars/registry/
     └── db/         PRIVATE: drizzle schema + services + the SQLite opener
 ```
 
+## Error responses
+
+REST and registry-control failures use the ADR-054 envelope
+`{ code, message, requestId, retryable, details? }`. Codes are registered under
+`registry.*`; validation diagnostics live under `details.issues`, and unknown
+exceptions are logged by request ID without exposing internals to callers.
+
 ## Commands
 
 ```bash

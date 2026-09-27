@@ -42,6 +42,14 @@ pillars/documents/
         └── pillars/               GET /pillars — `POPS_PILLARS` fleet view
 ```
 
+## Error responses
+
+REST failures use `{ code, message, requestId, retryable, details? }` with
+registered `documents.*` codes. In particular,
+`documents.paperless.not_configured` is a non-retryable configuration failure,
+while `documents.thumbnail.upstream_failure` is a retryable 502; neither
+response exposes Paperless diagnostics.
+
 ## Commands
 
 ```bash

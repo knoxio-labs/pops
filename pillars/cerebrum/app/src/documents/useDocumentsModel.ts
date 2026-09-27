@@ -50,7 +50,6 @@ function useGenerateMutation(
       setDocument(result?.document ?? null);
       setNotice(result?.notice ?? null);
     },
-    onError: (err: Error) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
 }
 

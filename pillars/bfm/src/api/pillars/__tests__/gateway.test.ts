@@ -166,6 +166,27 @@ describe('failures that are about the request, not the federation', () => {
     if (mapped.kind !== 'conflict') throw new Error('conflict narrowed wrong');
     expect(mapped.code).toBeUndefined();
   });
+
+  it('keeps every ADR-054 field needed by the mobile relay', () => {
+    const mapped = toGatewayFailure({
+      kind: 'bad-request',
+      pillar: 'purchases',
+      code: 'purchases.receipt.inconsistent_total',
+      message: 'The purchase totals are inconsistent.',
+      requestId: 'producer-request-4883',
+      retryable: false,
+      details: { expectedCents: 2_000 },
+    });
+
+    expect(mapped).toMatchObject({
+      code: 'purchases.receipt.inconsistent_total',
+      message: 'The purchase totals are inconsistent.',
+      requestId: 'producer-request-4883',
+      retryable: false,
+      details: { expectedCents: 2_000 },
+      upstreamStatus: 400,
+    });
+  });
 });
 
 /**

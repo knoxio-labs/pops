@@ -51,30 +51,44 @@ export function mapHttpFailure(
   body: unknown,
   headers: Headers
 ): CallFailure {
-  const message = extractErrorMessage(body);
-  const code = extractErrorCode(body);
-  const details = extractErrorDetails(body);
+  const metadata = extractErrorMetadata(body, headers);
+  const known = mapKnownFailure(pillarId, status, metadata, headers);
+  if (known !== undefined) return known;
+
+  // A status this function does not otherwise recognise. An unmapped 4xx is
+  // permanent; a 5xx is the only signal available here that the producer is
+  // in trouble and the same request may succeed later.
+  return status >= 500
+    ? withDetails({ kind: 'unavailable', pillar: pillarId }, metadata)
+    : withDetails({ kind: 'refused', pillar: pillarId, status }, metadata);
+}
+
+type ErrorMetadata = {
+  readonly message?: string;
+  readonly code?: string;
+  readonly details?: Record<string, unknown>;
+  readonly requestId?: string;
+  readonly retryable?: boolean;
+};
+
+function mapKnownFailure(
+  pillarId: string,
+  status: number,
+  metadata: ErrorMetadata,
+  headers: Headers
+): CallFailure | undefined {
   switch (status) {
     case 400:
-      return withDetails({ kind: 'bad-request', pillar: pillarId }, message, code, details);
+      return withDetails({ kind: 'bad-request', pillar: pillarId }, metadata);
     case 401:
     case 403:
-      return withDetails({ kind: 'unauthorized', pillar: pillarId }, message, code, details);
+      return withDetails({ kind: 'unauthorized', pillar: pillarId }, metadata);
     case 404:
-      return withDetails({ kind: 'not-found', pillar: pillarId }, message, code, details);
+      return withDetails({ kind: 'not-found', pillar: pillarId }, metadata);
     case 409:
-      return withDetails({ kind: 'conflict', pillar: pillarId }, message, code, details);
+      return withDetails({ kind: 'conflict', pillar: pillarId }, metadata);
     case 408:
     case 425:
-      // 408 Request Timeout (RFC 9110 §15.5.9): "the client MAY repeat the
-      // request without modification at any later time." 425 Too Early (RFC
-      // 8470 §5.2): the server is asking for a retry once the TLS handshake
-      // has completed. Both are the retryable half of 4xx, not the permanent
-      // half the default arm buckets unmapped 4xx into — landing either in
-      // `refused` reads a definitionally-transient status as a producer
-      // refusal that will repeat forever. Neither carries semantics closer
-      // to `rate-limited` (no producer-chosen delay to honour), so they fold
-      // onto `unavailable`, same as an outage: worth retrying, no schedule.
       return { kind: 'unavailable', pillar: pillarId };
     case 429:
       return withDetails(
@@ -83,46 +97,46 @@ export function mapHttpFailure(
           pillar: pillarId,
           retryAfterSeconds: parseRetryAfterSeconds(headers),
         },
-        message,
-        code,
-        details
+        metadata
       );
     default:
-      // A status this function does not otherwise recognise. The two families
-      // behave oppositely on retry, so folding both into one bucket is wrong
-      // in one direction no matter which bucket is picked — and folding into
-      // `unavailable` (retryable) is the DANGEROUS direction for an unmapped
-      // 4xx: a permanent producer refusal (413 body too large, 422 the
-      // payload's data is bad, 405 the method is wrong, ...) then reads as an
-      // outage, and a caller retries something that will never succeed.
-      // `>= 500` is the only signal this function has for "the producer
-      // itself is in trouble, try again" without hardcoding every 5xx it has
-      // never seen a real one of; unmapped `4xx` is `refused` — permanent,
-      // carrying the real status so a caller that wants finer-grained
-      // handling still can.
-      return status >= 500
-        ? { kind: 'unavailable', pillar: pillarId }
-        : withDetails({ kind: 'refused', pillar: pillarId, status }, message, code, details);
+      return undefined;
   }
 }
 
 type FailureWithDetails = Extract<
   CallFailure,
-  { kind: 'not-found' | 'conflict' | 'bad-request' | 'unauthorized' | 'refused' | 'rate-limited' }
+  {
+    kind:
+      | 'unavailable'
+      | 'not-found'
+      | 'conflict'
+      | 'bad-request'
+      | 'unauthorized'
+      | 'refused'
+      | 'rate-limited';
+  }
 >;
 
 /** Attach the producer's message, code, and remaining structured diagnostics when sent. */
-function withDetails<T extends FailureWithDetails>(
-  failure: T,
-  message: string | undefined,
-  code: string | undefined,
-  details: Record<string, unknown> | undefined
-): T {
+function withDetails<T extends FailureWithDetails>(failure: T, metadata: ErrorMetadata): T {
   return {
     ...failure,
-    ...(message ? { message } : {}),
-    ...(code ? { code } : {}),
-    ...(details ? { details } : {}),
+    ...(metadata.message ? { message: metadata.message } : {}),
+    ...(metadata.code ? { code: metadata.code } : {}),
+    ...(metadata.details ? { details: metadata.details } : {}),
+    ...(metadata.requestId ? { requestId: metadata.requestId } : {}),
+    ...(metadata.retryable === undefined ? {} : { retryable: metadata.retryable }),
+  };
+}
+
+function extractErrorMetadata(body: unknown, headers: Headers): ErrorMetadata {
+  return {
+    message: extractErrorMessage(body),
+    code: extractErrorCode(body),
+    details: extractErrorDetails(body),
+    requestId: extractErrorRequestId(body) ?? headers.get('X-Request-Id') ?? undefined,
+    retryable: extractErrorRetryable(body),
   };
 }
 
@@ -141,6 +155,27 @@ function extractErrorCode(body: unknown): string | undefined {
 
 function extractErrorDetails(body: unknown): Record<string, unknown> | undefined {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return undefined;
-  const entries = Object.entries(body).filter(([key]) => key !== 'message' && key !== 'code');
+  const bodyRecord = body as Record<string, unknown>;
+  const envelopeDetails = bodyRecord['details'];
+  if (isRecord(envelopeDetails)) return envelopeDetails;
+  const entries = Object.entries(bodyRecord).filter(
+    ([key]) => !['message', 'code', 'requestId', 'retryable'].includes(key)
+  );
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function extractErrorRequestId(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return undefined;
+  const requestId = (body as Record<string, unknown>)['requestId'];
+  return typeof requestId === 'string' ? requestId : undefined;
+}
+
+function extractErrorRetryable(body: unknown): boolean | undefined {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return undefined;
+  const retryable = (body as Record<string, unknown>)['retryable'];
+  return typeof retryable === 'boolean' ? retryable : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -92,21 +92,24 @@ describe('GET /api/inventory/photos/items/:itemId/:filename', () => {
     const res = await requestOn(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_404.jpg`);
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toBe('Photo not found');
+    expect(res.body).toMatchObject({
+      code: 'inventory.files.not_found',
+      message: 'Photo not found',
+    });
   });
 
   it('returns 400 for a filename that does not match the photo convention', async () => {
     const res = await requestOn(app()).get(`/api/inventory/photos/items/${ITEM_ID}/evil.jpg`);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid filename');
+    expect(res.body.message).toContain('Invalid filename');
   });
 
   it('returns 400 for a filename with a non-jpg extension', async () => {
     const res = await requestOn(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_1.png`);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid filename');
+    expect(res.body.message).toContain('Invalid filename');
   });
 });
 
@@ -130,13 +133,16 @@ describe('GET /api/inventory/documents/items/:itemId/:filename', () => {
     );
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toBe('Document not found');
+    expect(res.body).toMatchObject({
+      code: 'inventory.files.not_found',
+      message: 'Document not found',
+    });
   });
 
   it('returns 400 for a filename that does not match the upload convention', async () => {
     const res = await requestOn(app()).get(`/api/inventory/documents/items/${ITEM_ID}/notes.pdf`);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid filename');
+    expect(res.body.message).toContain('Invalid filename');
   });
 });

@@ -13,6 +13,8 @@
  */
 import { type Router as ExpressRouter, type Request, type Response, Router } from 'express';
 
+import { defineErrors, PopsError } from '@pops/pillar-express';
+
 import { moviesService, tvShowsService, type MediaDb } from '../../db/index.js';
 import { downloadAndServe, fetchPosterPathFromTmdb } from './images-fallback.js';
 import {
@@ -29,6 +31,22 @@ export interface ImagesRouterDeps {
   mediaDb: MediaDb;
 }
 
+/** Registered failures for the media image route. */
+export const mediaImageRouteErrors = defineErrors('media', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The image request is invalid.',
+    retryable: false,
+  },
+  not_found: {
+    area: 'image',
+    status: 404,
+    message: 'The image was not found.',
+    retryable: false,
+  },
+});
+
 async function tryOverrideOrCached(
   resolvedDir: string,
   filename: string,
@@ -41,8 +59,7 @@ async function tryOverrideOrCached(
 
   const filePath = safeJoin(resolvedDir, filename);
   if (!filePath) {
-    res.status(400).json({ error: 'Invalid path' });
-    return { served: true };
+    throw invalidImageRequest('The image path is invalid.');
   }
 
   const wasCorrupted = await removeCorruptedPlaceholder(filePath);
@@ -93,8 +110,7 @@ interface FallbackArgs {
 async function attemptFallbacks(args: FallbackArgs): Promise<void> {
   const imageType = resolveImageType(args.filename);
   if (imageType === 'override') {
-    args.res.status(404).json({ error: 'Image not found' });
-    return;
+    throw imageNotFound();
   }
 
   try {
@@ -121,7 +137,25 @@ async function attemptFallbacks(args: FallbackArgs): Promise<void> {
     console.error('[Images] Fallback failed:', err);
   }
 
-  args.res.status(404).json({ error: 'Image not found' });
+  throw imageNotFound();
+}
+
+function invalidImageRequest(message: string): PopsError {
+  return new PopsError({
+    code: 'media.request.invalid',
+    status: 400,
+    message,
+    retryable: false,
+  });
+}
+
+function imageNotFound(): PopsError {
+  return new PopsError({
+    code: 'media.image.not_found',
+    status: 404,
+    message: 'The image was not found.',
+    retryable: false,
+  });
 }
 
 /**
@@ -134,14 +168,12 @@ export function createImagesRouter(deps: ImagesRouterDeps): ExpressRouter {
   router.get('/media/images/:mediaType/:id/:filename', async (req: Request, res: Response) => {
     const params = validateParams(req);
     if (isValidationFailure(params)) {
-      res.status(params.status).json(params.body);
-      return;
+      throw invalidImageRequest(params.body.error);
     }
 
     const resolvedDir = getMediaDir(params.mediaType, params.id);
     if (!resolvedDir) {
-      res.status(400).json({ error: 'Invalid path' });
-      return;
+      throw invalidImageRequest('The image path is invalid.');
     }
 
     const cached = await tryOverrideOrCached(resolvedDir, params.filename, res);

@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
 import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { inventorySyncProtocolRouters } from '../contract/rest-sync.js';
@@ -32,6 +33,13 @@ import { getInventoryImagesDir } from './modules/photos/paths.js';
 import { makeInventoryRestHandlers } from './rest/handlers.js';
 import { readMinProtocol } from './sync/meta.js';
 import { createProtocolGate } from './sync/protocol.js';
+
+import type { TsRestExpressOptions } from '@ts-rest/express';
+
+type InventoryValidationHandler = Exclude<
+  TsRestExpressOptions<typeof inventoryContract>['requestValidationErrorHandler'],
+  'default' | 'combined' | undefined
+>;
 
 /**
  * JSON body cap. Photo / document uploads arrive as base64 strings in the
@@ -63,8 +71,11 @@ const openapiDocument: unknown = JSON.parse(
 
 export function createInventoryApiApp(deps: InventoryApiDeps): Express {
   const app = express();
+  const errorHandlers = createPillarErrorHandlers({ pillar: 'inventory' });
   app.disable('x-powered-by');
+  app.use(errorHandlers.requestId);
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(errorHandlers.bodyParser);
 
   const handlers = makeRequestHandler(deps);
 
@@ -98,7 +109,8 @@ export function createInventoryApiApp(deps: InventoryApiDeps): Express {
   createExpressEndpoints(
     inventoryContract,
     makeInventoryRestHandlers({ ...deps, serviceAccountVerifier }),
-    app
+    app,
+    { requestValidationErrorHandler: errorHandlers.validation as InventoryValidationHandler }
   );
 
   // Raw (non-ts-rest) byte-serving routes for item photos, direct-upload docs,
@@ -112,6 +124,9 @@ export function createInventoryApiApp(deps: InventoryApiDeps): Express {
   app.use(
     createInventoryMediaRouter({ db: deps.inventoryDb.db, imagesDir: getInventoryImagesDir })
   );
+
+  app.use(errorHandlers.notFound);
+  app.use(errorHandlers.final);
 
   return app;
 }

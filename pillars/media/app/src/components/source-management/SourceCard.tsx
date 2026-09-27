@@ -33,7 +33,6 @@ function useSourceMutations(source: Source) {
       toast.success(`Synced "${source.name}": ${data.candidatesInserted} new candidates`);
       invalidateRotation();
     },
-    onError: () => toast.error(`Failed to sync "${source.name}"`),
   });
 
   const toggleMutation = useMutation({
@@ -42,7 +41,6 @@ function useSourceMutations(source: Source) {
         await rotationUpdateSource({ path: { id: input.id }, body: { enabled: input.enabled } })
       ),
     onSuccess: invalidateRotation,
-    onError: () => toast.error('Failed to update source'),
   });
 
   const deleteMutation = useMutation({
@@ -52,7 +50,6 @@ function useSourceMutations(source: Source) {
       toast.success(`Deleted "${source.name}"`);
       invalidateRotation();
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to delete source'),
   });
 
   return { syncMutation, toggleMutation, deleteMutation };

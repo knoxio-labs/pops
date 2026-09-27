@@ -25,6 +25,7 @@ import {
   nameMerchant,
   type MerchantResolver,
 } from '../contacts/merchant.js';
+import { purchaseErrorBody } from '../errors.js';
 import { makeReceiptBytesHandlers } from './receipt-bytes-handlers.js';
 import { makeReceiptDraftHandlers } from './receipt-draft-handlers.js';
 import { persistReceiptPurchase, sameShopAlreadyRecorded } from './receipt-persist.js';
@@ -72,10 +73,9 @@ export function makeReceiptHandlers(
       if (prepared.kind === 'duplicate') {
         return {
           status: 409 as const,
-          body: {
+          body: purchaseErrorBody('already_imported', {
             message: `This upload has already been read as purchase ${prepared.purchaseId}`,
-            code: 'ALREADY_IMPORTED',
-          },
+          }),
         };
       }
       const { parts, goodParts, stored } = prepared;
@@ -117,12 +117,11 @@ export function makeReceiptHandlers(
       if (alreadyHave !== undefined) {
         return {
           status: 409 as const,
-          body: {
+          body: purchaseErrorBody('already_imported', {
             message:
               `This looks like purchase ${alreadyHave.id}, already recorded from ` +
               'another upload of the same receipt',
-            code: 'ALREADY_IMPORTED',
-          },
+          }),
         };
       }
 

@@ -117,7 +117,7 @@ describe('hero-image REST', () => {
       );
 
     expect(rejection?.status).toBe(400);
-    expect(rejection?.body).toMatchObject({ code: 'ValidationError' });
+    expect(rejection?.body).toMatchObject({ code: 'food.request.invalid' });
     expect(rejection?.message).toMatch(/^Image could not be decoded \(/);
   });
 

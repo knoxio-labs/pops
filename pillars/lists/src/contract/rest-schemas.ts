@@ -1,10 +1,12 @@
+import { z } from 'zod';
+
 /**
  * Shared zod building blocks for the lists REST contract.
  *
  * Split from `rest.ts` so the per-group route files (`rest-list.ts`,
  * `rest-items.ts`) can stay focused on the path map.
  */
-import { z } from 'zod';
+export { ErrorBodySchema } from '@pops/types';
 
 export const KIND_ENUM = z.enum(['shopping', 'packing', 'todo', 'generic']);
 export const SORT_ENUM = z.enum(['updated', 'name', 'created']);
@@ -85,11 +87,6 @@ export const ItemAddBodySchema = z.object({
   refId: PositiveInt.nullable().optional(),
   notes: z.string().nullable().optional(),
   position: z.number().int().nonnegative().optional(),
-});
-
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
 });
 
 export const OkSchema = z.object({ ok: z.literal(true) });

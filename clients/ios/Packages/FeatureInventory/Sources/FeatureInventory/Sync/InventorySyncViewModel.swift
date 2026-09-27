@@ -6,7 +6,7 @@ import Observation
 ///
 /// Follows `InventoryDashboardViewModel`'s shape: one observed query drives
 /// every section, and this holds only what the store cannot know — Undo's
-/// receipt, the last failure, and whether the storage-full alert is up.
+/// receipt, the last failure, and whether storage is full.
 @MainActor @Observable
 internal final class InventorySyncViewModel {
     internal enum Phase: Equatable {

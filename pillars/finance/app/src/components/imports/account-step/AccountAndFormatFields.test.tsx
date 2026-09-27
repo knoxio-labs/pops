@@ -252,7 +252,8 @@ describe('AccountAndFormatFields', () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        'finance API request failed: not permitted (HTTP 403)'
+        'finance API request failed: not permitted (HTTP 403)',
+        expect.objectContaining({ description: expect.anything() })
       )
     );
     expect(screen.getByRole('dialog')).toBeInTheDocument();

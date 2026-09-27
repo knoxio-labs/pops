@@ -1,3 +1,4 @@
+import { defineErrors } from '@pops/pillar-express';
 import { validateManifestPayload } from '@pops/pillar-sdk';
 
 /**
@@ -37,10 +38,18 @@ export interface ExternalRegisterDeps {
   readonly coreDb: CoreDb;
 }
 
-function rejectPillarIdShape(res: Response, pillarId: string): boolean {
-  if (PILLAR_ID_PATTERN.test(pillarId)) return false;
-  res.status(400).json({
-    ok: false,
+const registrationErrors = defineErrors('registry', {
+  invalid: {
+    area: 'registration',
+    status: 400,
+    message: 'The pillar registration is invalid.',
+    retryable: false,
+  },
+});
+
+function assertPillarIdShape(pillarId: string): void {
+  if (PILLAR_ID_PATTERN.test(pillarId)) return;
+  return registrationErrors.invalid({
     issues: [
       {
         field: 'pillarId',
@@ -50,17 +59,11 @@ function rejectPillarIdShape(res: Response, pillarId: string): boolean {
       },
     ],
   });
-  return true;
 }
 
-function rejectManifestPillarMismatch(
-  res: Response,
-  pillarId: string,
-  manifestPillar: string
-): boolean {
-  if (manifestPillar === pillarId) return false;
-  res.status(400).json({
-    ok: false,
+function assertManifestPillarMatches(pillarId: string, manifestPillar: string): void {
+  if (manifestPillar === pillarId) return;
+  return registrationErrors.invalid({
     issues: [
       {
         field: 'manifest.pillar',
@@ -70,7 +73,6 @@ function rejectManifestPillarMismatch(
       },
     ],
   });
-  return true;
 }
 
 function persistAndRespond(
@@ -81,10 +83,9 @@ function persistAndRespond(
   const { pillarId, baseUrl, manifest, capabilities } = body;
   const validation = validateManifestPayload(manifest);
   if (!validation.ok) {
-    res.status(400).json({ ok: false, issues: validation.issues });
-    return;
+    return registrationErrors.invalid({ issues: validation.issues });
   }
-  if (rejectManifestPillarMismatch(res, pillarId, validation.payload.pillar)) return;
+  assertManifestPillarMatches(pillarId, validation.payload.pillar);
 
   const now = registryNow();
   const persisted = pillarRegistryService.upsertPillarRegistration(deps.coreDb, {
@@ -113,11 +114,10 @@ export function createExternalRegisterHandler(deps: ExternalRegisterDeps): Exter
   return function externalRegisterHandler(req, res) {
     const parsed = parseRegisterBody(req.body);
     if (!parsed.ok) {
-      res.status(400).json({ ok: false, issues: parsed.issues });
-      return;
+      return registrationErrors.invalid({ issues: parsed.issues });
     }
 
-    if (rejectPillarIdShape(res, parsed.value.pillarId)) return;
+    assertPillarIdShape(parsed.value.pillarId);
 
     persistAndRespond(deps, parsed.value, res);
   };

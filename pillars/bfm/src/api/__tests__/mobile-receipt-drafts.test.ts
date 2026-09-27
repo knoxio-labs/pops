@@ -217,7 +217,7 @@ describe('extractReceipt', () => {
     const res = await post(app, token, EXTRACT_PATH, { parts: ONE_PART });
 
     expect(res.status).toBe(503);
-    expect(res.body.code).toBe('upstream_unavailable');
+    expect(res.body.code).toBe('gateway.upstream_unavailable');
   });
 });
 
@@ -306,7 +306,7 @@ describe('saveReceiptDraft', () => {
 
     const res = await post(app, token, SAVE_DRAFT_PATH, SAVE_BODY);
 
-    expect(res.body.code).toBe('upstream_conflict');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('rejects a save with no receipt attached, before it ever reaches purchases', async () => {

@@ -81,6 +81,13 @@ from `@pops/pillar-sdk`, which POSTs the manifest to the `registry` pillar
 auth: the pillar trusts the docker network and the gateway in front
 authenticates.
 
+## Error responses
+
+REST failures use `{ code, message, requestId, retryable, details? }` with
+registered `lists.*` codes. Constraint failures are safe client-facing
+conflicts, request IDs are propagated through `X-Request-Id`, and unknown
+exceptions are redacted as `lists.internal`.
+
 ## Commands
 
 ```bash

@@ -9,15 +9,15 @@
  * and `inventory.codes`.
  *
  * Every sync route requires `Pops-Inventory-Protocol: <n>`; a missing header or one
- * below the server's minimum is `426 client_too_old`. `POST /sync/mutations`
+ * below the server's minimum is `426 inventory.sync.client_too_old`. `POST /sync/mutations`
  * also reads `Pops-Actor: device:<deviceId>;label=<percent-encoded label>`,
  * honoured only from a caller whose service account holds `inventory.sync`;
  * anyone else is recorded as `web` (no key) or `service:<account>`.
  *
  * Cursors are opaque base64url strings the client echoes unmodified; one this
- * server did not issue is `400 invalid_cursor`. A snapshot cursor or feed
+ * server did not issue is `400 inventory.sync.invalid_cursor`. A snapshot cursor or feed
  * `since` from another epoch, or a `since` above the server's latest `seq`, is
- * `409 resync_required`.
+ * `409 inventory.sync.resync_required`.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -197,7 +197,7 @@ export const inventoryCodesContract = c.router({
     path: '/codes/suggest',
     headers: ProtocolHeaders,
     body: z.object({
-      name: z.string().trim().min(1).max(200),
+      name: z.string().trim().max(200),
       typeKey: z.string().min(1).optional(),
       stem: z
         .string()

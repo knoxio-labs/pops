@@ -118,11 +118,13 @@ function useRequestMutations({ onClose, resetState, setError, setSuccess }: Muta
   };
   const onMutationError = (err: Error) => setError(err.message);
   const addMovie = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: AddMovieInput) => unwrap(await arrAddMovie({ body: input })),
     onSuccess: onMutationSuccess,
     onError: onMutationError,
   });
   const downloadAndProtect = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: DownloadAndProtectInput) =>
       unwrap(await arrDownloadAndProtect({ body: input })),
     onSuccess: onMutationSuccess,

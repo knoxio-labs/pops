@@ -6,6 +6,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc
 
 # Copy workspace package.json files (for dep resolution)
 COPY libs/sdk/package.json ./libs/sdk/
+COPY libs/pillar-express/package.json ./libs/pillar-express/
 COPY libs/types/package.json ./libs/types/
 COPY pillars/mcp/package.json ./pillars/mcp/
 
@@ -15,6 +16,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 # Copy shared package sources
 COPY libs/sdk/ ./libs/sdk/
+COPY libs/pillar-express/ ./libs/pillar-express/
 COPY libs/types/ ./libs/types/
 
 # Copy pops-mcp source

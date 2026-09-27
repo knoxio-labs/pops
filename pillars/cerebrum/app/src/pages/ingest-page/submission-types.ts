@@ -1,5 +1,6 @@
 import type { UseMutationResult } from '@tanstack/react-query';
 
+import type { CerebrumApiError } from '../../cerebrum-api-helpers';
 import type {
   IngestQuickCaptureResponses,
   IngestSubmitResponses,
@@ -29,10 +30,10 @@ export type SubmitResponse = IngestSubmitResponses[200];
 
 export type QuickCaptureMutation = UseMutationResult<
   QuickCaptureResponse,
-  Error,
+  CerebrumApiError,
   QuickCapturePayload
 >;
-export type SubmitMutation = UseMutationResult<SubmitResponse, Error, SubmitPayload>;
+export type SubmitMutation = UseMutationResult<SubmitResponse, CerebrumApiError, SubmitPayload>;
 export type SetBulkResults = (
   next: BulkSegmentOutcome[] | ((prev: BulkSegmentOutcome[] | null) => BulkSegmentOutcome[] | null)
 ) => void;

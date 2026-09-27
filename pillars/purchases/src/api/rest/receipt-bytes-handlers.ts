@@ -21,11 +21,11 @@ import {
   THUMBNAIL_MEDIA_TYPE,
   type ThumbnailRefusal,
 } from '../../ingest/receipt/thumbnail.js';
+import { purchaseErrorBody, type PurchaseErrorReason } from '../errors.js';
 
 import type { Response } from 'express';
 
 import type { ReceiptMediaType } from '../../ingest/receipt/vision.js';
-import type { ErrorBody } from './error-mapping.js';
 
 /**
  * What ts-rest hands a handler on these two routes.
@@ -88,27 +88,20 @@ export function makeReceiptBytesHandlers() {
  */
 const receiptNotStored = (sha256: string) => ({
   status: 404 as const,
-  body: {
+  body: purchaseErrorBody('not_stored', {
     message: `No receipt is stored under ${sha256}`,
-    code: 'RECEIPT_NOT_STORED',
-  },
+  }),
 });
 
 /** Why a receipt that exists cannot be drawn, in terms the caller can act on. */
-const NO_THUMBNAIL_REASONS: Readonly<Record<ThumbnailRefusal, ErrorBody>> = {
-  'not-an-image': {
-    message: 'This receipt is a document rather than a photograph, so it has no thumbnail',
-    code: 'RECEIPT_NOT_AN_IMAGE',
-  },
-  undecodable: {
-    message: 'This receipt is stored but its bytes could not be decoded as an image',
-    code: 'RECEIPT_UNDECODABLE',
-  },
+const NO_THUMBNAIL_REASONS: Readonly<Record<ThumbnailRefusal, PurchaseErrorReason>> = {
+  'not-an-image': 'not_an_image',
+  undecodable: 'undecodable',
 };
 
 const noThumbnail = (reason: ThumbnailRefusal) => ({
   status: 415 as const,
-  body: NO_THUMBNAIL_REASONS[reason],
+  body: purchaseErrorBody(NO_THUMBNAIL_REASONS[reason]),
 });
 
 /**

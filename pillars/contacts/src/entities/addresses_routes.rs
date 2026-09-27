@@ -109,5 +109,5 @@ pub async fn create_address(
 }
 
 fn db_error(err: sqlx::Error) -> ApiError {
-    ApiError::internal(err.to_string())
+    ApiError::database(err)
 }

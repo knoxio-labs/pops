@@ -4,6 +4,9 @@
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ErrorState } from '@pops/ui';
+
+import { FoodApiError } from '../../food-api-helpers.js';
 import { FailedFilters, type FailedFiltersState } from './FailedFilters.js';
 import { FailedRowCard } from './FailedRow.js';
 import { DEFAULT_SINCE_DAYS, type FailedRow } from './inbox-types.js';
@@ -37,11 +40,7 @@ export function FailedTab({ initialFilters, now }: Props = {}): ReactElement {
         t={t}
       />
       {isLoading && <p className="text-sm text-muted-foreground">{t('inbox.failed.loading')}</p>}
-      {isError && (
-        <p className="text-sm text-destructive">
-          {t('inbox.failed.error', { message: error?.message ?? '' })}
-        </p>
-      )}
+      {isError && error instanceof FoodApiError && <ErrorState error={error} />}
       {!isLoading && !isError && rows.length === 0 && (
         <p className="rounded-md border bg-card p-6 text-sm text-muted-foreground">
           {t('inbox.failed.empty')}

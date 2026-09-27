@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { ApiError } from '@pops/pillar-sdk/client';
+
 import { InventoryApiError, unwrap } from './inventory-api-helpers';
 
 describe('unwrap', () => {
@@ -43,7 +45,48 @@ describe('unwrap', () => {
       unwrap({ error: { message: 'failed', issues: [{ path: 'key' }] } });
     } catch (error) {
       expect(error).toBeInstanceOf(InventoryApiError);
+      expect(error).toBeInstanceOf(ApiError);
       expect((error as InventoryApiError).issues).toEqual([]);
+      return;
+    }
+    throw new Error('unwrap did not throw');
+  });
+
+  it('keeps inventory issues in ApiError.details while exposing the compatibility view', () => {
+    try {
+      unwrap({
+        error: {
+          code: 'inventory.catalogue.invalid',
+          details: {
+            issues: [
+              {
+                code: 'duplicate_key',
+                definitionId: null,
+                message: 'Duplicate key',
+                path: 'key',
+              },
+            ],
+          },
+          message: 'Catalogue validation failed',
+          requestId: '01K123',
+          retryable: false,
+        },
+        response: new Response(null, { status: 400 }),
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      if (!(error instanceof ApiError)) throw error;
+      expect(error.details).toEqual({
+        issues: [
+          {
+            code: 'duplicate_key',
+            definitionId: null,
+            message: 'Duplicate key',
+            path: 'key',
+          },
+        ],
+      });
+      expect(error.issues).toHaveLength(1);
       return;
     }
     throw new Error('unwrap did not throw');

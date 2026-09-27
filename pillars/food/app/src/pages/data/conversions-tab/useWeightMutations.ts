@@ -39,6 +39,7 @@ type SetError = (msg: string | null) => void;
 
 function useCreateWeight(invalidate: () => void, setErrorMessage: SetError, t: TFunction) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: CreateWeightInput) =>
       unwrap(await conversionsCreateWeight({ body: input })),
     onSuccess: () => {
@@ -51,6 +52,7 @@ function useCreateWeight(invalidate: () => void, setErrorMessage: SetError, t: T
 
 function useUpdateWeight(invalidate: () => void, setErrorMessage: SetError, t: TFunction) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id, ...patch }: UpdateWeightMutationInput) =>
       unwrap(await conversionsUpdateWeight({ path: { id }, body: patch })),
     onSuccess: () => {
@@ -63,6 +65,7 @@ function useUpdateWeight(invalidate: () => void, setErrorMessage: SetError, t: T
 
 function useDeleteWeight(invalidate: () => void, setErrorMessage: SetError, t: TFunction) {
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id }: DeleteWeightMutationInput) =>
       unwrap(await conversionsDeleteWeight({ path: { id } })),
     onSuccess: (result) => {

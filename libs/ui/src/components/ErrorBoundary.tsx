@@ -9,7 +9,10 @@
  */
 import { Component, type ReactNode } from 'react';
 
+import { ErrorState } from './ErrorAlert';
 import { isStaleChunkError, reloadForStaleChunk } from './stale-chunk-reload';
+
+import type { ApiErrorPresentation } from '../primitives/sonner';
 
 interface Props {
   children: ReactNode;
@@ -26,6 +29,27 @@ interface Props {
 interface State {
   error: Error | null;
   checkingStaleChunk: boolean;
+}
+
+function isApiError(error: Error): error is Error & ApiErrorPresentation {
+  return (
+    'code' in error &&
+    typeof error.code === 'string' &&
+    'retryable' in error &&
+    typeof error.retryable === 'boolean' &&
+    (!('requestId' in error) ||
+      error.requestId === undefined ||
+      typeof error.requestId === 'string')
+  );
+}
+
+function errorPresentation(error: Error): ApiErrorPresentation {
+  if (isApiError(error)) return error;
+  return {
+    code: 'web.client.render_failed',
+    message: 'Something went wrong',
+    retryable: false,
+  };
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -68,16 +92,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return this.props.fallback ? (
         this.props.fallback(this.state.error, this.reset)
       ) : (
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-destructive">Something went wrong</h1>
-          <p className="mt-2 text-muted-foreground">{this.state.error.message}</p>
-          <button
-            onClick={this.reset}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-          >
-            Try again
-          </button>
-        </div>
+        <ErrorState error={errorPresentation(this.state.error)} onRetry={this.reset} />
       );
     }
 

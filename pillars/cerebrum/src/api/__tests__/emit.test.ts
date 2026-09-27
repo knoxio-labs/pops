@@ -202,7 +202,7 @@ describe('POST /emit/generate', () => {
   it('says which mode is missing what, rather than answering "Validation failed"', async () => {
     await expect(client().emit.generate({ mode: 'report' })).rejects.toMatchObject({
       status: 400,
-      body: { message: 'Query is required for report mode', code: 'ValidationError' },
+      body: { message: 'Query is required for report mode', code: 'cerebrum.request.invalid' },
     });
     await expect(client().emit.generate({ mode: 'summary' })).rejects.toMatchObject({
       status: 400,

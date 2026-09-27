@@ -654,6 +654,14 @@ description = "The pre-upload camera purpose-string check still rejects what App
 hide = true
 run = "scripts/check-camera-purpose.sh self-test"
 
+[tasks."verify:feature-repository-errors"]
+description = "Feature packages do not discard awaited repository failures with try?"
+hide = true
+run = '''
+node scripts/check-feature-repository-try.mjs --self-test
+node scripts/check-feature-repository-try.mjs
+'''
+
 # The one entry point. `.github/workflows/ios-quality.yml` invokes this task
 # rather than restating the commands, because the moment the two are written
 # out separately they drift and a green local run means nothing.
@@ -695,6 +703,7 @@ authoritative=1
 # so it is the one that must not be behind a guard.
 swiftlint lint --strict --quiet || status=1
 mise run generated-boundary || status=1
+mise run verify:feature-repository-errors || status=1
 mise run verify:release-version || status=1
 mise run verify:install-on-phone || status=1
 mise run verify:camera-purpose || status=1

@@ -39,7 +39,6 @@ export function useCardMutations(candidate: Candidate, setPopoverOpen: (v: boole
       toast.success(`Downloading "${candidate.title}"`);
       void invalidateCandidates();
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to download'),
   });
 
   const excludeMutation = useMutation({
@@ -51,7 +50,6 @@ export function useCardMutations(candidate: Candidate, setPopoverOpen: (v: boole
       void invalidateExclusions();
       setPopoverOpen(false);
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to exclude'),
   });
 
   const unexcludeMutation = useMutation({
@@ -62,7 +60,6 @@ export function useCardMutations(candidate: Candidate, setPopoverOpen: (v: boole
       void invalidateCandidates();
       void invalidateExclusions();
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to restore'),
   });
 
   return { downloadMutation, excludeMutation, unexcludeMutation };

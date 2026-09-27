@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type AliasesListData = {
   body?: never;
   path?: never;
@@ -55,27 +63,15 @@ export type AliasesCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type AliasesCreateError = AliasesCreateErrors[keyof AliasesCreateErrors];
@@ -142,27 +138,15 @@ export type AliasesMergeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type AliasesMergeError = AliasesMergeErrors[keyof AliasesMergeErrors];
@@ -242,27 +226,15 @@ export type AliasesDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type AliasesDeleteError = AliasesDeleteErrors[keyof AliasesDeleteErrors];
@@ -296,27 +268,15 @@ export type AliasesUpdateTextErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type AliasesUpdateTextError = AliasesUpdateTextErrors[keyof AliasesUpdateTextErrors];
@@ -364,27 +324,15 @@ export type BatchesCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type BatchesCreateError = BatchesCreateErrors[keyof BatchesCreateErrors];
@@ -491,27 +439,15 @@ export type BatchesGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type BatchesGetError = BatchesGetErrors[keyof BatchesGetErrors];
@@ -740,27 +676,15 @@ export type ConversionsCreateUnitErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConversionsCreateUnitError =
@@ -804,27 +728,15 @@ export type ConversionsDeleteUnitErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConversionsDeleteUnitError =
@@ -866,27 +778,15 @@ export type ConversionsUpdateUnitErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConversionsUpdateUnitError =
@@ -964,27 +864,15 @@ export type ConversionsCreateWeightErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConversionsCreateWeightError =
@@ -1029,27 +917,15 @@ export type ConversionsDeleteWeightErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConversionsDeleteWeightError =
@@ -1091,27 +967,15 @@ export type ConversionsUpdateWeightErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ConversionsUpdateWeightError =
@@ -1652,27 +1516,15 @@ export type InboxGetForReviewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type InboxGetForReviewError = InboxGetForReviewErrors[keyof InboxGetForReviewErrors];
@@ -2248,27 +2100,15 @@ export type IngredientsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type IngredientsCreateError = IngredientsCreateErrors[keyof IngredientsCreateErrors];
@@ -2311,27 +2151,15 @@ export type IngredientsRenameErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type IngredientsRenameError = IngredientsRenameErrors[keyof IngredientsRenameErrors];
@@ -2370,27 +2198,15 @@ export type IngredientsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type IngredientsGetError = IngredientsGetErrors[keyof IngredientsGetErrors];
@@ -2445,27 +2261,15 @@ export type IngredientsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type IngredientsDeleteError = IngredientsDeleteErrors[keyof IngredientsDeleteErrors];
@@ -2511,27 +2315,15 @@ export type IngredientsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type IngredientsUpdateError = IngredientsUpdateErrors[keyof IngredientsUpdateErrors];
@@ -2599,27 +2391,15 @@ export type IngredientsChangeParentErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type IngredientsChangeParentError =
@@ -2981,27 +2761,15 @@ export type PlanWeekViewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlanWeekViewError = PlanWeekViewErrors[keyof PlanWeekViewErrors];
@@ -3079,27 +2847,15 @@ export type PrepStatesCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PrepStatesCreateError = PrepStatesCreateErrors[keyof PrepStatesCreateErrors];
@@ -3135,27 +2891,15 @@ export type RecipesCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RecipesCreateError = RecipesCreateErrors[keyof RecipesCreateErrors];
@@ -3267,27 +3011,15 @@ export type RecipesSaveDraftErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RecipesSaveDraftError = RecipesSaveDraftErrors[keyof RecipesSaveDraftErrors];
@@ -3431,27 +3163,15 @@ export type RecipesRestoreVersionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RecipesRestoreVersionError =
@@ -3599,27 +3319,15 @@ export type HeroImageRemoveErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type HeroImageRemoveError = HeroImageRemoveErrors[keyof HeroImageRemoveErrors];
@@ -3655,27 +3363,15 @@ export type HeroImageUploadErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type HeroImageUploadError = HeroImageUploadErrors[keyof HeroImageUploadErrors];
@@ -3712,27 +3408,15 @@ export type RecipesGetForRenderingErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RecipesGetForRenderingError =
@@ -3869,27 +3553,15 @@ export type RecipesArchiveRecipeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RecipesArchiveRecipeError =
@@ -3920,27 +3592,15 @@ export type RecipesListDraftsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RecipesListDraftsError = RecipesListDraftsErrors[keyof RecipesListDraftsErrors];
@@ -3982,27 +3642,15 @@ export type RecipesCreateNewDraftErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RecipesCreateNewDraftError =
@@ -4261,27 +3909,15 @@ export type SubstitutionsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SubstitutionsCreateError = SubstitutionsCreateErrors[keyof SubstitutionsCreateErrors];
@@ -4326,27 +3962,15 @@ export type SubstitutionsGraphViewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SubstitutionsGraphViewError =
@@ -4452,27 +4076,15 @@ export type SubstitutionsResolveForLineErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SubstitutionsResolveForLineError =
@@ -4536,27 +4148,15 @@ export type SubstitutionsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SubstitutionsDeleteError = SubstitutionsDeleteErrors[keyof SubstitutionsDeleteErrors];
@@ -4593,27 +4193,15 @@ export type SubstitutionsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SubstitutionsUpdateError = SubstitutionsUpdateErrors[keyof SubstitutionsUpdateErrors];
@@ -4665,27 +4253,15 @@ export type VariantsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type VariantsCreateError = VariantsCreateErrors[keyof VariantsCreateErrors];
@@ -4730,27 +4306,15 @@ export type VariantsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type VariantsDeleteError = VariantsDeleteErrors[keyof VariantsDeleteErrors];
@@ -4788,27 +4352,15 @@ export type VariantsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type VariantsUpdateError = VariantsUpdateErrors[keyof VariantsUpdateErrors];

@@ -109,14 +109,24 @@ export type EntityResponse = {
 };
 
 /**
- * Error envelope returned by every fallible route. `code` carries the
- * originating error class name (e.g. `NotFoundError`) so clients can branch
- * without parsing `message`.
+ * Error envelope returned by every fallible contacts route.
  */
 export type ErrorBody = {
-  code?: string | null;
+  code: ErrorCode;
+  details?: unknown;
   message: string;
+  requestId: string;
+  retryable: boolean;
 };
+
+/**
+ * Stable error codes returned by the contacts pillar.
+ */
+export type ErrorCode =
+  | 'contacts.request.invalid'
+  | 'contacts.resource.not_found'
+  | 'contacts.entity.name_conflict'
+  | 'contacts.internal';
 
 /**
  * `GET /health` response body. Field-for-field identical to the TS pillar
@@ -162,8 +172,7 @@ export type MessageResponse = {
 };
 
 /**
- * Pagination envelope returned by every list endpoint. Mirrors core's
- * `PaginationMetaSchema`.
+ * Pagination envelope returned by every list endpoint.
  */
 export type PaginationMeta = {
   hasMore: boolean;

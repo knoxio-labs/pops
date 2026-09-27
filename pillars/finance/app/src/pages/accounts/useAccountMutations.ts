@@ -99,6 +99,7 @@ export function useAccountMutations(onSuccess: () => void) {
     ]);
 
   const createMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (values: AccountFormValues) => {
       const created = unwrap(await accountsCreate({ body: toAccountPayload(values) }));
       if (values.kind === 'gift-card') await writeGiftCardDetails(created.data.id, values);
@@ -112,6 +113,7 @@ export function useAccountMutations(onSuccess: () => void) {
     onSettled: (data) => invalidate(data?.data.id),
   });
   const updateMutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({
       id,
       values,

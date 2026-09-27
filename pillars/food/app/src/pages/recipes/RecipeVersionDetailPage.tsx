@@ -61,9 +61,6 @@ function RecipeVersionDetailBody({ slug, versionNo }: BodyProps): ReactElement {
       toast.success(t('recipes.versionDetail.restore.success'));
       void navigate(`/food/recipes/${slug}/edit`);
     },
-    onError: (err: Error) => {
-      toast.error(t('recipes.versionDetail.restore.error', { message: err.message }));
-    },
   });
 
   const onRestore = useCallback(() => {

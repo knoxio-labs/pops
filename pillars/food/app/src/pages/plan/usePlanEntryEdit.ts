@@ -21,6 +21,7 @@ export function usePlanEntryEdit({ entryId, onSaved, onDeleted }: Opts) {
   const [error, setError] = useState<string | null>(null);
 
   const updateEntry = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async (input: { plannedServings: number; notes: string | null }) =>
       unwrap(await planUpdateEntry({ path: { id: entryId }, body: input })),
     onSuccess: (res) => {
@@ -35,6 +36,7 @@ export function usePlanEntryEdit({ entryId, onSaved, onDeleted }: Opts) {
   });
 
   const deleteEntry = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async () => unwrap(await planDeleteEntry({ path: { id: entryId } })),
     onSuccess: (res) => {
       if (res.ok) {

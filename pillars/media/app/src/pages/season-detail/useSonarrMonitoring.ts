@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { toast } from 'sonner';
 
 import { unwrap } from '../../media-api-helpers.js';
 import {
@@ -66,9 +65,8 @@ export function useSonarrMonitoring({ tvdbId, seasonNum }: UseSonarrMonitoringAr
           body: { monitored: variables.monitored },
         })
       ),
-    onError: (err: Error) => {
+    onError: () => {
       setSeasonMonitored((prev) => (prev != null ? !prev : null));
-      toast.error(`Failed to update monitoring: ${err.message}`);
     },
   });
 

@@ -39,14 +39,12 @@ function useDetailMutations(adapterId: string): DetailMutations {
     onSuccess: () => {
       toast.success(t('plexus.list.healthSuccess'));
     },
-    onError: (err: Error) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const syncMutation = useMutation({
     mutationFn: async () => unwrap(await plexusAdaptersSync({ path: { adapterId } })),
     onSuccess: () => {
       toast.success(t('plexus.list.syncSuccess'));
     },
-    onError: (err: Error) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   return {
     isPending: healthMutation.isPending || syncMutation.isPending,

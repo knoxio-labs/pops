@@ -1,7 +1,9 @@
-import { AlertCircle, Library, Sparkles } from 'lucide-react';
+import { Library, Sparkles } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { Button, Skeleton } from '@pops/ui';
+import { Button, ErrorState, Skeleton } from '@pops/ui';
+
+import type { MediaApiError } from '../../media-api-helpers.js';
 
 export function PickLoading() {
   return (
@@ -44,14 +46,6 @@ export function EmptyView() {
   );
 }
 
-export function ErrorView({ message }: { message: string }) {
-  return (
-    <div className="text-center py-8 space-y-3">
-      <AlertCircle className="h-10 w-10 mx-auto text-destructive/70" />
-      <div className="space-y-1">
-        <p className="font-medium">Couldn&apos;t load picks</p>
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </div>
-    </div>
-  );
+export function ErrorView({ error }: { error: MediaApiError }) {
+  return <ErrorState error={error} className="py-8" />;
 }

@@ -429,7 +429,7 @@ describe('walking the pages', () => {
     const res = await list(app, token, '?limit=500');
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('invalid_request');
+    expect(res.body.code).toBe('bfm.request.invalid');
   });
 });
 
@@ -632,7 +632,7 @@ describe('one order', () => {
     const res = await one(app, token, 'pur-missing');
 
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('not_found');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 });
 
@@ -662,7 +662,7 @@ describe('purchases half-broken, seen from the phone', () => {
     const res = await list(app, token);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 });
 

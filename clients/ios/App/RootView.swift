@@ -29,6 +29,8 @@ internal struct RootView: View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.popsBackground)
+            .environment(\.errorPresenter, composition.errorPresenter)
+            .errorBanner(composition.errorPresenter)
             .task { await composition.shell.restoreSession() }
             .task(id: pairedDevice) { await composition.shell.loadBootstrap() }
             // Fires on the pairing that just happened and, since `.task(id:)`

@@ -29,7 +29,7 @@ const listEntities: MockHandler = (request) => {
 
 const entityById: MockHandler = ({ params }) => {
   const entity = CONTACT_ENTITIES.find((e) => e.id === params['id']);
-  if (entity === undefined) return notFound('entity');
+  if (entity === undefined) return notFound('entity', 'contacts.resource.not_found');
   const body: EntityResponse = { data: entity };
   return { body };
 };
@@ -69,11 +69,11 @@ export const contactsHandlers: MockHandlers = {
   'DELETE /entities/{id}': ok({ message: 'deleted' }),
   'GET /entities/{id}/addresses': ok({ data: [] }),
   'POST /entities/{id}/addresses': addressCreated,
-  'GET /entities/{id}/avatar': () => notFound('avatar'),
+  'GET /entities/{id}/avatar': () => notFound('avatar', 'contacts.resource.not_found'),
   'PUT /entities/{id}/avatar': ok(mutation),
   'DELETE /entities/{id}/avatar': ok(mutation),
   'POST /entities/{id}/colour/reroll': ok(mutation),
-  'GET /entities/{id}/poster': () => notFound('poster'),
+  'GET /entities/{id}/poster': () => notFound('poster', 'contacts.resource.not_found'),
   'PUT /entities/{id}/poster': ok(mutation),
   'DELETE /entities/{id}/poster': ok(mutation),
   'POST /search': ok({ hits: [] }),

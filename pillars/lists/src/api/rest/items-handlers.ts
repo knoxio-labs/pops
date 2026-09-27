@@ -19,16 +19,13 @@ import {
 } from '../../db/index.js';
 import { tryMapServiceError } from './error-mapping.js';
 
+import type { ErrorBody } from '@pops/types';
+
 import type { ListsDb, UpsertConflictMode, UpsertRefKind } from '../../db/index.js';
 
 type RefKind = 'free' | 'ingredient' | 'variant' | 'recipe' | 'custom';
 
 type ListKind = 'shopping' | 'packing' | 'todo' | 'generic';
-
-interface ConflictBody {
-  message: string;
-  code?: string;
-}
 
 type AddItemBody = Omit<Parameters<typeof addItem>[1], 'listId'> & {
   refKind?: RefKind;
@@ -36,11 +33,11 @@ type AddItemBody = Omit<Parameters<typeof addItem>[1], 'listId'> & {
 
 function notFoundOrConflict(
   err: unknown
-): { kind: 'notFound'; body: ConflictBody } | { kind: 'conflict'; body: ConflictBody } | null {
+): { kind: 'notFound'; body: ErrorBody } | { kind: 'conflict'; body: ErrorBody } | null {
   const mapped = tryMapServiceError(err);
   if (mapped === null) return null;
   if (mapped.status === 404) return { kind: 'notFound', body: mapped.body };
-  return { kind: 'conflict', body: { message: mapped.body.message, code: mapped.body.code } };
+  return { kind: 'conflict', body: mapped.body };
 }
 
 function isPermutationOfList(current: readonly number[], candidate: readonly number[]): boolean {

@@ -98,7 +98,7 @@ export function cataloguePreviewInput(
 export const cataloguePreviewDraft: ToolDef = {
   name: 'inventory.catalogue.previewDraft',
   description:
-    'Read inventory.catalogue.readDraft first, then validate operations at its exact revisions and return compatibility diagnostics without changing the draft or its revision.draftVersion. An empty operations array re-checks the current draft as it stands (useful after item data changed). Refused with catalogue_draft_conflict when expectedDraftVersion is stale.',
+    'Read inventory.catalogue.readDraft first, then validate operations at its exact revisions and return compatibility diagnostics without changing the draft or its revision.draftVersion. An empty operations array re-checks the current draft as it stands (useful after item data changed). Refused with inventory.catalogue.draft_conflict when expectedDraftVersion is stale.',
   inputSchema: cataloguePreviewInputSchema,
   scope: INVENTORY_TYPES_MANAGE_SCOPE,
   handler: async (args) => {

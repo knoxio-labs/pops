@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Shared zod building blocks for the food REST contract.
  *
@@ -6,7 +8,7 @@
  * here is zod-only — no imports from `src/api/` or `src/db/`, so the
  * contract honours the package boundary (consumers see only `.`).
  */
-import { z } from 'zod';
+import { ErrorBodySchema } from '@pops/types';
 
 /**
  * Numeric path params arrive as strings on the wire — coerce them.
@@ -30,12 +32,7 @@ export const QueryBool = z.preprocess((v) => v === true || v === 'true', z.boole
  */
 export const QueryPositiveInt = z.coerce.number().int().positive();
 
-/** Error envelope. `messageKey` carries the i18n key the FE resolves to a localised string. */
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
-  messageKey: z.string().optional(),
-});
+export { ErrorBodySchema };
 
 /** Bare `{ message }` body returned by message-style mutations. */
 export const MessageSchema = z.object({ message: z.string() });

@@ -243,8 +243,8 @@ describe('catalogue publication migration coverage', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('migration_coverage_mismatch');
-    expect(response.body.issues).not.toHaveLength(0);
+    expect(response.body.code).toBe('inventory.catalogue.migration_coverage_mismatch');
+    expect(response.body.details.issues).not.toHaveLength(0);
     await expectPublicationRolledBack(prepared);
   });
 
@@ -257,7 +257,7 @@ describe('catalogue publication migration coverage', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('migration_coverage_mismatch');
+    expect(response.body.code).toBe('inventory.catalogue.migration_coverage_mismatch');
     await expectPublicationRolledBack(prepared);
   });
 
@@ -269,7 +269,7 @@ describe('catalogue publication migration coverage', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('migration_coverage_mismatch');
+    expect(response.body.code).toBe('inventory.catalogue.migration_coverage_mismatch');
     await expectPublicationRolledBack(prepared);
   });
 
@@ -278,8 +278,8 @@ describe('catalogue publication migration coverage', () => {
     const response = await publish(prepared, { steps: prepared.steps.slice(0, 1) });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('migration_steps_incomplete');
-    expect(response.body.issues).not.toHaveLength(0);
+    expect(response.body.code).toBe('inventory.catalogue.migration_steps_incomplete');
+    expect(response.body.details.issues).not.toHaveLength(0);
     await expectPublicationRolledBack(prepared);
   });
 
@@ -302,7 +302,7 @@ describe('catalogue publication migration coverage', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('migration_steps_incomplete');
+    expect(response.body.code).toBe('inventory.catalogue.migration_steps_incomplete');
     await expectPublicationRolledBack(prepared);
   });
 
@@ -347,7 +347,7 @@ describe('catalogue publication migration coverage', () => {
     const response = await publishContainment(prepared, []);
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('migration_coverage_mismatch');
+    expect(response.body.code).toBe('inventory.catalogue.migration_coverage_mismatch');
     const current = await prepared.api.get('/type-catalogue');
     expect(current.body.revision.revision).toBe(prepared.baseRevision);
     expect(
@@ -369,7 +369,7 @@ describe('catalogue publication migration coverage', () => {
     const response = await publishContainment(prepared, [prepared.typeId]);
 
     expect(response.status).toBe(409);
-    expect(response.body.code).toBe('migration_containment_in_use');
+    expect(response.body.code).toBe('inventory.catalogue.migration_containment_in_use');
     const current = await prepared.api.get('/type-catalogue');
     const type = current.body.types.find((entry: { id: string }) => entry.id === prepared.typeId);
     expect(current.body.revision.revision).toBe(prepared.baseRevision);

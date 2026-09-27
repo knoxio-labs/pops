@@ -1,3 +1,4 @@
+import { invalidRequestBody } from '../errors.js';
 /**
  * Handlers for `putMedia`/`getMedia` — split out of
  * `mobile-inventory-handlers.ts` (which is at its line budget) rather than
@@ -8,7 +9,11 @@
  * file's header for why.
  */
 import { isGatewayOk } from '../pillars/gateway.js';
-import { toUpstreamErrorResponse } from './upstream-error.js';
+import {
+  toCollectionUpstreamErrorResponse,
+  toReceiptBytesErrorResponse,
+  toUpstreamErrorResponse,
+} from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -35,21 +40,6 @@ export interface MobileInventoryMediaHandlerDeps {
   inventoryMedia: MobileInventoryMediaClient;
 }
 
-function upstreamMessage(summary: string, failure: GatewayFailure): string {
-  return failure.detail === undefined ? summary : `${summary}: ${failure.detail}`;
-}
-
-export interface PutMediaFailureBody {
-  readonly code:
-    | 'upstream_unsupported_media'
-    | 'upstream_unavailable'
-    | 'upstream_contract_mismatch'
-    | 'upstream_misconfigured';
-  readonly pillar: string;
-  readonly retryable: boolean;
-  readonly message: string;
-}
-
 /**
  * `putMedia`'s own failure mapping onto its declared statuses (`415`, `502`,
  * `503`) — never `toUpstreamErrorResponse`/`toReceiptBytesErrorResponse`,
@@ -60,55 +50,15 @@ export interface PutMediaFailureBody {
  */
 function putMediaFailureResponse(failure: GatewayFailure): {
   status: 415 | 502 | 503;
-  body: PutMediaFailureBody;
+  body: ReturnType<typeof toUpstreamErrorResponse>['body'];
 } {
-  switch (failure.kind) {
-    case 'unsupported-media':
-      return {
-        status: 415,
-        body: {
-          code: 'upstream_unsupported_media',
-          pillar: failure.pillar,
-          retryable: false,
-          message: upstreamMessage('inventory cannot store those bytes as an image', failure),
-        },
-      };
-    case 'unavailable':
-    case 'degraded':
-      return {
-        status: 503,
-        body: {
-          code: 'upstream_unavailable',
-          pillar: failure.pillar,
-          retryable: true,
-          message: upstreamMessage('inventory did not answer', failure),
-        },
-      };
-    case 'gateway-misconfigured':
-      return {
-        status: 502,
-        body: {
-          code: 'upstream_misconfigured',
-          pillar: failure.pillar,
-          retryable: false,
-          message: upstreamMessage("inventory rejected this pillar's credential", failure),
-        },
-      };
-    case 'contract-mismatch':
-    case 'not-found':
-    case 'conflict':
-    case 'invalid-request':
-    case 'protocol-too-old':
-      return {
-        status: 502,
-        body: {
-          code: 'upstream_contract_mismatch',
-          pillar: failure.pillar,
-          retryable: false,
-          message: upstreamMessage('inventory answered a media store call unexpectedly', failure),
-        },
-      };
+  if (failure.kind === 'unsupported-media') {
+    const mapped = toReceiptBytesErrorResponse(failure);
+    return mapped.status === 415
+      ? { status: 415, body: mapped.body }
+      : { status: 502, body: mapped.body };
   }
+  return toCollectionUpstreamErrorResponse(failure);
 }
 
 export function makeMobileInventoryMediaHandlers(deps: MobileInventoryMediaHandlerDeps) {
@@ -146,12 +96,7 @@ export function makeMobileInventoryMediaHandlers(deps: MobileInventoryMediaHandl
         if (outcome.kind === 'invalid-request') {
           return {
             status: 400 as const,
-            body: {
-              code: 'invalid_request' as const,
-              message:
-                outcome.detail ??
-                "The uploaded bytes do not match the claimed sha256, or the sha256 isn't well-formed.",
-            },
+            body: invalidRequestBody(),
           };
         }
         return putMediaFailureResponse(outcome);
@@ -172,10 +117,7 @@ export function makeMobileInventoryMediaHandlers(deps: MobileInventoryMediaHandl
         if (outcome.kind === 'invalid-request') {
           return {
             status: 400 as const,
-            body: {
-              code: 'invalid_request' as const,
-              message: outcome.detail ?? 'The sha256 or the requested variant is not well-formed.',
-            },
+            body: invalidRequestBody(),
           };
         }
         return toUpstreamErrorResponse(outcome);

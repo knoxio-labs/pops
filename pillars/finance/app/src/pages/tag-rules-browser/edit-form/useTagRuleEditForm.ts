@@ -56,7 +56,6 @@ export function useTagRuleEditForm({ rule, onClose }: UseTagRuleEditFormOptions)
       void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules', 'list'] });
       onClose();
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   return {

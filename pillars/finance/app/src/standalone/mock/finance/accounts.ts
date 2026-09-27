@@ -6,7 +6,7 @@ import {
   REWARDS_CHECKPOINTS,
 } from '../../fixtures/accounts';
 import { IMPORT_BATCHES, IMPORT_CONFIG } from '../../fixtures/imports';
-import { created, noContent, notFound, ok, page } from '../respond';
+import { created, financeNotFound, noContent, ok, page } from '../respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
@@ -38,7 +38,7 @@ const [everyday] = ACCOUNTS;
 
 const byId: MockHandler = ({ params }) => {
   const account = ACCOUNTS.find((a) => a.id === params['id']);
-  if (account === undefined) return notFound('account');
+  if (account === undefined) return financeNotFound('account');
   const body: AccountsGetResponses[200] = { data: account };
   return { body };
 };
@@ -51,7 +51,7 @@ const checkpointsFor: MockHandler = ({ params }) => {
 
 const balanceFor: MockHandler = ({ params }) => {
   const account = ACCOUNTS.find((a) => a.id === params['id']);
-  if (account === undefined) return notFound('account');
+  if (account === undefined) return financeNotFound('account');
   const body: CheckpointsBalanceResponses[200] = { data: account.balance };
   return { body };
 };
@@ -67,7 +67,7 @@ const importBatchesFor: MockHandler = ({ params }) => {
 const importConfigFor: MockHandler = ({ params }) =>
   params['id'] === EVERYDAY_ACCOUNT_ID
     ? { body: { data: IMPORT_CONFIG } satisfies AccountImportsGetConfigResponses[200] }
-    : notFound('import config');
+    : financeNotFound('import config');
 
 const WRITTEN_AT = '2026-09-05T08:00:00.000Z';
 
@@ -96,7 +96,7 @@ const syncJob: AccountImportsGetSyncJobResponses[200]['data'] = {
 const mergePreview: MockHandler = ({ params }) => {
   const source = ACCOUNTS.find((a) => a.id === params['id']);
   const target = ACCOUNTS.find((a) => a.id !== params['id']);
-  if (source === undefined || target === undefined) return notFound('account');
+  if (source === undefined || target === undefined) return financeNotFound('account');
   const body: AccountsPreviewMergeResponses[200] = {
     data: {
       source,
@@ -199,7 +199,7 @@ export const accountHandlers: MockHandlers = {
   'POST /accounts/{id}/checkpoints': created({ data: REWARDS_CHECKPOINTS[0], message: 'created' }),
   'DELETE /accounts/{id}/checkpoints/{checkpointId}': noContent,
 
-  'GET /accounts/{id}/gift-card-details': () => notFound('gift card'),
+  'GET /accounts/{id}/gift-card-details': () => financeNotFound('gift card'),
   'PUT /accounts/{id}/gift-card-details': giftCardWritten,
   'POST /accounts/{id}/gift-card-details/reveal': ok({
     data: { number: '0000 0000 0000 0000', pin: '0000' },
@@ -212,7 +212,7 @@ export const accountHandlers: MockHandlers = {
   'POST /accounts/{id}/sync': () => ({ status: 202, body: { data: syncJob } }),
   'GET /accounts/{id}/sync/{jobId}': ok({ data: syncJob }),
 
-  'GET /accounts/{id}/loan-terms': () => notFound('loan terms'),
+  'GET /accounts/{id}/loan-terms': () => financeNotFound('loan terms'),
   'PUT /accounts/{id}/loan-terms': loanTermsWritten,
   'GET /accounts/{id}/loan-offset-links': ok<LoanListOffsetLinksResponses[200]>({ data: [] }),
   'POST /accounts/{id}/loan-offset-links': offsetLinked,

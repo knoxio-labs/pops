@@ -82,7 +82,7 @@ describe('users — URI contract', () => {
       status: 400,
       body: {
         message: "Not a core user URI: 'pops://finance/user/joao@example.com'",
-        code: 'ValidationError',
+        code: 'registry.request.invalid',
       },
     });
   });

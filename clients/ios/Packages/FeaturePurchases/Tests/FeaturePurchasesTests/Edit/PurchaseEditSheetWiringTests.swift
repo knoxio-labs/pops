@@ -38,9 +38,11 @@ internal struct PurchaseEditSheetWiringTests {
         #expect(callback.lowerBound < dismissal.lowerBound)
     }
 
-    @Test("a failed save keeps both recovery actions")
-    func failureActions() {
+    @Test("a failed save uses the shared presenter and retains the editable form")
+    func failurePresentation() {
         #expect(Self.source.contains("Button(\"Keep editing\", role: .cancel)"))
-        #expect(Self.source.contains("Button(\"Retry\")"))
+        #expect(Self.source.contains("errorPresenter.present("))
+        #expect(Self.source.contains("operation: \"Save purchase\""))
+        #expect(Self.source.contains("model.dismissFailure()"))
     }
 }

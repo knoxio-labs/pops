@@ -233,6 +233,7 @@ export type {
   EngramsUpdateErrors,
   EngramsUpdateResponse,
   EngramsUpdateResponses,
+  ErrorBody,
   GliaActionsDecideData,
   GliaActionsDecideError,
   GliaActionsDecideErrors,

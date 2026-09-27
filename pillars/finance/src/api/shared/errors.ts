@@ -1,34 +1,81 @@
 /**
  * HTTP-shaped domain errors used by finance-api REST handlers.
  *
- * Each error carries an optional `messageKey` the frontend uses to resolve a
- * translated string, with the EN-AU fallback in `message`. The REST error
- * mapping plumbs `messageKey` through the wire error shape so clients receive
- * it as `data.messageKey`.
+ * Each error is a registered ADR-054 failure. Express's shared final handler
+ * adds the current request ID and serializes the flat envelope.
  */
-export class HttpError extends Error {
-  /** i18n key the frontend uses to resolve a localised message. */
-  public readonly messageKey?: string;
+import { defineErrors, PopsError } from '@pops/pillar-express';
 
-  constructor(
-    public readonly statusCode: number,
-    message: string,
-    public readonly details?: unknown,
-    messageKey?: string
-  ) {
-    super(message);
-    this.name = 'HttpError';
-    this.messageKey = messageKey;
+/** Registered finance domain failures used by REST handlers. */
+export const financeDomainErrors = defineErrors('finance', {
+  not_found: {
+    area: 'resource',
+    status: 404,
+    message: 'The requested resource was not found.',
+    retryable: false,
+  },
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The request is invalid.',
+    retryable: false,
+  },
+  conflict: {
+    area: 'resource',
+    status: 409,
+    message: 'The request conflicts with existing state.',
+    retryable: false,
+  },
+  unprocessable: {
+    area: 'resource',
+    status: 422,
+    message: 'The request cannot be processed for this resource.',
+    retryable: false,
+  },
+  precondition_failed: {
+    area: 'request',
+    status: 412,
+    message: 'The request cannot be applied in the current state.',
+    retryable: false,
+  },
+});
+
+interface HttpErrorOptions {
+  readonly statusCode: number;
+  readonly code: string;
+  readonly message: string;
+  readonly details?: unknown;
+  readonly retryable?: boolean;
+}
+
+/** Base finance HTTP failure serialized by the shared Express error handler. */
+export class HttpError extends PopsError {
+  public readonly statusCode: number;
+
+  constructor(options: HttpErrorOptions) {
+    super({
+      code: options.code,
+      status: options.statusCode,
+      message: options.message,
+      retryable: options.retryable ?? false,
+      details: options.details,
+    });
+    this.statusCode = options.statusCode;
   }
 }
 
+/** A requested finance resource does not exist. */
 export class NotFoundError extends HttpError {
   constructor(resource: string, id: string) {
-    super(404, `${resource} '${id}' not found`, undefined, 'common.notFound');
-    this.name = 'NotFoundError';
+    super({
+      statusCode: 404,
+      code: 'finance.resource.not_found',
+      message: `${resource} '${id}' not found`,
+    });
   }
 }
 
+/** A well-formed request violates a finance input rule. */
 export class ValidationError extends HttpError {
   /**
    * `message` comes first, and is required, because it is the only one of the
@@ -45,19 +92,18 @@ export class ValidationError extends HttpError {
    *
    * @param message What the client is shown. Required — there is no generic
    *   default, so a caller cannot get one by omission.
-   * @param details Structured context for logs. It does NOT reach the client —
-   *   the wire envelope carries `message`, `code` and `messageKey` only.
+   * @param details Structured context included in the envelope when it is safe
+   *   and useful to the caller.
    */
   constructor(message: string, details?: unknown) {
-    super(400, message, details, 'common.validationFailed');
-    this.name = 'ValidationError';
+    super({ statusCode: 400, code: 'finance.request.invalid', message, details });
   }
 }
 
+/** A finance write conflicts with existing state. */
 export class ConflictError extends HttpError {
   constructor(message: string) {
-    super(409, message, undefined, 'common.conflict');
-    this.name = 'ConflictError';
+    super({ statusCode: 409, code: 'finance.resource.conflict', message });
   }
 }
 
@@ -69,9 +115,8 @@ export class ConflictError extends HttpError {
  * writing gift-card details onto an account that isn't `kind: 'gift-card'`).
  */
 export class UnprocessableEntityError extends HttpError {
-  constructor(message: string, messageKey = 'common.unprocessable') {
-    super(422, message, undefined, messageKey);
-    this.name = 'UnprocessableEntityError';
+  constructor(message: string) {
+    super({ statusCode: 422, code: 'finance.resource.unprocessable', message });
   }
 }
 
@@ -81,8 +126,7 @@ export class UnprocessableEntityError extends HttpError {
  * the wrong result type).
  */
 export class PreconditionError extends HttpError {
-  constructor(message: string, messageKey?: string) {
-    super(412, message, undefined, messageKey);
-    this.name = 'PreconditionError';
+  constructor(message: string) {
+    super({ statusCode: 412, code: 'finance.request.precondition_failed', message });
   }
 }

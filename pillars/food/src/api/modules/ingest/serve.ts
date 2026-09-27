@@ -19,6 +19,8 @@ import { extname, join } from 'node:path';
 
 import { eq } from 'drizzle-orm';
 
+import { defineErrors } from '@pops/pillar-express';
+
 import { type FoodDb, ingestSources } from '../../../db/index.js';
 import { ingestDirFor } from './ingest-storage.js';
 
@@ -40,11 +42,25 @@ const CONTENT_TYPE: Readonly<Record<string, string>> = {
   '.m4v': 'video/x-m4v',
 };
 
-function parseSourceId(req: Request, res: Response): number | null {
+const ingestErrors = defineErrors('food', {
+  invalid: {
+    area: 'request',
+    status: 400,
+    message: 'The source ID is invalid.',
+    retryable: false,
+  },
+  not_found: {
+    area: 'ingest_media',
+    status: 404,
+    message: 'Ingest media was not found.',
+    retryable: false,
+  },
+});
+
+function parseSourceId(req: Request): number {
   const raw = String(req.params['sourceId'] ?? '');
   if (!SOURCE_ID_RE.test(raw)) {
-    res.status(400).json({ message: `Invalid source id: ${raw}` });
-    return null;
+    ingestErrors.invalid();
   }
   return Number(raw);
 }
@@ -97,21 +113,22 @@ const SCREENSHOT_SPEC: MediaSpec = { baseName: 'screenshot', exts: SCREENSHOT_EX
 const VIDEO_SPEC: MediaSpec = { baseName: 'video', exts: VIDEO_EXTENSIONS };
 
 function serveMedia(db: FoodDb, spec: MediaSpec, req: Request, res: Response): void {
-  const sourceId = parseSourceId(req, res);
-  if (sourceId === null) return;
+  const sourceId = parseSourceId(req);
   if (!isServableSource(db, sourceId)) {
-    res.status(404).json({ message: 'File not found' });
-    return;
+    throw mediaNotFound();
   }
   const filePath = findFileWithExtension(ingestDirFor(sourceId), spec.baseName, spec.exts);
   if (filePath === null) {
-    res.status(404).json({ message: 'File not found' });
-    return;
+    throw mediaNotFound();
   }
   const contentType = CONTENT_TYPE[extname(filePath).toLowerCase()];
   if (contentType !== undefined) res.type(contentType);
   res.setHeader('Cache-Control', CACHE_CONTROL);
   res.sendFile(filePath);
+}
+
+function mediaNotFound(): never {
+  return ingestErrors.not_found();
 }
 
 export function makeServeIngestScreenshot(db: FoodDb) {

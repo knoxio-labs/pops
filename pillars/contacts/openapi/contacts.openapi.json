@@ -241,20 +241,39 @@
         "type": "object"
       },
       "ErrorBody": {
-        "description": "Error envelope returned by every fallible route. `code` carries the\noriginating error class name (e.g. `NotFoundError`) so clients can branch\nwithout parsing `message`.",
+        "description": "Error envelope returned by every fallible contacts route.",
         "properties": {
           "code": {
-            "nullable": true,
-            "type": "string"
+            "$ref": "#/components/schemas/ErrorCode"
           },
+          "details": {},
           "message": {
             "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
           }
         },
         "required": [
-          "message"
+          "code",
+          "message",
+          "requestId",
+          "retryable"
         ],
         "type": "object"
+      },
+      "ErrorCode": {
+        "description": "Stable error codes returned by the contacts pillar.",
+        "enum": [
+          "contacts.request.invalid",
+          "contacts.resource.not_found",
+          "contacts.entity.name_conflict",
+          "contacts.internal"
+        ],
+        "type": "string"
       },
       "HealthResponse": {
         "description": "`GET /health` response body. Field-for-field identical to the TS pillar\nhealth envelope: `ok`, `status`, `pillar`, `version`, `ts` (an RFC 3339 /\nISO 8601 UTC timestamp, matching the TS `new Date().toISOString()`). The\nregistry health probe parses this shape across every pillar.",
@@ -344,7 +363,7 @@
         "type": "object"
       },
       "PaginationMeta": {
-        "description": "Pagination envelope returned by every list endpoint. Mirrors core's\n`PaginationMetaSchema`.",
+        "description": "Pagination envelope returned by every list endpoint.",
         "properties": {
           "hasMore": {
             "type": "boolean"

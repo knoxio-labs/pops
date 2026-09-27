@@ -13,11 +13,11 @@ internal struct PurchaseDetailScreenWiringTests {
         #expect(Self.screen.contains("PurchaseDetailFailureView(failure: failure)"))
     }
 
-    @Test("a retained refresh failure retries without replacing loaded content")
-    func refreshNotice() {
-        #expect(Self.screen.contains("PurchaseDetailCopy.refreshNotice(for: refresh)"))
-        #expect(Self.screen.contains("Task { await model.refresh() }"))
-        #expect(Self.screen.contains(".accessibilityLabel(\"Retry\")"))
+    @Test("a retained refresh failure uses the shared presenter without replacing loaded content")
+    func refreshFailurePresentation() {
+        #expect(Self.screen.contains(".onChange(of: refreshFailure)"))
+        #expect(Self.screen.contains("errorPresenter.present("))
+        #expect(Self.screen.contains("operation: \"Refresh purchase details\""))
     }
 
     @Test("Edit lands its saved detail exactly once and has no placeholder state")

@@ -1,5 +1,11 @@
 import SwiftUI
 
+#if os(iOS)
+    import UIKit
+#elseif os(macOS)
+    import AppKit
+#endif
+
 /// Several pieces of glass that belong to one control.
 ///
 /// iOS 26 renders glass elements that sit near each other as a family, they
@@ -182,6 +188,17 @@ extension View {
             sheet(item: item, content: content)
         #endif
     }
+}
+
+@MainActor
+internal func playgroundCopy(_ text: String) {
+    #if os(iOS)
+        UIPasteboard.general.string = text
+    #elseif os(macOS)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+    #endif
 }
 
 extension View {

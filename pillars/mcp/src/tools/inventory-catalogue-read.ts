@@ -42,7 +42,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const catalogueGetType: ToolDef = {
   name: 'inventory.catalogue.getType',
   description:
-    'Read one inventory type definition, by its stable id, exactly as the current published catalogue revision or an exact earlier one defined it. Older revisions keep the label, fields and archive state they had then. Answers catalogue_type_unknown when that revision does not define the type, and catalogue_revision_unknown when no such published revision exists.',
+    'Read one inventory type definition, by its stable id, exactly as the current published catalogue revision or an exact earlier one defined it. Older revisions keep the label, fields and archive state they had then. Answers inventory.catalogue.type_unknown when that revision does not define the type, and inventory.catalogue.revision_unknown when no such published revision exists.',
   inputSchema: {
     type: 'object',
     properties: {

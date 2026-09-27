@@ -18,26 +18,12 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import enAUErrors from '@pops/locales/en-AU/errors.json';
-import ptBRErrors from '@pops/locales/pt-BR/errors.json';
-
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
 import { makeCerebrumApiDeps, makeClient, makeEmptyPeerClients } from './test-utils.js';
 
 import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
 import type { PeerClients } from '../modules/retrieval/peer-clients.js';
-
-/**
- * Read through `@pops/locales`' published `"./*"` export rather than a relative
- * path into the workspace: a raw `../../../../..` would keep passing only for
- * as long as this pillar sits in this repo, which is the property the
- * extractability rules exist to protect.
- */
-const LOCALE_STRINGS: Record<string, Record<string, string>> = {
-  'en-AU': enAUErrors,
-  'pt-BR': ptBRErrors,
-};
 
 let tmpDir: string;
 let engramRoot: string;
@@ -254,54 +240,18 @@ describe('POST /retrieval/search — structured (BM25)', () => {
   // answered `Validation failed` and a caller could not tell a missing query
   // from a missing filter. Assert the body, which is the part that was wrong.
   it.each([
-    [
-      { mode: 'semantic' as const },
-      'Query is required for semantic and hybrid search modes',
-      'cerebrum.retrieval.queryRequired',
-    ],
-    [
-      { mode: 'hybrid' as const },
-      'Query is required for semantic and hybrid search modes',
-      'cerebrum.retrieval.queryRequired',
-    ],
-    [
-      { mode: 'structured' as const },
-      'Structured search requires at least one filter',
-      'cerebrum.retrieval.filterRequired',
-    ],
+    [{ mode: 'semantic' as const }, 'Query is required for semantic and hybrid search modes'],
+    [{ mode: 'hybrid' as const }, 'Query is required for semantic and hybrid search modes'],
+    [{ mode: 'structured' as const }, 'Structured search requires at least one filter'],
   ])(
     'says what %o is missing, rather than answering "Validation failed"',
-    async (body, message, messageKey) => {
+    async (body, message) => {
       await expect(client().retrieval.search(body)).rejects.toMatchObject({
         status: 400,
-        body: { message, messageKey, code: 'ValidationError' },
+        body: { message, code: 'cerebrum.request.invalid' },
       });
     }
   );
-
-  // Both halves or neither: a key with no fallback leaves a client without
-  // i18n showing nothing, and a fallback with no key leaves one with i18n
-  // stuck on English. Read against the real locale files rather than a copy of
-  // the strings, because the failure this closes was a key that existed and
-  // did not match — `media.retrieval.*`, in a cerebrum handler (POPS-3051).
-  it.each(['en-AU', 'pt-BR'])('%s resolves every key these handlers emit', async (locale) => {
-    const strings = LOCALE_STRINGS[locale] ?? {};
-
-    for (const key of [
-      'cerebrum.retrieval.queryRequired',
-      'cerebrum.retrieval.filterRequired',
-      'cerebrum.retrieval.contextQueryRequired',
-    ]) {
-      expect(strings[key], `${locale} has no entry for ${key}`).toBeTruthy();
-    }
-
-    const rejection = await client()
-      .retrieval.search({ mode: 'structured' })
-      .catch((err: unknown) => err);
-    const { body } = rejection as { body: { messageKey?: string; message?: string } };
-    expect(strings[body.messageKey ?? '']).toBeTruthy();
-    if (locale === 'en-AU') expect(strings[body.messageKey ?? '']).toBe(body.message);
-  });
 });
 
 describe('POST /retrieval/search — semantic + cross-pillar enrichment', () => {
@@ -442,7 +392,10 @@ describe('POST /retrieval/context', () => {
   it('says the query is required, rather than answering "Validation failed"', async () => {
     await expect(client().retrieval.context({ query: '   ' })).rejects.toMatchObject({
       status: 400,
-      body: { message: 'Query is required for context assembly', code: 'ValidationError' },
+      body: {
+        message: 'Query is required for context assembly',
+        code: 'cerebrum.request.invalid',
+      },
     });
   });
 });

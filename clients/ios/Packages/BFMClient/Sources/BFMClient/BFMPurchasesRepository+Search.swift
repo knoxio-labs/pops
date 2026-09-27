@@ -29,10 +29,10 @@ extension BFMPurchasesRepository {
             throw RepositoryError.transport("\(SearchPurchases.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: SearchPurchases.id)
+                try upstream.body.json.code, operation: SearchPurchases.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: SearchPurchases.id)
+                try upstream.body.json.code, operation: SearchPurchases.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(SearchPurchases.id): undocumented status \(statusCode)"
@@ -59,10 +59,10 @@ extension BFMPurchasesRepository {
             throw RepositoryError.transport("\(PurchaseTags.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: PurchaseTags.id)
+                try upstream.body.json.code, operation: PurchaseTags.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: PurchaseTags.id)
+                try upstream.body.json.code, operation: PurchaseTags.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(PurchaseTags.id): undocumented status \(statusCode)"

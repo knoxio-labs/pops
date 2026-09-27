@@ -119,7 +119,13 @@ describe('POST /search', () => {
       .send({ query: { text: 42 } });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('invalid_request');
+    expect(res.body).toMatchObject({
+      code: 'orchestrator.request.invalid',
+      message: 'The search request is invalid.',
+      requestId: expect.any(String),
+      retryable: false,
+      details: { issues: expect.any(Array) },
+    });
     expect(source).not.toHaveBeenCalled();
   });
 
@@ -134,7 +140,12 @@ describe('POST /search', () => {
       .send({ query: { text: 'x' } });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toBe('search_failed');
+    expect(res.body).toEqual({
+      code: 'orchestrator.search.failed',
+      message: 'Search could not be completed.',
+      requestId: expect.any(String),
+      retryable: true,
+    });
     errSpy.mockRestore();
   });
 });

@@ -1,3 +1,5 @@
+import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
+
 /**
  * Map core service errors to ts-rest response envelopes.
  *
@@ -10,10 +12,7 @@
  */
 import { HttpError } from '../shared/errors.js';
 
-export interface ErrorBody {
-  message: string;
-  code?: string;
-}
+import type { ErrorBody } from '@pops/types';
 
 export type ErrorStatus = 400 | 401 | 404 | 409;
 
@@ -30,10 +29,31 @@ export function mapHttpError(err: unknown): MappedHttpError | null {
   if (err instanceof HttpError && isMappedStatus(err.statusCode)) {
     return {
       status: err.statusCode,
-      body: { message: err.message, code: err.name },
+      body: {
+        code: errorCode(err),
+        message: err.message,
+        requestId: getRequestId() ?? mintRequestId(),
+        retryable: false,
+        ...(err.details === undefined ? {} : { details: err.details }),
+      },
     };
   }
   return null;
+}
+
+function errorCode(error: HttpError): string {
+  switch (error.name) {
+    case 'ValidationError':
+      return 'registry.request.invalid';
+    case 'UnauthorizedError':
+      return 'registry.auth.unauthorized';
+    case 'NotFoundError':
+      return 'registry.resource.not_found';
+    case 'ConflictError':
+      return 'registry.resource.conflict';
+    default:
+      return 'registry.request.failed';
+  }
 }
 
 /**

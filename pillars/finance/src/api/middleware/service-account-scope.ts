@@ -25,7 +25,7 @@
  * Up webhook, which carries its own signature check — resolve to no scope and
  * are untouched.
  */
-import { createServiceAccountScopeGate } from '@pops/pillar-express';
+import { createServiceAccountScopeGate, defineErrors } from '@pops/pillar-express';
 
 import { financeContract } from '../../contract/rest.js';
 
@@ -39,10 +39,32 @@ import type { ContractScopeMap, ServiceAccountVerifier } from '@pops/pillar-sdk/
  */
 const FINANCE_SCOPE_ROOT = 'finance';
 
+const financeAuthErrors = defineErrors('finance', {
+  invalid: {
+    area: 'auth',
+    status: 401,
+    message: 'Missing or invalid service-account credentials.',
+    retryable: false,
+  },
+  forbidden: {
+    area: 'auth',
+    status: 403,
+    message: 'This service account is not authorised for this operation.',
+    retryable: false,
+  },
+  unavailable: {
+    area: 'auth',
+    status: 503,
+    message: 'Service-account credentials could not be verified.',
+    retryable: true,
+  },
+});
+
 const gate = createServiceAccountScopeGate({
   contract: financeContract,
   rootScope: FINANCE_SCOPE_ROOT,
   logPrefix: 'finance-api',
+  errors: financeAuthErrors,
 });
 
 /**

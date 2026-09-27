@@ -18,8 +18,11 @@ import {
   type StoredReceipt,
 } from '../../ingest/receipt/store.js';
 import { kindOf } from '../../ingest/receipt/vision.js';
+import { purchaseErrorBody } from '../errors.js';
 
 import type { z } from 'zod';
+
+import type { ErrorBody } from '@pops/types';
 
 import type { UploadReceiptBodySchema } from '../../contract/rest-receipts.js';
 import type { PurchasesDb } from '../../db/index.js';
@@ -40,16 +43,15 @@ export type UploadBody = z.infer<typeof UploadReceiptBodySchema>;
  */
 export function visionUnavailable(): {
   status: 503;
-  body: { message: string; code: string };
+  body: ErrorBody;
 } {
   return {
     status: 503,
-    body: {
+    body: purchaseErrorBody('vision_unavailable', {
       message:
         'No vision model is configured; set ANTHROPIC_API_KEY, or ' +
         'ANTHROPIC_API_KEY_FILE pointing at a mounted secret, to accept receipts',
-      code: 'VISION_UNAVAILABLE',
-    },
+    }),
   };
 }
 
@@ -71,16 +73,15 @@ function notWhatItClaims(
   mediaType: ReceiptMediaType,
   index: number,
   count: number
-): { status: 400; body: { message: string; code: string } } {
+): { status: 400; body: ErrorBody } {
   return {
     status: 400,
-    body: {
+    body: purchaseErrorBody('invalid_media_type', {
       message:
         count === 1
           ? `The upload is not a valid ${mediaType} file`
           : `${NOUNS[kindOf(mediaType)]} ${String(index + 1)} of ${String(count)} is not a valid ${mediaType} file`,
-      code: 'NOT_THE_STATED_TYPE',
-    },
+    }),
   };
 }
 

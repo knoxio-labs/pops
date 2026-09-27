@@ -68,7 +68,6 @@ export function ExclusionList() {
       void queryClient.invalidateQueries({ queryKey: ['media', 'rotation', 'listExclusions'] });
       void queryClient.invalidateQueries({ queryKey: ['media', 'rotation', 'listCandidates'] });
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to remove exclusion'),
   });
 
   const result = query.data?.data;

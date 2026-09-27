@@ -8,7 +8,7 @@
  * slot in flight together also mint one between them, not two. The last
  * block pins that last promise: the fake inventory below models the real
  * pillar's `sourceRef` dedup (same slot → same URI), which is what turns
- * the second request's `ACCEPT_NOT_RECORDED` conflict into "already
+ * the second request's `purchases.inventory.accept_not_recorded` conflict into "already
  * recorded, here is the same answer" instead of an orphan. The inventory
  * pillar is a fake here — the transport it stands in for is asserted on the
  * wire in `pillars/__tests__/outbound-credential.test.ts` — so what is
@@ -197,7 +197,7 @@ describe('a slot that is not offered creates nothing', () => {
 
     const again = await accept(app).expect(404);
 
-    expect(again.body.code).toBe('NOT_FOUND');
+    expect(again.body.code).toBe('purchases.resource.not_found');
     expect(inventory.calls).toHaveLength(1);
     expect(listDistinctInventoryItemUris(opened.db)).toHaveLength(1);
   });
@@ -238,16 +238,16 @@ describe('a slot that is not offered creates nothing', () => {
 
 describe('a create that fails is visible, never recorded', () => {
   it.each([
-    ['unauthorized', 'INVENTORY_UNAUTHORIZED'],
-    ['unavailable', 'INVENTORY_UNAVAILABLE'],
-    ['refused', 'INVENTORY_REFUSED'],
-    ['unreadable', 'INVENTORY_RESPONSE_UNREADABLE'],
+    ['unauthorized', 'purchases.inventory.unauthorized'],
+    ['unavailable', 'purchases.inventory.unavailable'],
+    ['refused', 'purchases.inventory.refused'],
+    ['unreadable', 'purchases.inventory.response_unreadable'],
   ] as const)('reports %s by name and leaves the slot offered', async (kind, code) => {
     const app = appWith(fakeInventory(() => ({ kind, reason: 'because' })));
 
     const failed = await accept(app).expect(502);
 
-    expect(failed.body).toMatchObject({ code, inventoryItemUri: null });
+    expect(failed.body).toMatchObject({ code, details: { inventoryItemUri: null } });
     expect(listDistinctInventoryItemUris(opened.db)).toEqual([]);
 
     const offers = await requestOn(app).get(`/purchases/${purchaseId}/inventory-proposals`);
@@ -272,8 +272,9 @@ describe('a create that fails is visible, never recorded', () => {
     const orphaned = await accept(app).expect(502);
 
     expect(orphaned.body).toMatchObject({
-      code: 'ACCEPT_NOT_RECORDED',
-      inventoryItemUri: 'pops://inventory/item/inv-race',
+      code: 'purchases.inventory.accept_not_recorded',
+      details: { inventoryItemUri: 'pops://inventory/item/inv-race' },
+      retryable: false,
     });
     expect(orphaned.body.message).toContain('Do not repeat this request');
   });
@@ -340,7 +341,7 @@ describe('a create that fails is visible, never recorded', () => {
     // so the loser orphaned a real, unreferenced asset. The real inventory
     // pillar dedupes creates on `sourceRef`, so `idempotentFakeInventory`
     // models that: both calls land on ONE URI, and the loser's
-    // `ACCEPT_NOT_RECORDED` conflict resolves to "already recorded" rather
+    // `purchases.inventory.accept_not_recorded` resolves to "already recorded" rather
     // than an orphan to reconcile by hand.
     const released: Array<() => void> = [];
     const inventory = idempotentFakeInventory();

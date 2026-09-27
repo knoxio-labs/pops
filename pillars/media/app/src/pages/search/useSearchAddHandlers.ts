@@ -53,7 +53,6 @@ export function useAddMovieHandler({ state, addMovieMutation }: HandlerArgs) {
             state.setSessionMovieLocalIds((prev) => new Map(prev).set(tmdbId, result.data.id));
             toast.success('Movie added to library');
           },
-          onError: (err) => toast.error(`Failed to add movie: ${err.message}`),
           onSettled: () => state.removeAdding(key),
         }
       );
@@ -75,7 +74,6 @@ export function useAddTvShowHandler({ state, addTvShowMutation }: HandlerArgs) {
             state.setSessionTvLocalIds((prev) => new Map(prev).set(tvdbId, result.data.show.id));
             toast.success('TV show added to library');
           },
-          onError: (err) => toast.error(`Failed to add TV show: ${err.message}`),
           onSettled: () => state.removeAdding(key),
         }
       );
@@ -105,14 +103,11 @@ export function useAddToWatchlistAndLibraryHandler({
               { mediaType: 'movie', mediaId: movieId },
               {
                 onSuccess: () => toast.success('Added to watchlist and library'),
-                onError: (err) =>
-                  toast.error(`Movie added to library but watchlist failed: ${err.message}`),
                 onSettled: () => state.removeFromSet(state.setAddingToWatchlistIds, tmdbId),
               }
             );
           },
-          onError: (err) => {
-            toast.error(`Failed to add movie: ${err.message}`);
+          onError: () => {
             state.removeFromSet(state.setAddingToWatchlistIds, tmdbId);
           },
           onSettled: () => state.removeAdding(key),
@@ -144,14 +139,11 @@ export function useMarkWatchedAndLibraryHandler({
               { mediaType: 'movie', mediaId: movieId },
               {
                 onSuccess: () => toast.success('Marked as watched and added to library'),
-                onError: (err) =>
-                  toast.error(`Movie added to library but watch log failed: ${err.message}`),
                 onSettled: () => state.removeFromSet(state.setMarkingWatchedTmdbIds, tmdbId),
               }
             );
           },
-          onError: (err) => {
-            toast.error(`Failed to add movie: ${err.message}`);
+          onError: () => {
             state.removeFromSet(state.setMarkingWatchedTmdbIds, tmdbId);
           },
           onSettled: () => state.removeAdding(key),
@@ -170,7 +162,6 @@ export function useMarkWatchedHandler({ state, watchHistoryLogMutation }: Handle
         { mediaType: 'movie', mediaId },
         {
           onSuccess: () => toast.success('Marked as watched'),
-          onError: (err) => toast.error(`Failed to log watch: ${err.message}`),
           onSettled: () => state.removeFromSet(state.setMarkingWatchedMediaIds, mediaId),
         }
       );

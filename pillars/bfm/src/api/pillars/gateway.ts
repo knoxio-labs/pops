@@ -44,74 +44,20 @@
  */
 import { pillar } from '@pops/pillar-sdk/server';
 
-import type { CallFailure, CallResult, PillarHandle } from '@pops/pillar-sdk/server';
+import { toGatewayFailure } from './gateway-failure-mapping.js';
 
-type GatewayFailureBase = {
-  /** The pillar that was called, by its registered id (e.g. `finance`). */
-  readonly pillar: string;
-  /** Operator-facing context. Never assume it is safe to show a user. */
-  readonly detail?: string;
-  /**
-   * The producer's own error code, verbatim, when its answer carried one.
-   * Lets a route distinguish two failures of the same `kind` by a stable
-   * machine token instead of parsing `detail`'s free text — see
-   * `toPurchaseUpdateErrorResponse`'s `purchase_locked` / `purchase_stale`
-   * split.
-   */
-  readonly code?: string;
-};
+import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
 
-/**
- * bfm's own failure vocabulary. Each member carries the status the mobile
- * surface should answer with, so the mapping lives here once instead of being
- * re-derived — and re-diverging — at every endpoint.
- */
-export type GatewayFailure =
-  | (GatewayFailureBase & { readonly kind: 'unavailable'; readonly status: 503 })
-  | (GatewayFailureBase & {
-      readonly kind: 'degraded';
-      readonly reason: 'reconciling';
-      readonly status: 503;
-    })
-  | (GatewayFailureBase & { readonly kind: 'contract-mismatch'; readonly status: 502 })
-  | (GatewayFailureBase & { readonly kind: 'not-found'; readonly status: 404 })
-  | (GatewayFailureBase & { readonly kind: 'conflict'; readonly status: 409 })
-  | (GatewayFailureBase & { readonly kind: 'invalid-request'; readonly status: 400 })
-  /**
-   * The producer answered, understood the request, and will not represent the
-   * resource in the form asked for — a receipt that is a PDF rather than a
-   * photograph, asked for as an image.
-   *
-   * Its own kind rather than folded into `invalid-request` because it is the
-   * one producer 4xx that is a fact about the RESOURCE instead of about the
-   * request bfm built. Folded, it would reach the phone as "this pillar built
-   * a bad request", and the app would keep asking for a picture that will
-   * never exist rather than drawing a placeholder once.
-   */
-  | (GatewayFailureBase & { readonly kind: 'unsupported-media'; readonly status: 415 })
-  | (GatewayFailureBase & { readonly kind: 'gateway-misconfigured'; readonly status: 502 })
-  /**
-   * This pillar's own `Pops-Inventory-Protocol` is below the inventory
-   * pillar's current minimum — a real HTTP status, `426`, that sits outside
-   * `@ts-rest/core`'s `HTTPStatusCode` union (`response-error.ts`), so it can
-   * never be a ts-rest handler's typed return value. Its `status` field
-   * exists for symmetry with every other member; the route that actually
-   * answers 426 throws `InventoryProtocolTooOldError` instead of switching on
-   * this kind through the normal `upstream-error.ts` path — see
-   * `api/inventory/protocol-error.ts`.
-   */
-  | (GatewayFailureBase & { readonly kind: 'protocol-too-old'; readonly status: 426 });
+import type { GatewayOutcome } from './gateway-types.js';
 
-export type GatewaySuccess<TValue> = { readonly kind: 'ok'; readonly value: TValue };
+export { toGatewayFailure } from './gateway-failure-mapping.js';
 
-export type GatewayOutcome<TValue> = GatewaySuccess<TValue> | GatewayFailure;
-
-/** Narrow an outcome to its success arm. */
-export function isGatewayOk<TValue>(
-  outcome: GatewayOutcome<TValue>
-): outcome is GatewaySuccess<TValue> {
-  return outcome.kind === 'ok';
-}
+export {
+  isGatewayOk,
+  type GatewayFailure,
+  type GatewayOutcome,
+  type GatewaySuccess,
+} from './gateway-types.js';
 
 /**
  * How a handle is obtained. Defaults to the authenticated `/server` factory;
@@ -142,123 +88,4 @@ export function createPillarGateway(handleFactory: PillarHandleFactory = pillar)
       return result.kind === 'ok' ? { kind: 'ok', value: result.value } : toGatewayFailure(result);
     },
   };
-}
-
-/**
- * Translate one SDK failure. Exported for the mapping tests, which assert the
- * table directly rather than through a call.
- */
-export function toGatewayFailure(failure: CallFailure): GatewayFailure {
-  const target = failure.pillar;
-  switch (failure.kind) {
-    case 'unavailable':
-      return { kind: 'unavailable', pillar: target, status: 503 };
-    case 'degraded':
-      return { kind: 'degraded', pillar: target, reason: failure.reason, status: 503 };
-    case 'contract-mismatch':
-      return {
-        kind: 'contract-mismatch',
-        pillar: target,
-        status: 502,
-        detail: describeMismatch(failure),
-      };
-    case 'not-found':
-      return { kind: 'not-found', pillar: target, status: 404, detail: failure.message };
-    case 'conflict':
-      return {
-        kind: 'conflict',
-        pillar: target,
-        status: 409,
-        detail: failure.message,
-        code: failure.code,
-      };
-    case 'bad-request':
-      return { kind: 'invalid-request', pillar: target, status: 400, detail: failure.message };
-    case 'refused':
-      return mapRefused(failure, target);
-    case 'rate-limited':
-      // Retryable, same as `unavailable` — but NOT the same fact: this
-      // producer answered and said "later", not "nobody answered". See
-      // `toGatewayFailure`'s header. `retryAfterSeconds`, when the producer
-      // sent one, survives in `detail`.
-      return {
-        kind: 'unavailable',
-        pillar: target,
-        status: 503,
-        detail: withRetryAfter(failure.retryAfterSeconds, failure.message),
-      };
-    case 'unauthorized':
-      // A sibling rejected THIS pillar's service-account key. Deliberately not
-      // a 401: the phone's own credential is fine, and saying otherwise sends
-      // it into a token-refresh loop against a fault only an operator can fix.
-      return {
-        kind: 'gateway-misconfigured',
-        pillar: target,
-        status: 502,
-        detail: failure.message,
-      };
-  }
-}
-
-/**
- * `refused` — a producer 4xx the SDK does not otherwise recognise. 415 and
- * 426 are pulled out of the fold below because each says something the
- * generic `invalid-request` bucket cannot: 415 is about the resource, not
- * the request (see `unsupported-media`'s own note); 426 is a fact about THIS
- * PILLAR'S BUILD, not about anything the request asked for, and the phone's
- * recovery for it (bfm needs deploying) is nothing like "the app sent a bad
- * query".
- */
-function mapRefused(
-  failure: Extract<CallFailure, { kind: 'refused' }>,
-  target: string
-): GatewayFailure {
-  if (failure.status === 415) {
-    return {
-      kind: 'unsupported-media',
-      pillar: target,
-      status: 415,
-      detail: withUpstreamStatus(failure.status, failure.message),
-    };
-  }
-  if (failure.status === 426) {
-    return {
-      kind: 'protocol-too-old',
-      pillar: target,
-      status: 426,
-      detail: withUpstreamStatus(failure.status, failure.message),
-    };
-  }
-  // A permanent 4xx the SDK did not otherwise recognise (413 body too large,
-  // 422 unprocessable, ...) — see `toGatewayFailure`'s header for why this
-  // folds onto the SAME outcome as `bad-request` rather than getting its own
-  // `GatewayFailure` kind. The real upstream status survives in `detail` so
-  // it is not lost, only not distinguished on the wire.
-  return {
-    kind: 'invalid-request',
-    pillar: target,
-    status: 400,
-    detail: withUpstreamStatus(failure.status, failure.message),
-  };
-}
-
-function describeMismatch(failure: Extract<CallFailure, { kind: 'contract-mismatch' }>): string {
-  if (failure.message !== undefined) return failure.message;
-  return `expected ${failure.expected ?? 'unknown'}, got ${failure.actual ?? 'unknown'}`;
-}
-
-function withUpstreamStatus(status: number, message: string | undefined): string {
-  const base = `upstream answered ${String(status)}`;
-  return message === undefined ? base : `${base}: ${message}`;
-}
-
-function withRetryAfter(
-  retryAfterSeconds: number | undefined,
-  message: string | undefined
-): string {
-  const base =
-    retryAfterSeconds === undefined
-      ? 'rate limited'
-      : `rate limited, retry after ${String(retryAfterSeconds)}s`;
-  return message === undefined ? base : `${base}: ${message}`;
 }

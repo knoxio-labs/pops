@@ -1,7 +1,7 @@
-import { AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { Button, Skeleton } from '@pops/ui';
+import { Skeleton } from '@pops/ui';
 
 export function WarrantySkeleton() {
   return (
@@ -10,19 +10,6 @@ export function WarrantySkeleton() {
       {Array.from({ length: 5 }).map((_, i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
-    </div>
-  );
-}
-
-export function ErrorState({ onRetry }: { onRetry: () => void }) {
-  return (
-    <div className="text-center py-16">
-      <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-      <p className="text-muted-foreground mb-4">Could not load warranties — try again</p>
-      <Button onClick={onRetry}>
-        <RefreshCw className="h-4 w-4" />
-        Retry
-      </Button>
     </div>
   );
 }

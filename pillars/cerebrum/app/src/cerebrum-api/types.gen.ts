@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type DebriefCreateData = {
   /**
    * Body
@@ -207,11 +215,7 @@ export type DebriefRecordErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type DebriefRecordError = DebriefRecordErrors[keyof DebriefRecordErrors];
@@ -251,11 +255,7 @@ export type DebriefDismissErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type DebriefDismissError = DebriefDismissErrors[keyof DebriefDismissErrors];
@@ -304,11 +304,7 @@ export type EgoChatErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type EgoChatError = EgoChatErrors[keyof EgoChatErrors];
@@ -364,11 +360,7 @@ export type EgoCreateConversationErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type EgoCreateConversationError =
@@ -412,11 +404,7 @@ export type EgoListConversationsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type EgoListConversationsError =
@@ -482,11 +470,7 @@ export type EgoGetConversationErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EgoGetConversationError = EgoGetConversationErrors[keyof EgoGetConversationErrors];
@@ -535,11 +519,7 @@ export type EgoGetActiveContextErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EgoGetActiveContextError = EgoGetActiveContextErrors[keyof EgoGetActiveContextErrors];
@@ -580,11 +560,7 @@ export type EgoSetScopesErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EgoSetScopesError = EgoSetScopesErrors[keyof EgoSetScopesErrors];
@@ -678,11 +654,7 @@ export type EmitGenerateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type EmitGenerateError = EmitGenerateErrors[keyof EmitGenerateErrors];
@@ -754,11 +726,7 @@ export type EmitPreviewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type EmitPreviewError = EmitPreviewErrors[keyof EmitPreviewErrors];
@@ -803,11 +771,7 @@ export type EmitGenerateReportErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type EmitGenerateReportError = EmitGenerateReportErrors[keyof EmitGenerateReportErrors];
@@ -876,11 +840,7 @@ export type EmitGenerateSummaryErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type EmitGenerateSummaryError = EmitGenerateSummaryErrors[keyof EmitGenerateSummaryErrors];
@@ -950,11 +910,7 @@ export type EmitGenerateTimelineErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type EmitGenerateTimelineError =
@@ -1025,19 +981,11 @@ export type EngramsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EngramsCreateError = EngramsCreateErrors[keyof EngramsCreateErrors];
@@ -1142,19 +1090,11 @@ export type ScopesAssignErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type ScopesAssignError = ScopesAssignErrors[keyof ScopesAssignErrors];
@@ -1206,19 +1146,11 @@ export type ScopesRemoveErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type ScopesRemoveError = ScopesRemoveErrors[keyof ScopesRemoveErrors];
@@ -1270,11 +1202,7 @@ export type EngramsDeleteErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EngramsDeleteError = EngramsDeleteErrors[keyof EngramsDeleteErrors];
@@ -1303,11 +1231,7 @@ export type EngramsGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EngramsGetError = EngramsGetErrors[keyof EngramsGetErrors];
@@ -1368,19 +1292,11 @@ export type EngramsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EngramsUpdateError = EngramsUpdateErrors[keyof EngramsUpdateErrors];
@@ -1432,19 +1348,11 @@ export type EngramsLinkErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EngramsLinkError = EngramsLinkErrors[keyof EngramsLinkErrors];
@@ -1479,19 +1387,11 @@ export type EngramsUnlinkErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type EngramsUnlinkError = EngramsUnlinkErrors[keyof EngramsUnlinkErrors];
@@ -1607,11 +1507,7 @@ export type GliaActionsGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type GliaActionsGetError = GliaActionsGetErrors[keyof GliaActionsGetErrors];
@@ -1660,27 +1556,15 @@ export type GliaActionsDecideErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type GliaActionsDecideError = GliaActionsDecideErrors[keyof GliaActionsDecideErrors];
@@ -1736,19 +1620,11 @@ export type GliaActionsExecuteErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type GliaActionsExecuteError = GliaActionsExecuteErrors[keyof GliaActionsExecuteErrors];
@@ -1797,27 +1673,15 @@ export type GliaActionsRevertErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type GliaActionsRevertError = GliaActionsRevertErrors[keyof GliaActionsRevertErrors];
@@ -1967,11 +1831,7 @@ export type WorkersGetQualityScoreErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type WorkersGetQualityScoreError =
@@ -2011,11 +1871,7 @@ export type WorkersGetStalenessScoreErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type WorkersGetStalenessScoreError =
@@ -2081,11 +1937,7 @@ export type GliaTrustStateGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type GliaTrustStateGetError = GliaTrustStateGetErrors[keyof GliaTrustStateGetErrors];
@@ -2274,11 +2126,7 @@ export type IndexReconcileErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type IndexReconcileError = IndexReconcileErrors[keyof IndexReconcileErrors];
@@ -2312,11 +2160,7 @@ export type IndexReindexErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type IndexReindexError = IndexReindexErrors[keyof IndexReindexErrors];
@@ -2349,11 +2193,7 @@ export type IndexReindexSourcesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type IndexReindexSourcesError = IndexReindexSourcesErrors[keyof IndexReindexSourcesErrors];
@@ -2414,11 +2254,7 @@ export type IngestClassifyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type IngestClassifyError = IngestClassifyErrors[keyof IngestClassifyErrors];
@@ -2453,11 +2289,7 @@ export type IngestEnrichmentStatusErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type IngestEnrichmentStatusError =
@@ -2502,11 +2334,7 @@ export type IngestExtractEntitiesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type IngestExtractEntitiesError =
@@ -2552,11 +2380,7 @@ export type IngestInferScopesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type IngestInferScopesError = IngestInferScopesErrors[keyof IngestInferScopesErrors];
@@ -2600,11 +2424,7 @@ export type IngestPreviewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type IngestPreviewError = IngestPreviewErrors[keyof IngestPreviewErrors];
@@ -2656,11 +2476,7 @@ export type IngestQuickCaptureErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type IngestQuickCaptureError = IngestQuickCaptureErrors[keyof IngestQuickCaptureErrors];
@@ -2697,11 +2513,7 @@ export type IngestRetryEnrichmentErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type IngestRetryEnrichmentError =
@@ -2745,19 +2557,11 @@ export type IngestSubmitErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type IngestSubmitError = IngestSubmitErrors[keyof IngestSubmitErrors];
@@ -3009,11 +2813,7 @@ export type NudgesGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type NudgesGetError = NudgesGetErrors[keyof NudgesGetErrors];
@@ -3065,19 +2865,11 @@ export type NudgesActErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type NudgesActError = NudgesActErrors[keyof NudgesActErrors];
@@ -3132,19 +2924,11 @@ export type NudgesDismissErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type NudgesDismissError = NudgesDismissErrors[keyof NudgesDismissErrors];
@@ -3205,11 +2989,7 @@ export type PlexusAdaptersGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type PlexusAdaptersGetError = PlexusAdaptersGetErrors[keyof PlexusAdaptersGetErrors];
@@ -3290,19 +3070,11 @@ export type PlexusFiltersSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type PlexusFiltersSetError = PlexusFiltersSetErrors[keyof PlexusFiltersSetErrors];
@@ -3426,11 +3198,7 @@ export type QueryAskErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type QueryAskError = QueryAskErrors[keyof QueryAskErrors];
@@ -3472,11 +3240,7 @@ export type QueryExplainErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type QueryExplainError = QueryExplainErrors[keyof QueryExplainErrors];
@@ -3534,11 +3298,7 @@ export type QueryRetrieveErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type QueryRetrieveError = QueryRetrieveErrors[keyof QueryRetrieveErrors];
@@ -3671,11 +3431,7 @@ export type ReflexGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type ReflexGetError = ReflexGetErrors[keyof ReflexGetErrors];
@@ -3759,11 +3515,7 @@ export type ReflexDisableErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type ReflexDisableError = ReflexDisableErrors[keyof ReflexDisableErrors];
@@ -3797,11 +3549,7 @@ export type ReflexEnableErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type ReflexEnableError = ReflexEnableErrors[keyof ReflexEnableErrors];
@@ -3835,11 +3583,7 @@ export type ReflexTestErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type ReflexTestError = ReflexTestErrors[keyof ReflexTestErrors];
@@ -3904,11 +3648,7 @@ export type RetrievalContextErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type RetrievalContextError = RetrievalContextErrors[keyof RetrievalContextErrors];
@@ -3968,11 +3708,7 @@ export type RetrievalSearchErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type RetrievalSearchError = RetrievalSearchErrors[keyof RetrievalSearchErrors];
@@ -4036,11 +3772,7 @@ export type RetrievalSimilarErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type RetrievalSimilarError = RetrievalSimilarErrors[keyof RetrievalSimilarErrors];
@@ -4103,11 +3835,7 @@ export type ScopesListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type ScopesListError = ScopesListErrors[keyof ScopesListErrors];
@@ -4143,11 +3871,7 @@ export type ScopesFilterErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type ScopesFilterError = ScopesFilterErrors[keyof ScopesFilterErrors];
@@ -4199,11 +3923,7 @@ export type ScopesReclassifyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type ScopesReclassifyError = ScopesReclassifyErrors[keyof ScopesReclassifyErrors];
@@ -4237,11 +3957,7 @@ export type ScopesReconcileErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
 };
 
 export type ScopesReconcileError = ScopesReconcileErrors[keyof ScopesReconcileErrors];
@@ -4298,27 +4014,15 @@ export type SettingsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsListError = SettingsListErrors[keyof SettingsListErrors];
@@ -4353,27 +4057,15 @@ export type SettingsGetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetManyError = SettingsGetManyErrors[keyof SettingsGetManyErrors];
@@ -4407,27 +4099,15 @@ export type SettingsResetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetError = SettingsResetErrors[keyof SettingsResetErrors];
@@ -4465,27 +4145,15 @@ export type SettingsSetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetManyError = SettingsSetManyErrors[keyof SettingsSetManyErrors];
@@ -4562,27 +4230,15 @@ export type SettingsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetError = SettingsGetErrors[keyof SettingsGetErrors];
@@ -4665,27 +4321,15 @@ export type SettingsSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetError = SettingsSetErrors[keyof SettingsSetErrors];
@@ -4769,27 +4413,15 @@ export type SettingsEnsureErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsEnsureError = SettingsEnsureErrors[keyof SettingsEnsureErrors];
@@ -4872,27 +4504,15 @@ export type SettingsResetKeyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetKeyError = SettingsResetKeyErrors[keyof SettingsResetKeyErrors];
@@ -4979,11 +4599,7 @@ export type TemplatesGetErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
 };
 
 export type TemplatesGetError = TemplatesGetErrors[keyof TemplatesGetErrors];

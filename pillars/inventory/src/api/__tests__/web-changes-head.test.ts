@@ -322,7 +322,7 @@ describe('GET /web/changes/head', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({
-      code: 'ValidationError',
+      code: 'inventory.request.invalid',
       message: 'since is ahead of the head',
     });
   });

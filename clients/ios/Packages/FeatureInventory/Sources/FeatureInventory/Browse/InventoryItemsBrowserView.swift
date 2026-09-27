@@ -148,7 +148,7 @@ internal struct InventoryItemsBrowserSkeleton: View {
 }
 
 extension View {
-    /// Move and the writer's Undo capsule and refusal alert: the same chrome
+    /// Move and the writer's Undo capsule and refusal presentation: the same chrome
     /// every list in this package shows, over its own selection and model.
     fileprivate func chrome(
         selection: Binding<InventorySelection>, moving: Binding<InventoryPlacementRequest?>,

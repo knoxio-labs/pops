@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
 import {
   INTERNAL_CREDENTIAL_HEADER,
   type InternalCallerSpec,
@@ -68,6 +69,15 @@ const INGEST_COMPLETE_SCOPE = 'food.ingest.worker-complete';
  */
 const INTERNAL_PATH_SCOPES = new Map([['/ingest/worker-complete', INGEST_COMPLETE_SCOPE]]);
 
+const foodAuthErrors = defineErrors('food', {
+  unauthorized: {
+    area: 'auth',
+    status: 401,
+    message: 'The request is not authorized.',
+    retryable: false,
+  },
+});
+
 /**
  * The callers this pillar accepts for its internal paths (ADR-039 E22). The
  * food worker is the sole caller of the completion callback; its secret comes
@@ -91,7 +101,11 @@ function requireInternalToken(req: Request, res: Response, next: NextFunction): 
     },
   });
   if (!result.ok) {
-    res.status(401).json({ message: 'Unauthorized' });
+    try {
+      foodAuthErrors.unauthorized();
+    } catch (error) {
+      next(error);
+    }
     return;
   }
   next();
@@ -99,8 +113,11 @@ function requireInternalToken(req: Request, res: Response, next: NextFunction): 
 
 export function createFoodApiApp(deps: FoodApiDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'food' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(errors.bodyParser);
   app.use(requireInternalToken);
 
   // Build the handler shape once at factory time so static deps don't
@@ -132,7 +149,14 @@ export function createFoodApiApp(deps: FoodApiDeps): Express {
   app.get('/ingest/source/:sourceId/screenshot', makeServeIngestScreenshot(deps.foodDb.db));
   app.get('/ingest/source/:sourceId/video', makeServeIngestVideo(deps.foodDb.db));
 
-  createExpressEndpoints(foodContract, makeFoodRestHandlers(deps), app);
+  createExpressEndpoints(foodContract, makeFoodRestHandlers(deps), app, {
+    requestValidationErrorHandler: (error, req, res, next) => {
+      errors.validation(error, req as Request, res as Response, next);
+    },
+  });
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
 }

@@ -1,3 +1,5 @@
+import { defineErrors } from '@pops/pillar-express';
+
 /**
  * HTTP-JSON heartbeat handler for external pillars.
  *
@@ -25,6 +27,15 @@ export interface ExternalHeartbeatDeps {
 }
 
 export type ExternalHeartbeatHandler = (req: Request, res: Response) => void;
+
+const heartbeatErrors = defineErrors('registry', {
+  invalid: {
+    area: 'heartbeat',
+    status: 400,
+    message: 'The pillar heartbeat is invalid.',
+    retryable: false,
+  },
+});
 
 function rejectNotRegistered(res: Response): void {
   res.status(200).json({ ok: false, reason: 'not-registered' });
@@ -69,8 +80,7 @@ export function createExternalHeartbeatHandler(
   return function externalHeartbeatHandler(req, res) {
     const parsed = parseHeartbeatBody(req.body);
     if (!parsed.ok) {
-      res.status(400).json({ ok: false, issues: parsed.issues });
-      return;
+      return heartbeatErrors.invalid({ issues: parsed.issues });
     }
 
     const existing = pillarRegistryService.getPillarRegistration(

@@ -218,7 +218,7 @@ describe('getting one account', () => {
     const res = await get(app, token, `${LIST_PATH}/missing`);
 
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('not_found');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
     expect(res.body.retryable).toBe(false);
   });
 });
@@ -233,10 +233,11 @@ describe('finance being unreachable', () => {
 
     expect(res.status).toBe(503);
     expect(res.body).toMatchObject({
-      code: 'upstream_unavailable',
-      pillar: 'finance',
+      code: 'gateway.upstream_unavailable',
       retryable: true,
+      details: { upstream: { pillar: 'finance', status: 503 } },
     });
+    expect(res.body.requestId).toBe(res.headers['x-request-id']);
     expect(res.body.data).toBeUndefined();
   });
 
@@ -248,7 +249,7 @@ describe('finance being unreachable', () => {
     const res = await get(app, token, `${LIST_PATH}/acc-1`);
 
     expect(res.status).toBe(503);
-    expect(res.body.code).toBe('upstream_unavailable');
+    expect(res.body.code).toBe('gateway.upstream_unavailable');
   });
 });
 
@@ -259,7 +260,7 @@ describe('finance answering with something bfm cannot read', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
     expect(res.body.retryable).toBe(false);
   });
 
@@ -269,7 +270,7 @@ describe('finance answering with something bfm cannot read', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 
   it('does not let a 404 escape the LIST route, which never declares one', async () => {
@@ -279,7 +280,7 @@ describe('finance answering with something bfm cannot read', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_contract_mismatch');
+    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
   });
 });
 
@@ -292,8 +293,36 @@ describe("a sibling rejecting bfm's own credential", () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('upstream_misconfigured');
+    expect(res.body.code).toBe('bfm.upstream.misconfigured');
     expect(res.body.retryable).toBe(false);
+  });
+
+  it('relays the producer envelope and annotates the upstream hop', async () => {
+    const { app, token } = openWith(
+      createAccountsFake([], {
+        kind: 'unauthorized',
+        pillar: 'finance',
+        code: 'finance.auth.forbidden',
+        message: 'Finance refused this service account.',
+        requestId: 'finance-request-4883',
+        retryable: false,
+        details: { scope: 'finance.accounts.read' },
+      }).factory
+    );
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(502);
+    expect(res.body).toEqual({
+      code: 'finance.auth.forbidden',
+      message: 'Finance refused this service account.',
+      requestId: 'finance-request-4883',
+      retryable: false,
+      details: {
+        scope: 'finance.accounts.read',
+        upstream: { pillar: 'finance', status: 401 },
+      },
+    });
   });
 });
 

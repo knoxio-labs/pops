@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type ArrConfigData = {
   body?: never;
   path?: never;
@@ -36,27 +44,15 @@ export type ArrQueueErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrQueueError = ArrQueueErrors[keyof ArrQueueErrors];
@@ -98,27 +94,15 @@ export type ArrDownloadAndProtectErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrDownloadAndProtectError =
@@ -158,27 +142,15 @@ export type ArrAddMovieErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrAddMovieError = ArrAddMovieErrors[keyof ArrAddMovieErrors];
@@ -219,27 +191,15 @@ export type ArrUpdateRadarrMonitoringErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrUpdateRadarrMonitoringError =
@@ -282,27 +242,15 @@ export type ArrTriggerRadarrSearchErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrTriggerRadarrSearchError =
@@ -337,27 +285,15 @@ export type ArrCheckMovieErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrCheckMovieError = ArrCheckMovieErrors[keyof ArrCheckMovieErrors];
@@ -390,27 +326,15 @@ export type ArrGetMovieStatusErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetMovieStatusError = ArrGetMovieStatusErrors[keyof ArrGetMovieStatusErrors];
@@ -451,27 +375,15 @@ export type ArrGetRadarrQualityProfilesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetRadarrQualityProfilesError =
@@ -503,27 +415,15 @@ export type ArrGetRadarrRootFoldersErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetRadarrRootFoldersError =
@@ -562,27 +462,15 @@ export type ArrTestRadarrErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrTestRadarrError = ArrTestRadarrErrors[keyof ArrTestRadarrErrors];
@@ -673,27 +561,15 @@ export type ArrGetCalendarErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetCalendarError = ArrGetCalendarErrors[keyof ArrGetCalendarErrors];
@@ -737,27 +613,15 @@ export type ArrUpdateEpisodeMonitoringErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrUpdateEpisodeMonitoringError =
@@ -786,27 +650,15 @@ export type ArrGetSonarrLanguageProfilesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetSonarrLanguageProfilesError =
@@ -838,27 +690,15 @@ export type ArrGetSonarrQualityProfilesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetSonarrQualityProfilesError =
@@ -890,27 +730,15 @@ export type ArrGetSonarrRootFoldersErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetSonarrRootFoldersError =
@@ -956,27 +784,15 @@ export type ArrAddSeriesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrAddSeriesError = ArrAddSeriesErrors[keyof ArrAddSeriesErrors];
@@ -1028,27 +844,15 @@ export type ArrGetSeriesEpisodesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetSeriesEpisodesError =
@@ -1092,27 +896,15 @@ export type ArrUpdateSeriesMonitoringErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrUpdateSeriesMonitoringError =
@@ -1169,27 +961,15 @@ export type ArrTriggerSeriesSearchErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrTriggerSeriesSearchError =
@@ -1230,27 +1010,15 @@ export type ArrUpdateSeasonMonitoringErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrUpdateSeasonMonitoringError =
@@ -1281,27 +1049,15 @@ export type ArrCheckSeriesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrCheckSeriesError = ArrCheckSeriesErrors[keyof ArrCheckSeriesErrors];
@@ -1338,27 +1094,15 @@ export type ArrGetShowStatusErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrGetShowStatusError = ArrGetShowStatusErrors[keyof ArrGetShowStatusErrors];
@@ -1404,27 +1148,15 @@ export type ArrTestSonarrErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ArrTestSonarrError = ArrTestSonarrErrors[keyof ArrTestSonarrErrors];
@@ -1525,27 +1257,15 @@ export type ComparisonsCreateDimensionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsCreateDimensionError =
@@ -1594,27 +1314,15 @@ export type ComparisonsUpdateDimensionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsUpdateDimensionError =
@@ -1696,27 +1404,15 @@ export type ComparisonsScoresErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsScoresError = ComparisonsScoresErrors[keyof ComparisonsScoresErrors];
@@ -1761,27 +1457,15 @@ export type ComparisonsExcludeFromDimensionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsExcludeFromDimensionError =
@@ -1817,27 +1501,15 @@ export type ComparisonsIncludeInDimensionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsIncludeInDimensionError =
@@ -1896,27 +1568,15 @@ export type ComparisonsMarkStaleErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsMarkStaleError =
@@ -2004,27 +1664,15 @@ export type ComparisonsRecordErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsRecordError = ComparisonsRecordErrors[keyof ComparisonsRecordErrors];
@@ -2081,27 +1729,15 @@ export type ComparisonsBatchRecordComparisonsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsBatchRecordComparisonsError =
@@ -2140,27 +1776,15 @@ export type ComparisonsBlacklistMovieErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsBlacklistMovieError =
@@ -2200,27 +1824,15 @@ export type ComparisonsListForMediaErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsListForMediaError =
@@ -2305,27 +1917,15 @@ export type ComparisonsRecordSkipErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsRecordSkipError =
@@ -2359,27 +1959,15 @@ export type ComparisonsGetSmartPairErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsGetSmartPairError =
@@ -2430,27 +2018,15 @@ export type ComparisonsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsDeleteError = ComparisonsDeleteErrors[keyof ComparisonsDeleteErrors];
@@ -2480,27 +2056,15 @@ export type DiscoveryContextPicksErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DiscoveryContextPicksError =
@@ -2555,27 +2119,15 @@ export type DiscoveryDismissErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DiscoveryDismissError = DiscoveryDismissErrors[keyof DiscoveryDismissErrors];
@@ -2703,27 +2255,15 @@ export type DiscoveryGenreSpotlightPageErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DiscoveryGenreSpotlightPageError =
@@ -2970,27 +2510,15 @@ export type DiscoveryGetShelfPageErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DiscoveryGetShelfPageError =
@@ -3119,27 +2647,15 @@ export type DiscoveryUndismissErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type DiscoveryUndismissError = DiscoveryUndismissErrors[keyof DiscoveryUndismissErrors];
@@ -3212,27 +2728,15 @@ export type TvShowsDeleteEpisodeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsDeleteEpisodeError =
@@ -3327,27 +2831,15 @@ export type LibraryAddMovieErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LibraryAddMovieError = LibraryAddMovieErrors[keyof LibraryAddMovieErrors];
@@ -3411,27 +2903,15 @@ export type LibraryRefreshMovieErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LibraryRefreshMovieError = LibraryRefreshMovieErrors[keyof LibraryRefreshMovieErrors];
@@ -3541,27 +3021,15 @@ export type LibraryAddTvShowErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LibraryAddTvShowError = LibraryAddTvShowErrors[keyof LibraryAddTvShowErrors];
@@ -3639,27 +3107,15 @@ export type LibraryRefreshTvShowErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type LibraryRefreshTvShowError =
@@ -3814,27 +3270,15 @@ export type MoviesCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type MoviesCreateError = MoviesCreateErrors[keyof MoviesCreateErrors];
@@ -3897,27 +3341,15 @@ export type MoviesDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type MoviesDeleteError = MoviesDeleteErrors[keyof MoviesDeleteErrors];
@@ -3946,27 +3378,15 @@ export type MoviesGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type MoviesGetError = MoviesGetErrors[keyof MoviesGetErrors];
@@ -4046,27 +3466,15 @@ export type MoviesUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type MoviesUpdateError = MoviesUpdateErrors[keyof MoviesUpdateErrors];
@@ -4127,27 +3535,15 @@ export type PlexGetAuthPinErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexGetAuthPinError = PlexGetAuthPinErrors[keyof PlexGetAuthPinErrors];
@@ -4183,27 +3579,15 @@ export type PlexCheckAuthPinErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexCheckAuthPinError = PlexCheckAuthPinErrors[keyof PlexCheckAuthPinErrors];
@@ -4257,27 +3641,15 @@ export type PlexGetLibrariesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexGetLibrariesError = PlexGetLibrariesErrors[keyof PlexGetLibrariesErrors];
@@ -4321,27 +3693,15 @@ export type PlexStartSchedulerErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexStartSchedulerError = PlexStartSchedulerErrors[keyof PlexStartSchedulerErrors];
@@ -4409,27 +3769,15 @@ export type PlexStopSchedulerErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexStopSchedulerError = PlexStopSchedulerErrors[keyof PlexStopSchedulerErrors];
@@ -4547,27 +3895,15 @@ export type PlexStartSyncJobErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexStartSyncJobError = PlexStartSyncJobErrors[keyof PlexStartSyncJobErrors];
@@ -4687,27 +4023,15 @@ export type PlexGetSyncJobStatusErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexGetSyncJobStatusError =
@@ -4749,27 +4073,15 @@ export type PlexTestConnectionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexTestConnectionError = PlexTestConnectionErrors[keyof PlexTestConnectionErrors];
@@ -4823,27 +4135,15 @@ export type PlexSetUrlErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type PlexSetUrlError = PlexSetUrlErrors[keyof PlexSetUrlErrors];
@@ -4894,27 +4194,15 @@ export type RotationListCandidatesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationListCandidatesError =
@@ -4967,27 +4255,15 @@ export type RotationAddToQueueErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationAddToQueueError = RotationAddToQueueErrors[keyof RotationAddToQueueErrors];
@@ -5017,27 +4293,15 @@ export type RotationGetCandidateStatusErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationGetCandidateStatusError =
@@ -5078,27 +4342,15 @@ export type RotationDownloadCandidateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationDownloadCandidateError =
@@ -5137,27 +4389,15 @@ export type RotationRemoveFromQueueErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationRemoveFromQueueError =
@@ -5191,27 +4431,15 @@ export type RotationListExclusionsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationListExclusionsError =
@@ -5255,27 +4483,15 @@ export type RotationAddExclusionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationAddExclusionError =
@@ -5311,27 +4527,15 @@ export type RotationRemoveExclusionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationRemoveExclusionError =
@@ -5364,27 +4568,15 @@ export type RotationGetExclusionErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationGetExclusionError =
@@ -5536,27 +4728,15 @@ export type RotationSchedulerCancelLeavingErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationSchedulerCancelLeavingError =
@@ -5654,27 +4834,15 @@ export type RotationSchedulerRemovalPreviewErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationSchedulerRemovalPreviewError =
@@ -5764,27 +4932,15 @@ export type RotationSchedulerResetQueueErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationSchedulerResetQueueError =
@@ -5820,27 +4976,15 @@ export type RotationSchedulerRunNowErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationSchedulerRunNowError =
@@ -5913,27 +5057,15 @@ export type RotationSchedulerToggleErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationSchedulerToggleError =
@@ -6018,27 +5150,15 @@ export type RotationSaveSettingsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationSaveSettingsError =
@@ -6135,27 +5255,15 @@ export type RotationCreateSourceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationCreateSourceError =
@@ -6203,27 +5311,15 @@ export type RotationDeleteSourceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationDeleteSourceError =
@@ -6267,27 +5363,15 @@ export type RotationUpdateSourceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationUpdateSourceError =
@@ -6335,27 +5419,15 @@ export type RotationSyncSourceErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type RotationSyncSourceError = RotationSyncSourceErrors[keyof RotationSyncSourceErrors];
@@ -6392,19 +5464,11 @@ export type SearchMoviesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 502
    */
-  502: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  502: ErrorBody;
 };
 
 export type SearchMoviesError = SearchMoviesErrors[keyof SearchMoviesErrors];
@@ -6449,19 +5513,11 @@ export type SearchTvShowsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 502
    */
-  502: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  502: ErrorBody;
 };
 
 export type SearchTvShowsError = SearchTvShowsErrors[keyof SearchTvShowsErrors];
@@ -6506,27 +5562,15 @@ export type TvShowsDeleteSeasonErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsDeleteSeasonError = TvShowsDeleteSeasonErrors[keyof TvShowsDeleteSeasonErrors];
@@ -6556,27 +5600,15 @@ export type TvShowsListEpisodesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsListEpisodesError = TvShowsListEpisodesErrors[keyof TvShowsListEpisodesErrors];
@@ -6631,27 +5663,15 @@ export type TvShowsCreateEpisodeErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsCreateEpisodeError =
@@ -6693,27 +5713,15 @@ export type SettingsListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsListError = SettingsListErrors[keyof SettingsListErrors];
@@ -6748,27 +5756,15 @@ export type SettingsGetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetManyError = SettingsGetManyErrors[keyof SettingsGetManyErrors];
@@ -6802,27 +5798,15 @@ export type SettingsResetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetError = SettingsResetErrors[keyof SettingsResetErrors];
@@ -6860,27 +5844,15 @@ export type SettingsSetManyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetManyError = SettingsSetManyErrors[keyof SettingsSetManyErrors];
@@ -6958,27 +5930,15 @@ export type SettingsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsGetError = SettingsGetErrors[keyof SettingsGetErrors];
@@ -7062,27 +6022,15 @@ export type SettingsSetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsSetError = SettingsSetErrors[keyof SettingsSetErrors];
@@ -7167,27 +6115,15 @@ export type SettingsEnsureErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsEnsureError = SettingsEnsureErrors[keyof SettingsEnsureErrors];
@@ -7271,27 +6207,15 @@ export type SettingsResetKeyErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type SettingsResetKeyError = SettingsResetKeyErrors[keyof SettingsResetKeyErrors];
@@ -7374,27 +6298,15 @@ export type ShelfImpressionsFreshnessErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ShelfImpressionsFreshnessError =
@@ -7459,27 +6371,15 @@ export type ComparisonsSubmitTierListErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsSubmitTierListError =
@@ -7519,27 +6419,15 @@ export type ComparisonsGetTierListMoviesErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type ComparisonsGetTierListMoviesError =
@@ -7653,27 +6541,15 @@ export type TvShowsCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsCreateError = TvShowsCreateErrors[keyof TvShowsCreateErrors];
@@ -7734,27 +6610,15 @@ export type TvShowsDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsDeleteError = TvShowsDeleteErrors[keyof TvShowsDeleteErrors];
@@ -7783,27 +6647,15 @@ export type TvShowsGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsGetError = TvShowsGetErrors[keyof TvShowsGetErrors];
@@ -7881,27 +6733,15 @@ export type TvShowsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsUpdateError = TvShowsUpdateErrors[keyof TvShowsUpdateErrors];
@@ -7957,27 +6797,15 @@ export type TvShowsListSeasonsErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsListSeasonsError = TvShowsListSeasonsErrors[keyof TvShowsListSeasonsErrors];
@@ -8031,27 +6859,15 @@ export type TvShowsCreateSeasonErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type TvShowsCreateSeasonError = TvShowsCreateSeasonErrors[keyof TvShowsCreateSeasonErrors];
@@ -8136,27 +6952,15 @@ export type WatchHistoryLogErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchHistoryLogError = WatchHistoryLogErrors[keyof WatchHistoryLogErrors];
@@ -8199,27 +7003,15 @@ export type WatchHistoryBatchLogErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchHistoryBatchLogError =
@@ -8257,27 +7049,15 @@ export type WatchHistoryBatchProgressErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchHistoryBatchProgressError =
@@ -8311,27 +7091,15 @@ export type WatchHistoryProgressErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchHistoryProgressError =
@@ -8430,27 +7198,15 @@ export type WatchHistoryDeleteErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchHistoryDeleteError = WatchHistoryDeleteErrors[keyof WatchHistoryDeleteErrors];
@@ -8480,27 +7236,15 @@ export type WatchHistoryGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchHistoryGetError = WatchHistoryGetErrors[keyof WatchHistoryGetErrors];
@@ -8580,27 +7324,15 @@ export type WatchlistAddErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchlistAddError = WatchlistAddErrors[keyof WatchlistAddErrors];
@@ -8648,27 +7380,15 @@ export type WatchlistReorderErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchlistReorderError = WatchlistReorderErrors[keyof WatchlistReorderErrors];
@@ -8724,27 +7444,15 @@ export type WatchlistRemoveErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchlistRemoveError = WatchlistRemoveErrors[keyof WatchlistRemoveErrors];
@@ -8773,27 +7481,15 @@ export type WatchlistGetErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchlistGetError = WatchlistGetErrors[keyof WatchlistGetErrors];
@@ -8839,27 +7535,15 @@ export type WatchlistUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  404: ErrorBody;
   /**
    * 409
    */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
+  409: ErrorBody;
 };
 
 export type WatchlistUpdateError = WatchlistUpdateErrors[keyof WatchlistUpdateErrors];

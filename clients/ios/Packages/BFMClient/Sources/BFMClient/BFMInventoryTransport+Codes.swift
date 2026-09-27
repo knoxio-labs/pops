@@ -10,7 +10,7 @@ extension BFMInventoryTransport {
                 body: .json(.init(name: name, stem: stem, typeKey: typeKey))
             )
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: SuggestCodes.id)
+            throw Self.failure(error, operation: SuggestCodes.id)
         }
 
         switch output {
@@ -33,7 +33,7 @@ extension BFMInventoryTransport {
                 for: .rateLimited, operation: SuggestCodes.id)
         case .badGateway(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue),
+                for: .upstream(code: try upstream.body.json.code),
                 operation: SuggestCodes.id)
         case .undocumented(let status, _):
             throw BFMInventoryFailureMapping.repositoryError(

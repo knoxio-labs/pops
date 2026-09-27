@@ -1,10 +1,14 @@
+import { z } from 'zod';
+
 /**
  * Shared zod building blocks for the ai pillar REST contract.
  *
  * Everything here is zod-only — no imports from `src/api/` or `src/db/`,
  * so the contract honours the package boundary (consumers see only `.`).
  */
-import { z } from 'zod';
+import { ErrorBodySchema } from '@pops/types';
+
+export { ErrorBodySchema } from '@pops/types';
 
 /** String identity (uuid style). Path + body alike. */
 export const NonEmptyString = z.string().min(1);
@@ -24,15 +28,6 @@ export const PaginationMetaSchema = z.object({
   limit: z.number(),
   offset: z.number(),
   hasMore: z.boolean(),
-});
-
-/**
- * Error envelope. `code` carries the originating `HttpError` subclass name
- * (e.g. `NotFoundError`) so clients can branch without parsing `message`.
- */
-export const ErrorBodySchema = z.object({
-  message: z.string(),
-  code: z.string().optional(),
 });
 
 /** Bare `{ message }` body returned by delete-style mutations. */

@@ -20,7 +20,6 @@ import {
   workersRunPruner,
 } from '../../cerebrum-api';
 import { unwrap } from '../../cerebrum-api-helpers';
-import { extractMessage } from '../../utils/errors';
 import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 
 import type { GliaWorkerKey } from '../../glia/types';
@@ -30,18 +29,10 @@ interface WorkerMutationState {
   mutate: (input: { dryRun: boolean }, opts: { onSuccess: () => void }) => void;
 }
 
-function useSharedCallbacks() {
-  const { t } = useTranslation('cerebrum');
-  return {
-    onError: (err: unknown) => toast.error(extractMessage(err, t('errors.unknown'))),
-  };
-}
-
 function usePrunerMutation(): WorkerMutationState {
   return useMutation({
     mutationFn: async (input: { dryRun: boolean }) =>
       unwrap(await workersRunPruner({ body: input })),
-    ...useSharedCallbacks(),
   });
 }
 
@@ -49,7 +40,6 @@ function useConsolidatorMutation(): WorkerMutationState {
   return useMutation({
     mutationFn: async (input: { dryRun: boolean }) =>
       unwrap(await workersRunConsolidator({ body: input })),
-    ...useSharedCallbacks(),
   });
 }
 
@@ -57,7 +47,6 @@ function useLinkerMutation(): WorkerMutationState {
   return useMutation({
     mutationFn: async (input: { dryRun: boolean }) =>
       unwrap(await workersRunLinker({ body: input })),
-    ...useSharedCallbacks(),
   });
 }
 
@@ -65,7 +54,6 @@ function useAuditorMutation(): WorkerMutationState {
   return useMutation({
     mutationFn: async (input: { dryRun: boolean }) =>
       unwrap(await workersRunAuditor({ body: input })),
-    ...useSharedCallbacks(),
   });
 }
 

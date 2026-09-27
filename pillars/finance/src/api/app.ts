@@ -19,13 +19,13 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
 import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { financeContract } from '../contract/rest.js';
 import { type FinanceApiDeps, makeRequestHandler } from './handlers.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeUpWebhookIngest } from './modules/up-bank/webhook-ingest.js';
-import { createRequestValidationErrorHandler } from './rest/error-mapping.js';
 import { makeFinanceRestHandlers } from './rest/handlers.js';
 import { createUpBankWebhookRouter } from './webhooks/up-bank.js';
 
@@ -59,13 +59,16 @@ const openapiDocument: unknown = JSON.parse(
 
 export function createFinanceApiApp(deps: FinanceApiDeps): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'finance' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
 
   // Up Bank signs the raw request bytes, so the webhook body must reach the
   // handler unparsed. The path-scoped raw parser MUST precede the global JSON
   // parser, which would otherwise consume the stream first.
   app.use('/webhooks/up', express.raw({ type: 'application/json' }));
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(errors.bodyParser);
 
   const handlers = makeRequestHandler(deps);
 
@@ -99,7 +102,9 @@ export function createFinanceApiApp(deps: FinanceApiDeps): Express {
     // own error body. Every route declaring a 400 declares `ErrorBody`, so
     // without this the document promises one shape and the server sends
     // another — see `rest/error-mapping.ts`.
-    requestValidationErrorHandler: createRequestValidationErrorHandler(),
+    requestValidationErrorHandler: (error, req, res, next) => {
+      errors.validation(error, req as Request, res as Response, next);
+    },
   });
 
   // Raw (non-ts-rest) webhook route. Mounted after the contract endpoints; its
@@ -108,6 +113,9 @@ export function createFinanceApiApp(deps: FinanceApiDeps): Express {
   app.use(
     createUpBankWebhookRouter({ ingest: makeUpWebhookIngest(deps.financeDb.db, deps.contacts) })
   );
+
+  app.use(errors.notFound);
+  app.use(errors.final);
 
   return app;
 }

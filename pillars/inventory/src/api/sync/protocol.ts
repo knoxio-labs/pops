@@ -9,8 +9,8 @@ const PROTOCOL_PATTERN = /^\d{1,6}$/;
 /**
  * Check a request's `Pops-Inventory-Protocol` against the server's minimum
  * (Inventory ADR-002 D10) and return it. Absent, or below the minimum, is
- * `426 client_too_old`, which the phone shows as "This app is too old";
- * present but not a whole number is `400 invalid_protocol`. A client newer
+ * `426 inventory.sync.client_too_old`; present but not a whole number is
+ * `400 inventory.sync.invalid_protocol`. A client newer
  * than the server is served: protocol changes are additive until the minimum
  * is raised.
  */
@@ -65,7 +65,7 @@ export function createProtocolGate(
         next(error);
         return;
       }
-      res.status(error.status).json({ message: error.message, code: error.code });
+      next(error);
     }
   };
 }

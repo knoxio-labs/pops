@@ -20,6 +20,7 @@
  * honouring it in name only would be a claim the pillar cannot back.
  */
 import { searchFilterScope, searchPurchases } from '../../db/index.js';
+import { purchaseErrorBody } from '../errors.js';
 
 import type { z } from 'zod';
 
@@ -35,7 +36,7 @@ export function makeSearchHandlers(db: PurchasesDb) {
       if (!scope.ok) {
         return {
           status: 400 as const,
-          body: { message: scope.message, code: 'UNSUPPORTED_FILTER' },
+          body: purchaseErrorBody('unsupported_filter', { message: scope.message }),
         };
       }
 

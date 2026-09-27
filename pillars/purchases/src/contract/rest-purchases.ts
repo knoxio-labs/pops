@@ -133,8 +133,8 @@ export const purchasesPurchaseContract = c.router({
   /**
    * Edit a purchase that is already saved (POPS-2458). Merchant, date and
    * total are locked on a matched, part-matched, or unrecognised status;
-   * everything else stays editable. `409 purchase_locked` and `409
-   * purchase_stale` are the two ways the edit is refused outright; `502` is
+   * everything else stays editable. `409 purchases.purchase.locked` and
+   * `409 purchases.purchase.stale` are the two ways the edit is refused outright; `502` is
    * inventory's own pointer clear failing before anything here commits
    * (POPS-4268) — the phone shows its save-failed state and the caller's own
    * retry is the retry, since clearing that pointer is idempotent.

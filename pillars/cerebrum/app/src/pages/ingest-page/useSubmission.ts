@@ -10,7 +10,6 @@
  */
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { toast } from 'sonner';
 
 import { ingestQuickCapture, ingestSubmit } from '../../cerebrum-api';
 import { unwrap } from '../../cerebrum-api-helpers';
@@ -22,12 +21,15 @@ import {
   toQuickCaptureShape,
 } from './submission-helpers';
 
+import type { CerebrumApiError } from '../../cerebrum-api-helpers';
 import type {
   QuickCaptureMutation,
   QuickCapturePayload,
+  QuickCaptureResponse,
   SetBulkResults,
   SubmitMutation,
   SubmitPayload,
+  SubmitResponse,
 } from './submission-types';
 import type { BulkSegmentOutcome, IngestFormValues, SubmitResult } from './types';
 import type { useFormState } from './useFormState';
@@ -48,15 +50,19 @@ function buildSubmitPayload(form: IngestFormValues): SubmitPayload {
 }
 
 function useIngestMutations(setSubmitResult: (next: SubmitResult | null) => void) {
-  const submitMutation = useMutation({
+  const submitMutation = useMutation<SubmitResponse, CerebrumApiError, SubmitPayload>({
+    meta: { errorHandled: true },
     mutationFn: async (payload: SubmitPayload) => unwrap(await ingestSubmit({ body: payload })),
     onSuccess: (result) => setSubmitResult(asResult(toQuickCaptureShape(result))),
-    onError: (error: Error) => toast.error('Submit Engram failed', { description: error.message }),
   });
-  const quickCaptureMutation = useMutation({
+  const quickCaptureMutation = useMutation<
+    QuickCaptureResponse,
+    CerebrumApiError,
+    QuickCapturePayload
+  >({
+    meta: { errorHandled: true },
     mutationFn: async (payload: QuickCapturePayload) =>
       unwrap(await ingestQuickCapture({ body: payload })),
-    onError: (error: Error) => toast.error('Capture failed', { description: error.message }),
   });
   return { submitMutation, quickCaptureMutation };
 }
@@ -102,7 +108,8 @@ export function useSubmission(formState: FormState) {
   }, [formState]);
 
   const isSubmitting = submitMutation.isPending || quickCaptureMutation.isPending || bulkInFlight;
-  const submitError = submitMutation.error?.message ?? null;
+  const submitError =
+    submitMutation.error ?? (bulkResults === null ? quickCaptureMutation.error : null);
 
   return {
     handleSubmit,

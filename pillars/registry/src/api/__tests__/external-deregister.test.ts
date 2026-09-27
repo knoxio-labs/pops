@@ -141,7 +141,7 @@ describe('POST /core.registry.deregister — idempotency', () => {
 });
 
 describe('POST /core.registry.deregister — internal pillar refusal', () => {
-  it('returns 403 internal-pillar-not-deregisterable-externally when the row was registered via the in-tree bootstrap path', async () => {
+  it('returns a registered 403 when the row was registered via the in-tree bootstrap path', async () => {
     pillarRegistryService.upsertPillarRegistration(coreDb.db, {
       baseUrl: 'http://finance-api:3004',
       manifest: {
@@ -162,8 +162,9 @@ describe('POST /core.registry.deregister — internal pillar refusal', () => {
     });
     expect(res.status).toBe(403);
     expect(res.body).toMatchObject({
-      ok: false,
-      reason: 'internal-pillar-not-deregisterable-externally',
+      code: 'registry.deregistration.internal_forbidden',
+      requestId: expect.any(String),
+      retryable: false,
     });
     expect(pillarRegistryService.getPillarRegistration(coreDb.db, 'finance')).not.toBeNull();
     expect(capturedEvents).toEqual([]);
@@ -174,7 +175,7 @@ describe('POST /core.registry.deregister — body validation', () => {
   it('returns 400 when pillarId is missing', async () => {
     const res = await requestOn(app).post('/core.registry.deregister').send({});
     expect(res.status).toBe(400);
-    const fields = res.body.issues.map((i: { field: string }) => i.field);
+    const fields = res.body.details.issues.map((i: { field: string }) => i.field);
     expect(fields).toContain('pillarId');
   });
 });

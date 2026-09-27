@@ -463,13 +463,22 @@ describe('GET /web/moving-day', () => {
       .query({ homeLocationId: randomUUID() });
 
     expect(response.status).toBe(400);
-    expect(response.body).toMatchObject({ code: 'ValidationError' });
+    expect(response.body).toMatchObject({
+      code: 'inventory.request.invalid',
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 
   it('an empty destinationField is a 400', async () => {
     const response = await harness.api.get('/web/moving-day').query({ destinationField: '   ' });
 
     expect(response.status).toBe(400);
-    expect(response.body).toMatchObject({ name: 'ValidationError' });
+    expect(response.body).toMatchObject({
+      code: 'inventory.request.invalid',
+      details: { issues: expect.any(Array) },
+      requestId: expect.any(String),
+      retryable: false,
+    });
   });
 });

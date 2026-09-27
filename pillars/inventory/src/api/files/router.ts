@@ -26,22 +26,14 @@ import {
 
 import { lookupPillar as defaultLookupPillar } from '@pops/pillar-sdk/discovery';
 
+import { inventoryError, sendInventoryError } from '../errors.js';
 import { getInventoryDocumentsDir } from '../modules/document-files/paths.js';
 import { getInventoryImagesDir } from '../modules/photos/paths.js';
 import { tryServeFile } from './serve-file.js';
-
-const DOCUMENTS_PILLAR_ID = 'documents';
-
-/**
- * Bound the proxied thumbnail fetch so a hung `documents` service can't pin an
- * inventory request (and its worker) indefinitely. Mirrors the 10s budget the
- * old direct Paperless client used for thumbnail fetches.
- */
-const THUMBNAIL_FETCH_TIMEOUT_MS = 10_000;
+import { createThumbnailProxyHandler } from './thumbnail-proxy.js';
 
 /** Uploaded item bytes can change on re-upload, so cache privately + short. */
 const UPLOAD_CACHE_CONTROL = 'private, max-age=3600';
-const THUMBNAIL_CACHE_CONTROL = 'public, max-age=3600';
 
 /** Item IDs are hex blobs in prod; e2e seeds use simple `inv-NNN` ids. */
 const ITEM_ID_RE = /^[a-z0-9-]+$/i;
@@ -69,11 +61,29 @@ async function serveItemFile(req: Request, res: ExpressResponse, spec: ServeSpec
   const filename = String(req.params['filename'] ?? '');
 
   if (!itemId || itemId.includes('..') || itemId.includes('/') || !ITEM_ID_RE.test(itemId)) {
-    res.status(400).json({ error: `Invalid item id: ${itemId}` });
+    sendInventoryError(
+      req,
+      res,
+      inventoryError({
+        area: 'files',
+        reason: 'invalid_item_id',
+        status: 400,
+        message: `Invalid item id: ${itemId}`,
+      })
+    );
     return;
   }
   if (!spec.filenameRe.test(filename)) {
-    res.status(400).json({ error: `Invalid filename: ${filename}` });
+    sendInventoryError(
+      req,
+      res,
+      inventoryError({
+        area: 'files',
+        reason: 'invalid_filename',
+        status: 400,
+        message: `Invalid filename: ${filename}`,
+      })
+    );
     return;
   }
 
@@ -81,12 +91,26 @@ async function serveItemFile(req: Request, res: ExpressResponse, spec: ServeSpec
   // Sandbox: the resolved path must live inside the base dir — defends against
   // any traversal the regexes don't catch.
   if (!filePath.startsWith(spec.baseDir + '/') && filePath !== spec.baseDir) {
-    res.status(400).json({ error: 'Invalid path' });
+    sendInventoryError(
+      req,
+      res,
+      inventoryError({
+        area: 'files',
+        reason: 'invalid_path',
+        status: 400,
+        message: 'Invalid path',
+      })
+    );
     return;
   }
 
   const served = await tryServeFile(filePath, res, UPLOAD_CACHE_CONTROL);
-  if (!served) res.status(404).json({ error: spec.notFound });
+  if (!served)
+    sendInventoryError(
+      req,
+      res,
+      inventoryError({ area: 'files', reason: 'not_found', status: 404, message: spec.notFound })
+    );
 }
 
 export interface CreateInventoryFilesRouterOptions {
@@ -99,68 +123,6 @@ export interface CreateInventoryFilesRouterOptions {
   lookupDocumentsPillar?: typeof defaultLookupPillar;
   /** Fetch implementation for the proxied byte request. Test-only override. */
   fetchImpl?: typeof fetch;
-}
-
-function createThumbnailProxyHandler(
-  lookupDocumentsPillar: typeof defaultLookupPillar,
-  fetchImpl: typeof fetch
-) {
-  return async (req: Request<{ id: string }>, res: ExpressResponse): Promise<void> => {
-    const { id } = req.params;
-    if (!/^\d+$/.test(id)) {
-      res.status(400).json({ error: `Invalid document id: ${id}` });
-      return;
-    }
-
-    let documentsPillar: Awaited<ReturnType<typeof lookupDocumentsPillar>>;
-    try {
-      documentsPillar = await lookupDocumentsPillar(DOCUMENTS_PILLAR_ID);
-    } catch (err) {
-      // Discovery throws (e.g. RegistryUnreachableError) only when its cache
-      // is empty AND the registry is unreachable — degrade the same way as an
-      // unregistered pillar rather than surfacing an unhandled 500.
-      console.error('[inventory/documents] Thumbnail discovery error:', err);
-      res.status(503).json({ error: 'Documents service is not available' });
-      return;
-    }
-    if (!documentsPillar) {
-      res.status(503).json({ error: 'Documents service is not available' });
-      return;
-    }
-
-    let response: Response;
-    try {
-      response = await fetchImpl(`${documentsPillar.baseUrl}/documents/${id}/thumbnail`, {
-        signal: AbortSignal.timeout(THUMBNAIL_FETCH_TIMEOUT_MS),
-      });
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'TimeoutError') {
-        console.error('[inventory/documents] Thumbnail proxy timed out:', err);
-        res.status(504).json({ error: 'The documents pillar timed out' });
-        return;
-      }
-      console.error('[inventory/documents] Thumbnail proxy error:', err);
-      res.status(502).json({ error: 'Failed to reach the documents pillar' });
-      return;
-    }
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        res.status(404).json({ error: 'Document not found' });
-        return;
-      }
-      if (response.status === 503) {
-        res.status(503).json({ error: 'Paperless-ngx is not configured' });
-        return;
-      }
-      res.status(502).json({ error: 'Failed to fetch thumbnail from the documents pillar' });
-      return;
-    }
-
-    const contentType = response.headers.get('content-type') ?? 'image/png';
-    res.set({ 'Content-Type': contentType, 'Cache-Control': THUMBNAIL_CACHE_CONTROL });
-    res.send(Buffer.from(await response.arrayBuffer()));
-  };
 }
 
 /** Build the inventory pillar's raw file-serving router. */

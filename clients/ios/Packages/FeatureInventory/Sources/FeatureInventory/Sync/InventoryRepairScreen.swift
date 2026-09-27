@@ -11,6 +11,7 @@ internal struct InventoryRepairScreen: View {
     @State private var chosen: InventoryRepairOption.ID?
     @State private var code: String = ""
     @Environment(\.inventoryItemForm) private var itemForm
+    @Environment(\.errorPresenter) private var errorPresenter
 
     internal init(repairId: InventoryRepair.ID, store: any InventoryStore) {
         _model = State(wrappedValue: InventoryRepairViewModel(repairId: repairId, store: store))
@@ -42,15 +43,17 @@ internal struct InventoryRepairScreen: View {
         .popsTitleDisplay(large: false)
         .tint(.popsInventory)
         .inventoryWriteFailureAlerts($model.failure)
-        .alert(
-            "That change did not save",
-            isPresented: Binding(
-                get: { model.refusal != nil }, set: { if !$0 { model.refusal = nil } }),
-            presenting: model.refusal
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text($0)
+        .onChange(of: model.refusal) { _, refusal in
+            guard let refusal else { return }
+            errorPresenter.present(
+                PopsError(
+                    code: "ios.inventory.repair_refused",
+                    message: refusal,
+                    retryable: false,
+                    kind: .client),
+                operation: "Repair inventory",
+                context: .foreground)
+            model.refusal = nil
         }
     }
 

@@ -270,7 +270,7 @@ describe('the non-mutating draft preview', () => {
       discardedOverrides: [{ fieldId: gadget.readyFieldId, items: 1 }],
     });
     expect(rejected.status, JSON.stringify(rejected.body)).toBe(400);
-    expect(rejected.body.preview.compatibility.classification).toBe('forbidden');
+    expect(rejected.body.details.preview.compatibility.classification).toBe('forbidden');
     expect(snapshotDatabase()).toEqual(before);
   });
 });
@@ -296,13 +296,13 @@ describe('the publication protocol gate over REST', () => {
     const refused = await publish(patched.draft);
 
     expect(refused.status, JSON.stringify(refused.body)).toBe(409);
-    expect(refused.body.code).toBe('protocol_rollout_required');
-    expect(refused.body.preview).toMatchObject({
+    expect(refused.body.code).toBe('inventory.catalogue.protocol_rollout_required');
+    expect(refused.body.details.preview).toMatchObject({
       baseRevision: draft.baseRevision,
       draftRevision: draft.revision,
       compatibility: { classification: 'protocol_gated' },
     });
-    expect(refused.body.preview.compatibility.changes).toEqual(
+    expect(refused.body.details.preview.compatibility.changes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ classification: 'protocol_gated', code: 'primitive_kind_added' }),
         expect.objectContaining({ code: 'minimum_protocol_increased' }),
@@ -427,8 +427,8 @@ describe('computed-field publication policy over REST', () => {
       const refused = await publish(patched.draft);
 
       expect(refused.status, JSON.stringify(refused.body)).toBe(409);
-      expect(refused.body.code).toBe('catalogue_migration_required');
-      expect(refused.body.preview.compatibility.discardedOverrides).toEqual([
+      expect(refused.body.code).toBe('inventory.catalogue.migration_required');
+      expect(refused.body.details.preview.compatibility.discardedOverrides).toEqual([
         { fieldId: gadget.readyFieldId, items: 2 },
       ]);
       expect(overrideRows(gadget.readyFieldId)).toEqual({ count: 2 });

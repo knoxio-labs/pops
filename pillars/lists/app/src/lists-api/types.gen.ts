@@ -4,6 +4,14 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ErrorBody = {
+  code: string;
+  details?: unknown;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type ItemsSearchData = {
   body?: never;
   path?: never;
@@ -88,17 +96,11 @@ export type ItemsUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ItemsUpdateError = ItemsUpdateErrors[keyof ItemsUpdateErrors];
@@ -132,10 +134,7 @@ export type ItemsCheckErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ItemsCheckError = ItemsCheckErrors[keyof ItemsCheckErrors];
@@ -170,10 +169,7 @@ export type ItemsUncheckErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ItemsUncheckError = ItemsUncheckErrors[keyof ItemsUncheckErrors];
@@ -239,10 +235,7 @@ export type ListCreateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
 };
 
 export type ListCreateError = ListCreateErrors[keyof ListCreateErrors];
@@ -276,10 +269,7 @@ export type ListDeleteErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ListDeleteError = ListDeleteErrors[keyof ListDeleteErrors];
@@ -356,10 +346,7 @@ export type ListUpdateErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
 };
 
 export type ListUpdateError = ListUpdateErrors[keyof ListUpdateErrors];
@@ -398,10 +385,7 @@ export type ListArchiveErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ListArchiveError = ListArchiveErrors[keyof ListArchiveErrors];
@@ -435,10 +419,7 @@ export type ListUnarchiveErrors = {
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ListUnarchiveError = ListUnarchiveErrors[keyof ListUnarchiveErrors];
@@ -478,17 +459,11 @@ export type ItemsAddErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ItemsAddError = ItemsAddErrors[keyof ItemsAddErrors];
@@ -531,17 +506,11 @@ export type ItemsBulkAddErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ItemsBulkAddError = ItemsBulkAddErrors[keyof ItemsBulkAddErrors];
@@ -664,17 +633,11 @@ export type ItemsUpsertByRefErrors = {
   /**
    * 400
    */
-  400: {
-    code?: string;
-    message: string;
-  };
+  400: ErrorBody;
   /**
    * 404
    */
-  404: {
-    code?: string;
-    message: string;
-  };
+  404: ErrorBody;
 };
 
 export type ItemsUpsertByRefError = ItemsUpsertByRefErrors[keyof ItemsUpsertByRefErrors];

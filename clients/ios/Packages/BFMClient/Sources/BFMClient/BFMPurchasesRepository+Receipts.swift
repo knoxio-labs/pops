@@ -10,6 +10,8 @@ extension BFMPurchasesRepository {
             output = try await client.generated.mobilePurchases_getReceiptThumbnail(
                 path: .init(sha256: sha256))
         } catch let error as ClientError {
+            let statusCode = BFMRepositoryFailure.statusCode(in: error)
+            if statusCode == 404 || statusCode == 415 { return nil }
             throw BFMRepositoryFailure.failure(error, operation: GetReceiptThumbnail.id)
         }
 
@@ -26,10 +28,10 @@ extension BFMPurchasesRepository {
             throw RepositoryError.transport("\(GetReceiptThumbnail.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetReceiptThumbnail.id)
+                try upstream.body.json.code, operation: GetReceiptThumbnail.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetReceiptThumbnail.id)
+                try upstream.body.json.code, operation: GetReceiptThumbnail.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(GetReceiptThumbnail.id): undocumented status \(statusCode)")
@@ -43,6 +45,7 @@ extension BFMPurchasesRepository {
             output = try await client.generated.mobilePurchases_getReceipt(
                 path: .init(sha256: sha256))
         } catch let error as ClientError {
+            if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
             throw BFMRepositoryFailure.failure(error, operation: GetReceipt.id)
         }
 
@@ -59,10 +62,10 @@ extension BFMPurchasesRepository {
             throw RepositoryError.transport("\(GetReceipt.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetReceipt.id)
+                try upstream.body.json.code, operation: GetReceipt.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetReceipt.id)
+                try upstream.body.json.code, operation: GetReceipt.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport("\(GetReceipt.id): undocumented status \(statusCode)")
         }

@@ -224,7 +224,9 @@ describe('POST /ai-usage/record — validation + best-effort', () => {
 
     expect(res.body).toMatchObject({
       message: 'Unknown or malformed domain: Finance Pillar!!',
-      code: 'ValidationError',
+      code: 'ai.request.invalid',
+      requestId: expect.any(String),
+      retryable: false,
     });
   });
 

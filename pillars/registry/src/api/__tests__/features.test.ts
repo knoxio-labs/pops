@@ -240,7 +240,7 @@ describe('features REST — setEnabled', () => {
       status: 400,
       body: {
         message: new FeatureScopeError('demo.capabilityFlag', 'system|user', 'capability').message,
-        code: 'ValidationError',
+        code: 'registry.request.invalid',
       },
     });
   });

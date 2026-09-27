@@ -1,10 +1,10 @@
-import { AlertCircle } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { Button } from '@pops/ui';
+import { Button, ErrorState } from '@pops/ui';
 
 import { MediaCard } from '../../components/MediaCard';
 import { MediaGrid } from '../../components/MediaGrid';
+import { MediaApiError } from '../../media-api-helpers.js';
 import { LibrarySkeleton } from './LibrarySkeleton';
 import { PaginationControls } from './PaginationControls';
 
@@ -25,18 +25,6 @@ interface LibraryContentProps {
   setParam: (key: string, value: string) => void;
   setPageSize: (s: number) => void;
   refetch: () => void;
-}
-
-function ErrorView({ refetch }: { refetch: () => void }) {
-  return (
-    <div className="text-center py-16">
-      <AlertCircle className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-      <p className="text-muted-foreground">Something went wrong loading your library.</p>
-      <Button variant="outline" size="sm" className="mt-4" onClick={() => void refetch()}>
-        Retry
-      </Button>
-    </div>
-  );
 }
 
 function LibraryEmptyView() {
@@ -77,7 +65,9 @@ function NoResults({
 
 export function LibraryContent(props: LibraryContentProps) {
   if (props.isLoading) return <LibrarySkeleton count={props.pageSize} />;
-  if (props.error) return <ErrorView refetch={props.refetch} />;
+  if (props.error instanceof MediaApiError) {
+    return <ErrorState error={props.error} onRetry={() => void props.refetch()} />;
+  }
   if (props.isLibraryEmpty) return <LibraryEmptyView />;
   if (props.items.length === 0) {
     return (

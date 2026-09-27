@@ -4,12 +4,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
-import { PageHeader } from '@pops/ui';
+import { ErrorState, PageHeader } from '@pops/ui';
 
-import { isUnavailableError, unwrap } from '../inventory-api-helpers.js';
+import { InventoryApiError, unwrap } from '../inventory-api-helpers.js';
 import { paperlessStatus, reportsWarranties } from '../inventory-api/index.js';
 import { CollapsibleSection, ExpiringSection } from './warranties-page/sections';
-import { EmptyState, ErrorState, WarrantySkeleton } from './warranties-page/states';
+import { EmptyState, WarrantySkeleton } from './warranties-page/states';
 import { categorizeWarranties, type WarrantyTiers } from './warranties-page/utils';
 import { WarrantyRow } from './warranties-page/WarrantyRow';
 
@@ -94,21 +94,21 @@ function WarrantyContent({ tiers, paperlessBaseUrl, onItemClick }: WarrantyConte
 
 function WarrantiesBody({
   isLoading,
-  isError,
+  error,
   tiers,
   paperlessBaseUrl,
   onRetry,
   onItemClick,
 }: {
   isLoading: boolean;
-  isError: boolean;
+  error: InventoryApiError | null;
   tiers: WarrantyTiers;
   paperlessBaseUrl: string | null;
   onRetry: () => void;
   onItemClick: (id: string) => void;
 }) {
   if (isLoading) return <WarrantySkeleton />;
-  if (isError) return <ErrorState onRetry={onRetry} />;
+  if (error !== null) return <ErrorState error={error} onRetry={onRetry} />;
   const totalItems =
     tiers.critical.length +
     tiers.warning.length +
@@ -128,8 +128,7 @@ export function WarrantiesPage() {
     queryKey: ['inventory', 'reports', 'warranties', undefined],
     queryFn: async () => unwrap(await reportsWarranties()),
   });
-  const { data, isLoading, isError, refetch } = warrantiesQuery;
-  const isUnavailable = isUnavailableError(warrantiesQuery.error);
+  const { data, isLoading, refetch } = warrantiesQuery;
   const { data: paperlessData } = useQuery<PaperlessStatusResult>({
     queryKey: ['inventory', 'paperless', 'status', undefined],
     queryFn: async () => unwrap(await paperlessStatus()),
@@ -149,7 +148,7 @@ export function WarrantiesPage() {
       />
       <WarrantiesBody
         isLoading={isLoading}
-        isError={isError || isUnavailable}
+        error={warrantiesQuery.error instanceof InventoryApiError ? warrantiesQuery.error : null}
         tiers={tiers}
         paperlessBaseUrl={paperlessBaseUrl}
         onRetry={() => refetch()}

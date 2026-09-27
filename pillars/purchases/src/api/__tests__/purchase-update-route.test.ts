@@ -93,7 +93,7 @@ describe('PATCH /purchases/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it('409s purchase_locked on a matched purchase', async () => {
+  it('409s with the registered locked code on a matched purchase', async () => {
     const { purchaseId, itemId } = seedOrder();
     opened.raw.prepare('UPDATE purchases SET status = ? WHERE id = ?').run('linked', purchaseId);
     const linked = getPurchase(opened.db, purchaseId);
@@ -107,10 +107,10 @@ describe('PATCH /purchases/:id', () => {
       });
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('purchase_locked');
+    expect(res.body.code).toBe('purchases.purchase.locked');
   });
 
-  it('409s purchase_stale on a mismatched expectedUpdatedAt', async () => {
+  it('409s with the registered stale code on a mismatched expectedUpdatedAt', async () => {
     const { purchaseId, itemId } = seedOrder();
 
     const res = await requestOn(appWith())
@@ -121,7 +121,8 @@ describe('PATCH /purchases/:id', () => {
       });
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('purchase_stale');
+    expect(res.body.code).toBe('purchases.purchase.stale');
+    expect(res.body.retryable).toBe(true);
   });
 
   it('400s a negative total', async () => {

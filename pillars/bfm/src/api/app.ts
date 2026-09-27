@@ -21,6 +21,8 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createPillarErrorHandlers } from '@pops/pillar-express';
+
 import {
   MOBILE_INVENTORY_MEDIA_MAX_BYTES,
   MOBILE_INVENTORY_MUTATIONS_MAX_BYTES,
@@ -103,7 +105,9 @@ export interface CreateBfmApiAppOptions {
 
 export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOptions = {}): Express {
   const app = express();
+  const errors = createPillarErrorHandlers({ pillar: 'bfm' });
   app.disable('x-powered-by');
+  app.use(errors.requestId);
 
   // FIRST, ahead of everything, including the guard.
   //
@@ -203,7 +207,7 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // reaches it. `express.json()` throws before any route matches, so its
   // refusal reaches an error handler rather than a handler — and left to
   // Express's default that is a `400` with an empty body, not the
-  // `invalid_request` these routes declare.
+  // `bfm.request.invalid` these routes declare.
   app.use(createJsonBodyErrorHandler());
 
   app.get('/openapi', (_req: Request, res: Response) => {

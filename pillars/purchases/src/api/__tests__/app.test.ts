@@ -4,7 +4,7 @@
  * where the wire schema's rejections (float cents, bad currency) actually
  * fire.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { setPurchaseStatus } from '../../db/index.js';
@@ -88,6 +88,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   cleanup();
   __resetPillarRegistryCache();
 });
@@ -99,10 +100,25 @@ describe('probes', () => {
     expect(res.body).toMatchObject({ ok: true, pillar: 'purchases', version: '1.2.3' });
   });
 
-  it('fails health when the DB handle is gone rather than reporting a bogus 200', async () => {
+  it('redacts an unknown failure into purchases.internal with its request id', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     opened.raw.close();
-    const res = await requestOn(app).get('/health');
+    const res = await requestOn(app).get('/health').set('X-Request-Id', 'health-failure-4877');
+
     expect(res.status).toBe(500);
+    expect(res.headers['x-request-id']).toBe('health-failure-4877');
+    expect(res.body).toEqual({
+      code: 'purchases.internal',
+      message: 'The service could not complete the request.',
+      requestId: 'health-failure-4877',
+      retryable: false,
+    });
+    expect(JSON.stringify(res.body)).not.toContain('database');
+    expect(logged).toHaveBeenCalledWith(
+      '[purchases] unhandled request failure',
+      expect.objectContaining({ requestId: 'health-failure-4877' })
+    );
+    logged.mockRestore();
   });
 
   it('lists itself in /pillars', async () => {
@@ -228,24 +244,28 @@ describe('POST /purchases', () => {
 
   it('answers 409 on a duplicate checksum so an adapter can treat it as a skip', async () => {
     await requestOn(app).post('/purchases').send(minimalOrder);
-    const res = await requestOn(app).post('/purchases').send(minimalOrder);
+    const res = await requestOn(app)
+      .post('/purchases')
+      .set('X-Request-Id', 'duplicate-purchase-4877')
+      .send(minimalOrder);
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('DUPLICATE_PURCHASE');
+    expect(res.body.code).toBe('purchases.purchase.duplicate');
+    expect(res.body.requestId).toBe('duplicate-purchase-4877');
+    expect(res.headers['x-request-id']).toBe('duplicate-purchase-4877');
+    expect(res.body.retryable).toBe(false);
   });
 
-  it('answers 409 DUPLICATE_PURCHASE on a re-import under a new checksum', async () => {
+  it('answers the same registered duplicate code on a re-import under a new checksum', async () => {
     // An adapter that changed how it hashes a row is still re-running the
     // same import. Asserting only the status would have hidden that this
-    // used to come back as CONFLICT_UNIQUE, which an adapter branching on
-    // DUPLICATE_PURCHASE to skip would treat as a hard failure.
+    // A generic storage conflict would make an adapter treat this as a hard failure.
     await requestOn(app).post('/purchases').send(minimalOrder);
     const res = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, checksum: 'different-recipe' });
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('DUPLICATE_PURCHASE');
-    // The message names the checksum already on file, not the one submitted.
-    expect(res.body.message).toContain('http-1');
+    expect(res.body.code).toBe('purchases.purchase.duplicate');
+    expect(res.body.message).toBe('This purchase has already been recorded.');
   });
 
   it('answers the same way whichever identity matched', async () => {
@@ -739,7 +759,7 @@ describe('DELETE /purchases/:id', () => {
   it('404s an id that was never there', async () => {
     const res = await requestOn(app).delete('/purchases/nope');
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('NOT_FOUND');
+    expect(res.body.code).toBe('purchases.resource.not_found');
   });
 });
 
@@ -775,7 +795,7 @@ describe('GET /sources/:id', () => {
   it('404s an unregistered slug', async () => {
     const res = await requestOn(app).get('/sources/ebay');
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('NOT_FOUND');
+    expect(res.body.code).toBe('purchases.resource.not_found');
   });
 });
 
@@ -810,7 +830,7 @@ describe('payload rejections', () => {
     // A client payload error, not a server fault. A 500 would leave an
     // adapter unable to tell a bad payload from a broken pillar.
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('INVALID_INGEST_PAYLOAD');
+    expect(res.body.code).toBe('purchases.purchase.invalid_ingest_payload');
   });
 
   it('rejects two lines claiming the same ref', async () => {
@@ -826,7 +846,7 @@ describe('payload rejections', () => {
         ],
       });
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('INVALID_INGEST_PAYLOAD');
+    expect(res.body.code).toBe('purchases.purchase.invalid_ingest_payload');
   });
 
   it("rejects an explicit ref that collides with another line's positional key", async () => {
@@ -845,7 +865,7 @@ describe('payload rejections', () => {
         ],
       });
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('INVALID_INGEST_PAYLOAD');
+    expect(res.body.code).toBe('purchases.purchase.invalid_ingest_payload');
   });
 
   it('rejects a shipment status outside the vocabulary', async () => {
@@ -1112,7 +1132,7 @@ describe('purchase handler edge paths', () => {
       );
 
       expect(res.status).toBe(400);
-      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+      expect(res.body.code).toBe('purchases.request.merchant_filter_conflict');
       expect(res.body.message).toContain('merchantEntityId');
       expect(res.body.message).toContain('merchantEntityName');
     });
@@ -1124,7 +1144,7 @@ describe('purchase handler edge paths', () => {
       );
 
       expect(res.status).toBe(400);
-      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+      expect(res.body.code).toBe('purchases.request.merchant_filter_conflict');
     });
 
     it('scopes a roll-up to one merchant, so a row and its orders agree', async () => {
@@ -1191,7 +1211,7 @@ describe('purchase handler edge paths', () => {
       );
 
       expect(res.status).toBe(400);
-      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+      expect(res.body.code).toBe('purchases.request.merchant_filter_conflict');
     });
   });
 

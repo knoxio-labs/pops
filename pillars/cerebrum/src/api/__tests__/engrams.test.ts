@@ -70,7 +70,7 @@ describe('POST /engrams (create)', () => {
       client().engrams.create({ type: 'note', title: 'No scope' })
     ).rejects.toMatchObject({
       status: 400,
-      body: { message: 'at least one scope is required', code: 'ValidationError' },
+      body: { message: 'at least one scope is required', code: 'cerebrum.request.invalid' },
     });
   });
 

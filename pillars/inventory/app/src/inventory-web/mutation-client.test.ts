@@ -184,7 +184,7 @@ describe('sendInventoryMutation', () => {
     expect(outcome.status).toBe('conflict');
   });
 
-  it('throws InventoryApiError on a 426 (protocol too old)', async () => {
+  it('throws ApiError on a 426 (protocol too old)', async () => {
     mocks.syncMutations.mockResolvedValue({
       data: undefined,
       error: { message: 'client too old' },
@@ -195,7 +195,7 @@ describe('sendInventoryMutation', () => {
     ).rejects.toMatchObject({ status: 426 });
   });
 
-  it('throws InventoryApiError when the response carries no outcome at all', async () => {
+  it('throws ApiError when the response carries no outcome at all', async () => {
     mocks.syncMutations.mockResolvedValue({
       data: { outcomes: [], highWaterSeq: 0 },
       error: undefined,
@@ -257,7 +257,7 @@ describe('sendInventoryMutation', () => {
     } as const;
 
     await expect(sendInventoryMutations([input])).rejects.toMatchObject({
-      name: 'InventoryApiError',
+      name: 'ApiError',
       message: 'inventory mutation returned 0 outcomes for 1 mutations',
       status: 200,
     });

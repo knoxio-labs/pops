@@ -39,3 +39,8 @@ export const useImportStore = create<ImportStore>()((set, get) => ({
   ...buildPendingTagRuleActions(set, get),
   ...buildTransactionActions(set, get),
 }));
+
+/** Reads the import store outside React without subscribing a component. */
+export function getImportStoreState(): ImportStore {
+  return useImportStore.getState();
+}

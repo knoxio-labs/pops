@@ -43,6 +43,19 @@ function ok<T>(data: T) {
   return { data, error: undefined };
 }
 
+function failedLibraryRequest(message = 'Library unavailable') {
+  return {
+    data: undefined,
+    error: {
+      code: 'media.library.unavailable',
+      message,
+      requestId: 'req-library',
+      retryable: true,
+    },
+    response: { status: 503 },
+  };
+}
+
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -140,35 +153,31 @@ describe('LibraryPage', () => {
   });
 
   describe('Error state', () => {
-    it('renders error message with retry button', async () => {
-      libraryListMock.mockRejectedValue(new Error('Network error'));
+    it('renders the API error code with a retry button', async () => {
+      libraryListMock.mockResolvedValue(failedLibraryRequest());
       renderPage();
 
-      expect(
-        await screen.findByText('Something went wrong loading your library.')
-      ).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+      expect(await screen.findByLabelText('Error code')).toHaveTextContent(
+        'media.library.unavailable'
+      );
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     });
 
     it('calls the library API again when Retry is clicked', async () => {
-      libraryListMock.mockRejectedValue(new Error('Network error'));
+      libraryListMock.mockResolvedValue(failedLibraryRequest());
       renderPage();
 
-      await screen.findByRole('button', { name: 'Retry' });
+      await screen.findByRole('button', { name: 'Try again' });
       libraryListMock.mockClear();
-      await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
       await waitFor(() => expect(libraryListMock).toHaveBeenCalled());
     });
 
     it('does not expose technical error details', async () => {
-      libraryListMock.mockRejectedValue(
-        new Error('TRPC_INTERNAL_ERROR: connection refused at postgres:5432')
-      );
+      libraryListMock.mockResolvedValue(failedLibraryRequest('Library unavailable'));
       renderPage();
 
-      expect(
-        await screen.findByText('Something went wrong loading your library.')
-      ).toBeInTheDocument();
+      expect(await screen.findByText('Library unavailable')).toBeInTheDocument();
       expect(screen.queryByText(/TRPC_INTERNAL_ERROR/)).not.toBeInTheDocument();
       expect(screen.queryByText(/postgres/)).not.toBeInTheDocument();
     });

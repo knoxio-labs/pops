@@ -114,8 +114,8 @@ async function patch(draft: Draft, operations: readonly unknown[]) {
 async function rejectedCodes(draft: Draft, operations: readonly unknown[]) {
   const response = await patchRequest(draft, operations);
   expect(response.status, JSON.stringify(response.body)).toBe(400);
-  expect(response.body.code).toBe('catalogue_validation_failed');
-  return (response.body.issues as { code: string; path: string }[]).map(
+  expect(response.body.code).toBe('inventory.catalogue.validation_failed');
+  return (response.body.details.issues as { code: string; path: string }[]).map(
     (entry) => `${entry.path}:${entry.code}`
   );
 }
@@ -326,8 +326,8 @@ describe('field default values at publication', () => {
     const refused = await publish(withDefault.draft);
 
     expect(refused.status, JSON.stringify(refused.body)).toBe(400);
-    expect(refused.body.code).toBe('catalogue_validation_failed');
-    expect(refused.body.issues).toEqual([
+    expect(refused.body.code).toBe('inventory.catalogue.validation_failed');
+    expect(refused.body.details.issues).toEqual([
       expect.objectContaining({
         definitionId: kit.sizeFieldId,
         path: 'defaultValues',

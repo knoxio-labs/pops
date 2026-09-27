@@ -100,7 +100,6 @@ function useDeleteFlow() {
       toast.success('Tag rule deleted');
       setDeleteId(null);
     },
-    onError: (err: Error) => toast.error(err.message),
   });
   const handleDelete = useCallback(() => {
     if (!deleteId) return;
@@ -117,7 +116,6 @@ function useDisableFlow() {
       void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules', 'list'] });
       toast.success('Tag rule disabled');
     },
-    onError: (err: Error) => toast.error(err.message),
   });
   const handleDisable = useCallback((id: string) => disableMutation.mutate(id), [disableMutation]);
   return { disableMutation, handleDisable };
@@ -168,7 +166,6 @@ function useApplyExistingFlow() {
       void queryClient.invalidateQueries({ queryKey: ['finance', 'transactions'] });
       toast.success(applyExistingMessage(t, result.data));
     },
-    onError: (err: Error) => toast.error(err.message),
   });
   const handleApplyExisting = useCallback(
     (id: string) => applyExistingMutation.mutate(id),

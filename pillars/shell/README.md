@@ -144,6 +144,13 @@ on its own path instead of a boot failure. The bundle itself is a static nginx
 image built from the pillar's app (`pillars/purchases/app/Dockerfile`), the same
 shape the design playground uses.
 
+The shell preserves an incoming `X-Request-Id`, mints nginx's `$request_id` when
+the header is absent, returns it on every response, forwards it to proxied
+services, and records it in the JSON access log. If nginx itself cannot reach an
+upstream, its 502, 503, and 504 responses use the ADR-054
+`gateway.upstream_unavailable` envelope and are retryable. Upstream response
+bodies are not intercepted, including pillar-owned 502, 503, and 504 envelopes.
+
 In dev, `vite-plugin-pillar-ui-dev.ts` serves `pillars/<id>/app/dist/remote` at
 the same path, so the loader path is exercised locally rather than first in a
 deployment. Build the bundle with
@@ -187,6 +194,17 @@ error boundary, so a bundle that 404s degrades to a placeholder on that pillar
 alone. An expiry has the opposite failure: a machine left off for longer than
 the window boots to the empty shell this exists to prevent. Every successful
 boot overwrites the entry.
+
+## API failure presentation
+
+The shell owns mutation failure notifications through the shared React Query
+`MutationCache`. A failed mutation is rendered from its ADR-054 `ApiError`, so
+the notification includes the safe server message, stable code and request
+details. A feature that renders the failure inline sets
+`meta.errorHandled: true`; otherwise adding a feature-local error toast would
+show the same failure twice. Query failures remain inline where the page has a
+natural error state, while network-wide query failures also use the shell's
+deduplicated offline notification.
 
 ## Overlay mount contract
 

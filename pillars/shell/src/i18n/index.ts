@@ -3,7 +3,7 @@
  *
  * Locales are the `SUPPORTED_LOCALES` `@pops/pillar-sdk` declares, falling
  * back to its `DEFAULT_LOCALE`. The shell registers only the namespaces it and
- * the kit read — `common`, `shell`, `navigation` and `ui`, from
+ * the kit read — `common`, `errors`, `shell`, `navigation` and `ui`, from
  * `@pops/locales`. Each pillar owns its own namespace and ships it in its
  * remote bundle's `i18n` export; the runtime loader adds it to this instance
  * when that pillar is first loaded (`app/remote-translations.ts`), so nothing
@@ -15,10 +15,12 @@ import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 import enAUCommon from '@pops/locales/en-AU/common.json';
+import enAUErrors from '@pops/locales/en-AU/errors.json';
 import enAUNavigation from '@pops/locales/en-AU/navigation.json';
 import enAUShell from '@pops/locales/en-AU/shell.json';
 import enAUUi from '@pops/locales/en-AU/ui.json';
 import ptBRCommon from '@pops/locales/pt-BR/common.json';
+import ptBRErrors from '@pops/locales/pt-BR/errors.json';
 import ptBRNavigation from '@pops/locales/pt-BR/navigation.json';
 import ptBRShell from '@pops/locales/pt-BR/shell.json';
 import ptBRUi from '@pops/locales/pt-BR/ui.json';
@@ -36,7 +38,7 @@ function getStoredLocale(): SupportedLocale {
 }
 
 /** The shared namespaces the shell registers at init, in resource-loading order. */
-export const NAMESPACES = ['common', 'shell', 'navigation', 'ui'] as const;
+export const NAMESPACES = ['common', 'errors', 'shell', 'navigation', 'ui'] as const;
 
 const i18n = createInstance();
 
@@ -68,12 +70,14 @@ void i18n.use(initReactI18next).init({
   resources: {
     'en-AU': {
       common: enAUCommon,
+      errors: enAUErrors,
       shell: enAUShell,
       navigation: enAUNavigation,
       ui: enAUUi,
     },
     'pt-BR': {
       common: ptBRCommon,
+      errors: ptBRErrors,
       shell: ptBRShell,
       navigation: ptBRNavigation,
       ui: ptBRUi,

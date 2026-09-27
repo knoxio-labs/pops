@@ -1,16 +1,21 @@
+import { PopsError } from '@pops/pillar-express';
+
 /**
- * A request the sync protocol refuses, carrying the status and machine `code`
- * the contract declares for it (`src/contract/rest-sync.ts`). Handlers turn it
- * into `{ status, body: { message, code } }`; anything else propagates.
+ * A request the sync protocol refuses, carrying the status and registered
+ * dotted code serialized by the shared Express error pipeline.
  */
-export class SyncRequestError extends Error {
+export class SyncRequestError extends PopsError {
   constructor(
     readonly status: 400 | 401 | 403 | 404 | 409 | 426 | 503,
-    readonly code: string,
+    reason: string,
     message: string
   ) {
-    super(message);
-    this.name = 'SyncRequestError';
+    super({
+      code: `inventory.sync.${reason}`,
+      status,
+      message,
+      retryable: status === 503,
+    });
   }
 }
 

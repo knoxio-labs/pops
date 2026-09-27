@@ -357,7 +357,7 @@ describe('cerebrum.nudges.dismiss', () => {
     expect(err).toBeInstanceOf(HttpError);
     if (!(err instanceof HttpError)) throw new Error('expected HttpError');
     expect(err.status).toBe(409);
-    expect(err.body).toMatchObject({ code: 'ConflictError' });
+    expect(err.body).toMatchObject({ code: 'cerebrum.resource.conflict' });
   });
 });
 

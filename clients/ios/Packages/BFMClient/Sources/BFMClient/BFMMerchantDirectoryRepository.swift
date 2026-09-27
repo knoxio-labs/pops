@@ -45,10 +45,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             throw RepositoryError.transport("\(SearchMerchants.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: SearchMerchants.id)
+                try upstream.body.json.code, operation: SearchMerchants.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: SearchMerchants.id)
+                try upstream.body.json.code, operation: SearchMerchants.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(SearchMerchants.id): undocumented status \(statusCode)"
@@ -61,6 +61,7 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
         do {
             output = try await client.generated.mobileContacts_getMerchant(path: .init(id: id))
         } catch let error as ClientError {
+            if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
             throw BFMRepositoryFailure.failure(error, operation: GetMerchant.id)
         }
 
@@ -77,10 +78,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             throw RepositoryError.transport("\(GetMerchant.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetMerchant.id)
+                try upstream.body.json.code, operation: GetMerchant.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetMerchant.id)
+                try upstream.body.json.code, operation: GetMerchant.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(GetMerchant.id): undocumented status \(statusCode)"
@@ -109,10 +110,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             throw RepositoryError.transport("\(CreateMerchant.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: CreateMerchant.id)
+                try upstream.body.json.code, operation: CreateMerchant.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: CreateMerchant.id)
+                try upstream.body.json.code, operation: CreateMerchant.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(CreateMerchant.id): undocumented status \(statusCode)"
@@ -127,6 +128,9 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
                 path: .init(id: id)
             )
         } catch let error as ClientError {
+            if BFMRepositoryFailure.statusCode(in: error) == 404 {
+                throw RepositoryError.transport("(GetMerchantAddresses.id): no such merchant")
+            }
             throw BFMRepositoryFailure.failure(error, operation: GetMerchantAddresses.id)
         }
 
@@ -143,10 +147,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             throw RepositoryError.transport("\(GetMerchantAddresses.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetMerchantAddresses.id)
+                try upstream.body.json.code, operation: GetMerchantAddresses.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: GetMerchantAddresses.id)
+                try upstream.body.json.code, operation: GetMerchantAddresses.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(GetMerchantAddresses.id): undocumented status \(statusCode)"
@@ -164,6 +168,9 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
                 body: .json(.init(value: value))
             )
         } catch let error as ClientError {
+            if BFMRepositoryFailure.statusCode(in: error) == 404 {
+                throw RepositoryError.transport("(CreateMerchantAddress.id): no such merchant")
+            }
             throw BFMRepositoryFailure.failure(error, operation: CreateMerchantAddress.id)
         }
 
@@ -180,10 +187,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             throw RepositoryError.transport("\(CreateMerchantAddress.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: CreateMerchantAddress.id)
+                try upstream.body.json.code, operation: CreateMerchantAddress.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: CreateMerchantAddress.id)
+                try upstream.body.json.code, operation: CreateMerchantAddress.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(CreateMerchantAddress.id): undocumented status \(statusCode)"

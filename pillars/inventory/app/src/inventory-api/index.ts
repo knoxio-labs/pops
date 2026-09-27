@@ -152,6 +152,7 @@ export type {
   DocumentsUnlinkErrors,
   DocumentsUnlinkResponse,
   DocumentsUnlinkResponses,
+  ErrorBody,
   ExpressionV1,
   FixturesConnectData,
   FixturesConnectError,

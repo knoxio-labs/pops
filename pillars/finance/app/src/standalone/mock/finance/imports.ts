@@ -1,5 +1,5 @@
 import { IMPORT_BATCHES, IMPORT_DRAFTS, IMPORT_PROGRESS } from '../../fixtures/imports';
-import { created, noContent, notFound, ok } from '../respond';
+import { created, financeNotFound, noContent, ok } from '../respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
@@ -20,7 +20,9 @@ const [draft] = IMPORT_DRAFTS;
 
 const draftById: MockHandler = ({ params }) => {
   const found = IMPORT_DRAFTS.find((d) => d.id === params['id']);
-  return found === undefined ? notFound('draft') : { body: { data: { ...found, payload: {} } } };
+  return found === undefined
+    ? financeNotFound('draft')
+    : { body: { data: { ...found, payload: {} } } };
 };
 
 const reevaluated = { affectedCount: 0, result: IMPORT_PROGRESS.result };

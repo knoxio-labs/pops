@@ -11,7 +11,7 @@
  *
  * Only the **device-facing** routes are reshaped: `/mobile/*` and the routes
  * in `paths.ts`'s `DEVICE_FACING_PATHS`, each of which declares its own 400 for
- * the same reason and answers the same `invalid_request` body. The operator
+ * the same reason and answers the same `bfm.request.invalid` body. The operator
  * routes declare no 400 at all, so
  * there is nothing there for a native body to contradict, and quietly changing
  * what they answer is not this ticket's business — they keep ts-rest's default
@@ -29,7 +29,8 @@
  */
 import { RequestValidationError } from '@ts-rest/express';
 
-import { INVALID_REQUEST, isDeviceFacingPath } from './invalid-request-scope.js';
+import { invalidRequestBody } from '../errors.js';
+import { isDeviceFacingPath } from './invalid-request-scope.js';
 
 import type { NextFunction, Response } from 'express';
 
@@ -56,7 +57,7 @@ export function createRequestValidationErrorHandler() {
       // server's internal schema fields, they are not localised, and the app
       // renders its own copy from `code` — carrying them would be a payload
       // the phone pays for and never shows.
-      res.status(400).json(INVALID_REQUEST);
+      res.status(400).json(invalidRequestBody());
       return;
     }
 

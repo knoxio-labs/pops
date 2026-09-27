@@ -38,6 +38,7 @@ function useRelocateMutation(args: {
 }) {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ id, ...body }: BatchesRelocateInput) =>
       unwrap(await batchesRelocate({ path: { id }, body })),
     onSuccess: (res) => {

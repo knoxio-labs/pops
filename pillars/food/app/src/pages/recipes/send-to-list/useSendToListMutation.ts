@@ -45,6 +45,7 @@ export function useSendToListMutation({ onSuccess }: UseSendOpts) {
   const { t } = useTranslation('food');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const mutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: async ({ versionId, scaleFactor, target }: SendInput) =>
       unwrap(await sendToListSend({ path: { versionId }, body: { scaleFactor, target } })),
     onSuccess: (result) => {

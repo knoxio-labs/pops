@@ -94,6 +94,7 @@ export function useDictionaryEdits(): DictionaryEdits {
   const [lastOutcome, setLastOutcome] = useState<EditOutcome | null>(null);
 
   const mutation = useMutation({
+    meta: { errorHandled: true },
     mutationFn: applyEdit,
     onSuccess: async (kind) => {
       setLastOutcome({ kind, status: 'ok', message: null });
