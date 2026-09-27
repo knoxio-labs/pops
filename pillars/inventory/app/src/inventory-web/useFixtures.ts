@@ -64,7 +64,7 @@ function fixtureListQuery(filter: FixturesFilter, offset: number): FixtureListQu
   const search = filter.search.trim();
   if (search.length > 0) query.search = search;
   if (filter.type !== null) query.type = filter.type;
-  if (filter.withinLocationId !== null) query.locationId = filter.withinLocationId;
+  if (filter.withinLocationId !== null) query.withinLocationId = filter.withinLocationId;
   return query;
 }
 

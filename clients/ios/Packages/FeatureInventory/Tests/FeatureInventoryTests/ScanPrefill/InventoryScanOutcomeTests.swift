@@ -46,7 +46,7 @@ internal struct InventoryScanOutcomeTests {
     func appliesToCapturedType() async {
         let gate = ScanPrefillGate()
         let generator = ScanPrefillGenerator(
-            answer: [ScanPrefillFixture.detail.id: .text("filled")], gate: gate)
+            answer: [ScanPrefillFixture.detail.id: .text("Space comedy")], gate: gate)
         let opened = await ScanPrefillFixture.open(generator: generator)
         defer { opened.loading.cancel() }
 
@@ -58,7 +58,7 @@ internal struct InventoryScanOutcomeTests {
 
         #expect(
             opened.form.protocol2Draft?.values(for: ScanPrefillFixture.detail)
-                == [.string("filled")])
+                == [.string("Space comedy")])
     }
 
     @Test(

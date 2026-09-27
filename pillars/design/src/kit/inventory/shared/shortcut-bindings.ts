@@ -61,7 +61,6 @@ const LIST: readonly ShortcutBinding[] = [
 ];
 
 const DETAIL: readonly ShortcutBinding[] = [
-  b('detail-edit', 'detail', 'e', 'Edit'),
   b('detail-place', 'detail', 'p', 'Pick up or put back'),
   b('detail-move', 'detail', 'm', 'Move'),
   b('detail-open-close', 'detail', 'o', 'Open or close container'),

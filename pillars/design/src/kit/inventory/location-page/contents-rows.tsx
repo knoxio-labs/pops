@@ -38,6 +38,7 @@ export interface RowContext {
   onPickUp?: (id: string) => void;
   onMove?: (id: string) => void;
   onTakeOut?: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
 /** Native drop handlers that route a hover and a drop to `drag` for one target. */
@@ -72,6 +73,35 @@ export function TargetHint({ ctx, target }: { ctx: RowContext; target: Placement
   );
 }
 
+function ItemVerbs({ item, ctx, inBox }: { item: ItemRowModel; ctx: RowContext; inBox: boolean }) {
+  const I = INVENTORY_ICONS;
+  return (
+    <>
+      {inBox ? (
+        <RowVerb
+          icon={I.takeOut}
+          label="Take out"
+          shortcutId="take-out"
+          onClick={() => ctx.onTakeOut?.(item.id)}
+        />
+      ) : null}
+      <RowVerb
+        icon={I.pickUp}
+        label="Pick up"
+        shortcutId="pick-up"
+        onClick={() => ctx.onPickUp?.(item.id)}
+      />
+      <RowVerb icon={I.move} label="Move" shortcutId="move" onClick={() => ctx.onMove?.(item.id)} />
+      <RowVerb
+        icon={I.edit}
+        label={`Edit ${item.name}`}
+        shortcutId="list-edit"
+        onClick={() => ctx.onEdit?.(item.id)}
+      />
+    </>
+  );
+}
+
 /** One item row, draggable when the context can drag. */
 export function ContentsItemRow({
   item,
@@ -82,7 +112,6 @@ export function ContentsItemRow({
   ctx: RowContext;
   inBox?: boolean;
 }) {
-  const I = INVENTORY_ICONS;
   const lifted = ctx.drag?.dragging.includes(item.id) === true;
   return (
     <div
@@ -104,30 +133,7 @@ export function ContentsItemRow({
         showPlacement={false}
         onToggle={ctx.selection?.onRowToggle}
         onOpen={ctx.onOpenItem}
-        verbs={
-          <>
-            {inBox ? (
-              <RowVerb
-                icon={I.takeOut}
-                label="Take out"
-                shortcutId="take-out"
-                onClick={() => ctx.onTakeOut?.(item.id)}
-              />
-            ) : null}
-            <RowVerb
-              icon={I.pickUp}
-              label="Pick up"
-              shortcutId="pick-up"
-              onClick={() => ctx.onPickUp?.(item.id)}
-            />
-            <RowVerb
-              icon={I.move}
-              label="Move"
-              shortcutId="move"
-              onClick={() => ctx.onMove?.(item.id)}
-            />
-          </>
-        }
+        verbs={<ItemVerbs item={item} ctx={ctx} inBox={inBox} />}
       />
     </div>
   );

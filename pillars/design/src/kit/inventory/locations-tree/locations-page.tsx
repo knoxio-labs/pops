@@ -40,6 +40,7 @@ export interface LocationsPageProps {
   /** Single pane, for tablet width: the tree alone, a place opens its page. */
   single?: boolean;
   onOpenPlace?: (id: string) => void;
+  onEdit?: (id: string) => void;
   /** Places things were last put, for the Move picker. */
   recents?: readonly PlacementTarget[];
 }
@@ -73,10 +74,11 @@ function Preview({
       verbs={verbs}
       initialSelection={props.initialSelection}
       onOpen={() => props.onOpenPlace?.(place.id)}
+      onRename={() => api.edits.startRename(place.id)}
       onStoreHere={onStoreHere}
+      onEdit={props.onEdit}
       menu={{
         onNewInside: () => api.edits.startCreate(place.id),
-        onRename: () => api.edits.startRename(place.id),
         onDelete: () => api.edits.requestDelete(place.id),
       }}
       moveControl={
