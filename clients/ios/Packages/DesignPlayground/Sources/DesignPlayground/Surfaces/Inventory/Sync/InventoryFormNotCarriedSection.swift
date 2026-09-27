@@ -13,9 +13,11 @@ internal struct InventoryFormNotCarriedSection: View {
                     InventoryQueuedValueRow(value: value)
                 }
             } header: {
-                Text("Not carried over")
+                Text("Not kept")
             } footer: {
-                Text("These values no longer fit this item's fields, so saving leaves them out.")
+                Text(
+                    "Only fields shared with the new type are kept. These values are left out when saving."
+                )
             }
         }
     }
