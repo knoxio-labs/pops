@@ -1,140 +1,114 @@
-import { Pencil, QrCode, Trash2 } from 'lucide-react';
-import { Link } from 'react-router';
+import { Button, cn } from '@pops/ui';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-  Button,
-} from '@pops/ui';
+import { PlacementPicker } from '../../foundation/placement-picker/placement-picker';
+import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip';
+import { LegacyHeaderActions } from './legacy-header-actions';
+import { MoreMenu } from './more-menu';
 
-import { labelsHref } from '../labels-page/label-params';
+import type { ReactElement } from 'react';
 
-function pluralize(value: number, singular: string): string {
-  return value === 1 ? singular : `${singular}s`;
+import type { PlacementTarget, PlacementWorld } from '../../foundation/model';
+import type { DetailVerb, DetailVerbs, MenuEntry } from './detail-verbs';
+import type { LegacyHeaderActionsProps } from './legacy-header-actions';
+
+export type { LegacyHeaderActionsProps } from './legacy-header-actions';
+
+/** Props for the verb-driven item-detail header. */
+export interface HeaderActionsProps {
+  itemId: string;
+  verbs: DetailVerbs;
+  world: PlacementWorld;
+  recents: readonly PlacementTarget[];
+  menuOpen?: boolean;
+  pickerOpen: boolean;
+  onPickerOpenChange: (open: boolean) => void;
+  onVerb?: (verb: DetailVerb) => void;
+  onMenu?: (entry: MenuEntry) => void;
+  onPick?: (target: PlacementTarget) => void;
+  onCreatePlace?: (name: string, parentId: string | null) => Promise<void>;
 }
 
-function PrintLabelButton({ id }: { id: string }) {
-  return (
-    <Button asChild variant="outline" size="sm" className="font-bold">
-      <Link to={labelsHref([id])}>
-        <QrCode className="mr-2 size-4 text-app-accent" aria-hidden />
-        Print label
-      </Link>
+function DetailVerbButton({
+  verb,
+  primary,
+  onClick,
+}: {
+  verb: DetailVerb;
+  primary: boolean;
+  onClick: () => void;
+}): ReactElement {
+  const Icon = verb.icon;
+  const refused = verb.disabledReason !== undefined;
+  const button = (
+    <Button
+      size="default"
+      variant={primary ? 'default' : 'outline'}
+      className={cn('whitespace-nowrap', refused && 'opacity-50')}
+      prefix={<Icon className="size-4" aria-hidden />}
+      aria-disabled={refused || undefined}
+      onClick={refused ? undefined : onClick}
+    >
+      {verb.label}
     </Button>
+  );
+
+  return (
+    <HintTooltip
+      label={verb.detail === undefined ? verb.label : `${verb.label}. ${verb.detail}`}
+      shortcutId={verb.shortcutId}
+      disabledReason={verb.disabledReason}
+    >
+      {button}
+    </HintTooltip>
   );
 }
 
-function EditButton({ id, readOnly }: { id: string; readOnly: boolean }) {
-  const disabledReason = 'Nothing can change on this item.';
-  if (readOnly) {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        disabled
-        title={disabledReason}
-        aria-label={`Edit (${disabledReason})`}
-      >
-        <Pencil className="mr-2 size-4" aria-hidden />
-        Edit
-      </Button>
+function MoveVerb({ props, button }: { props: HeaderActionsProps; button: ReactElement }) {
+  return (
+    <PlacementPicker
+      trigger={<span className="inline-flex">{button}</span>}
+      open={props.pickerOpen}
+      onOpenChange={props.onPickerOpenChange}
+      world={props.world}
+      subject={{ kind: 'items', ids: [props.itemId] }}
+      recents={props.recents}
+      onPick={(target) => {
+        props.onPickerOpenChange(false);
+        props.onPick?.(target);
+      }}
+      onCreatePlace={props.onCreatePlace}
+    />
+  );
+}
+
+function VerbHeaderActions(props: HeaderActionsProps): ReactElement {
+  const renderVerb = (verb: DetailVerb, primary: boolean): ReactElement => {
+    const button = (
+      <DetailVerbButton verb={verb} primary={primary} onClick={() => props.onVerb?.(verb)} />
     );
-  }
-  return (
-    <Button asChild variant="outline" size="sm" className="font-bold">
-      <Link to={`/inventory/items/${id}/edit`}>
-        <Pencil className="mr-2 size-4 text-app-accent" aria-hidden />
-        Edit
-      </Link>
-    </Button>
-  );
-}
+    return verb.id === 'move' && verb.disabledReason === undefined ? (
+      <MoveVerb key={verb.id} props={props} button={button} />
+    ) : (
+      <span key={verb.id} className="inline-flex">
+        {button}
+      </span>
+    );
+  };
 
-function DeleteButton({
-  itemName,
-  connectionsCount,
-  photosCount,
-  readOnly,
-  onDelete,
-}: {
-  itemName: string;
-  connectionsCount: number;
-  photosCount: number;
-  readOnly: boolean;
-  onDelete: () => void;
-}) {
-  const disabledReason = 'Nothing can change on this item.';
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive"
-          disabled={readOnly}
-          title={readOnly ? disabledReason : undefined}
-        >
-          <Trash2 className="mr-2 size-4" aria-hidden />
-          Delete
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete {itemName}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will also remove {connectionsCount} {pluralize(connectionsCount, 'connection')} and{' '}
-            {photosCount} {pluralize(photosCount, 'photo')}.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={onDelete}
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-/** Header actions retained by the route-compatible item page. */
-export function HeaderActions({
-  id,
-  itemName,
-  connectionsCount,
-  photosCount,
-  readOnly,
-  onDelete,
-}: {
-  id: string;
-  itemName: string;
-  connectionsCount: number;
-  photosCount: number;
-  readOnly: boolean;
-  onDelete: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <PrintLabelButton id={id} />
-      <EditButton id={id} readOnly={readOnly} />
-      <DeleteButton
-        itemName={itemName}
-        connectionsCount={connectionsCount}
-        photosCount={photosCount}
-        readOnly={readOnly}
-        onDelete={onDelete}
-      />
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      {props.verbs.primary ? renderVerb(props.verbs.primary, true) : null}
+      {props.verbs.secondary.map((verb) => renderVerb(verb, false))}
+      {props.verbs.edit ? renderVerb(props.verbs.edit, false) : null}
+      {props.verbs.menu.length > 0 ? (
+        <MoreMenu groups={props.verbs.menu} defaultOpen={props.menuOpen} onSelect={props.onMenu} />
+      ) : null}
     </div>
   );
+}
+
+/** Renders either the current route-compatible actions or the verb-driven action row. */
+export function HeaderActions(props: HeaderActionsProps | LegacyHeaderActionsProps): ReactElement {
+  if ('verbs' in props) return <VerbHeaderActions {...props} />;
+  return <LegacyHeaderActions {...props} />;
 }
