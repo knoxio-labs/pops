@@ -96,6 +96,12 @@ function RowActions({
   );
 }
 
+function rowBackground(selected: boolean, traced: boolean): string {
+  if (selected) return 'bg-app-accent/10';
+  if (traced) return 'bg-app-accent/5';
+  return 'hover:bg-muted/60';
+}
+
 /** Renders one registry row without changing server order. */
 export function ConnectionListRow({
   row,
@@ -115,9 +121,10 @@ export function ConnectionListRow({
       role="row"
       data-row-id={row.id}
       aria-selected={selected}
-      className={`group grid min-h-14 items-center gap-3 border-b border-border/60 border-l-2 px-3 ${CONNECTION_GRID} ${
-        selected ? 'bg-app-accent/10' : 'hover:bg-muted/60'
-      } ${traced ? 'border-l-app-accent bg-app-accent/5' : 'border-l-transparent'}`}
+      className={`group grid min-h-14 items-center gap-3 border-b border-border/60 border-l-2 px-3 ${CONNECTION_GRID} ${rowBackground(
+        selected,
+        traced
+      )} ${traced ? 'border-l-app-accent' : 'border-l-transparent'}`}
     >
       <Checkbox
         checked={selected}

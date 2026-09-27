@@ -51,7 +51,7 @@ function TraceRow({ node, onOpen }: { node: ConnectionTraceNode; onOpen: (id: st
       {item !== null ? (
         <button
           type="button"
-          className="flex min-h-11 w-full min-w-0 items-center text-left hover:text-app-accent"
+          className="flex min-h-11 min-w-11 w-full items-center text-left hover:text-app-accent"
           aria-label={`Open ${node.end.name}`}
           onClick={() => onOpen(node.end.id)}
         >
