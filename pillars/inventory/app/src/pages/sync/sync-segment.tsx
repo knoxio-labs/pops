@@ -129,6 +129,7 @@ function openRepairSheet(props: SyncSegmentProps): ReactNode {
   if (repair === undefined) return null;
   return (
     <RepairSheet
+      key={repair.id}
       repair={repair}
       device={
         props.ledger.devices.find((device) => device.id === repair.deviceId)?.name ??
