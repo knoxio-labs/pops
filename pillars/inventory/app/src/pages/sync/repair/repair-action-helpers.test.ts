@@ -155,4 +155,39 @@ describe('blockedReasonFor', () => {
       ).toBe('Web actions are unavailable offline.');
     }
   });
+
+  it('reports catalogue state and unmatched fields before other type-change reasons', () => {
+    const repair = identifiedTypeReplacementCase();
+    expect(
+      blockedReasonFor(action('change-type'), {
+        repair,
+        device: "Joao's iPhone",
+        detail,
+        catalogueStatus: 'pending',
+        changeType: null,
+      })
+    ).toBe('Loading the catalogue');
+    expect(
+      blockedReasonFor(action('change-type'), {
+        repair,
+        device: "Joao's iPhone",
+        detail,
+        catalogueStatus: 'error',
+        changeType: null,
+      })
+    ).toBe('The catalogue did not load');
+    expect(
+      blockedReasonFor(action('change-type'), {
+        repair,
+        device: "Joao's iPhone",
+        detail,
+        catalogueStatus: 'success',
+        changeType: {
+          kind: 'unmatched',
+          replacement: 'Router',
+          fields: ['Wi-Fi standard', 'Ports'],
+        },
+      })
+    ).toBe('No field on Router matches Wi-Fi standard and Ports.');
+  });
 });

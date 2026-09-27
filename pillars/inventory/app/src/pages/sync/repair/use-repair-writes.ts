@@ -6,9 +6,11 @@ import { useRevertEvent } from '../../../inventory-web/useRevertEvent.js';
 import { errorMessage } from './repair-action-helpers.js';
 import { performRepairWrite } from './repair-write-operations.js';
 
+import type { BulkItemVerbs } from '../../../inventory-web/item-verbs-bulk.js';
 import type { RepairCase } from '../sync-model.js';
-import type { RepairOutcome } from './repair-outcome.js';
+import type { AppliedRepair, RepairOutcome } from './repair-outcome.js';
 import type { WebAction } from './repair-plan.js';
+import type { ChangeTypeWrite } from './repair-targets.js';
 
 interface RepairWrites {
   busy: boolean;
@@ -17,8 +19,17 @@ interface RepairWrites {
   run: (action: WebAction) => Promise<void>;
 }
 
+interface RepairWriteOptions {
+  bulk?: BulkItemVerbs;
+  typeWrite?: ChangeTypeWrite | null;
+  onApplied?: (applied: AppliedRepair) => void;
+}
+
 /** Runs the write actions exposed by a Sync repair plan. */
-export function useRepairWrites(repair: RepairCase): RepairWrites {
+export function useRepairWrites(
+  repair: RepairCase,
+  options: RepairWriteOptions = {}
+): RepairWrites {
   const queryClient = useQueryClient();
   const verbs = useItemVerbs();
   const revert = useRevertEvent();
@@ -36,6 +47,9 @@ export function useRepairWrites(repair: RepairCase): RepairWrites {
           verbs,
           queryClient,
           revert,
+          bulk: options.bulk,
+          typeWrite: options.typeWrite,
+          onApplied: options.onApplied,
           setRefusal,
           setOutcome,
         });
@@ -45,7 +59,7 @@ export function useRepairWrites(repair: RepairCase): RepairWrites {
         setBusy(false);
       }
     },
-    [queryClient, repair, revert, verbs]
+    [options.bulk, options.onApplied, options.typeWrite, queryClient, repair, revert, verbs]
   );
   return { busy, refusal, outcome, run };
 }
