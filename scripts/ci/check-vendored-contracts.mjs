@@ -1016,6 +1016,7 @@ export const KNOWN_VENDORED_LEGS = [
   'bfm -> clients/ios/Contracts/bfm.openapi.json',
   'contacts -> pillars/finance/app/contracts/contacts.openapi.json',
   'purchases -> pillars/finance/app/contracts/purchases.openapi.json',
+  'purchases -> pillars/inventory/app/contracts/purchases.openapi.json',
 ];
 
 /**

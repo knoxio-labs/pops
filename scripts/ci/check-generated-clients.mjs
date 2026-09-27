@@ -267,6 +267,7 @@ export const EXPECTED_TARGETS = [
   { pkgName: '@pops/app-food', scriptName: 'generate:food-client', inAppMatrix: true },
   { pkgName: '@pops/app-food', scriptName: 'generate:lists-client', inAppMatrix: true },
   { pkgName: '@pops/app-inventory', scriptName: 'generate:inventory-client', inAppMatrix: true },
+  { pkgName: '@pops/app-inventory', scriptName: 'generate:purchases-client', inAppMatrix: true },
   { pkgName: '@pops/app-lists', scriptName: 'generate:lists-client', inAppMatrix: true },
   { pkgName: '@pops/app-media', scriptName: 'generate:media-client', inAppMatrix: true },
   { pkgName: '@pops/app-purchases', scriptName: 'generate:purchases-client', inAppMatrix: true },
