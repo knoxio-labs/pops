@@ -252,6 +252,35 @@ describe('ContainersPage', () => {
   });
 
   it.each([
+    [
+      'a conflict',
+      {
+        status: 'conflict' as const,
+        kind: 'deleted' as const,
+        mutationId: 'mutation-1',
+        at: '2026-09-27T00:00:00.000Z',
+        source: { kind: 'web', label: 'Web' },
+      },
+      'Changed elsewhere since it loaded.',
+    ],
+    [
+      'a deferred mutation',
+      { status: 'deferred' as const, mutationId: 'mutation-1', waitingOn: 'mutation-0' },
+      'Waiting on another change.',
+    ],
+  ])('shows the shared refusal reason for %s', async (_name, outcome, message) => {
+    renderPage();
+    verbs.setAccess.mockResolvedValue({
+      applied: [],
+      refused: [{ id: 'box-open', refusal: { kind: 'outcome', outcome } }],
+      undo: null,
+    });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Open box' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(`Not saved. ${message}`);
+  });
+
+  it.each([
     ['loading', () => (currentRows = rowsResult([], { status: 'pending' }))],
     [
       'summary loading',

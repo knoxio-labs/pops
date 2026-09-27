@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
+import { refusalReason } from '../../foundation/list-page/selection-actions.js';
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { labelsHref } from '../labels-page/label-params.js';
 
@@ -8,16 +9,8 @@ import type { useNavigate } from 'react-router';
 import type { SelectionBarAction } from '../../foundation/model/contracts.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { useSelection } from '../../foundation/selection/use-selection.js';
-import type { BulkItemRefusal, BulkResult } from '../../inventory-web/item-verbs-bulk-types.js';
+import type { BulkResult } from '../../inventory-web/item-verbs-bulk-types.js';
 import type { useBulkItemVerbs } from '../../inventory-web/item-verbs-bulk.js';
-
-function refusalMessage(refusal: BulkItemRefusal): string {
-  if (refusal.kind === 'failed') return 'The inventory service did not answer.';
-  if (refusal.kind === 'no-previous-place') return 'This container has no remembered place.';
-  return 'message' in refusal.outcome && typeof refusal.outcome.message === 'string'
-    ? refusal.outcome.message
-    : 'The inventory service rejected this action.';
-}
 
 function mergeRejections(
   previous: Readonly<Record<string, string>>,
@@ -27,7 +20,7 @@ function mergeRejections(
   const next = { ...previous };
   ids.forEach((id) => delete next[id]);
   result.refused.forEach(({ id, refusal }) => {
-    next[id] = refusalMessage(refusal);
+    next[id] = refusalReason(refusal);
   });
   return next;
 }
