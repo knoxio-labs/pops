@@ -37,6 +37,10 @@ name: App Quality
 #
 # Selectors use the manifest `name` (`@pops/app-<id>`) discovered from disk,
 # never a hardcoded list, so a newly added pillar app is covered with no edit.
+# The matrix is the reverse transitive dependency closure of the changed
+# workspace packages: one app edit runs one row; a pillar contract runs its
+# consumers; a shared package runs every app that reaches it. Dependency-graph
+# inputs and an untrustworthy git base deliberately fall back to all apps.
 # `assert-app-coverage` in `_discover-units.yml` keeps every app routed to a
 # covering FE workflow; this workflow now ALSO gives each its own unit lane.
 
@@ -96,36 +100,49 @@ env:
 
 jobs:
   discover:
-    name: Discover app units from disk
+    name: Discover affected app units
     runs-on: ubuntu-latest
     outputs:
       apps: ${{ steps.scan.outputs.apps }}
       count: ${{ steps.scan.outputs.count }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - id: scan
-        name: Walk pillars/*/app/package.json for the manifest name
-        # An app unit is any `pillars/*/app` carrying a package.json. Emit the
-        # manifest `name` (the only valid `pnpm --filter` selector — basenames
-        # all collide on `app`) plus its dir as a display key. Disk-derived so
-        # adding a pillar app needs no edit here. The names MUST be @pops/app-*
-        # (enforced by assert-app-coverage); fail loud on a stray name so a
-        # mis-named member can't silently drop out of the matrix.
+        name: Compute the reverse dependency closure from the changed files
         run: |
           set -euo pipefail
-          apps=$(find pillars -mindepth 2 -maxdepth 2 -type d -name app | sort | while read -r d; do
-            [ -f "$d/package.json" ] || continue
-            pkg=$(jq -r '.name' "$d/package.json")
-            case "$pkg" in
-              @pops/app-*) : ;;
-              *) echo "::error::$d is named '$pkg' (expected @pops/app-*) — fix the name or this unit drops out of app-quality" >&2; exit 1 ;;
-            esac
-            jq -n --arg pkg "$pkg" --arg dir "$d" '{pkg:$pkg,dir:$dir}'
-          done | jq -s -c '.')
+          node scripts/ci/select-affected-apps.mjs --self-test
+          node scripts/ci/check-generated-clients.mjs --self-test
+
+          force_all=0
+          if [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "Merge-group promotion validates every app."
+            force_all=1
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            before='${{ github.event.before }}'
+            if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ] && git merge-base --is-ancestor "$before" HEAD 2>/dev/null; then
+              base="$before"
+            else
+              force_all=1
+            fi
+          else
+            base=$(git merge-base "origin/${{ github.base_ref || 'main' }}" HEAD 2>/dev/null) || force_all=1
+          fi
+
+          if [ "$force_all" = 1 ]; then
+            echo "No trustworthy diff base; selecting every app."
+            apps=$(node scripts/ci/select-affected-apps.mjs --all </dev/null)
+          else
+            echo "Selecting apps affected since $base:"
+            git diff --name-only "$base" HEAD
+            apps=$(git diff --name-only "$base" HEAD | node scripts/ci/select-affected-apps.mjs)
+          fi
           count=$(echo "$apps" | jq 'length')
           echo "apps=$apps" >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "Discovered $count app unit(s):"
+          echo "Selected $count app unit(s):"
           echo "$apps" | jq .
 
   app:
@@ -170,9 +187,6 @@ jobs:
         # Deps only (`^...`), so the compiled .d.ts the app's typecheck, test
         # and bundle build all import are materialised before any of them run.
         run: pnpm --filter "${{ matrix.app.pkg }}^..." build
-
-      - name: Gate self-test (proves it catches drift, a generator error, and missing output)
-        run: node scripts/ci/check-generated-clients.mjs --self-test
 
       - name: Codegen drift
         # Runs for every app unit in the matrix — every app's pre-existing
