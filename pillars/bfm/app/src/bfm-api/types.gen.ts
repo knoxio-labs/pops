@@ -209,6 +209,9 @@ export type HealthResponse = HealthResponses[keyof HealthResponses];
 
 export type MobileBarcodeLookupData = {
   body?: never;
+  headers?: {
+    'x-pops-barcode-diagnostics'?: '1';
+  };
   path: {
     code: string;
   };
@@ -297,8 +300,10 @@ export type MobileBarcodeLookupResponses = {
       }
     | {
         outcome: 'not_found';
+        reason?: 'unsupported';
       }
     | {
+        error?: ErrorBody;
         outcome: 'unavailable';
       };
 };
