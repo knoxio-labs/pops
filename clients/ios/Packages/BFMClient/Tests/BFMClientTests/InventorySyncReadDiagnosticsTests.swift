@@ -124,7 +124,7 @@ internal struct InventorySyncReadDiagnosticsTests {
         #expect(recorded.operation == "mobileInventory.catalogueRevision")
     }
 
-    @Test("a cancelled sync read does not record a diagnostic")
+    @Test("a cancelled sync read becomes CancellationError without a diagnostic")
     func cancellationIsSilent() async throws {
         let diagnostics = SyncReadDiagnostics()
         let transport = try BFMInventoryTransport.stubbed(
@@ -134,14 +134,14 @@ internal struct InventorySyncReadDiagnosticsTests {
             }
         )
 
-        await #expect(throws: RepositoryError.self) {
+        await #expect(throws: CancellationError.self) {
             _ = try await transport.fetchSnapshot(cursor: nil, limit: 250)
         }
 
         #expect((await diagnostics.entries).isEmpty)
     }
 
-    @Test("a cancelled URL request does not record a diagnostic")
+    @Test("a cancelled URL request becomes CancellationError without a diagnostic")
     func URLCancellationIsSilent() async throws {
         let diagnostics = SyncReadDiagnostics()
         let transport = try BFMInventoryTransport.stubbed(
@@ -151,7 +151,7 @@ internal struct InventorySyncReadDiagnosticsTests {
             }
         )
 
-        await #expect(throws: RepositoryError.self) {
+        await #expect(throws: CancellationError.self) {
             _ = try await transport.fetchChanges(since: 40, epoch: "epoch-1", limit: 250)
         }
 

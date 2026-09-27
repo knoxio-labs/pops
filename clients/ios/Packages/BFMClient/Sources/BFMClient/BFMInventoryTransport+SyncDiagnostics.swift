@@ -11,12 +11,14 @@ extension BFMInventoryTransport {
         do {
             return try await read()
         } catch let error as ClientError {
+            if isCancellation(error) { throw CancellationError() }
             let mappedError = mapClientError(error)
             if !isResyncRequired(mappedError) {
                 await recordSyncReadFailure(error, operation: operation)
             }
             throw mappedError
         } catch {
+            if isCancellation(error) { throw CancellationError() }
             if !isResyncRequired(error) {
                 await recordSyncReadFailure(error, operation: operation)
             }
@@ -41,7 +43,11 @@ extension BFMInventoryTransport {
     }
 
     private func isCancellation(_ error: Error) -> Bool {
+        if Task.isCancelled { return true }
         if error is CancellationError { return true }
+        if let error = error as? ClientError {
+            return isCancellation(error.underlyingError)
+        }
         guard let error = error as? URLError else { return false }
         return error.code == .cancelled
     }
