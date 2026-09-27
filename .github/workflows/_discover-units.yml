@@ -66,6 +66,10 @@ on:
         value: ${{ jobs.list.outputs.units }}
       changed:
         value: ${{ jobs.list.outputs.changed }}
+      changedTs:
+        value: ${{ jobs.list.outputs.changedTs }}
+      changedRust:
+        value: ${{ jobs.list.outputs.changedRust }}
       changedClientDirs:
         value: ${{ jobs.list.outputs.changedClientDirs }}
 
@@ -76,6 +80,8 @@ jobs:
     outputs:
       units: ${{ steps.scan.outputs.units }}
       changed: ${{ steps.scan.outputs.changed }}
+      changedTs: ${{ steps.scan.outputs.changedTs }}
+      changedRust: ${{ steps.scan.outputs.changedRust }}
       changedClientDirs: ${{ steps.scan.outputs.changedClientDirs }}
     steps:
       - uses: actions/checkout@v7
@@ -163,6 +169,7 @@ jobs:
             else
               echo "Shared root changed or full validation requested — building ALL units."
             fi
+            changed="$units"
             echo "changed=$units" >> "$GITHUB_OUTPUT"
             shared_root_changed=1
           else
@@ -173,6 +180,9 @@ jobs:
             echo "changed=$changed" >> "$GITHUB_OUTPUT"
             shared_root_changed=0
           fi
+
+          echo "changedTs=$(echo "$changed" | jq -c '[.[] | select(.lang == "ts")]')" >> "$GITHUB_OUTPUT"
+          echo "changedRust=$(echo "$changed" | jq -c '[.[] | select(.lang == "rust")]')" >> "$GITHUB_OUTPUT"
 
           # clients/* by the same per-dir rule as units above — a PR touching
           # only clients/ios must not also pull in an unrelated client's

@@ -27,4 +27,16 @@ describe('fast CI workflow wiring', () => {
     expect(review).toContain('current=$(gh api');
     expect(review).toContain('if [ "$current" != "$EVENT_SHA" ]');
   });
+
+  it('does not schedule opposite-language unit jobs', () => {
+    const discovery = workflow('_discover-units.yml');
+    const unitQuality = workflow('unit-quality.yml');
+
+    expect(discovery).toContain('changedTs:');
+    expect(discovery).toContain('changedRust:');
+    expect(unitQuality).toContain('fromJson(needs.discover.outputs.changedTs)');
+    expect(unitQuality).toContain('fromJson(needs.discover.outputs.changedRust)');
+    expect(unitQuality).not.toContain("matrix.unit.lang != 'ts'");
+    expect(unitQuality).not.toContain("matrix.unit.lang != 'rust'");
+  });
 });
