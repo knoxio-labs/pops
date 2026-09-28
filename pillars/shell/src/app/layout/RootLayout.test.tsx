@@ -84,24 +84,37 @@ describe('RootLayout', () => {
     const main = screen.getByRole('main');
     expect(main).toHaveClass(
       'flex',
-      'min-h-0',
-      'flex-1',
       'min-w-0',
       'flex-col',
       'overflow-x-clip',
-      'overflow-y-auto'
+      'md:min-h-0',
+      'md:flex-1',
+      'md:overflow-y-auto'
     );
 
     const shell = main.parentElement?.parentElement?.parentElement;
     if (shell === null || shell === undefined) throw new Error('Shell root was not rendered');
-    expect(shell).toHaveClass('relative', 'h-dvh', 'overflow-hidden');
+    expect(shell).toHaveClass(
+      'relative',
+      'min-h-screen',
+      'overflow-x-clip',
+      'md:h-dvh',
+      'md:overflow-hidden'
+    );
 
     const contentRow = main.parentElement;
     if (contentRow === null) throw new Error('Shell content row was not rendered');
-    expect(contentRow).toHaveClass('flex', 'min-h-0', 'flex-1', 'overflow-hidden');
+    expect(contentRow).toHaveClass('flex', 'md:min-h-0', 'md:flex-1', 'md:overflow-hidden');
 
     const contentLayer = contentRow.parentElement;
     if (contentLayer === null) throw new Error('Shell content layer was not rendered');
-    expect(contentLayer).toHaveClass('relative', 'z-10', 'flex', 'h-full', 'min-h-0', 'flex-col');
+    expect(contentLayer).toHaveClass(
+      'relative',
+      'z-10',
+      'flex',
+      'flex-col',
+      'md:h-full',
+      'md:min-h-0'
+    );
   });
 });
