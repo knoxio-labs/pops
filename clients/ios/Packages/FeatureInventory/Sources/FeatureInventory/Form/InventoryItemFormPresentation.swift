@@ -7,7 +7,7 @@ extension View {
     /// it with an `InventoryItemFormRequest`. A nested chooser can supply
     /// `onCreated` to close itself after a successful new-item write.
     internal func inventoryItemFormPresentation(
-        store: any InventoryStore, suggester: InventoryCodeSuggester = .unbound,
+        store: any InventoryStore, suggester: InventoryCodeSuggester? = nil,
         scan: InventoryScanPrefill? = nil,
         onCreated: @escaping @MainActor () -> Void = {}
     ) -> some View {
@@ -19,15 +19,16 @@ extension View {
 
 private struct InventoryItemFormPresentation: ViewModifier {
     let store: any InventoryStore
-    let suggester: InventoryCodeSuggester
+    let suggester: InventoryCodeSuggester?
     let scan: InventoryScanPrefill?
     let onCreated: @MainActor () -> Void
     @State private var request: InventoryItemFormRequest?
     @Environment(\.inventoryPlacementPicker) private var picker
+    @Environment(\.inventoryCodeSuggester) private var inheritedSuggester
     @Environment(\.inventoryScanPrefill) private var inheritedScan
 
     init(
-        store: any InventoryStore, suggester: InventoryCodeSuggester,
+        store: any InventoryStore, suggester: InventoryCodeSuggester?,
         scan: InventoryScanPrefill?, onCreated: @escaping @MainActor () -> Void
     ) {
         self.store = store
@@ -37,13 +38,16 @@ private struct InventoryItemFormPresentation: ViewModifier {
     }
 
     func body(content: Content) -> some View {
+        let resolvedSuggester = suggester ?? inheritedSuggester ?? .unbound
         let resolvedScan = scan ?? inheritedScan ?? .unbound
         content
             .environment(\.inventoryItemForm, InventoryItemFormPresenter { request = $0 })
+            .environment(\.inventoryCodeSuggester, resolvedSuggester)
             .environment(\.inventoryScanPrefill, resolvedScan)
             .sheet(item: $request) { request in
                 InventoryItemFormSheet(
-                    request: request, store: store, suggester: suggester, scan: resolvedScan,
+                    request: request, store: store, suggester: resolvedSuggester,
+                    scan: resolvedScan,
                     onCreated: onCreated
                 )
                 .environment(\.inventoryPlacementPicker, picker)
