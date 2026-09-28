@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppContextProvider } from '@pops/navigation';
 
+import { PAGE_HEIGHT } from '../../foundation/item-page/section-parts';
 import { buildWorld } from '../../foundation/model/placement-model';
 import { ShortcutProvider } from '../../foundation/shortcuts/shortcut-provider';
 import { InventoryApiError } from '../../inventory-api-helpers.js';
@@ -202,6 +203,26 @@ describe('ItemDetailPage', () => {
     const detail = screen.getAllByLabelText('Facts rail').at(0);
     if (detail === undefined) throw new Error('Facts rail was not rendered');
     expect(header.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('gives the loaded split view one page height and a bounded body', () => {
+    renderPage();
+
+    const header = screen.getByTestId('item-detail-header');
+    const page = header.parentElement;
+    if (page === null) throw new Error('Detail page frame was not rendered');
+    expect(page).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+
+    const content = page.children.item(1);
+    if (content === null) throw new Error('Detail content frame was not rendered');
+    expect(content).toHaveClass('min-h-0', 'flex-1', 'flex-col');
+
+    const rail = screen.getAllByLabelText('Facts rail').at(0);
+    if (rail === undefined) throw new Error('Facts rail was not rendered');
+    const split = rail.parentElement;
+    if (split === null) throw new Error('Detail split body was not rendered');
+    expect(split).toHaveClass('min-h-0', 'flex-1');
+    expect(split.parentElement).toHaveClass('min-h-0', 'flex-1');
   });
 
   it('renders a retry state for a failed lead read', () => {

@@ -108,9 +108,10 @@ describe('POST /codes/suggest', () => {
     ]);
   });
 
-  it('uses the type letter, and X when untyped or the type is unknown', async () => {
+  it('uses the type letter, then the item name, and X when neither has a letter', async () => {
     expect((await suggest({ name: 'Moving box', typeKey: 'storage_box' }))[0]).toBe('S01');
-    expect((await suggest({ name: 'lamp' }))[0]).toBe('X01');
+    expect((await suggest({ name: 'lamp' }))[0]).toBe('L01');
+    expect((await suggest({ name: '42 lamp', typeKey: 'not_a_type' }))[0]).toBe('L01');
     expect((await suggest({ name: '42', typeKey: 'not_a_type' }))[0]).toBe('X01');
   });
 

@@ -10,6 +10,7 @@ import { codesSuggest, webList } from '../../inventory-api/index.js';
 import { INVENTORY_SYNC_PROTOCOL } from '../../inventory-web/mutation-client.js';
 import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
 import { usePublishedCatalogue } from '../../inventory-web/useCatalogueLookups.js';
+import { compareInventoryNames } from '../../lib/sort-names.js';
 import { detailsFor } from './label-details.js';
 import { MAX_LABEL_IDS } from './label-params';
 
@@ -84,7 +85,9 @@ function useContents(items: WebItem[]) {
     })),
   });
   const contents = new Map<string, WebItem[]>();
-  boxes.forEach((box, index) => contents.set(box.id, results[index]?.data ?? []));
+  boxes.forEach((box, index) =>
+    contents.set(box.id, (results[index]?.data ?? []).toSorted(compareInventoryNames))
+  );
   return { contents, isLoading: results.some((result) => result.isLoading) };
 }
 
