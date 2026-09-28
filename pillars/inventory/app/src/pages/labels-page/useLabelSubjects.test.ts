@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { detailsFor } from './useLabelSubjects';
+import { detailsFor } from './label-details';
 
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types';
 import type { WebListResponses } from '../../inventory-api/types.gen';
