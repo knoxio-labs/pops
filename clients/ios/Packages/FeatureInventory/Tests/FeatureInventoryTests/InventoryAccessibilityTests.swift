@@ -70,6 +70,13 @@ internal struct InventoryAccessibilityTests {
         #expect(InventoryAccessibility.itemScanUseText == "inventory-item-scan-use-text")
     }
 
+    @Test("the item form's commit actions have pinned, distinct identifiers")
+    func itemFormCommitIdentifiers() {
+        #expect(InventoryAccessibility.itemCreate == "inventory-item-create")
+        #expect(InventoryAccessibility.itemCreateAnother == "inventory-item-create-another")
+        #expect(InventoryAccessibility.itemCreate != InventoryAccessibility.itemCreateAnother)
+    }
+
     @Test("no Type option collides with the picker, another option, or a field")
     func typeOptionIdentifiersAreDistinct() {
         let ids: Set<String> = [
