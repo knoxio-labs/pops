@@ -48,7 +48,7 @@ export function RootLayout() {
 
   return (
     <AppContextProvider>
-      <div className={cn('min-h-screen bg-background relative', appColorClass)}>
+      <div className={cn('relative h-dvh overflow-hidden bg-background', appColorClass)}>
         <SkipLink />
         <AmbientBackground />
 
