@@ -9,6 +9,8 @@ internal enum InventoryAccessibility {
     /// The item form's name field, whose label and placeholder both read
     /// "Name".
     internal static let itemNameField = "inventory-item-name-field"
+    internal static let itemCreate = "inventory-item-create"
+    internal static let itemCreateAnother = "inventory-item-create-another"
     internal static let useFreeCode = "inventory-item-use-free-code"
     internal static let itemScan = "inventory-item-scan"
     internal static let itemScanUseText = "inventory-item-scan-use-text"

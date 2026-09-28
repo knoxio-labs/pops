@@ -38,17 +38,21 @@ internal struct InventoryItemFormView: View {
                             mode: model.mode, hasStagedWork: model.hasStagedWork
                         ) { dismiss() }
                     }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(model.actionTitle) {
-                            Task {
-                                if await model.submit() {
-                                    dismiss()
-                                    if model.mode == .create { onCreated() }
+                    if model.mode == .create {
+                        ToolbarItemGroup(placement: .confirmationAction) {
+                            createButton
+                            createAnotherButton
+                        }
+                    } else {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(model.actionTitle) {
+                                Task {
+                                    if await model.submit() { dismiss() }
                                 }
                             }
+                            .popsProminentGlassButton()
+                            .disabled(!model.canSubmit)
                         }
-                        .popsProminentGlassButton()
-                        .disabled(!model.canSubmit)
                     }
                 }
         }
@@ -80,6 +84,34 @@ internal struct InventoryItemFormView: View {
         .onChange(of: model.phase) { _, phase in
             if phase == .ready, model.focusesCode { codeFieldFocused = true }
         }
+    }
+
+    private var createButton: some View {
+        Button {
+            Task {
+                if await model.submit() {
+                    dismiss()
+                    if model.mode == .create { onCreated() }
+                }
+            }
+        } label: {
+            Image(systemName: "checkmark")
+        }
+        .popsProminentGlassButton()
+        .disabled(!model.canSubmit)
+        .accessibilityLabel("Create")
+        .accessibilityIdentifier(InventoryAccessibility.itemCreate)
+    }
+
+    private var createAnotherButton: some View {
+        Button {
+            Task { _ = await model.submitAndPrepareForAnother() }
+        } label: {
+            Image(systemName: "plus")
+        }
+        .disabled(!model.canSubmit)
+        .accessibilityLabel("Create another")
+        .accessibilityIdentifier(InventoryAccessibility.itemCreateAnother)
     }
 
     /// A hand-built binding rather than `$model.photoRunner.undoOffer`:
@@ -142,6 +174,7 @@ internal struct InventoryItemFormView: View {
             labelling
             InventoryFormNotCarriedSection(values: model.notCarried)
         }
+        .id(model.formGeneration)
         .popsMotion(value: model.draft.typeKey)
         .inventoryInsetGroupedList()
         .popsGroundedSwipeActionsContainer()
