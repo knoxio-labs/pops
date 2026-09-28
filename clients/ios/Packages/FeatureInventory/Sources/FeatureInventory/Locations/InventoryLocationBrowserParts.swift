@@ -21,7 +21,7 @@ internal struct InventoryLocationBrowserSkeleton: View {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 PopsPageTitle(title: "Locations")
                 Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
-                .popsShimmer()
+                    .popsShimmer()
                 PopsListSkeleton(rows: 5)
             }
             .padding(.horizontal, PopsSpacing.lg)
