@@ -1,7 +1,5 @@
 import AppCore
 
-@testable import FeatureInventory
-
 internal enum InventoryProtocol2TreeFixture {
     static let beddingTypeId = "bedding"
     static let sheetTypeId = "sheet"
