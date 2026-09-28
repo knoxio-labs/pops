@@ -93,7 +93,8 @@ internal struct InventoryDestinationLevel: View {
                 includesNewPlace: false)
         case .openContainers:
             destinationSection(
-                heading: "Open containers", nodes: tree.nodes.filter { !$0.isLocation },
+                heading: "Open containers",
+                nodes: tree.nodes.filter { $0.destination.kind == .container },
                 parentID: nil, includesNewPlace: false)
         }
     }
@@ -130,8 +131,10 @@ internal struct InventoryDestinationLevel: View {
             true
         case .places:
             node.isLocation
-        case .containers, .openContainers:
+        case .containers:
             !node.isLocation
+        case .openContainers:
+            node.destination.kind == .container
         }
     }
 
@@ -191,7 +194,7 @@ internal struct InventoryDestinationLevel: View {
     }
 
     private func row(_ node: InventoryDestinationTree.Node) -> some View {
-        let drillID = tree.children(of: node.id).isEmpty ? nil : node.id
+        let drillID = tree.drillID(for: node.id, at: levelID)
         return row(destination(for: node), drillID: drillID, reservesDrill: true)
     }
 

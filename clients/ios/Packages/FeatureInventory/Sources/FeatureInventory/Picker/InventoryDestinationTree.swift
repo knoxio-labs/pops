@@ -36,6 +36,11 @@ internal struct InventoryDestinationTree: Equatable {
         nodes.filter { $0.parentID == parentID }
     }
 
+    internal func drillID(for nodeID: String, at levelID: String?) -> String? {
+        guard nodeID != levelID, !children(of: nodeID).isEmpty else { return nil }
+        return nodeID
+    }
+
     internal func descendants(of id: String) -> [Node] {
         var seen: Set<String> = [id]
         return walk(below: id, seen: &seen)

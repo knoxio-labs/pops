@@ -35,7 +35,7 @@ internal struct InventoryPlacementRequest: Identifiable, Equatable {
 ///
 /// For items: Put back when exactly one item is in hand with a place to go
 /// back to, even a closed container; recent destinations; and one tree of
-/// places and open containers. A container is never offered itself or
+/// places and live containers. A container is never offered itself or
 /// anything inside it. For a place: only the places it may move under.
 internal struct InventoryPlacementChoices: Equatable {
     internal static let recentLimit = 3
@@ -77,7 +77,7 @@ internal struct InventoryPlacementChoices: Equatable {
         blocked: Set<InventoryItem.ID>
     ) -> [InventoryDestinationTree.Node] {
         let containers = source.inventoryContainers().filter {
-            $0.isLive && $0.containment?.access == .open && !blocked.contains($0.id)
+            $0.isLive && !blocked.contains($0.id)
         }
         let available = Set(containers.map(\.id))
         let crumbs = InventoryPlacementCrumbs(source: source)
