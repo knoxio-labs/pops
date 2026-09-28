@@ -1,3 +1,6 @@
+import { cn } from '@pops/ui';
+
+import { PAGE_HEIGHT } from '../../foundation/item-page/section-parts';
 import { ContainerWorkspace } from './container/workspace';
 import { DetailDialogs } from './detail-dialogs';
 import { DetailHeader } from './detail-header';
@@ -103,7 +106,7 @@ function ReadyContent({
   onRetry: () => void;
 }): ReactElement {
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       {banner ? <DetailStateBanner state={banner} onRetry={onRetry} /> : null}
       {ready.actions.refusal ? (
         <p role="alert" className="text-sm text-destructive">
@@ -127,7 +130,7 @@ function ReadyContent({
           offline={offline}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -150,7 +153,7 @@ export function DetailReadyView({
   detailBanners: ReactNode;
 }): ReactElement {
   return (
-    <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
+    <div className={cn('@container flex min-h-0 flex-col gap-4 overflow-hidden', PAGE_HEIGHT)}>
       <ReadyHeader model={model} ready={ready} />
       {detailBanners}
       <ReadyContent
