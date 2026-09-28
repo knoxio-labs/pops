@@ -9,36 +9,45 @@ internal struct InventoryPhotoViewerExperimentImage: View {
     internal var zoomable = false
 
     internal var body: some View {
-        if zoomable, let data = photo.imageData, !photo.isBroken, let image = decode(data) {
-            InventoryPhotoZoomableImage(image: image, caption: photo.caption)
-        } else {
-            plate
-        }
-    }
-
-    private var plate: some View {
         Color.popsSurface
             .overlay {
                 if photo.isBroken {
-                    VStack(spacing: PopsSpacing.xs) {
-                        Image(systemName: "photo.badge.exclamationmark")
-                            .font(.popsTitle)
-                            .foregroundStyle(Color.popsWarning)
-                        Text("Couldn't load")
-                            .font(.popsCaption)
-                            .foregroundStyle(Color.popsMutedForeground)
+                    failureState
+                } else if let data = photo.imageData, let image = decode(data) {
+                    if zoomable {
+                        InventoryPhotoZoomableImage(image: image, caption: photo.caption)
+                    } else {
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .padding(PopsSpacing.md)
                     }
-                    .accessibilityLabel("Photo failed to load")
                 } else {
-                    Image(systemName: "photo")
-                        .font(.popsLargeTitle)
-                        .foregroundStyle(Color.popsMutedForeground)
-                        .accessibilityLabel("Photo is loading")
+                    loadingState
                 }
             }
             .clipShape(
                 RoundedRectangle(
                     cornerRadius: PopsRadius.control, style: .continuous))
+    }
+
+    private var failureState: some View {
+        VStack(spacing: PopsSpacing.xs) {
+            Image(systemName: "photo.badge.exclamationmark")
+                .font(.popsTitle)
+                .foregroundStyle(Color.popsWarning)
+            Text("Couldn't load")
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsMutedForeground)
+        }
+        .accessibilityLabel("Photo failed to load")
+    }
+
+    private var loadingState: some View {
+        Image(systemName: "photo")
+            .font(.popsLargeTitle)
+            .foregroundStyle(Color.popsMutedForeground)
+            .accessibilityLabel("Photo is loading")
     }
 
     private func decode(_ data: Data) -> Image? {
