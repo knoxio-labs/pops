@@ -13,8 +13,8 @@ const container = box(
   'open'
 );
 const rows = [
-  item(['lamp', 'Desk lamp', 'lamp'], inBox(container.id), { code: 'LAMP-1' }),
   item(['cable', 'USB cable', 'cable'], inBox(container.id), { code: 'CABLE-1' }),
+  item(['lamp', 'Desk lamp', 'lamp'], inBox(container.id), { code: 'LAMP-1' }),
 ];
 const world = buildWorld(
   [container, ...rows],
