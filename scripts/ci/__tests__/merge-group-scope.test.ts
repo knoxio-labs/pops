@@ -237,9 +237,9 @@ describe('the scope job is wired to the workflow it scopes', () => {
   it.each([
     ['pull_request', undefined, 100],
     ['pull_request', false, 100],
-    ['pull_request', true, 120],
-    ['merge_group', undefined, 120],
-    ['merge_group', false, 120],
+    ['pull_request', true, 150],
+    ['merge_group', undefined, 150],
+    ['merge_group', false, 150],
   ])('budgets the %s full=%s iOS job at %s minutes', (event, full, expected) => {
     const expression = jobsOf('ios-quality.yml').get('quality')?.['timeout-minutes'];
     if (typeof expression !== 'string') throw new Error('Missing lane-specific timeout expression');
@@ -291,6 +291,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
         "github.event_name == 'merge_group' || inputs['full-validation'] == true"
       );
     }
+    expect(namedStep('UI flow (Maestro, against a real BFM)')?.['timeout-minutes']).toBe(30);
 
     expect(namedStep('Release carries no BFM host')?.if).toBeUndefined();
 
