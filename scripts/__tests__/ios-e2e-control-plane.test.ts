@@ -128,6 +128,7 @@ describe('the control plane', () => {
   let outage: boolean;
   let openApiUnreachable: boolean;
   let contractMismatch: boolean;
+  let purchasesReset: boolean;
   let purchasesReachable: boolean;
   let purchasesSearchOutage: boolean;
   let inventoryReachable: boolean;
@@ -140,6 +141,7 @@ describe('the control plane', () => {
     outage = false;
     openApiUnreachable = false;
     contractMismatch = false;
+    purchasesReset = false;
     purchasesReachable = false;
     purchasesSearchOutage = false;
     inventoryReachable = false;
@@ -183,6 +185,11 @@ describe('the control plane', () => {
         isFinanceContractMismatch: () => contractMismatch,
       },
       purchases: {
+        reset: () => {
+          purchasesReset = true;
+          purchasesReachable = false;
+          purchasesSearchOutage = false;
+        },
         setReachable: (active: boolean) => {
           purchasesReachable = active;
         },
@@ -299,6 +306,7 @@ describe('the control plane', () => {
     expect(outage).toBe(false);
     expect(openApiUnreachable).toBe(false);
     expect(contractMismatch).toBe(false);
+    expect(purchasesReset).toBe(true);
     // Withheld again, so the next flow meets the single-feature root every
     // flow written before `receipt-capture` existed was written against.
     expect(purchasesReachable).toBe(false);
