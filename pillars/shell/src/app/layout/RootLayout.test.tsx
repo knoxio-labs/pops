@@ -82,7 +82,7 @@ describe('RootLayout', () => {
     );
 
     const main = screen.getByRole('main');
-    expect(main).toHaveClass('flex', 'min-h-0', 'flex-1', 'min-w-0', 'overflow-x-clip');
+    expect(main).toHaveClass('flex', 'min-h-0', 'flex-1', 'min-w-0', 'flex-col', 'overflow-x-clip');
 
     const contentRow = main.parentElement;
     if (contentRow === null) throw new Error('Shell content row was not rendered');
