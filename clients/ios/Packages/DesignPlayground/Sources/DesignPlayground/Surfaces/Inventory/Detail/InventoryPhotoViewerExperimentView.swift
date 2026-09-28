@@ -206,7 +206,7 @@ private struct InventoryPhotoViewerExperimentViewer: View {
 
     private var pager: some View {
         ScrollView(.horizontal) {
-            LazyHStack(spacing: 0) {
+            LazyHStack(spacing: PopsSpacing.zero) {
                 ForEach(photos) { photo in
                     InventoryPhotoViewerExperimentImage(photo: photo)
                         .containerRelativeFrame(.horizontal)
