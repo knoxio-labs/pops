@@ -63,6 +63,7 @@ function type(
     key,
     label,
     legacyLabels: [],
+    parentTypeId: null,
     presentation: {},
     replacedBy: null,
     revision: 1,
