@@ -172,7 +172,9 @@ internal struct InventoryFormTypePicker: View {
     }
 
     private func choose(_ id: String?) {
-        selection = id
         dismiss()
+        Task { @MainActor in
+            selection = id
+        }
     }
 }
