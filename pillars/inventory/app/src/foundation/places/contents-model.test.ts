@@ -55,6 +55,36 @@ describe('place contents model', () => {
     expect(filterContents(contents, 'missing').boxes).toHaveLength(0);
   });
 
+  it('keeps every ancestor when a deeply nested item matches', () => {
+    const contents = placeContents(
+      buildWorld(
+        [
+          box(['outer', 'Outer box', 'box-type'], at('garage'), 'open'),
+          box(['inner', 'Inner box', 'box-type'], inBox('outer'), 'open'),
+          box(['pouch', 'Small pouch', 'box-type'], inBox('inner'), 'open'),
+          item(['screwdriver', 'Screwdriver', null], inBox('pouch')),
+        ],
+        locations
+      ),
+      'garage'
+    );
+
+    const filtered = filterContents(contents, 'screwdriver');
+
+    expect(
+      filtered.boxes.map(({ box: entry, depth, contents: groupContents }) => [
+        entry.id,
+        depth,
+        groupContents.map(({ id }) => id),
+      ])
+    ).toEqual([
+      ['outer', 0, ['inner']],
+      ['inner', 1, ['pouch']],
+      ['pouch', 2, ['screwdriver']],
+    ]);
+    expect(filtered.boxedCount).toBe(3);
+  });
+
   it('can include inactive rows and recognizes a truly empty place', () => {
     const world = buildWorld(
       [item(['retired', 'Retired', null], at('garage'), { lifecycle: 'retired' })],
