@@ -3,10 +3,12 @@ import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { cn } from '@pops/ui';
 
 import { ListBody } from '../../foundation/items-table/list-body.js';
+import { typePathLabel } from '../../lib/type-tree.js';
 
 import type { ReactElement } from 'react';
 
 import type { BulkColumn } from '../../foundation/list-page/paste-parser.js';
+import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 import type { ImportRowResult } from './use-import.js';
 
 const COLS: readonly [BulkColumn, string, string][] = [
@@ -17,23 +19,42 @@ const COLS: readonly [BulkColumn, string, string][] = [
   ['where', 'Where', 'w-32 lg:w-40'],
   ['note', 'Note', 'hidden w-40 lg:block'],
 ];
+const EMPTY_TYPES: readonly CatalogueType[] = [];
 
 /** Props for the preview step. */
 export interface PreviewStepProps {
   results: readonly ImportRowResult[];
   /** Shows only rows that will be skipped. */
   onlyProblems?: boolean;
+  /** Published types used to resolve type keys into leaf and hierarchy labels. */
+  types?: readonly CatalogueType[];
+}
+
+function typeForValue(types: readonly CatalogueType[], value: string): CatalogueType | undefined {
+  const normalized = value.trim().toLocaleLowerCase();
+  if (normalized === '') return undefined;
+  return types.find((type) => {
+    const path = typePathLabel(types, type.id).toLocaleLowerCase();
+    return (
+      type.key.toLocaleLowerCase() === normalized ||
+      type.label.toLocaleLowerCase() === normalized ||
+      path === normalized
+    );
+  });
 }
 
 function PreviewRow({
   result,
   own,
+  types,
 }: {
   result: ImportRowResult;
   own: ImportRowResult['issues'];
+  types: readonly CatalogueType[];
 }): ReactElement {
   const bad = new Set(own.map((issue) => issue.column));
   const skipped = result.status === 'skipped';
+  const resolvedType = typeForValue(types, result.draft.type);
   return (
     <div role="row" className={cn('border-b last:border-b-0', skipped && 'bg-warning/5')}>
       <div className="flex h-9 items-center gap-3 pr-4 text-sm">
@@ -54,8 +75,19 @@ function PreviewRow({
               bad.has(key) && 'rounded-sm bg-warning/15 px-1 font-medium'
             )}
           >
-            {result.draft[key] ||
-              (key === 'type' ? <span className="text-muted-foreground">Untyped</span> : '')}
+            {key === 'type' && resolvedType !== undefined ? (
+              <span className="block">
+                <span>{resolvedType.label}</span>
+                {typePathLabel(types, resolvedType.id) !== resolvedType.label ? (
+                  <span className="block text-2xs text-muted-foreground">
+                    {typePathLabel(types, resolvedType.id)}
+                  </span>
+                ) : null}
+              </span>
+            ) : (
+              result.draft[key] ||
+              (key === 'type' ? <span className="text-muted-foreground">Untyped</span> : '')
+            )}
           </span>
         ))}
       </div>
@@ -67,7 +99,11 @@ function PreviewRow({
 }
 
 /** Renders server outcomes for every non-blank parsed row. */
-export function PreviewStep({ results, onlyProblems = false }: PreviewStepProps): ReactElement {
+export function PreviewStep({
+  results,
+  onlyProblems = false,
+  types = EMPTY_TYPES,
+}: PreviewStepProps): ReactElement {
   const shown = results
     .filter((result) => result.status !== 'blank')
     .filter((result) => !onlyProblems || result.status === 'skipped');
@@ -86,7 +122,12 @@ export function PreviewStep({ results, onlyProblems = false }: PreviewStepProps)
           ))}
         </div>
         {shown.map((result) => (
-          <PreviewRow key={`row-${String(result.row)}`} result={result} own={result.issues} />
+          <PreviewRow
+            key={`row-${String(result.row)}`}
+            result={result}
+            own={result.issues}
+            types={types}
+          />
         ))}
       </div>
     </ListBody>

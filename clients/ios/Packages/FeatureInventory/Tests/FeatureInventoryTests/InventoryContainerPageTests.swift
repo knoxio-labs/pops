@@ -103,6 +103,17 @@ internal struct InventoryContainerPageTests {
         #expect(InventoryContainerVerb(action: edit) == nil)
     }
 
+    @Test("Open or Close leads the row and holding the container moves to More")
+    func rowAndOverflowPlacement() {
+        let open = Fixture.item("box", "Kitchen box", at: .location("hall"), access: .open)
+        let inHand = Fixture.item(
+            "box", "Kitchen box", at: .hand, previous: .location("hall"), access: .open)
+
+        #expect(InventoryContainerVerb.row(for: open).map(\.id) == ["close", "move", "storeHere"])
+        #expect(InventoryContainerVerb.overflow(for: open).map(\.id) == ["pickUp"])
+        #expect(InventoryContainerVerb.overflow(for: inHand).map(\.id) == ["putBack"])
+    }
+
     @Test("A verb's Undo lands on the item page's runner, so one capsule reverses it")
     func verbsShareTheItemPagesRunner() async throws {
         let store = Self.store()

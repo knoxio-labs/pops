@@ -18,8 +18,8 @@ internal enum InventoryLocationSort: String, CaseIterable, Identifiable {
     }
 }
 
-/// Every place, opening on the top level: the counts, the search, then the
-/// roots as rows that push their own page.
+/// Every place, opening on the top level: the search, then the roots as rows
+/// that push their own page.
 ///
 /// The design's Kind filter has nothing behind it: a location has no kind
 /// (ADR-002), so the browser offers only a sort, not a filter.
@@ -65,7 +65,6 @@ internal struct InventoryLocationBrowserView: View {
                 if tree.nodes.isEmpty {
                     firstRun
                 } else {
-                    InventoryCountTiles(tiles: tree.total.tiles)
                     searchBar
                     if model.query.isEmpty {
                         rootList(tree)

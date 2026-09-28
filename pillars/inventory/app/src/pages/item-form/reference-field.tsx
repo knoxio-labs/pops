@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button, Input } from '@pops/ui';
 
 import { useWebSearch } from '../../inventory-web/useWebSearch.js';
+import { referenceChoiceError } from './field-rules';
 import { ReferenceSearchStatus } from './reference-search-status';
 
 import type { KeyboardEvent, ReactElement } from 'react';
@@ -25,6 +26,7 @@ interface ReferenceCandidate {
   readonly label: string;
   readonly typeId?: string | null;
   readonly typeName?: string | null;
+  readonly refusal: string | null;
 }
 
 function candidatesFor(
@@ -32,26 +34,19 @@ function candidatesFor(
   results: ReturnType<typeof useWebSearch>['results']
 ): ReferenceCandidate[] {
   const candidates: ReferenceCandidate[] = [];
-  if (field.referenceKinds.includes('item')) {
-    for (const hit of results.items) {
-      if (
-        field.referenceTypeIds.length === 0 ||
-        (hit.item.typeId !== null && field.referenceTypeIds.includes(hit.item.typeId))
-      ) {
-        candidates.push({
-          id: hit.item.id,
-          kind: 'item',
-          label: hit.item.name,
-          typeId: hit.item.typeId,
-          typeName: hit.item.typeName,
-        });
-      }
-    }
+  for (const hit of results.items) {
+    const candidate = {
+      id: hit.item.id,
+      kind: 'item' as const,
+      label: hit.item.name,
+      typeId: hit.item.typeId,
+      typeName: hit.item.typeName,
+    };
+    candidates.push({ ...candidate, refusal: referenceChoiceError(field, candidate) });
   }
-  if (field.referenceKinds.includes('location')) {
-    for (const hit of results.places) {
-      candidates.push({ id: hit.place.id, kind: 'location', label: hit.place.name });
-    }
+  for (const hit of results.places) {
+    const candidate = { id: hit.place.id, kind: 'location' as const, label: hit.place.name };
+    candidates.push({ ...candidate, refusal: referenceChoiceError(field, candidate) });
   }
   return candidates;
 }
@@ -62,8 +57,10 @@ function addReference(
   candidate: ReferenceCandidate,
   dispatch: ReferenceFieldProps['dispatch']
 ): void {
+  if (candidate.refusal !== null) return;
   if (refs.some((ref) => ref.id === candidate.id && ref.kind === candidate.kind)) return;
-  const next = field.cardinality === 'many' ? [...refs, candidate] : [candidate];
+  const { refusal: _refusal, ...choice } = candidate;
+  const next = field.cardinality === 'many' ? [...refs, choice] : [choice];
   dispatch({ type: 'field-refs', fieldId: field.id, refs: next });
 }
 
@@ -91,6 +88,7 @@ function ReferenceMatches({
           size="sm"
           className="w-full justify-start"
           aria-label={candidate.label}
+          disabled={candidate.refusal !== null}
           onClick={() => {
             addReference(field, refs, candidate, dispatch);
             clearQuery();
@@ -100,6 +98,11 @@ function ReferenceMatches({
           {candidate.kind === 'item' ? (
             <span className="ml-auto shrink-0 text-xs text-muted-foreground">
               {candidate.typeName ?? 'Unknown type'}
+            </span>
+          ) : null}
+          {candidate.refusal !== null ? (
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+              {candidate.refusal}
             </span>
           ) : null}
         </Button>
@@ -174,7 +177,7 @@ export function ReferenceField({
   };
   const addFromQuery = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key !== 'Enter') return;
-    const candidate = candidates[0];
+    const candidate = candidates.find((entry) => entry.refusal === null);
     if (candidate === undefined) return;
     event.preventDefault();
     addReference(field, refs, candidate, dispatch);

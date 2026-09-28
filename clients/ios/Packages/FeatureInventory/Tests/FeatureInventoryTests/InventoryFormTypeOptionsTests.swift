@@ -60,9 +60,31 @@ internal struct InventoryFormTypeOptionsTests {
     func typePickerLeavesNavigationOwnershipWithCaller() throws {
         let source = try pickerSource()
 
-        #expect(source.contains(".navigationDestination(for: String.self)"))
+        #expect(!source.contains(".navigationDestination(for: String.self)"))
         #expect(!source.contains("NavigationStack"))
         #expect(!source.contains("NavigationPath"))
+    }
+
+    @Test("parent rows use explicit destinations within the caller's stack")
+    func parentRowsUseExplicitDestinations() throws {
+        let source = try pickerSource()
+
+        #expect(source.contains("NavigationLink {"))
+        #expect(source.contains("level(for: option.id)"))
+        #expect(!source.contains(".navigationDestination(for: String.self)"))
+    }
+
+    @Test("selection commits after the picker begins dismissal")
+    func selectionCommitsAfterDismissalBegins() throws {
+        let source = try pickerSource()
+        let chooseBody = try #require(
+            source.split(separator: "private func choose").last.map(String.init))
+        let dismiss = try #require(chooseBody.range(of: "dismiss()")?.lowerBound)
+        let task = try #require(chooseBody.range(of: "Task { @MainActor in")?.lowerBound)
+        let selection = try #require(chooseBody.range(of: "selection = id")?.lowerBound)
+
+        #expect(dismiss < task)
+        #expect(task < selection)
     }
 
     @Test("search \"pillowcase\" returns its path")

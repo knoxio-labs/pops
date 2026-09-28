@@ -50,11 +50,16 @@ export function useFactEditing(model: FactEditingModel): FactEditing {
   const itemVerbs = useItemVerbs();
   const pendingItemIds = usePendingItemIds();
   const type = model.aggregate?.type ?? null;
-  const formType = type === null ? null : (formTypesOf({ types: [type] })[0] ?? null);
+  const types = catalogue.types ?? (type === null ? [] : [type]);
+  const formType =
+    type === null
+      ? null
+      : (formTypesOf({ types }).find((candidate) => candidate.id === type.id) ?? null);
   const initialDrafts = draftsFromValues(
     type,
     model.aggregate?.fieldValues ?? [],
-    model.relatedWorld
+    model.relatedWorld,
+    types
   );
   const state = useFactEditingState({
     itemId: model.item.id,

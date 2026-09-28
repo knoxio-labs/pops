@@ -1,5 +1,10 @@
 import { Checkbox, Input, Label } from '@pops/ui';
 
+import {
+  decimalPlacesInputIsValid,
+  MAX_DECIMAL_PLACES,
+  supportsDecimalPlaces,
+} from './decimal-places';
 import { useFieldFormContext } from './FieldFormContext';
 import { measurementDimensionReadout } from './measurement-dimension';
 
@@ -9,19 +14,23 @@ export function FieldFormConstraints() {
   if (value.kind === 'measurement') {
     const dimension = measurementDimensionReadout(value.fixedUnit);
     return (
-      <div className="space-y-2">
-        <Label htmlFor="catalogue-fixed-unit">Fixed unit</Label>
-        <Input
-          id="catalogue-fixed-unit"
-          className="min-h-11"
-          value={value.fixedUnit}
-          disabled={value.shapeLocked}
-          onChange={(event) => value.setFixedUnit(event.target.value)}
-        />
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="catalogue-fixed-unit">Fixed unit</Label>
+          <Input
+            id="catalogue-fixed-unit"
+            className="min-h-11"
+            value={value.fixedUnit}
+            disabled={value.shapeLocked}
+            onChange={(event) => value.setFixedUnit(event.target.value)}
+          />
+        </div>
         {dimension !== null && <p className="text-xs text-muted-foreground">{dimension}</p>}
+        <DecimalPlacesControl />
       </div>
     );
   }
+  if (supportsDecimalPlaces(value.kind)) return <DecimalPlacesControl />;
   if (value.kind !== 'reference') return null;
   const noTargetKind = value.referenceKinds.length === 0;
   return (
@@ -40,6 +49,36 @@ export function FieldFormConstraints() {
       )}
       {value.referenceKinds.includes('item') && <ReferenceTypes />}
     </section>
+  );
+}
+
+function DecimalPlacesControl() {
+  const { decimalPlaces, setDecimalPlaces } = useFieldFormContext();
+  const valid = decimalPlacesInputIsValid(decimalPlaces);
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="catalogue-decimal-places">Decimal places</Label>
+      <Input
+        id="catalogue-decimal-places"
+        className="min-h-11"
+        type="number"
+        min={0}
+        max={MAX_DECIMAL_PLACES}
+        step={1}
+        inputMode="numeric"
+        value={decimalPlaces}
+        onChange={(event) => setDecimalPlaces(event.target.value)}
+        aria-invalid={!valid}
+      />
+      <p className="text-xs text-muted-foreground">
+        Leave blank to preserve the value’s scale. Display values are rounded to this many places.
+      </p>
+      {!valid && (
+        <p className="text-xs text-destructive" role="alert">
+          Enter a whole number from 0 to {MAX_DECIMAL_PLACES}.
+        </p>
+      )}
+    </div>
   );
 }
 

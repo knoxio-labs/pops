@@ -9,7 +9,7 @@ import {
 } from '../../foundation/list-page/list-filters.js';
 import { OfflineBanner } from '../../foundation/list-page/list-states.js';
 import { containersSearch } from '../../inventory-web/items-url-filters.js';
-import { labelsHref } from '../labels-page/label-params.js';
+import { effectiveCapabilities } from '../../lib/type-tree.js';
 import { containerSegmentOptions } from './containers-model.js';
 import { ContainersPackingStrip } from './containers-packing-strip.js';
 
@@ -34,8 +34,15 @@ function showToolbar(model: ContainersPageModel): boolean {
 /** Renders the filter toolbar, state segments, and server-backed summary. */
 export function ContainersToolbar({ model }: { model: ContainersPageModel }): ReactElement | null {
   if (!showToolbar(model) || model.summary.data === undefined) return null;
-  const types = typeFilterOptions(model.typeOptions);
-  const places = placeFilterOptions(model.placeOptions, [...model.world.items.values()]);
+  const containerTypeKeys = new Set(
+    model.typeOptions
+      .filter((type) => effectiveCapabilities(model.typeOptions, type.id).includes('containment'))
+      .map((type) => type.key)
+  );
+  const types = typeFilterOptions(model.typeOptions).filter((type) =>
+    containerTypeKeys.has(type.value)
+  );
+  const places = placeFilterOptions(model.placeOptions, []);
   return (
     <div className="shrink-0 space-y-2">
       <ItemsToolbar
@@ -69,11 +76,13 @@ export function ContainersToolbar({ model }: { model: ContainersPageModel }): Re
 /** Renders the offline notice and moving-day packing strip. */
 export function ContainersBanner({ model }: { model: ContainersPageModel }): ReactElement | null {
   const strip =
-    model.filters.filters.segment === 'moving' && model.summary.data !== undefined ? (
+    model.online &&
+    model.filters.filters.segment === 'moving' &&
+    model.summary.data !== undefined ? (
       <ContainersPackingStrip
         progress={model.summary.data.packing}
-        printableCount={model.closedIds.length}
-        onPrint={() => void model.navigate(labelsHref(model.closedIds))}
+        printing={model.printing}
+        onPrint={() => void model.printClosed()}
       />
     ) : null;
   if (model.online && strip === null) return null;

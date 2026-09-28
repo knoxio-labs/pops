@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Skeleton } from '@pops/ui';
 
@@ -10,7 +10,6 @@ import {
 import { LoadError } from '../../foundation/frame/load-error.js';
 import { undoEvent } from '../overview/overview-event-actions.js';
 import { HistoryFilters } from './history-filters.js';
-import { filterCounts, filterEvents } from './history-model.js';
 import { HistoryPageLayout } from './history-page-layout.js';
 
 import type { EventModel } from '../../foundation/model/model.js';
@@ -30,16 +29,20 @@ function undoDisabledReason(isOnline: boolean, hasCachedError: boolean): string 
 export interface HistoryQueryState {
   isPending: boolean;
   isError: boolean;
+  total: number | null;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
-  fetchNextPage: () => Promise<unknown>;
-  refetch: () => Promise<unknown>;
+  fetchNextPage: () => void;
+  refetch: () => void;
 }
 
 /** Props for {@link HistoryPageContent}. */
 export interface HistoryPageContentProps {
   events: readonly EventModel[];
   sourceById: ReadonlyMap<string, WebEvent>;
+  filter: HistoryFilter;
+  counts: Readonly<Record<HistoryFilter, number>>;
+  onFilterChange: (filter: HistoryFilter) => void;
   history: HistoryQueryState;
   /** Whether the query has data to keep visible after a failed refetch. */
   hasCachedData: boolean;
@@ -74,13 +77,14 @@ function HistoryReady({
   history,
   revertEvent,
   navigate,
+  filter,
+  counts,
+  onFilterChange,
   disabledReason,
 }: HistoryPageContentProps & { disabledReason?: string }) {
-  const [filter, setFilter] = useState<HistoryFilter>('all');
   const [openId, setOpenId] = useState<string | null>(null);
-  const counts = useMemo(() => filterCounts(events), [events]);
-  const shownEvents = useMemo(() => filterEvents(events, filter), [events, filter]);
   const openEvent = events.find((event) => event.id === openId) ?? null;
+  const total = filter === 'all' ? (history.total ?? events.length) : counts[filter];
   const onUndo = useCallback(
     async (eventId: string) => {
       if (disabledReason !== undefined) return;
@@ -95,20 +99,21 @@ function HistoryReady({
 
   return (
     <>
-      <HistoryFilters filter={filter} counts={counts} onChange={setFilter} />
+      <HistoryFilters filter={filter} counts={counts} onChange={onFilterChange} />
       <HistoryPageLayout
-        shownEvents={shownEvents}
+        shownEvents={events}
         filtered={filter !== 'all'}
         openEvent={openEvent}
         openId={openId}
+        total={total}
         hasNextPage={history.hasNextPage}
         isFetchingNextPage={history.isFetchingNextPage}
         disabledReason={disabledReason}
         onOpen={setOpenId}
         onUndo={(eventId) => void onUndo(eventId)}
         onClose={() => setOpenId(null)}
-        onClearFilter={() => setFilter('all')}
-        onLoadMore={() => void history.fetchNextPage()}
+        onClearFilter={() => onFilterChange('all')}
+        onLoadMore={history.fetchNextPage}
       />
     </>
   );

@@ -78,6 +78,13 @@ describe('formatFactValue', () => {
   it('joins multiple values and leaves ordinary values readable', () => {
     expect(formatFactValue(['one', 'two'], field(), world)).toBe('one, two');
     expect(formatFactValue([42], field({ kind: 'integer' }), world)).toBe('42');
+    expect(
+      formatFactValue(
+        [{ amount: '24.0000', unit: 'L' }],
+        field({ kind: 'measurement', fixedUnit: 'L', presentation: { decimalPlaces: 1 } }),
+        world
+      )
+    ).toBe('24.0 L');
   });
 
   it('returns null for an unset field', () => {

@@ -1,4 +1,5 @@
 import { formatFactValue } from '../../foundation/item-page/fact-value';
+import { effectiveFields } from '../../lib/type-tree';
 
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types';
 import type { PlacementWorld } from '../../foundation/model/placement-model';
@@ -56,8 +57,8 @@ export function relatedItemIds(
     .toSorted();
 }
 
-function fieldLabel(type: CatalogueType, fieldId: string): string {
-  return type.fields.find((field) => field.id === fieldId)?.label ?? fieldId;
+function fieldLabel(fields: readonly CatalogueField[], fieldId: string): string {
+  return fields.find((field) => field.id === fieldId)?.label ?? fieldId;
 }
 
 function storedFact(
@@ -77,8 +78,8 @@ function storedFact(
 
 function computedFact(
   item: WebGetResponse['item'],
-  type: CatalogueType,
   field: CatalogueField,
+  fields: readonly CatalogueField[],
   relatedWorld: PlacementWorld
 ): DetailFact {
   const value = item.computedValues.find((entry) => entry.fieldId === field.id);
@@ -88,7 +89,7 @@ function computedFact(
       label: field.label,
       value: null,
       origin: 'missing-inputs',
-      missingInputs: value.missingInputs.map((input) => fieldLabel(type, input.fieldId)),
+      missingInputs: value.missingInputs.map((input) => fieldLabel(fields, input.fieldId)),
       inline: false,
     };
   }
@@ -101,11 +102,12 @@ function computedFact(
   };
 }
 
-/** Maps a web item and published type into the ordered facts shown in the rail. */
+/** Maps a web item and published type into ordered facts, resolving ancestors when `types` is supplied. */
 export function toDetailFacts(
   item: WebGetResponse['item'],
   type: CatalogueType | null,
-  relatedWorld: PlacementWorld
+  relatedWorld: PlacementWorld,
+  types?: readonly CatalogueType[]
 ): DetailFact[] {
   const facts: DetailFact[] = [];
   if (item.quantity > 1) {
@@ -118,14 +120,14 @@ export function toDetailFacts(
     });
   }
   if (type === null) return facts;
-  const fields = [...type.fields]
-    .filter((field) => field.archivedAt === null)
-    .toSorted((left, right) => left.sortOrder - right.sortOrder);
+  const fields = (types === undefined ? type.fields : effectiveFields(types, type.id)).filter(
+    (field) => field.archivedAt === null
+  );
   for (const field of fields) {
     const fact =
       field.storage === 'stored'
         ? storedFact(item, field, relatedWorld)
-        : computedFact(item, type, field, relatedWorld);
+        : computedFact(item, field, fields, relatedWorld);
     facts.push(fact);
   }
   return facts;

@@ -97,4 +97,15 @@ internal struct InventoryLocationPageActionTests {
             Self.storeHereSheet.contains(
                 ".inventoryItemFormPresentation(store: runner.store, onCreated: { dismiss() })"))
     }
+
+    @Test("nested item-form presenters inherit the server-backed code suggester")
+    func nestedPresentationsInheritCodeSuggester() {
+        #expect(
+            Self.itemFormPresentation.contains(
+                "@Environment(\\.inventoryCodeSuggester) private var inheritedSuggester"))
+        #expect(
+            Self.itemFormPresentation.contains(
+                ".environment(\\.inventoryCodeSuggester, resolvedSuggester)"))
+        #expect(Self.itemFormPresentation.contains("suggester: resolvedSuggester"))
+    }
 }

@@ -1,9 +1,11 @@
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { placementTrail } from '../../foundation/model/placement-model.js';
+import { purchaseRecord } from '../../foundation/search/search-records.js';
 export { PALETTE_COMMANDS } from './palette-navigation-commands.js';
 
 import type { ItemRowModel, LocationModel, PlacementTarget } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
+import type { PurchaseHit } from '../../inventory-web/purchase-model.js';
 import type { InventoryPaletteCommand } from './palette-groups.js';
 
 function detailForPlacement(world: PlacementWorld, target: PlacementTarget): string {
@@ -50,6 +52,16 @@ export function locationRecordCommand(
     keywords: [location.kind],
     detail: detailForPlacement(world, { kind: 'location', locationId: location.id }),
     action: { kind: 'open-location', id: location.id },
+  };
+}
+
+/** Creates a searchable purchase result command for the command palette. */
+export function purchaseRecordCommand(hit: PurchaseHit): InventoryPaletteCommand {
+  const record = purchaseRecord(hit);
+  return {
+    ...record,
+    keywords: [hit.merchant, hit.orderNumber ?? '', hit.matchedLine ?? ''],
+    action: { kind: 'open-purchase', id: hit.id },
   };
 }
 

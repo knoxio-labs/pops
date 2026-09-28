@@ -1,12 +1,11 @@
-import { cn, Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
+import { cn, Tabs, TabsList, TabsTrigger } from '@pops/ui';
 
 import { EmptyLine } from '../../foundation/item-page/section-parts';
 import { INVENTORY_ICONS } from '../../foundation/model/icons';
 import { ShortcutHint } from '../../foundation/shortcuts/shortcut-hint';
+import { TabPanels } from './detail-tab-panels';
 import { FactsSection } from './facts-section';
-import { HistoryPreviewSection } from './history-preview-section';
 import { PhotosSection } from './photos-section';
-import { ConnectionsTabSection, OverviewSections } from './sections';
 
 import type { ReactElement } from 'react';
 
@@ -69,7 +68,7 @@ export function FactsRail({
       ) : (
         <FactsSection
           facts={aggregate.facts}
-          typeName={aggregate.type?.label ?? model.item.typeName}
+          typeName={model.item.typeName ?? aggregate.type?.label ?? null}
           readOnly={readOnly}
           onSetType={onSetType}
           editing={editing}
@@ -109,58 +108,6 @@ function TabBar({ model }: { model: ItemDetailModel }): ReactElement {
   );
 }
 
-function TabPanels({
-  itemId,
-  model,
-  readOnly,
-  onSetType,
-  onLinksChanged,
-  editing,
-  onQuantity,
-}: {
-  itemId: string;
-  model: ItemDetailModel;
-  readOnly: boolean;
-  onSetType: () => void;
-  onLinksChanged: () => void;
-  editing?: FactEditing;
-  onQuantity?: (action: 'split' | 'change') => void;
-}): ReactElement {
-  return (
-    <>
-      <TabsContent value="facts" className="min-h-0 overflow-y-auto p-4 @2xl:hidden">
-        <FactsRail
-          model={model}
-          readOnly={readOnly}
-          onSetType={onSetType}
-          mobile
-          editing={editing}
-          onQuantity={onQuantity}
-        />
-      </TabsContent>
-      <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto p-4">
-        <OverviewSections
-          itemId={itemId}
-          model={model}
-          readOnly={readOnly}
-          onLinksChanged={onLinksChanged}
-        />
-      </TabsContent>
-      <TabsContent value="connections" className="min-h-0 flex-1 overflow-y-auto p-4">
-        <ConnectionsTabSection
-          itemId={itemId}
-          model={model}
-          readOnly={readOnly}
-          onLinksChanged={onLinksChanged}
-        />
-      </TabsContent>
-      <TabsContent value="history" className="min-h-0 flex-1 overflow-y-auto p-4">
-        <HistoryPreviewSection itemId={itemId} eventCount={model.eventCount} />
-      </TabsContent>
-    </>
-  );
-}
-
 /** Renders the URL-backed detail tabs and their independent section panes. */
 export function DetailTabs({
   itemId,
@@ -197,10 +144,17 @@ export function DetailTabs({
         itemId={itemId}
         model={model}
         readOnly={readOnly}
-        onSetType={onSetType}
+        factsRail={
+          <FactsRail
+            model={model}
+            readOnly={readOnly}
+            onSetType={onSetType}
+            mobile
+            editing={editing}
+            onQuantity={onQuantity}
+          />
+        }
         onLinksChanged={onLinksChanged}
-        editing={editing}
-        onQuantity={onQuantity}
       />
     </Tabs>
   );

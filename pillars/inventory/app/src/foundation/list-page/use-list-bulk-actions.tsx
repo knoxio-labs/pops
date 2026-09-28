@@ -87,7 +87,7 @@ function createSetTypeHandler(context: BulkHandlerContext): (typeKey: string) =>
     const action = context.action;
     const type = context.catalogue?.types.find((candidate) => candidate.key === typeKey);
     if (action === null || type === undefined) return;
-    const values = typeChangeValues(context.webItems ?? [], type);
+    const values = typeChangeValues(context.webItems ?? [], type, context.catalogue?.types ?? []);
     await context.runBulk(
       () => context.bulk.changeType(action.ids, typeKey, values),
       'type',
@@ -106,7 +106,7 @@ function createSetFieldHandler(
       (entry) => entry.field.id === fieldId
     );
     if (candidate === undefined) return;
-    const patch = bulkFieldPatch(candidate.field, fieldInput);
+    const patch = bulkFieldPatch(candidate.field, fieldInput, context.catalogue?.types ?? []);
     if (patch === null) return;
     const eligible = new Set(candidate.itemIds);
     const writes = context.rows

@@ -31,6 +31,18 @@ function ownFields(type: CatalogueType): CatalogueField[] {
   );
 }
 
+function effectiveField(types: readonly CatalogueType[], field: CatalogueField): CatalogueField {
+  if (field.kind !== 'reference' || field.referenceTypeIds.length === 0) return field;
+  return {
+    ...field,
+    referenceTypeIds: [
+      ...new Set(
+        field.referenceTypeIds.flatMap((typeId) => [typeId, ...descendantIds(types, typeId)])
+      ),
+    ],
+  };
+}
+
 /** Returns root-first ancestor ids, excluding the requested type itself. */
 export function ancestorIds(types: readonly CatalogueType[], id: string): string[] {
   return ancestorTypeIds(typeIndex(types), id);
@@ -103,13 +115,47 @@ export function typePath(types: readonly CatalogueType[], id: string): string[] 
   return path;
 }
 
+/** Returns the root-first label path used wherever a type is shown to a person. */
+export function typePathLabel(types: readonly CatalogueType[], id: string): string {
+  return typePath(types, id).join(' › ');
+}
+
 /** Returns ancestor-owned fields in root-first order, followed by the type's own fields. */
 export function effectiveFields(types: readonly CatalogueType[], id: string): CatalogueField[] {
   const index = typeIndex(types);
   const type = index.get(id);
   if (type === undefined) return [];
-  return [...ancestorIds(types, id), id].flatMap((typeId) => {
+  const fields = new Map<string, CatalogueField>();
+  for (const typeId of [...ancestorIds(types, id), id]) {
     const owner = index.get(typeId);
-    return owner === undefined ? [] : ownFields(owner);
-  });
+    for (const field of owner === undefined ? [] : ownFields(owner)) {
+      fields.set(field.id, effectiveField(types, field));
+    }
+  }
+  return [...fields.values()];
+}
+
+/** Returns the union of inherited and local capabilities in root-first order. */
+export function effectiveCapabilities(
+  types: readonly CatalogueType[],
+  id: string
+): CatalogueType['capabilities'] {
+  const index = typeIndex(types);
+  const capabilities = new Set<CatalogueType['capabilities'][number]>();
+  for (const typeId of [...ancestorIds(types, id), id]) {
+    for (const capability of index.get(typeId)?.capabilities ?? []) capabilities.add(capability);
+  }
+  return [...capabilities];
+}
+
+/** Returns one catalogue type with inherited fields and capabilities resolved. */
+export function effectiveType(types: readonly CatalogueType[], id: string): CatalogueType | null {
+  const type = typeIndex(types).get(id);
+  return type === undefined
+    ? null
+    : {
+        ...type,
+        capabilities: effectiveCapabilities(types, id),
+        fields: effectiveFields(types, id),
+      };
 }

@@ -612,7 +612,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","purchases.purchase","purchases.receipt","barcode.lookup"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types","inventory.codes","inventory.media","barcode.lookup"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

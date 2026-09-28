@@ -1,5 +1,7 @@
 import { evaluationErrorSentence } from '@pops/inventory/expression';
 
+import { formatDecimal } from '../decimal-places';
+
 import type {
   ExpressionContext,
   ExpressionField,
@@ -56,19 +58,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function formatObjectValue(value: Record<string, unknown>, field?: ExpressionField): string {
+function formatObjectValue(
+  value: Record<string, unknown>,
+  field?: Pick<ExpressionField, 'kind' | 'options' | 'decimalPlaces'>
+): string {
   const { amount, unit, optionId, targetId } = value;
-  if (typeof amount === 'string' && typeof unit === 'string') return `${amount} ${unit}`;
+  if ((typeof amount === 'string' || typeof amount === 'number') && typeof unit === 'string') {
+    return `${formatDecimal(amount, field?.decimalPlaces ?? null)} ${unit}`;
+  }
   if (typeof optionId === 'string')
     return field?.options?.find((option) => option.id === optionId)?.label ?? optionId;
   if (typeof targetId === 'string') return targetId;
   return JSON.stringify(value);
 }
 
-/** Formats a wire value for the preview: yes or no, an amount with its unit, a choice's label. */
-export function formatWireValue(value: unknown, field?: ExpressionField): string {
+/** Formats a wire value for the preview: yes or no, a precise amount with its unit, or a choice's label. */
+export function formatWireValue(
+  value: unknown,
+  field?: Pick<ExpressionField, 'kind' | 'options' | 'decimalPlaces'>
+): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'string' || typeof value === 'number') {
+    return field?.kind === 'decimal'
+      ? formatDecimal(value, field.decimalPlaces ?? null)
+      : String(value);
+  }
   return isRecord(value) ? formatObjectValue(value, field) : JSON.stringify(value);
 }
 

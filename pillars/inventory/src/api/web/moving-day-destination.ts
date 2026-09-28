@@ -44,7 +44,7 @@ function readDestinationFields(
 
   const wantedKey = destinationFieldName(destinationField);
   for (const type of catalogue.types) {
-    const field = type.fields.find(
+    const field = type.effectiveFields.find(
       (candidate) => candidate.kind === 'enum' && candidate.key.trim().toLowerCase() === wantedKey
     );
     if (field === undefined) continue;

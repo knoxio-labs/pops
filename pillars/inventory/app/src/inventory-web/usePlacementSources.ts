@@ -163,7 +163,10 @@ export function usePlacementSources(subject: PickerSubject) {
   const recentState = useRecents();
   const subjectChunks = useMemo(() => subjectChunksFor(subject), [subject]);
   const queries = usePlacementQueries(subjectChunks);
-  const mapperContext = { typeNames: catalogue.typeNameById };
+  const mapperContext = useMemo(
+    () => ({ typeNames: catalogue.typeNameById }),
+    [catalogue.typeNameById]
+  );
   const itemSources = usePlacementItems(queries, mapperContext);
   const locationSources = usePlacementLocations(queries.locationsQuery);
   const world = useMemo(

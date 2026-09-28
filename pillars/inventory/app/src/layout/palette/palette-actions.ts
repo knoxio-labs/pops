@@ -2,6 +2,7 @@ import { toast } from 'sonner';
 
 import { showUndoToast } from '../../foundation/feedback/undo-toast.js';
 import { targetName } from '../../foundation/model/placement-model.js';
+import { purchaseHref } from '../../inventory-web/purchase-model.js';
 import { recordOpened, recordQuery } from '../../inventory-web/recents.js';
 
 import type { NavigateFunction } from 'react-router';
@@ -34,6 +35,7 @@ function locationHref(id: string): string {
 export function paletteRecordHref(action: PaletteCommandAction): string | null {
   if (action.kind === 'open-item') return itemHref(action.id);
   if (action.kind === 'open-location') return locationHref(action.id);
+  if (action.kind === 'open-purchase') return purchaseHref(action.id);
   return null;
 }
 
@@ -72,7 +74,7 @@ function runVerb(
 interface ItemActionContext {
   readonly action: Exclude<
     PaletteCommandAction,
-    { kind: 'navigate' | 'open-item' | 'open-location' | 'copy-code' }
+    { kind: 'navigate' | 'open-item' | 'open-location' | 'open-purchase' | 'copy-code' }
   >;
   readonly argument: InventoryPaletteCommand | null;
   readonly verbs: ItemVerbs;
@@ -141,6 +143,11 @@ export function runPaletteAction({
   if (action.kind === 'open-location') {
     recordOpened({ kind: 'location', id: action.id });
     void navigate(locationHref(action.id));
+    onClose();
+    return;
+  }
+  if (action.kind === 'open-purchase') {
+    void navigate(purchaseHref(action.id));
     onClose();
     return;
   }

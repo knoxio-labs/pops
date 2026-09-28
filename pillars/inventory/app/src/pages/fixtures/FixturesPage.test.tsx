@@ -4,10 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   useFixturesPageModel: vi.fn(),
+  useConnectionsTabCounts: vi.fn(),
 }));
 
 vi.mock('./fixtures-page-model.js', () => ({
   useFixturesPageModel: (...args: unknown[]) => mocks.useFixturesPageModel(...args),
+}));
+vi.mock('../../inventory-web/useConnectionsTabCounts.js', () => ({
+  useConnectionsTabCounts: (...args: unknown[]) => mocks.useConnectionsTabCounts(...args),
 }));
 
 import { FixturesPage } from './FixturesPage.js';
@@ -84,6 +88,7 @@ function renderPage(model = pageModel()): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.useConnectionsTabCounts.mockReturnValue({ connections: 2, fixtures: 1 });
 });
 
 describe('FixturesPage', () => {
@@ -97,10 +102,12 @@ describe('FixturesPage', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Kind' }), {
       target: { value: 'light' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Desk outlet' }));
-
     expect(model.filters.setQueryDraft).toHaveBeenCalledWith('desk');
     expect(model.filters.setKindDraft).toHaveBeenCalledWith('light');
+    expect(screen.getByRole('tab', { name: /Connections\s*2/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Fixtures\s*1/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Desk outlet' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Edit Desk outlet');
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));

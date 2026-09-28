@@ -11,6 +11,7 @@ export interface HistoryPageLayoutProps {
   filtered: boolean;
   openEvent: EventModel | null;
   openId: string | null;
+  total: number;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   disabledReason?: string;
@@ -27,6 +28,7 @@ export function HistoryPageLayout({
   filtered,
   openEvent,
   openId,
+  total,
   hasNextPage,
   isFetchingNextPage,
   disabledReason,
@@ -45,6 +47,7 @@ export function HistoryPageLayout({
           events={shownEvents}
           filtered={filtered}
           selectedId={openId}
+          total={total}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
           disabledReason={disabledReason}

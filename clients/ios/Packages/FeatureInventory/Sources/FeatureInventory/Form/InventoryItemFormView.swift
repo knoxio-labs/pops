@@ -38,17 +38,24 @@ internal struct InventoryItemFormView: View {
                             mode: model.mode, hasStagedWork: model.hasStagedWork
                         ) { dismiss() }
                     }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(model.actionTitle) {
-                            Task {
-                                if await model.submit() {
-                                    dismiss()
-                                    if model.mode == .create { onCreated() }
+                    if model.mode == .create {
+                        ToolbarItemGroup(placement: .confirmationAction) {
+                            InventoryCreateButton(model: model) {
+                                dismiss()
+                                if model.mode == .create { onCreated() }
+                            }
+                            InventoryCreateAnotherButton(model: model)
+                        }
+                    } else {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(model.actionTitle) {
+                                Task {
+                                    if await model.submit() { dismiss() }
                                 }
                             }
+                            .popsProminentGlassButton()
+                            .disabled(!model.canSubmit)
                         }
-                        .popsProminentGlassButton()
-                        .disabled(!model.canSubmit)
                     }
                 }
         }
@@ -142,6 +149,7 @@ internal struct InventoryItemFormView: View {
             labelling
             InventoryFormNotCarriedSection(values: model.notCarried)
         }
+        .id(model.formGeneration)
         .popsMotion(value: model.draft.typeKey)
         .inventoryInsetGroupedList()
         .popsGroundedSwipeActionsContainer()
