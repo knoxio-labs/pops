@@ -627,7 +627,10 @@ describe('POST /web/items/batch', () => {
         baseRevision: current.revision.revision,
         expectedDraftVersion: withArchived.revision.draftVersion,
       },
-      [{ kind: 'archive_type', id: archived.id }]
+      [
+        { kind: 'archive_type', id: archived.id },
+        { kind: 'archive_type', id: duplicate.id },
+      ]
     ).draft;
     publishCatalogueDraft(
       h.db.db,
@@ -644,10 +647,11 @@ describe('POST /web/items/batch', () => {
     if (catalogue === null) throw new Error('the archived batch catalogue is missing');
     const leaf = catalogue.types.find((type) => type.id === tree.leafTypeId);
     if (leaf === undefined) throw new Error('the published batch leaf is missing');
-    expect(resolveBatchType(catalogue, leaf.label)).toBeUndefined();
+    expect(resolveBatchType(catalogue, leaf.label)).toEqual(leaf);
     expect(resolveBatchType(catalogue, 'does-not-exist')).toBeUndefined();
     expect(resolveBatchType(catalogue, 'Archived batch label')).toBeUndefined();
     expect(resolveBatchType(catalogue, 'batch_archived_key')).toBeUndefined();
+    expect(resolveBatchType(catalogue, duplicate.key)).toBeUndefined();
     expect(resolveBatchType(catalogue, '')).toBeNull();
     expect(resolveBatchType(null, 'anything')).toBeUndefined();
   });

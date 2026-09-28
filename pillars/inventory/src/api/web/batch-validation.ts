@@ -109,11 +109,12 @@ export function resolveBatchType(
   const typesById = new Map(catalogue.types.map((type) => [type.id, type]));
   const matches = catalogue.types.filter(
     (type) =>
-      normalized(type.key) === key ||
-      normalized(type.label) === key ||
-      normalized(typePathLabel(catalogue, type, typesById)) === key
+      type.archivedAt === null &&
+      (normalized(type.key) === key ||
+        normalized(type.label) === key ||
+        normalized(typePathLabel(catalogue, type, typesById)) === key)
   );
-  if (matches.length !== 1 || matches[0]?.archivedAt !== null) return undefined;
+  if (matches.length !== 1) return undefined;
   return matches[0];
 }
 
