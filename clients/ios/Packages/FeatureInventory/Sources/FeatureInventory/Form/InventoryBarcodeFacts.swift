@@ -30,7 +30,7 @@ internal enum InventoryBarcodeFacts {
     }
 
     internal static func deterministicValues(
-        _ product: InventoryBarcodeProduct, fields: [InventoryCatalogueField]
+        _ product: InventoryBarcodeProduct, fields: [InventoryCatalogueField], isbn: String? = nil
     ) -> [String: [InventoryPrimitiveValue]] {
         fields.reduce(into: [String: [InventoryPrimitiveValue]]()) { result, field in
             guard let kind = canonicalField(for: field) else { return }
@@ -50,13 +50,35 @@ internal enum InventoryBarcodeFacts {
                 } else if let value = stringValue(language, for: field) {
                     result[field.id] = [value]
                 }
+            case .genre:
+                guard field.kind == .enumeration,
+                    let values = enumValues(product.subjects, for: field)
+                else { return }
+                result[field.id] = values
+            case .format:
+                guard field.kind == .enumeration,
+                    let values = enumValues(formatValues(product.attributes), for: field)
+                else { return }
+                result[field.id] = values
+            case .isbn:
+                guard let isbn, let value = textValue(isbn, for: field) else { return }
+                result[field.id] = [value]
+            case .pageCount:
+                guard let pageCount = product.pageCount,
+                    let value = textValue(String(pageCount), for: field)
+                else { return }
+                result[field.id] = [value]
             }
         }
     }
 
     private enum CanonicalField {
         case author
+        case genre
+        case format
+        case isbn
         case language
+        case pageCount
     }
 
     private static func canonicalField(for field: InventoryCatalogueField) -> CanonicalField? {
@@ -71,6 +93,23 @@ internal enum InventoryBarcodeFacts {
         let languageKeys = ["language", "languages", "languagecode", "lang", "idioma"]
         if names.contains(where: languageKeys.contains) {
             return .language
+        }
+        let genreKeys = ["genre", "genres", "subject", "subjects", "category", "categories"]
+        if names.contains(where: genreKeys.contains) {
+            return .genre
+        }
+        let formatKeys = ["format", "formats", "binding", "bookformat", "physicalformat", "type"]
+        if names.contains(where: formatKeys.contains) {
+            return .format
+        }
+        let isbnKeys = ["isbn", "isbn10", "isbn13"]
+        if names.contains(where: isbnKeys.contains) {
+            return .isbn
+        }
+        let help = normalized(field.help ?? "")
+        let pageCountKeys = ["pagecount", "pages", "numberofpages"]
+        if names.contains(where: pageCountKeys.contains) || help.contains("pagecount") {
+            return .pageCount
         }
         return nil
     }
@@ -96,6 +135,39 @@ internal enum InventoryBarcodeFacts {
         case .shortText, .longText: return .string(value)
         default: return nil
         }
+    }
+
+    private static func enumValues(
+        _ candidates: [String], for field: InventoryCatalogueField
+    ) -> [InventoryPrimitiveValue]? {
+        let candidateValues = Set(candidates.map(normalized))
+        let matches = field.enumOptions
+            .filter { option in
+                option.archivedAt == nil
+                    && (candidateValues.contains(normalized(option.key))
+                        || candidateValues.contains(normalized(option.label)))
+            }
+            .sorted { ($0.sortOrder, $0.id) < ($1.sortOrder, $1.id) }
+        guard !matches.isEmpty, field.cardinality == .many || matches.count == 1 else {
+            return nil
+        }
+        return matches.map { .enumeration(optionId: $0.id) }
+    }
+
+    private static func textValue(
+        _ value: String, for field: InventoryCatalogueField
+    ) -> InventoryPrimitiveValue? {
+        guard case .value(let parsed) = InventoryProtocol2ValueText.parse(value, for: field)
+        else { return nil }
+        return parsed
+    }
+
+    private static func formatValues(_ attributes: [String: String]) -> [String] {
+        let formatKeys = ["format", "physicalformat", "binding", "bookformat", "editiontype"]
+        return attributes
+            .filter { formatKeys.contains(normalized($0.key)) }
+            .sorted { normalized($0.key) < normalized($1.key) }
+            .compactMap { nonempty($0.value) }
     }
 
     private static func languageOption(

@@ -114,6 +114,33 @@ internal struct InventoryScanIdentifierTests {
         #expect(values[language.id] == [.enumeration(optionId: "pt")])
     }
 
+    @Test("book metadata maps exact provider values to catalogue fields")
+    func deterministicBookMetadata() {
+        let genre = InventoryPrefillTestSupport.field(
+            id: "field-genre", key: "genre", label: "Genre", kind: .enumeration,
+            enumOptions: [
+                InventoryPrefillTestSupport.option(
+                    id: "science-fiction", label: "Science fiction")
+            ])
+        let format = InventoryPrefillTestSupport.field(
+            id: "field-type", key: "Type", label: "Type", kind: .enumeration,
+            enumOptions: [InventoryPrefillTestSupport.option(id: "hardcover", label: "Hardcover")])
+        let isbn = InventoryPrefillTestSupport.field(
+            id: "field-isbn", key: "ISBN", label: "ISBN")
+        let length = InventoryPrefillTestSupport.field(
+            id: "field-length", key: "Length", label: "Length", help: "Page count")
+        let values = InventoryBarcodeFacts.deterministicValues(
+            InventoryBarcodeProduct(
+                title: "Book", pageCount: 352, subjects: ["science fiction"],
+                attributes: ["physical_format": "Hardcover"]),
+            fields: [genre, format, isbn, length], isbn: "9781368024259")
+
+        #expect(values[genre.id] == [.enumeration(optionId: "science-fiction")])
+        #expect(values[format.id] == [.enumeration(optionId: "hardcover")])
+        #expect(values[isbn.id] == [.string("9781368024259")])
+        #expect(values[length.id] == [.string("352")])
+    }
+
     @Test("the generator receives product facts without the scanned identifier")
     func generatedFactsExcludeIdentifier() async throws {
         let generator = ScanPrefillGenerator()

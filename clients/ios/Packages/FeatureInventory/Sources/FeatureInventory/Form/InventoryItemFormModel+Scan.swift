@@ -44,7 +44,10 @@ extension InventoryItemFormModel {
         guard !Task.isCancelled else { return .miss }
         switch result {
         case .found(let product):
-            return fillFromProduct(product)
+            let isbn = identifier.kind == InventoryIdentifierDraft.Kind.isbn.rawValue
+                ? identifier.value
+                : nil
+            return fillFromProduct(product, isbn: isbn)
         case .notFound:
             prefillStatus = .productNotFound
         case .unsupported:
@@ -92,7 +95,9 @@ extension InventoryItemFormModel {
         return false
     }
 
-    private func fillFromProduct(_ product: InventoryBarcodeProduct) -> InventoryScanOutcome {
+    private func fillFromProduct(
+        _ product: InventoryBarcodeProduct, isbn: String?
+    ) -> InventoryScanOutcome {
         guard let currentDraft = protocol2Draft, let type = protocol2Type else {
             prefillStatus = .nothingFound
             return .miss
@@ -102,7 +107,7 @@ extension InventoryItemFormModel {
         }
         let source = InventoryPrefillSource.product(InventoryBarcodeFacts.facts(product))
         let deterministicValues = InventoryBarcodeFacts.deterministicValues(
-            product, fields: type.fields)
+            product, fields: type.fields, isbn: isbn)
         startPrefill(
             source: source, type: type, currentDraft: currentDraft,
             initialValues: deterministicValues)
