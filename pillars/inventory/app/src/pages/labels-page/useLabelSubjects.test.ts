@@ -173,7 +173,7 @@ describe('detailsFor', () => {
         ])
       )
     ).toEqual({
-      typeName: 'Sheet',
+      typeName: 'Bedding › Sheet',
       fields: [
         { id: 'bedding.material', label: 'Material', value: 'Cotton' },
         { id: 'sheet.fitted', label: 'Fitted', value: 'Yes' },

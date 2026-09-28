@@ -460,7 +460,7 @@ describe('useItemsExport', () => {
 
     const lines = downloadedCsv().split('\r\n');
     expect(lines[0]).toBe('Name,Type,Quantity,Code,Where,Note,Material,Fitted');
-    expect(lines[1]).toBe('sheet,Sheet,1,,Garage,,cotton,yes');
+    expect(lines[1]).toBe('sheet,Bedding › Sheet,1,,Garage,,cotton,yes');
   });
 
   it('downloads nothing and reports a failed page request', async () => {

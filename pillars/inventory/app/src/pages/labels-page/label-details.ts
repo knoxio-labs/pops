@@ -1,4 +1,4 @@
-import { effectiveType } from '../../lib/type-tree.js';
+import { effectiveType, typePathLabel } from '../../lib/type-tree.js';
 
 import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
@@ -75,7 +75,7 @@ function catalogueDetailsFor(
     fields.push({ id: `${ownerKey}.${field.key}`, label: field.label, value });
   }
   return {
-    typeName: type.label,
+    typeName: typePathLabel([...types.values()], type.id) || type.label,
     fields,
     contents: contents.map((subject) =>
       subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name

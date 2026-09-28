@@ -1,6 +1,6 @@
 import { formatWireValue } from '../../catalogue-editor/computed/preview-model.js';
 import { expressionContext } from '../../catalogue-editor/expression/wire.js';
-import { effectiveType } from '../../lib/type-tree.js';
+import { effectiveType, typePathLabel } from '../../lib/type-tree.js';
 
 import type { ExpressionField } from '@pops/inventory/expression';
 
@@ -77,14 +77,13 @@ export function toExportRows(input: {
   readonly rows: readonly WebItem[];
   readonly containerNames: ReadonlyMap<string, string>;
   readonly types: Parameters<typeof expressionContext>[0];
-  readonly typeNames: ReadonlyMap<string, string>;
   readonly world: PlacementWorld;
 }): ExportRow[] {
-  const { rows, containerNames, types, typeNames, world } = input;
+  const { rows, containerNames, types, world } = input;
   const rowsById = new Map(rows.map((row) => [row.id, row] as const));
   return rows.map((item) => ({
     name: item.name,
-    typeLabel: item.typeId === null ? '' : (typeNames.get(item.typeId) ?? ''),
+    typeLabel: item.typeId === null ? '' : typePathLabel(types, item.typeId),
     quantity: item.quantity,
     code: item.code ?? '',
     where: rowWhere(item, rowsById, containerNames, world),
