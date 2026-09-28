@@ -68,8 +68,7 @@ export function promoteIntegration(run) {
     '-m',
     `chore: freeze ${source.slice('integration/'.length)} promotion`,
   ]);
-  run('mise', ['lint']);
-  run('mise', ['typecheck']);
+  run('mise', ['check']);
   run('git', ['push', '-u', 'origin', candidate]);
   const url = run('gh', [
     'pr',
@@ -81,7 +80,7 @@ export function promoteIntegration(run) {
     '--title',
     `feat: integrate ${source.slice('integration/'.length)}`,
     '--body',
-    `Frozen integration revision: ${sha}.\n\nSource: ${source}.\n\nValidation: mise lint and mise typecheck passed before push. Promotion validation runs the full suite on the candidate combined with current main. Merge after required checks and review gates pass and GitHub permits it; base movement alone does not require a refresh.`,
+    `Frozen integration revision: ${sha}.\n\nSource: ${source}.\n\nValidation: mise check passed before push. Promotion validation runs the full suite on the candidate combined with current main. Merge after required checks and review gates pass and GitHub permits it; base movement alone does not require a refresh.`,
   ]).trim();
   run('git', ['switch', source]);
   return url;
