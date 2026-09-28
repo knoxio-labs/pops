@@ -1,114 +1,91 @@
-import { useId } from 'react';
+import { ChevronsUpDown } from 'lucide-react';
+import { useId, useMemo } from 'react';
 
-import { ComboboxSelect, Input, Label } from '@pops/ui';
+import { Button, Input, Label, TreePicker, type TreeNode } from '@pops/ui';
+
+import { ancestorIds, typePath } from '../../lib/type-tree';
 
 import type { ReactElement } from 'react';
 
+import type { CatalogueType } from '../../catalogue-editor/types';
 import type { FormTypeDef } from './field-model';
 import type { DraftAction, ItemDraft } from './form-draft';
 
-interface TypeTreeOption {
-  readonly value: string;
+interface TypePickerData {
+  readonly type: FormTypeDef | null;
   readonly pathLabel: string;
-  readonly depth: number;
 }
 
 const NO_TYPE = '__none__';
 
-function parentTypeIdOf(type: FormTypeDef): string | null {
-  if (!('parentTypeId' in type)) return null;
-  const parentTypeId = type.parentTypeId;
-  return typeof parentTypeId === 'string' || parentTypeId === null ? parentTypeId : null;
-}
-
-function typePath(types: readonly FormTypeDef[], typeId: string): FormTypeDef[] {
-  const index = new Map(types.map((type) => [type.id, type] as const));
-  const path: FormTypeDef[] = [];
-  const seen = new Set<string>();
-  let current = index.get(typeId);
-  while (current !== undefined && !seen.has(current.id)) {
-    path.unshift(current);
-    seen.add(current.id);
-    const parent = parentTypeIdOf(current);
-    current = parent === null ? undefined : index.get(parent);
-  }
-  return path;
-}
-
-function flattenTypeTree(types: readonly FormTypeDef[]): FormTypeDef[] {
-  const ids = new Set(types.map((type) => type.id));
-  const children = new Map<string | null, FormTypeDef[]>();
-  for (const type of types) {
-    const parentTypeId = parentTypeIdOf(type);
-    const parent = parentTypeId !== null && ids.has(parentTypeId) ? parentTypeId : null;
-    children.set(parent, [...(children.get(parent) ?? []), type]);
-  }
-
-  const flattened: FormTypeDef[] = [];
-  const visited = new Set<string>();
-  const visit = (parentTypeId: string | null): void => {
-    for (const type of children.get(parentTypeId) ?? []) {
-      if (visited.has(type.id)) continue;
-      visited.add(type.id);
-      flattened.push(type);
-      visit(type.id);
-    }
+function catalogueTypeForTree(type: FormTypeDef, sortOrder: number): CatalogueType {
+  return {
+    archivedAt: null,
+    capabilities: type.containment ? ['containment'] : [],
+    description: type.description,
+    fields: [],
+    id: type.id,
+    key: type.key,
+    label: type.label,
+    legacyLabels: [],
+    parentTypeId: type.parentTypeId ?? null,
+    presentation: {},
+    replacedBy: null,
+    revision: 0,
+    sortOrder,
   };
-  visit(null);
-  for (const type of types) if (!visited.has(type.id)) visit(type.id);
-  return flattened;
 }
 
-function typeTreeOptions(types: readonly FormTypeDef[], query = ''): TypeTreeOption[] {
-  const flattened = flattenTypeTree(types);
-  const normalised = query.trim().toLocaleLowerCase();
-  const visible = new Set<string>();
-
-  for (const type of flattened) {
-    const path = typePath(types, type.id);
-    const pathLabel = path.map((ancestor) => ancestor.label).join(' › ');
-    if (normalised === '' || pathLabel.toLocaleLowerCase().includes(normalised)) {
-      for (const ancestor of path) visible.add(ancestor.id);
-    }
+function typePickerModel(
+  types: readonly FormTypeDef[],
+  allowNoType: boolean
+): {
+  readonly nodes: TreeNode<TypePickerData>[];
+  readonly labelByTypeId: ReadonlyMap<string, string>;
+} {
+  const treeTypes = types.map(catalogueTypeForTree);
+  const labelByTypeId = new Map(
+    treeTypes.map((type) => [type.id, typePath(treeTypes, type.id).join(' › ')] as const)
+  );
+  const parentByTypeId = new Map(
+    treeTypes.map((type) => [type.id, ancestorIds(treeTypes, type.id).at(-1) ?? null] as const)
+  );
+  const childrenByParent = new Map<string | null, FormTypeDef[]>();
+  for (const type of types) {
+    const parentId = parentByTypeId.get(type.id) ?? null;
+    childrenByParent.set(parentId, [...(childrenByParent.get(parentId) ?? []), type]);
   }
 
-  return flattened.flatMap((type) => {
-    if (!visible.has(type.id)) return [];
-    const path = typePath(types, type.id);
-    return [
-      {
-        value: type.id,
-        pathLabel: path.map((ancestor) => ancestor.label).join(' › '),
-        depth: Math.max(path.length, 1),
-      },
-    ];
-  });
-}
-
-function typePickerOptions(types: readonly FormTypeDef[]): {
-  options: { value: string; label: string }[];
-  typeIdByValue: ReadonlyMap<string, string>;
-  valueByTypeId: ReadonlyMap<string, string>;
-} {
-  const typeIdByValue = new Map<string, string>();
-  const valueByTypeId = new Map<string, string>();
-  const treeOptions = typeTreeOptions(types);
-  const options = treeOptions.map((option) => {
-    const searchableLabels = treeOptions
-      .filter((candidate) =>
-        typePath(types, candidate.value).some((type) => type.id === option.value)
-      )
-      .map((candidate) => candidate.pathLabel)
-      .join(' ');
-    const value = `${option.value}::${searchableLabels}`;
-    typeIdByValue.set(value, option.value);
-    valueByTypeId.set(option.value, value);
+  const visited = new Set<string>();
+  const buildNode = (type: FormTypeDef, active: ReadonlySet<string>): TreeNode<TypePickerData> => {
+    visited.add(type.id);
+    const nextActive = new Set(active);
+    nextActive.add(type.id);
     return {
-      value,
-      label: `${'  '.repeat(option.depth - 1)}${option.pathLabel}`,
+      id: type.id,
+      data: {
+        type,
+        pathLabel: labelByTypeId.get(type.id) ?? type.label,
+      },
+      children: (childrenByParent.get(type.id) ?? [])
+        .filter((child) => !nextActive.has(child.id) && !visited.has(child.id))
+        .map((child) => buildNode(child, nextActive)),
     };
-  });
-  return { options, typeIdByValue, valueByTypeId };
+  };
+
+  const nodes: TreeNode<TypePickerData>[] = [];
+  for (const type of types) {
+    if ((parentByTypeId.get(type.id) ?? null) === null && !visited.has(type.id)) {
+      nodes.push(buildNode(type, new Set()));
+    }
+  }
+  for (const type of types) {
+    if (!visited.has(type.id)) nodes.push(buildNode(type, new Set()));
+  }
+  if (allowNoType) {
+    nodes.unshift({ id: NO_TYPE, data: { type: null, pathLabel: 'No type yet' }, children: [] });
+  }
+  return { nodes, labelByTypeId };
 }
 
 /** Props for the name, type and note controls. */
@@ -159,32 +136,40 @@ function TypeField({
   'draft' | 'type' | 'types' | 'allowNoType' | 'dispatch'
 >): ReactElement {
   const id = useId();
-  const picker = typePickerOptions(types);
-  const options = [
-    ...(allowNoType ? [{ value: NO_TYPE, label: 'No type yet' }] : []),
-    ...picker.options,
-  ];
-  const setType = (value: string | string[]): void => {
-    const selectedValue = typeof value === 'string' ? value : (value[0] ?? NO_TYPE);
-    const selected =
-      selectedValue === NO_TYPE ? null : (picker.typeIdByValue.get(selectedValue) ?? null);
-    const selectedType = types.find((candidate) => candidate.id === selected);
-    dispatch({ type: 'type', typeId: selected, containment: selectedType?.containment === true });
-  };
-  const selectedValue =
-    draft.typeId === null ? NO_TYPE : (picker.valueByTypeId.get(draft.typeId) ?? draft.typeId);
+  const picker = useMemo(() => typePickerModel(types, allowNoType), [allowNoType, types]);
+  const selectedLabel =
+    draft.typeId === null
+      ? 'No type yet'
+      : (picker.labelByTypeId.get(draft.typeId) ?? type?.label ?? 'No type yet');
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>Type</Label>
-      <ComboboxSelect
-        id={id}
-        aria-label="Type"
-        options={options}
-        value={selectedValue}
-        onChange={setType}
-        placeholder="No type yet"
-        searchPlaceholder="Search types"
-        emptyMessage="No matching types"
+      <TreePicker
+        nodes={picker.nodes}
+        getLabel={(data) => data.pathLabel}
+        selectedId={draft.typeId ?? (allowNoType ? NO_TYPE : null)}
+        onSelect={(node) => {
+          const selectedType = node.data.type;
+          dispatch({
+            type: 'type',
+            typeId: selectedType?.id ?? null,
+            containment: selectedType?.containment === true,
+          });
+        }}
+        placeholder="Search types"
+        trigger={
+          <Button
+            id={id}
+            type="button"
+            role="combobox"
+            aria-label="Type"
+            variant="outline"
+            className="w-full justify-between"
+          >
+            <span className="truncate">{selectedLabel}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
+          </Button>
+        }
       />
       {type?.containment === true ? (
         <p className="text-sm text-muted-foreground">
