@@ -34,8 +34,9 @@ import Synchronization
 /// order they were asked for, so two of them never page into the replica at
 /// once.
 public final class OnlineInventoryStore: InventoryStore, Sendable {
-    /// The newest sync protocol this build speaks.
-    static let supportedProtocol = 2
+    /// The newest sync protocol this build speaks:
+    /// 3, where catalogue types may have parents.
+    static let supportedProtocol = 3
 
     let replica: InventoryReplica
     let transport: any InventorySyncTransport

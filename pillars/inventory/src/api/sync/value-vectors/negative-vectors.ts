@@ -8,6 +8,7 @@ import { SUPPORTED_INVENTORY_PROTOCOL } from '../../../protocol/rollout.js';
 
 import type { CatalogueFieldWire } from '../../../catalogue/authoring-types.js';
 import type { PrimitiveKind } from '../../../catalogue/value-types.js';
+import type { Mutation } from '../../../domain/commands/envelope.js';
 import type { SyncItemFieldValue } from '../wire.js';
 import type { FieldKeyName } from './catalogue-fields.js';
 import type { ValueVectorCatalogue } from './catalogue.js';
@@ -38,10 +39,19 @@ export interface ProtocolAboveSupportedVector {
   readonly minimumProtocol: number;
 }
 
+/** A child create that omits a required field inherited from its parent type. */
+export interface MissingRequiredFieldVector {
+  readonly category: 'missing_required_field';
+  readonly name: string;
+  readonly command: Mutation;
+  readonly producerRejection: string;
+}
+
 export type NegativeValueVector =
   | MalformedValueVector
   | UnknownKindVector
-  | ProtocolAboveSupportedVector;
+  | ProtocolAboveSupportedVector
+  | MissingRequiredFieldVector;
 
 interface MalformedSpec {
   readonly name: string;
@@ -131,9 +141,23 @@ function malformedVectors(
         catalogueRevision: catalogue.liveRevision,
         values: [spec.value],
       },
-      producerRejection: engine.rejectedCreate(catalogue, [{ fieldId, values: [spec.value] }]),
+      producerRejection: engine.rejectedCreate(catalogue, [{ fieldId, values: [spec.value] }])
+        .producerRejection,
     };
   });
+}
+
+function missingRequiredFieldVector(
+  engine: FixtureEngine,
+  catalogue: ValueVectorCatalogue
+): MissingRequiredFieldVector {
+  const rejected = engine.rejectedCreate(catalogue, [], catalogue.childTypeId);
+  return {
+    category: 'missing_required_field',
+    name: 'child type missing inherited required field',
+    command: rejected.command,
+    producerRejection: rejected.producerRejection,
+  };
 }
 
 function unknownKindVector(template: CatalogueFieldWire): UnknownKindVector {
@@ -159,6 +183,7 @@ export function buildNegativeValueVectors(
 ): readonly NegativeValueVector[] {
   return [
     ...malformedVectors(engine, catalogue),
+    missingRequiredFieldVector(engine, catalogue),
     unknownKindVector(template),
     {
       category: 'protocol_above_supported',

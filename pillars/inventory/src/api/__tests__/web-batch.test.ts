@@ -15,8 +15,15 @@ import {
   type WebBatchResponse,
 } from '../../contract/rest-web-batch.js';
 import { events, items, mutations } from '../../db/index.js';
+import {
+  activateMinimumProtocol,
+  readMinimumProtocol,
+  TYPE_TREE_PROTOCOL,
+} from '../../protocol/rollout.js';
 import { createLocation, openSyncHarness, send, type SyncHarness } from './sync-harness.js';
 import { createTestTransport } from './test-http.js';
+
+import type { CommandDb } from '../../domain/commands/index.js';
 
 const transport = createTestTransport();
 let h: SyncHarness;
@@ -25,6 +32,53 @@ type BatchRow = WebBatchBody['rows'][number];
 type BatchOutcome = WebBatchResponse['outcomes'][number];
 
 const BATCH_AUTHOR = { kind: 'web', id: 'web-batch-test', label: 'Web batch test' } as const;
+
+function publishContainmentTree(db: CommandDb): { readonly childTypeId: string } {
+  activateMinimumProtocol(db, readMinimumProtocol(db), TYPE_TREE_PROTOCOL);
+  const created = createCatalogueDraft(db, 1, BATCH_AUTHOR);
+  const parentDraft = patchCatalogueDraft(
+    db,
+    {
+      revision: created.revision.revision,
+      baseRevision: 1,
+      expectedDraftVersion: created.revision.draftVersion,
+    },
+    [
+      {
+        kind: 'put_type',
+        key: 'batch_parent',
+        label: 'Batch parent',
+        capabilities: ['containment'],
+      },
+    ]
+  ).draft;
+  const parent = parentDraft.types.find((type) => type.key === 'batch_parent');
+  if (parent === undefined) throw new Error('the batch parent type was not created');
+
+  const childDraft = patchCatalogueDraft(
+    db,
+    {
+      revision: parentDraft.revision.revision,
+      baseRevision: 1,
+      expectedDraftVersion: parentDraft.revision.draftVersion,
+    },
+    [{ kind: 'put_type', key: 'batch_child', label: 'Batch child', parentTypeId: parent.id }]
+  ).draft;
+  const child = childDraft.types.find((type) => type.key === 'batch_child');
+  if (child === undefined) throw new Error('the batch child type was not created');
+
+  publishCatalogueDraft(
+    db,
+    childDraft.revision.revision,
+    {
+      baseRevision: 1,
+      expectedDraftVersion: childDraft.revision.draftVersion,
+      note: null,
+    },
+    BATCH_AUTHOR
+  );
+  return { childTypeId: child.id };
+}
 
 function row(overrides: Partial<BatchRow> = {}): BatchRow {
   return { name: '', type: '', quantity: '', code: '', where: '', note: '', ...overrides };
@@ -451,6 +505,34 @@ describe('POST /web/items/batch', () => {
             column: 'type',
             code: 'invalid',
             message: expect.stringContaining('requires a value'),
+          },
+        ],
+      },
+    ]);
+    expect(h.db.db.select().from(items).all()).toHaveLength(0);
+  });
+
+  it('pre-validates quantities for containment inherited from a parent type', async () => {
+    const tree = publishContainmentTree(h.db.db);
+    const child = loadPublishedCatalogue(h.db.db)?.types.find(
+      (type) => type.id === tree.childTypeId
+    );
+    if (child === undefined) throw new Error('the published type tree must contain Batch child');
+
+    const response = await postBatch(
+      body([row({ name: 'Nested item', type: child.label, quantity: '2' })])
+    );
+
+    expect(response.status).toBe(200);
+    expect(parsedOutcomes(response.body)).toEqual([
+      {
+        status: 'invalid',
+        row: 0,
+        issues: [
+          {
+            column: 'quantity',
+            code: 'quantity_container',
+            message: `A ${child.label} is a container, so its quantity is 1.`,
           },
         ],
       },

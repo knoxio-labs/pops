@@ -9,7 +9,7 @@
         "revision": 2,
         "baseRevision": 1,
         "status": "published",
-        "minimumProtocol": 2,
+        "minimumProtocol": 3,
         "draftVersion": 2,
         "created": {
           "actor": {
@@ -36,6 +36,7 @@
           "id": "3da7cdc4-09e4-5da6-a0ca-f6b9f11a6a8b",
           "key": "book",
           "label": "Book",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 0,
           "capabilities": [],
@@ -475,6 +476,7 @@
           "id": "10000000-0000-4000-8000-000000000001",
           "key": "value_vector_type",
           "label": "Value Vector Type",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 0,
           "capabilities": [],
@@ -1101,6 +1103,7 @@
           "id": "59538480-6e82-5ccc-b7be-f1cfd15b9af6",
           "key": "bulb",
           "label": "Light bulb",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 1,
           "capabilities": [],
@@ -1331,6 +1334,7 @@
           "id": "b5ea5cd3-73b3-56dc-92e1-374eac720990",
           "key": "cable",
           "label": "Cable",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 2,
           "capabilities": [],
@@ -1652,6 +1656,7 @@
           "id": "f87ec1bf-55c1-53ec-9363-1a719e9c2dc3",
           "key": "charger",
           "label": "Charger",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 3,
           "capabilities": [],
@@ -1817,6 +1822,7 @@
           "id": "10a4724d-f45b-559a-956b-7c30e3eec6c2",
           "key": "furniture",
           "label": "Furniture",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 4,
           "capabilities": ["containment"],
@@ -1992,6 +1998,7 @@
           "id": "27089eb5-490e-5d2f-a0ad-15fc5b766a1f",
           "key": "storage_box",
           "label": "Storage box",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 5,
           "capabilities": ["containment"],
@@ -2211,6 +2218,7 @@
           "id": "e91f7e16-26c9-5714-af54-c3dba5fbab5b",
           "key": "tape",
           "label": "Tape",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 6,
           "capabilities": [],
@@ -2370,6 +2378,60 @@
               "enumOptions": []
             }
           ]
+        },
+        {
+          "revision": 2,
+          "id": "10000000-0000-4000-8000-000000000002",
+          "key": "value_vector_required_parent",
+          "label": "Value Vector Required Parent",
+          "parentTypeId": null,
+          "description": null,
+          "sortOrder": 7,
+          "capabilities": [],
+          "legacyLabels": [],
+          "presentation": {},
+          "archivedAt": null,
+          "replacedBy": null,
+          "fields": [
+            {
+              "id": "10000000-0000-4000-8000-000000000022",
+              "typeId": "10000000-0000-4000-8000-000000000002",
+              "key": "inheritedRequired",
+              "label": "Inherited required",
+              "help": null,
+              "sortOrder": 0,
+              "kind": "short_text",
+              "cardinality": "one",
+              "required": true,
+              "storage": "stored",
+              "fixedUnit": null,
+              "referenceKinds": [],
+              "referenceTypeIds": [],
+              "expressionVersion": null,
+              "expression": null,
+              "allowOverride": false,
+              "defaultValues": [],
+              "presentation": {},
+              "archivedAt": null,
+              "replacedBy": null,
+              "enumOptions": []
+            }
+          ]
+        },
+        {
+          "revision": 2,
+          "id": "10000000-0000-4000-8000-000000000003",
+          "key": "value_vector_required_child",
+          "label": "Value Vector Required Child",
+          "parentTypeId": "10000000-0000-4000-8000-000000000002",
+          "description": null,
+          "sortOrder": 8,
+          "capabilities": [],
+          "legacyLabels": [],
+          "presentation": {},
+          "archivedAt": null,
+          "replacedBy": null,
+          "fields": []
         }
       ]
     },
@@ -2378,7 +2440,7 @@
         "revision": 3,
         "baseRevision": 2,
         "status": "published",
-        "minimumProtocol": 2,
+        "minimumProtocol": 3,
         "draftVersion": 3,
         "created": {
           "actor": {
@@ -2405,6 +2467,7 @@
           "id": "3da7cdc4-09e4-5da6-a0ca-f6b9f11a6a8b",
           "key": "book",
           "label": "Book",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 0,
           "capabilities": [],
@@ -2844,6 +2907,7 @@
           "id": "10000000-0000-4000-8000-000000000001",
           "key": "value_vector_type",
           "label": "Value Vector Type",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 0,
           "capabilities": [],
@@ -3470,6 +3534,7 @@
           "id": "59538480-6e82-5ccc-b7be-f1cfd15b9af6",
           "key": "bulb",
           "label": "Light bulb",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 1,
           "capabilities": [],
@@ -3700,6 +3765,7 @@
           "id": "b5ea5cd3-73b3-56dc-92e1-374eac720990",
           "key": "cable",
           "label": "Cable",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 2,
           "capabilities": [],
@@ -4021,6 +4087,7 @@
           "id": "f87ec1bf-55c1-53ec-9363-1a719e9c2dc3",
           "key": "charger",
           "label": "Charger",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 3,
           "capabilities": [],
@@ -4186,6 +4253,7 @@
           "id": "10a4724d-f45b-559a-956b-7c30e3eec6c2",
           "key": "furniture",
           "label": "Furniture",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 4,
           "capabilities": ["containment"],
@@ -4361,6 +4429,7 @@
           "id": "27089eb5-490e-5d2f-a0ad-15fc5b766a1f",
           "key": "storage_box",
           "label": "Storage box",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 5,
           "capabilities": ["containment"],
@@ -4580,6 +4649,7 @@
           "id": "e91f7e16-26c9-5714-af54-c3dba5fbab5b",
           "key": "tape",
           "label": "Tape",
+          "parentTypeId": null,
           "description": null,
           "sortOrder": 6,
           "capabilities": [],
@@ -4739,6 +4809,60 @@
               "enumOptions": []
             }
           ]
+        },
+        {
+          "revision": 3,
+          "id": "10000000-0000-4000-8000-000000000002",
+          "key": "value_vector_required_parent",
+          "label": "Value Vector Required Parent",
+          "parentTypeId": null,
+          "description": null,
+          "sortOrder": 7,
+          "capabilities": [],
+          "legacyLabels": [],
+          "presentation": {},
+          "archivedAt": null,
+          "replacedBy": null,
+          "fields": [
+            {
+              "id": "10000000-0000-4000-8000-000000000022",
+              "typeId": "10000000-0000-4000-8000-000000000002",
+              "key": "inheritedRequired",
+              "label": "Inherited required",
+              "help": null,
+              "sortOrder": 0,
+              "kind": "short_text",
+              "cardinality": "one",
+              "required": true,
+              "storage": "stored",
+              "fixedUnit": null,
+              "referenceKinds": [],
+              "referenceTypeIds": [],
+              "expressionVersion": null,
+              "expression": null,
+              "allowOverride": false,
+              "defaultValues": [],
+              "presentation": {},
+              "archivedAt": null,
+              "replacedBy": null,
+              "enumOptions": []
+            }
+          ]
+        },
+        {
+          "revision": 3,
+          "id": "10000000-0000-4000-8000-000000000003",
+          "key": "value_vector_required_child",
+          "label": "Value Vector Required Child",
+          "parentTypeId": "10000000-0000-4000-8000-000000000002",
+          "description": null,
+          "sortOrder": 8,
+          "capabilities": [],
+          "legacyLabels": [],
+          "presentation": {},
+          "archivedAt": null,
+          "replacedBy": null,
+          "fields": []
         }
       ]
     }
@@ -8971,11 +9095,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000000a",
-      "itemId": "00000000-0000-4000-8000-00000000004e",
+      "itemId": "00000000-0000-4000-8000-000000000050",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000004e",
+        "id": "00000000-0000-4000-8000-000000000050",
         "revision": 1,
-        "seq": 40,
+        "seq": 41,
         "name": "no value set for shortTextOne",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": null,
@@ -8994,11 +9118,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000004e"
+                "itemId": "00000000-0000-4000-8000-000000000050"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000004e"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000050"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -9011,11 +9135,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000004e"
+                "itemId": "00000000-0000-4000-8000-000000000050"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000004e"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000050"]
           }
         ],
         "fields": {},
@@ -9043,9 +9167,9 @@
       "fieldValue": null,
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000004f",
+        "mutationId": "00000000-0000-4000-8000-000000000051",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000004e",
+        "entityId": "00000000-0000-4000-8000-000000000050",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9071,11 +9195,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000000a",
-      "itemId": "00000000-0000-4000-8000-000000000050",
+      "itemId": "00000000-0000-4000-8000-000000000052",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000050",
+        "id": "00000000-0000-4000-8000-000000000052",
         "revision": 2,
-        "seq": 42,
+        "seq": 43,
         "name": "shortTextOne cleared",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": null,
@@ -9094,11 +9218,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000050"
+                "itemId": "00000000-0000-4000-8000-000000000052"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000050"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000052"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -9111,11 +9235,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000050"
+                "itemId": "00000000-0000-4000-8000-000000000052"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000050"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000052"]
           }
         ],
         "fields": {},
@@ -9143,9 +9267,9 @@
       "fieldValue": null,
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000052",
+        "mutationId": "00000000-0000-4000-8000-000000000054",
         "op": "item.edit",
-        "entityId": "00000000-0000-4000-8000-000000000050",
+        "entityId": "00000000-0000-4000-8000-000000000052",
         "baseRevision": 1,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9416,11 +9540,11 @@
       "cardinality": "one",
       "storage": "computed",
       "fieldId": "10000000-0000-4000-8000-000000000020",
-      "itemId": "00000000-0000-4000-8000-000000000053",
+      "itemId": "00000000-0000-4000-8000-000000000055",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000053",
+        "id": "00000000-0000-4000-8000-000000000055",
         "revision": 2,
-        "seq": 44,
+        "seq": 45,
         "name": "computed overridden",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -9458,11 +9582,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000053"
+                "itemId": "00000000-0000-4000-8000-000000000055"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000053"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000055"]
           }
         ],
         "fields": {},
@@ -9501,9 +9625,9 @@
         "traversedItemIds": []
       },
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000055",
+        "mutationId": "00000000-0000-4000-8000-000000000057",
         "op": "item.setOverride",
-        "entityId": "00000000-0000-4000-8000-000000000053",
+        "entityId": "00000000-0000-4000-8000-000000000055",
         "baseRevision": 1,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9520,11 +9644,11 @@
       "cardinality": "one",
       "storage": "computed",
       "fieldId": "10000000-0000-4000-8000-000000000020",
-      "itemId": "00000000-0000-4000-8000-000000000056",
+      "itemId": "00000000-0000-4000-8000-000000000058",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000056",
+        "id": "00000000-0000-4000-8000-000000000058",
         "revision": 1,
-        "seq": 45,
+        "seq": 46,
         "name": "computed unavailable",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": null,
@@ -9543,11 +9667,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000056"
+                "itemId": "00000000-0000-4000-8000-000000000058"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000056"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000058"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -9560,11 +9684,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000056"
+                "itemId": "00000000-0000-4000-8000-000000000058"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000056"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000058"]
           }
         ],
         "fields": {},
@@ -9601,16 +9725,16 @@
           {
             "reason": "missing_dependency",
             "fieldId": "10000000-0000-4000-8000-00000000000e",
-            "itemId": "00000000-0000-4000-8000-000000000056"
+            "itemId": "00000000-0000-4000-8000-000000000058"
           }
         ],
         "dependencies": [],
-        "traversedItemIds": ["00000000-0000-4000-8000-000000000056"]
+        "traversedItemIds": ["00000000-0000-4000-8000-000000000058"]
       },
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000057",
+        "mutationId": "00000000-0000-4000-8000-000000000059",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000056",
+        "entityId": "00000000-0000-4000-8000-000000000058",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9620,6 +9744,88 @@
             "name": "computed unavailable",
             "typeId": "10000000-0000-4000-8000-000000000001",
             "values": [],
+            "note": null,
+            "externalIds": [],
+            "quantity": 1,
+            "placement": {
+              "kind": "hand"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "child type with inherited required field",
+      "kind": "short_text",
+      "cardinality": "one",
+      "storage": "stored",
+      "fieldId": "10000000-0000-4000-8000-000000000022",
+      "itemId": "00000000-0000-4000-8000-00000000004e",
+      "item": {
+        "id": "00000000-0000-4000-8000-00000000004e",
+        "revision": 1,
+        "seq": 40,
+        "name": "child type with inherited required field",
+        "typeId": "10000000-0000-4000-8000-000000000003",
+        "catalogueRevision": 2,
+        "typeKey": null,
+        "legacyType": null,
+        "fieldValues": [
+          {
+            "fieldId": "10000000-0000-4000-8000-000000000022",
+            "source": "stored",
+            "catalogueRevision": 2,
+            "values": ["Inherited value"]
+          }
+        ],
+        "computedValues": [],
+        "fields": {},
+        "note": null,
+        "code": null,
+        "externalIds": [],
+        "quantity": 1,
+        "lifecycle": "active",
+        "lifecycleChangedAt": null,
+        "placement": {
+          "kind": "hand"
+        },
+        "previousPlacement": null,
+        "isContainer": false,
+        "access": null,
+        "isFull": null,
+        "photos": [],
+        "provenance": null,
+        "documentsStatus": "none",
+        "documentTitles": [],
+        "createdAt": "2026-09-24T00:00:00.000Z",
+        "updatedAt": "2026-09-24T00:00:00.000Z",
+        "deletedAt": null
+      },
+      "fieldValue": {
+        "fieldId": "10000000-0000-4000-8000-000000000022",
+        "source": "stored",
+        "catalogueRevision": 2,
+        "values": ["Inherited value"]
+      },
+      "computedValue": null,
+      "command": {
+        "mutationId": "00000000-0000-4000-8000-00000000004f",
+        "op": "item.create",
+        "entityId": "00000000-0000-4000-8000-00000000004e",
+        "baseRevision": null,
+        "dependsOn": [],
+        "clientTime": "2026-09-24T00:00:00.000Z",
+        "catalogueRevision": 2,
+        "args": {
+          "item": {
+            "name": "child type with inherited required field",
+            "typeId": "10000000-0000-4000-8000-000000000003",
+            "values": [
+              {
+                "fieldId": "10000000-0000-4000-8000-000000000022",
+                "values": ["Inherited value"]
+              }
+            ],
             "note": null,
             "externalIds": [],
             "quantity": 1,
@@ -9906,6 +10112,33 @@
       "producerRejection": "invalid"
     },
     {
+      "category": "missing_required_field",
+      "name": "child type missing inherited required field",
+      "command": {
+        "mutationId": "00000000-0000-4000-8000-000000000087",
+        "op": "item.create",
+        "entityId": "00000000-0000-4000-8000-000000000086",
+        "baseRevision": null,
+        "dependsOn": [],
+        "clientTime": "2026-09-24T00:00:00.000Z",
+        "catalogueRevision": 2,
+        "args": {
+          "item": {
+            "name": "malformed value",
+            "typeId": "10000000-0000-4000-8000-000000000003",
+            "values": [],
+            "note": null,
+            "externalIds": [],
+            "quantity": 1,
+            "placement": {
+              "kind": "hand"
+            }
+          }
+        }
+      },
+      "producerRejection": "invalid"
+    },
+    {
       "category": "unknown_kind",
       "name": "catalogue field of an unknown kind",
       "field": {
@@ -9935,8 +10168,8 @@
     {
       "category": "protocol_above_supported",
       "name": "minimum protocol one above the supported protocol",
-      "supportedProtocol": 2,
-      "minimumProtocol": 3
+      "supportedProtocol": 3,
+      "minimumProtocol": 4
     }
   ]
 }

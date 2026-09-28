@@ -46,7 +46,9 @@ internal struct CatalogueCompatibility {
         typeId: String, fieldIds: [String], values: [InventoryPrimitiveValue],
         requiresAll: Bool
     ) -> InventoryCatalogueChange? {
-        guard let type = target.types.first(where: { $0.id == typeId }) else {
+        guard let found = target.types.first(where: { $0.id == typeId }),
+            let type = target.effectiveType(id: found.id)
+        else {
             return change(.type, typeId, typeId: typeId, .notInRevision)
         }
         if type.archivedAt != nil { return change(.type, typeId, typeId: typeId, .archived) }
@@ -73,7 +75,7 @@ internal struct CatalogueCompatibility {
         type: InventoryCatalogueType, fieldIds: [String]
     ) -> InventoryCatalogueChange? {
         let fields = Dictionary(uniqueKeysWithValues: type.fields.map { ($0.id, $0) })
-        let before = authored?.types.first { $0.id == type.id }.map { authoredType in
+        let before = authored?.effectiveType(id: type.id).map { authoredType in
             Dictionary(uniqueKeysWithValues: authoredType.fields.map { ($0.id, $0) })
         }
         for fieldId in fieldIds {
@@ -97,8 +99,10 @@ internal struct CatalogueCompatibility {
     private func overrideIncompatibility(
         typeId: String, fieldIds: [String]
     ) -> InventoryCatalogueChange? {
-        guard let type = target.types.first(where: { $0.id == typeId }) else { return nil }
-        let before = authored?.types.first { $0.id == typeId }
+        guard let found = target.types.first(where: { $0.id == typeId }),
+            let type = target.effectiveType(id: found.id)
+        else { return nil }
+        let before = authored?.effectiveType(id: typeId)
         for fieldId in fieldIds {
             guard let field = type.fields.first(where: { $0.id == fieldId }) else {
                 return change(.field, fieldId, typeId: typeId, fieldId: fieldId, .notInRevision)

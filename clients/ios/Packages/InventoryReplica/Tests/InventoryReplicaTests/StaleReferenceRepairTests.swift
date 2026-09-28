@@ -166,4 +166,29 @@ internal struct StaleReferenceRepairTests {
         }
         #expect(target.targetId == Setup.rack)
     }
+
+    @Test("a child target satisfies a reference constrained to its ancestor")
+    func descendantTargetSatisfiesAncestorConstraint() throws {
+        let replica = try InheritedTypeFixture.downloaded([
+            InheritedTypeFixture.item(InheritedTypeFixture.sheetItem)
+        ])
+        let command = InventoryCommand.editProtocol2Item(
+            id: InheritedTypeFixture.targetItem, catalogueRevision: InheritedTypeFixture.revision,
+            values: [
+                InventoryProtocol2FieldPatch(
+                    fieldId: InheritedTypeFixture.reference,
+                    values: [
+                        .reference(
+                            InventoryReferenceValue(
+                                targetKind: .item, targetId: InheritedTypeFixture.sheetItem))
+                    ])
+            ])
+
+        let stale = try replica.database.read { db in
+            try StaleReferenceRetryCheck.stillStale(
+                command, onto: InheritedTypeFixture.revision, in: db)
+        }
+
+        #expect(stale == nil)
+    }
 }

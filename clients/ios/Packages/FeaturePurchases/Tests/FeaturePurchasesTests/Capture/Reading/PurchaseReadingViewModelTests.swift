@@ -34,6 +34,29 @@ internal struct PurchaseReadingViewModelTests {
         #expect(model.rows.allSatisfy { $0.outcome.isSettled })
     }
 
+    @Test("finishing waits for the exact gate when later calls arrive out of order")
+    func outOfOrderGateRegistration() async {
+        let repository = ReadingGate(heldRegistrations: [3])
+        let model = PurchaseReadingViewModel(receipts: inputs(5), repository: repository)
+        let task = Task { await model.start() }
+
+        await repository.waitForCallCount(2)
+        let finishing = Task { await finish(keys: 1...5, repository: repository, task: task) }
+        await repository.waitForGate(4)
+        let decision = await repository.waitForFinishDecision(3)
+
+        #expect(decision == .exactGateWait)
+        await repository.allowRegistration(3)
+
+        if decision == .missedRelease {
+            await repository.waitForGate(3)
+            await repository.release(3)
+        }
+
+        await finishing.value
+        #expect(model.rows.allSatisfy { $0.outcome.isSettled })
+    }
+
     @Test("drafts, unreadable results and failures settle independently")
     func outcomeMapping() async {
         let repository = ReadingGate(answers: [
@@ -121,7 +144,7 @@ internal struct PurchaseReadingViewModelTests {
         #expect(model.isFinished)
     }
 
-    nonisolated fileprivate static let reading = ReceiptDraftReading(
+    nonisolated internal static let reading = ReceiptDraftReading(
         receiptUris: [],
         reconciled: true,
         failures: [],
@@ -142,84 +165,9 @@ internal struct PurchaseReadingViewModelTests {
         task: Task<Void, Never>
     ) async {
         for key in keys {
-            await repository.waitForCallCount(Int(key))
+            await repository.waitForGate(key)
             await repository.release(key)
         }
         await task.value
-    }
-}
-
-private actor ReadingGate: ReceiptCaptureRepository {
-    internal enum Answer: Sendable {
-        case draft
-        case unreadable(String)
-        case failure(RepositoryError)
-        case cancelled
-    }
-
-    private let answers: [UInt8: Answer]
-    private var calls: [UInt8] = []
-    private var active = 0
-    private var peak = 0
-    private var gates: [UInt8: CheckedContinuation<Void, Never>] = [:]
-    private var callWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
-
-    internal init(answers: [UInt8: Answer] = [:]) {
-        self.answers = answers
-    }
-
-    internal func extract(_ parts: [ReceiptPart]) async throws -> ReceiptExtraction {
-        let key = parts.first?.data.first ?? 0
-        calls.append(key)
-        active += 1
-        peak = max(peak, active)
-
-        await withCheckedContinuation { continuation in
-            gates[key] = continuation
-            resumeCallWaiters()
-        }
-        active -= 1
-
-        switch answers[key] ?? .draft {
-        case .draft:
-            return .draft(PurchaseReadingViewModelTests.reading)
-        case .unreadable(let reason):
-            return .unreadable(receiptCount: 1, reason: reason)
-        case .failure(let error):
-            throw error
-        case .cancelled:
-            throw CancellationError()
-        }
-    }
-
-    internal func saveDraft(_ payload: ReceiptDraftSavePayload) async throws -> ReceiptPurchase {
-        throw RepositoryError.dependencyNotBound
-    }
-
-    internal func createManualPurchase(_ payload: ReceiptManualPurchasePayload) async throws
-        -> ReceiptPurchase
-    {
-        throw RepositoryError.dependencyNotBound
-    }
-
-    internal func waitForCallCount(_ count: Int) async {
-        guard calls.count < count else { return }
-        await withCheckedContinuation { continuation in
-            callWaiters.append((count, continuation))
-        }
-    }
-
-    internal func release(_ key: UInt8) {
-        gates.removeValue(forKey: key)?.resume()
-    }
-
-    internal func peakConcurrency() -> Int { peak }
-    /// Called keys in ascending order: concurrent reads reach the repository in no fixed order.
-    internal func calledKeys() -> [UInt8] { calls.sorted() }
-
-    private func resumeCallWaiters() {
-        let ready = callWaiters.filter { calls.count >= $0.0 }
-        callWaiters.removeAll { calls.count >= $0.0 }
-        for waiter in ready { waiter.1.resume() }
     }
 }

@@ -33,6 +33,30 @@ internal struct InventoryProtocol2ItemDetailTests {
         #expect(detail.otherFields.map(\.source) == [.recorded, .recorded, .unavailable])
     }
 
+    @Test("detail header shows the full type path")
+    func detailHeaderShowsTypePath() throws {
+        let parent = InventoryCatalogueType(
+            id: "bedding", key: "bedding", label: "Bedding", sortOrder: 0)
+        let child = InventoryCatalogueType(
+            id: "pillows", key: "pillows", label: "Pillows", sortOrder: 1,
+            parentTypeId: parent.id)
+        let item = InventoryItem(
+            id: "pillow-item", revision: 1, seq: 1, catalogueRevision: 4,
+            name: "Pillow", typeId: child.id, typeKey: nil, placement: .hand,
+            createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
+        let source = FormFixtureSource(
+            items: [item],
+            protocol2Catalogue: InventoryCatalogueSnapshot(
+                revision: InventoryCatalogueRevision(revision: 4, minimumProtocol: 2),
+                types: [parent, child]))
+
+        let detail = try #require(
+            InventoryItemDetail(reading: source, id: item.id, now: FormFixture.epoch))
+
+        #expect(detail.record.typePath == ["Bedding", "Pillows"])
+        #expect(detail.subtitle == "Bedding › Pillows")
+    }
+
     @Test("a deleted reference remains a readable stale identity")
     func deletedReferencePresentation() throws {
         let field = Self.field(

@@ -28,11 +28,12 @@ export const INVENTORY_PROTOCOL_HEADER = 'pops-inventory-protocol';
 
 /**
  * The sync wire shape this build of bfm understands. Raised only when
- * `client.ts`'s mapping changes to depend on a newer shape than `2`: protocol
- * 2 carries persisted type IDs, exact catalogue revisions and canonical
- * stable-ID values alongside the protocol-1 compatibility projection.
+ * `client.ts`'s mapping changes to depend on a newer shape than `3`: protocol
+ * 3 permits catalogue types to name parents, while retaining persisted type
+ * IDs, exact catalogue revisions and canonical stable-ID values alongside the
+ * protocol-1 compatibility projection.
  */
-export const INVENTORY_SYNC_PROTOCOL_VERSION = 2;
+export const INVENTORY_SYNC_PROTOCOL_VERSION = 3;
 
 /**
  * The acting-device header inventory's sync write routes honour
@@ -82,10 +83,10 @@ export function withInventoryActor<T>(actorHeader: string, send: () => Promise<T
  * whose bare `TRouter` still cannot — see `UNPINNABLE_CALL_SITES`'s entry
  * for this file).
  *
- * `Pops-Inventory-Protocol` is not the caller's business: it names the wire
- * shape THIS BUILD understands, not anything the phone sent — the phone
- * never sees this header, since `/mobile/inventory/*` has its own contract,
- * versioned independently through bfm's own OpenAPI and Swift codegen.
+ * `Pops-Inventory-Protocol` is bfm's outbound compatibility contract, not
+ * anything the phone sends: the phone never sees this header, since
+ * `/mobile/inventory/*` has its own contract, versioned independently through
+ * bfm's own OpenAPI and Swift codegen.
  */
 export function createInventoryPillarHandleFactory(): PillarHandleFactory {
   return <TRouter>(pillarId: string) =>

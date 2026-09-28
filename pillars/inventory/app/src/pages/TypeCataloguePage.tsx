@@ -15,13 +15,13 @@ export function TypeCataloguePage() {
   if (page.catalogue === undefined)
     return <TypeCatalogueLayout.Error onRetry={() => void page.reload()} />;
   const readyPage = { ...page, catalogue: page.catalogue };
-  function applyOperation(operation: CatalogueOperation): void {
-    void page.applyOperation(operation).then((created) => {
-      if (created === null) return;
-      if (created === 'type') toast.success('Type created');
-      else if (created === 'field') toast.success('Field created');
-      else toast.success('Draft saved');
-    });
+  async function applyOperation(operation: CatalogueOperation): Promise<boolean> {
+    const created = await page.applyOperation(operation);
+    if (created === null) return false;
+    if (created === 'type') toast.success('Type created');
+    else if (created === 'field') toast.success('Field created');
+    else toast.success('Draft saved');
+    return true;
   }
   return (
     <TypeCatalogueLayout

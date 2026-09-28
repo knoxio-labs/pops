@@ -46,9 +46,19 @@ export function previewField(
       'preview_type_unknown',
       `Type ${subject.typeId} is not in the draft`
     );
-  const field = type.fields.find((candidate) =>
-    'id' in subject.field ? candidate.id === subject.field.id : candidate.key === subject.field.key
-  );
+  const field =
+    type.effectiveFields
+      .filter((candidate) => candidate.archivedAt === null)
+      .find((candidate) =>
+        'id' in subject.field
+          ? candidate.id === subject.field.id
+          : candidate.key === subject.field.key
+      ) ??
+    type.effectiveFields.find((candidate) =>
+      'id' in subject.field
+        ? candidate.id === subject.field.id
+        : candidate.key === subject.field.key
+    );
   if (field === undefined)
     throw new CatalogueApiError(
       404,

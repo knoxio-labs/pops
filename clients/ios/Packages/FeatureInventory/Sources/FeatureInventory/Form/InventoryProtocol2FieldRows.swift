@@ -11,6 +11,7 @@ internal struct InventoryProtocol2FieldRow: View {
     /// when the field has never been evaluated (an item still being created)
     /// or the field is not computed.
     let computedDisplay: InventoryComputedDisplay?
+    let catalogue: InventoryCatalogueSnapshot?
     let referenceTargets: [InventoryProtocol2ReferenceTarget]
     /// What a computed field is waiting on while it is unavailable, named.
     let missingInputs: [InventoryMissingInput]
@@ -200,6 +201,7 @@ extension InventoryProtocol2FieldRow {
             InventoryProtocol2ValueEditor(
                 field: field, entry: entry, label: field.label,
                 identifier: InventoryAccessibility.protocol2Field(id: field.id),
+                catalogue: catalogue,
                 referenceTargets: referenceTargets,
                 setText: { overrideEntry?.setText($0, for: field) },
                 setValue: { overrideEntry?.setValue($0) },
@@ -229,6 +231,7 @@ extension InventoryProtocol2FieldRow {
         InventoryProtocol2ValueEditor(
             field: field, entry: entry, label: label, showsLabel: showsLabel,
             identifier: identifier,
+            catalogue: catalogue,
             referenceTargets: referenceTargets,
             setText: { setText($0, entry.id) },
             setValue: { setValue($0, entry.id) },

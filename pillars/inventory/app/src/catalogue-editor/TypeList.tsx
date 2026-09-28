@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react';
 
 import { Badge, Button, Input, cn } from '@pops/ui';
 
+import { ancestorIds, typeDepth, typePath } from '../lib/type-tree';
+
 import type { CatalogueType } from './types';
 
 interface TypeListProps {
@@ -12,12 +14,58 @@ interface TypeListProps {
   readonly types: readonly CatalogueType[];
 }
 
-function matchesType(type: CatalogueType, needle: string, showArchived: boolean): boolean {
-  return (
-    (showArchived || type.archivedAt === null) &&
-    (needle.length === 0 ||
-      type.label.toLocaleLowerCase().includes(needle) ||
-      type.key.toLocaleLowerCase().includes(needle))
+interface TypeListRow {
+  readonly depth: number;
+  readonly type: CatalogueType;
+}
+
+function treeRows(types: readonly CatalogueType[]): TypeListRow[] {
+  const knownIds = new Set(types.map((type) => type.id));
+  const children = new Map<string | null, CatalogueType[]>();
+  for (const type of types) {
+    const parentId =
+      type.parentTypeId !== null && knownIds.has(type.parentTypeId) ? type.parentTypeId : null;
+    children.set(parentId, [...(children.get(parentId) ?? []), type]);
+  }
+  const rows: TypeListRow[] = [];
+  const visit = (parentId: string | null, depth: number, seen: ReadonlySet<string>): void => {
+    for (const type of children.get(parentId) ?? []) {
+      if (seen.has(type.id)) continue;
+      rows.push({ depth, type });
+      const next = new Set(seen);
+      next.add(type.id);
+      visit(type.id, depth + 1, next);
+    }
+  };
+  visit(null, 1, new Set());
+  for (const type of types) {
+    if (!rows.some((row) => row.type.id === type.id))
+      rows.push({ depth: typeDepth(types, type.id), type });
+  }
+  return rows;
+}
+
+function visibleRows(
+  types: readonly CatalogueType[],
+  query: string,
+  showArchived: boolean
+): TypeListRow[] {
+  const needle = query.trim().toLocaleLowerCase();
+  const rows = treeRows(types);
+  const matches = new Set(
+    rows
+      .filter(({ type }) => {
+        const path = typePath(types, type.id).join(' › ').toLocaleLowerCase();
+        return (
+          needle.length === 0 ||
+          path.includes(needle) ||
+          type.key.toLocaleLowerCase().includes(needle)
+        );
+      })
+      .flatMap(({ type }) => [type.id, ...ancestorIds(types, type.id)])
+  );
+  return rows.filter(
+    ({ type }) => matches.has(type.id) && (showArchived || type.archivedAt === null)
   );
 }
 
@@ -25,10 +73,10 @@ function matchesType(type: CatalogueType, needle: string, showArchived: boolean)
 export function TypeList({ onCreate, onSelect, selectedId, types }: TypeListProps) {
   const [query, setQuery] = useState('');
   const [showArchived, setShowArchived] = useState(false);
-  const visibleTypes = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase();
-    return types.filter((type) => matchesType(type, needle, showArchived));
-  }, [query, showArchived, types]);
+  const visibleTypes = useMemo(
+    () => visibleRows(types, query, showArchived),
+    [query, showArchived, types]
+  );
   const archivedCount = types.filter((type) => type.archivedAt !== null).length;
   return (
     <section className="space-y-4 rounded-xl border bg-card p-5">
@@ -53,9 +101,10 @@ export function TypeList({ onCreate, onSelect, selectedId, types }: TypeListProp
         />
       </div>
       <div className="space-y-1">
-        {visibleTypes.map((type) => (
+        {visibleTypes.map(({ depth, type }) => (
           <TypeListItem
             key={type.id}
+            depth={depth}
             type={type}
             selected={selectedId === type.id}
             onSelect={onSelect}
@@ -80,10 +129,12 @@ export function TypeList({ onCreate, onSelect, selectedId, types }: TypeListProp
 }
 
 function TypeListItem({
+  depth,
   onSelect,
   selected,
   type,
 }: {
+  readonly depth: number;
   readonly onSelect: (id: string) => void;
   readonly selected: boolean;
   readonly type: CatalogueType;
@@ -93,7 +144,11 @@ function TypeListItem({
       type="button"
       aria-pressed={selected}
       onClick={() => onSelect(type.id)}
-      className="flex min-h-11 min-w-11 w-full items-start gap-3 rounded-lg border border-transparent p-3 text-left transition-colors hover:not-aria-pressed:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
+      className={cn(
+        'flex min-h-11 min-w-11 w-full items-start gap-3 rounded-lg border border-transparent py-3 pr-3 text-left transition-colors hover:not-aria-pressed:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10',
+        indentationClass(depth),
+        type.archivedAt !== null && 'opacity-60'
+      )}
     >
       <Boxes className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1">
@@ -114,4 +169,10 @@ function TypeListItem({
       </span>
     </button>
   );
+}
+
+function indentationClass(depth: number): string {
+  if (depth === 1) return 'pl-3';
+  if (depth === 2) return 'pl-8';
+  return 'pl-12';
 }

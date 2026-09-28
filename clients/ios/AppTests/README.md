@@ -35,6 +35,7 @@ Probed here, on a booted simulator, in this target: a `UIWindow(windowScene:)` g
 The difference is what is being asserted on. `TabView` is bridged to a real `UITabBarController` **child view controller**, and mounting does build those. A SwiftUI leaf has no UIKit object behind it at all: the content is drawn into a display list, and accessibility elements are built on demand for an attached accessibility client, which no unit-test process has. So:
 
 - **view-controller-shaped questions** — is there a tab bar, how many tabs, which is selected — are answerable here, and `ContentViewTabSwitcherTests` is the pattern;
+- **pixel-shaped questions** — did a SwiftUI leaf draw content rather than only its adaptive background — are answered by attaching its hosting view to a scene-backed window and synchronously rendering the view's layer; `ContentViewFeatureSwitchingTests` keeps transparent and background-only controls beside that assertion;
 - **accessibility-identifier questions** are not, in any test process. They are answered by the Maestro flows in [`../.maestro`](../.maestro), which drive a real accessibility client, and held in the meantime by source-shaped wiring suites — `ReceiptResultAccessibilityWiringTests` is the worked example, including what such a suite can and cannot see.
 
 ## What is here
