@@ -35,10 +35,7 @@ internal struct InventoryLocationBrowserSkeleton: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 PopsPageTitle(title: "Locations")
-                VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                    InventoryCountTilesSkeleton(count: 3)
-                    Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
-                }
+                Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
                 .popsShimmer()
                 PopsListSkeleton(rows: 5)
             }
