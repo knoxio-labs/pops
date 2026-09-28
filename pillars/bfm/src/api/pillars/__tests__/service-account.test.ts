@@ -5,9 +5,10 @@
  * point of the file source is that production hands it a mounted path, and a
  * mock proves nothing about reading one.
  */
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -130,6 +131,19 @@ describe('the granted scopes', () => {
       'inventory.media',
       'barcode.lookup',
     ]);
+  });
+
+  it('keeps the provisioning command in sync with the source of truth', () => {
+    const readme = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '../../../../README.md'),
+      'utf8'
+    );
+    const payload = JSON.stringify({
+      name: BFM_SERVICE_ACCOUNT_NAME,
+      scopes: BFM_SERVICE_ACCOUNT_SCOPES,
+    });
+
+    expect(readme).toContain(`-d '${payload}'`);
   });
 
   it('authorises checkpoint history with the production grant', () => {

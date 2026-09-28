@@ -129,6 +129,9 @@ internal struct InventoryItemFormPresenter: Sendable {
 }
 
 extension EnvironmentValues {
+    /// The server-backed code suggester, installed by the outer Inventory
+    /// flow so nested item-form presenters do not silently become unbound.
+    @Entry internal var inventoryCodeSuggester: InventoryCodeSuggester?
     @Entry internal var inventoryScanPrefill: InventoryScanPrefill?
 
     /// The shared destination picker, when the screen that owns it has

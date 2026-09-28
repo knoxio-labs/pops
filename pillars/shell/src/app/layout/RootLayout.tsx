@@ -48,19 +48,24 @@ export function RootLayout() {
 
   return (
     <AppContextProvider>
-      <div className={cn('min-h-screen bg-background relative', appColorClass)}>
+      <div
+        className={cn(
+          'relative min-h-screen overflow-x-clip bg-background md:h-dvh md:overflow-hidden',
+          appColorClass
+        )}
+      >
         <SkipLink />
         <AmbientBackground />
 
-        <div className="relative z-10 pt-(--shell-top-bar-height)">
+        <div className="relative z-10 flex flex-col pt-(--shell-top-bar-height) md:h-full md:min-h-0">
           <TopBar />
-          <div className="flex">
+          <div className="flex md:min-h-0 md:flex-1 md:overflow-hidden">
             <NavRegion pageNavOpen={pageNavOpen} onClosePageNav={() => setPageNavOpen(false)} />
 
             <main
               id="main-content"
               tabIndex={-1}
-              className="flex-1 min-w-0 overflow-x-clip p-4 pb-24 md:max-lg:p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-200 focus:outline-none"
+              className="flex min-w-0 flex-col overflow-x-clip p-4 pb-24 md:min-h-0 md:flex-1 md:overflow-y-auto md:max-lg:p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-200 focus:outline-none"
             >
               <ErrorBoundary staleChunkProbeUrl={shellDocumentProbeUrl}>
                 <Outlet />

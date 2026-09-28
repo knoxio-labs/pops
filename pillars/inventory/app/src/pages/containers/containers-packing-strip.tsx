@@ -1,6 +1,8 @@
 import { Button } from '@pops/ui';
 
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
+import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
+import { MAX_LABEL_IDS } from '../labels-page/label-params.js';
 
 import type { ReactElement } from 'react';
 
@@ -15,26 +17,29 @@ function Figure({ value, label }: { value: number; label: string }): ReactElemen
   );
 }
 
-function printLabel(closed: number, printable: number): string {
+function printLabel(closed: number): string {
   if (closed === 0) return 'Print labels';
-  if (printable < closed) return `Print labels for ${printable} of ${closed} closed`;
   return `Print labels for ${closed} closed`;
 }
 
 /** Renders server-provided moving-day packing progress and its bounded label action. */
 export function ContainersPackingStrip({
   progress,
-  printableCount,
+  printing,
   onPrint,
 }: {
   progress: WebSummaryGetResponse['packing'];
-  printableCount: number;
+  printing: boolean;
   onPrint: () => void;
 }): ReactElement {
   const total = progress.closed + progress.fullButOpen + progress.open;
   const closedShare = total === 0 ? 0 : Math.round((progress.closed / total) * 100);
   const fullShare = total === 0 ? 0 : Math.round((progress.fullButOpen / total) * 100);
   const Label = INVENTORY_ICONS.label;
+  const overLimit = progress.closed > MAX_LABEL_IDS;
+  const disabledReason = overLimit
+    ? `Print labels takes at most ${MAX_LABEL_IDS} containers`
+    : undefined;
   return (
     <div className="flex shrink-0 items-center gap-5 rounded-lg border bg-card px-4 py-2.5">
       <div className="min-w-0 flex-1 space-y-2">
@@ -56,16 +61,20 @@ export function ContainersPackingStrip({
           <span className="bg-app-accent/40" style={{ width: `${String(fullShare)}%` }} />
         </div>
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={progress.closed === 0 || printableCount === 0}
-        onClick={onPrint}
-        prefix={<Label className="size-4" aria-hidden />}
-      >
-        {printLabel(progress.closed, printableCount)}
-      </Button>
+      <HintTooltip label={printLabel(progress.closed)} disabledReason={disabledReason}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={printing || progress.closed === 0 || overLimit}
+          loading={printing}
+          loadingText="Loading labels"
+          onClick={onPrint}
+          prefix={<Label className="size-4" aria-hidden />}
+        >
+          {printLabel(progress.closed)}
+        </Button>
+      </HintTooltip>
     </div>
   );
 }

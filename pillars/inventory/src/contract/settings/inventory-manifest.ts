@@ -97,7 +97,7 @@ export const inventoryManifest: SettingsManifest = {
           type: 'text',
           default: DEFAULT_CODE_PATTERN,
           description:
-            '{type} is the type’s first letter, X when untyped. {##} is the number, at least as many digits as #. Used while suggestions are on.',
+            'For {type}, use the type’s first letter, then the item name’s first letter, then X. {##} is the number, at least as many digits as #. Used while suggestions are on.',
           validation: {
             required: true,
             pattern: CODE_PATTERN_RULE,

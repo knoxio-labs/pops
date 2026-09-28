@@ -32,3 +32,4 @@ export {
 } from './rest-sync-ledger.js';
 export { WEB_BATCH_MAX_ROWS } from './rest-web-batch.js';
 export { WEB_ITEMS_MAX_IDS } from './rest-web.js';
+export { HISTORY_KIND_GROUPS } from './rest-web-events.js';

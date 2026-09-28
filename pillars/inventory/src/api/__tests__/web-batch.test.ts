@@ -20,6 +20,7 @@ import {
   readMinimumProtocol,
   TYPE_TREE_PROTOCOL,
 } from '../../protocol/rollout.js';
+import { resolveBatchType } from '../web/batch-validation.js';
 import { createLocation, openSyncHarness, send, type SyncHarness } from './sync-harness.js';
 import { createTestTransport } from './test-http.js';
 
@@ -33,7 +34,10 @@ type BatchOutcome = WebBatchResponse['outcomes'][number];
 
 const BATCH_AUTHOR = { kind: 'web', id: 'web-batch-test', label: 'Web batch test' } as const;
 
-function publishContainmentTree(db: CommandDb): { readonly childTypeId: string } {
+function publishContainmentTree(db: CommandDb): {
+  readonly childTypeId: string;
+  readonly leafTypeId: string;
+} {
   activateMinimumProtocol(db, readMinimumProtocol(db), TYPE_TREE_PROTOCOL);
   const created = createCatalogueDraft(db, 1, BATCH_AUTHOR);
   const parentDraft = patchCatalogueDraft(
@@ -67,17 +71,36 @@ function publishContainmentTree(db: CommandDb): { readonly childTypeId: string }
   const child = childDraft.types.find((type) => type.key === 'batch_child');
   if (child === undefined) throw new Error('the batch child type was not created');
 
-  publishCatalogueDraft(
+  const leafDraft = patchCatalogueDraft(
     db,
-    childDraft.revision.revision,
     {
+      revision: childDraft.revision.revision,
       baseRevision: 1,
       expectedDraftVersion: childDraft.revision.draftVersion,
+    },
+    [
+      {
+        kind: 'put_type',
+        key: 'batch_leaf_key',
+        label: 'Batch leaf label',
+        parentTypeId: child.id,
+      },
+    ]
+  ).draft;
+  const leaf = leafDraft.types.find((type) => type.key === 'batch_leaf_key');
+  if (leaf === undefined) throw new Error('the batch leaf type was not created');
+
+  publishCatalogueDraft(
+    db,
+    leafDraft.revision.revision,
+    {
+      baseRevision: 1,
+      expectedDraftVersion: leafDraft.revision.draftVersion,
       note: null,
     },
     BATCH_AUTHOR
   );
-  return { childTypeId: child.id };
+  return { childTypeId: child.id, leafTypeId: leaf.id };
 }
 
 function row(overrides: Partial<BatchRow> = {}): BatchRow {
@@ -538,5 +561,98 @@ describe('POST /web/items/batch', () => {
       },
     ]);
     expect(h.db.db.select().from(items).all()).toHaveLength(0);
+  });
+
+  it('resolves active type keys, leaf labels, and three-level paths case-insensitively', async () => {
+    const tree = publishContainmentTree(h.db.db);
+    const catalogue = loadPublishedCatalogue(h.db.db);
+    if (catalogue === null) throw new Error('the bootstrap catalogue must be published');
+    const leaf = catalogue.types.find((type) => type.id === tree.leafTypeId);
+    if (leaf === undefined) throw new Error('the published batch leaf is missing');
+    const parent = catalogue.types.find((type) => type.id === leaf.parentTypeId);
+    if (parent === undefined) throw new Error('the published batch parent is missing');
+    const root = catalogue.types.find((type) => type.id === parent.parentTypeId);
+    if (root === undefined) throw new Error('the published batch root is missing');
+    const path = [root.label, parent.label, leaf.label].join(' › ');
+
+    const response = await postBatch(
+      body([
+        row({ name: 'By key', type: leaf.key.toUpperCase() }),
+        row({ name: 'By label', type: leaf.label.toLocaleLowerCase() }),
+        row({ name: 'By path', type: path.toLocaleUpperCase() }),
+      ])
+    );
+
+    expect(response.status).toBe(200);
+    const outcomes = parsedOutcomes(response.body);
+    expect(outcomes.every((outcome) => outcome.status === 'created')).toBe(true);
+    expect(h.db.db.select({ typeId: items.typeId }).from(items).all()).toEqual([
+      { typeId: leaf.id },
+      { typeId: leaf.id },
+      { typeId: leaf.id },
+    ]);
+  });
+
+  it('rejects ambiguous, missing, and archived type values without changing blank semantics', () => {
+    const tree = publishContainmentTree(h.db.db);
+    const current = loadPublishedCatalogue(h.db.db);
+    if (current === null) throw new Error('the bootstrap catalogue must be published');
+    const draft = createCatalogueDraft(h.db.db, current.revision.revision, BATCH_AUTHOR);
+    const withDuplicate = patchCatalogueDraft(
+      h.db.db,
+      {
+        revision: draft.revision.revision,
+        baseRevision: current.revision.revision,
+        expectedDraftVersion: draft.revision.draftVersion,
+      },
+      [{ kind: 'put_type', key: 'batch_duplicate_key', label: 'Batch leaf label' }]
+    ).draft;
+    const duplicate = withDuplicate.types.find((type) => type.key === 'batch_duplicate_key');
+    if (duplicate === undefined) throw new Error('the duplicate batch type was not created');
+    const withArchived = patchCatalogueDraft(
+      h.db.db,
+      {
+        revision: withDuplicate.revision.revision,
+        baseRevision: current.revision.revision,
+        expectedDraftVersion: withDuplicate.revision.draftVersion,
+      },
+      [{ kind: 'put_type', key: 'batch_archived_key', label: 'Archived batch label' }]
+    ).draft;
+    const archived = withArchived.types.find((type) => type.key === 'batch_archived_key');
+    if (archived === undefined) throw new Error('the archived batch type was not created');
+    const archivedDraft = patchCatalogueDraft(
+      h.db.db,
+      {
+        revision: withArchived.revision.revision,
+        baseRevision: current.revision.revision,
+        expectedDraftVersion: withArchived.revision.draftVersion,
+      },
+      [
+        { kind: 'archive_type', id: archived.id },
+        { kind: 'archive_type', id: duplicate.id },
+      ]
+    ).draft;
+    publishCatalogueDraft(
+      h.db.db,
+      archivedDraft.revision.revision,
+      {
+        baseRevision: current.revision.revision,
+        expectedDraftVersion: archivedDraft.revision.draftVersion,
+        note: null,
+      },
+      BATCH_AUTHOR
+    );
+
+    const catalogue = loadPublishedCatalogue(h.db.db);
+    if (catalogue === null) throw new Error('the archived batch catalogue is missing');
+    const leaf = catalogue.types.find((type) => type.id === tree.leafTypeId);
+    if (leaf === undefined) throw new Error('the published batch leaf is missing');
+    expect(resolveBatchType(catalogue, leaf.label)).toEqual(leaf);
+    expect(resolveBatchType(catalogue, 'does-not-exist')).toBeUndefined();
+    expect(resolveBatchType(catalogue, 'Archived batch label')).toBeUndefined();
+    expect(resolveBatchType(catalogue, 'batch_archived_key')).toBeUndefined();
+    expect(resolveBatchType(catalogue, duplicate.key)).toBeUndefined();
+    expect(resolveBatchType(catalogue, '')).toBeNull();
+    expect(resolveBatchType(null, 'anything')).toBeUndefined();
   });
 });

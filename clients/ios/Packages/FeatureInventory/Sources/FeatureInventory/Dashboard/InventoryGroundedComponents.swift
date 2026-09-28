@@ -57,6 +57,9 @@ internal struct InventoryGroundedRowLabel: View {
     internal let symbol: String
     internal let value: String?
     internal let tone: Color
+    internal let photo: String?
+    internal let loadPhoto: (@MainActor (String) async -> Data?)?
+    internal let showsKindBadge: Bool
     @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget
 
     internal init(
@@ -64,23 +67,24 @@ internal struct InventoryGroundedRowLabel: View {
         detail: String,
         symbol: String,
         value: String? = nil,
-        tone: Color = .popsMutedForeground
+        tone: Color = .popsMutedForeground,
+        photo: String? = nil,
+        loadPhoto: (@MainActor (String) async -> Data?)? = nil,
+        showsKindBadge: Bool = false
     ) {
         self.title = title
         self.detail = detail
         self.symbol = symbol
         self.value = value
         self.tone = tone
+        self.photo = photo
+        self.loadPhoto = loadPhoto
+        self.showsKindBadge = showsKindBadge
     }
 
     internal var body: some View {
         HStack(spacing: PopsSpacing.md) {
-            InventorySelectableMark {
-                Image(systemName: symbol)
-                    .font(.popsHeadline)
-                    .foregroundStyle(tone)
-                    .frame(width: markSize, height: markSize)
-            }
+            leadingMark
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Text(title)
                     .font(.popsHeadline)
@@ -104,6 +108,21 @@ internal struct InventoryGroundedRowLabel: View {
         }
         .padding(.vertical, PopsSpacing.xs)
         .contentShape(.rect)
+    }
+
+    @ViewBuilder private var leadingMark: some View {
+        if let photo, let loadPhoto {
+            InventoryRecordMark(
+                photo: photo, symbol: InventorySymbol(system: symbol),
+                showsKindBadge: showsKindBadge, tone: tone, load: loadPhoto)
+        } else {
+            InventorySelectableMark {
+                Image(systemName: symbol)
+                    .font(.popsHeadline)
+                    .foregroundStyle(tone)
+                    .frame(width: markSize, height: markSize)
+            }
+        }
     }
 }
 

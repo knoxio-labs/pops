@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 
+import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import { webItemDetailQueryKey } from '../../inventory-web/queryKeys.js';
 import { useChangedElsewhere } from '../../inventory-web/useChangedElsewhere.js';
 import { CancelDialog } from './cancel-dialog';
@@ -111,14 +112,16 @@ function FormCards({
 }): ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   return (
-    <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-      <IdentityCard
-        api={api}
-        sources={sources}
-        openedTypeId={opening.draft.mode === 'edit' ? opening.draft.typeId : null}
-        editingId={opening.editing?.id}
-      />
-      <div className="min-w-0 space-y-4 lg:max-h-[calc(100vh-15rem)] lg:overflow-y-auto lg:pr-1">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
+      <div className="min-h-0 lg:overflow-y-auto">
+        <IdentityCard
+          api={api}
+          sources={sources}
+          openedTypeId={opening.draft.mode === 'edit' ? opening.draft.typeId : null}
+          editingId={opening.editing?.id}
+        />
+      </div>
+      <div className="min-w-0 space-y-4 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
         <FieldsCard
           draft={api.draft}
           view={api.view}
@@ -156,7 +159,9 @@ function FormContent({
   const staleBanner = staleBannerFor(api, opening, stale, itemId);
   const justCreated = justCreatedFor(api, navigate);
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 sm:p-6 lg:min-h-[calc(100vh-8rem)]">
+    <div
+      className={`${PAGE_HEIGHT} mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-4 overflow-hidden p-4 sm:p-6`}
+    >
       <FormHeader
         mode={api.draft.mode}
         editingName={opening.editing?.name ?? null}

@@ -12,7 +12,7 @@ import { LabelShowsPicker } from './label-shows-picker';
 import { OptionField } from './print-option-field';
 import { SheetChoice } from './print-sheet-choice';
 
-import type { PrintSubject } from '@pops/inventory/labels';
+import type { LabelContent, PrintSubject } from '@pops/inventory/labels';
 
 import type { PrintJob } from './useLabelJob';
 
@@ -95,14 +95,26 @@ export function StartAtControl({ job }: { job: PrintJob }) {
 }
 
 /** Label content, sheet and copies, in one wrapping row, and what the sheet cannot fit. */
-export function PrintOptions({ job, customOpen }: { job: PrintJob; customOpen?: boolean }) {
+export function PrintOptions({
+  job,
+  customOpen,
+  onContentChange,
+}: {
+  job: PrintJob;
+  customOpen?: boolean;
+  onContentChange?: (content: LabelContent) => void;
+}) {
   const hasBoxes = job.subjects.some((subject) => subject.kind === 'container');
   const hasItems = job.subjects.some((subject) => subject.kind === 'item');
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <SheetChoice job={job} customOpen={customOpen} />
-        <LabelShowsPicker content={job.content} fields={job.fields} onChange={job.setContent} />
+        <LabelShowsPicker
+          content={job.content}
+          fields={job.fields}
+          onChange={onContentChange ?? job.setContent}
+        />
         {hasBoxes ? <CopiesChoice job={job} kind="container" /> : null}
         {hasItems ? <CopiesChoice job={job} kind="item" /> : null}
       </div>

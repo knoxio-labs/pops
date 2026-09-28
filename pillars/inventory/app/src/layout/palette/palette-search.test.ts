@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { coreItem, coreWorld } from '../../foundation/test-fixtures/core';
 import { InventoryApiError } from '../../inventory-api-helpers';
+import { PurchasesApiError } from '../../purchases-api-helpers';
 import {
   PALETTE_SEARCH_DEBOUNCE_MS,
   inventoryPaletteSearchRecords,
   paletteSearchStatus,
+  purchasesPaletteSearchStatus,
   useDebouncedPaletteValue,
 } from './palette-search';
 
@@ -44,24 +46,40 @@ describe('inventory palette search', () => {
   });
 
   it('marks a query pending while the raw and debounced values differ', () => {
-    expect(paletteSearchStatus('lamp', '', 'inventory', searchState('idle'))).toBe('pending');
-    expect(paletteSearchStatus('lamp', 'lamp', 'inventory', searchState('pending'))).toBe(
-      'pending'
-    );
+    expect(paletteSearchStatus('lamp', '', searchState('idle'))).toBe('pending');
+    expect(paletteSearchStatus('lamp', 'lamp', searchState('pending'))).toBe('pending');
   });
 
-  it('surfaces server errors and does not pretend Purchases has a search API', () => {
+  it('surfaces inventory server errors', () => {
     expect(
       paletteSearchStatus(
         'lamp',
         'lamp',
-        'inventory',
         searchState('error', new InventoryApiError('Inventory is offline.', 503))
       )
     ).toEqual({ error: 'Inventory is offline.' });
-    expect(paletteSearchStatus('order 42', 'order 42', 'purchases', searchState('idle'))).toEqual({
-      error: 'Purchases search is not available in the current inventory contract.',
-    });
+  });
+
+  it('tracks the purchases search while it debounces, loads, and fails', () => {
+    expect(purchasesPaletteSearchStatus('order 42', '', { status: 'idle', error: null })).toBe(
+      'pending'
+    );
+    expect(
+      purchasesPaletteSearchStatus('order 42', 'order 42', { status: 'pending', error: null })
+    ).toBe('pending');
+    expect(
+      purchasesPaletteSearchStatus('order 42', 'order 42', { status: 'success', error: null })
+    ).toBe('ready');
+    expect(
+      purchasesPaletteSearchStatus('order 42', 'order 42', {
+        status: 'error',
+        error: new PurchasesApiError('Purchases are offline.', 503, 'transport'),
+      })
+    ).toEqual({ error: 'Purchases are offline.' });
+  });
+
+  it('treats an empty purchases query as ready without a request', () => {
+    expect(purchasesPaletteSearchStatus('', '', { status: 'idle', error: null })).toBe('ready');
   });
 
   it('deduplicates exact and ranked item hits into palette records', () => {

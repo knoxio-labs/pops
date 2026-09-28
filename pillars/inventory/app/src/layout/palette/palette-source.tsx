@@ -8,18 +8,20 @@ import { toItemRowModel } from '../../inventory-web/item-row-model.js';
 import { useRecents } from '../../inventory-web/recents.js';
 import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
+import { usePurchasesSearch } from '../../inventory-web/usePurchasesSearch.js';
 import {
-  PALETTE_COMMANDS,
   itemRecordCommand,
   locationRecordCommand,
-  placementArgumentCommand,
-  thisItemCommands,
   uniquePlacementTargets,
 } from './palette-commands.js';
 import { toUiPaletteSource } from './palette-groups.js';
 import { usePaletteSearch } from './palette-search.js';
-
-import type { PaletteStep } from '@pops/ui';
+import {
+  paletteCommands,
+  paletteStatus,
+  placementArgumentCommands,
+  purchaseRecordCommands,
+} from './palette-source-model.js';
 
 import type { PickerSubject } from '../../foundation/model/contracts.js';
 import type { ItemRowModel, PlacementTarget } from '../../foundation/model/model.js';
@@ -27,7 +29,6 @@ import type { LocationModel } from '../../foundation/model/model.js';
 import type { PlacementWorld } from '../../foundation/model/placement-model.js';
 import type { WebListResponses } from '../../inventory-api/types.gen.js';
 import type { PaletteSource, PaletteScope } from './palette-groups.js';
-import type { PaletteSearchState } from './palette-search.js';
 
 type RecentItemsResponse = WebListResponses['200'];
 
@@ -126,30 +127,6 @@ function placementTargets(
   ]);
 }
 
-function paletteStatus({
-  search,
-  placement,
-  query,
-  scope,
-  step,
-}: {
-  search: PaletteSearchState;
-  placement: ReturnType<typeof usePlacementSources>;
-  query: string;
-  scope: PaletteScope;
-  step: PaletteStep | null;
-}) {
-  if (step !== null) {
-    if (placement.isLoading) return 'pending' as const;
-    if (placement.isError) {
-      return { error: 'Placement destinations could not load.' } as const;
-    }
-    return 'ready' as const;
-  }
-  if (query.trim() === '' && scope === 'inventory') return 'ready' as const;
-  return search.status;
-}
-
 /** Builds the live palette source from inventory data and browser recents. */
 export function useInventoryPaletteSource(
   input: InventoryPaletteInput
@@ -169,15 +146,15 @@ export function useInventoryPaletteSource(
     [placement.world, recentItems.items]
   );
   const search = usePaletteSearch(input.query, input.scope, placement.world);
-  const records = search.records;
-  const currentItem = currentItemId === null ? undefined : items.get(currentItemId);
-  const commands = useMemo(
-    () => [
-      ...PALETTE_COMMANDS,
-      ...(currentItem === undefined ? [] : thisItemCommands(currentItem)),
-    ],
-    [currentItem]
+  const purchaseSearch = usePurchasesSearch(
+    input.scope === 'purchases' ? search.debouncedQuery : ''
   );
+  const purchaseRecords = useMemo(
+    () => purchaseRecordCommands(purchaseSearch.hits),
+    [purchaseSearch.hits]
+  );
+  const currentItem = currentItemId === null ? undefined : items.get(currentItemId);
+  const commands = useMemo(() => paletteCommands(currentItem), [currentItem]);
   const recent = useMemo(
     () => recentCommands(recents.records, items, placement.world.locations, placement.world),
     [items, placement.world, recents.records]
@@ -187,19 +164,20 @@ export function useInventoryPaletteSource(
     [placement.locations, placement.openContainers, placement.recents]
   );
   const argumentCommands = useMemo(
-    () => targets.map((target) => placementArgumentCommand(target, placement.world)),
+    () => placementArgumentCommands(targets, placement.world),
     [placement.world, targets]
   );
   const source = useMemo<PaletteSource>(
     () => ({
       commands,
-      inventoryRecords: records,
-      purchaseRecords: [],
+      inventoryRecords: search.records,
+      purchaseRecords,
       recents: recent,
       arguments: { placement: argumentCommands },
-      status: (query, scope, step) => paletteStatus({ search, placement, query, scope, step }),
+      status: (query, scope, step) =>
+        paletteStatus({ search, purchaseSearch, placement, query, scope, step }),
     }),
-    [argumentCommands, commands, placement, recent, records, search]
+    [argumentCommands, commands, placement, purchaseRecords, purchaseSearch, recent, search]
   );
 
   return { source: toUiPaletteSource(source), world: placement.world };

@@ -23,7 +23,7 @@ export function useContainerContents(
   containerId: string,
   baseWorld: PlacementWorld
 ): ContainerContentsData {
-  const query = useItemRows({ containingItemId: containerId }, CONTENT_LIMIT);
+  const query = useItemRows({ containingItemId: containerId, sort: 'name' }, CONTENT_LIMIT);
 
   useEffect(() => {
     if (query.status === 'success' && query.hasNextPage && !query.isFetchingNextPage) {

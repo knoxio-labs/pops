@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PAGE_HEIGHT } from '../foundation/frame/page-frame';
 import { InventoryApiError } from '../inventory-api-helpers';
 
 import type { TypesReadCatalogueResponses } from '../inventory-api/types.gen';
@@ -166,9 +167,15 @@ function CatalogueRoute({ navigateTo }: { readonly navigateTo?: string }) {
   return (
     <>
       <TypeCataloguePage />
+      <CurrentPath />
       {navigateTo === undefined ? null : <NavigationButton to={navigateTo} />}
     </>
   );
+}
+
+function CurrentPath() {
+  const location = useLocation();
+  return <output data-testid="current-path">{location.pathname}</output>;
 }
 
 function NavigationButton({ to }: { readonly to: string }) {
@@ -234,6 +241,68 @@ beforeEach(() => {
 });
 
 describe('TypeCataloguePage', () => {
+  it('bounds the loading state to the shared page frame', async () => {
+    const catalogueResponse: { data: Catalogue; error: undefined } = {
+      data: published,
+      error: undefined,
+    };
+    let resolveCatalogue = (_value: typeof catalogueResponse): void => undefined;
+    const pendingCatalogue = new Promise<typeof catalogueResponse>((resolve) => {
+      resolveCatalogue = resolve;
+    });
+    api.readCatalogue.mockReturnValue(pendingCatalogue);
+    renderPage();
+
+    expect(screen.getByText('Loading type catalogue…')).toHaveClass(
+      'min-h-0',
+      'overflow-hidden',
+      PAGE_HEIGHT
+    );
+
+    await act(async () => {
+      resolveCatalogue(catalogueResponse);
+    });
+  });
+
+  it('contains desktop editor scrolling within its fixed frame', async () => {
+    renderPage();
+
+    await screen.findAllByText('Electronics');
+
+    const card = document.querySelector<HTMLElement>('[data-slot="card"]');
+    if (card === null) throw new Error('Expected the catalogue editor card');
+    const page = card.parentElement?.parentElement;
+    if (page === null || page === undefined) throw new Error('Expected the catalogue page frame');
+    expect(page).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+    expect(card).toHaveClass('lg:col-span-3', 'lg:flex', 'lg:flex-col');
+    expect(card).toHaveClass('min-h-0', 'min-w-0');
+
+    const cardContent = card.querySelector<HTMLElement>('[data-slot="card-content"]');
+    if (cardContent === null) throw new Error('Expected the catalogue editor content');
+    expect(cardContent).toHaveClass(
+      'lg:flex',
+      'lg:min-h-0',
+      'lg:flex-1',
+      'lg:flex-col',
+      'lg:overflow-hidden'
+    );
+    expect(cardContent.children[1]).toHaveClass('lg:min-h-0', 'lg:flex-1', 'lg:overflow-y-auto');
+    expect(card.parentElement).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-y-auto',
+      'lg:grid-rows-1',
+      'lg:overflow-hidden'
+    );
+
+    const typeColumn = screen
+      .getByRole('heading', { name: 'Item types' })
+      .closest('section')?.parentElement;
+    if (typeColumn === null || typeColumn === undefined)
+      throw new Error('Expected the type navigation column');
+    expect(typeColumn).toHaveClass('lg:h-full', 'lg:min-h-0', 'lg:overflow-y-auto');
+  });
+
   it('renders the persisted catalogue and its fields', async () => {
     renderPage();
 
@@ -284,6 +353,18 @@ describe('TypeCataloguePage', () => {
     );
     expect(screen.getByRole('button', { name: /Type A/ })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: /Type C/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('updates the type route when selecting a type from the catalogue', async () => {
+    api.readCatalogue.mockResolvedValue({ data: navigationCatalogue, error: undefined });
+    renderPage('/inventory/types');
+
+    await screen.findByRole('button', { name: /Type A/ });
+    fireEvent.click(screen.getByRole('button', { name: /Type B/ }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('current-path')).toHaveTextContent(`/inventory/types/${TYPE_B_ID}`)
+    );
   });
 
   it('resets the editor state when navigating from type A to type B', async () => {
@@ -512,6 +593,11 @@ describe('TypeCataloguePage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reload' }));
 
     expect(await screen.findByText('Failed to load the type catalogue.')).toBeInTheDocument();
+    const errorHeader = screen.getByRole('heading', { name: 'Type catalogue' });
+    const errorPage = errorHeader.closest('header')?.parentElement;
+    if (errorPage === null || errorPage === undefined)
+      throw new Error('Expected the catalogue error frame');
+    expect(errorPage).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByDisplayValue('Recovered after retry')).toBeInTheDocument();

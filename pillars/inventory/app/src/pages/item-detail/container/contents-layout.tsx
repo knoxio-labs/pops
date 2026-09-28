@@ -9,15 +9,18 @@ import type { ReactElement } from 'react';
 import type { SelectionBarAction } from '../../../foundation/model/contracts.js';
 import type { ItemRowModel } from '../../../foundation/model/model.js';
 import type { SelectionApi } from '../../../foundation/selection/use-selection.js';
+import type { ContentsSort } from './contents-model.js';
 import type { ContentsPaneProps } from './workspace-types.js';
 
 type LayoutProps = ContentsPaneProps & {
   query: string;
+  sort: ContentsSort;
   rows: ItemRowModel[];
   selection: SelectionApi;
   actions: readonly SelectionBarAction[];
   refusal: string | null;
   onQuery: (value: string) => void;
+  onSort: (sort: ContentsSort) => void;
 };
 
 function ContentsHeader({
@@ -31,6 +34,8 @@ function ContentsHeader({
   readOnlyReason,
   query,
   onQuery,
+  sort,
+  onSort,
   onOpenContainer,
   onRetire,
 }: LayoutProps): ReactElement {
@@ -48,6 +53,8 @@ function ContentsHeader({
             <ContentsFilter name={name} query={query} onQuery={onQuery} />
           )
         }
+        sort={sort}
+        onSort={onSort}
       />
       <ContentsFlow
         name={name}

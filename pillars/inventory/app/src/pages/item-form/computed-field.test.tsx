@@ -84,4 +84,17 @@ describe('ComputedField', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Invalid value.');
     expect(screen.getByRole('status')).toHaveAttribute('aria-invalid', 'true');
   });
+
+  it('rounds computed measurements only for display', () => {
+    expect(
+      formatComputedValue(field('measurement', { decimalPlaces: 1 }), {
+        amount: '24.0000',
+        unit: 'kg',
+      })
+    ).toBe('24.0 kg');
+  });
+
+  it('rounds computed decimals only for display', () => {
+    expect(formatComputedValue(field('decimal', { decimalPlaces: 1 }), '24.05')).toBe('24.1');
+  });
 });

@@ -21,19 +21,26 @@ describe('label page address', () => {
     );
   });
 
-  it('reads the template, sheet and contents flag, with an unknown template as auto', () => {
+  it('reads shows, sheet and contents, with the legacy template as an alias', () => {
     expect(
       readLabelParams(new URLSearchParams('ids=a&template=item&sheet=L7163&contents=1'))
     ).toEqual({
       ids: ['a'],
-      template: 'item',
+      shows: 'qr-code',
       content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
       sheetId: 'L7163',
       contents: true,
     });
+    expect(readLabelParams(new URLSearchParams('shows=qr'))).toEqual({
+      ids: [],
+      shows: 'qr',
+      content: { kind: 'parts', parts: ['qr'], fields: [] },
+      sheetId: null,
+      contents: false,
+    });
     expect(readLabelParams(new URLSearchParams('template=poster'))).toEqual({
       ids: [],
-      template: 'auto',
+      shows: null,
       content: DEFAULT_LABEL_CONTENT,
       sheetId: null,
       contents: false,
@@ -43,29 +50,36 @@ describe('label page address', () => {
   it('uses stored defaults only when the URL does not provide them', () => {
     expect(
       readLabelParams(new URLSearchParams('ids=a'), {
-        template: 'item',
+        shows: 'qr-code',
         content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
         sheetId: 'L7165',
       })
     ).toEqual({
       ids: ['a'],
-      template: 'item',
+      shows: 'qr-code',
       content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
       sheetId: 'L7165',
       contents: false,
     });
     expect(
       readLabelParams(new URLSearchParams('ids=a&template=container&sheet=L7163'), {
-        template: 'item',
+        shows: 'qr-code',
         content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
         sheetId: 'L7165',
       })
     ).toEqual({
       ids: ['a'],
-      template: 'container',
+      shows: 'qr-name-code',
       content: { kind: 'parts', parts: ['qr', 'name', 'code'], fields: [] },
       sheetId: 'L7163',
       contents: false,
+    });
+  });
+
+  it('lets an explicit shows value win over the legacy template', () => {
+    expect(readLabelParams(new URLSearchParams('shows=name&template=item'))).toMatchObject({
+      shows: 'name',
+      content: { kind: 'parts', parts: ['name'], fields: [] },
     });
   });
 

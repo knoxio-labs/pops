@@ -57,7 +57,7 @@ internal struct PurchaseDetailReceipt: View {
                             ViewThatFits(in: .vertical) {
                                 lines
                                 ScrollView { lines }
-                                    .scrollBounceBehavior(.basedOnSize)
+                                    .scrollBounceBehavior(.basedOnSize, axes: .vertical)
                                     .scrollIndicators(.hidden)
                             }
                         }

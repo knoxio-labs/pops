@@ -1,3 +1,4 @@
+import { effectiveFields } from '../../lib/type-tree.js';
 import {
   encodeBulkReferenceValues,
   isBulkReferenceInput,
@@ -72,7 +73,7 @@ export function bulkFieldCandidates(
   for (const row of rows) {
     if (!selected.has(row.id) || row.typeId === null) continue;
     const type = catalogue.types.find((candidate) => candidate.id === row.typeId);
-    for (const field of type?.fields ?? []) {
+    for (const field of type === undefined ? [] : effectiveFields(catalogue.types, type.id)) {
       if (!supportsBulkField(field)) continue;
       const existing = fields.get(field.id);
       if (existing === undefined) {
@@ -88,10 +89,14 @@ export function bulkFieldCandidates(
 /** Returns the stable values that survive a selected item's type change. */
 export function typeChangeValues(
   items: readonly WebItem[],
-  targetType: CatalogueType
+  targetType: CatalogueType,
+  types: readonly CatalogueType[] = []
 ): ReadonlyMap<string, readonly FieldValueEntry[]> {
+  const resolvedTarget = effectiveFields(types, targetType.id);
   const targetFieldIds = new Set(
-    targetType.fields.filter((field) => supportsTypeValue(field)).map((field) => field.id)
+    (resolvedTarget.length > 0 ? resolvedTarget : targetType.fields)
+      .filter((field) => supportsTypeValue(field))
+      .map((field) => field.id)
   );
   return new Map(
     items.map((item) => [
@@ -158,11 +163,12 @@ function encodeMeasurementValue(
 /** Encodes one bulk field input in the stable catalogue value format. */
 export function encodeBulkFieldValues(
   field: CatalogueType['fields'][number],
-  input: BulkFieldInput
+  input: BulkFieldInput,
+  types: readonly CatalogueType[] = []
 ): readonly FieldWireValue[] | null {
   if (!supportsBulkField(field)) return null;
   if (field.kind === 'boolean') return typeof input === 'boolean' ? [input] : null;
-  if (field.kind === 'reference') return encodeBulkReferenceValues(field, input);
+  if (field.kind === 'reference') return encodeBulkReferenceValues(field, input, types);
   if (field.kind === 'enum') return encodeEnumValues(field, input);
   if (field.kind === 'integer' || field.kind === 'decimal') {
     return encodeNumericValue(field, input);
@@ -186,10 +192,14 @@ export function sharedTypeFieldLabels(
   if (catalogue === undefined || row.typeId === null) return [];
   const currentType = catalogue.types.find((type) => type.id === row.typeId);
   if (currentType === undefined) return [];
+  const currentFields = effectiveFields(catalogue.types, currentType.id);
+  const targetFields = effectiveFields(catalogue.types, targetType.id);
   const targetFieldIds = new Set(
-    targetType.fields.filter((field) => supportsTypeValue(field)).map((field) => field.id)
+    (targetFields.length > 0 ? targetFields : targetType.fields)
+      .filter((field) => supportsTypeValue(field))
+      .map((field) => field.id)
   );
-  return currentType.fields
+  return (currentFields.length > 0 ? currentFields : currentType.fields)
     .filter((field) => supportsTypeValue(field) && targetFieldIds.has(field.id))
     .map((field) => field.label);
 }
@@ -197,8 +207,9 @@ export function sharedTypeFieldLabels(
 /** Builds a stable patch for one selected item and one chosen field value. */
 export function bulkFieldPatch(
   field: CatalogueType['fields'][number],
-  input: BulkFieldInput
+  input: BulkFieldInput,
+  types: readonly CatalogueType[] = []
 ): FieldValuePatch | null {
-  const values = encodeBulkFieldValues(field, input);
+  const values = encodeBulkFieldValues(field, input, types);
   return values === null ? null : { fieldId: field.id, values };
 }

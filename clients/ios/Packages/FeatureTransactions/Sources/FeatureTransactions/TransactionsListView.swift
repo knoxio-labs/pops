@@ -92,7 +92,7 @@ extension TransactionsListView {
             }
             .padding(PopsSpacing.lg)
         }
-        .scrollBounceBehavior(.always)
+        .scrollBounceBehavior(.always, axes: .vertical)
         .refreshable { await model.refresh() }
         // Names the screen rather than any one row, so a flow can say "the
         // list is up" before saying what is on it — and get told which of the

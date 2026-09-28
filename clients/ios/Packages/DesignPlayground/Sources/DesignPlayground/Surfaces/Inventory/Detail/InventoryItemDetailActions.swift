@@ -64,31 +64,31 @@ internal struct InventoryItemDetailActionRow: View {
     }
 }
 
-/// The page's own chrome: Edit, and everything that is not one of the verbs
-/// in the row. A More menu rather than six more bar items, which is what the
+/// The page's own overflow chrome: everything that is not one of the verbs in
+/// the row. A More menu rather than six more bar items, which is what the
 /// HIG's toolbar guidance asks for once the important actions are placed.
 internal struct InventoryItemDetailToolbar: ToolbarContent {
     internal let detail: InventoryItemDetail
-    @Binding internal var editing: Bool
     @Binding internal var destroying: Bool
+    internal let moreActions: [InventoryAction]
+    internal let onAction: (InventoryAction) -> Void
     internal let perform: (InventoryLifecycleCommand) -> Void
     internal let destroy: () -> Void
 
     internal var body: some ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
-            Button("Edit") { editing = true }
-        }
-        ToolbarItem(placement: .primaryAction) {
-            InventoryItemDetailMenu(detail: detail, perform: perform)
-                .confirmationDialog(
-                    "Destroy \(detail.item.name)?", isPresented: $destroying,
-                    titleVisibility: .visible
-                ) {
-                    Button("Destroy", role: .destructive, action: destroy)
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("History and documents stay.")
-                }
+            InventoryItemDetailMenu(
+                detail: detail, moreActions: moreActions, onAction: onAction, perform: perform
+            )
+            .confirmationDialog(
+                "Destroy \(detail.item.name)?", isPresented: $destroying,
+                titleVisibility: .visible
+            ) {
+                Button("Destroy", role: .destructive, action: destroy)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("History and documents stay.")
+            }
         }
     }
 }
@@ -97,10 +97,26 @@ internal struct InventoryItemDetailToolbar: ToolbarContent {
 /// web (POPS-3992); this menu has nothing to reprint.
 internal struct InventoryItemDetailMenu: View {
     internal let detail: InventoryItemDetail
+    internal let moreActions: [InventoryAction]
+    internal let onAction: (InventoryAction) -> Void
     internal let perform: (InventoryLifecycleCommand) -> Void
 
     internal var body: some View {
         Menu {
+            if !moreActions.isEmpty {
+                ForEach(moreActions) { action in
+                    Button {
+                        onAction(action)
+                    } label: {
+                        Label {
+                            Text(action.title)
+                        } icon: {
+                            action.symbol.image
+                        }
+                    }
+                }
+                Divider()
+            }
             if let code = detail.item.code {
                 Button {
                 } label: {

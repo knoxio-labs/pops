@@ -1,3 +1,6 @@
+import { cn } from '@pops/ui';
+
+import { PAGE_HEIGHT } from '../../foundation/item-page/section-parts';
 import { ContainerWorkspace } from './container/workspace';
 import { DetailDialogs } from './detail-dialogs';
 import { DetailHeader } from './detail-header';
@@ -7,6 +10,7 @@ import { HeaderActions } from './header-actions';
 import { ItemDetailView } from './item-detail-view';
 
 import type { ReactElement } from 'react';
+import type { ReactNode } from 'react';
 
 import type { ItemDetailModel } from './detail-model';
 import type { DetailReadyState } from './use-detail-ready-state';
@@ -102,7 +106,7 @@ function ReadyContent({
   onRetry: () => void;
 }): ReactElement {
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       {banner ? <DetailStateBanner state={banner} onRetry={onRetry} /> : null}
       {ready.actions.refusal ? (
         <p role="alert" className="text-sm text-destructive">
@@ -126,7 +130,7 @@ function ReadyContent({
           offline={offline}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -138,6 +142,7 @@ export function DetailReadyView({
   offline,
   banner,
   onRetry,
+  detailBanners,
 }: {
   itemId: string;
   model: ItemDetailModel;
@@ -145,10 +150,12 @@ export function DetailReadyView({
   offline: boolean;
   banner: ItemDetailBannerState | null;
   onRetry: () => void;
+  detailBanners: ReactNode;
 }): ReactElement {
   return (
-    <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
+    <div className={cn('@container flex min-h-0 flex-col gap-4 overflow-hidden', PAGE_HEIGHT)}>
       <ReadyHeader model={model} ready={ready} />
+      {detailBanners}
       <ReadyContent
         itemId={itemId}
         model={model}

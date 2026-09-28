@@ -15,7 +15,7 @@ extension View {
         #endif
     }
 
-    /// Adds non-full-swipe actions and reports presentation changes on supporting platforms.
+    /// Adds actions that can be presented with a short swipe or committed with a full swipe.
     @ViewBuilder
     public func popsGroundedSwipeActions<Actions: View>(
         edge: HorizontalEdge,
@@ -26,15 +26,15 @@ extension View {
             if #available(iOS 27.0, macOS 27.0, *) {
                 swipeActions(
                     edge: edge,
-                    allowsFullSwipe: false,
+                    allowsFullSwipe: true,
                     content: actions,
                     onPresentationChanged: onPresentationChanged
                 )
             } else {
-                swipeActions(edge: edge, allowsFullSwipe: false, content: actions)
+                swipeActions(edge: edge, allowsFullSwipe: true, content: actions)
             }
         #else
-            swipeActions(edge: edge, allowsFullSwipe: false, content: actions)
+            swipeActions(edge: edge, allowsFullSwipe: true, content: actions)
         #endif
     }
 

@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useCallback, useMemo } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { cn } from '@pops/ui';
 
@@ -8,46 +8,98 @@ import { toEventModel } from '../../inventory-web/event-model.js';
 import { useOnline } from '../../inventory-web/useOnline.js';
 import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
 import { useRevertEvent } from '../../inventory-web/useRevertEvent.js';
-import { useWebItemHistory } from '../../inventory-web/useWebItemDetail.js';
+import { useWebEvents } from '../../inventory-web/useWebEvents.js';
+import {
+  chipCounts,
+  historyKinds,
+  parseHistoryFilter,
+  type HistoryFilter,
+} from './history-model.js';
 import { HistoryPageContent } from './history-page-content.js';
 import { HistoryPageHeader } from './history-page-header.js';
 
 import type { PickerSubject } from '../../foundation/model/contracts.js';
-import type { WebGetResponses } from '../../inventory-api/types.gen.js';
-import type { WebEvent } from '../../inventory-web/useWebEvents.js';
-
-type HistoryPage = WebGetResponses[200];
-type HistoryWireEvent = HistoryPage['history']['events'][number];
-
-const EMPTY_HISTORY_PAGES: readonly HistoryPage[] = [];
+import type { WebEventsFeed } from '../../inventory-web/useWebEvents.js';
 
 function itemPath(id: string | undefined): string {
   return id === undefined ? '/inventory/items' : `/inventory/items/${id}`;
 }
 
-function asWebEvent(event: HistoryWireEvent, entityName: string): WebEvent {
-  return { ...event, entityName };
-}
+const HISTORY_PAGE_CLASS = '@container flex min-h-0 max-w-5xl flex-col gap-4 overflow-hidden';
 
-function historySources(pages: readonly HistoryPage[], entityName: string): WebEvent[] {
-  return pages.flatMap((page) => page.history.events.map((event) => asWebEvent(event, entityName)));
+function HistoryPageSurface({
+  itemName,
+  itemHref,
+  events,
+  sourceById,
+  filter,
+  counts,
+  onFilterChange,
+  history,
+  isOnline,
+  revertEvent,
+  navigate,
+}: {
+  itemName: string;
+  itemHref: string;
+  events: ReturnType<typeof toEventModel>[];
+  sourceById: ReadonlyMap<string, WebEventsFeed['events'][number]>;
+  filter: HistoryFilter;
+  counts: ReturnType<typeof chipCounts>;
+  onFilterChange: (filter: HistoryFilter) => void;
+  history: WebEventsFeed;
+  isOnline: boolean;
+  revertEvent: ReturnType<typeof useRevertEvent>;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  return (
+    <div className={cn(HISTORY_PAGE_CLASS, PAGE_HEIGHT)}>
+      <HistoryPageHeader
+        itemName={itemName}
+        itemHref={itemHref}
+        eventCount={events.length}
+        hasNextPage={history.hasNextPage}
+      />
+      <HistoryPageContent
+        events={events}
+        sourceById={sourceById}
+        filter={filter}
+        counts={counts}
+        onFilterChange={onFilterChange}
+        history={{
+          isPending: history.status === 'pending',
+          isError: history.status === 'error',
+          total: history.total,
+          hasNextPage: history.hasNextPage,
+          isFetchingNextPage: history.isFetchingNextPage,
+          fetchNextPage: history.fetchNextPage,
+          refetch: history.refetch,
+        }}
+        hasCachedData={history.total !== null}
+        isOnline={isOnline}
+        revertEvent={revertEvent}
+        navigate={navigate}
+      />
+    </div>
+  );
 }
 
 /** Renders the cursor-paged, filterable history for one inventory item. */
 export function ItemHistoryPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filter = parseHistoryFilter(searchParams.get('kind'));
   const subject = useMemo<PickerSubject>(
     () => ({ kind: 'items', ids: id === undefined ? [] : [id] }),
     [id]
   );
   const placement = usePlacementSources(subject);
   const isOnline = useOnline();
-  const history = useWebItemHistory(id);
+  const history = useWebEvents({ entityId: id, kinds: historyKinds(filter), limit: 50 });
   const revertEvent = useRevertEvent();
-  const pages = history.data?.pages ?? EMPTY_HISTORY_PAGES;
-  const itemName = pages[0]?.item.name ?? 'Item';
-  const sources = useMemo(() => historySources(pages, itemName), [itemName, pages]);
+  const sources = history.events;
+  const itemName = sources[0]?.entityName ?? placement.world.items.get(id ?? '')?.name ?? 'Item';
   const typeNames = useMemo(
     () => new Map((placement.catalogue?.types ?? []).map((type) => [type.id, type.label] as const)),
     [placement.catalogue]
@@ -60,25 +112,36 @@ export function ItemHistoryPage() {
     () => new Map(sources.map((event) => [String(event.seq), event] as const)),
     [sources]
   );
-  const itemHref = itemPath(id);
+  const total = history.total ?? events.length;
+  const counts = useMemo(() => chipCounts(history.kindCounts, total), [history.kindCounts, total]);
+  const onFilterChange = useCallback(
+    (nextFilter: HistoryFilter) => {
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (nextFilter === 'all') next.delete('kind');
+          else next.set('kind', nextFilter);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
 
   return (
-    <div className={cn('@container flex max-w-5xl flex-col gap-4', PAGE_HEIGHT)}>
-      <HistoryPageHeader
-        itemName={itemName}
-        itemHref={itemHref}
-        eventCount={events.length}
-        hasNextPage={history.hasNextPage}
-      />
-      <HistoryPageContent
-        events={events}
-        sourceById={sourceById}
-        history={history}
-        hasCachedData={history.data !== undefined}
-        isOnline={isOnline}
-        revertEvent={revertEvent}
-        navigate={navigate}
-      />
-    </div>
+    <HistoryPageSurface
+      itemName={itemName}
+      itemHref={itemPath(id)}
+      events={events}
+      sourceById={sourceById}
+      filter={filter}
+      counts={counts}
+      onFilterChange={onFilterChange}
+      history={history}
+      isOnline={isOnline}
+      revertEvent={revertEvent}
+      navigate={navigate}
+    />
   );
 }

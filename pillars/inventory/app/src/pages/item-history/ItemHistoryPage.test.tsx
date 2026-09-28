@@ -2,13 +2,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { ItemHistoryPage } from './ItemHistoryPage.js';
 
-import type { WebGetResponses } from '../../inventory-api/types.gen.js';
-
-type HistoryPage = WebGetResponses[200];
-type HistoryWireEvent = HistoryPage['history']['events'][number];
+import type { WebEvent, WebEventsFeed } from '../../inventory-web/useWebEvents.js';
 
 const mocks = vi.hoisted(() => ({
   fetchNextPage: vi.fn(),
@@ -18,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   usePlacementSources: vi.fn(),
   useOnline: vi.fn(),
   useRevertEvent: vi.fn(),
-  useWebItemHistory: vi.fn(),
+  useWebEvents: vi.fn(),
 }));
 
 vi.mock('../../inventory-web/usePlacementSources.js', () => ({
@@ -30,47 +28,15 @@ vi.mock('../../inventory-web/useOnline.js', () => ({
 vi.mock('../../inventory-web/useRevertEvent.js', () => ({
   useRevertEvent: () => mocks.useRevertEvent(),
 }));
-vi.mock('../../inventory-web/useWebItemDetail.js', () => ({
-  useWebItemHistory: (...args: unknown[]) => mocks.useWebItemHistory(...args),
+vi.mock('../../inventory-web/useWebEvents.js', () => ({
+  useWebEvents: (...args: unknown[]) => mocks.useWebEvents(...args),
 }));
 vi.mock('../overview/overview-event-actions.js', () => ({
   undoEvent: (...args: unknown[]) => mocks.undoEvent(...args),
 }));
 
-const item: HistoryPage['item'] = {
-  access: null,
-  catalogueRevision: null,
-  code: null,
-  computedValues: [],
-  createdAt: '2026-08-01T00:00:00.000Z',
-  deletedAt: null,
-  documentTitles: [],
-  documentsStatus: 'none',
-  externalIds: [],
-  fieldValues: [],
-  fields: {},
-  id: 'item-1',
-  isContainer: false,
-  isFull: null,
-  legacyType: null,
-  lifecycle: 'active',
-  lifecycleChangedAt: null,
-  name: 'Desk lamp',
-  note: null,
-  photos: [],
-  placement: { kind: 'location', locationId: 'study' },
-  previousPlacement: null,
-  provenance: null,
-  quantity: 1,
-  revision: 2,
-  seq: 2,
-  typeId: null,
-  typeKey: null,
-  updatedAt: '2026-09-03T00:00:00.000Z',
-};
-
-function wireEvent(overrides: Partial<HistoryWireEvent> = {}): HistoryWireEvent {
-  const base: HistoryWireEvent = {
+function wireEvent(overrides: Partial<WebEvent> = {}): WebEvent {
+  const base: WebEvent = {
     actor: { kind: 'web', label: 'João' },
     after: {
       lifecycle: 'active',
@@ -86,6 +52,7 @@ function wireEvent(overrides: Partial<HistoryWireEvent> = {}): HistoryWireEvent 
     compensatesSeq: null,
     entityId: 'item-1',
     entityKind: 'item',
+    entityName: 'Desk lamp',
     fields: ['placement'],
     kind: 'moved',
     reason: 'Put it away',
@@ -116,28 +83,16 @@ const edited = wireEvent({
   undoable: false,
 });
 
-function page(events: HistoryWireEvent[] = [moved, edited]): HistoryPage {
-  return { item, history: { events, nextCursor: null } };
-}
-
-interface HistoryQueryState {
-  data?: { pages: HistoryPage[]; pageParams: Array<string | undefined> };
-  fetchNextPage: () => void;
-  hasNextPage: boolean;
-  isError: boolean;
-  isFetchingNextPage: boolean;
-  isPending: boolean;
-  refetch: () => void;
-}
-
-function query(overrides: Partial<HistoryQueryState> = {}): HistoryQueryState {
+function feed(overrides: Partial<WebEventsFeed> = {}): WebEventsFeed {
   return {
-    data: { pages: [page()], pageParams: [undefined] },
+    events: [moved, edited],
+    kindCounts: { moved: 1, edited: 1 },
+    total: 2,
+    status: 'success',
+    error: null,
     fetchNextPage: mocks.fetchNextPage,
     hasNextPage: false,
-    isError: false,
     isFetchingNextPage: false,
-    isPending: false,
     refetch: mocks.refetch,
     ...overrides,
   };
@@ -167,7 +122,9 @@ beforeEach(() => {
   });
   mocks.useOnline.mockReturnValue(true);
   mocks.useRevertEvent.mockReturnValue(mocks.revertEvent);
-  mocks.useWebItemHistory.mockReturnValue(query());
+  mocks.useWebEvents.mockImplementation(({ kinds }: { kinds?: readonly string[] }) =>
+    kinds === undefined ? feed() : feed({ events: [edited], kindCounts: { edited: 1 }, total: 1 })
+  );
 });
 
 afterEach(() => {
@@ -175,6 +132,22 @@ afterEach(() => {
 });
 
 describe('ItemHistoryPage', () => {
+  it('keeps the route frame bounded around the scrolling history list', () => {
+    renderPage();
+
+    const heading = screen.getByRole('heading', { name: 'History of Desk lamp' });
+    const header = heading.closest('header');
+    if (header === null || header.parentElement === null) {
+      throw new Error('Item history page frame was not rendered');
+    }
+    expect(header.parentElement).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+
+    const month = screen.getByRole('region', { name: 'September 2026' });
+    const list = month.parentElement;
+    if (list === null) throw new Error('Item history list was not rendered');
+    expect(list).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto');
+  });
+
   it('renders filters, month groups, event details, and the undo action', async () => {
     renderPage();
 
@@ -185,6 +158,24 @@ describe('ItemHistoryPage', () => {
     expect(screen.getByText('Renamed to Desk lamp v2')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Details/ }));
+
+    expect(mocks.useWebEvents).toHaveBeenLastCalledWith({
+      entityId: 'item-1',
+      kinds: [
+        'created',
+        'edited',
+        'code_set',
+        'type_changed',
+        'quantity_changed',
+        'split_from',
+        'split_into',
+        'photo_added',
+        'photo_removed',
+        'override_set',
+        'override_cleared',
+      ],
+      limit: 50,
+    });
 
     expect(screen.queryByText('Moved to Study')).not.toBeInTheDocument();
     expect(screen.getByText('Renamed to Desk lamp v2')).toBeInTheDocument();
@@ -212,18 +203,32 @@ describe('ItemHistoryPage', () => {
   });
 
   it('loads another cursor page from the history list', () => {
-    mocks.useWebItemHistory.mockReturnValue(query({ hasNextPage: true }));
+    mocks.useWebEvents.mockReturnValue(feed({ hasNextPage: true, total: 3 }));
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Load more events' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load 1 more' }));
 
     expect(mocks.fetchNextPage).toHaveBeenCalledOnce();
   });
 
-  it('renders the empty state when an item has no history', () => {
-    mocks.useWebItemHistory.mockReturnValue(
-      query({ data: { pages: [page([])], pageParams: [undefined] } })
+  it('uses the loaded count in the header and the filtered count for paging', () => {
+    mocks.useWebEvents.mockImplementation(({ kinds }: { kinds?: readonly string[] }) =>
+      kinds === undefined
+        ? feed({ total: 200, hasNextPage: true })
+        : feed({ events: [edited], kindCounts: { edited: 2 }, total: 200, hasNextPage: true })
     );
+
+    renderPage();
+
+    expect(screen.getByText('2 events loaded')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Details/ }));
+
+    expect(screen.getByText('1 of 2 shown')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load 1 more' })).toBeInTheDocument();
+  });
+
+  it('renders the empty state when an item has no history', () => {
+    mocks.useWebEvents.mockReturnValue(feed({ events: [], kindCounts: {}, total: 0 }));
     renderPage();
 
     expect(screen.getByRole('status')).toHaveTextContent('Nothing has happened to it yet');
@@ -233,14 +238,18 @@ describe('ItemHistoryPage', () => {
   });
 
   it('renders a loading state while history is pending', () => {
-    mocks.useWebItemHistory.mockReturnValue(query({ data: undefined, isPending: true }));
+    mocks.useWebEvents.mockReturnValue(
+      feed({ events: [], kindCounts: {}, total: null, status: 'pending' })
+    );
     renderPage();
 
     expect(screen.getByRole('status', { name: 'Loading history' })).toBeInTheDocument();
   });
 
   it('renders a retry state when history fails', () => {
-    mocks.useWebItemHistory.mockReturnValue(query({ data: undefined, isError: true }));
+    mocks.useWebEvents.mockReturnValue(
+      feed({ events: [], kindCounts: {}, total: null, status: 'error' })
+    );
     renderPage();
 
     expect(
@@ -271,7 +280,7 @@ describe('ItemHistoryPage', () => {
   });
 
   it('keeps cached history visible and disables Undo when a refetch fails', () => {
-    mocks.useWebItemHistory.mockReturnValue(query({ isError: true }));
+    mocks.useWebEvents.mockReturnValue(feed({ status: 'error' }));
     renderPage();
 
     expect(screen.getByText('Moved to Study')).toBeInTheDocument();

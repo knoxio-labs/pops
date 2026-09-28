@@ -161,7 +161,6 @@ export function useItemsExport(): ItemsExport {
           rows: batch.rows,
           containerNames: batch.containerNames,
           types: catalogue.types,
-          typeNames: catalogue.typeNameById,
           world: placement.world,
         });
         downloadCsv(filename, exportCsv(rows));
@@ -171,7 +170,7 @@ export function useItemsExport(): ItemsExport {
         setExporting(false);
       }
     },
-    [busy, catalogue.typeNameById, catalogue.types, placement.world]
+    [busy, catalogue.types, placement.world]
   );
 
   const exportView = useCallback(
