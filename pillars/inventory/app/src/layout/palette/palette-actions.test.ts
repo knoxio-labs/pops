@@ -2,7 +2,7 @@ import { act } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { coreWorld } from '../../foundation/test-fixtures/core';
-import { runPaletteAction } from './palette-actions';
+import { paletteRecordHref, runPaletteAction } from './palette-actions';
 import { placementArgumentCommand } from './palette-commands';
 
 import type { NavigateFunction } from 'react-router';
@@ -82,6 +82,16 @@ describe('inventory palette actions', () => {
     runPaletteAction(state);
 
     expect(state.destinations).toEqual(['/inventory/items']);
+    expect(state.onClose).toHaveBeenCalledOnce();
+  });
+
+  it('opens a purchase result in the purchases pillar', () => {
+    const state = context({ action: { kind: 'open-purchase', id: 'purchase-1' } });
+
+    runPaletteAction(state);
+
+    expect(state.destinations).toEqual(['/purchases/purchase-1']);
+    expect(paletteRecordHref(state.action)).toBe('/purchases/purchase-1');
     expect(state.onClose).toHaveBeenCalledOnce();
   });
 

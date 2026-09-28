@@ -19,6 +19,7 @@ export type PaletteCommandAction =
   | { kind: 'navigate'; href: string }
   | { kind: 'open-item'; id: string }
   | { kind: 'open-location'; id: string }
+  | { kind: 'open-purchase'; id: string }
   | { kind: 'move'; itemId: string }
   | { kind: 'pick-up'; itemId: string }
   | { kind: 'put-back'; itemId: string }

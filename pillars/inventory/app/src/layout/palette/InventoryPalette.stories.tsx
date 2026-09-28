@@ -6,6 +6,7 @@ import {
   itemRecordCommand,
   locationRecordCommand,
   placementArgumentCommand,
+  purchaseRecordCommand,
   thisItemCommands,
 } from './palette-commands';
 import { toUiPaletteSource } from './palette-groups';
@@ -23,13 +24,30 @@ const recents = [
   itemRecordCommand(coreItem('itm-lamp'), coreWorld, 'recents'),
   locationRecordCommand(kitchen, coreWorld, 'recents'),
 ];
+const purchaseRecords = [
+  purchaseRecordCommand({
+    id: 'purchase-1',
+    merchant: 'Kmart',
+    orderNumber: 'KM-123',
+    date: '2026-09-12T12:00:00.000Z',
+    totalCents: 1400,
+    currency: 'AUD',
+    matchedLine: 'Cable organiser, 3 pack',
+  }),
+  purchaseRecordCommand({
+    id: 'purchase-2',
+    merchant: 'Amazon',
+    orderNumber: '114-2231',
+    date: '2026-08-02T12:00:00.000Z',
+    totalCents: 8640,
+    currency: 'AUD',
+    matchedLine: null,
+  }),
+];
 const source: PaletteSource = {
   commands: [...PALETTE_COMMANDS, ...thisItemCommands(currentItem)],
   inventoryRecords: records,
-  purchaseRecords: [
-    itemRecordCommand(coreItem('itm-tv'), coreWorld),
-    itemRecordCommand(coreItem('itm-lamp'), coreWorld),
-  ],
+  purchaseRecords,
   recents,
   arguments: {
     placement: [
