@@ -1,16 +1,16 @@
 import DesignSystem
 import SwiftUI
 
-/// One level of the picker: the lists at the top, or a place's own children.
+/// One level of the picker: the quick choices at the top, or one level of
+/// the shared destination tree.
 internal struct InventoryDestinationLevel: View {
-    let tree: InventoryLocationTree
+    let tree: InventoryDestinationTree
     let levelID: String?
     let offered: Set<String>?
     let effect: String?
     let isLoading: Bool
     let putBack: InventoryDestination?
     let recent: [InventoryDestination]
-    let containers: [InventoryDestination]
     /// Places named in New place and not created yet, by the id the tree
     /// gave them, so choosing one creates it rather than naming an id the
     /// store has never seen.
@@ -31,7 +31,9 @@ internal struct InventoryDestinationLevel: View {
                 if isLoading {
                     PopsListSkeleton(rows: 6)
                 } else if let levelID {
-                    placesSection(heading: nil, places: tree.children(of: levelID), at: levelID)
+                    destinationSection(
+                        heading: nil, nodes: levelNodes(at: levelID), parentID: levelID,
+                        includesNewPlace: tree.node(levelID)?.isLocation == true)
                 } else {
                     searchBar
                     if query.isEmpty { topLevel } else { results }
@@ -49,7 +51,7 @@ internal struct InventoryDestinationLevel: View {
 
     private var searchBar: some View {
         PopsSearchBar(
-            query: $query, tint: .popsInventory, prompt: "Search places",
+            query: $query, tint: .popsInventory, prompt: "Search places and containers",
             isFiltered: filter != .everywhere,
             filterSummary: filter == .everywhere ? "" : filter.title,
             filterOptions: {
@@ -62,26 +64,8 @@ internal struct InventoryDestinationLevel: View {
         )
     }
 
-    /// The open containers first, as the top level lists them, then every
-    /// other container the places hold.
-    private var everyContainer: [InventoryDestination] {
-        let open = Set(containers.map(\.id))
-        let placed = tree.ordered.flatMap { place in
-            place.containers.map { InventoryDestination(container: $0, at: place) }
-        }
-        return containers + placed.filter { !open.contains($0.id) }
-    }
-
-    private var offeredContainers: [InventoryDestination] {
-        switch filter {
-        case .everywhere, .openContainers: containers
-        case .containers: everyContainer
-        case .places: []
-        }
-    }
-
-    private func destination(for place: InventoryLocationNode) -> InventoryDestination {
-        pending[place.id] ?? InventoryDestination(place: place, in: tree)
+    private func destination(for node: InventoryDestinationTree.Node) -> InventoryDestination {
+        pending[node.id] ?? node.destination
     }
 
     private func isOffered(_ id: String) -> Bool {
@@ -95,15 +79,23 @@ internal struct InventoryDestinationLevel: View {
                 section("Put back") { row(putBack) }
             }
             recentSection { _ in true }
-            openPanel
-            placesSection(heading: "Places", places: tree.roots, at: nil)
+            destinationSection(
+                heading: "Destinations", nodes: tree.roots, parentID: nil,
+                includesNewPlace: true)
         case .places:
             recentSection { !$0.isContainer }
-            placesSection(heading: "Places", places: tree.roots, at: nil)
+            destinationSection(
+                heading: "Places", nodes: tree.roots.filter(\.isLocation), parentID: nil,
+                includesNewPlace: true)
         case .containers:
-            containerSection("Containers", everyContainer)
+            destinationSection(
+                heading: "Containers", nodes: tree.nodes.filter { !$0.isLocation }, parentID: nil,
+                includesNewPlace: false)
         case .openContainers:
-            containerSection("Open containers", containers)
+            destinationSection(
+                heading: "Open containers",
+                nodes: tree.nodes.filter { $0.destination.kind == .container },
+                parentID: nil, includesNewPlace: false)
         }
     }
 
@@ -117,59 +109,63 @@ internal struct InventoryDestinationLevel: View {
         }
     }
 
-    @ViewBuilder private var openPanel: some View {
-        if !containers.isEmpty {
-            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                PopsSectionHeader(title: "Open containers")
-                InventoryGroundedOpenPanel { divided(containers) }
-            }
+    @ViewBuilder private var results: some View {
+        let destinations = tree.matching(query)
+            .filter { matchesFilter($0) && isOffered($0.id) }
+            .map(destination)
+        if destinations.isEmpty {
+            PopsEmptyLine(text: "No matches")
+        } else {
+            section("Destinations") { rows(destinations) }
+        }
+    }
+
+    private func levelNodes(at id: String) -> [InventoryDestinationTree.Node] {
+        let current = tree.node(id).map { [$0] } ?? []
+        return current + tree.children(of: id)
+    }
+
+    private func matchesFilter(_ node: InventoryDestinationTree.Node) -> Bool {
+        switch filter {
+        case .everywhere:
+            true
+        case .places:
+            node.isLocation
+        case .containers:
+            !node.isLocation
+        case .openContainers:
+            node.destination.kind == .container
         }
     }
 
     @ViewBuilder
-    private func containerSection(_ title: String, _ destinations: [InventoryDestination])
-        -> some View
-    {
-        if destinations.isEmpty {
-            PopsEmptyLine(text: "No \(title.lowercased())")
-        } else {
-            section(title) { rows(destinations) }
-        }
-    }
-
-    @ViewBuilder private var results: some View {
-        let places =
-            filter.showsPlaces
-            ? tree.matching(query).filter { isOffered($0.id) }
-                .map(destination) : []
-        let boxes = offeredContainers.filter { $0.name.localizedCaseInsensitiveContains(query) }
-        if places.isEmpty, boxes.isEmpty {
-            PopsEmptyLine(text: "No matches")
-        } else {
-            if !boxes.isEmpty {
-                section(filter == .containers ? "Containers" : "Open containers") { rows(boxes) }
-            }
-            if !places.isEmpty { section("Places") { rows(places) } }
-        }
-    }
-
-    private func placesSection(
-        heading: String?, places: [InventoryLocationNode], at levelID: String?
+    private func destinationSection(
+        heading: String?, nodes: [InventoryDestinationTree.Node], parentID: String?,
+        includesNewPlace: Bool
     ) -> some View {
-        let here = levelID.flatMap { tree.node($0) }.map { [$0] } ?? []
-        let offeredPlaces = (here + places).filter { isOffered($0.id) }
-        return VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            if let heading { PopsSectionHeader(title: heading) }
-            InventoryGroundedListPanel {
-                VStack(alignment: .leading, spacing: PopsSpacing.zero) {
-                    ForEach(offeredPlaces) { place in
-                        row(
-                            destination(for: place),
-                            drillsInto: place.id == levelID ? nil : place,
-                            reservesDrill: true)
-                        PopsDivider().padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+        let offeredNodes = nodes.filter { isOffered($0.id) }
+        if offeredNodes.isEmpty, !includesNewPlace {
+            PopsEmptyLine(text: "No \(heading?.lowercased() ?? "destinations")")
+        } else {
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                if let heading { PopsSectionHeader(title: heading) }
+                InventoryGroundedListPanel {
+                    VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+                        ForEach(offeredNodes) { node in
+                            row(node)
+                            if node.id != offeredNodes.last?.id {
+                                PopsDivider().padding(
+                                    .leading, PopsSize.touchTarget + PopsSpacing.md)
+                            }
+                        }
+                        if includesNewPlace {
+                            if !offeredNodes.isEmpty {
+                                PopsDivider().padding(
+                                    .leading, PopsSize.touchTarget + PopsSpacing.md)
+                            }
+                            InventoryNewPlaceRow(drafting: $drafting) { onCreate($0, parentID) }
+                        }
                     }
-                    InventoryNewPlaceRow(drafting: $drafting) { onCreate($0, levelID) }
                 }
             }
         }
@@ -197,15 +193,18 @@ internal struct InventoryDestinationLevel: View {
         }
     }
 
+    private func row(_ node: InventoryDestinationTree.Node) -> some View {
+        let drillID = tree.drillID(for: node.id, at: levelID)
+        return row(destination(for: node), drillID: drillID, reservesDrill: true)
+    }
+
     private func row(
-        _ destination: InventoryDestination, drillsInto place: InventoryLocationNode? = nil,
-        reservesDrill: Bool = false
+        _ destination: InventoryDestination, drillID: String? = nil, reservesDrill: Bool = false
     ) -> some View {
-        let canDrill = place.map { !tree.children(of: $0.id).isEmpty } ?? false
-        return InventoryDestinationRow(
+        InventoryDestinationRow(
             destination: destination,
             isSelected: selection?.id == destination.id,
-            drillID: canDrill ? place?.id : nil,
+            drillID: drillID,
             reservesDrill: reservesDrill
         ) {
             selection = destination

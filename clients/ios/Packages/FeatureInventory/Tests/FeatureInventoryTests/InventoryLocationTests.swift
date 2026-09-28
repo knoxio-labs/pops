@@ -114,4 +114,35 @@ internal struct InventoryLocationTests {
 
         #expect(putBack.kind == .putBack(.container("crate")))
     }
+
+    @Test("the destination tree puts places and nested containers in one hierarchy")
+    func destinationTreeIncludesContainers() async throws {
+        let base = InMemoryInventoryStore(
+            items: [
+                Fixture.item("lamp", "Lamp", at: .hand),
+                Fixture.item("box", "Box", at: .location("home"), access: .open),
+                Fixture.item("tray", "Tray", at: .container("box"), access: .open),
+                Fixture.item("crate", "Crate", at: .location("home"), access: .closed),
+            ],
+            locations: [
+                Self.location("home", "Home"),
+                Self.location("bedroom", "Bedroom", parentId: "home"),
+            ])
+        var iterator = base.observe(
+            InventoryQuery {
+                InventoryPlacementChoices(reading: $0, for: .items(["lamp"]))
+            }
+        ).makeAsyncIterator()
+        let choices = try #require(await iterator.next())
+
+        #expect(
+            choices.destinations.children(of: "home").map { $0.destination.name }
+                == ["Bedroom", "Box", "Crate"])
+        #expect(
+            choices.destinations.children(of: "box").map { $0.destination.name } == ["Tray"])
+        #expect(choices.destinations.matching("tray").map { $0.destination.name } == ["Tray"])
+        #expect(choices.destinations.node("crate")?.destination.kind == .closedContainer)
+        #expect(choices.destinations.drillID(for: "home", at: "home") == nil)
+        #expect(choices.destinations.drillID(for: "box", at: "home") == "box")
+    }
 }
