@@ -10,6 +10,7 @@ import type { PickerSubject } from '../../foundation/model/contracts';
 import type { ItemRowModel } from '../../foundation/model/model';
 import type { PlacementWorld } from '../../foundation/model/placement-model';
 import type { WebGetResponse } from '../../inventory-api/types.gen.js';
+import type { WebEvent } from '../../inventory-web/useWebEvents.js';
 
 const mocks = vi.hoisted(() => ({
   connectionsGraph: vi.fn(),
@@ -105,6 +106,23 @@ const webItem: WebGetResponse['item'] = {
   typeId: null,
   typeKey: null,
   updatedAt: '2026-09-01T00:00:00Z',
+};
+
+const detailEvent: WebEvent = {
+  actor: { kind: 'web', label: 'Web' },
+  after: { name: 'Desk lamp' },
+  before: { name: 'Lamp' },
+  clientTime: null,
+  compensatesSeq: null,
+  entityId: 'item-1',
+  entityKind: 'item',
+  entityName: 'Desk lamp',
+  fields: ['name'],
+  kind: 'edited',
+  reason: null,
+  seq: 12,
+  serverTime: '2026-09-02T12:00:00Z',
+  undoable: false,
 };
 
 const success = (data: unknown) => ({
@@ -224,6 +242,33 @@ describe('useItemDetailModel', () => {
 
     await waitFor(() => expect(hook.result.current.status).toBe('ready'));
     expect(hook.result.current.model?.aggregate).toBeNull();
+  });
+
+  it('maps server events into the detail history model', async () => {
+    mocks.useWebEvents.mockReturnValue({
+      events: [detailEvent],
+      kindCounts: { edited: 1 },
+      total: 1,
+      status: 'success',
+      error: null,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    const hook = renderModel();
+
+    await waitFor(() => expect(hook.result.current.status).toBe('ready'));
+    expect(hook.result.current.model?.events).toEqual([
+      expect.objectContaining({
+        id: '12',
+        itemId: 'item-1',
+        kind: 'field-changed',
+        summary: 'Renamed to Desk lamp',
+        actorName: 'Web',
+      }),
+    ]);
   });
 
   it('exposes a not-found state for a detail 404 before placement resolves', () => {

@@ -57,6 +57,29 @@ internal struct InventoryLocationTests {
         #expect(tree.deletion(of: "attic") == nil)
     }
 
+    @Test("location rows retain the first photo for direct and contained items")
+    func locationRowsRetainPhotoReferences() async throws {
+        let base = InMemoryInventoryStore(
+            items: [
+                Fixture.item(
+                    "lamp", "Lamp", at: .location("kitchen"), photo: "lamp-photo"),
+                Fixture.item(
+                    "box", "Box", at: .location("kitchen"), access: .open, photo: "box-photo"),
+                Fixture.item(
+                    "mug", "Mug", at: .container("box"), photo: "mug-photo"),
+            ],
+            locations: [Self.location("kitchen", "Kitchen")])
+        var iterator = base.observe(InventoryQuery { InventoryLocationTree(reading: $0) })
+            .makeAsyncIterator()
+        let tree = try #require(await iterator.next())
+        let kitchen = try #require(tree.node("kitchen"))
+        let box = try #require(kitchen.containers.first)
+
+        #expect(kitchen.items.map(\.photo) == ["lamp-photo"])
+        #expect(box.photo == "box-photo")
+        #expect(box.contents.map(\.photo) == ["mug-photo"])
+    }
+
     @Test("reparent targets exclude the place itself and everything under it")
     func reparentTargetsExcludeDescendants() async throws {
         let base = InMemoryInventoryStore(

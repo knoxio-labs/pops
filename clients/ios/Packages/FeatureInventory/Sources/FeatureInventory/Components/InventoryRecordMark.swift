@@ -10,6 +10,7 @@ internal struct InventoryRecordMark: View {
     /// The photo's content hash, if the record has one.
     internal let photo: String?
     internal let symbol: InventorySymbol
+    internal let tone: Color
     internal var showsKindBadge = false
     internal let load: @MainActor (String) async -> Data?
     @State private var image: Image?
@@ -21,6 +22,18 @@ internal struct InventoryRecordMark: View {
 
     internal var body: some View {
         InventorySelectableMark { picture }
+    }
+
+    internal init(
+        photo: String?, symbol: InventorySymbol, showsKindBadge: Bool = false,
+        tone: Color = .popsMutedForeground,
+        load: @escaping @MainActor (String) async -> Data?
+    ) {
+        self.photo = photo
+        self.symbol = symbol
+        self.showsKindBadge = showsKindBadge
+        self.tone = tone
+        self.load = load
     }
 
     private var kindBadge: some View {
@@ -48,7 +61,7 @@ internal struct InventoryRecordMark: View {
             } else {
                 symbol.image
                     .font(.popsHeadline)
-                    .foregroundStyle(Color.popsMutedForeground)
+                    .foregroundStyle(tone)
             }
         }
         .frame(width: size, height: size)

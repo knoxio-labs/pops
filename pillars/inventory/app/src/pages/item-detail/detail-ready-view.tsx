@@ -7,6 +7,7 @@ import { HeaderActions } from './header-actions';
 import { ItemDetailView } from './item-detail-view';
 
 import type { ReactElement } from 'react';
+import type { ReactNode } from 'react';
 
 import type { ItemDetailModel } from './detail-model';
 import type { DetailReadyState } from './use-detail-ready-state';
@@ -138,6 +139,7 @@ export function DetailReadyView({
   offline,
   banner,
   onRetry,
+  detailBanners,
 }: {
   itemId: string;
   model: ItemDetailModel;
@@ -145,10 +147,12 @@ export function DetailReadyView({
   offline: boolean;
   banner: ItemDetailBannerState | null;
   onRetry: () => void;
+  detailBanners: ReactNode;
 }): ReactElement {
   return (
     <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
       <ReadyHeader model={model} ready={ready} />
+      {detailBanners}
       <ReadyContent
         itemId={itemId}
         model={model}

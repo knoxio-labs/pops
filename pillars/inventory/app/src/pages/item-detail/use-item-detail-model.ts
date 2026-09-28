@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 
 import { isNotFoundError, isUnavailableError } from '../../inventory-api-helpers.js';
+import { toEventModel } from '../../inventory-web/event-model.js';
 import { usePendingItemIds } from '../../inventory-web/item-verbs.js';
 import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { useWebEvents } from '../../inventory-web/useWebEvents.js';
@@ -77,10 +78,14 @@ export function useItemDetailModel(id: string): ItemDetailModelState {
   const auxiliary = useAuxiliaryQueries(id);
   const baseItem = displayItem(sources.primary.world.items.get(id), pendingIds);
   const type = catalogue.typeForId(webItem?.typeId ?? baseItem?.typeId);
+  const typeNames = catalogue.typeNameById;
   const aggregate = aggregateFor(webItem, type, sources.relatedWorld);
   const documents = documentsFor(auxiliary.documentsQuery);
   const paperless = paperlessFor(auxiliary.paperlessQuery);
   const connections = connectionsFor(id, sources, auxiliary);
+  const eventModels = events.events.map((event) =>
+    toEventModel(event, sources.primary.world, typeNames)
+  );
   const model = buildModel({
     baseItem,
     primaryWorld: sources.primary.world,
@@ -90,6 +95,7 @@ export function useItemDetailModel(id: string): ItemDetailModelState {
     paperless,
     paperlessBaseUrl: auxiliary.paperlessQuery.data?.data.baseUrl ?? null,
     connections,
+    events: eventModels,
     eventCount: events.total,
   });
   const notFound = isNotFoundError(detailQuery.error);
