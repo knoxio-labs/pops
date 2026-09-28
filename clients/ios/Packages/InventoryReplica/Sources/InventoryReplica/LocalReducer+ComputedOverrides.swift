@@ -63,11 +63,11 @@ extension LocalReducer {
         guard item.typeId != nil || item.typeKey != nil else {
             throw refusal(.typeUnknown, "an untyped item has no fields")
         }
-        let type = catalogue.types.first { candidate in
+        let found = catalogue.types.first { candidate in
             if let typeId = item.typeId { return candidate.id == typeId }
             return candidate.key == item.typeKey
         }
-        guard let type else {
+        guard let found, let type = catalogue.effectiveType(id: found.id) else {
             throw refusal(.typeUnknown, "unknown type \(item.typeId ?? item.typeKey ?? "")")
         }
         guard let field = type.fields.first(where: { $0.id == fieldId }) else {

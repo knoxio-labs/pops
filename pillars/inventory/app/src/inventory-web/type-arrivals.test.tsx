@@ -46,6 +46,7 @@ function type(
     revision: 8,
     sortOrder,
     ...overrides,
+    parentTypeId: overrides.parentTypeId ?? null,
   };
 }
 

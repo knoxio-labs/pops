@@ -66,7 +66,7 @@ function disallowedOverrideFieldIds(db: CommandDb, typeId: string | null): Reado
   const type = loadPublishedCatalogue(db)?.types.find((entry) => entry.id === typeId);
   if (!type) return new Set();
   return new Set(
-    type.fields
+    type.effectiveFields
       .filter((field) => field.storage === 'computed' && !field.allowOverride)
       .map((field) => field.id)
   );

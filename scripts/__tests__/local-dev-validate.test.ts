@@ -9,34 +9,44 @@ const state = vi.hoisted(() => ({
   rootTestStatus: 0,
   docsStatus: 0,
   taskStatus: 0,
+  discoverNoUnits: false,
+  missingTypecheckTasks: false,
   changedPaths: ['libs/example/src/code.ts'],
 }));
 vi.mock('../local-dev/discovery.mjs', () => ({
-  discoverUnits: vi.fn(async () => [
-    {
-      unitPath: '/fixture/libs/example',
-      packageName: 'example',
-      dependencies: [],
-      taskNames: ['typecheck', 'test'],
-    },
-    {
-      unitPath: '/fixture/pillars/other',
-      packageName: 'other',
-      dependencies: [],
-      taskNames: ['typecheck', 'test'],
-    },
-    {
-      unitPath: '/fixture/clients/ios',
-      packageName: undefined,
-      dependencies: [],
-      taskNames: ['typecheck', 'test'],
-    },
-  ]),
+  discoverUnits: vi.fn(async () =>
+    state.discoverNoUnits
+      ? []
+      : [
+          {
+            unitPath: '/fixture/libs/example',
+            packageName: 'example',
+            dependencies: [],
+            taskNames: ['typecheck', 'test'],
+          },
+          {
+            unitPath: '/fixture/pillars/other',
+            packageName: 'other',
+            dependencies: [],
+            taskNames: ['typecheck', 'test'],
+          },
+          {
+            unitPath: '/fixture/clients/ios',
+            packageName: undefined,
+            dependencies: [],
+            taskNames: ['typecheck', 'test'],
+          },
+        ]
+  ),
   discoverLocalTasks: vi.fn(
     async ({ taskNames, unitPaths }: { taskNames: string[]; unitPaths: string[] }) =>
-      unitPaths.map((unitPath) => ({ unitPath, taskName: taskNames[0] }))
+      state.missingTypecheckTasks && taskNames[0] === 'typecheck'
+        ? []
+        : unitPaths.map((unitPath) => ({ unitPath, taskName: taskNames[0] }))
   ),
-  prepareTasks: vi.fn(async () => [{ unitPath: 'libs/example', taskName: 'build' }]),
+  prepareTasks: vi.fn(async ({ descriptors }: { descriptors: unknown[] }) =>
+    descriptors.length > 0 ? [{ unitPath: 'libs/example', taskName: 'build' }] : []
+  ),
 }));
 vi.mock('../local-dev/affected.mjs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../local-dev/affected.mjs')>();
@@ -63,6 +73,7 @@ vi.mock('../local-dev/validation-cache.mjs', () => ({
 }));
 vi.mock('../local-dev/run-all.mjs', () => ({
   runTasks: async (tasks: { unitPath: string; taskName: string }[]) => {
+    if (tasks.length === 0) throw new Error('runner received no tasks');
     for (const task of tasks) state.events.push(`${task.taskName}:${task.unitPath}`);
     return {
       status: tasks[0]?.taskName === 'typecheck' ? state.taskStatus : 0,
@@ -96,6 +107,8 @@ beforeEach(() => {
   state.rootTestStatus = 0;
   state.docsStatus = 0;
   state.taskStatus = 0;
+  state.discoverNoUnits = false;
+  state.missingTypecheckTasks = false;
   state.changedPaths = ['libs/example/src/code.ts'];
 });
 
@@ -133,18 +146,29 @@ describe('validation orchestration', () => {
     expect(state.events).toContain('typecheck:pillars/other');
   });
   it('typechecks standalone root tooling when no product unit is selected', async () => {
+    state.discoverNoUnits = true;
     state.changedPaths = ['scripts/ci/integration-promote.mjs'];
     expect(await validate({ cwd: '/fixture', typecheckOnly: true })).toBe(0);
+    expect(await vi.mocked(discoverUnits).mock.results[0]?.value).toEqual([]);
     expect(state.events).toContain('run typecheck:scripts');
     expect(state.events).not.toContain('typecheck:libs/example');
     expect(state.events).not.toContain('typecheck:pillars/other');
   });
   it('runs standalone root tooling tests and returns their failure', async () => {
+    state.discoverNoUnits = true;
     state.changedPaths = ['scripts/ci/integration-promote.mjs'];
     state.rootTestStatus = 3;
     expect(await validate({ cwd: '/fixture' })).toBe(3);
     expect(state.events).toContain('run typecheck:scripts');
     expect(state.events).toContain('run test:scripts');
+  });
+  it('rejects a selected unit whose typecheck task is missing', async () => {
+    state.missingTypecheckTasks = true;
+    await expect(validate({ cwd: '/fixture', typecheckOnly: true })).rejects.toThrow(
+      'runner received no tasks'
+    );
+    expect(state.events).toContain('build');
+    expect(state.events).not.toContain('receipt');
   });
   it('stops documentation-only validation after lint, format and the docs guard', async () => {
     state.changedPaths = ['README.md', 'pillars/other/README.md'];

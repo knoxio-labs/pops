@@ -35528,6 +35528,8 @@ internal enum Operations {
                             internal var label: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/legacyLabels`.
                             internal var legacyLabels: [Swift.String]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/parentTypeId`.
+                            internal var parentTypeId: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/presentation`.
                             internal struct PresentationPayload: Codable, Hashable, Sendable {
                                 /// A container of undocumented properties.
@@ -35565,6 +35567,7 @@ internal enum Operations {
                             ///   - key:
                             ///   - label:
                             ///   - legacyLabels:
+                            ///   - parentTypeId:
                             ///   - presentation:
                             ///   - replacedBy:
                             ///   - revision:
@@ -35578,6 +35581,7 @@ internal enum Operations {
                                 key: Swift.String,
                                 label: Swift.String,
                                 legacyLabels: [Swift.String],
+                                parentTypeId: Swift.String? = nil,
                                 presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload,
                                 replacedBy: Swift.String? = nil,
                                 revision: Swift.Int,
@@ -35591,6 +35595,7 @@ internal enum Operations {
                                 self.key = key
                                 self.label = label
                                 self.legacyLabels = legacyLabels
+                                self.parentTypeId = parentTypeId
                                 self.presentation = presentation
                                 self.replacedBy = replacedBy
                                 self.revision = revision
@@ -35605,6 +35610,7 @@ internal enum Operations {
                                 case key
                                 case label
                                 case legacyLabels
+                                case parentTypeId
                                 case presentation
                                 case replacedBy
                                 case revision
@@ -35644,6 +35650,10 @@ internal enum Operations {
                                     [Swift.String].self,
                                     forKey: .legacyLabels
                                 )
+                                self.parentTypeId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .parentTypeId
+                                )
                                 self.presentation = try container.decode(
                                     Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload.self,
                                     forKey: .presentation
@@ -35669,6 +35679,7 @@ internal enum Operations {
                                     "key",
                                     "label",
                                     "legacyLabels",
+                                    "parentTypeId",
                                     "presentation",
                                     "replacedBy",
                                     "revision",

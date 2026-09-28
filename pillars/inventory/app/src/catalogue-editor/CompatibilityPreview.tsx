@@ -14,6 +14,22 @@ const blockedClassifications: ReadonlySet<CatalogueCompatibility['classification
   'forbidden',
 ]);
 
+const changeCopy: Readonly<Record<string, { readonly detail: string; readonly title: string }>> = {
+  migration_through_subtypes_unsupported: {
+    detail:
+      'The web editor does not invent a migration. Keep the field optional or make the change through the supported catalogue workflow.',
+    title: 'Required changes stop at the parent boundary',
+  },
+  published_type_parent_changed: {
+    detail: 'This editor draws the refusal; it does not offer a migration.',
+    title: 'Published type parent cannot change',
+  },
+  type_parent_set: {
+    detail: 'New subtypes require the type-tree protocol before they can be published.',
+    title: 'Type parent set',
+  },
+};
+
 function Metric({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div className="rounded-lg border bg-card p-3">
@@ -73,11 +89,17 @@ function ResultPanel({
       </div>
       {compatibility.changes.length > 0 && (
         <ul className="space-y-1 text-xs text-muted-foreground">
-          {compatibility.changes.map((change) => (
-            <li key={`${change.definitionId}-${change.code}`}>
-              <span className="font-mono">{change.code}</span> · {change.definitionId}
-            </li>
-          ))}
+          {compatibility.changes.map((change) => {
+            const copy = changeCopy[change.code];
+            return (
+              <li key={`${change.definitionId}-${change.code}`}>
+                <span className="font-medium text-foreground">{copy?.title ?? change.code}</span> ·{' '}
+                {change.definitionId}
+                {copy !== undefined && <span className="block pl-2">{copy.detail}</span>}
+                <span className="block pl-2 font-mono">{change.code}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

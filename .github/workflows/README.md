@@ -194,8 +194,8 @@ mise exec -- node scripts/ci/integration-promote.mjs
 The helper checks the repository/account and required promotion gate,
 refuses a stale source or empty candidate, creates
 `promotion/<workstream>/<source-sha>`, merges current main and creates a unique
-snapshot commit so integration-head checks cannot be reused. It runs `mise lint`
-and `mise typecheck`, pushes through normal hooks and opens the main PR. On
+snapshot commit so integration-head checks cannot be reused. It runs `mise check`,
+pushes through normal hooks and opens the main PR. On
 success it returns to integration; on failure it leaves the candidate checkout
 for diagnosis. It never deletes or force-pushes a branch.
 

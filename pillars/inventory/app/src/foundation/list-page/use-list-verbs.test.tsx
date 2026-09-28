@@ -56,6 +56,7 @@ function type(id: string, label: string, fields: readonly CatalogueField[] = [])
     key: id,
     label,
     legacyLabels: [],
+    parentTypeId: null,
     presentation: {},
     replacedBy: null,
     revision: 1,

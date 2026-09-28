@@ -7,6 +7,8 @@ internal struct InventoryDetailRecord: Identifiable, Equatable {
     internal let name: String
     /// Nil for an item filed before its type exists.
     internal let typeName: String?
+    /// The type's ancestry, ordered from root to the item's type.
+    internal let typePath: [String]
     internal let code: String?
     internal let quantity: InventoryQuantity
     internal let trail: InventoryDetailTrail
@@ -152,7 +154,10 @@ internal struct InventoryItemDetail: Identifiable, Equatable {
     /// The line under the name: what kind of thing it is, and how many the
     /// record stands for when that is not one.
     internal var subtitle: String {
-        var parts = [record.typeName ?? "No type yet"]
+        var parts = [
+            record.typePath.isEmpty
+                ? record.typeName ?? "No type yet" : record.typePath.joined(separator: " › ")
+        ]
         if record.quantity.count != 1 { parts.append("\(record.quantity.count) in this group") }
         return parts.joined(separator: " · ")
     }

@@ -1,3 +1,4 @@
+import { descendantIds, effectiveFields } from '../../lib/type-tree';
 import { EMPTY } from './edit';
 
 import type {
@@ -90,7 +91,12 @@ export function fromWire(value: unknown): ExpressionNode {
   }
 }
 
-function expressionField(field: CatalogueField): ExpressionField {
+function expressionField(field: CatalogueField, types: readonly CatalogueType[]): ExpressionField {
+  const referenceTypeIds = [
+    ...new Set(
+      field.referenceTypeIds.flatMap((typeId) => [typeId, ...descendantIds(types, typeId)])
+    ),
+  ];
   return {
     id: field.id,
     label: field.label,
@@ -100,7 +106,7 @@ function expressionField(field: CatalogueField): ExpressionField {
     storage: field.storage,
     ...(field.archivedAt === null ? {} : { archived: true }),
     ...(field.kind === 'reference'
-      ? { reference: { kinds: field.referenceKinds, typeIds: field.referenceTypeIds } }
+      ? { reference: { kinds: field.referenceKinds, typeIds: referenceTypeIds } }
       : {}),
     ...(field.kind === 'enum'
       ? {
@@ -124,7 +130,9 @@ export function expressionContext(
     types: types.map((type) => ({
       id: type.id,
       label: type.label,
-      fields: type.fields.filter((field) => field.id !== editedFieldId).map(expressionField),
+      fields: effectiveFields(types, type.id)
+        .filter((field) => field.id !== editedFieldId)
+        .map((field) => expressionField(field, types)),
     })),
   };
 }

@@ -94,12 +94,15 @@ public struct InventoryCatalogueType: Codable, Identifiable, Hashable, Sendable 
     /// The type that took over this archived type's items, when the
     /// catalogue records one.
     public let replacedBy: String?
+    /// The parent type whose fields and capabilities the phone resolves for
+    /// this type; `nil` identifies a root type.
+    public let parentTypeId: String?
 
     public init(
         id: String, key: String, label: String, description: String? = nil, sortOrder: Int,
         fields: [InventoryCatalogueField] = [], capabilities: [String] = [],
         legacyLabels: [String] = [], presentation: InventoryJSON = .object([:]),
-        archivedAt: String? = nil, replacedBy: String? = nil
+        archivedAt: String? = nil, replacedBy: String? = nil, parentTypeId: String? = nil
     ) {
         self.id = id
         self.key = key
@@ -112,6 +115,7 @@ public struct InventoryCatalogueType: Codable, Identifiable, Hashable, Sendable 
         self.presentation = presentation
         self.archivedAt = archivedAt
         self.replacedBy = replacedBy
+        self.parentTypeId = parentTypeId
     }
 
     /// Whether this type grants the containment capability (ADR-002 D1). A
@@ -152,5 +156,55 @@ public struct InventoryCatalogueSnapshot: Codable, Hashable, Sendable {
     public init(revision: InventoryCatalogueRevision, types: [InventoryCatalogueType]) {
         self.revision = revision
         self.types = types
+    }
+
+    /// The known parent chain for `typeId`, ordered from the oldest known
+    /// ancestor to the type. Missing parents and repeated ids end the walk.
+    public func ancestry(ofType typeId: String) -> [InventoryCatalogueType] {
+        var current = types.first { $0.id == typeId }
+        var visited: Set<String> = []
+        var chain: [InventoryCatalogueType] = []
+
+        while let type = current, visited.insert(type.id).inserted {
+            chain.append(type)
+            current = type.parentTypeId.flatMap { parentId in
+                types.first { $0.id == parentId }
+            }
+        }
+        return Array(chain.reversed())
+    }
+
+    /// The type's own definition with inherited fields and capabilities
+    /// resolved from its known parent chain.
+    public func effectiveType(id typeId: String) -> InventoryCatalogueType? {
+        guard let own = types.first(where: { $0.id == typeId }) else { return nil }
+        let chain = ancestry(ofType: typeId)
+        var capabilities: [String] = []
+        var capabilityIds: Set<String> = []
+        for type in chain {
+            for capability in type.capabilities where capabilityIds.insert(capability).inserted {
+                capabilities.append(capability)
+            }
+        }
+        return InventoryCatalogueType(
+            id: own.id, key: own.key, label: own.label, description: own.description,
+            sortOrder: own.sortOrder,
+            fields: chain.flatMap { type in
+                type.fields.sorted(by: Self.fieldOrder)
+            },
+            capabilities: capabilities, legacyLabels: own.legacyLabels,
+            presentation: own.presentation, archivedAt: own.archivedAt,
+            replacedBy: own.replacedBy, parentTypeId: own.parentTypeId)
+    }
+
+    /// Whether `typeId` is the same as or descends from `ancestorTypeId`.
+    public func type(_ typeId: String, isOrDescendsFrom ancestorTypeId: String) -> Bool {
+        ancestry(ofType: typeId).contains { $0.id == ancestorTypeId }
+    }
+
+    private static func fieldOrder(
+        _ left: InventoryCatalogueField, _ right: InventoryCatalogueField
+    ) -> Bool {
+        left.sortOrder != right.sortOrder ? left.sortOrder < right.sortOrder : left.key < right.key
     }
 }

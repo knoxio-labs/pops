@@ -3731,6 +3731,7 @@ export type TypesReadCatalogueResponses = {
       key: string;
       label: string;
       legacyLabels: Array<string>;
+      parentTypeId: string | null;
       presentation: {
         [key: string]: unknown;
       };
@@ -3925,6 +3926,7 @@ export type TypesManageCreateDraftResponses = {
       key: string;
       label: string;
       legacyLabels: Array<string>;
+      parentTypeId: string | null;
       presentation: {
         [key: string]: unknown;
       };
@@ -4061,6 +4063,7 @@ export type TypesManageReadDraftResponses = {
       key: string;
       label: string;
       legacyLabels: Array<string>;
+      parentTypeId: string | null;
       presentation: {
         [key: string]: unknown;
       };
@@ -4091,6 +4094,7 @@ export type TypesManagePatchDraftData = {
           kind: 'put_type';
           label?: string;
           legacyLabels?: Array<string>;
+          parentTypeId?: string | null;
           presentation?: {
             [key: string]: unknown;
           };
@@ -4324,6 +4328,7 @@ export type TypesManagePatchDraftResponses = {
         key: string;
         label: string;
         legacyLabels: Array<string>;
+        parentTypeId: string | null;
         presentation: {
           [key: string]: unknown;
         };
@@ -4473,6 +4478,7 @@ export type TypesManageAbandonDraftResponses = {
       key: string;
       label: string;
       legacyLabels: Array<string>;
+      parentTypeId: string | null;
       presentation: {
         [key: string]: unknown;
       };
@@ -4511,6 +4517,7 @@ export type TypesManagePreviewComputedFieldData = {
           kind: 'put_type';
           label?: string;
           legacyLabels?: Array<string>;
+          parentTypeId?: string | null;
           presentation?: {
             [key: string]: unknown;
           };
@@ -4703,6 +4710,7 @@ export type TypesManagePreviewDraftData = {
           kind: 'put_type';
           label?: string;
           legacyLabels?: Array<string>;
+          parentTypeId?: string | null;
           presentation?: {
             [key: string]: unknown;
           };
@@ -5031,6 +5039,7 @@ export type TypesManagePublishDraftResponses = {
       key: string;
       label: string;
       legacyLabels: Array<string>;
+      parentTypeId: string | null;
       presentation: {
         [key: string]: unknown;
       };
@@ -5196,6 +5205,7 @@ export type TypesManagePreviewComputedFieldOnPublishedData = {
           kind: 'put_type';
           label?: string;
           legacyLabels?: Array<string>;
+          parentTypeId?: string | null;
           presentation?: {
             [key: string]: unknown;
           };
@@ -5498,6 +5508,7 @@ export type TypesReadTypeResponses = {
       key: string;
       label: string;
       legacyLabels: Array<string>;
+      parentTypeId: string | null;
       presentation: {
         [key: string]: unknown;
       };
