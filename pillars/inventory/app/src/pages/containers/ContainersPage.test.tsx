@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { ShortcutProvider } from '../../foundation/shortcuts/shortcut-provider.js';
 import { MAX_LABEL_IDS } from '../labels-page/label-params.js';
@@ -15,15 +16,32 @@ import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 import type { ItemRows, WebItemsFilters } from '../../inventory-web/useWebItems.js';
 
 const mocks = vi.hoisted(() => ({
+  showUndoToast: vi.fn(),
+  toastError: vi.fn(),
   useBulkItemVerbs: vi.fn(),
   useCatalogueLookups: vi.fn(),
+  useItemsExport: vi.fn(),
   useItemRows: vi.fn(),
+  useListVerbs: vi.fn(),
   useOnline: vi.fn(),
   usePendingItemIds: vi.fn(),
   usePlacementSources: vi.fn(),
   useWebSummary: vi.fn(),
+  webList: vi.fn(),
 }));
 
+vi.mock('../../foundation/feedback/undo-toast.js', () => ({
+  showUndoToast: mocks.showUndoToast,
+}));
+vi.mock('../../foundation/list-page/use-export.js', () => ({
+  useItemsExport: mocks.useItemsExport,
+}));
+vi.mock('../../foundation/list-page/use-list-verbs.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../foundation/list-page/use-list-verbs.js')>();
+  return { ...actual, useListVerbs: mocks.useListVerbs };
+});
+vi.mock('sonner', () => ({ toast: { error: mocks.toastError } }));
 vi.mock('../../inventory-web/item-verbs-bulk.js', () => ({
   useBulkItemVerbs: mocks.useBulkItemVerbs,
 }));
@@ -39,6 +57,9 @@ vi.mock('../../inventory-web/usePlacementSources.js', () => ({
   usePlacementSources: mocks.usePlacementSources,
 }));
 vi.mock('../../inventory-web/useWebSummary.js', () => ({ useWebSummary: mocks.useWebSummary }));
+vi.mock('../../inventory-api/index.js', () => ({
+  webList: (...args: unknown[]) => mocks.webList(...args),
+}));
 
 const location = { id: 'garage', name: 'Garage', parentId: null, kind: 'property' as const };
 
@@ -72,14 +93,18 @@ const retiredBox = row('box-retired', 'Retired box', {
   container: { access: 'closed', full: false },
 });
 
-function catalogueType(key: string, label: string): CatalogueType {
+function catalogueType(
+  key: string,
+  label: string,
+  options: Partial<Pick<CatalogueType, 'capabilities' | 'sortOrder' | 'archivedAt'>> = {}
+): CatalogueType {
   return {
     id: `type-${key}`,
     key,
     label,
-    sortOrder: 0,
-    archivedAt: null,
-    capabilities: [],
+    sortOrder: options.sortOrder ?? 0,
+    archivedAt: options.archivedAt ?? null,
+    capabilities: options.capabilities ?? [],
     description: null,
     fields: [],
     legacyLabels: [],
@@ -120,7 +145,6 @@ const summary: WebSummaryGetResponse = {
 };
 
 let currentRows = rowsResult([openBox, closedBox]);
-let currentClosedRows = rowsResult([closedBox]);
 let currentSummary: {
   data: WebSummaryGetResponse | undefined;
   status: 'pending' | 'error' | 'success';
@@ -128,6 +152,25 @@ let currentSummary: {
 } = { data: summary, status: 'success', refetch: vi.fn() };
 let currentOnline = true;
 let verbs: { setAccess: ReturnType<typeof vi.fn>; setLifecycle: ReturnType<typeof vi.fn> };
+
+function listActions() {
+  return [
+    ['pick-up', 'Pick up', INVENTORY_ICONS.pickUp],
+    ['move', 'Move', INVENTORY_ICONS.move],
+    ['take-out', 'Take out', INVENTORY_ICONS.takeOut],
+    ['label', 'Print labels', INVENTORY_ICONS.label],
+    ['set-type', 'Set type', INVENTORY_ICONS.type],
+    ['set-field', 'Set field', INVENTORY_ICONS.computed],
+    ['retire', 'Retire', INVENTORY_ICONS.retired],
+    ['discard', 'Discard', INVENTORY_ICONS.discarded],
+    ['export', 'Export selected as CSV', INVENTORY_ICONS.label],
+    ['copy-codes', 'Copy codes', INVENTORY_ICONS.code],
+  ].map(([id, label, icon]) => ({ id, label, icon, onSelect: vi.fn() }));
+}
+
+function ok<T>(data: T) {
+  return { data, error: undefined, response: { status: 200 } };
+}
 
 function LocationProbe(): ReactElement {
   const locationState = useLocation();
@@ -139,12 +182,13 @@ function LocationStateProbe(): ReactElement {
 }
 
 function renderPage(initialEntry = '/inventory/containers'): void {
-  mocks.useItemRows.mockImplementation((query: WebItemsFilters) =>
-    query.access === 'closed' && query.sort === 'name' ? currentClosedRows : currentRows
-  );
+  mocks.useItemRows.mockImplementation((_query: WebItemsFilters) => currentRows);
   mocks.useCatalogueLookups.mockReturnValue({
     catalogue: undefined,
-    types: [catalogueType('storage', 'Storage')],
+    types: [
+      catalogueType('storage', 'Storage'),
+      catalogueType('box', 'Box', { capabilities: ['containment'], sortOrder: 1 }),
+    ],
     typeById: new Map(),
     typeNameById: new Map(),
     typeForId: () => null,
@@ -159,10 +203,45 @@ function renderPage(initialEntry = '/inventory/containers'): void {
   });
   mocks.useWebSummary.mockReturnValue(currentSummary);
   verbs = {
-    setAccess: vi.fn().mockResolvedValue({ applied: ['box-open'], refused: [], undo: null }),
+    setAccess: vi.fn().mockResolvedValue({
+      applied: ['box-open'],
+      refused: [],
+      undo: async () => undefined,
+    }),
     setLifecycle: vi.fn().mockResolvedValue({ applied: ['box-open'], refused: [], undo: null }),
   };
   mocks.useBulkItemVerbs.mockReturnValue(verbs);
+  mocks.useItemsExport.mockReturnValue({
+    busy: false,
+    exportSelection: vi.fn(),
+    exportTemplate: vi.fn(),
+    exportView: vi.fn(),
+  });
+  mocks.useListVerbs.mockImplementation(
+    (input: {
+      contentCounts: Readonly<Record<string, { deep: number }>>;
+      tracked: { rejections: Readonly<Record<string, string>>; track: unknown };
+    }) => ({
+      actions: listActions(),
+      carried: input.contentCounts['box-open']?.deep ?? 0,
+      dockAnchorRef: { current: null },
+      keyHandlers: {},
+      onRowVerb: vi.fn(),
+      overlays: null,
+      rejections: input.tracked.rejections,
+      track: input.tracked.track,
+    })
+  );
+  mocks.webList.mockResolvedValue(
+    ok({
+      contentCounts: {},
+      hiddenInactiveCount: 0,
+      items: [{ id: 'box-closed' }],
+      nextCursor: null,
+      total: 1,
+      unfilteredTotal: 1,
+    })
+  );
 
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
@@ -180,7 +259,6 @@ function renderPage(initialEntry = '/inventory/containers'): void {
 beforeEach(() => {
   vi.clearAllMocks();
   currentRows = rowsResult([openBox, closedBox]);
-  currentClosedRows = rowsResult([closedBox]);
   currentSummary = { data: summary, status: 'success', refetch: vi.fn() };
   currentOnline = true;
 });
@@ -198,6 +276,20 @@ describe('ContainersPage', () => {
     expect(screen.getByText('Holds')).toBeInTheDocument();
   });
 
+  it('offers only containment types and places in the container filters', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+
+    const typeOptions = [...screen.getByLabelText('Type').querySelectorAll('option')].map(
+      (option) => option.textContent
+    );
+    const placeOptions = [...screen.getByLabelText('Where').querySelectorAll('option')].map(
+      (option) => option.textContent
+    );
+    expect(typeOptions).toEqual(['Any type', 'Box']);
+    expect(placeOptions).toEqual(['Anywhere', 'Garage']);
+  });
+
   it('changes the URL-backed state segment and sends the server filter', async () => {
     renderPage();
 
@@ -205,21 +297,28 @@ describe('ContainersPage', () => {
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent('/inventory/containers?state=closed')
     );
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(mocks.useItemRows.mock.calls.some(([query]) => query.access === 'closed')).toBe(true);
+    await waitFor(() =>
+      expect(mocks.useItemRows.mock.calls.some(([query]) => query.access === 'closed')).toBe(true)
+    );
   });
 
-  it('shows moving-day packing progress and caps label ids at the route limit', () => {
-    const closedCount = MAX_LABEL_IDS + 1;
-    const manyClosed = Array.from({ length: closedCount }, (_, index) =>
-      row(`closed-${String(index)}`, `Closed ${String(index)}`, {
-        container: { access: 'closed', full: false },
-      })
+  it('shows moving-day packing progress and prints the server returned closed ids', async () => {
+    renderPage('/inventory/containers?state=moving');
+
+    expect(screen.getByText('of 2 closed')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Print labels for 1 closed' }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/inventory/labels?ids=box-closed')
     );
+    expect(mocks.webList).toHaveBeenCalledWith({
+      query: { isContainer: 'true', access: 'closed', limit: MAX_LABEL_IDS },
+    });
+  });
+
+  it('disables moving-day labels above the route limit and fetches nothing', () => {
+    const closedCount = MAX_LABEL_IDS + 1;
     currentRows = rowsResult([closedBox]);
-    currentClosedRows = rowsResult(manyClosed);
     currentSummary = {
       data: { ...summary, packing: { ...summary.packing, closed: closedCount } },
       status: 'success',
@@ -228,13 +327,56 @@ describe('ContainersPage', () => {
     renderPage('/inventory/containers?state=moving');
 
     expect(screen.getByText(`of ${String(closedCount + 1)} closed`)).toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: `Print labels for ${String(MAX_LABEL_IDS)} of ${String(closedCount)} closed`,
+    const button = screen.getByRole('button', {
+      name: `Print labels for ${String(closedCount)} closed`,
+    });
+    expect(button).toBeDisabled();
+    expect(mocks.webList).not.toHaveBeenCalled();
+  });
+
+  it('disables Print labels while the closed-container request is pending', async () => {
+    let resolveRequest: (value: unknown) => void = () => undefined;
+    const request = new Promise<unknown>((resolve) => {
+      resolveRequest = resolve;
+    });
+    renderPage('/inventory/containers?state=moving');
+    mocks.webList.mockReturnValueOnce(request);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Print labels for 1 closed' }));
+
+    const loadingButton = screen.getByRole('button', { name: 'Loading labels' });
+    expect(loadingButton).toBeDisabled();
+    fireEvent.click(loadingButton);
+    expect(mocks.webList).toHaveBeenCalledOnce();
+
+    resolveRequest(
+      ok({
+        contentCounts: {},
+        hiddenInactiveCount: 0,
+        items: [{ id: 'box-closed' }],
+        nextCursor: null,
+        total: 1,
+        unfilteredTotal: 1,
       })
     );
-    const params = new URLSearchParams(screen.getByTestId('location').textContent?.split('?')[1]);
-    expect(params.get('ids')?.split(',')).toHaveLength(MAX_LABEL_IDS);
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/inventory/labels')
+    );
+  });
+
+  it('keeps the Containers page when the closed-container request fails', async () => {
+    renderPage('/inventory/containers?state=moving');
+    mocks.webList.mockRejectedValueOnce(new Error('offline'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Print labels for 1 closed' }));
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        'Labels did not open. The inventory service did not answer.'
+      )
+    );
+    expect(screen.getByTestId('location')).toHaveTextContent('/inventory/containers?state=moving');
+    expect(screen.getByRole('button', { name: 'Print labels for 1 closed' })).not.toBeDisabled();
   });
 
   it('clicking a row opens the item with the Containers list trail', () => {
@@ -347,8 +489,38 @@ describe('ContainersPage', () => {
 
   it('uses the filtered empty state when a segment has no rows but containers exist elsewhere', () => {
     currentRows = rowsResult([], { total: 0, unfilteredTotal: 0 });
-    currentClosedRows = rowsResult([], { total: 0, unfilteredTotal: 0 });
     renderPage('/inventory/containers?state=closed');
     expect(screen.getByText('No containers match these filters')).toBeInTheDocument();
+  });
+
+  it('uses the empty inventory state when the summary failed before any container existed', () => {
+    currentRows = rowsResult([], { total: 0, unfilteredTotal: 0 });
+    currentSummary = { data: undefined, status: 'error', refetch: vi.fn() };
+    renderPage();
+
+    expect(screen.getByText('No containers yet')).toBeInTheDocument();
+  });
+
+  it('uses the filtered empty state when the summary fails with an active filter', () => {
+    currentRows = rowsResult([], { total: 0, unfilteredTotal: 0 });
+    currentSummary = { data: undefined, status: 'error', refetch: vi.fn() };
+    renderPage('/inventory/containers?type=box');
+
+    expect(screen.getByText('No containers match these filters')).toBeInTheDocument();
+  });
+
+  it('shows inactive containers omitted from the server result', () => {
+    currentRows = rowsResult([openBox, closedBox], { hiddenInactiveCount: 2 });
+    renderPage();
+
+    expect(screen.getByText('2 containers, 2 inactive not shown')).toBeInTheDocument();
+  });
+
+  it('routes New container to the first published containment type', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New container' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/inventory/items/new?type=box');
   });
 });

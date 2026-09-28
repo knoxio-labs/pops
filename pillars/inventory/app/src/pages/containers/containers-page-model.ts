@@ -1,10 +1,11 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 
-import { useListPageKeys } from '../../foundation/list-page/use-list-page-keys.js';
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { useSelection } from '../../foundation/selection/use-selection.js';
-import { useBulkItemVerbs } from '../../inventory-web/item-verbs-bulk.js';
+import { unwrap } from '../../inventory-api-helpers.js';
+import { webList } from '../../inventory-api/index.js';
 import { usePendingItemIds } from '../../inventory-web/item-verbs.js';
 import { containersQuery } from '../../inventory-web/items-url-filters.js';
 import { listTrailState } from '../../inventory-web/list-trail.js';
@@ -14,9 +15,7 @@ import { useOnline } from '../../inventory-web/useOnline.js';
 import { usePlacementSources } from '../../inventory-web/usePlacementSources.js';
 import { useItemRows } from '../../inventory-web/useWebItems.js';
 import { useWebSummary } from '../../inventory-web/useWebSummary.js';
-import { MAX_LABEL_IDS } from '../labels-page/label-params.js';
-import { printableContainerIds } from './containers-model.js';
-import { useContainerSelectionActions } from './containers-selection.js';
+import { labelsHref, MAX_LABEL_IDS } from '../labels-page/label-params.js';
 
 /** The server and interaction state consumed by the Containers page sections. */
 export type ContainersPageModel = ReturnType<typeof useContainersPageSources>;
@@ -38,15 +37,36 @@ function useContainerOpenItem(rows: readonly { id: string }[]): (id: string) => 
   );
 }
 
+function useContainerLabelPrinter(
+  summary: ReturnType<typeof useWebSummary>,
+  navigate: ReturnType<typeof useNavigate>
+): { printing: boolean; printClosed: () => Promise<void> } {
+  const [printing, setPrinting] = useState(false);
+  const printClosed = useCallback(async (): Promise<void> => {
+    const closedCount = summary.data?.packing.closed ?? 0;
+    if (printing || closedCount === 0 || closedCount > MAX_LABEL_IDS) return;
+    setPrinting(true);
+    try {
+      const page = unwrap(
+        await webList({
+          query: { isContainer: 'true', access: 'closed', limit: MAX_LABEL_IDS },
+        })
+      );
+      void navigate(labelsHref(page.items.map((item) => item.id)));
+    } catch {
+      toast.error('Labels did not open. The inventory service did not answer.');
+    } finally {
+      setPrinting(false);
+    }
+  }, [navigate, printing, summary.data?.packing.closed]);
+  return { printing, printClosed };
+}
+
 /** Loads the server-backed rows, summary, placement world, and selection verbs. */
 export function useContainersPageSources() {
   const navigate = useNavigate();
   const filters = useContainersUrlFilters();
-  const itemRows = useItemRows(containersQuery(filters.queryFilters));
-  const closedRows = useItemRows(
-    { isContainer: 'true', access: 'closed', sort: 'name' },
-    MAX_LABEL_IDS
-  );
+  const itemRows = useItemRows(containersQuery(filters.queryFilters), 50);
   const summary = useWebSummary();
   const online = useOnline();
   const catalogue = useCatalogueLookups();
@@ -54,9 +74,8 @@ export function useContainersPageSources() {
   const placement = usePlacementSources(placementSubject);
   const pendingIds = usePendingItemIds();
   const selection = useSelection(itemRows.rows.map((row) => row.id));
-  const verbs = useBulkItemVerbs();
-  useListPageKeys({ rows: itemRows.rows, selection, trail: { listName: 'Containers' } });
   const openItem = useContainerOpenItem(itemRows.rows);
+  const labelPrinter = useContainerLabelPrinter(summary, navigate);
 
   const world = useMemo(
     () =>
@@ -68,19 +87,10 @@ export function useContainersPageSources() {
   );
   const typeOptions = useMemo(() => catalogue.types, [catalogue.types]);
   const placeOptions = useMemo(() => [...world.locations.values()], [world]);
-  const selectionActionsModel = useContainerSelectionActions({
-    selection,
-    world,
-    online,
-    navigate,
-    verbs,
-  });
-  const closedIds = useMemo(() => printableContainerIds(closedRows.rows), [closedRows.rows]);
   const retry = useCallback((): void => {
     itemRows.refetch();
-    closedRows.refetch();
     void summary.refetch();
-  }, [closedRows, itemRows, summary]);
+  }, [itemRows, summary]);
 
   return {
     navigate,
@@ -89,14 +99,14 @@ export function useContainersPageSources() {
     itemRows,
     summary,
     online,
+    catalogue,
     world,
     typeOptions,
     placeOptions,
     pendingIds,
     selection,
-    selectionActions: selectionActionsModel.actions,
-    rejections: selectionActionsModel.rejections,
-    closedIds,
+    printing: labelPrinter.printing,
+    printClosed: labelPrinter.printClosed,
     retry,
   };
 }
