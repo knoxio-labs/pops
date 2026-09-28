@@ -75,6 +75,19 @@ internal struct InventoryFormTypeOptionsTests {
         #expect(!source.contains(".navigationDestination(for: String.self)"))
     }
 
+    @Test("selection commits after the picker begins dismissal")
+    func selectionCommitsAfterDismissalBegins() throws {
+        let source = try pickerSource()
+        let chooseBody = try #require(
+            source.split(separator: "private func choose").last.map(String.init))
+        let dismiss = try #require(chooseBody.range(of: "dismiss()")?.lowerBound)
+        let task = try #require(chooseBody.range(of: "Task { @MainActor in")?.lowerBound)
+        let selection = try #require(chooseBody.range(of: "selection = id")?.lowerBound)
+
+        #expect(dismiss < task)
+        #expect(task < selection)
+    }
+
     @Test("search \"pillowcase\" returns its path")
     func searchReturnsTypePath() {
         let results = InventoryFormTypeOptions.search(
