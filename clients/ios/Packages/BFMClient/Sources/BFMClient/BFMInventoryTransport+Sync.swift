@@ -20,7 +20,8 @@ extension BFMInventoryTransport {
                             try inventoryItem(from: $0, timeZone: timeZone())
                         },
                         locations: try payload.locations.map { try $0.inventoryLocation() },
-                        nextCursor: payload.nextCursor, catalogueRevision: payload.catalogueRevision
+                        nextCursor: payload.nextCursor, catalogueRevision: payload.catalogueRevision,
+                        issues: (payload.issues ?? []).map(inventorySyncIssue(from:))
                     )
                 case .conflict:
                     throw InventorySyncTransportError.resyncRequired
@@ -48,11 +49,11 @@ extension BFMInventoryTransport {
             return BFMInventoryFailureMapping.repositoryError(
                 for: .rateLimited, operation: operation)
         case .badGateway(let upstream):
-            return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code), operation: operation)
+            return BFMInventoryFailureMapping.syncServerError(
+                for: try upstream.body.json.code, operation: operation)
         case .serviceUnavailable(let upstream):
-            return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code), operation: operation)
+            return BFMInventoryFailureMapping.syncServerError(
+                for: try upstream.body.json.code, operation: operation)
         case .undocumented(let status, _):
             return BFMInventoryFailureMapping.repositoryError(
                 for: .undocumented(status), operation: operation)
@@ -86,7 +87,8 @@ extension BFMInventoryTransport {
                         events: try payload.events.map(inventoryEvent(from:)),
                         nextSince: payload.nextSince, hasMore: payload.hasMore,
                         catalogueVersion: payload.catalogueVersion,
-                        catalogueRevision: payload.catalogueRevision
+                        catalogueRevision: payload.catalogueRevision,
+                        issues: (payload.issues ?? []).map(inventorySyncIssue(from:))
                     )
                 case .conflict:
                     throw InventorySyncTransportError.resyncRequired
@@ -114,11 +116,11 @@ extension BFMInventoryTransport {
             return BFMInventoryFailureMapping.repositoryError(
                 for: .rateLimited, operation: operation)
         case .badGateway(let upstream):
-            return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code), operation: operation)
+            return BFMInventoryFailureMapping.syncServerError(
+                for: try upstream.body.json.code, operation: operation)
         case .serviceUnavailable(let upstream):
-            return BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code), operation: operation)
+            return BFMInventoryFailureMapping.syncServerError(
+                for: try upstream.body.json.code, operation: operation)
         case .undocumented(let status, _):
             return BFMInventoryFailureMapping.repositoryError(
                 for: .undocumented(status), operation: operation)
@@ -130,3 +132,66 @@ extension BFMInventoryTransport {
 
 private typealias Snapshot = Operations.MobileInventory_snapshot
 private typealias Changes = Operations.MobileInventory_changes
+private typealias Item = Operations.MobileInventory_item
+
+extension BFMInventoryTransport {
+    public func fetchItem(itemId: String) async throws -> InventorySyncItemResult {
+        try await observedSyncRead(
+            operation: Item.id,
+            mapClientError: { Self.syncReadFailure($0, operation: Item.id) },
+            read: {
+                let output = try await client.generated.mobileInventory_item(
+                    .init(path: .init(id: itemId)))
+                switch output {
+                case .ok(let ok):
+                    let payload = try ok.body.json
+                    return InventorySyncItemResult(
+                        item: try payload.item.map {
+                            try inventoryItem(from: $0, timeZone: timeZone())
+                        },
+                        issues: (payload.issues ?? []).map(inventorySyncIssue(from:)),
+                        catalogueVersion: payload.catalogueVersion,
+                        catalogueRevision: payload.catalogueRevision)
+                case .upgradeRequired:
+                    throw InventorySyncTransportError.clientTooOld
+                case .notFound:
+                    throw BFMInventoryFailureMapping.syncServerError(
+                        for: "upstream_not_found", operation: Item.id)
+                default:
+                    throw try Self.commonFailure(output, operation: Item.id)
+                }
+            })
+    }
+
+    fileprivate static func commonFailure(_ output: Item.Output, operation: String) throws
+        -> RepositoryError
+    {
+        switch output {
+        case .badRequest:
+            return BFMInventoryFailureMapping.repositoryError(
+                for: .badRequest, operation: operation)
+        case .unauthorized:
+            return BFMInventoryFailureMapping.repositoryError(
+                for: .unauthorized, operation: operation)
+        case .forbidden(let forbidden):
+            return Self.forbiddenFailure(try forbidden.body.json, operation: operation)
+        case .tooManyRequests:
+            return BFMInventoryFailureMapping.repositoryError(
+                for: .rateLimited, operation: operation)
+        case .notFound:
+            return BFMInventoryFailureMapping.syncServerError(
+                for: "upstream_not_found", operation: operation)
+        case .badGateway(let upstream):
+            return BFMInventoryFailureMapping.syncServerError(
+                for: try upstream.body.json.code, operation: operation)
+        case .serviceUnavailable(let upstream):
+            return BFMInventoryFailureMapping.syncServerError(
+                for: try upstream.body.json.code, operation: operation)
+        case .undocumented(let status, _):
+            return BFMInventoryFailureMapping.repositoryError(
+                for: .undocumented(status), operation: operation)
+        case .ok, .upgradeRequired:
+            preconditionFailure("handled by the caller's own switch")
+        }
+    }
+}

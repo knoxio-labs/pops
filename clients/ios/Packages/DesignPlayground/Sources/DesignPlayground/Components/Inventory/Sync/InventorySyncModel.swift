@@ -187,6 +187,15 @@ internal struct InventoryRepair: Identifiable, Hashable {
     }
 }
 
+/// A server-side item problem that remains visible until the item is retried.
+internal struct InventorySyncIssue: Identifiable, Equatable {
+    internal let id: String
+    internal let recordID: String
+    internal let title: String
+    internal let problem: String
+    internal let retryable: Bool
+}
+
 /// A repair settled, by a person or on its own.
 internal struct InventoryResolvedEntry: Identifiable, Equatable {
     internal let id: String
@@ -201,6 +210,7 @@ internal struct InventoryResolvedEntry: Identifiable, Equatable {
 internal struct InventorySyncLedger: Equatable {
     internal private(set) var waiting: [InventoryQueuedOperation]
     internal private(set) var repairs: [InventoryRepair]
+    internal private(set) var issues: [InventorySyncIssue]
     internal private(set) var resolved: [InventoryResolvedEntry]
     private var undone: [String: Removed] = [:]
 
@@ -213,10 +223,12 @@ internal struct InventorySyncLedger: Equatable {
     internal init(
         waiting: [InventoryQueuedOperation] = [],
         repairs: [InventoryRepair] = [],
+        issues: [InventorySyncIssue] = [],
         resolved: [InventoryResolvedEntry] = []
     ) {
         self.waiting = InventoryQueue.ordered(waiting)
         self.repairs = repairs
+        self.issues = issues
         self.resolved = resolved
     }
 

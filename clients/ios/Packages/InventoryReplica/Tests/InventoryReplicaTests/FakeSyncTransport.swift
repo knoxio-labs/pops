@@ -9,6 +9,7 @@ import Synchronization
 internal final class FakeSyncTransport: InventorySyncTransport {
     typealias SnapshotHandler = @Sendable (String?) async throws -> InventorySnapshotPage
     typealias ChangesHandler = @Sendable (Int, String) async throws -> InventoryChangesPage
+    typealias ItemHandler = @Sendable (String) async throws -> InventorySyncItemResult
     typealias SubmitHandler =
         @Sendable ([InventoryOutboundMutation]) async throws -> InventoryMutationBatchResult
 
@@ -20,6 +21,7 @@ internal final class FakeSyncTransport: InventorySyncTransport {
     struct Script {
         var snapshot: SnapshotHandler = { _ in throw RepositoryError.contractMismatch }
         var changes: ChangesHandler = { _, _ in throw RepositoryError.contractMismatch }
+        var item: ItemHandler = { _ in throw RepositoryError.contractMismatch }
         var submit: SubmitHandler = { _ in throw RepositoryError.contractMismatch }
         var catalogue: InventoryCatalogue?
         var protocol2Catalogue: InventoryCatalogueSnapshot?
@@ -32,6 +34,7 @@ internal final class FakeSyncTransport: InventorySyncTransport {
     struct Calls {
         var snapshotCursors: [String?] = []
         var changesSince: [Int] = []
+        var itemIds: [String] = []
         var submitted: [InventoryOutboundMutation] = []
         var catalogueRequests: [String?] = []
         var protocol2CatalogueRequests: [Int] = []
@@ -77,6 +80,11 @@ internal final class FakeSyncTransport: InventorySyncTransport {
     {
         recorded.withLock { $0.changesSince.append(since) }
         return try await script.withLock { $0.changes }(since, epoch)
+    }
+
+    func fetchItem(itemId: String) async throws -> InventorySyncItemResult {
+        recorded.withLock { $0.itemIds.append(itemId) }
+        return try await script.withLock { $0.item }(itemId)
     }
 
     func fetchItemEvents(itemId: String, cursor: String?, limit: Int) async throws

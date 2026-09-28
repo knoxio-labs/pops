@@ -148,6 +148,78 @@ internal struct OnlineStoreRefreshTests {
         #expect(try replica.read(.replicaStatus) == .offline(lastRefreshAt: Fixture.created))
     }
 
+    @Test("a server failure is not presented as offline")
+    func serverFailureIsDistinctFromOffline() async throws {
+        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+            throw RepositoryError.transport(
+                PopsError(
+                    code: "ios.inventory.sync.upstream_failure",
+                    message: "Inventory sync failed on the server.",
+                    retryable: true,
+                    kind: .server))
+        }
+        let store = harness.store
+        let replica = harness.replica
+
+        await store.refresh()
+
+        #expect(
+            try replica.read(.replicaStatus)
+                == .syncFailed(lastRefreshAt: Fixture.created))
+    }
+
+    @Test("a targeted retry applies the item and clears only its issue")
+    func targetedRetryAppliesItem() async throws {
+        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+            Fixture.changes()
+        }
+        let issue = InventorySyncIssue(
+            itemId: "a", itemName: "a", seq: 21, code: "enum_option_unknown",
+            fieldId: "field", fieldKey: "format", message: "The format value is unavailable.",
+            itemApplied: true, retryable: true)
+        try harness.replica.apply(
+            Fixture.changes(items: [Fixture.item("a", revision: 2)], issues: [issue]))
+        harness.transport.update { $0.item = { _ in
+            InventorySyncItemResult(item: Fixture.item("a", revision: 3))
+        } }
+
+        await harness.store.retrySyncIssue(issue.id)
+
+        #expect(harness.transport.calls.itemIds == ["a"])
+        #expect(harness.transport.calls.changesSince == [10])
+        #expect(try harness.replica.read(.syncLedger).issues.isEmpty)
+        #expect(try harness.replica.read(.item(id: "a"))?.revision == 3)
+        #expect(try harness.replica.read(.replicaStatus) == .current)
+    }
+
+    @Test("a failed targeted retry remains visible as a server sync failure")
+    func failedTargetedRetryRemainsVisible() async throws {
+        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+            Fixture.changes()
+        }
+        let issue = InventorySyncIssue(
+            itemId: "a", itemName: "a", seq: 21, code: "enum_option_unknown",
+            fieldId: "field", fieldKey: "format", message: "The format value is unavailable.",
+            itemApplied: true, retryable: true)
+        try harness.replica.apply(
+            Fixture.changes(items: [Fixture.item("a", revision: 2)], issues: [issue]))
+        harness.transport.update { $0.item = { _ in
+            throw RepositoryError.transport(
+                PopsError(
+                    code: "ios.inventory.sync.upstream_failure",
+                    message: "Inventory sync failed on the server.",
+                    retryable: true,
+                    kind: .server))
+        } }
+
+        await harness.store.retrySyncIssue(issue.id)
+
+        #expect(try harness.replica.read(.syncLedger).issues == [issue])
+        #expect(
+            try harness.replica.read(.replicaStatus)
+                == .syncFailed(lastRefreshAt: Fixture.created))
+    }
+
     @Test("a refresh before anything was downloaded asks the server nothing")
     func refreshWhenEmpty() async throws {
         let replica = try InventoryReplica(now: { Fixture.created })

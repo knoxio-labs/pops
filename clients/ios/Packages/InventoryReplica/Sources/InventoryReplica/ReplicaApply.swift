@@ -33,6 +33,8 @@ internal enum ReplicaApply {
             meta = meta.startingOver()
         }
         let changed = try upsert(items: page.items, locations: page.locations, in: db)
+        let issueItemIds = Set(page.items.map { $0.id }).union(page.issues.map { $0.itemId })
+        try SyncIssueRows.replace(page.issues, itemIds: issueItemIds, now: now, in: db)
         meta.epoch = page.epoch
         meta.catalogueVersion = page.catalogueVersion
         meta.catalogueRevision = page.catalogueRevision
@@ -62,6 +64,8 @@ internal enum ReplicaApply {
         }
         let catalogueMoved = meta.catalogueRevision != page.catalogueRevision
         let changed = try upsert(items: page.items, locations: page.locations, in: db)
+        let issueItemIds = Set(page.items.map { $0.id }).union(page.issues.map { $0.itemId })
+        try SyncIssueRows.replace(page.issues, itemIds: issueItemIds, now: now, in: db)
         for event in page.events {
             try db.execute(
                 sql: insertSQL(EventRow.columns, into: "event", onConflict: "DO NOTHING"),
@@ -75,6 +79,16 @@ internal enum ReplicaApply {
         try MutationLogReplay.rebase(resetting: changed, in: db)
         if catalogueMoved { try LocalComputedValues.refreshForCatalogueChange(in: db) }
         try RepairSettlement.settleResolvedElsewhere(at: now, in: db)
+    }
+
+    static func item(_ result: InventorySyncItemResult, now: Date, in db: Database) throws {
+        let issueItemIds = Set(result.item.map { [$0.id] } ?? []).union(
+            result.issues.map { $0.itemId })
+        if let item = result.item {
+            let changed = try upsert(items: [item], locations: [], in: db)
+            try MutationLogReplay.rebase(resetting: changed, in: db)
+        }
+        try SyncIssueRows.replace(result.issues, itemIds: issueItemIds, now: now, in: db)
     }
 
     /// Stores `catalogue` over the previous one, queueing a type arrival for
@@ -143,7 +157,10 @@ internal enum ReplicaApply {
     private static func discardServerState(_ db: Database) throws {
         for table in ReplicaSchema.itemLayers + ReplicaSchema.fieldValueLayers
             + ReplicaSchema.locationLayers
-            + ["event", "item_fts", ComputedValueRows.tableName, ComputedValueRows.localTableName]
+            + [
+                "event", "item_fts", ComputedValueRows.tableName,
+                ComputedValueRows.localTableName, ReplicaSchema.syncIssueTableName,
+            ]
         {
             try db.execute(sql: "DELETE FROM \(table)")
         }

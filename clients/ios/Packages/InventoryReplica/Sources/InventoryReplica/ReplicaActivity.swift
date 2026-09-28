@@ -10,6 +10,7 @@ internal struct ReplicaActivity: Hashable, Sendable {
     var isDownloading = false
     var isRefreshing = false
     var isOffline = false
+    var syncFailed = false
     var blocked: InventoryBlockReason?
     /// Set by the drain when a pass stopped on a failure no network retry
     /// fixes, cleared by the next pass that gets through; the Sync ledger
@@ -26,6 +27,7 @@ internal struct ReplicaActivity: Hashable, Sendable {
         -> InventoryReplicaStatus
     {
         if let blocked { return .blocked(reason: blocked) }
+        if syncFailed { return .syncFailed(lastRefreshAt: lastRefreshAt) }
         switch stored {
         case .empty:
             return isDownloading ? .downloading(progress: 0) : .empty
@@ -36,7 +38,7 @@ internal struct ReplicaActivity: Hashable, Sendable {
         case .current:
             if isRefreshing { return .refreshing }
             return isOffline ? .offline(lastRefreshAt: lastRefreshAt) : .current
-        case .refreshing, .offline, .blocked:
+        case .refreshing, .offline, .syncFailed, .blocked:
             return stored
         }
     }

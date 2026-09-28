@@ -7,6 +7,7 @@
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
 import { emptyInventoryChanges, emptyInventorySnapshot } from './inventory-fake-pages.js';
+import { makeItemProcedure, readItemId } from './inventory-item-fake.js';
 import { makeLedgerProcedure, type InventoryLedgerCall } from './inventory-ledger-fake.js';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
@@ -24,6 +25,10 @@ export interface InventoryChangesCall {
   limit?: number;
 }
 
+export interface InventoryItemCall {
+  id?: string;
+}
+
 export interface InventoryMutationsCall {
   mutations?: unknown[];
 }
@@ -39,6 +44,7 @@ export interface InventoryFake {
   snapshotCalls: InventorySyncCall[];
   changesCalls: InventoryChangesCall[];
   itemEventsCalls: (InventorySyncCall & { id?: string })[];
+  itemCalls: InventoryItemCall[];
   mutationsCalls: InventoryMutationsCall[];
   ledgerCalls: InventoryLedgerCall[];
   suggestCalls: InventorySuggestCall[];
@@ -55,6 +61,8 @@ export interface InventoryFakeOptions {
    * answers the producer's own not-found shape.
    */
   itemEventsResult?: Readonly<Record<string, CallResult<unknown>>>;
+  /** What `sync.item` answers, per item id. */
+  itemResult?: Readonly<Record<string, CallResult<unknown>>>;
   /** What `types.catalogue` answers. */
   catalogueResult?: CallResult<unknown>;
   /** What `types.read.catalogue` answers for each requested revision. */
@@ -130,11 +138,24 @@ function readSuggestCall(input: unknown): InventorySuggestCall {
   };
 }
 
+function makeSuggestProcedure(
+  options: InventoryFakeOptions,
+  calls: InventorySuggestCall[]
+): (rawInput: unknown) => Promise<CallResult<unknown>> {
+  return (rawInput) => {
+    calls.push(readSuggestCall(rawInput));
+    return Promise.resolve(
+      options.suggestResult ?? { kind: 'ok', value: { suggestions: ['box-1'] } }
+    );
+  };
+}
+
 /** @param options What each procedure answers; see {@link InventoryFakeOptions}. */
 export function createInventoryFake(options: InventoryFakeOptions = {}): InventoryFake {
   const snapshotCalls: InventorySyncCall[] = [];
   const changesCalls: InventoryChangesCall[] = [];
   const itemEventsCalls: (InventorySyncCall & { id?: string })[] = [];
+  const itemCalls: InventoryItemCall[] = [];
   const mutationsCalls: InventoryMutationsCall[] = [];
   const ledgerCalls: InventoryLedgerCall[] = [];
   const suggestCalls: InventorySuggestCall[] = [];
@@ -163,12 +184,7 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
     return Promise.resolve((options.mutationsResult ?? defaultMutationsResult)(rawInput));
   };
 
-  const suggest = (rawInput: unknown): Promise<CallResult<unknown>> => {
-    suggestCalls.push(readSuggestCall(rawInput));
-    return Promise.resolve(
-      options.suggestResult ?? { kind: 'ok', value: { suggestions: ['box-1'] } }
-    );
-  };
+  const suggest = makeSuggestProcedure(options, suggestCalls);
 
   return {
     factory: <TRouter>() =>
@@ -177,6 +193,7 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
           snapshot: makeSnapshotProcedure(options, snapshotCalls),
           changes: makeChangesProcedure(options, changesCalls),
           itemEvents: makeItemEventsProcedure(options, itemEventsCalls),
+          item: makeItemProcedure(options, itemCalls),
           mutations,
           reportLedger: makeLedgerProcedure(options.ledgerResult, ledgerCalls),
         },
@@ -186,6 +203,7 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
     snapshotCalls,
     changesCalls,
     itemEventsCalls,
+    itemCalls,
     mutationsCalls,
     ledgerCalls,
     suggestCalls,
@@ -221,16 +239,4 @@ function readChangesCall(input: unknown): InventoryChangesCall {
     epoch: 'epoch' in input && typeof input.epoch === 'string' ? input.epoch : undefined,
     limit: 'limit' in input && typeof input.limit === 'number' ? input.limit : undefined,
   };
-}
-
-function readItemId(input: unknown): string {
-  if (
-    input !== null &&
-    typeof input === 'object' &&
-    'id' in input &&
-    typeof input.id === 'string'
-  ) {
-    return input.id;
-  }
-  throw new Error('[bfm-test] sync.itemEvents was called without an id');
 }

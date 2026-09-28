@@ -28,6 +28,7 @@ import { SyncLedgerReportBodySchema, SyncLedgerReportResponseSchema } from './re
 import {
   SyncEventSchema,
   SyncItemSchema,
+  SyncItemIssueSchema,
   SyncLocationSchema,
   SyncMutationsBodySchema,
   SyncMutationsResponseSchema,
@@ -74,6 +75,7 @@ const SnapshotResponse = z.object({
   catalogueRevision: z.number().int().positive().nullable(),
   total: z.number().int(),
   items: z.array(SyncItemSchema),
+  issues: z.array(SyncItemIssueSchema).optional(),
   locations: z.array(SyncLocationSchema),
   nextCursor: z.string().nullable(),
 });
@@ -82,6 +84,7 @@ const ChangesResponse = z.object({
   epoch: z.string(),
   minimumProtocol: z.number().int().positive(),
   items: z.array(SyncItemSchema),
+  issues: z.array(SyncItemIssueSchema).optional(),
   locations: z.array(SyncLocationSchema),
   events: z.array(SyncEventSchema),
   nextSince: z.number().int(),
@@ -128,6 +131,23 @@ export const inventorySyncContract = c.router({
     }),
     responses: { 200: HistoryResponse, 404: ErrorBodySchema, ...SYNC_ERRORS },
     summary: "An item's history, newest first",
+  },
+  item: {
+    method: 'GET',
+    path: '/sync/items/:id',
+    headers: ProtocolHeaders,
+    pathParams: z.object({ id: NonEmptyString }),
+    responses: {
+      200: z.object({
+        item: SyncItemSchema.nullable(),
+        issues: z.array(SyncItemIssueSchema).optional(),
+        catalogueVersion: z.string(),
+        catalogueRevision: z.number().int().positive().nullable(),
+      }),
+      404: ErrorBodySchema,
+      ...SYNC_ERRORS,
+    },
+    summary: 'Read one item and any compatibility issues recorded while projecting it',
   },
   mutations: {
     method: 'POST',

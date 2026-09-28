@@ -3,9 +3,9 @@ import { eq } from 'drizzle-orm';
 import { itemFieldValues } from '../db/schema.js';
 import { loadPublishedCatalogue } from './catalogue.js';
 import { referenceState, referenceValue } from './item-value-references.js';
+import { parseSyncValue } from './item-value-sync-read.js';
 import { ItemFieldSetError } from './item-value-types.js';
 import { validateItemFieldValues } from './item-value-validation.js';
-import { parseCanonicalValue } from './value-dispatch.js';
 
 import type { CommandDb } from '../domain/commands/entities.js';
 import type { PersistedItemType } from './catalogue-types.js';
@@ -14,6 +14,7 @@ import type {
   ItemFieldValueInput,
   ReadItemFieldValue,
 } from './item-value-types.js';
+import type { PrimitiveWireValue } from './value-types.js';
 
 export {
   assertIncomingReferencesPermitType,
@@ -99,11 +100,37 @@ export function findCatalogueType(
   return types.find((type) => type.id === typeId) ?? null;
 }
 
-/**
- * Reads canonical persisted values and annotates references with their current
- * live, deleted, or missing state. Reference ids are never discarded.
- */
-export function readItemFieldValues(db: CommandDb, itemId: string): readonly ReadItemFieldValue[] {
+function appendFieldValue(
+  db: CommandDb,
+  result: ReadItemFieldValue[],
+  row: typeof itemFieldValues.$inferSelect,
+  value: PrimitiveWireValue
+): void {
+  const reference = referenceValue(value);
+  const parsed = reference ? { ...reference, targetState: referenceState(db, reference) } : value;
+  const previous = result.at(-1);
+  if (
+    previous?.fieldId === row.fieldId &&
+    previous.source === row.source &&
+    previous.catalogueRevision === row.catalogueRevision
+  ) {
+    result[result.length - 1] = { ...previous, values: [...previous.values, parsed] };
+    return;
+  }
+  result.push({
+    fieldId: row.fieldId,
+    source: row.source,
+    catalogueRevision: row.catalogueRevision,
+    values: [parsed],
+  });
+}
+
+/** Reads canonical values and annotates references with their current state. */
+function readItemFieldValuesInternal(
+  db: CommandDb,
+  itemId: string,
+  preserveStructurallyValidValues: boolean
+): readonly ReadItemFieldValue[] {
   const rows = db
     .select()
     .from(itemFieldValues)
@@ -121,29 +148,29 @@ export function readItemFieldValues(db: CommandDb, itemId: string): readonly Rea
       ?.types.flatMap((type) => type.fields)
       .find((entry) => entry.id === row.fieldId);
     if (!field) {
+      if (preserveStructurallyValidValues) continue;
       throw new ItemFieldSetError('field_unknown', row.fieldId, 'stored definition is unavailable');
     }
-    const parsed = parseCanonicalValue(
-      { ...field, archivedEnumOptionIds: new Set<string>() },
-      row.valueJson
-    ).value;
-    const reference = referenceValue(parsed);
-    const value = reference ? { ...reference, targetState: referenceState(db, reference) } : parsed;
-    const previous = result.at(-1);
-    if (
-      previous?.fieldId === row.fieldId &&
-      previous.source === row.source &&
-      previous.catalogueRevision === row.catalogueRevision
-    ) {
-      result[result.length - 1] = { ...previous, values: [...previous.values, value] };
-    } else {
-      result.push({
-        fieldId: row.fieldId,
-        source: row.source,
-        catalogueRevision: row.catalogueRevision,
-        values: [value],
-      });
-    }
+    const parsed = parseSyncValue(field, row.valueJson, preserveStructurallyValidValues);
+    appendFieldValue(db, result, row, parsed);
   }
   return result;
+}
+
+/** Reads canonical values strictly, throwing when a stored row is invalid. */
+export function readItemFieldValues(db: CommandDb, itemId: string): readonly ReadItemFieldValue[] {
+  return readItemFieldValuesInternal(db, itemId, false);
+}
+
+/**
+ * Reads values for a sync page without letting a structurally valid legacy
+ * value, such as an enum option removed from the active catalogue, abort the
+ * surrounding page. Values that cannot be represented safely are omitted;
+ * the compatibility projection reports the corresponding issue to the client.
+ */
+export function readItemFieldValuesForSync(
+  db: CommandDb,
+  itemId: string
+): readonly ReadItemFieldValue[] {
+  return readItemFieldValuesInternal(db, itemId, true);
 }

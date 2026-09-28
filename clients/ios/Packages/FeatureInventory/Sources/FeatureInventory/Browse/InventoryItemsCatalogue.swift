@@ -45,7 +45,7 @@ internal struct InventoryOfflineState: Equatable, Sendable {
     internal init?(_ status: InventoryReplicaStatus) {
         switch status {
         case .offline(let at), .stale(let at): lastRefreshAt = at
-        case .empty, .downloading, .current, .refreshing, .blocked: return nil
+        case .empty, .downloading, .current, .refreshing, .syncFailed, .blocked: return nil
         }
     }
 

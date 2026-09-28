@@ -556,6 +556,16 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'inventory',
+    operationId: 'sync.item',
+    path: '/sync/items/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/inventory/client-item.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
     operationId: 'types.catalogue',
     path: '/types',
     method: 'get',

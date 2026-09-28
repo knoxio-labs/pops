@@ -48,6 +48,7 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         locations: [InventoryLocation] = [],
         catalogue: InventoryCatalogue = InventoryCatalogue(version: "fake", units: [], types: []),
         repairs: [InventoryRepair] = [],
+        issues: [InventorySyncIssue] = [],
         media: [String: Data] = [:],
         events: [InventoryEvent] = []
     ) {
@@ -57,6 +58,7 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
                 locations: Dictionary(uniqueKeysWithValues: locations.map { ($0.id, $0) }),
                 catalogue: catalogue,
                 repairs: repairs,
+                issues: issues,
                 resolved: [],
                 media: media,
                 events: events,

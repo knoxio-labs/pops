@@ -203,4 +203,23 @@ extension InventoryReplica {
             }
         }
     }
+
+    /// Stores one targeted item retry with the catalogue revision named by
+    /// the response, without advancing the feed cursor.
+    public func apply(
+        _ result: InventorySyncItemResult, catalogue: InventoryCatalogueSnapshot,
+        referencedCatalogues: [InventoryCatalogueSnapshot] = []
+    ) throws {
+        guard result.catalogueRevision == catalogue.revision.revision else {
+            throw InventoryReplicaError.corruptValue("item catalogue revision does not match")
+        }
+        try write { db in
+            for referenced in referencedCatalogues {
+                try Protocol2CatalogueRows.store(referenced, in: db)
+            }
+            try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
+                try ReplicaApply.item(result, now: now(), in: db)
+            }
+        }
+    }
 }

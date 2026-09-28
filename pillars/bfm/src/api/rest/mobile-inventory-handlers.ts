@@ -201,5 +201,12 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
 
       return { status: 200 as const, body: outcome.value };
     },
+
+    item: async ({ params }: Req['item']) => {
+      const outcome = orThrowIfTooOld(await deps.inventory.item({ itemId: params.id }));
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
   };
 }
