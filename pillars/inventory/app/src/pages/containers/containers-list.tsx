@@ -6,32 +6,46 @@ import {
   ListError,
   ListSkeleton,
 } from '../../foundation/list-page/list-states.js';
-import { carriedCount } from '../../foundation/list-page/selection-actions.js';
-import { SelectionBar } from '../../foundation/selection/selection-bar.js';
 import { HoldsContentCountsProvider, holdsSecondColumn } from './holds-cell.js';
 
 import type { ReactElement } from 'react';
 
+import type { ListVerbs } from '../../foundation/list-page/use-list-verbs.js';
 import type { ContainersPageModel } from './containers-page-model.js';
 
-function emptyState(model: ContainersPageModel): ReactElement | null {
+function isEmptyInventory(model: ContainersPageModel): boolean {
   const total = model.itemRows.total ?? 0;
   const baseline = model.itemRows.unfilteredTotal ?? 0;
   const hiddenInactive = model.itemRows.hiddenInactiveCount ?? 0;
-  const noContainers =
-    baseline === 0 &&
-    hiddenInactive === 0 &&
-    !isNarrowed(model.filters.filters) &&
-    model.summary.data !== undefined &&
-    model.summary.data.containerSegments.all + model.summary.data.containerSegments.retired === 0;
-  if (noContainers) {
+  if (total !== 0 || baseline !== 0 || hiddenInactive !== 0) return false;
+  if (model.summary.data !== undefined) {
+    return (
+      !isNarrowed(model.filters.filters) &&
+      model.summary.data.containerSegments.all + model.summary.data.containerSegments.retired === 0
+    );
+  }
+  return model.filters.filters.segment === 'all';
+}
+
+function emptyState(model: ContainersPageModel): ReactElement | null {
+  const total = model.itemRows.total ?? 0;
+  if (isEmptyInventory(model)) {
     return <EmptyInventory noun="containers" onNavigate={model.navigate} offline={!model.online} />;
   }
   if (total === 0) return <EmptyFiltered noun="containers" onClear={model.filters.clearFilters} />;
   return null;
 }
 
-function ContainersTable({ model }: { model: ContainersPageModel }): ReactElement {
+function ContainersTable({
+  model,
+  rejections,
+  onRowVerb,
+}: {
+  model: ContainersPageModel;
+  rejections: ListVerbs['rejections'];
+  onRowVerb: ListVerbs['onRowVerb'];
+}): ReactElement {
+  const moving = model.filters.filters.segment === 'moving';
   return (
     <HoldsContentCountsProvider counts={model.itemRows.contentCounts}>
       <ItemsTable
@@ -40,12 +54,13 @@ function ContainersTable({ model }: { model: ContainersPageModel }): ReactElemen
         total={model.itemRows.total ?? 0}
         world={model.world}
         selection={model.selection}
-        sort={model.filters.filters.sort}
-        onSort={(sort) => model.filters.setFilters({ sort })}
+        sort={moving ? undefined : model.filters.filters.sort}
+        onSort={moving ? undefined : (sort) => model.filters.setFilters({ sort })}
         pendingIds={model.pendingIds}
-        rejections={model.rejections}
+        rejections={rejections}
         secondColumn={holdsSecondColumn}
         onOpen={model.openItem}
+        onRowVerb={onRowVerb}
         onLoadMore={model.itemRows.fetchNextPage}
       />
     </HoldsContentCountsProvider>
@@ -53,32 +68,32 @@ function ContainersTable({ model }: { model: ContainersPageModel }): ReactElemen
 }
 
 /** Renders loading, error, empty, and table states for container rows. */
-export function ContainersBody({ model }: { model: ContainersPageModel }): ReactElement {
+export function ContainersBody({
+  model,
+  rejections,
+  onRowVerb,
+}: {
+  model: ContainersPageModel;
+  rejections: ListVerbs['rejections'];
+  onRowVerb: ListVerbs['onRowVerb'];
+}): ReactElement {
   const { itemRows, summary } = model;
   if (itemRows.status === 'pending' || summary.status === 'pending') {
     return <ListSkeleton label="Loading containers" />;
   }
-  if (itemRows.status === 'error' || summary.status === 'error' || summary.data === undefined) {
+  if (itemRows.status === 'error') {
     return <ListError noun="containers" onRetry={model.retry} />;
   }
-  return emptyState(model) ?? <ContainersTable model={model} />;
-}
-
-/** Renders the selection bar and its container verbs. */
-export function ContainersSelectionBar({ model }: { model: ContainersPageModel }): ReactElement {
+  if (summary.status === 'error' || summary.data === undefined) {
+    return isEmptyInventory(model) ? (
+      <EmptyInventory noun="containers" onNavigate={model.navigate} offline={!model.online} />
+    ) : (
+      <ListError noun="containers" onRetry={model.retry} />
+    );
+  }
   return (
-    <SelectionBar
-      count={model.selection.count}
-      loadedCount={model.itemRows.rows.length}
-      coverage={model.selection.coverage}
-      actions={model.selectionActions}
-      carriedCount={carriedCount(
-        model.selection.selectedIds,
-        model.itemRows.contentCounts,
-        model.world
-      )}
-      onSelectAll={model.selection.onHeaderToggle}
-      onClear={model.selection.clearSelection}
-    />
+    emptyState(model) ?? (
+      <ContainersTable model={model} rejections={rejections} onRowVerb={onRowVerb} />
+    )
   );
 }
