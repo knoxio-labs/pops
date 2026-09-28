@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { deviceIdFrom, mintAgedAccessToken } from '../ios-e2e/aged-access-token.mjs';
 import { startControlPlane } from '../ios-e2e/control-plane.mjs';
+import { startPurchasesStub } from '../ios-e2e/purchases-stub.mjs';
 
 const SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
 
@@ -128,8 +129,7 @@ describe('the control plane', () => {
   let outage: boolean;
   let openApiUnreachable: boolean;
   let contractMismatch: boolean;
-  let purchasesReachable: boolean;
-  let purchasesSearchOutage: boolean;
+  let purchases: Awaited<ReturnType<typeof startPurchasesStub>>;
   let inventoryReachable: boolean;
   let inventorySyncOutage: boolean;
   let publishUserDefinedType: () => Promise<Record<string, unknown>>;
@@ -140,8 +140,7 @@ describe('the control plane', () => {
     outage = false;
     openApiUnreachable = false;
     contractMismatch = false;
-    purchasesReachable = false;
-    purchasesSearchOutage = false;
+    purchases = await startPurchasesStub();
     inventoryReachable = false;
     inventorySyncOutage = false;
     publishUserDefinedType = () => Promise.resolve({ typeId: 'type-1', revision: 2 });
@@ -182,16 +181,7 @@ describe('the control plane', () => {
         },
         isFinanceContractMismatch: () => contractMismatch,
       },
-      purchases: {
-        setReachable: (active: boolean) => {
-          purchasesReachable = active;
-        },
-        isReachable: () => purchasesReachable,
-        setSearchOutage: (active: boolean) => {
-          purchasesSearchOutage = active;
-        },
-        isSearchOutage: () => purchasesSearchOutage,
-      },
+      purchases,
       inventory: {
         setReachable: (active: boolean) => {
           inventoryReachable = active;
@@ -208,6 +198,7 @@ describe('the control plane', () => {
 
   afterEach(async () => {
     await control.close();
+    await purchases.close();
     await new Promise<void>((resolve) => bfm.close(() => resolve()));
   });
 
@@ -250,6 +241,43 @@ describe('the control plane', () => {
       inventorySyncOutage: false,
     });
     expect(seen).toEqual([]);
+  });
+
+  it('resets manual purchases between flows without changing the seeded history or search', async () => {
+    const list = async () => (await fetch(`${purchases.url}/purchases`)).json();
+    const search = async () =>
+      (
+        await fetch(`${purchases.url}/search`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ query: { text: 'Corner Store' } }),
+        })
+      ).json();
+    const baselineList = await list();
+    const baselineSearch = await search();
+    expect(baselineList.total).toBe(3);
+    expect(baselineSearch.hits).toHaveLength(1);
+
+    for (let flow = 0; flow < 2; flow++) {
+      const createdResponse = await fetch(`${purchases.url}/purchases/manual`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ merchantEntityName: 'Corner Store', totalCents: 500 }),
+      });
+      expect(createdResponse.status).toBe(200);
+      const created = await createdResponse.json();
+      expect((await list()).total).toBe(4);
+      expect((await search()).hits).toHaveLength(2);
+
+      expect((await call('/__e2e/reset', { method: 'POST' })).status).toBe(200);
+      expect(await list()).toEqual(baselineList);
+      expect(await search()).toEqual(baselineSearch);
+      expect(
+        (await fetch(`${purchases.url}/purchases/${String(created.purchase.id)}`)).status
+      ).toBe(404);
+    }
+    expect((await call('/__e2e/reset', { method: 'POST' })).status).toBe(200);
+    expect(await list()).toEqual(baselineList);
   });
 
   it('names the device on the most recent authenticated request', async () => {
@@ -301,8 +329,8 @@ describe('the control plane', () => {
     expect(contractMismatch).toBe(false);
     // Withheld again, so the next flow meets the single-feature root every
     // flow written before `receipt-capture` existed was written against.
-    expect(purchasesReachable).toBe(false);
-    expect(purchasesSearchOutage).toBe(false);
+    expect(purchases.isReachable()).toBe(false);
+    expect(purchases.isSearchOutage()).toBe(false);
     expect(inventoryReachable).toBe(false);
     expect(inventorySyncOutage).toBe(false);
   });
@@ -434,24 +462,24 @@ describe('the control plane', () => {
     expect(await (await call('/__e2e/purchases/up', { method: 'POST' })).json()).toEqual(
       expect.objectContaining({ purchasesReachable: true })
     );
-    expect(purchasesReachable).toBe(true);
+    expect(purchases.isReachable()).toBe(true);
 
     expect(await (await call('/__e2e/purchases/down', { method: 'POST' })).json()).toEqual(
       expect.objectContaining({ purchasesReachable: false })
     );
-    expect(purchasesReachable).toBe(false);
+    expect(purchases.isReachable()).toBe(false);
   });
 
   it('throws the purchases search outage both ways, independent of reachability', async () => {
     expect(await (await call('/__e2e/purchases/search-down', { method: 'POST' })).json()).toEqual(
       expect.objectContaining({ purchasesSearchOutage: true, purchasesReachable: false })
     );
-    expect(purchasesSearchOutage).toBe(true);
+    expect(purchases.isSearchOutage()).toBe(true);
 
     expect(await (await call('/__e2e/purchases/search-up', { method: 'POST' })).json()).toEqual(
       expect.objectContaining({ purchasesSearchOutage: false })
     );
-    expect(purchasesSearchOutage).toBe(false);
+    expect(purchases.isSearchOutage()).toBe(false);
   });
 
   it('throws the inventory sync outage both ways', async () => {
