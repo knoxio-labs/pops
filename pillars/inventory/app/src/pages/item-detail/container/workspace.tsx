@@ -1,13 +1,10 @@
 import { useMemo } from 'react';
 
-import { cn } from '@pops/ui';
-
 import {
   OFFLINE_REASON,
   OFFLINE_TITLE,
   StateBanner,
 } from '../../../foundation/feedback/state-banner.js';
-import { PAGE_HEIGHT } from '../../../foundation/item-page/section-parts.js';
 import { useContainerContents } from './use-container-contents.js';
 import { ContainerWorkspaceBody } from './workspace-body.js';
 import { contentsErrorDetail, contentsErrorTitle, mergeWorld } from './workspace-model.js';
@@ -19,9 +16,7 @@ import type { ContainerWorkspaceProps } from './workspace-types.js';
 export type { ContainerWorkspaceProps } from './workspace-types.js';
 
 function WorkspaceFrame({ children }: { children: ReactNode }): ReactElement {
-  return (
-    <div className={cn(PAGE_HEIGHT, '@container flex min-h-0 flex-col gap-3')}>{children}</div>
-  );
+  return <div className="@container flex min-h-0 flex-1 flex-col gap-3">{children}</div>;
 }
 
 function LoadingState({ name }: { name: string }): ReactElement {
