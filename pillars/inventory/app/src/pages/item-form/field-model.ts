@@ -1,4 +1,5 @@
 import { decimalPlacesFromPresentation } from '../../catalogue-editor/decimal-places';
+import { ancestorIds, effectiveFields } from '../../lib/type-tree.js';
 
 import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 
@@ -78,12 +79,19 @@ export const EMPTY_DRAFTS: FieldDrafts = {
   booleans: {},
 };
 
-/** Converts the published catalogue shape into the form's stable view model. */
+function effectiveCapabilitiesFor(types: readonly CatalogueType[], id: string): readonly string[] {
+  const typeById = new Map(types.map((type) => [type.id, type]));
+  const path = [...ancestorIds(types, id), id];
+  return [...new Set(path.flatMap((typeId) => typeById.get(typeId)?.capabilities ?? []))];
+}
+
+/** Converts published types into form definitions with root-first effective fields and capabilities. */
 export function formTypesOf(
   catalogue: { readonly types: readonly CatalogueType[] } | undefined
 ): FormTypeDef[] {
-  return (catalogue?.types ?? [])
-    .filter((type) => type.archivedAt === null)
+  const allTypes = catalogue?.types ?? [];
+  const activeTypes = allTypes.filter((type) => type.archivedAt === null);
+  return activeTypes
     .toSorted((left, right) => left.sortOrder - right.sortOrder)
     .map((type) => ({
       id: type.id,
@@ -91,10 +99,9 @@ export function formTypesOf(
       label: type.label,
       description: type.description,
       parentTypeId: type.parentTypeId,
-      containment: type.capabilities.includes('containment'),
-      fields: type.fields
+      containment: effectiveCapabilitiesFor(allTypes, type.id).includes('containment'),
+      fields: effectiveFields(allTypes, type.id)
         .filter((field) => field.archivedAt === null)
-        .toSorted((left, right) => left.sortOrder - right.sortOrder)
         .map((field) => ({
           id: field.id,
           key: field.key,

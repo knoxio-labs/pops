@@ -1,39 +1,36 @@
 import { CircleCheck, TriangleAlert } from 'lucide-react';
+import { useMemo, type ReactElement } from 'react';
 
-import { Input, cn } from '@pops/ui';
+import { cn } from '@pops/ui';
 
-import { BULK_COLUMNS } from '../../foundation/list-page/paste-parser.js';
+import {
+  BULK_COLUMNS,
+  type BulkColumn,
+  type BulkDraft,
+} from '../../foundation/list-page/paste-parser.js';
+import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
+import { BULK_GRID_HEADERS, BULK_GRID_WIDTHS, BulkGridCell } from './bulk-grid-cell.js';
+import { buildBulkTypeTree } from './bulk-grid-type-picker.js';
 
-import type { ReactElement } from 'react';
-
-import type { BulkColumn, BulkDraft } from '../../foundation/list-page/paste-parser.js';
 import type { BulkIssue, BulkRowStatus } from './use-bulk-entry.js';
 
-const HEADERS: Readonly<Record<BulkColumn, string>> = {
-  name: 'Name',
-  type: 'Type',
-  quantity: 'Qty',
-  code: 'Code',
-  where: 'Where',
-  note: 'Note',
-};
+export { cellLabel } from './bulk-grid-cell.js';
 
-const WIDTHS: Readonly<Record<BulkColumn, string>> = {
-  name: 'min-w-40 flex-1',
-  type: 'w-28 shrink-0 lg:w-36',
-  quantity: 'w-16 shrink-0',
-  code: 'w-24 shrink-0',
-  where: 'w-36 shrink-0 lg:w-44',
-  note: 'hidden w-40 shrink-0 lg:block',
-};
+/** Props for one controlled bulk-entry grid row. */
+export interface BulkGridRowProps {
+  draft: BulkDraft;
+  index: number;
+  status: BulkRowStatus;
+  issues: readonly BulkIssue[];
+  disabled?: boolean;
+  hintWhere?: string;
+  onCell: (column: BulkColumn, value: string) => void;
+  onPaste: (text: string) => boolean;
+  onEnter: (column: BulkColumn) => void;
+}
 
 function placeholders(destination: string): Readonly<Partial<Record<BulkColumn, string>>> {
   return { name: 'Required', type: 'Untyped', quantity: '1', where: destination };
-}
-
-/** Returns the accessible label shared by every cell and Enter navigation. */
-export function cellLabel(column: BulkColumn, index: number): string {
-  return `${HEADERS[column]}, row ${String(index + 1)}`;
 }
 
 function Status({ status, index }: { status: BulkRowStatus; index: number }): ReactElement {
@@ -53,80 +50,6 @@ function Status({ status, index }: { status: BulkRowStatus; index: number }): Re
   return <span className="text-xs tabular-nums text-muted-foreground">{index + 1}</span>;
 }
 
-/** Props for one controlled bulk-entry grid row. */
-export interface BulkGridRowProps {
-  draft: BulkDraft;
-  index: number;
-  status: BulkRowStatus;
-  issues: readonly BulkIssue[];
-  disabled?: boolean;
-  hintWhere?: string;
-  onCell: (column: BulkColumn, value: string) => void;
-  onPaste: (text: string) => boolean;
-  onEnter: (column: BulkColumn) => void;
-}
-
-interface GridCellProps {
-  column: BulkColumn;
-  draft: BulkDraft;
-  index: number;
-  hints: Readonly<Partial<Record<BulkColumn, string>>>;
-  refused: ReadonlySet<BulkColumn>;
-  errorId: string;
-  disabled: boolean;
-  onCell: (column: BulkColumn, value: string) => void;
-  onPaste: (text: string) => boolean;
-  onEnter: (column: BulkColumn) => void;
-}
-
-function GridCell({
-  column,
-  draft,
-  index,
-  hints,
-  refused,
-  errorId,
-  disabled,
-  onCell,
-  onPaste,
-  onEnter,
-}: GridCellProps): ReactElement {
-  return (
-    <span role="gridcell" className={WIDTHS[column]}>
-      <Input
-        aria-label={cellLabel(column, index)}
-        aria-invalid={refused.has(column) || undefined}
-        aria-describedby={refused.has(column) ? errorId : undefined}
-        value={draft[column]}
-        placeholder={hints[column]}
-        disabled={disabled}
-        onChange={(event) => onCell(column, event.target.value)}
-        onPaste={(event) => {
-          if (onPaste(event.clipboardData.getData('text'))) event.preventDefault();
-        }}
-        onKeyDown={(event) => {
-          if (
-            event.key === 'Enter' &&
-            !event.metaKey &&
-            !event.ctrlKey &&
-            !event.shiftKey &&
-            !event.altKey
-          ) {
-            event.preventDefault();
-            onEnter(column);
-          }
-        }}
-        className={cn(
-          'h-8 rounded-sm border-transparent bg-transparent px-2 text-sm shadow-none hover:border-input',
-          column === 'code' && 'font-mono text-xs',
-          column === 'quantity' && 'text-right tabular-nums',
-          'aria-invalid:border-warning aria-invalid:bg-warning/10 aria-invalid:ring-0 dark:aria-invalid:ring-0'
-        )}
-      />
-    </span>
-  );
-}
-
 /** Renders one controlled bulk-entry row and its server issues. */
 export function BulkGridRow({
   draft,
@@ -139,6 +62,8 @@ export function BulkGridRow({
   onPaste,
   onEnter,
 }: BulkGridRowProps): ReactElement {
+  const catalogue = useCatalogueLookups();
+  const typeNodes = useMemo(() => buildBulkTypeTree(catalogue.types), [catalogue.types]);
   const hints = hintWhere === undefined ? {} : placeholders(hintWhere);
   const refused = new Set(issues.map((issue) => issue.column));
   const errorId = `bulk-row-${String(index)}-issues`;
@@ -152,7 +77,7 @@ export function BulkGridRow({
           <Status status={status} index={index} />
         </span>
         {BULK_COLUMNS.map((column) => (
-          <GridCell
+          <BulkGridCell
             key={column}
             column={column}
             draft={draft}
@@ -164,6 +89,8 @@ export function BulkGridRow({
             onCell={onCell}
             onPaste={onPaste}
             onEnter={onEnter}
+            typeNodes={typeNodes}
+            types={catalogue.types}
           />
         ))}
       </div>
@@ -171,7 +98,8 @@ export function BulkGridRow({
         <ul id={errorId} className="flex flex-wrap gap-x-4 gap-y-0.5 pb-2 pl-12 text-xs">
           {issues.map((issue, issueIndex) => (
             <li key={`${issue.column}-${issue.code}-${issue.message}-${String(issueIndex)}`}>
-              <span className="font-medium">{HEADERS[issue.column]}:</span> {issue.message}
+              <span className="font-medium">{BULK_GRID_HEADERS[issue.column]}:</span>{' '}
+              {issue.message}
             </li>
           ))}
         </ul>
@@ -189,8 +117,8 @@ export function BulkGridHeader(): ReactElement {
     >
       <span className="w-10 shrink-0 text-center">#</span>
       {BULK_COLUMNS.map((column) => (
-        <span key={column} role="columnheader" className={cn(WIDTHS[column], 'px-2')}>
-          {HEADERS[column]}
+        <span key={column} role="columnheader" className={cn(BULK_GRID_WIDTHS[column], 'px-2')}>
+          {BULK_GRID_HEADERS[column]}
           {column === 'name' ? <span className="text-app-accent"> *</span> : null}
         </span>
       ))}

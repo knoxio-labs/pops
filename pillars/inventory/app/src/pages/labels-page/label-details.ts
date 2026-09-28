@@ -2,6 +2,7 @@ import {
   decimalPlacesFromPresentation,
   formatDecimal,
 } from '../../catalogue-editor/decimal-places.js';
+import { effectiveType, typePathLabel } from '../../lib/type-tree.js';
 
 import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
@@ -73,9 +74,10 @@ function fieldValuesFor(item: WebItem, field: CatalogueField): readonly unknown[
 function catalogueDetailsFor(
   item: WebItem,
   contents: readonly LabelContent[],
-  type: CatalogueType
+  type: CatalogueType,
+  types: ReadonlyMap<string, CatalogueType>
 ): LabelDetails {
-  const prefix = item.typeKey ?? type.key;
+  const itemTypeKey = item.typeKey ?? type.key;
   const fields: LabelFieldValue[] = [];
   for (const field of type.fields) {
     const value = fieldValuesFor(item, field)
@@ -83,10 +85,11 @@ function catalogueDetailsFor(
       .filter(Boolean)
       .join(', ');
     if (value.length === 0) continue;
-    fields.push({ id: `${prefix}.${field.key}`, label: field.label, value });
+    const ownerKey = types.get(field.typeId)?.key ?? itemTypeKey;
+    fields.push({ id: `${ownerKey}.${field.key}`, label: field.label, value });
   }
   return {
-    typeName: type.label,
+    typeName: typePathLabel([...types.values()], type.id) || type.label,
     fields,
     contents: contents.map((subject) =>
       subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name
@@ -100,8 +103,8 @@ export function detailsFor(
   contents: readonly LabelContent[],
   types: ReadonlyMap<string, CatalogueType>
 ): LabelDetails {
-  const type = item.typeId === null ? undefined : types.get(item.typeId);
-  if (type !== undefined) return catalogueDetailsFor(item, contents, type);
+  const type = item.typeId === null ? null : effectiveType([...types.values()], item.typeId);
+  if (type !== null) return catalogueDetailsFor(item, contents, type, types);
 
   const fields: LabelFieldValue[] = [];
   if (item.typeKey !== null) {

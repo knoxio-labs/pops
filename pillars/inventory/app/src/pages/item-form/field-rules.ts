@@ -70,16 +70,20 @@ function enumError(field: FormFieldDef, value: string): string | null {
     : `${field.label} has no option ${value}.`;
 }
 
-function referenceKindError(field: FormFieldDef, value: ReferenceChoice): string | null {
+/** Returns the refusal reason for a selected reference target, or null when it fits. */
+export function referenceChoiceError(
+  field: FormFieldDef,
+  value: Pick<ReferenceChoice, 'kind' | 'typeId'>
+): string | null {
   if (!field.referenceKinds.includes(value.kind)) {
     return `${field.label} does not allow ${value.kind === 'item' ? 'items' : 'places'}.`;
   }
   if (
     value.kind === 'item' &&
-    value.typeId !== undefined &&
-    value.typeId !== null &&
     field.referenceTypeIds.length > 0 &&
-    !field.referenceTypeIds.includes(value.typeId)
+    (value.typeId === undefined ||
+      value.typeId === null ||
+      !field.referenceTypeIds.includes(value.typeId))
   ) {
     return `${field.label} does not allow this item type.`;
   }
@@ -140,7 +144,7 @@ export function referenceError(
 ): string | null {
   if (field.cardinality === 'one' && values.length > 1) return `${field.label} holds one value.`;
   for (const value of values) {
-    const error = referenceKindError(field, value);
+    const error = referenceChoiceError(field, value);
     if (error !== null) return error;
   }
   return null;

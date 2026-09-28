@@ -68,7 +68,7 @@ export function FactsRail({
       ) : (
         <FactsSection
           facts={aggregate.facts}
-          typeName={aggregate.type?.label ?? model.item.typeName}
+          typeName={model.item.typeName ?? aggregate.type?.label ?? null}
           readOnly={readOnly}
           onSetType={onSetType}
           editing={editing}

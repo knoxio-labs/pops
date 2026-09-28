@@ -1,3 +1,5 @@
+import { descendantIds } from '../../lib/type-tree.js';
+
 import type { FieldWireValue } from '../../inventory-web/commands.js';
 import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 import type { ReferenceChoice } from '../../pages/item-form/field-model';
@@ -29,21 +31,23 @@ export function isBulkReferenceInput(input: unknown): input is BulkReferenceInpu
 
 function referenceChoiceIsAllowed(
   field: CatalogueType['fields'][number],
-  choice: ReferenceChoice
+  choice: ReferenceChoice,
+  types: readonly CatalogueType[]
 ): boolean {
   if (!field.referenceKinds.includes(choice.kind)) return false;
   if (choice.kind === 'location' || field.referenceTypeIds.length === 0) return true;
-  return (
-    choice.typeId !== undefined &&
-    choice.typeId !== null &&
-    field.referenceTypeIds.includes(choice.typeId)
+  if (choice.typeId === undefined || choice.typeId === null) return false;
+  const allowedTypeIds = new Set(
+    field.referenceTypeIds.flatMap((typeId) => [typeId, ...descendantIds(types, typeId)])
   );
+  return allowedTypeIds.has(choice.typeId);
 }
 
 /** Encodes typed bulk reference choices as stable catalogue wire values. */
 export function encodeBulkReferenceValues(
   field: CatalogueType['fields'][number],
-  input: unknown
+  input: unknown,
+  types: readonly CatalogueType[] = []
 ): readonly FieldWireValue[] | null {
   if (!isBulkReferenceInput(input) || input.length === 0) return null;
   if (field.cardinality === 'one' && input.length > 1) return null;
@@ -51,7 +55,7 @@ export function encodeBulkReferenceValues(
   if (
     input.some((choice) => {
       const key = `${choice.kind}:${choice.id}`;
-      if (keys.has(key) || !referenceChoiceIsAllowed(field, choice)) return true;
+      if (keys.has(key) || !referenceChoiceIsAllowed(field, choice, types)) return true;
       keys.add(key);
       return false;
     })

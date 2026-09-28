@@ -73,8 +73,11 @@ internal final class InventoryItemFormModel {
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
-    internal private(set) var showsValidation = false
+    internal var showsValidation = false
     internal private(set) var isSubmitting = false
+    /// Advances when Create another replaces the current draft with a fresh
+    /// form, so the view also releases any field focus from the saved item.
+    internal var formGeneration = 0
     /// A free code to wear instead, offered while the typed one is held.
     internal var freeCode: String?
     internal var failure: InventoryWriteFailure?
@@ -89,6 +92,7 @@ internal final class InventoryItemFormModel {
     internal let suggester: InventoryCodeSuggester
     internal let scan: InventoryScanPrefill
     internal var fillTask: Task<Void, Never>?
+    internal let mintId: () -> String
     internal let mintProtocol2ValueId: () -> String
     /// The item as the store has it; nil for a create.
     internal var original: InventoryItem?
@@ -98,7 +102,7 @@ internal final class InventoryItemFormModel {
     /// For a `.repair` request: the held change's values that no longer fit
     /// the current fields, shown struck through with why.
     internal var notCarried: [InventoryQueuedValue] = []
-    private var created = false
+    internal var created = false
     /// What an offer over `photoRunner` reverses: the photo it removed, and
     /// where it stood, so Undo can put it back in place.
     internal var removedPhotos: [InventoryUndoOffer.ID: (photo: InventoryFormPhoto, index: Int)] =
@@ -115,13 +119,14 @@ internal final class InventoryItemFormModel {
         request: InventoryItemFormRequest, store: any InventoryStore,
         suggester: InventoryCodeSuggester,
         scan: InventoryScanPrefill = .unbound,
-        mintId: () -> String = { UUID().uuidString.lowercased() },
+        mintId: @escaping () -> String = { UUID().uuidString.lowercased() },
         mintProtocol2ValueId: @escaping () -> String = { UUID().uuidString.lowercased() }
     ) {
         self.request = request
         self.store = store
         self.suggester = suggester
         self.scan = scan
+        self.mintId = mintId
         self.mintProtocol2ValueId = mintProtocol2ValueId
         photoRunner = InventoryCommandRunner(store: store)
         switch request {

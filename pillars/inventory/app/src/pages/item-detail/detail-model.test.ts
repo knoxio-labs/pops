@@ -216,6 +216,48 @@ describe('item detail model', () => {
     });
   });
 
+  it('shows inherited facts before child facts', () => {
+    const inherited = field({
+      id: 'bedding-material',
+      key: 'material',
+      label: 'Material',
+      typeId: 'type-bedding',
+      sortOrder: 0,
+    });
+    const local = field({
+      id: 'sheet-fitted',
+      key: 'fitted',
+      label: 'Fitted',
+      typeId: 'type-sheet',
+      sortOrder: 0,
+    });
+    const parent = {
+      ...type([inherited]),
+      id: 'type-bedding',
+      key: 'bedding',
+      label: 'Bedding',
+    };
+    const child = {
+      ...type([local]),
+      id: 'type-sheet',
+      key: 'sheet',
+      label: 'Sheet',
+      parentTypeId: parent.id,
+    };
+    const item = webItem({
+      typeId: child.id,
+      fieldValues: [
+        { catalogueRevision: 1, fieldId: inherited.id, source: 'stored', values: ['Cotton'] },
+        { catalogueRevision: 1, fieldId: local.id, source: 'stored', values: [true] },
+      ],
+    });
+
+    expect(toDetailFacts(item, child, relatedWorld, [parent, child])).toMatchObject([
+      { key: 'material', label: 'Material', value: 'Cotton' },
+      { key: 'fitted', label: 'Fitted', value: 'Yes' },
+    ]);
+  });
+
   it('maps provenance, linked documents, Paperless, and photo URLs', () => {
     const provenance = toDetailProvenance({
       merchant: 'Officeworks',

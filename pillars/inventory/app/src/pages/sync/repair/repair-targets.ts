@@ -1,3 +1,4 @@
+import { effectiveFields } from '../../../lib/type-tree.js';
 import { toWireValues } from '../wire-values.js';
 
 import type { CatalogueField, CatalogueType } from '../../../catalogue-editor/types.js';
@@ -20,16 +21,16 @@ function fittingValuesFor(repair: RepairCase) {
   return (repair.held?.values ?? []).filter((value) => value.fit === 'fits');
 }
 
-function fieldFor(type: CatalogueType, id: string): CatalogueField | null {
-  return type.fields.find((field) => field.id === id) ?? null;
+function fieldFor(fields: readonly CatalogueField[], id: string): CatalogueField | null {
+  return fields.find((field) => field.id === id) ?? null;
 }
 
 function matchingFieldFor(
   source: CatalogueField,
-  replacement: CatalogueType
+  replacementFields: readonly CatalogueField[]
 ): CatalogueField | null {
   return (
-    replacement.fields.find(
+    replacementFields.find(
       (field) =>
         field.archivedAt === null &&
         field.key === source.key &&
@@ -79,15 +80,15 @@ type HeldValueResult =
 
 function heldValueResultFor(
   held: NonNullable<RepairCase['held']>['values'][number],
-  source: CatalogueType,
-  replacement: CatalogueType
+  sourceFields: readonly CatalogueField[],
+  replacementFields: readonly CatalogueField[]
 ): HeldValueResult {
   if (held.fieldId === undefined || held.values === undefined) return { kind: 'invalid' };
   const wireValues = toWireValues(held.values);
   if (wireValues === null) return { kind: 'invalid' };
-  const sourceField = fieldFor(source, held.fieldId);
+  const sourceField = fieldFor(sourceFields, held.fieldId);
   if (sourceField === null) return { kind: 'unmatched' };
-  const targetField = matchingFieldFor(sourceField, replacement);
+  const targetField = matchingFieldFor(sourceField, replacementFields);
   if (targetField === null) return { kind: 'unmatched' };
   const value = valueFor(held, sourceField, targetField, wireValues);
   return value === null ? { kind: 'unmatched' } : { kind: 'value', value };
@@ -109,7 +110,9 @@ export function changeTypeWrite(
   if (replacement === undefined) return null;
 
   const fitting = fittingValuesFor(repair);
-  const results = fitting.map((held) => heldValueResultFor(held, source, replacement));
+  const sourceFields = effectiveFields(types, source.id);
+  const replacementFields = effectiveFields(types, replacement.id);
+  const results = fitting.map((held) => heldValueResultFor(held, sourceFields, replacementFields));
   if (results.some((result) => result.kind === 'invalid')) return null;
   const unmatched = fitting.flatMap((held, index) =>
     results[index]?.kind === 'unmatched' ? [held.field] : []
