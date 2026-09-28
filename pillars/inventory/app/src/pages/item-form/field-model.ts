@@ -46,6 +46,8 @@ export interface FormTypeDef {
   readonly key: string;
   readonly label: string;
   readonly description: string | null;
+  /** The published parent id, when this type belongs below another type. */
+  readonly parentTypeId?: string | null;
   readonly containment: boolean;
   readonly fields: readonly FormFieldDef[];
 }
@@ -85,6 +87,7 @@ export function formTypesOf(
       key: type.key,
       label: type.label,
       description: type.description,
+      parentTypeId: type.parentTypeId,
       containment: type.capabilities.includes('containment'),
       fields: type.fields
         .filter((field) => field.archivedAt === null)
