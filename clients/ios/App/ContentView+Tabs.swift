@@ -4,6 +4,7 @@ import FeatureTransactions
 
 extension ContentView {
     nonisolated internal static let moreTab = MobileFeature(rawValue: "shell.more")
+    nonisolated internal static let moreTabAccessibilityIdentifier = "more-tab"
 
     nonisolated internal static func primaryFeatures(for available: [MobileFeature])
         -> [MobileFeature]
