@@ -1,5 +1,6 @@
 import AppCore
 import Auth
+import DesignSystem
 import FeaturePurchases
 import Foundation
 import SwiftUI
@@ -81,15 +82,30 @@ internal enum ContentViewFixture {
 internal struct ContentViewFeatureSwitchingTests {
     private static let canvas = CGSize(width: 390, height: 844)
 
-    private static func render(_ view: some View, in scheme: ColorScheme = .light) -> CGImage? {
-        let renderer = ImageRenderer(
-            content:
-                view
-                .environment(\.colorScheme, scheme)
-                .frame(width: canvas.width, height: canvas.height)
-        )
-        renderer.scale = 1
-        return renderer.cgImage
+    private static func render(_ view: some View, in scheme: ColorScheme) -> CGImage? {
+        let content = view.environment(\.colorScheme, scheme).frame(
+            width: canvas.width, height: canvas.height)
+        let controller = UIHostingController(rootView: content)
+        controller.overrideUserInterfaceStyle = scheme == .dark ? .dark : .light
+        controller.view.backgroundColor = .clear
+
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+            .first
+        else { return nil }
+
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(origin: .zero, size: canvas)
+        controller.view.frame = window.bounds
+        window.addSubview(controller.view)
+        defer { controller.view.removeFromSuperview() }
+        window.layoutIfNeeded()
+        controller.view.layoutIfNeeded()
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: canvas, format: format).image { context in
+            controller.view.layer.render(in: context.cgContext)
+        }.cgImage
     }
 
     private static func hasNonUniformPixels(_ image: CGImage) -> Bool {
@@ -108,17 +124,31 @@ internal struct ContentViewFeatureSwitchingTests {
         }
     }
 
+    private static func pixels(_ image: CGImage) -> Data? {
+        image.dataProvider?.data as Data?
+    }
+
+    private static func rendersSchemeAwareContent(_ view: some View) throws -> Bool {
+        let light = try #require(render(view, in: .light))
+        let dark = try #require(render(view, in: .dark))
+        let lightBackground = try #require(render(Color.popsBackground, in: .light))
+        let darkBackground = try #require(render(Color.popsBackground, in: .dark))
+
+        return hasNonUniformPixels(light) && hasNonUniformPixels(dark)
+            && pixels(light) != pixels(dark)
+            && pixels(light) != pixels(lightBackground)
+            && pixels(dark) != pixels(darkBackground)
+    }
+
     private func contentView(available: [MobileFeature]) -> ContentView {
         ContentViewFixture.view(available: available)
     }
 
     @Test("zero available features renders, and renders real content rather than a blank screen")
     func zeroFeaturesRendersRealContent() throws {
-        let light = try #require(Self.render(contentView(available: []).features, in: .light))
-        let dark = try #require(Self.render(contentView(available: []).features, in: .dark))
-
-        #expect(Self.hasNonUniformPixels(light), "the light explanation is blank")
-        #expect(Self.hasNonUniformPixels(dark), "the dark explanation is blank")
+        #expect(try Self.rendersSchemeAwareContent(contentView(available: []).features))
+        #expect(try !Self.rendersSchemeAwareContent(Color.clear))
+        #expect(try !Self.rendersSchemeAwareContent(Color.popsBackground))
     }
 
     /// `.receiptCapture` is not in `RootFeature.renderable` — POPS-4294
@@ -130,13 +160,8 @@ internal struct ContentViewFeatureSwitchingTests {
     /// lone screen of its own.
     @Test("receipt-capture alone renders the nothing-available explanation, not a screen")
     func receiptCaptureAloneRendersNothingAvailable() throws {
-        let light = try #require(
-            Self.render(contentView(available: [.receiptCapture]).features, in: .light))
-        let dark = try #require(
-            Self.render(contentView(available: [.receiptCapture]).features, in: .dark))
-
-        #expect(Self.hasNonUniformPixels(light), "the light explanation is blank")
-        #expect(Self.hasNonUniformPixels(dark), "the dark explanation is blank")
+        #expect(
+            try Self.rendersSchemeAwareContent(contentView(available: [.receiptCapture]).features))
     }
 }
 
