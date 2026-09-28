@@ -1,4 +1,4 @@
-import { act, createEvent, fireEvent, render, screen } from '@testing-library/react';
+import { act, createEvent, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -118,6 +118,23 @@ const catalogueType = {
   presentation: {},
   replacedBy: null,
   revision: 1,
+  parentTypeId: null,
+};
+const beddingType = {
+  ...catalogueType,
+  id: 'type-bedding',
+  key: 'bedding',
+  label: 'Bedding',
+};
+const sheetType = {
+  ...catalogueType,
+  id: 'type-sheet',
+  key: 'sheet',
+  label: 'Sheet',
+  parentTypeId: beddingType.id,
+};
+type TestCatalogueType = Omit<typeof catalogueType, 'parentTypeId'> & {
+  parentTypeId: string | null;
 };
 
 let currentOnline = true;
@@ -145,9 +162,12 @@ function allCreated(rows: readonly BatchRow[]): BatchRun {
   };
 }
 
-function renderPage(initialEntry = '/inventory/items/bulk-new') {
+function renderPage(
+  initialEntry = '/inventory/items/bulk-new',
+  types: readonly TestCatalogueType[] = [catalogueType]
+) {
   mocks.useCatalogueLookups.mockImplementation(() => ({
-    types: [catalogueType],
+    types,
     isPending: cataloguePending,
     error: catalogueError,
   }));
@@ -305,6 +325,60 @@ describe('BulkEntryPage', () => {
     expect(screen.getByRole('textbox', { name: 'Name, row 2' })).toHaveValue('a');
     expect(screen.getByRole('textbox', { name: 'Type, row 2' })).toHaveValue('cable');
     expect(screen.getByRole('textbox', { name: 'Name, row 3' })).toHaveValue('b');
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('opens a hierarchical type tree, shows child paths, and selects a child path', () => {
+    renderPage('/inventory/items/bulk-new', [beddingType, sheetType]);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name, row 1' }), {
+      target: { value: 'Guest fitted sheet' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Type, row 1' }));
+
+    const tree = screen.getByRole('tree');
+    expect(tree).toBeInTheDocument();
+    expect(within(tree).queryByText('Bedding › Sheet')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(within(tree).getByText('Bedding › Sheet')).toBeInTheDocument();
+
+    fireEvent.click(within(tree).getByText('Bedding › Sheet'));
+    expect(screen.getByRole('textbox', { name: 'Type, row 1' })).toHaveValue('Bedding › Sheet');
+    expect(screen.getByRole('textbox', { name: 'Name, row 1' })).toHaveValue('Guest fitted sheet');
+  });
+
+  it('searches the type tree by a child path and clears the selected type', () => {
+    renderPage('/inventory/items/bulk-new', [beddingType, sheetType]);
+    const typePicker = screen.getByRole('button', { name: 'Choose Type, row 1' });
+    fireEvent.click(typePicker);
+    fireEvent.change(screen.getByPlaceholderText('Search types'), {
+      target: { value: 'sheet' },
+    });
+
+    const tree = screen.getByRole('tree');
+    expect(within(tree).getByText('Bedding › Sheet')).toBeInTheDocument();
+    fireEvent.click(within(tree).getByText('Bedding › Sheet'));
+    expect(screen.getByRole('textbox', { name: 'Type, row 1' })).toHaveValue('Bedding › Sheet');
+
+    fireEvent.click(typePicker);
+    fireEvent.click(screen.getByText('Clear selection'));
+    expect(screen.getByRole('textbox', { name: 'Type, row 1' })).toHaveValue('');
+  });
+
+  it('keeps legacy flat type typing and table paste behavior', () => {
+    renderPage('/inventory/items/bulk-new', [beddingType, sheetType]);
+    const typeInput = screen.getByRole('textbox', { name: 'Type, row 1' });
+    fireEvent.change(typeInput, { target: { value: 'Sheet' } });
+    expect(typeInput).toHaveValue('Sheet');
+
+    const event = createEvent.paste(typeInput, {
+      clipboardData: { getData: () => 'A\tSheet\nB\tBedding' },
+    });
+    fireEvent(typeInput, event);
+
+    expect(screen.getByRole('textbox', { name: 'Name, row 1' })).toHaveValue('A');
+    expect(screen.getByRole('textbox', { name: 'Type, row 1' })).toHaveValue('Sheet');
+    expect(screen.getByRole('textbox', { name: 'Name, row 2' })).toHaveValue('B');
+    expect(screen.getByRole('textbox', { name: 'Type, row 2' })).toHaveValue('Bedding');
     expect(event.defaultPrevented).toBe(true);
   });
 
