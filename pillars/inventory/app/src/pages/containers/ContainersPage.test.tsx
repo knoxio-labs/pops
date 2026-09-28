@@ -501,6 +501,21 @@ describe('ContainersPage', () => {
     expect(screen.getByText('No containers yet')).toBeInTheDocument();
   });
 
+  it('uses the filtered empty state when the summary fails with an active filter', () => {
+    currentRows = rowsResult([], { total: 0, unfilteredTotal: 0 });
+    currentSummary = { data: undefined, status: 'error', refetch: vi.fn() };
+    renderPage('/inventory/containers?type=box');
+
+    expect(screen.getByText('No containers match these filters')).toBeInTheDocument();
+  });
+
+  it('shows inactive containers omitted from the server result', () => {
+    currentRows = rowsResult([openBox, closedBox], { hiddenInactiveCount: 2 });
+    renderPage();
+
+    expect(screen.getByText('2 containers, 2 inactive not shown')).toBeInTheDocument();
+  });
+
   it('routes New container to the first published containment type', () => {
     renderPage();
 

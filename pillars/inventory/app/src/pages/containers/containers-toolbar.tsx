@@ -58,7 +58,7 @@ export function ContainersToolbar({ model }: { model: ContainersPageModel }): Re
       <ItemsSummary
         shown={model.itemRows.total ?? 0}
         total={model.itemRows.unfilteredTotal ?? 0}
-        hiddenInactive={0}
+        hiddenInactive={model.itemRows.hiddenInactiveCount ?? 0}
         noun="containers"
         chips={filterChips(model.filters.filters, types, places, model.filters.setFilters)}
         href={`/inventory/containers${containersSearch(model.filters.filters)}`}

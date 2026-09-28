@@ -24,7 +24,7 @@ function isEmptyInventory(model: ContainersPageModel): boolean {
       model.summary.data.containerSegments.all + model.summary.data.containerSegments.retired === 0
     );
   }
-  return model.filters.filters.segment === 'all';
+  return !isNarrowed(model.filters.filters) && model.filters.filters.segment === 'all';
 }
 
 function emptyState(model: ContainersPageModel): ReactElement | null {
@@ -85,11 +85,15 @@ export function ContainersBody({
     return <ListError noun="containers" onRetry={model.retry} />;
   }
   if (summary.status === 'error' || summary.data === undefined) {
-    return isEmptyInventory(model) ? (
-      <EmptyInventory noun="containers" onNavigate={model.navigate} offline={!model.online} />
-    ) : (
-      <ListError noun="containers" onRetry={model.retry} />
-    );
+    if (isEmptyInventory(model)) {
+      return (
+        <EmptyInventory noun="containers" onNavigate={model.navigate} offline={!model.online} />
+      );
+    }
+    if ((model.itemRows.total ?? 0) === 0) {
+      return <EmptyFiltered noun="containers" onClear={model.filters.clearFilters} />;
+    }
+    return <ListError noun="containers" onRetry={model.retry} />;
   }
   return (
     emptyState(model) ?? (
