@@ -49,10 +49,6 @@ internal enum BFMRepositoryFailure {
             return .conflict(popsError.code)
         }
 
-        if statusCode == nil, popsError.code.hasPrefix("gateway.") {
-            return .transport(popsError)
-        }
-
         guard let fallbackStatus = fallbackStatusCode(in: popsError.code) else {
             switch popsError.code {
             case "invalid_token", "device_revoked", "capability_not_granted":
