@@ -12,7 +12,8 @@ internal enum InventoryPhotoViewerExperiments {
                 id: "full-screen-stage",
                 title: "Full-screen stage",
                 note:
-                    "Photos take the whole screen, with Close, Share and More in the toolbar and a compact caption below.",
+                    "Photos take the whole screen, with Close, Share and More in the toolbar "
+                    + "and a compact caption below.",
                 surface: surface(.fullScreen)
             ),
             DesignVariant(

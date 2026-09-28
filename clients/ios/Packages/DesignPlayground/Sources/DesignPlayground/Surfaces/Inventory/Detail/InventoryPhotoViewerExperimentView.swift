@@ -9,7 +9,7 @@ internal enum InventoryPhotoViewerDesignPresentation {
     case sheet
 }
 
-private enum InventoryPhotoViewerExperimentPreviewState: String, CaseIterable, Identifiable {
+private enum InventoryPhotoPreviewState: String, CaseIterable, Identifiable {
     case ready
     case loading
     case unavailable
@@ -35,7 +35,7 @@ private enum InventoryPhotoViewerExperimentPreviewState: String, CaseIterable, I
 
 internal struct InventoryPhotoViewerExperimentView: View {
     internal let presentation: InventoryPhotoViewerDesignPresentation
-    @State private var previewState: InventoryPhotoViewerExperimentPreviewState = .ready
+    @State private var previewState: InventoryPhotoPreviewState = .ready
     @State private var viewing: InventoryPhoto?
 
     internal var body: some View {
@@ -125,7 +125,7 @@ internal struct InventoryPhotoViewerExperimentView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Menu("Preview state", systemImage: "slider.horizontal.3") {
-                        ForEach(InventoryPhotoViewerExperimentPreviewState.allCases) { state in
+                        ForEach(InventoryPhotoPreviewState.allCases) { state in
                             Button {
                                 previewState = state
                             } label: {
