@@ -2,7 +2,7 @@ import { MobileCodeSuggestResponseSchema } from '../../contract/mobile-inventory
 import { parseOrMismatch } from '../pillars/parse-response.js';
 
 import type { GatewayOutcome, PillarGateway } from '../pillars/gateway.js';
-import type { SuggestCodesRequest } from './client.js';
+import type { SuggestCodesRequest } from './client-types.js';
 
 const INVENTORY_PILLAR_ID = 'inventory';
 

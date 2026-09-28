@@ -49,8 +49,11 @@ import type {
   InventoryCatalogueRouter,
   MobileInventoryCatalogueClient,
 } from './catalogue-client.js';
+import type { ItemRequest, SuggestCodesRequest } from './client-types.js';
 
 export const INVENTORY_PILLAR_ID = 'inventory';
+
+export type { ItemRequest, SuggestCodesRequest } from './client-types.js';
 
 /** The subset of inventory's router bfm calls. See `client.ts` header. */
 export type InventorySyncRouter = InventoryCatalogueRouter & {
@@ -83,10 +86,6 @@ export interface ItemHistoryRequest {
   readonly limit: number;
 }
 
-export interface ItemRequest {
-  readonly itemId: string;
-}
-
 export interface MutationsRequest {
   readonly mutations: readonly MobileMutation[];
   /**
@@ -104,12 +103,6 @@ export interface LedgerReportRequest {
   readonly report: MobileInventoryLedgerReport;
   /** The authenticated device identity sent to inventory as `Pops-Actor`. */
   readonly actorHeader: string;
-}
-
-export interface SuggestCodesRequest {
-  readonly name: string;
-  readonly typeKey: string | null;
-  readonly stem: string | null;
 }
 
 export interface MobileInventoryClient extends MobileInventoryCatalogueClient {

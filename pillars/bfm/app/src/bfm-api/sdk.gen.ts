@@ -60,9 +60,12 @@ import type {
   MobileInventoryGetMediaData,
   MobileInventoryGetMediaErrors,
   MobileInventoryGetMediaResponses,
+  MobileInventoryItemData,
+  MobileInventoryItemErrors,
   MobileInventoryItemHistoryData,
   MobileInventoryItemHistoryErrors,
   MobileInventoryItemHistoryResponses,
+  MobileInventoryItemResponses,
   MobileInventoryMutationsData,
   MobileInventoryMutationsErrors,
   MobileInventoryMutationsResponses,
@@ -473,6 +476,18 @@ export const mobileInventoryChanges = <ThrowOnError extends boolean = false>(
     MobileInventoryChangesErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/sync/changes', ...options });
+
+/**
+ * Read one item and any compatibility issues recorded while projecting it
+ */
+export const mobileInventoryItem = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryItemData, ThrowOnError>
+): RequestResult<MobileInventoryItemResponses, MobileInventoryItemErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileInventoryItemResponses,
+    MobileInventoryItemErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/sync/items/{id}', ...options });
 
 /**
  * Store a device's latest sync ledger report

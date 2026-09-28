@@ -1,6 +1,6 @@
 import type { CallResult } from '@pops/pillar-sdk/server';
 
-import type { InventoryFakeOptions, InventoryItemCall } from './inventory-fake.js';
+import type { InventoryFakeOptions, InventoryItemCall } from './inventory-fake-types.js';
 
 /** Builds the fake targeted item procedure and records every requested id. */
 export function makeItemProcedure(
