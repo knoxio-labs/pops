@@ -42,7 +42,7 @@ So it draws as the empty treatment, muted and with no retry, and `TransactionsCo
 
 ## Empty is not an outage
 
-The one distinction the whole screen is built around. The BFM answers a finance outage with a typed unavailable response rather than a `500` or an empty list, precisely so this app never renders "no transactions yet" when the truth is that it could not ask. `TransactionsListState` keeps `empty` and `failed` apart, the copy for each is asserted to differ, and `TransactionsCopyTests` fails if the outage sentence ever starts reading like the empty one.
+The one distinction the whole screen is built around. The BFM answers a finance outage with a typed unavailable response rather than a `500` or an empty list, precisely so this app never renders "no transactions yet" when the truth is that it could not ask. `TransactionsListState` keeps `empty` and `failed` apart, the copy for each is asserted to differ, and `TransactionsCopyTests` fails if the outage sentence ever starts reading like the empty one. The structured `gateway.upstream_unavailable` envelope keeps its diagnostic fields in the repository error while selecting the same outage explanation; unknown structured codes retain the transport explanation.
 
 ## Cursors, and the two ways paging goes wrong
 
