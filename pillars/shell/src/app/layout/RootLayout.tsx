@@ -60,7 +60,7 @@ export function RootLayout() {
             <main
               id="main-content"
               tabIndex={-1}
-              className="flex min-h-0 flex-1 min-w-0 flex-col overflow-x-clip p-4 pb-24 md:max-lg:p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-200 focus:outline-none"
+              className="flex min-h-0 flex-1 min-w-0 flex-col overflow-x-clip overflow-y-auto p-4 pb-24 md:max-lg:p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-200 focus:outline-none"
             >
               <ErrorBoundary staleChunkProbeUrl={shellDocumentProbeUrl}>
                 <Outlet />
