@@ -17,9 +17,17 @@ import type { ReactElement } from 'react';
 
 import type { ItemDetailModel } from './detail-model';
 
-const mocks = vi.hoisted(() => ({ useItemDetailModel: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  useChangedElsewhere: vi.fn(),
+  useItemDetailModel: vi.fn(),
+  useSyncLedger: vi.fn(),
+}));
 
 vi.mock('./use-item-detail-model', () => ({ useItemDetailModel: mocks.useItemDetailModel }));
+vi.mock('../../inventory-web/useChangedElsewhere.js', () => ({
+  useChangedElsewhere: mocks.useChangedElsewhere,
+}));
+vi.mock('../../inventory-web/useSyncLedger.js', () => ({ useSyncLedger: mocks.useSyncLedger }));
 vi.mock('./detail-store-here', () => ({
   DetailStoreHereSheet: (props: {
     open: boolean;
@@ -134,6 +142,15 @@ beforeEach(() => {
     model,
     banner: null,
     retry: vi.fn(),
+  });
+  mocks.useChangedElsewhere.mockReturnValue({ groups: [], stale: false, reload: vi.fn() });
+  mocks.useSyncLedger.mockReturnValue({
+    ledger: undefined,
+    status: 'pending',
+    error: null,
+    reportedSince: [],
+    stale: false,
+    reload: vi.fn(),
   });
 });
 

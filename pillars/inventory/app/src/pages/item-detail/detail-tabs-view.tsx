@@ -155,7 +155,11 @@ function TabPanels({
         />
       </TabsContent>
       <TabsContent value="history" className="min-h-0 flex-1 overflow-y-auto p-4">
-        <HistoryPreviewSection itemId={itemId} eventCount={model.eventCount} />
+        <HistoryPreviewSection
+          itemId={itemId}
+          eventCount={model.eventCount}
+          events={model.events}
+        />
       </TabsContent>
     </>
   );

@@ -39,7 +39,7 @@ export function OverviewSections({
         readOnly={readOnly}
         onLinksChanged={onLinksChanged}
       />
-      <HistoryPreviewSection itemId={itemId} eventCount={model.eventCount} />
+      <HistoryPreviewSection itemId={itemId} eventCount={model.eventCount} events={model.events} />
     </div>
   );
 }

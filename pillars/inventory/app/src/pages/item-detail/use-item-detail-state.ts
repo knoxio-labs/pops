@@ -111,6 +111,7 @@ interface BuildModelInput {
   paperless: ItemDetailModel['paperless'];
   paperlessBaseUrl: string | null;
   connections: ItemDetailModel['connections'];
+  events: ItemDetailModel['events'];
   eventCount: number | null;
 }
 
@@ -126,7 +127,7 @@ export function buildModel(input: BuildModelInput): ItemDetailModel | null {
     paperless: input.paperless,
     paperlessBaseUrl: input.paperlessBaseUrl,
     connections: input.connections,
-    events: [],
+    events: input.events,
     eventCount: input.eventCount,
   };
 }
