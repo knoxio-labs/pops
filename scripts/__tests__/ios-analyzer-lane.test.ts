@@ -178,7 +178,7 @@ describe('the iOS analyzer lane', () => {
     const analyze = steps.find(
       (step) => step.name === 'SwiftLint analyzer rules (reuse the test compile)'
     );
-    expect(analyze?.['timeout-minutes']).toBe(60);
+    expect(analyze?.['timeout-minutes']).toBe(75);
     expect(analyze?.run).toBe('mise run --skip-deps lint:analyze');
     expect(analyze?.env).toEqual({
       POPS_IOS_ANALYZER_ARTIFACTS: '${{ runner.temp }}/ios-analyzer-diagnostics',
