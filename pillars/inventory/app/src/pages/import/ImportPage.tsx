@@ -6,6 +6,7 @@ import { Button, Label, Switch } from '@pops/ui';
 
 import { InventoryPage } from '../../foundation/frame/page-frame.js';
 import { downloadCsv, templateCsv } from '../../foundation/list-page/inventory-csv.js';
+import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { MAX_LABEL_IDS, labelsHref } from '../labels-page/label-params.js';
 import { ImportDock } from './import-dock.js';
 import { ImportDone } from './import-done.js';
@@ -17,6 +18,7 @@ import { useImport } from './use-import.js';
 
 import type { ReactElement } from 'react';
 
+import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 import type { ImportPhase, ImportState } from './use-import.js';
 
 function FileLine({
@@ -66,6 +68,7 @@ function ImportToolbar({ state }: { state: ImportState }): ReactElement {
 
 interface ImportContentProps {
   state: ImportState;
+  types: readonly CatalogueType[];
   onShowInItems: () => void;
   onPrintLabels: () => void;
   printDisabledReason: string | undefined;
@@ -74,6 +77,7 @@ interface ImportContentProps {
 
 function ImportContent({
   state,
+  types,
   onShowInItems,
   onPrintLabels,
   printDisabledReason,
@@ -99,7 +103,7 @@ function ImportContent({
     );
   }
   if (state.phase === 'preview' || state.phase === 'committing') {
-    return <PreviewStep results={state.results} onlyProblems={state.onlyProblems} />;
+    return <PreviewStep results={state.results} onlyProblems={state.onlyProblems} types={types} />;
   }
   if (state.file === null) return null;
   return (
@@ -120,6 +124,7 @@ function ImportContent({
 export function ImportPage(): ReactElement {
   const navigate = useNavigate();
   const state = useImport();
+  const catalogue = useCatalogueLookups();
 
   const onShowInItems = (): void => {
     void navigate('/inventory/items?sort=updated');
@@ -154,6 +159,7 @@ export function ImportPage(): ReactElement {
     >
       <ImportContent
         state={state}
+        types={catalogue.types}
         onShowInItems={onShowInItems}
         onPrintLabels={onPrintLabels}
         printDisabledReason={printDisabledReason}

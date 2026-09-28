@@ -11,7 +11,7 @@ import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 function typeOption(
   key: string,
   sortOrder: number,
-  options: Partial<Pick<CatalogueType, 'archivedAt' | 'capabilities'>> = {}
+  options: Partial<Pick<CatalogueType, 'archivedAt' | 'capabilities' | 'parentTypeId'>> = {}
 ): CatalogueType {
   return {
     id: key,
@@ -23,7 +23,7 @@ function typeOption(
     description: null,
     fields: [],
     legacyLabels: [],
-    parentTypeId: null,
+    parentTypeId: options.parentTypeId ?? null,
     presentation: {},
     replacedBy: null,
     revision: 1,
@@ -87,5 +87,14 @@ describe('containerTypeKey', () => {
 
   it('returns null when the published catalogue has no containment type', () => {
     expect(containerTypeKey([typeOption('cable', 1)])).toBeNull();
+  });
+
+  it('inherits containment from a parent type', () => {
+    expect(
+      containerTypeKey([
+        typeOption('storage', 2, { capabilities: ['containment'] }),
+        typeOption('moving-box', 1, { parentTypeId: 'storage' }),
+      ])
+    ).toBe('moving-box');
   });
 });

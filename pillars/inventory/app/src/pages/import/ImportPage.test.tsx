@@ -32,6 +32,9 @@ vi.mock('../../inventory-web/batch-commit.js', () => ({
 vi.mock('../../inventory-web/useDeleteCreated.js', () => ({
   useDeleteCreated: () => mocks.deleteCreated,
 }));
+vi.mock('../../inventory-web/useCatalogueLookups.js', () => ({
+  useCatalogueLookups: () => ({ types: [] }),
+}));
 vi.mock('../../foundation/list-page/inventory-csv.js', async () => {
   const actual = await vi.importActual<
     typeof import('../../foundation/list-page/inventory-csv.js')

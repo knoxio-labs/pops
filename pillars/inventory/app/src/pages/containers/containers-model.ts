@@ -1,3 +1,5 @@
+import { effectiveCapabilities } from '../../lib/type-tree.js';
+
 import type { Segment } from '../../foundation/frame/segmented.js';
 import type { WebSummaryGetResponse } from '../../inventory-api/types.gen.js';
 import type { ContainerSegment } from '../../inventory-web/items-url-filters.js';
@@ -21,7 +23,10 @@ export function containerSegmentOptions(
 export function containerTypeKey(types: readonly CatalogueType[]): string | null {
   return (
     types
-      .filter((type) => type.archivedAt === null && type.capabilities.includes('containment'))
+      .filter(
+        (type) =>
+          type.archivedAt === null && effectiveCapabilities(types, type.id).includes('containment')
+      )
       .toSorted((left, right) => left.sortOrder - right.sortOrder)[0]?.key ?? null
   );
 }

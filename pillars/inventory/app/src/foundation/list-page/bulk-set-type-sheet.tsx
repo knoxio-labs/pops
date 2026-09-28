@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { Button, ComboboxSelect, Label, Sheet } from '@pops/ui';
 
+import { typePathLabel } from '../../lib/type-tree.js';
 import { bulkItemCount, sharedTypeFieldLabels } from './bulk-action-model.js';
 
 import type { ReactElement } from 'react';
@@ -32,16 +33,17 @@ function currentTypeLabel(
   const labels = new Set(
     selectedRows(rows, ids).map((row) => {
       if (row.typeId === null) return 'No type';
-      return (
-        catalogue?.types.find((type) => type.id === row.typeId)?.label ??
-        row.typeName ??
-        'Unknown type'
-      );
+      const type = catalogue?.types.find((candidate) => candidate.id === row.typeId);
+      return type === undefined ? (row.typeName ?? 'Unknown type') : typeLabel(catalogue, type);
     })
   );
   if (labels.size === 0) return 'No type information loaded';
   if (labels.size === 1) return [...labels][0] ?? 'Unknown type';
   return 'Mixed types';
+}
+
+function typeLabel(catalogue: CatalogueDescriptor | undefined, type: CatalogueType): string {
+  return typePathLabel(catalogue?.types ?? [], type.id) || type.label;
 }
 
 function TypePreview({
@@ -119,6 +121,50 @@ function TypeSheetFooter({
   );
 }
 
+function TypeSelection({
+  rows,
+  action,
+  catalogue,
+  types,
+  typeKey,
+  targetType,
+  onTypeKey,
+}: {
+  rows: readonly ItemRowModel[];
+  action: BulkActionState;
+  catalogue: CatalogueDescriptor | undefined;
+  types: readonly CatalogueType[];
+  typeKey: string;
+  targetType: CatalogueType | undefined;
+  onTypeKey: (value: string) => void;
+}): ReactElement {
+  return (
+    <div className="space-y-5">
+      <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+        {currentTypeLabel(rows, action.ids, catalogue)}{' '}
+        <span className="text-muted-foreground">to</span>{' '}
+        {targetType === undefined ? 'Choose a new type' : typeLabel(catalogue, targetType)}
+      </p>
+      <div className="space-y-2">
+        <Label htmlFor="bulk-new-type">New type</Label>
+        <ComboboxSelect
+          id="bulk-new-type"
+          aria-label="New type"
+          options={types.map((type) => ({ value: type.key, label: typeLabel(catalogue, type) }))}
+          value={typeKey}
+          onChange={(value) => onTypeKey(typeof value === 'string' ? value : '')}
+          placeholder="Choose the new type"
+          searchPlaceholder="Search types"
+          emptyMessage="No matching types"
+        />
+      </div>
+      {targetType === undefined ? null : (
+        <TypePreview rows={rows} action={action} targetType={targetType} catalogue={catalogue} />
+      )}
+    </div>
+  );
+}
+
 /** The live sheet for replacing the selected items' catalogue type. */
 export function BulkSetTypeSheet({
   action,
@@ -145,29 +191,15 @@ export function BulkSetTypeSheet({
       title={`Set type on ${bulkItemCount(action.ids.length)}`}
       description="Choose a type. Values shared by both types stay on each item."
     >
-      <div className="space-y-5">
-        <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
-          {currentTypeLabel(rows, action.ids, catalogue)}{' '}
-          <span className="text-muted-foreground">to</span>{' '}
-          {targetType?.label ?? 'Choose a new type'}
-        </p>
-        <div className="space-y-2">
-          <Label htmlFor="bulk-new-type">New type</Label>
-          <ComboboxSelect
-            id="bulk-new-type"
-            aria-label="New type"
-            options={types.map((type) => ({ value: type.key, label: type.label }))}
-            value={typeKey}
-            onChange={(value) => setTypeKey(typeof value === 'string' ? value : '')}
-            placeholder="Choose the new type"
-            searchPlaceholder="Search types"
-            emptyMessage="No matching types"
-          />
-        </div>
-        {targetType === undefined ? null : (
-          <TypePreview rows={rows} action={action} targetType={targetType} catalogue={catalogue} />
-        )}
-      </div>
+      <TypeSelection
+        rows={rows}
+        action={action}
+        catalogue={catalogue}
+        types={types}
+        typeKey={typeKey}
+        targetType={targetType}
+        onTypeKey={setTypeKey}
+      />
       <TypeSheetFooter
         action={action}
         busy={busy}
