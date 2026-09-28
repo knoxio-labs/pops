@@ -75,6 +75,33 @@ describe('item form field rules', () => {
         { id: 'item-1', kind: 'item' as const, label: 'Item', typeId: 'type-lamp' },
       ])
     ).toContain('item type');
+    expect(
+      referenceError(reference, [
+        { id: 'item-2', kind: 'item' as const, label: 'Untyped item', typeId: null },
+      ])
+    ).toContain('item type');
+  });
+
+  it('accepts expanded descendant ids while keeping a leaf restriction exact', () => {
+    const parentField = field('related', 'reference', {
+      referenceKinds: ['item'],
+      referenceTypeIds: ['type-parent', 'type-child'],
+    });
+    expect(
+      referenceError(parentField, [
+        { id: 'item-child', kind: 'item', label: 'Child', typeId: 'type-child' },
+      ])
+    ).toBeNull();
+
+    const leafField = field('related', 'reference', {
+      referenceKinds: ['item'],
+      referenceTypeIds: ['type-leaf'],
+    });
+    expect(
+      referenceError(leafField, [
+        { id: 'item-child', kind: 'item', label: 'Child', typeId: 'type-child' },
+      ])
+    ).toContain('item type');
   });
 });
 
