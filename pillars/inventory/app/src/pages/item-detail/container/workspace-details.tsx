@@ -73,7 +73,13 @@ export function containerSectionSpecs(
       count: model.eventCount,
       summary: historySummary(model),
       flagged: model.eventCount === null,
-      body: <HistoryPreviewSection itemId={itemId} eventCount={model.eventCount} />,
+      body: (
+        <HistoryPreviewSection
+          itemId={itemId}
+          eventCount={model.eventCount}
+          events={model.events}
+        />
+      ),
     },
   ];
 }
