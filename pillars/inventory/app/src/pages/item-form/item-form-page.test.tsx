@@ -120,7 +120,13 @@ describe('ItemFormPage', () => {
 
     const cards = page.children.item(1);
     if (cards === null) throw new Error('Form cards were not rendered');
-    expect(cards).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto', 'lg:overflow-hidden');
+    expect(cards).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-y-auto',
+      'lg:grid-rows-1',
+      'lg:overflow-hidden'
+    );
     expect(cards.firstElementChild).toHaveClass('min-h-0', 'lg:overflow-y-auto');
     expect(cards.lastElementChild).toHaveClass('min-w-0', 'lg:min-h-0', 'lg:overflow-y-auto');
   });

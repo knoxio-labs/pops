@@ -54,13 +54,13 @@ export function RootLayout() {
 
         <div className="relative z-10 pt-(--shell-top-bar-height)">
           <TopBar />
-          <div className="flex">
+          <div className="flex min-h-0">
             <NavRegion pageNavOpen={pageNavOpen} onClosePageNav={() => setPageNavOpen(false)} />
 
             <main
               id="main-content"
               tabIndex={-1}
-              className="flex-1 min-w-0 overflow-x-clip p-4 pb-24 md:max-lg:p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-200 focus:outline-none"
+              className="flex min-h-0 flex-1 min-w-0 flex-col overflow-x-clip p-4 pb-24 md:max-lg:p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-200 focus:outline-none"
             >
               <ErrorBoundary staleChunkProbeUrl={shellDocumentProbeUrl}>
                 <Outlet />

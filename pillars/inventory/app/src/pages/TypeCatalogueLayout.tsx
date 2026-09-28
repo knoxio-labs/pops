@@ -5,6 +5,7 @@ import { Badge, Button, Card, CardContent, CardHeader, PageHeader, cn } from '@p
 import { AuditDialog } from '../catalogue-editor/AuditDialog';
 import { TypeList } from '../catalogue-editor/CatalogueNavigation';
 import { PublishPanel } from '../catalogue-editor/PublishPanel';
+import { PAGE_HEIGHT } from '../foundation/frame/page-frame.js';
 import { ArchiveCatalogueDialog } from './ArchiveCatalogueDialog';
 import { CatalogueEditorContent } from './CatalogueEditorContent';
 import { type useTypeCataloguePage } from './useTypeCataloguePage';
@@ -13,8 +14,6 @@ import type { CatalogueOperationHandler } from '../catalogue-editor/types';
 
 type Page = ReturnType<typeof useTypeCataloguePage>;
 type ReadyPage = Page & { readonly catalogue: NonNullable<Page['catalogue']> };
-
-const CARD_HEIGHT = 'lg:h-[calc(100vh-13.25rem)]';
 
 interface LayoutProps {
   readonly onAbandon: () => void;
@@ -26,7 +25,7 @@ interface LayoutProps {
 /** Composes the focused catalogue navigation, editor, review, and audit surfaces. */
 export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }: LayoutProps) {
   return (
-    <div className="space-y-6">
+    <div className={cn('flex min-h-0 flex-col gap-6 overflow-hidden', PAGE_HEIGHT)}>
       <PageHeader
         title="Type catalogue"
         description="Edit one persisted draft, validate compatibility, then publish an atomic revision."
@@ -38,8 +37,8 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
         }
       />
       <RevisionNotice page={page} />
-      <div className="grid gap-5 lg:grid-cols-4">
-        <div className="lg:col-span-1 lg:h-full lg:min-h-0 lg:overflow-y-auto">
+      <div className="grid min-h-0 min-w-0 flex-1 gap-5 overflow-y-auto lg:grid-cols-4 lg:grid-rows-1 lg:overflow-hidden">
+        <div className="min-h-0 lg:col-span-1 lg:h-full lg:min-h-0 lg:overflow-y-auto">
           <TypeList
             types={page.types}
             selectedId={page.selectedTypeId}
@@ -47,7 +46,7 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
             onSelect={page.selectType}
           />
         </div>
-        <Card className={cn('lg:col-span-3 lg:flex lg:flex-col', CARD_HEIGHT)}>
+        <Card className="min-h-0 min-w-0 lg:col-span-3 lg:flex lg:flex-col">
           <CardHeader className="lg:shrink-0">
             <EditorTitle page={page} />
           </CardHeader>
@@ -146,7 +145,7 @@ function EditorSteps({ mode }: { readonly mode: Page['mode'] }) {
 
 TypeCatalogueLayout.Error = function Error({ onRetry }: { readonly onRetry: () => void }) {
   return (
-    <div className="space-y-6">
+    <div className={cn('flex min-h-0 flex-col gap-6 overflow-hidden', PAGE_HEIGHT)}>
       <PageHeader
         title="Type catalogue"
         description="Define the fields and behaviour available to inventory items."
