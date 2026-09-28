@@ -1,8 +1,8 @@
 import SwiftUI
 
-#if os(iOS)
+#if canImport(UIKit)
     import UIKit
-#elseif os(macOS)
+#elseif canImport(AppKit)
     import AppKit
 #endif
 
@@ -192,9 +192,9 @@ extension View {
 
 @MainActor
 internal func playgroundCopy(_ text: String) {
-    #if os(iOS)
+    #if canImport(UIKit)
         UIPasteboard.general.string = text
-    #elseif os(macOS)
+    #elseif canImport(AppKit)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)

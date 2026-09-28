@@ -235,7 +235,9 @@ describe('the scope job is wired to the workflow it scopes', () => {
   });
 
   it('runs the analyzer and Maestro in every explicit full lane', () => {
-    const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
+    const qualityJob = jobsOf('ios-quality.yml').get('quality');
+    expect(qualityJob?.['timeout-minutes']).toBe(150);
+    const steps = stepsOf(qualityJob);
     const namedStep = (name: string) => steps.find((step) => step.name === name);
 
     const pullRequestSuite = namedStep('Test (iOS Simulator)');
