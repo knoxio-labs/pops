@@ -52,9 +52,9 @@ export function RootLayout() {
         <SkipLink />
         <AmbientBackground />
 
-        <div className="relative z-10 pt-(--shell-top-bar-height)">
+        <div className="relative z-10 flex h-full min-h-0 flex-col pt-(--shell-top-bar-height)">
           <TopBar />
-          <div className="flex min-h-0">
+          <div className="flex min-h-0 flex-1 overflow-hidden">
             <NavRegion pageNavOpen={pageNavOpen} onClosePageNav={() => setPageNavOpen(false)} />
 
             <main

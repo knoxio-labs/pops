@@ -98,6 +98,10 @@ describe('RootLayout', () => {
 
     const contentRow = main.parentElement;
     if (contentRow === null) throw new Error('Shell content row was not rendered');
-    expect(contentRow).toHaveClass('flex', 'min-h-0');
+    expect(contentRow).toHaveClass('flex', 'min-h-0', 'flex-1', 'overflow-hidden');
+
+    const contentLayer = contentRow.parentElement;
+    if (contentLayer === null) throw new Error('Shell content layer was not rendered');
+    expect(contentLayer).toHaveClass('relative', 'z-10', 'flex', 'h-full', 'min-h-0', 'flex-col');
   });
 });
