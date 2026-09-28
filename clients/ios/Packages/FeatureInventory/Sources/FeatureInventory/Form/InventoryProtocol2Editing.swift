@@ -261,7 +261,8 @@ internal enum InventoryProtocol2Display {
         guard fraction.count > places else {
             fraction.append(contentsOf: repeatElement("0", count: places - fraction.count))
             let result = fraction.isEmpty ? integer : "\(integer).\(String(fraction))"
-            return negative && result != "0" && fraction.contains(where: { $0 != "0" })
+            let hasNonZeroMagnitude = integer != "0" || fraction.contains(where: { $0 != "0" })
+            return negative && hasNonZeroMagnitude
                 ? "-\(result)"
                 : result
         }
@@ -293,7 +294,8 @@ internal enum InventoryProtocol2Display {
         }
 
         let result = fraction.isEmpty ? integer : "\(integer).\(String(fraction))"
-        return negative && result != "0" && fraction.contains(where: { $0 != "0" })
+        let hasNonZeroMagnitude = integer != "0" || fraction.contains(where: { $0 != "0" })
+        return negative && hasNonZeroMagnitude
             ? "-\(result)"
             : result
     }

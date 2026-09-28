@@ -52,6 +52,22 @@ internal struct InventoryProtocol2PrimitiveDisplayTests {
                     presentation: .object(["decimalPlaces": .number("1")])),
                 expected: "48.1 kg"),
             DisplayCase(
+                value: .decimal(try InventoryDecimal("-5")),
+                field: field(
+                    .decimal, presentation: .object(["decimalPlaces": .number("2")])),
+                expected: "-5.00"),
+            DisplayCase(
+                value: .measurement(amount: try InventoryDecimal("-5.001"), unit: "kg"),
+                field: field(
+                    .measurement, fixedUnit: "kg",
+                    presentation: .object(["decimalPlaces": .number("2")])),
+                expected: "-5.00 kg"),
+            DisplayCase(
+                value: .decimal(try InventoryDecimal("-0.05")),
+                field: field(
+                    .decimal, presentation: .object(["decimalPlaces": .number("1")])),
+                expected: "-0.1"),
+            DisplayCase(
                 value: .date(try InventoryCanonicalDate("2024-02-29")), field: field(.date),
                 expected: "2024-02-29"),
             DisplayCase(
