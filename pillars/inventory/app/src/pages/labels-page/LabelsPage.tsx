@@ -9,24 +9,26 @@ import { Plus, Printer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
+import { matchingPreset } from '@pops/inventory/labels';
 import { Alert, AlertDescription, AlertTitle, Button, PageHeader, Skeleton } from '@pops/ui';
 
 import {
   DEFAULT_INVENTORY_DEFAULTS,
   labelContentForShows,
-  labelTemplateForShows,
   useInventoryDefaults,
 } from '../../inventory-web/useInventoryDefaults.js';
 import { AddDialog } from './add-dialog';
 import { MAX_LABEL_IDS, readLabelParams } from './label-params';
 import { loadSheetId } from './label-storage';
+import { LabelsSelection } from './labels-selection';
 import { PrintOptions } from './print-options';
 import { PrintPreview } from './print-preview';
 import { LabelPrintStyles } from './print-styles';
-import { SelectionPanel } from './selection-panel';
 import { useLabelJob } from './useLabelJob';
 import { useLabelSubjects } from './useLabelSubjects';
 import { useSaveCode } from './useSaveCode';
+
+import type { LabelContent } from '@pops/inventory/labels';
 
 import type { LabelPageDefaults, LabelParams } from './label-params';
 import type { LabelSubjects } from './useLabelSubjects';
@@ -91,7 +93,19 @@ function useIdsParam(defaults: LabelPageDefaults) {
       },
       { replace: true }
     );
-  return { params, setIds };
+  const setContent = (content: LabelContent) =>
+    setSearch(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('template');
+        const preset = matchingPreset(content);
+        if (preset === null) next.delete('shows');
+        else next.set('shows', preset.id);
+        return next;
+      },
+      { replace: true }
+    );
+  return { params, setIds, setContent };
 }
 
 /**
@@ -118,10 +132,12 @@ function LabelsContent({
   data,
   params,
   setIds,
+  setContent,
 }: {
   data: LabelSubjects;
   params: LabelParams;
   setIds: (ids: string[]) => void;
+  setContent: (content: LabelContent) => void;
 }) {
   const job = useLabelJob(data.subjects, {
     content: params.content,
@@ -130,6 +146,10 @@ function LabelsContent({
   });
   const { save } = useSaveCode();
   const [addOpen, setAddOpen] = useState(false);
+  const changeContent = (content: LabelContent): void => {
+    job.setContent(content);
+    setContent(content);
+  };
   const add = (ids: string[]) => setIds([...params.ids, ...ids]);
   const addControl = (
     <AddDialog
@@ -149,20 +169,16 @@ function LabelsContent({
       <LabelPrintStyles />
       <Header count={job.labels.length} onPrint={job.block ? undefined : job.print} />
       <div className={GRID}>
-        <aside className="flex min-w-0 flex-col lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:self-start">
-          <SelectionPanel
-            subjects={data.subjects}
-            contents={data.contents}
-            missing={data.missing}
-            saveCode={save}
-            addControl={addControl}
-            onOpenAdd={() => setAddOpen(true)}
-            onAdd={add}
-            onRemove={(id) => setIds(params.ids.filter((held) => held !== id))}
-          />
-        </aside>
+        <LabelsSelection
+          data={data}
+          saveCode={save}
+          addControl={addControl}
+          onOpenAdd={() => setAddOpen(true)}
+          onAdd={add}
+          onRemove={(id) => setIds(params.ids.filter((held) => held !== id))}
+        />
         <section className="flex min-w-0 flex-col gap-4" aria-label="Labels">
-          <PrintOptions job={job} />
+          <PrintOptions job={job} onContentChange={changeContent} />
           <PrintPreview job={job} />
         </section>
       </div>
@@ -175,11 +191,11 @@ export function LabelsPage() {
   const settings = useInventoryDefaults();
   const stored = settings.data ?? DEFAULT_INVENTORY_DEFAULTS;
   const defaults: LabelPageDefaults = {
-    template: labelTemplateForShows(stored.labelShows),
+    shows: stored.labelShows,
     content: labelContentForShows(stored.labelShows),
     sheetId: loadSheetId() ?? stored.labelSheet,
   };
-  const { params, setIds } = useIdsParam(defaults);
+  const { params, setIds, setContent } = useIdsParam(defaults);
   const data = useLabelSubjects(params.ids);
   useExpandContents(params, data, setIds);
   if (settings.isPending || data.isLoading || params.contents) return <LabelsLoading />;
@@ -191,5 +207,5 @@ export function LabelsPage() {
       </Alert>
     );
   }
-  return <LabelsContent data={data} params={params} setIds={setIds} />;
+  return <LabelsContent data={data} params={params} setIds={setIds} setContent={setContent} />;
 }

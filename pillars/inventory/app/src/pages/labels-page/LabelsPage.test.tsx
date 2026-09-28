@@ -13,6 +13,7 @@ const api = vi.hoisted(() => ({
   syncMutations: vi.fn(),
   searchSearch: vi.fn(),
   settingsList: vi.fn(),
+  typesReadCatalogue: vi.fn(),
 }));
 
 vi.mock('../../inventory-api/index.js', () => ({
@@ -21,6 +22,7 @@ vi.mock('../../inventory-api/index.js', () => ({
   syncMutations: (...args: unknown[]) => api.syncMutations(...args),
   searchSearch: (...args: unknown[]) => api.searchSearch(...args),
   settingsList: (...args: unknown[]) => api.settingsList(...args),
+  typesReadCatalogue: (...args: unknown[]) => api.typesReadCatalogue(...args),
 }));
 
 import { LabelsPage } from './LabelsPage';
@@ -118,6 +120,21 @@ beforeEach(() => {
     ok({ outcomes: [mutationOutcome(body)] })
   );
   api.searchSearch.mockResolvedValue(ok({ hits: [] }));
+  api.typesReadCatalogue.mockResolvedValue(
+    ok({
+      revision: {
+        abandoned: null,
+        baseRevision: null,
+        created: { actor: { id: null, kind: 'migration', label: null }, at: '2026-09-01' },
+        draftVersion: 1,
+        minimumProtocol: 1,
+        published: null,
+        revision: 1,
+        status: 'published',
+      },
+      types: [],
+    })
+  );
   api.settingsList.mockResolvedValue(
     ok({
       data: [
@@ -218,6 +235,9 @@ describe('LabelsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Contents only/ }));
 
     expect(screen.getByRole('button', { name: 'Label shows: Contents only' })).toBeInTheDocument();
+    expect(new URLSearchParams(screen.getByTestId('address').textContent ?? '').get('shows')).toBe(
+      'contents'
+    );
     expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Milk jug');
   });
 

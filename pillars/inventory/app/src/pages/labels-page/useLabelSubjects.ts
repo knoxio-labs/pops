@@ -9,9 +9,11 @@ import { unwrap } from '../../inventory-api-helpers.js';
 import { codesSuggest, webList } from '../../inventory-api/index.js';
 import { INVENTORY_SYNC_PROTOCOL } from '../../inventory-web/mutation-client.js';
 import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
+import { usePublishedCatalogue } from '../../inventory-web/useCatalogueLookups.js';
+import { detailsFor } from './label-details.js';
 import { MAX_LABEL_IDS } from './label-params';
 
-import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
+import type { LabelDetails, PrintSubject } from '@pops/inventory/labels';
 
 import type { WebListResponses } from '../../inventory-api/types.gen.js';
 
@@ -99,36 +101,9 @@ function useSuggestions(items: WebItem[]) {
   return suggestions;
 }
 
-function valueText(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  if (Array.isArray(value)) return value.map(valueText).filter(Boolean).join(', ');
-  if (typeof value === 'object') return JSON.stringify(value) ?? '';
-  return '';
-}
-
-function detailsFor(item: WebItem, contents: readonly LabelSubject[]): LabelDetails {
-  const fields: LabelFieldValue[] = [];
-  if (item.typeKey !== null) {
-    for (const [key, rawValue] of Object.entries(item.fields)) {
-      const value = valueText(rawValue);
-      if (value.length === 0) continue;
-      fields.push({ id: `${item.typeKey}.${key}`, label: key, value });
-    }
-  }
-  return {
-    typeName: item.typeKey,
-    fields,
-    contents: contents.map((subject) =>
-      subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name
-    ),
-  };
-}
-
 /** Loads the items behind `ids`, each box's contents, and codes to suggest. */
 export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
+  const { typeById } = usePublishedCatalogue();
   const listed = useQuery({
     queryKey: [...WEB_ITEMS_QUERY_KEY, 'labels', ids] as const,
     queryFn: () => listItems({ ids: ids.join(',') }),
@@ -155,7 +130,7 @@ export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
     missing: listed.data && !listed.isPlaceholderData ? ids.filter((id) => !byId.has(id)) : [],
     contents,
     details: new Map(
-      ordered.map((item) => [item.id, detailsFor(item, contents.get(item.id) ?? [])])
+      ordered.map((item) => [item.id, detailsFor(item, contents.get(item.id) ?? [], typeById)])
     ),
   };
 }

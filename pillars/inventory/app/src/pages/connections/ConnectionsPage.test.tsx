@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   showUndoToast: vi.fn(),
   toastError: vi.fn(),
   useConnectionsPageModel: vi.fn(),
+  useConnectionsTabCounts: vi.fn(),
 }));
 
 vi.mock('./connections-page-model.js', () => ({
@@ -35,6 +36,9 @@ vi.mock('./connection-graph.js', () => ({
 }));
 vi.mock('../../foundation/feedback/undo-toast.js', () => ({ showUndoToast: mocks.showUndoToast }));
 vi.mock('sonner', () => ({ toast: { error: mocks.toastError } }));
+vi.mock('../../inventory-web/useConnectionsTabCounts.js', () => ({
+  useConnectionsTabCounts: (...args: unknown[]) => mocks.useConnectionsTabCounts(...args),
+}));
 
 import { ConnectionsPage } from './ConnectionsPage.js';
 
@@ -232,6 +236,7 @@ function renderPage(initialEntry = '/inventory/connections'): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.useConnectionsTabCounts.mockReturnValue({ connections: 2, fixtures: 1 });
   observers.length = 0;
   globalThis.IntersectionObserver = TestIntersectionObserver;
   currentRows = rows;
@@ -261,6 +266,8 @@ describe('ConnectionsPage', () => {
     expect(rowsInGrid.at(1)?.textContent).toContain('Alpha');
     expect(rowsInGrid.at(2)?.textContent).toContain('Outlet');
     expect(screen.getByText('1 Sept 2026')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Connections\s*2/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Fixtures\s*1/ })).toBeInTheDocument();
     expect(screen.queryByTestId('connections-sentinel')).not.toBeInTheDocument();
 
     cleanup();
