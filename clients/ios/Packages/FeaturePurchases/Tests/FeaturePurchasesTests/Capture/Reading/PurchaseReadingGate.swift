@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 internal actor ReadingGate: ReceiptCaptureRepository {
     internal enum Answer: Sendable {
