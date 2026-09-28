@@ -1,7 +1,10 @@
-import type { LabelDetails, LabelFieldValue } from '@pops/inventory/labels';
+import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types.js';
-import type { LabelSubject, WebItem } from './useLabelSubjects.js';
+import type { WebListResponses } from '../../inventory-api/types.gen.js';
+
+type WebItem = WebListResponses[200]['items'][number];
+type LabelContent = Pick<PrintSubject, 'name' | 'quantity'>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -54,7 +57,7 @@ function fieldValuesFor(item: WebItem, field: CatalogueField): readonly unknown[
 
 function catalogueDetailsFor(
   item: WebItem,
-  contents: readonly LabelSubject[],
+  contents: readonly LabelContent[],
   type: CatalogueType
 ): LabelDetails {
   const prefix = item.typeKey ?? type.key;
@@ -79,7 +82,7 @@ function catalogueDetailsFor(
 /** Builds printable label details from catalogue fields, with legacy fallback values. */
 export function detailsFor(
   item: WebItem,
-  contents: readonly LabelSubject[],
+  contents: readonly LabelContent[],
   types: ReadonlyMap<string, CatalogueType>
 ): LabelDetails {
   const type = item.typeId === null ? undefined : types.get(item.typeId);
