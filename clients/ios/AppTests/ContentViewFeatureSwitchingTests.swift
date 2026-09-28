@@ -1,5 +1,6 @@
 import AppCore
 import Auth
+import DesignSystem
 import FeaturePurchases
 import Foundation
 import SwiftUI
@@ -79,46 +80,26 @@ internal enum ContentViewFixture {
 @Suite("ContentView feature switching")
 @MainActor
 internal struct ContentViewFeatureSwitchingTests {
-    private static let canvas = CGSize(width: 390, height: 844)
-
-    private static func render(_ view: some View, in scheme: ColorScheme = .light) -> CGImage? {
-        let renderer = ImageRenderer(
-            content:
-                view
-                .environment(\.colorScheme, scheme)
-                .frame(width: canvas.width, height: canvas.height)
-        )
-        renderer.scale = 1
-        return renderer.cgImage
-    }
-
-    private static func hasNonUniformPixels(_ image: CGImage) -> Bool {
-        guard let providerData = image.dataProvider?.data else { return false }
-        let data = providerData as Data
-        let pixelSize = image.bitsPerPixel / 8
-        guard pixelSize > 0, data.count >= pixelSize else { return false }
-        let firstPixel = data[..<pixelSize]
-
-        return (0..<image.height).contains { row in
-            (0..<image.width).contains { column in
-                let start = row * image.bytesPerRow + column * pixelSize
-                let end = start + pixelSize
-                return end <= data.count && data[start..<end] != firstPixel
-            }
-        }
-    }
-
-    private func contentView(available: [MobileFeature]) -> ContentView {
-        ContentViewFixture.view(available: available)
-    }
-
     @Test("zero available features renders, and renders real content rather than a blank screen")
     func zeroFeaturesRendersRealContent() throws {
-        let light = try #require(Self.render(contentView(available: []).features, in: .light))
-        let dark = try #require(Self.render(contentView(available: []).features, in: .dark))
+        let adaptiveFlat = Color(
+            uiColor: UIColor { traits in
+                traits.userInterfaceStyle == .dark ? .red : .blue
+            })
 
-        #expect(Self.hasNonUniformPixels(light), "the light explanation is blank")
-        #expect(Self.hasNonUniformPixels(dark), "the dark explanation is blank")
+        #expect(
+            try SwiftUIViewRendering.rendersSchemeAwareContent(
+                ContentViewFixture.view(available: []).features,
+                background: Color.popsBackground))
+        #expect(
+            try !SwiftUIViewRendering.rendersSchemeAwareContent(
+                Color.clear, background: Color.popsBackground))
+        #expect(
+            try !SwiftUIViewRendering.rendersSchemeAwareContent(
+                Color.popsBackground, background: Color.popsBackground))
+        #expect(
+            try !SwiftUIViewRendering.rendersSchemeAwareContent(
+                adaptiveFlat.ignoresSafeArea(), background: Color.popsBackground))
     }
 
     /// `.receiptCapture` is not in `RootFeature.renderable` — POPS-4294
@@ -130,13 +111,10 @@ internal struct ContentViewFeatureSwitchingTests {
     /// lone screen of its own.
     @Test("receipt-capture alone renders the nothing-available explanation, not a screen")
     func receiptCaptureAloneRendersNothingAvailable() throws {
-        let light = try #require(
-            Self.render(contentView(available: [.receiptCapture]).features, in: .light))
-        let dark = try #require(
-            Self.render(contentView(available: [.receiptCapture]).features, in: .dark))
-
-        #expect(Self.hasNonUniformPixels(light), "the light explanation is blank")
-        #expect(Self.hasNonUniformPixels(dark), "the dark explanation is blank")
+        #expect(
+            try SwiftUIViewRendering.rendersSchemeAwareContent(
+                ContentViewFixture.view(available: [.receiptCapture]).features,
+                background: Color.popsBackground))
     }
 }
 
