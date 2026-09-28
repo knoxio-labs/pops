@@ -40,8 +40,11 @@ internal struct InventoryItemFormView: View {
                     }
                     if model.mode == .create {
                         ToolbarItemGroup(placement: .confirmationAction) {
-                            createButton
-                            createAnotherButton
+                            InventoryCreateButton(model: model) {
+                                dismiss()
+                                if model.mode == .create { onCreated() }
+                            }
+                            InventoryCreateAnotherButton(model: model)
                         }
                     } else {
                         ToolbarItem(placement: .confirmationAction) {
@@ -84,34 +87,6 @@ internal struct InventoryItemFormView: View {
         .onChange(of: model.phase) { _, phase in
             if phase == .ready, model.focusesCode { codeFieldFocused = true }
         }
-    }
-
-    private var createButton: some View {
-        Button {
-            Task {
-                if await model.submit() {
-                    dismiss()
-                    if model.mode == .create { onCreated() }
-                }
-            }
-        } label: {
-            Image(systemName: "checkmark")
-        }
-        .popsProminentGlassButton()
-        .disabled(!model.canSubmit)
-        .accessibilityLabel("Create")
-        .accessibilityIdentifier(InventoryAccessibility.itemCreate)
-    }
-
-    private var createAnotherButton: some View {
-        Button {
-            Task { _ = await model.submitAndPrepareForAnother() }
-        } label: {
-            Image(systemName: "plus")
-        }
-        .disabled(!model.canSubmit)
-        .accessibilityLabel("Create another")
-        .accessibilityIdentifier(InventoryAccessibility.itemCreateAnother)
     }
 
     /// A hand-built binding rather than `$model.photoRunner.undoOffer`:

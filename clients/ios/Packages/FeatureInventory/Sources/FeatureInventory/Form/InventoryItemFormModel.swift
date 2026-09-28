@@ -73,11 +73,11 @@ internal final class InventoryItemFormModel {
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
-    internal private(set) var showsValidation = false
+    internal var showsValidation = false
     internal private(set) var isSubmitting = false
     /// Advances when Create another replaces the current draft with a fresh
     /// form, so the view also releases any field focus from the saved item.
-    internal private(set) var formGeneration = 0
+    internal var formGeneration = 0
     /// A free code to wear instead, offered while the typed one is held.
     internal var freeCode: String?
     internal var failure: InventoryWriteFailure?
@@ -92,7 +92,7 @@ internal final class InventoryItemFormModel {
     internal let suggester: InventoryCodeSuggester
     internal let scan: InventoryScanPrefill
     internal var fillTask: Task<Void, Never>?
-    private let mintId: () -> String
+    internal let mintId: () -> String
     internal let mintProtocol2ValueId: () -> String
     /// The item as the store has it; nil for a create.
     internal var original: InventoryItem?
@@ -102,7 +102,7 @@ internal final class InventoryItemFormModel {
     /// For a `.repair` request: the held change's values that no longer fit
     /// the current fields, shown struck through with why.
     internal var notCarried: [InventoryQueuedValue] = []
-    private var created = false
+    internal var created = false
     /// What an offer over `photoRunner` reverses: the photo it removed, and
     /// where it stood, so Undo can put it back in place.
     internal var removedPhotos: [InventoryUndoOffer.ID: (photo: InventoryFormPhoto, index: Int)] =
@@ -215,56 +215,6 @@ extension InventoryItemFormModel {
             }
         }
         return true
-    }
-
-    /// Saves the current new item and replaces it with a blank create draft.
-    /// The next draft keeps only the placement and type, which are the two
-    /// values that make repeated entry useful; every item-specific value is
-    /// minted or cleared for the next record.
-    internal func submitAndPrepareForAnother() async -> Bool {
-        guard mode == .create, await submit() else { return false }
-        prepareForAnother()
-        return true
-    }
-
-    private func prepareForAnother() {
-        let placement = draft.placement
-        let placementName = draft.placementName
-        let legacyTypeKey = draft.typeKey
-        let nextProtocol2: InventoryProtocol2Draft?
-        if let type = protocol2Type {
-            var next = InventoryProtocol2Draft(
-                type: type,
-                catalogueRevision: protocol2Draft?.catalogueRevision
-                    ?? protocol2Catalogue?.revision.revision ?? 0)
-            next.prefillDefaults(for: type)
-            next.typeSelectionChanged = true
-            nextProtocol2 = next
-        } else {
-            nextProtocol2 = nil
-        }
-
-        cancelScanPrefill()
-        draft = InventoryItemDraft(
-            id: mintId(), placement: placement, placementName: placementName)
-        draft.typeKey = legacyTypeKey
-        if isOffline { draft.code.assist = .offline }
-        protocol2ComputedDisplays = [:]
-        protocol2ComputedMissingInputs = [:]
-        protocol2Draft = nextProtocol2
-        showsValidation = false
-        freeCode = nil
-        failure = nil
-        codeSuggestionFailure = nil
-        scanFailure = nil
-        prefillFailure = nil
-        prefillStatus = nil
-        created = false
-        removedPhotos = [:]
-        localPhotoData = [:]
-        photoRunner.undoOffer = nil
-        photoRunner.failure = nil
-        formGeneration += 1
     }
 
     internal var commands: [InventoryCommand] {
