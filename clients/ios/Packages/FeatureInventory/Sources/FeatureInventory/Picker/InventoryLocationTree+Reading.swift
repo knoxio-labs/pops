@@ -8,6 +8,8 @@ internal struct InventoryPlacedEntry: Identifiable, Equatable {
     internal let typeName: String
     internal let symbol: String
     internal let quantity: Int
+    /// The first photo's content hash, when the item has one.
+    internal let photo: String?
 
     internal init(item: InventoryItem, catalogue: InventoryCatalogue) {
         id = item.id
@@ -15,6 +17,7 @@ internal struct InventoryPlacedEntry: Identifiable, Equatable {
         typeName = item.typeKey.flatMap { catalogue.type(forKey: $0)?.name } ?? "No type yet"
         symbol = InventorySymbol.record(access: item.containment?.access).system
         quantity = item.quantity.count
+        photo = item.photos.first?.sha256
     }
 }
 
@@ -25,6 +28,8 @@ internal struct InventoryPlacedContainer: Identifiable, Equatable {
     internal let id: String
     internal let name: String
     internal let isOpen: Bool
+    /// The first photo's content hash, when the container has one.
+    internal let photo: String?
     internal let contents: [InventoryPlacedEntry]
 
     internal var symbol: String {
@@ -79,6 +84,7 @@ extension InventoryLocationTree {
                     InventoryPlacedContainer(
                         id: container.id, name: container.name,
                         isOpen: container.containment?.access == .open,
+                        photo: container.photos.first?.sha256,
                         contents: source.inventoryContents(ofContainer: container.id)
                             .filter(\.isLive)
                             .map { InventoryPlacedEntry(item: $0, catalogue: catalogue) })
