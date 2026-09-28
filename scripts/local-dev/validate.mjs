@@ -100,7 +100,10 @@ export async function validate({
       const status = run('mise', ['run', 'typecheck:scripts']);
       if (status !== 0) return status;
     }
-    const result = await runTasks(checks, { concurrency });
+    const result =
+      scope.unitPaths.length === 0
+        ? { status: 0, count: 0, failures: [] }
+        : await runTasks(checks, { concurrency });
     if (result.status !== 0) {
       console.error(`local-check: typecheck failed in ${result.failures.join(', ')}`);
       return result.status;
