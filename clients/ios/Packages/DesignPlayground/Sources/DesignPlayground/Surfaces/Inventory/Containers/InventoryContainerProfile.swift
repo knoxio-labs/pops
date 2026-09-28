@@ -78,8 +78,8 @@ internal struct InventoryContainerProfile: Identifiable {
     }
 }
 
-/// The verbs a container's page puts in its action row: Pick up, Move,
-/// Open or Close, Store here.
+/// The verbs a container's page puts in its action row: Open or Close, Move,
+/// Store here. Pick up or Put back lives in More.
 ///
 /// Built here rather than taken from ``InventoryAction/available(for:style:)``
 /// because containment changes two things that list does not know: Store here
@@ -95,17 +95,25 @@ internal enum InventoryContainerActions {
         }
         let move = InventoryAction("move", "Move", symbol: .move, heading: .whereItIs)
         if profile.isFurniture { return [move, storeHere] }
-        var row = [pickUp(item), move]
+        var row = [move]
         switch item.access {
         case .open:
-            row.append(InventoryAction("close", "Close", symbol: .close, heading: .container))
+            row.insert(
+                InventoryAction("close", "Close", symbol: .close, heading: .container), at: 0)
         case .closed, .sealed:
-            row.append(
-                InventoryAction("reopen", "Open", symbol: .open, heading: .container))
+            row.insert(
+                InventoryAction("reopen", "Open", symbol: .open, heading: .container), at: 0)
         case nil:
             break
         }
         return row + [storeHere]
+    }
+
+    /// The container's placement action for the More menu, kept out of the
+    /// row so Open or Close remains its first action.
+    internal static func overflow(for profile: InventoryContainerProfile) -> [InventoryAction] {
+        guard profile.isActive, !profile.isFurniture else { return [] }
+        return [pickUp(profile.item)]
     }
 
     private static let storeHere = InventoryAction(

@@ -110,9 +110,9 @@ internal enum InventoryItemDetailPrimaryAction {
     /// then the placement verbs, in the order a person would reach for them.
     private static let priority = ["restore", "put-back", "pick-up", "move"]
 
-    /// The ids a capability contributes to the row. Everything else an item
+    /// The ids that stay in the row after placement. Everything else an item
     /// can do is in the More menu.
-    private static let capabilityRow = ["reopen", "close", "put-in"]
+    private static let capabilityRow = ["reopen", "close", "put-in", "edit"]
 
     /// The whole row, primary first.
     internal static func row(for record: InventoryDetailRecord) -> [InventoryAction] {
@@ -123,6 +123,21 @@ internal enum InventoryItemDetailPrimaryAction {
         let placement = actions.filter { priority.contains($0.id) && $0.id != first.id }
         let capability = capabilityRow.compactMap { id in actions.first { $0.id == id } }
         return [first] + placement + capability
+    }
+}
+
+/// Builds the visible action row for item detail, adding Edit to specialized
+/// rows such as a container's without changing their domain-specific order.
+internal enum InventoryItemDetailActionRowModel {
+    internal static func row(
+        for record: InventoryDetailRecord, actions: [InventoryAction]?
+    ) -> [InventoryAction] {
+        let row = actions ?? InventoryItemDetailPrimaryAction.row(for: record)
+        guard actions != nil,
+            !row.contains(where: { $0.id == "edit" }),
+            let edit = InventoryAction.available(for: record).first(where: { $0.id == "edit" })
+        else { return row }
+        return row + [edit]
     }
 }
 
@@ -165,14 +180,13 @@ internal enum InventoryItemDetailPending: String, Identifiable {
     internal var id: String { rawValue }
 }
 
-/// Where a pending screen from Item detail's action row or toolbar goes: the
+/// Where a pending screen from Item detail's action row or More menu goes: the
 /// real item form, editing the item for `.edit`, or opened focused on the
 /// code field for `.label`.
 ///
 /// A free function rather than inline logic at each call site, because Item
-/// detail used to decide this twice — once in `act(_:)`, which reached the
-/// form, and once in the toolbar's own Edit button, which did not, so Edit
-/// kept opening the placeholder from the one place people actually tap it.
+/// detail keeps this routing in one place so the action row and More menu
+/// cannot disagree about which form a pending action opens.
 internal enum InventoryItemDetailRouting {
     @MainActor
     internal static func present(

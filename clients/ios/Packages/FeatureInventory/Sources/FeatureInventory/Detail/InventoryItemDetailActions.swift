@@ -42,30 +42,32 @@ internal struct InventoryItemDetailActionRow: View {
     }
 }
 
-/// The page's own chrome: Edit, and everything that is not one of the verbs
-/// in the row, in a More menu rather than six more bar items.
+/// The page's own overflow chrome: everything that is not one of the verbs in
+/// the row, in a More menu rather than six more bar items.
 internal struct InventoryItemDetailToolbar: ToolbarContent {
     internal let record: InventoryDetailRecord
     @Binding internal var destroying: Bool
     internal let open: (InventoryItemDetailPending) -> Void
+    internal let moreActions: [InventoryAction]
+    internal let onAction: (InventoryAction) -> Void
     internal let perform: (InventoryLifecycleCommand) -> Void
     internal let destroy: () -> Void
 
     internal var body: some ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
-            Button("Edit") { open(.edit) }
-        }
-        ToolbarItem(placement: .primaryAction) {
-            InventoryItemDetailMenu(record: record, open: open, perform: perform)
-                .confirmationDialog(
-                    "Destroy \(record.name)?", isPresented: $destroying,
-                    titleVisibility: .visible
-                ) {
-                    Button("Destroy", role: .destructive, action: destroy)
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("History and documents stay.")
-                }
+            InventoryItemDetailMenu(
+                record: record, open: open, moreActions: moreActions, onAction: onAction,
+                perform: perform
+            )
+            .confirmationDialog(
+                "Destroy \(record.name)?", isPresented: $destroying,
+                titleVisibility: .visible
+            ) {
+                Button("Destroy", role: .destructive, action: destroy)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("History and documents stay.")
+            }
         }
     }
 }
@@ -75,10 +77,26 @@ internal struct InventoryItemDetailToolbar: ToolbarContent {
 internal struct InventoryItemDetailMenu: View {
     internal let record: InventoryDetailRecord
     internal let open: (InventoryItemDetailPending) -> Void
+    internal let moreActions: [InventoryAction]
+    internal let onAction: (InventoryAction) -> Void
     internal let perform: (InventoryLifecycleCommand) -> Void
 
     internal var body: some View {
         Menu {
+            if !moreActions.isEmpty {
+                ForEach(moreActions) { action in
+                    Button {
+                        onAction(action)
+                    } label: {
+                        Label {
+                            Text(action.title)
+                        } icon: {
+                            action.symbol.image
+                        }
+                    }
+                }
+                Divider()
+            }
             if let code = record.code {
                 Button {
                     InventoryPasteboard.copy(code)
