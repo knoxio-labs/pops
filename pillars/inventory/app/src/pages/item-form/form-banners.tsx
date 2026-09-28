@@ -74,10 +74,14 @@ function CreatedBanner({
 }: {
   created: NonNullable<FormBannersProps['justCreated']>;
 }): ReactElement {
+  const photoCopy =
+    created.photos === 0
+      ? ''
+      : ` with ${created.photos} ${created.photos === 1 ? 'photo' : 'photos'}`;
   return (
     <StateBanner
       kind="needs-attention"
-      title={`Created ${created.name} in ${created.place}. Type and place are kept for the next one.`}
+      title={`Created ${created.name} in ${created.place}${photoCopy}. Type and place are kept for the next one.`}
       detail={
         <Button
           variant="link"

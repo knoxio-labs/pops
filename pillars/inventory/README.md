@@ -273,13 +273,22 @@ cell issues, and valid rows commit without rolling back other rows. Omit
 `true` to return `valid` outcomes while rolling back all item, event, mutation,
 and sequence writes.
 
+The inventory app exposes `/inventory/items/bulk-new` as a controlled,
+spreadsheet-like grid over that endpoint. It accepts tab-separated and CSV
+pastes, validates typed rows after a short debounce, creates ready rows while
+leaving refused rows in place, and supports undo, Items navigation, and label
+printing for the items created by the last batch.
+
 ### Web Items browser
 
 The shell mounts the Items browser at `/inventory/items`. Search, type,
 placement, inactive, sort, view and page state live in the URL; the page sends
 those filters to `GET /web/items` and renders the server's totals and pages
 without client-side filtering or sorting. Table, compact and card views share
-the same URL state and keep scrolling within the list body.
+the same URL state and keep scrolling within the list body. Selecting rows also
+offers typed Set type and Set field sheets, plus reversible Retire and Discard
+actions; each applied item write records its own history event and one undo
+toast covers the completed batch.
 
 ### Web inventory routes and navigation
 
@@ -592,8 +601,8 @@ that exist:
   fixture is, who calls it, and what it deliberately does not do.
 - [`src/api/modules/reports/`](src/api/modules/reports/README.md) — the
   read-only report surface and the warranty window it does not own.
-  [`app/src/pages/item-detail/`](app/src/pages/item-detail/README.md),
-  [`app/src/pages/item-form/`](app/src/pages/item-form/README.md).
+- [`app/src/pages/item-detail/`](app/src/pages/item-detail/README.md)
+- [`app/src/pages/item-form/`](app/src/pages/item-form/README.md)
 
 Everything else is documented by the file header comments in the directory
 itself.

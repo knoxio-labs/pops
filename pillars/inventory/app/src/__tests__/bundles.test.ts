@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { INVENTORY_SETTINGS_WIDGET_SLOTS } from '@pops/inventory/manifest';
+
 import { bundles } from '../bundles';
 import { PAGE_COMPONENTS } from '../routes';
 import { allPageSlots } from './page-slots';
@@ -13,7 +15,9 @@ import { allPageSlots } from './page-slots';
  */
 describe('inventory bundles record', () => {
   it('carries exactly the slots the pillar manifest advertises, nested ones included', () => {
-    const declared = [...new Set(allPageSlots())].toSorted();
+    const declared = [
+      ...new Set([...allPageSlots(), ...INVENTORY_SETTINGS_WIDGET_SLOTS]),
+    ].toSorted();
     expect(Object.keys(bundles).toSorted()).toEqual(declared);
   });
 
@@ -36,10 +40,21 @@ describe('inventory bundles record', () => {
   // Deduped, because two paths share `inventory-item-form` — the same edit
   // form under `items/new` and `items/:id/edit`.
   it('binds a distinct component to every slot', () => {
-    expect(new Set(Object.values(bundles)).size).toBe(new Set(allPageSlots()).size);
+    expect(new Set(Object.values(bundles)).size).toBe(Object.keys(bundles).length);
   });
 
-  it('is the route table’s component map, not a copy of it', () => {
-    expect(bundles).toBe(PAGE_COMPONENTS);
+  it('carries settings widgets that are not pages', () => {
+    for (const slot of INVENTORY_SETTINGS_WIDGET_SLOTS) {
+      expect(allPageSlots()).not.toContain(slot);
+      expect(bundles[slot]).toBeDefined();
+    }
+  });
+
+  it('keeps the page entries bound to the route table', () => {
+    for (const slot of allPageSlots()) {
+      expect(bundles[slot as keyof typeof bundles]).toBe(
+        PAGE_COMPONENTS[slot as keyof typeof PAGE_COMPONENTS]
+      );
+    }
   });
 });

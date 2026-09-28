@@ -19,6 +19,13 @@ function currentPhotos(db: CommandDb, itemId: string): (typeof itemPhotos.$infer
     .all();
 }
 
+function normalizePositions(db: CommandDb, itemId: string): void {
+  currentPhotos(db, itemId).forEach((photo, position) => {
+    if (photo.position === position) return;
+    db.update(itemPhotos).set({ position }).where(eq(itemPhotos.id, photo.id)).run();
+  });
+}
+
 function hashesOf(
   photos: readonly { mediaSha256: string | null; filePath: string | null }[]
 ): string[] {
@@ -88,6 +95,7 @@ export const itemRemovePhoto = defineOp({
             sql`${itemPhotos.itemId} = ${row.id} AND ${itemPhotos.mediaSha256} = ${args.sha256}`
           )
           .run();
+        normalizePositions(effectCtx.db, row.id);
         const after = currentPhotos(effectCtx.db, row.id);
         if (after.length === before.length) return undefined;
         return recordSideEffect(changeContextFrom(effectCtx), target, {

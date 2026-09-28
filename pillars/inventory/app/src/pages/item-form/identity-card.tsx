@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@pops/ui';
 
 import { buildWorld } from '../../foundation/model/placement-model';
+import { PhotosField } from '../../foundation/photos/photos-field';
 import { CodeField } from './code-field';
 import { CountAndPlace } from './count-and-place';
 import { draftRow } from './form-opening';
@@ -108,6 +109,13 @@ function IdentityCardContent({
         onQuantity={(value) => api.dispatch({ type: 'quantity', value })}
         onPick={onPick}
         onCreatePlace={onCreatePlace}
+      />
+      <PhotosField
+        photos={api.photos.queue}
+        refused={api.photos.refused}
+        onRemove={api.photos.remove}
+        onRetry={api.photos.retry}
+        onFiles={api.photos.add}
       />
     </CardContent>
   );

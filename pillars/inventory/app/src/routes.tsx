@@ -163,6 +163,7 @@ export const routes: RouteObject[] = [
       { path: 'connections/fixtures', element: <FixturesPage /> },
       { path: 'fixtures/:id', element: <FixtureDetailPage /> },
       { path: 'types', element: <TypeCataloguePage /> },
+      { path: 'types/:id', element: <TypeCataloguePage /> },
       { path: 'types/:id/arrived', element: <TypeArrivedPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'labels', element: <LabelsPage /> },

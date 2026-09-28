@@ -197,7 +197,9 @@ describe('sheets', () => {
     fireEvent.change(screen.getByLabelText('Sheet'), { target: { value: 'custom' } });
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Labels down'), { target: { value: '8' } });
-    fireEvent.change(within(dialog).getByLabelText('Label height'), { target: { value: '33.9' } });
+    fireEvent.change(within(dialog).getByLabelText('Label height'), {
+      target: { value: '33.9' },
+    });
     fireEvent.change(within(dialog).getByLabelText('Top margin'), { target: { value: '12.9' } });
     fireEvent.change(within(dialog).getByLabelText('Down pitch'), { target: { value: '33.9' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Use this sheet' }));

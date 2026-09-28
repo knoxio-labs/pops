@@ -13,12 +13,14 @@ import { ItemsPage } from './items-page';
 import type { ReactElement } from 'react';
 
 import type { ItemRowModel } from '../../foundation/model/model';
+import type { TypeArrival } from '../../inventory-web/type-arrivals';
 import type { CatalogueType } from '../../inventory-web/useCatalogueLookups';
 import type { ItemRows } from '../../inventory-web/useWebItems';
 
 const mocks = vi.hoisted(() => ({
   useItemRows: vi.fn(),
   useCatalogueLookups: vi.fn(),
+  useTypeArrival: vi.fn(),
   usePlacementSources: vi.fn(),
   usePendingItemIds: vi.fn(),
   useItemVerbs: vi.fn(),
@@ -31,6 +33,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../inventory-web/useWebItems', () => ({ useItemRows: mocks.useItemRows }));
 vi.mock('../../inventory-web/useCatalogueLookups.js', () => ({
   useCatalogueLookups: mocks.useCatalogueLookups,
+}));
+vi.mock('../../inventory-web/type-arrivals.js', () => ({
+  useTypeArrival: mocks.useTypeArrival,
 }));
 vi.mock('../../inventory-web/usePlacementSources.js', () => ({
   usePlacementSources: mocks.usePlacementSources,
@@ -156,6 +161,10 @@ function rowsResult(overrides: Partial<ItemRows> = {}): ItemRows {
 
 let currentRows = rowsResult();
 let currentOnline = true;
+let currentArrival: { arrival: TypeArrival | null; dismiss: ReturnType<typeof vi.fn> } = {
+  arrival: null,
+  dismiss: vi.fn(),
+};
 let currentChanged: {
   groups: { entityCount: number }[];
   stale: boolean;
@@ -164,6 +173,10 @@ let currentChanged: {
 
 function LocationProbe(): ReactElement {
   return <output data-testid="location">{useLocation().search + useLocation().pathname}</output>;
+}
+
+function LocationStateProbe(): ReactElement {
+  return <output data-testid="location-state">{JSON.stringify(useLocation().state)}</output>;
 }
 
 function renderPage(initialEntry = '/inventory/items'): void {
@@ -190,6 +203,7 @@ function renderPage(initialEntry = '/inventory/items'): void {
     isPending: false,
     error: null,
   }));
+  mocks.useTypeArrival.mockImplementation(() => currentArrival);
   mocks.usePlacementSources.mockImplementation(() => ({
     world: buildWorld([activeRow], [location]),
     recents: [],
@@ -203,6 +217,7 @@ function renderPage(initialEntry = '/inventory/items'): void {
           <Route path="*" element={<ItemsPage />} />
         </Routes>
         <LocationProbe />
+        <LocationStateProbe />
       </ShortcutProvider>
     </MemoryRouter>
   );
@@ -217,6 +232,7 @@ beforeEach(() => {
   globalThis.IntersectionObserver = TestIntersectionObserver;
   currentRows = rowsResult();
   currentOnline = true;
+  currentArrival = { arrival: null, dismiss: vi.fn() };
   currentChanged = { groups: [], stale: false, reload: vi.fn() };
 });
 
@@ -469,6 +485,42 @@ describe('ItemsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows the Type arrived banner without a publisher and routes Review or Not now', () => {
+    const dismiss = vi.fn();
+    currentArrival = {
+      arrival: {
+        type: catalogueType('garden', 'Garden tools'),
+        matches: 2,
+      },
+      dismiss,
+    };
+    renderPage();
+
+    expect(screen.getByText('2 untyped items look like Garden tools')).toBeInTheDocument();
+    expect(
+      screen.getByText('Garden tools was published. Review them before anything changes.')
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review 2' }));
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/inventory/types/type-garden/arrived'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+    expect(dismiss).toHaveBeenCalledWith('type-garden');
+  });
+
+  it('uses singular copy when one item matches the arrived type', () => {
+    currentArrival = {
+      arrival: {
+        type: catalogueType('garden', 'Garden tools'),
+        matches: 1,
+      },
+      dismiss: vi.fn(),
+    };
+    renderPage();
+
+    expect(screen.getByText('1 untyped item looks like Garden tools')).toBeInTheDocument();
+  });
+
   it('a failed read shows the error and Retry refetches', () => {
     const refetch = vi.fn();
     currentRows = rowsResult({ status: 'error', refetch });
@@ -513,6 +565,26 @@ describe('ItemsPage', () => {
     fireEvent.keyDown(grid, { key: 'j' });
     fireEvent.keyDown(grid, { key: 'Enter' });
     expect(screen.getByTestId('location')).toHaveTextContent('/inventory/items/item-1');
+  });
+
+  it('clicking a row opens the item with the Items list trail', () => {
+    const rows = [
+      activeRow,
+      { ...activeRow, id: 'item-2', name: 'Kitchen 14' },
+      { ...activeRow, id: 'item-3', name: 'Kitchen 15' },
+    ];
+    currentRows = rowsResult({ rows });
+    renderPage('/inventory/items?q=lead');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Kitchen 14' }));
+
+    expect(JSON.parse(screen.getByTestId('location-state').textContent ?? '')).toEqual({
+      listTrail: {
+        listName: 'Items',
+        href: '/inventory/items?q=lead',
+        ids: ['item-1', 'item-2', 'item-3'],
+      },
+    });
   });
 
   it('Escape with rows ticked clears them; with none it leaves the input to the global dismiss', () => {

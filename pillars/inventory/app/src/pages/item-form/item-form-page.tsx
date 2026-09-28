@@ -87,7 +87,7 @@ function openingFor(
   sources: ReturnType<typeof useFormSources>
 ): ItemFormOpening {
   if (id !== undefined && sources.item !== null && sources.catalogue !== undefined)
-    return editOpening(sources.item, sources.catalogue);
+    return editOpening(sources.item, sources.catalogue, sources.world);
   return createOpening(new URLSearchParams(search), sources.world, sources.catalogue);
 }
 

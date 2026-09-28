@@ -139,6 +139,91 @@ describe('device sync ledger', () => {
     expect(actual.attentionCount).toBe(2);
   });
 
+  it('round-trips optional repair targets, ids and resolved item ids', async () => {
+    const body = report({
+      attention: [
+        {
+          id: 'identified-case',
+          kind: 'placement',
+          itemId: 'item-1',
+          itemName: 'Lamp',
+          openedAt: '2026-09-20T10:00:00.000Z',
+          problem: 'The placement changed in two places.',
+          typeId: 'type-1',
+          mine: {
+            value: 'Office 04',
+            source: 'phone',
+            at: '2026-09-20T09:00:00.000Z',
+            target: { kind: 'location', locationId: 'location-1' },
+          },
+          held: {
+            title: 'Held fields',
+            values: [
+              {
+                field: 'Colour',
+                value: 'blue',
+                fit: 'fits',
+                fieldId: 'field-1',
+                values: ['blue'],
+              },
+            ],
+          },
+        },
+      ],
+      resolved: [
+        {
+          id: 'resolved-case',
+          itemName: 'Cable',
+          outcome: 'settled',
+          at: '2026-09-20T08:00:00.000Z',
+          itemId: 'item-2',
+        },
+      ],
+    });
+
+    expect((await postLedger(body)).body).toEqual({ stored: true });
+    const actual = await readLedger();
+    expect(actual.attention[0]).toMatchObject({ ...body.attention[0], deviceId: 'phone-1' });
+    expect(actual.resolved).toEqual([{ ...body.resolved[0], deviceId: 'phone-1' }]);
+  });
+
+  it('round-trips replacement and stale-reference ids, including unknown kinds', async () => {
+    const body = report({
+      attention: [
+        {
+          id: 'catalogue-case',
+          kind: 'type-replaced',
+          itemId: 'item-1',
+          itemName: 'Router',
+          openedAt: '2026-09-20T10:00:00.000Z',
+          problem: 'The type was replaced.',
+          held: {
+            title: 'Held fields',
+            values: [
+              {
+                field: 'Type',
+                value: 'Network',
+                fit: 'replaced',
+                replacementTypeId: 'type-router',
+              },
+              {
+                field: 'Reference',
+                value: 'Desk lamp',
+                fit: 'record-gone',
+                recordId: 'item-lamp',
+                recordKind: 'future-record-kind',
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect((await postLedger(body)).body).toEqual({ stored: true });
+    const actual = await readLedger();
+    expect(actual.attention[0]?.held?.values).toEqual(body.attention[0]?.held?.values);
+  });
+
   it('replaces the latest report and ignores an older report', async () => {
     const first = report({
       reportedAt: '2026-09-20T10:00:00.000Z',

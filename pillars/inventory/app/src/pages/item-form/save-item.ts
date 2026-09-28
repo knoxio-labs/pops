@@ -9,21 +9,32 @@ import {
 import { createItem, saveItemEdits } from './save-item-operations';
 
 import type { InventoryCommand } from '../../inventory-web/commands.js';
+import type { FormTypeDef } from './field-model';
 import type { ItemDraft } from './form-draft';
+import type { SendCommandOptions } from './save-item-operations';
 import type { SaveRefusal, SaveResult } from './save-types';
 
 export type { SaveRefusal, SaveResult, SaveSuccess } from './save-types';
 
+/** Inputs for one edit save, including the revision read when the form opened. */
+export interface SaveEditRequest {
+  readonly id: string;
+  readonly draft: ItemDraft;
+  readonly initial: ItemDraft;
+  readonly type: FormTypeDef | null;
+  readonly catalogueRevision: number;
+  readonly baseRevision: number;
+}
+
 /** Save operations used by the item form. */
 export interface ItemSaveApi {
   readonly saving: boolean;
-  readonly create: (draft: ItemDraft, typeKey: string | null) => Promise<SaveResult>;
-  readonly saveEdits: (
-    id: string,
+  readonly create: (
     draft: ItemDraft,
-    initial: ItemDraft,
-    typeKey: string | null
+    type: FormTypeDef | null,
+    catalogueRevision: number
   ) => Promise<SaveResult>;
+  readonly saveEdits: (request: SaveEditRequest) => Promise<SaveResult>;
 }
 
 function refusalFor(
@@ -42,9 +53,13 @@ function refusalFor(
   return { kind: 'message', message: 'The save was deferred. Try again.' };
 }
 
-async function send(command: InventoryCommand, entityId: string): Promise<SaveResult> {
+async function send(
+  command: InventoryCommand,
+  entityId: string,
+  options: SendCommandOptions = {}
+): Promise<SaveResult> {
   try {
-    const outcome = await sendInventoryMutation({ command, entityId });
+    const outcome = await sendInventoryMutation({ command, entityId, ...options });
     if (outcome.status !== 'applied') return { status: 'refused', refusal: refusalFor(outcome) };
     return { status: 'saved', result: { itemId: entityId, revision: outcome.revision } };
   } catch (error: unknown) {
@@ -74,18 +89,13 @@ export function useItemSave(): ItemSaveApi {
     }
   }, []);
   const create = useCallback(
-    (draft: ItemDraft, typeKey: string | null): Promise<SaveResult> =>
-      run(() => createItem(draft, typeKey, queryClient, send)),
+    (draft: ItemDraft, type: FormTypeDef | null, catalogueRevision: number): Promise<SaveResult> =>
+      run(() => createItem({ draft, type, catalogueRevision, queryClient, send })),
     [queryClient, run]
   );
   const saveEdits = useCallback(
-    (
-      id: string,
-      draft: ItemDraft,
-      initial: ItemDraft,
-      typeKey: string | null
-    ): Promise<SaveResult> =>
-      run(() => saveItemEdits({ id, draft, initial, typeKey, queryClient, send })),
+    (request: SaveEditRequest): Promise<SaveResult> =>
+      run(() => saveItemEdits({ ...request, queryClient, send })),
     [queryClient, run]
   );
   return { saving, create, saveEdits };

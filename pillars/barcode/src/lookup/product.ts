@@ -27,3 +27,14 @@ export const ProductSchema = z.object({
 
 /** Inferred type for the normalised book product wire shape. */
 export type Product = z.infer<typeof ProductSchema>;
+
+/**
+ * Whether a product contains the metadata required to safely keep it in the
+ * long-lived lookup cache.
+ *
+ * A title without an author or language is still useful to the caller, but it
+ * must be revalidated so a later provider can fill the missing fields.
+ */
+export function isProductComplete(product: Product): boolean {
+  return product.contributors.length > 0 && product.language !== undefined;
+}

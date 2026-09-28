@@ -1,4 +1,4 @@
-import Darwin
+import Foundation
 
 /// The zoom a lens needs before a QR code framed at a comfortable size is also
 /// one it can focus on.
@@ -52,7 +52,7 @@ public enum QRFocusGeometry {
         else { return nil }
         let visibleWidth = codeWidth / fillFraction
         let halfAngle = fieldOfViewDegrees / 2 * .pi / 180
-        return (visibleWidth / 2) / tan(halfAngle)
+        return (visibleWidth / 2) / Foundation.tan(halfAngle)
     }
 
     /// The zoom factor that pushes the framing distance out to the lens's

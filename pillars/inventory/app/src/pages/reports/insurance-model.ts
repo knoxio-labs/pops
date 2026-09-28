@@ -7,11 +7,15 @@ import type { ReportEntry } from '../../inventory-web/useReportEntries.js';
 /** The row ordering used by the insurance schedule. */
 export type InsuranceSort = 'value' | 'name';
 
+/** The missing evidence represented by an insurance schedule gap filter. */
+export type InsuranceGapReason = 'unvalued' | 'without-photo';
+
 /** The URL-backed insurance schedule filters. */
 export interface InsuranceOptions {
   scopeId: string | null;
   sort: InsuranceSort;
   gapsOnly: boolean;
+  gapReason?: InsuranceGapReason | null;
 }
 
 /** One room of the insurance schedule. */
@@ -28,7 +32,9 @@ export function entryValue(entry: ReportEntry): number | null {
 }
 
 /** Returns whether an entry is missing a replacement value or photo. */
-export function hasGap(entry: ReportEntry): boolean {
+export function hasGap(entry: ReportEntry, reason: InsuranceGapReason | null = null): boolean {
+  if (reason === 'unvalued') return entryValue(entry) === null;
+  if (reason === 'without-photo') return entry.photos === 0;
   return entryValue(entry) === null || entry.photos === 0;
 }
 
@@ -60,7 +66,7 @@ export function insuranceGroups(
   const groups = new Map<string, InsuranceGroup>();
   for (const entry of entries) {
     if (!inScope(entry, world, options.scopeId)) continue;
-    if (options.gapsOnly && !hasGap(entry)) continue;
+    if (options.gapsOnly && !hasGap(entry, options.gapReason ?? null)) continue;
     const group = groups.get(entry.room.key) ?? {
       roomId: entry.room.key,
       room: entry.room.label,
@@ -122,10 +128,12 @@ export function insuranceCsv(groups: readonly InsuranceGroup[]): string {
 /** Parses the supported insurance controls from the current URL. */
 export function parseInsuranceOptions(params: URLSearchParams): InsuranceOptions {
   const locationId = params.get('locationId');
+  const reason = params.get('reason');
   return {
     scopeId: locationId === null || locationId === '' ? null : locationId,
     sort: params.get('sort') === 'name' ? 'name' : 'value',
     gapsOnly: params.get('gaps') === '1',
+    gapReason: reason === 'unvalued' || reason === 'without-photo' ? reason : null,
   };
 }
 
@@ -134,6 +142,9 @@ export function insuranceSearch(options: InsuranceOptions): string {
   const params = new URLSearchParams();
   if (options.scopeId !== null) params.set('locationId', options.scopeId);
   if (options.gapsOnly) params.set('gaps', '1');
+  if (options.gapReason !== undefined && options.gapReason !== null) {
+    params.set('reason', options.gapReason);
+  }
   if (options.sort === 'name') params.set('sort', 'name');
   const query = params.toString();
   return query === '' ? '' : `?${query}`;

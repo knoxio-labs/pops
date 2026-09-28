@@ -11,8 +11,15 @@ import { Link, useSearchParams } from 'react-router';
 
 import { Alert, AlertDescription, AlertTitle, Button, PageHeader, Skeleton } from '@pops/ui';
 
+import {
+  DEFAULT_INVENTORY_DEFAULTS,
+  labelContentForShows,
+  labelTemplateForShows,
+  useInventoryDefaults,
+} from '../../inventory-web/useInventoryDefaults.js';
 import { AddDialog } from './add-dialog';
 import { MAX_LABEL_IDS, readLabelParams } from './label-params';
+import { loadSheetId } from './label-storage';
 import { PrintOptions } from './print-options';
 import { PrintPreview } from './print-preview';
 import { LabelPrintStyles } from './print-styles';
@@ -21,7 +28,7 @@ import { useLabelJob } from './useLabelJob';
 import { useLabelSubjects } from './useLabelSubjects';
 import { useSaveCode } from './useSaveCode';
 
-import type { LabelParams } from './label-params';
+import type { LabelPageDefaults, LabelParams } from './label-params';
 import type { LabelSubjects } from './useLabelSubjects';
 
 function printLabel(count: number): string {
@@ -71,9 +78,9 @@ function LabelsLoading() {
   );
 }
 
-function useIdsParam() {
+function useIdsParam(defaults: LabelPageDefaults) {
   const [search, setSearch] = useSearchParams();
-  const params = readLabelParams(search);
+  const params = readLabelParams(search, defaults);
   const setIds = (ids: string[], dropContents = false) =>
     setSearch(
       (current) => {
@@ -116,7 +123,11 @@ function LabelsContent({
   params: LabelParams;
   setIds: (ids: string[]) => void;
 }) {
-  const job = useLabelJob(data.subjects, { template: params.template, sheetId: params.sheetId });
+  const job = useLabelJob(data.subjects, {
+    content: params.content,
+    details: data.details,
+    sheetId: params.sheetId,
+  });
   const { save } = useSaveCode();
   const [addOpen, setAddOpen] = useState(false);
   const add = (ids: string[]) => setIds([...params.ids, ...ids]);
@@ -161,10 +172,17 @@ function LabelsContent({
 
 /** The label print page. */
 export function LabelsPage() {
-  const { params, setIds } = useIdsParam();
+  const settings = useInventoryDefaults();
+  const stored = settings.data ?? DEFAULT_INVENTORY_DEFAULTS;
+  const defaults: LabelPageDefaults = {
+    template: labelTemplateForShows(stored.labelShows),
+    content: labelContentForShows(stored.labelShows),
+    sheetId: loadSheetId() ?? stored.labelSheet,
+  };
+  const { params, setIds } = useIdsParam(defaults);
   const data = useLabelSubjects(params.ids);
   useExpandContents(params, data, setIds);
-  if (data.isLoading || params.contents) return <LabelsLoading />;
+  if (settings.isPending || data.isLoading || params.contents) return <LabelsLoading />;
   if (data.error) {
     return (
       <Alert variant="destructive">

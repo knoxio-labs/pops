@@ -19,13 +19,21 @@ const EMPTY_TYPES: readonly CatalogueType[] = [];
 export interface CatalogueLookups {
   readonly catalogue: CatalogueDescriptor | undefined;
   readonly types: readonly CatalogueType[];
+  /** The previous published revision, or null before the catalogue is ready or on its first revision. */
+  readonly baseRevision: number | null;
   readonly typeById: ReadonlyMap<string, CatalogueType>;
   readonly typeNameById: ReadonlyMap<string, string>;
   readonly typeForId: (id: string | null | undefined) => CatalogueType | null;
   readonly typeNameForId: (id: string | null | undefined) => string | null;
   readonly isPending: boolean;
   readonly error: unknown | null;
+  readonly refetch: () => void;
+  readonly revision: number | null;
+  readonly status: 'pending' | 'error' | 'success';
 }
+
+/** The combined published catalogue state used by Type arrived and repair actions. */
+export type PublishedCatalogue = CatalogueLookups;
 
 /** Reads the published catalogue through the cache key shared with the editor. */
 export function useCatalogue() {
@@ -48,6 +56,10 @@ export function useCatalogueLookups(): CatalogueLookups {
   return {
     catalogue: catalogueQuery.data,
     types,
+    baseRevision:
+      catalogueQuery.isPending || catalogueQuery.error !== null
+        ? null
+        : (catalogueQuery.data?.revision.baseRevision ?? null),
     typeById,
     typeNameById,
     typeForId: (id) => (id === null || id === undefined ? null : (typeById.get(id) ?? null)),
@@ -55,7 +67,17 @@ export function useCatalogueLookups(): CatalogueLookups {
       id === null || id === undefined ? null : (typeNameById.get(id) ?? null),
     isPending: catalogueQuery.isPending,
     error: catalogueQuery.error,
+    refetch: () => {
+      void catalogueQuery.refetch();
+    },
+    revision: catalogueQuery.data?.revision.revision ?? null,
+    status: catalogueQuery.status,
   };
+}
+
+/** Provides the published catalogue and revision metadata for web features. */
+export function usePublishedCatalogue(): PublishedCatalogue {
+  return useCatalogueLookups();
 }
 
 /** Adds one selected type to the shared catalogue lookup result. */
