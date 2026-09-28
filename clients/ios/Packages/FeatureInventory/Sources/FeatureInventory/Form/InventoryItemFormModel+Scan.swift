@@ -44,7 +44,8 @@ extension InventoryItemFormModel {
         guard !Task.isCancelled else { return .miss }
         switch result {
         case .found(let product):
-            let isbn = identifier.kind == InventoryIdentifierDraft.Kind.isbn.rawValue
+            let isbn: String? =
+                identifier.kind == InventoryIdentifierDraft.Kind.isbn.rawValue
                 ? identifier.value
                 : nil
             return fillFromProduct(product, isbn: isbn)
