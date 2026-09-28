@@ -125,6 +125,63 @@ describe('detailsFor', () => {
     });
   });
 
+  it('prints inherited fields first and keeps each field under its owner type', () => {
+    const inherited = field({
+      id: 'field-material',
+      key: 'material',
+      label: 'Material',
+      typeId: 'type-bedding',
+    });
+    const local = field({
+      id: 'field-fitted',
+      key: 'fitted',
+      label: 'Fitted',
+      typeId: 'type-sheet',
+    });
+    const parent: CatalogueType = {
+      ...type,
+      fields: [inherited],
+      id: 'type-bedding',
+      key: 'bedding',
+      label: 'Bedding',
+    };
+    const child: CatalogueType = {
+      ...type,
+      fields: [local],
+      id: 'type-sheet',
+      key: 'sheet',
+      label: 'Sheet',
+      parentTypeId: parent.id,
+    };
+    const childItem: WebItem = {
+      ...item,
+      fieldValues: [
+        { catalogueRevision: 1, fieldId: inherited.id, source: 'stored', values: ['Cotton'] },
+        { catalogueRevision: 1, fieldId: local.id, source: 'stored', values: [true] },
+      ],
+      typeId: child.id,
+      typeKey: child.key,
+    };
+
+    expect(
+      detailsFor(
+        childItem,
+        [],
+        new Map([
+          [parent.id, parent],
+          [child.id, child],
+        ])
+      )
+    ).toEqual({
+      typeName: 'Sheet',
+      fields: [
+        { id: 'bedding.material', label: 'Material', value: 'Cotton' },
+        { id: 'sheet.fitted', label: 'Fitted', value: 'Yes' },
+      ],
+      contents: [],
+    });
+  });
+
   it('retains legacy fields while the catalogue is unavailable', () => {
     const legacy = { ...item, fields: { Colour: 'White' }, typeId: null, typeKey: 'legacy' };
 

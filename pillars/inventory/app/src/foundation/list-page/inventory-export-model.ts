@@ -1,22 +1,40 @@
 import { formatWireValue } from '../../catalogue-editor/computed/preview-model.js';
 import { expressionContext } from '../../catalogue-editor/expression/wire.js';
+import { effectiveType } from '../../lib/type-tree.js';
+
+import type { ExpressionField } from '@pops/inventory/expression';
 
 import type { WebItem } from '../../inventory-web/item-row-model.js';
 import type { PlacementWorld } from '../model/placement-model.js';
 import type { ExportRow } from './inventory-csv.js';
+
+function expressionFieldsFor(
+  types: Parameters<typeof expressionContext>[0],
+  typeId: string
+): ReadonlyMap<string, ExpressionField> | null {
+  const type = expressionContext(types, typeId, undefined).types.find(
+    (candidate) => candidate.id === typeId
+  );
+  if (type === undefined) return null;
+
+  const fields = new Map<string, ExpressionField>();
+  for (const field of type.fields) fields.set(field.id, field);
+  return fields;
+}
 
 function fieldValues(
   item: WebItem,
   types: Parameters<typeof expressionContext>[0]
 ): Record<string, string> {
   if (item.typeId === null) return {};
-  const type = expressionContext(types, item.typeId, undefined).types.find(
-    (candidate) => candidate.id === item.typeId
-  );
-  if (type === undefined) return {};
+  const type = effectiveType(types, item.typeId);
+  const expressionFields = expressionFieldsFor(types, item.typeId);
+  if (type === null || expressionFields === null) return {};
 
   const fields: Record<string, string> = {};
   for (const field of type.fields) {
+    const expressionField = expressionFields.get(field.id);
+    if (expressionField === undefined) continue;
     if (field.storage === 'stored') {
       const stored = item.fieldValues.find(
         (entry) => entry.fieldId === field.id && entry.source === 'stored'
@@ -24,14 +42,14 @@ function fieldValues(
       fields[field.label] =
         stored === undefined
           ? ''
-          : stored.values.map((value) => formatWireValue(value, field)).join('; ');
+          : stored.values.map((value) => formatWireValue(value, expressionField)).join('; ');
       continue;
     }
 
     const computed = item.computedValues.find((entry) => entry.fieldId === field.id);
     fields[field.label] =
       computed?.state === 'ok' || computed?.state === 'overridden'
-        ? formatWireValue(computed.values[0], field)
+        ? formatWireValue(computed.values[0], expressionField)
         : '';
   }
   return fields;
