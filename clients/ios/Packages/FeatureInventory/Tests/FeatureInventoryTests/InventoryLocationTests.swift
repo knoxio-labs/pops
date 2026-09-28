@@ -114,4 +114,31 @@ internal struct InventoryLocationTests {
 
         #expect(putBack.kind == .putBack(.container("crate")))
     }
+
+    @Test("the destination tree puts places and nested open containers in one hierarchy")
+    func destinationTreeIncludesContainers() async throws {
+        let base = InMemoryInventoryStore(
+            items: [
+                Fixture.item("lamp", "Lamp", at: .hand),
+                Fixture.item("box", "Box", at: .location("home"), access: .open),
+                Fixture.item("tray", "Tray", at: .container("box"), access: .open),
+            ],
+            locations: [
+                Self.location("home", "Home"),
+                Self.location("bedroom", "Bedroom", parentId: "home"),
+            ])
+        var iterator = base.observe(
+            InventoryQuery {
+                InventoryPlacementChoices(reading: $0, for: .items(["lamp"]))
+            }
+        ).makeAsyncIterator()
+        let choices = try #require(await iterator.next())
+
+        #expect(
+            choices.destinations.children(of: "home").map { $0.destination.name }
+                == ["Bedroom", "Box"])
+        #expect(
+            choices.destinations.children(of: "box").map { $0.destination.name } == ["Tray"])
+        #expect(choices.destinations.matching("tray").map { $0.destination.name } == ["Tray"])
+    }
 }
