@@ -102,7 +102,10 @@ internal struct InventoryContainerContentsSection: View {
                 detail: "\(entry.typeName ?? "No type yet") · "
                     + InventoryRelativeTime.text(entry.added),
                 symbol: InventorySymbol.record(access: entry.item.containment?.access).system,
-                value: entry.item.quantity.count == 1 ? nil : "\(entry.item.quantity.count)"
+                value: entry.item.quantity.count == 1 ? nil : "\(entry.item.quantity.count)",
+                photo: entry.item.photos.first?.sha256,
+                loadPhoto: thumbnail,
+                showsKindBadge: entry.item.isContainer
             )
         }
         .buttonStyle(.plain)

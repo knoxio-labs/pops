@@ -24,7 +24,7 @@ The dashboard, its panels, tiles, rows and sync pill are the design playground's
 
 Everything the dashboard links to has its own screen: item detail (POPS-4062), containers and locations (POPS-4064), the item form (POPS-4063), the items browser, In hand and selection mode (POPS-4065), Sync and repair (POPS-4074), the scanner (POPS-4078), and the full-screen open containers list (POPS-4113). The playground has no design for Recent activity; it is the item History page over every record's newest events (POPS-4198), and a Recent work row opens the record its event is about.
 
-Location and container-content rows use the same leading selection mark as the Items browser: tapping it starts selection, and the shared bottom action bar applies Move and the other actions to every selected row.
+Location and container-content rows use the same leading selection mark as the Items browser: tapping it starts selection, and the shared bottom action bar applies Move and the other actions to every selected row. When an item has a photo, its thumbnail replaces the kind glyph; container rows retain a small container badge over the photo.
 
 ## One placement picker
 

@@ -81,7 +81,10 @@ internal struct InventoryLocationSections: View {
                 detail: container.isOpen ? "Open container" : "Container",
                 symbol: container.symbol,
                 value: "\(container.contents.count)",
-                tone: container.isOpen ? .popsWarning : .popsMutedForeground)
+                tone: container.isOpen ? .popsWarning : .popsMutedForeground,
+                photo: container.photo,
+                loadPhoto: { await model.thumbnail($0) },
+                showsKindBadge: true)
         }
         .buttonStyle(.plain)
     }
@@ -90,7 +93,9 @@ internal struct InventoryLocationSections: View {
         NavigationLink(value: InventoryRoute.item(entry.id)) {
             InventoryGroundedRowLabel(
                 title: entry.name, detail: entry.typeName, symbol: entry.symbol,
-                value: entry.quantity == 1 ? nil : "\(entry.quantity)")
+                value: entry.quantity == 1 ? nil : "\(entry.quantity)",
+                photo: entry.photo,
+                loadPhoto: { await model.thumbnail($0) })
         }
         .buttonStyle(.plain)
     }
