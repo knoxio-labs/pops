@@ -166,7 +166,7 @@ describe('S6 protocol-1 refusal and protocol-2 success at the BFM boundary', () 
     expect(errorCodeSchema.parse(downgrade.body).code).toBe('protocol_minimum_downgrade');
 
     const unsupported = await stack.inventory('/type-catalogue/protocol-rollout', {
-      body: { expectedMinimumProtocol: 2, minimumProtocol: 3 },
+      body: { expectedMinimumProtocol: 2, minimumProtocol: 4 },
     });
     expect(unsupported.status).toBe(400);
     expect(errorCodeSchema.parse(unsupported.body).code).toBe('protocol_not_supported');

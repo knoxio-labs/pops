@@ -84,10 +84,30 @@ function buildPositiveValueVectors(
   const referenceEdgeVectors = buildReferenceEdgeVectors(db, engine, live, edgeTargets);
   const integerOne = kindVectors.find((vector) => vector.fieldId === live.fieldIds.integerOne);
   if (!integerOne) throw new Error('no integer one vector');
+  const child = engine.createItem(
+    live,
+    live.liveRevision,
+    'child type with inherited required field',
+    [{ fieldId: live.inheritedRequiredFieldId, values: ['Inherited value'] }],
+    live.childTypeId
+  );
+  const childItem = projectItem(db, child.itemId);
   return [
     ...kindVectors,
     ...referenceEdgeVectors,
     ...buildAbsentAndComputedVectors(db, engine, live, integerOne),
+    {
+      name: 'child type with inherited required field',
+      kind: 'short_text',
+      cardinality: 'one',
+      storage: 'stored',
+      fieldId: live.inheritedRequiredFieldId,
+      itemId: child.itemId,
+      item: childItem,
+      fieldValue: fieldValueOf(childItem, live.inheritedRequiredFieldId),
+      computedValue: null,
+      command: child.command,
+    },
   ];
 }
 

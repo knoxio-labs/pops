@@ -83,6 +83,7 @@ function catalogueType(key: string, label: string): CatalogueType {
     description: null,
     fields: [],
     legacyLabels: [],
+    parentTypeId: null,
     presentation: {},
     replacedBy: null,
     revision: 1,

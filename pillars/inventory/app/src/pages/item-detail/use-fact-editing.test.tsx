@@ -80,6 +80,7 @@ const catalogueType = {
   key: 'tools',
   label: 'Tools',
   legacyLabels: [],
+  parentTypeId: null,
   presentation: {},
   replacedBy: null,
   revision: 1,

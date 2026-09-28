@@ -52,7 +52,8 @@ internal enum InventoryListFixture {
         photo: String? = nil
     ) -> InventoryRecord {
         InventoryRecord(
-            id: id, name: id, typeKey: type, typeName: type, code: code,
+            id: id, name: id, typeKey: type,
+            typeKeys: type.map { Set([$0]) } ?? Set(), typeName: type, code: code,
             quantity: InventoryQuantity(count: quantity), lifecycle: lifecycle, access: access,
             placement: placement, path: [], sync: sync, photo: photo, createdAt: now)
     }

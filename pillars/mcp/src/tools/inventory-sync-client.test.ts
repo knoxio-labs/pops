@@ -2,8 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { callOk, mockPillarInventory, pillarMockGetter } from './test-helpers.js';
 
+import type { ServerPillarOptions } from '@pops/pillar-sdk/server';
+
+const getPillarMock = vi.hoisted(() =>
+  vi.fn<(pillarId: string, options?: ServerPillarOptions) => unknown>()
+);
+
 vi.mock('../pillar-client.js', () => ({
-  getPillar: pillarMockGetter,
+  getPillar: getPillarMock,
   __resetPillarClientForTests: () => {},
 }));
 
@@ -14,6 +20,7 @@ const inventory = mockPillarInventory.inventory;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getPillarMock.mockImplementation((pillarId: string) => pillarMockGetter(pillarId));
 });
 
 describe('fetchItemRevision', () => {
@@ -31,6 +38,17 @@ describe('fetchItemRevision', () => {
 });
 
 describe('sendItemMutation', () => {
+  it('sends the supported inventory protocol on item writes', async () => {
+    await sendItemMutation({
+      entityId: 'item_1',
+      op: 'item.setFull',
+      args: { full: true },
+      baseRevision: 1,
+    });
+    const options = getPillarMock.mock.calls.at(-1)?.[1];
+    expect(options?.extraHeaders?.()).toEqual({ 'pops-inventory-protocol': '3' });
+  });
+
   it('preserves caller retry identity and catalogue revision in a one-mutation batch', async () => {
     inventory.sync.mutations.mockResolvedValue(
       callOk({

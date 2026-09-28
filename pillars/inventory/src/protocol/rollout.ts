@@ -5,7 +5,7 @@ import { syncMeta, type SyncMetaKey } from '../db/index.js';
 import type { CommandDb } from '../domain/commands/index.js';
 
 /** Highest inventory sync protocol understood by this server build. */
-export const SUPPORTED_INVENTORY_PROTOCOL = 2;
+export const SUPPORTED_INVENTORY_PROTOCOL = 3;
 
 /**
  * First protocol that carries ADR-002 D5's persisted definitions and values, and
@@ -13,6 +13,9 @@ export const SUPPORTED_INVENTORY_PROTOCOL = 2;
  * never used raises the catalogue minimum to at least this protocol.
  */
 export const PERSISTED_CATALOGUE_PROTOCOL = 2;
+
+/** Protocol for catalogues whose types have parents. */
+export const TYPE_TREE_PROTOCOL = 3;
 
 function requireMeta(db: CommandDb, key: SyncMetaKey): string {
   const row = db.select().from(syncMeta).where(eq(syncMeta.key, key)).get();

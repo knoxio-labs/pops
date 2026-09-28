@@ -57,6 +57,7 @@ function type(fields: CatalogueField[]): CatalogueType {
     key: 'equipment',
     label: 'Equipment',
     legacyLabels: [],
+    parentTypeId: null,
     presentation: {},
     replacedBy: null,
     revision: 1,

@@ -53,6 +53,7 @@ const arrivedType: CatalogueType = {
   key: 'garden',
   label: 'Garden tools',
   legacyLabels: ['Garden', 'Workshop'],
+  parentTypeId: null,
   presentation: {},
   replacedBy: null,
   revision: 8,

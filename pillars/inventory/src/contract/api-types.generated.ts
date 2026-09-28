@@ -5914,6 +5914,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6141,6 +6143,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6308,6 +6312,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6366,6 +6372,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -6614,6 +6622,8 @@ export interface operations {
                 key: string;
                 label: string;
                 legacyLabels: string[];
+                /** Format: uuid */
+                parentTypeId: string | null;
                 presentation: {
                   [key: string]: unknown;
                 };
@@ -6801,6 +6811,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6878,6 +6890,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -7119,6 +7133,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -7498,6 +7514,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -7741,6 +7759,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -8088,6 +8108,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };

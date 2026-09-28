@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { validateTypeTree } from '../authoring-type-tree-validation.js';
 import { ancestorIds, descendantIds, resolveTypeTree, typeChain } from '../catalogue-tree.js';
 
 import type { UnresolvedItemType, UnresolvedItemTypeField } from '../catalogue-types.js';
@@ -140,10 +141,34 @@ describe('resolveTypeTree', () => {
       }),
     ];
 
-    expect(typeChain(types, 'orphan')).toEqual({ ancestorIds: [], stop: 'missing_parent' });
+    expect(typeChain(types, 'orphan')).toEqual({
+      ancestorIds: [],
+      stop: 'missing_parent',
+      missingParentId: 'missing',
+    });
     expect(resolveTypeTree(types)[0]?.effectiveFields.map((entry) => entry.id)).toEqual([
       'orphan-field',
     ]);
+  });
+
+  it('reports the missing ancestor for descendants of a broken chain', () => {
+    const types = resolveTypeTree([
+      type('grandparent', { parentTypeId: 'missing-grandparent' }),
+      type('parent', { parentTypeId: 'grandparent' }),
+      type('child', { parentTypeId: 'parent' }),
+    ]);
+
+    const issues = validateTypeTree({
+      revision: { revision: 1, baseRevision: null, status: 'draft', minimumProtocol: 1 },
+      types,
+    });
+
+    expect(issues).toContainEqual({
+      definitionId: 'child',
+      path: 'parentTypeId',
+      code: 'type_parent_unknown',
+      message: 'Parent type missing-grandparent does not exist',
+    });
   });
 
   it('includes archived descendants', () => {

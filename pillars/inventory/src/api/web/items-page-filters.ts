@@ -11,7 +11,11 @@ import {
   type SQLWrapper,
 } from 'drizzle-orm';
 
-import { resolvePublishedType } from '../../catalogue/index.js';
+import {
+  descendantIds,
+  loadPublishedCatalogue,
+  resolvePublishedType,
+} from '../../catalogue/index.js';
 import { catalogueRevisions, itemTypes, items } from '../../db/index.js';
 import { atEffectiveLocationSql, withinSql } from './placement-scope.js';
 
@@ -58,11 +62,23 @@ function strictBooleanCondition(column: SQLWrapper, value: boolean): SQL {
   return value ? sql`${column} = 1` : sql`(${column} IS NULL OR ${column} = 0)`;
 }
 
+/** Returns the item-type predicate for a case-insensitive published type key and its descendants. */
+export function typeKeyCondition(db: CommandDb, typeKey: string): SQL {
+  const catalogue = loadPublishedCatalogue(db);
+  if (catalogue === null) return sql`0`;
+
+  const type = catalogue.types.find(
+    (candidate) => candidate.key.toLocaleLowerCase() === typeKey.toLocaleLowerCase()
+  );
+  if (type === undefined) return sql`0`;
+
+  return inArray(items.typeId, [type.id, ...descendantIds(catalogue.types, type.id)]);
+}
+
 function typeConditions(db: CommandDb, filter: WebItemsFilter): SQL[] {
   const conditions: SQL[] = [];
   if (filter.typeKey !== undefined) {
-    const type = resolvePublishedType(db, { key: filter.typeKey });
-    conditions.push(type === null ? sql`0` : eq(items.typeId, type.id));
+    conditions.push(typeKeyCondition(db, filter.typeKey));
   }
   if (filter.untyped !== undefined) {
     conditions.push(filter.untyped ? isNull(items.typeId) : isNotNull(items.typeId));

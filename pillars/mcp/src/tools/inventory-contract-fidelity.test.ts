@@ -70,6 +70,15 @@ function discriminants(schema: unknown): readonly string[] {
   });
 }
 
+function shape(variants: readonly unknown[], kind: string) {
+  const variant = variants.find((entry) => discriminants({ oneOf: [entry] }).includes(kind));
+  if (variant === undefined) throw new Error(`${kind} operation is missing`);
+  return {
+    properties: Object.keys(object(property(variant, 'properties'), kind)).toSorted(),
+    required: strings(property(variant, 'required'), `${kind} required`).toSorted(),
+  };
+}
+
 /** Resolves a `{ $ref: '#/components/schemas/Name' }` against the OpenAPI document root. */
 function resolveRef(spec: unknown, schema: unknown): unknown {
   const ref = property(schema, '$ref');
@@ -149,14 +158,6 @@ describe('inventory MCP schema fidelity', () => {
       ),
       'operation oneOf'
     );
-    const shape = (variants: readonly unknown[], kind: string) => {
-      const variant = variants.find((entry) => discriminants({ oneOf: [entry] }).includes(kind));
-      if (variant === undefined) throw new Error(`${kind} operation is missing`);
-      return {
-        properties: Object.keys(object(property(variant, 'properties'), kind)).toSorted(),
-        required: strings(property(variant, 'required'), `${kind} required`).toSorted(),
-      };
-    };
 
     for (const kind of ['archive_type', 'archive_field', 'archive_enum_option']) {
       expect(shape(catalogueOperationSchema.oneOf, kind), kind).toEqual(
@@ -165,6 +166,21 @@ describe('inventory MCP schema fidelity', () => {
     }
     expect(shape(catalogueOperationSchema.oneOf, 'archive_field').properties).toContain(
       'replacedBy'
+    );
+  });
+
+  it('matches the producer put_type property key set', () => {
+    const patchSchema = requestSchema(spec, '/type-catalogue/drafts/{revision}', 'patch');
+    const producerVariants = array(
+      property(
+        property(property(property(patchSchema, 'properties'), 'operations'), 'items'),
+        'oneOf'
+      ),
+      'operation oneOf'
+    );
+
+    expect(shape(catalogueOperationSchema.oneOf, 'put_type').properties).toEqual(
+      shape(producerVariants, 'put_type').properties
     );
   });
 

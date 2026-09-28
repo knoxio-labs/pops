@@ -11,29 +11,114 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
+import { createTestTransport, type BoundAgent } from './test-http.js';
 import { makeClient } from './test-utils.js';
+
+import type { Express } from 'express';
 
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
+let inventoryApp: Express | null = null;
+const catalogueTransport = createTestTransport();
 
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'inventory-api-web-items-test-'));
   inventoryDb = openInventoryDb(join(tmpDir, 'inventory.db'));
+  inventoryApp = createInventoryApiApp({
+    inventoryDb,
+    version: '0.0.1-test',
+    selfBaseUrl: 'http://localhost:3005',
+    identityResolver: async () => ({
+      user: { email: 'owner@example.com' },
+      serviceAccount: null,
+    }),
+  });
 });
 
 afterEach(() => {
   inventoryDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
+  inventoryApp = null;
 });
 
+function testApp(): Express {
+  if (inventoryApp === null) throw new Error('inventory app is not initialized');
+  return inventoryApp;
+}
+
 function client() {
-  return makeClient(
-    createInventoryApiApp({
-      inventoryDb,
-      version: '0.0.1-test',
-      selfBaseUrl: 'http://localhost:3005',
-    })
-  );
+  return makeClient(testApp());
+}
+
+function catalogueApi(): BoundAgent {
+  return catalogueTransport.requestOn(testApp());
+}
+
+interface CatalogueType {
+  readonly id: string;
+  readonly key: string;
+}
+
+interface CatalogueDescriptor {
+  readonly revision: { readonly revision: number; readonly draftVersion: number };
+  readonly types: CatalogueType[];
+}
+
+async function publishType(key: string, parentTypeId?: string): Promise<string> {
+  const api = catalogueApi();
+  const currentResponse = await api.get('/type-catalogue');
+  expect(currentResponse.status, JSON.stringify(currentResponse.body)).toBe(200);
+  const current: CatalogueDescriptor = currentResponse.body;
+
+  const createdResponse = await api
+    .post('/type-catalogue/drafts')
+    .send({ baseRevision: current.revision.revision });
+  expect(createdResponse.status, JSON.stringify(createdResponse.body)).toBe(201);
+  const created: CatalogueDescriptor = createdResponse.body;
+
+  const patchedResponse = await api
+    .patch(`/type-catalogue/drafts/${created.revision.revision}`)
+    .send({
+      baseRevision: current.revision.revision,
+      expectedDraftVersion: created.revision.draftVersion,
+      operations: [
+        {
+          kind: 'put_type',
+          key,
+          label: key,
+          ...(parentTypeId === undefined ? {} : { parentTypeId }),
+        },
+      ],
+    });
+  expect(patchedResponse.status, JSON.stringify(patchedResponse.body)).toBe(200);
+  const patched: { readonly draft: CatalogueDescriptor } = patchedResponse.body;
+
+  const publishedResponse = await api
+    .post(`/type-catalogue/drafts/${created.revision.revision}/publish`)
+    .send({
+      baseRevision: current.revision.revision,
+      expectedDraftVersion: patched.draft.revision.draftVersion,
+    });
+  expect(publishedResponse.status, JSON.stringify(publishedResponse.body)).toBe(200);
+  const published: CatalogueDescriptor = publishedResponse.body;
+  const type = published.types.find((candidate) => candidate.key === key);
+  if (type === undefined) throw new Error(`published type ${key} was not created`);
+  return type.id;
+}
+
+async function publishTypeTree(): Promise<void> {
+  const rolloutResponse = await catalogueApi().get('/type-catalogue/protocol-rollout');
+  expect(rolloutResponse.status, JSON.stringify(rolloutResponse.body)).toBe(200);
+  const rollout: { readonly minimumProtocol: number } = rolloutResponse.body;
+  const activated = await catalogueApi().post('/type-catalogue/protocol-rollout').send({
+    expectedMinimumProtocol: rollout.minimumProtocol,
+    minimumProtocol: 3,
+  });
+  expect(activated.status, JSON.stringify(activated.body)).toBe(200);
+
+  const beddingId = await publishType('bedding');
+  const linenId = await publishType('linen', beddingId);
+  await publishType('sheet', linenId);
 }
 
 function expectIds(actual: readonly { id: string }[], expected: readonly string[]): void {
@@ -286,6 +371,28 @@ describe('web.items.list', () => {
     expectIds((await client().web.listItems({ isContainer: 'true', lifecycle: 'retired' })).items, [
       retired.data.id,
     ]);
+  });
+
+  it("matches a type filter against the type's descendants", async () => {
+    await publishTypeTree();
+    const bedding = await client().items.create({ itemName: 'Bedding' });
+    const linen = await client().items.create({ itemName: 'Linen' });
+    const sheet = await client().items.create({ itemName: 'Sheet' });
+    setPublishedType(bedding.data.id, 'bedding');
+    setPublishedType(linen.data.id, 'linen');
+    setPublishedType(sheet.data.id, 'sheet');
+
+    const beddingPage = await client().web.listItems({ typeKey: 'bedding', limit: 50 });
+    const linenPage = await client().web.listItems({ typeKey: 'linen', limit: 50 });
+    const sheetPage = await client().web.listItems({ typeKey: 'sheet', limit: 50 });
+
+    expect(new Set(beddingPage.items.map((item) => item.id))).toEqual(
+      new Set([bedding.data.id, linen.data.id, sheet.data.id])
+    );
+    expect(new Set(linenPage.items.map((item) => item.id))).toEqual(
+      new Set([linen.data.id, sheet.data.id])
+    );
+    expect(sheetPage.items.map((item) => item.id)).toEqual([sheet.data.id]);
   });
 
   it('uses lifecycle as an explicit override and never lists tombstones', async () => {

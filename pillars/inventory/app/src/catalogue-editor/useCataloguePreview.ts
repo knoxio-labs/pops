@@ -17,6 +17,7 @@ interface PreviewRunState {
   readonly sequence: MutableRefObject<number>;
   readonly setCompatibility: Dispatch<SetStateAction<CompatibilitySnapshot>>;
   readonly setError: Dispatch<SetStateAction<unknown>>;
+  readonly setErrorOperations: Dispatch<SetStateAction<readonly CatalogueOperation[] | null>>;
 }
 
 /**
@@ -51,7 +52,10 @@ function runCataloguePreview(
           operations,
         });
     } catch (previewError) {
-      if (state.sequence.current === requestSequence) state.setError(previewError);
+      if (state.sequence.current === requestSequence) {
+        state.setError(previewError);
+        state.setErrorOperations(operations);
+      }
     }
   })();
 }
@@ -64,12 +68,16 @@ export function useCataloguePreview(
   const sequence = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [errorOperations, setErrorOperations] = useState<readonly CatalogueOperation[] | null>(
+    null
+  );
 
   const cancel = useCallback(() => {
     sequence.current += 1;
     if (timer.current !== null) clearTimeout(timer.current);
     timer.current = null;
     setError(null);
+    setErrorOperations(null);
   }, []);
 
   const preview = useCallback(
@@ -77,10 +85,11 @@ export function useCataloguePreview(
       sequence.current += 1;
       if (timer.current !== null) clearTimeout(timer.current);
       setError(null);
+      setErrorOperations(null);
       timer.current = setTimeout(() => {
         timer.current = null;
         runCataloguePreview(
-          { queryClient, sequence, setCompatibility, setError },
+          { queryClient, sequence, setCompatibility, setError, setErrorOperations },
           [operation],
           true
         );
@@ -96,7 +105,12 @@ export function useCataloguePreview(
       timer.current = null;
     }
     setError(null);
-    runCataloguePreview({ queryClient, sequence, setCompatibility, setError }, [], false);
+    setErrorOperations(null);
+    runCataloguePreview(
+      { queryClient, sequence, setCompatibility, setError, setErrorOperations },
+      [],
+      false
+    );
   }, [queryClient, setCompatibility]);
 
   useEffect(
@@ -107,5 +121,5 @@ export function useCataloguePreview(
     []
   );
 
-  return { cancel, error, preview, recheck };
+  return { cancel, error, errorOperations, preview, recheck };
 }
