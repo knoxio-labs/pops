@@ -1,4 +1,4 @@
-import { Check, LoaderCircle, Sparkles } from 'lucide-react';
+import { Check, LoaderCircle, QrCode } from 'lucide-react';
 import { useId } from 'react';
 
 import { Button, Input, Label } from '@pops/ui';
@@ -140,7 +140,7 @@ export function CodeField({
             aria-disabled={disabled}
             disabled={disabled}
             onClick={disabled ? undefined : onSuggest}
-            prefix={<Sparkles className="size-4" aria-hidden />}
+            prefix={<QrCode className="size-4" aria-hidden />}
           />
         </HintTooltip>
       </div>
