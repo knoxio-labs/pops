@@ -15,6 +15,10 @@ import { itemDetailBannerState } from './use-item-detail-state';
 
 import type { ReactElement } from 'react';
 
+import type {
+  WebChangesHeadResponse,
+  WebSyncLedgerGetResponse,
+} from '../../inventory-api/types.gen';
 import type { ItemDetailModel } from './detail-model';
 
 const mocks = vi.hoisted(() => ({
@@ -99,8 +103,45 @@ const model: ItemDetailModel = {
   eventCount: 0,
 };
 
+const changedGroup: WebChangesHeadResponse['groups'][number] = {
+  actorId: 'phone-1',
+  actorKind: 'device',
+  actorLabel: 'Phone',
+  entityCount: 1,
+  eventCount: 1,
+  kindCounts: { edited: 1 },
+  latestServerTime: '2026-09-01T00:01:00Z',
+};
+
+const conflictCase: WebSyncLedgerGetResponse['attention'][number] = {
+  id: 'case-1',
+  itemId: 'item-1',
+  itemName: 'Desk lamp',
+  kind: 'field',
+  problem: 'The name',
+  deviceId: 'phone-1',
+  openedAt: '2026-09-01T00:01:00Z',
+  mine: { at: '2026-09-01T00:01:00Z', source: 'Web', value: 'Desk lamp' },
+  theirs: { at: '2026-09-01T00:01:00Z', source: 'Phone', value: 'Lamp' },
+};
+
+const conflictLedger: WebSyncLedgerGetResponse = {
+  attention: [conflictCase],
+  attentionCount: 1,
+  devices: [],
+  receivedHead: null,
+  resolved: [],
+  waiting: [],
+};
+
 function LocationProbe(): ReactElement {
-  return <output data-testid="route">{useLocation().pathname}</output>;
+  const location = useLocation();
+  return (
+    <output data-testid="route">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
 }
 
 function NavigationProbe(): ReactElement {
@@ -247,6 +288,31 @@ describe('ItemDetailPage', () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('opens a matching conflict case in Sync', () => {
+    mocks.useChangedElsewhere.mockReturnValue({
+      groups: [changedGroup],
+      stale: true,
+      reload: vi.fn(),
+    });
+    mocks.useSyncLedger.mockReturnValue({
+      ledger: conflictLedger,
+      status: 'success',
+      error: null,
+      reportedSince: [],
+      stale: false,
+      reload: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(
+      screen.getByText('The name was changed on Phone while you were editing it.')
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Resolve in Sync' }));
+
+    expect(screen.getByTestId('route')).toHaveTextContent('/inventory/sync?case=case-1');
   });
 
   it('uses the unavailable state for an unavailable lead read', () => {

@@ -28,7 +28,6 @@ function itemPath(id: string | undefined): string {
 function HistoryPageSurface({
   itemName,
   itemHref,
-  total,
   events,
   sourceById,
   filter,
@@ -41,7 +40,6 @@ function HistoryPageSurface({
 }: {
   itemName: string;
   itemHref: string;
-  total: number;
   events: ReturnType<typeof toEventModel>[];
   sourceById: ReadonlyMap<string, WebEventsFeed['events'][number]>;
   filter: HistoryFilter;
@@ -57,7 +55,7 @@ function HistoryPageSurface({
       <HistoryPageHeader
         itemName={itemName}
         itemHref={itemHref}
-        eventCount={total}
+        eventCount={events.length}
         hasNextPage={history.hasNextPage}
       />
       <HistoryPageContent
@@ -133,7 +131,6 @@ export function ItemHistoryPage() {
     <HistoryPageSurface
       itemName={itemName}
       itemHref={itemPath(id)}
-      total={total}
       events={events}
       sourceById={sourceById}
       filter={filter}

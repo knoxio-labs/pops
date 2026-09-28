@@ -194,6 +194,22 @@ describe('ItemHistoryPage', () => {
     expect(mocks.fetchNextPage).toHaveBeenCalledOnce();
   });
 
+  it('uses the loaded count in the header and the filtered count for paging', () => {
+    mocks.useWebEvents.mockImplementation(({ kinds }: { kinds?: readonly string[] }) =>
+      kinds === undefined
+        ? feed({ total: 200, hasNextPage: true })
+        : feed({ events: [edited], kindCounts: { edited: 2 }, total: 200, hasNextPage: true })
+    );
+
+    renderPage();
+
+    expect(screen.getByText('2 events loaded')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Details/ }));
+
+    expect(screen.getByText('1 of 2 shown')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load 1 more' })).toBeInTheDocument();
+  });
+
   it('renders the empty state when an item has no history', () => {
     mocks.useWebEvents.mockReturnValue(feed({ events: [], kindCounts: {}, total: 0 }));
     renderPage();

@@ -84,6 +84,7 @@ function HistoryReady({
 }: HistoryPageContentProps & { disabledReason?: string }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const openEvent = events.find((event) => event.id === openId) ?? null;
+  const total = filter === 'all' ? (history.total ?? events.length) : counts[filter];
   const onUndo = useCallback(
     async (eventId: string) => {
       if (disabledReason !== undefined) return;
@@ -104,7 +105,7 @@ function HistoryReady({
         filtered={filter !== 'all'}
         openEvent={openEvent}
         openId={openId}
-        total={history.total ?? events.length}
+        total={total}
         hasNextPage={history.hasNextPage}
         isFetchingNextPage={history.isFetchingNextPage}
         disabledReason={disabledReason}
