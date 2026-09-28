@@ -81,7 +81,7 @@ function EmptyPreview() {
 /** Summary, start control, print outcome and the sheets. */
 export function PrintPreview({ job, monochrome = false }: { job: PrintJob; monochrome?: boolean }) {
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <p className="flex flex-wrap items-baseline gap-x-3 text-sm">
           <span className="font-medium">
@@ -95,7 +95,7 @@ export function PrintPreview({ job, monochrome = false }: { job: PrintJob; monoc
       {job.pages.length === 0 ? (
         <EmptyPreview />
       ) : (
-        <div className="overflow-x-auto rounded-lg bg-muted/40 p-4 print:overflow-visible print:bg-transparent print:p-0">
+        <div className="min-h-0 flex-1 overflow-auto rounded-lg bg-muted/40 p-4 print:overflow-visible print:bg-transparent print:p-0">
           <PrintSheets
             pages={job.pages}
             labels={job.labels}

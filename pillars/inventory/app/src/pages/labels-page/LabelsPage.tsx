@@ -10,8 +10,9 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
 import { matchingPreset } from '@pops/inventory/labels';
-import { Alert, AlertDescription, AlertTitle, Button, PageHeader, Skeleton } from '@pops/ui';
+import { Alert, AlertDescription, AlertTitle, Button, PageHeader, Skeleton, cn } from '@pops/ui';
 
+import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import {
   DEFAULT_INVENTORY_DEFAULTS,
   labelContentForShows,
@@ -58,11 +59,12 @@ function Header({ count, onPrint }: { count: number; onPrint?: () => void }) {
   );
 }
 
-const GRID = 'grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]';
+const GRID =
+  'grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 overflow-y-auto lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden';
 
 function LabelsLoading() {
   return (
-    <div className="space-y-4">
+    <div className={cn('flex min-h-0 flex-col gap-4 overflow-hidden', PAGE_HEIGHT)}>
       <Header count={0} />
       <div className={GRID}>
         <div className="space-y-3" aria-busy="true" aria-label="Loading items">
@@ -165,7 +167,7 @@ function LabelsContent({
     />
   );
   return (
-    <div className="space-y-4">
+    <div className={cn('flex min-h-0 flex-col gap-4 overflow-hidden', PAGE_HEIGHT)}>
       <LabelPrintStyles />
       <Header count={job.labels.length} onPrint={job.block ? undefined : job.print} />
       <div className={GRID}>
@@ -177,7 +179,7 @@ function LabelsContent({
           onAdd={add}
           onRemove={(id) => setIds(params.ids.filter((held) => held !== id))}
         />
-        <section className="flex min-w-0 flex-col gap-4" aria-label="Labels">
+        <section className="flex min-h-0 min-w-0 flex-col gap-4" aria-label="Labels">
           <PrintOptions job={job} onContentChange={changeContent} />
           <PrintPreview job={job} />
         </section>

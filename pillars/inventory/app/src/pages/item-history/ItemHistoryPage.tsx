@@ -25,6 +25,8 @@ function itemPath(id: string | undefined): string {
   return id === undefined ? '/inventory/items' : `/inventory/items/${id}`;
 }
 
+const HISTORY_PAGE_CLASS = '@container flex min-h-0 max-w-5xl flex-col gap-4 overflow-hidden';
+
 function HistoryPageSurface({
   itemName,
   itemHref,
@@ -51,7 +53,7 @@ function HistoryPageSurface({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   return (
-    <div className={cn('@container flex max-w-5xl flex-col gap-4', PAGE_HEIGHT)}>
+    <div className={cn(HISTORY_PAGE_CLASS, PAGE_HEIGHT)}>
       <HistoryPageHeader
         itemName={itemName}
         itemHref={itemHref}

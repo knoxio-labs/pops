@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
+import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import { SHEET_STORAGE_KEY } from './label-storage';
 
 const api = vi.hoisted(() => ({
@@ -253,6 +254,27 @@ describe('LabelsPage', () => {
       '/inventory/items'
     );
     expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/inventory');
+  });
+
+  it('keeps the page frame bounded and the sheets on their own scroll surface', async () => {
+    renderPage(`?ids=${GRINDER}`);
+
+    const heading = await screen.findByRole('heading', { name: 'Print labels' });
+    await screen.findByRole('button', { name: 'Print 1 label' });
+    const header = heading.closest('header');
+    if (header === null || header.parentElement === null) {
+      throw new Error('Label page frame was not rendered');
+    }
+    expect(header.parentElement).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+
+    const labels = screen.getByRole('region', { name: 'Labels' });
+    expect(labels).toHaveClass('min-h-0', 'min-w-0');
+    const preview = labels.lastElementChild;
+    if (preview === null) throw new Error('Label preview was not rendered');
+    expect(preview).toHaveClass('min-h-0', 'min-w-0', 'flex-1');
+    const sheets = preview.lastElementChild;
+    if (sheets === null) throw new Error('Label sheets were not rendered');
+    expect(sheets).toHaveClass('min-h-0', 'flex-1', 'overflow-auto');
   });
 
   it('loads the listed items by id and gives a box two labels, a thing one', async () => {

@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { ItemHistoryPage } from './ItemHistoryPage.js';
 
@@ -131,6 +132,22 @@ afterEach(() => {
 });
 
 describe('ItemHistoryPage', () => {
+  it('keeps the route frame bounded around the scrolling history list', () => {
+    renderPage();
+
+    const heading = screen.getByRole('heading', { name: 'History of Desk lamp' });
+    const header = heading.closest('header');
+    if (header === null || header.parentElement === null) {
+      throw new Error('Item history page frame was not rendered');
+    }
+    expect(header.parentElement).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+
+    const month = screen.getByRole('region', { name: 'September 2026' });
+    const list = month.parentElement;
+    if (list === null) throw new Error('Item history list was not rendered');
+    expect(list).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto');
+  });
+
   it('renders filters, month groups, event details, and the undo action', async () => {
     renderPage();
 
