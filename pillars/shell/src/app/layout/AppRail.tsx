@@ -36,8 +36,8 @@ export function AppRail({ className }: AppRailProps) {
   return (
     <div
       className={cn(
-        'w-16 shrink-0 bg-card border-r border-border',
-        'hidden md:flex flex-col py-2 gap-2',
+        'w-16 h-full min-h-0 shrink-0 bg-card border-r border-border',
+        'hidden md:flex flex-col gap-2 overflow-y-auto py-2',
         className
       )}
     >
