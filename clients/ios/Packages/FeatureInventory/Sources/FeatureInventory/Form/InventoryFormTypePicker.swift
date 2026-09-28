@@ -36,9 +36,6 @@ internal struct InventoryFormTypePicker: View {
         .inventoryInsetGroupedList()
         .navigationTitle(navigationTitle)
         .searchable(text: $query, prompt: "Search types")
-        .navigationDestination(for: String.self) { parentID in
-            level(for: parentID)
-        }
         .onAppear { query = initialQuery }
     }
 
@@ -94,7 +91,9 @@ internal struct InventoryFormTypePicker: View {
 
     @ViewBuilder private func nodeRow(_ option: InventoryFormTypeOption) -> some View {
         if option.hasChildren {
-            NavigationLink(value: option.id) {
+            NavigationLink {
+                AnyView(level(for: option.id))
+            } label: {
                 optionLabel(name: option.label, isSelected: selection == option.id)
             }
             .accessibilityIdentifier(option.accessibilityIdentifier)
