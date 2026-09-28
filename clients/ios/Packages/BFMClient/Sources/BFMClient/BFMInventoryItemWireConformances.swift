@@ -115,7 +115,9 @@ extension Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPay
     internal var documentsStatusRaw: String { documentsStatus.rawValue }
 }
 
-extension Operations.MobileInventory_item.Output.Ok.Body.JsonPayload.ItemPayload: WireInventoryItem {
+extension Operations.MobileInventory_item.Output.Ok.Body.JsonPayload.ItemPayload:
+    WireInventoryItem
+{
     internal var protocol2FieldValues: [WireProtocol2FieldValue] {
         fieldValues.map {
             let source: InventoryValueSource = $0.source == .stored ? .stored : .override

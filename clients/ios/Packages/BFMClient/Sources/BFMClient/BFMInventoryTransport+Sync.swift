@@ -20,7 +20,8 @@ extension BFMInventoryTransport {
                             try inventoryItem(from: $0, timeZone: timeZone())
                         },
                         locations: try payload.locations.map { try $0.inventoryLocation() },
-                        nextCursor: payload.nextCursor, catalogueRevision: payload.catalogueRevision,
+                        nextCursor: payload.nextCursor,
+                        catalogueRevision: payload.catalogueRevision,
                         issues: (payload.issues ?? []).map(inventorySyncIssue(from:))
                     )
                 case .conflict:

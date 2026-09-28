@@ -3,29 +3,27 @@ import InventoryReplica
 import Synchronization
 import Testing
 
+private func downloadedStore(
+    _ items: [InventoryItem],
+    changes: @escaping FakeSyncTransport.ChangesHandler
+) async throws -> OnlineHarness {
+    let replica = try InventoryReplica(now: { Fixture.created })
+    var script = FakeSyncTransport.Script()
+    script.snapshot = { _ in Fixture.snapshot(items: items) }
+    script.changes = { _, _ in Fixture.changes() }
+    let transport = FakeSyncTransport(script)
+    let store = OnlineInventoryStore(replica: replica, transport: transport)
+    try await store.download()
+    transport.update { $0.changes = changes }
+    return OnlineHarness(store: store, transport: transport, replica: replica)
+}
+
 @Suite("Online store refresh and resync")
 internal struct OnlineStoreRefreshTests {
-    /// A store over a replica that has downloaded `items`, whose transport
-    /// then answers the feed with `changes`.
-    private static func downloaded(
-        _ items: [InventoryItem],
-        changes: @escaping FakeSyncTransport.ChangesHandler
-    ) async throws -> OnlineHarness {
-        let replica = try InventoryReplica(now: { Fixture.created })
-        var script = FakeSyncTransport.Script()
-        script.snapshot = { _ in Fixture.snapshot(items: items) }
-        script.changes = { _, _ in Fixture.changes() }
-        let transport = FakeSyncTransport(script)
-        let store = OnlineInventoryStore(replica: replica, transport: transport)
-        try await store.download()
-        transport.update { $0.changes = changes }
-        return OnlineHarness(store: store, transport: transport, replica: replica)
-    }
-
     @Test("a refresh applies the feed and shows as refreshing while it runs")
     func refreshAppliesFeed() async throws {
         let gate = Gate()
-        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+        let harness = try await downloadedStore([Fixture.item("a")]) { _, _ in
             await gate.pass()
             return Fixture.changes(items: [Fixture.item("a", name: "Renamed", revision: 2)])
         }
@@ -44,7 +42,7 @@ internal struct OnlineStoreRefreshTests {
 
     @Test("409 takes a fresh snapshot and keeps nothing stale, even in the same epoch")
     func resyncKeepsNothingStale() async throws {
-        let harness = try await Self.downloaded([
+        let harness = try await downloadedStore([
             Fixture.item("kept", revision: 5), Fixture.item("gone"),
         ]) { _, _ in throw InventorySyncTransportError.resyncRequired }
         let store = harness.store
@@ -70,7 +68,7 @@ internal struct OnlineStoreRefreshTests {
 
     @Test("a feed page from another epoch is answered with a fresh snapshot too")
     func foreignEpochResyncs() async throws {
-        let harness = try await Self.downloaded([Fixture.item("old")]) { _, _ in
+        let harness = try await downloadedStore([Fixture.item("old")]) { _, _ in
             Fixture.changes(epoch: "epoch-2")
         }
         let store = harness.store
@@ -107,7 +105,7 @@ internal struct OnlineStoreRefreshTests {
 
     @Test("426 blocks the replica as too old, and reaching the server again clears it")
     func tooOldBlocks() async throws {
-        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+        let harness = try await downloadedStore([Fixture.item("a")]) { _, _ in
             throw InventorySyncTransportError.clientTooOld
         }
         let store = harness.store
@@ -124,7 +122,7 @@ internal struct OnlineStoreRefreshTests {
 
     @Test("401 blocks the replica as signed out")
     func unauthorisedBlocks() async throws {
-        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+        let harness = try await downloadedStore([Fixture.item("a")]) { _, _ in
             throw RepositoryError.unauthorized
         }
         let store = harness.store
@@ -137,7 +135,7 @@ internal struct OnlineStoreRefreshTests {
 
     @Test("an unreachable server shows offline with the last complete refresh")
     func unreachableIsOffline() async throws {
-        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+        let harness = try await downloadedStore([Fixture.item("a")]) { _, _ in
             throw RepositoryError.transport("offline")
         }
         let store = harness.store
@@ -148,9 +146,38 @@ internal struct OnlineStoreRefreshTests {
         #expect(try replica.read(.replicaStatus) == .offline(lastRefreshAt: Fixture.created))
     }
 
+    @Test("a refresh before anything was downloaded asks the server nothing")
+    func refreshWhenEmpty() async throws {
+        let replica = try InventoryReplica(now: { Fixture.created })
+        let transport = FakeSyncTransport()
+        let store = OnlineInventoryStore(replica: replica, transport: transport)
+
+        await store.refresh()
+
+        #expect(transport.calls.snapshotCursors.isEmpty)
+        #expect(transport.calls.changesSince.isEmpty)
+        #expect(try replica.read(.replicaStatus) == .empty)
+    }
+
+    @Test("status() streams the layered status, not only the stored one")
+    func statusStreamsOverlay() async throws {
+        let harness = try await downloadedStore([Fixture.item("a")]) { _, _ in
+            throw RepositoryError.transport("offline")
+        }
+        let store = harness.store
+        await store.refresh()
+
+        var statuses = store.status().makeAsyncIterator()
+
+        #expect(await statuses.next() == .offline(lastRefreshAt: Fixture.created))
+    }
+}
+
+@Suite("Inventory sync issue handling")
+internal struct InventorySyncIssueTests {
     @Test("a server failure is not presented as offline")
     func serverFailureIsDistinctFromOffline() async throws {
-        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+        let harness = try await downloadedStore([Fixture.item("a")]) { _, _ in
             throw RepositoryError.transport(
                 PopsError(
                     code: "ios.inventory.sync.upstream_failure",
@@ -170,7 +197,7 @@ internal struct OnlineStoreRefreshTests {
 
     @Test("a targeted retry applies the item and clears only its issue")
     func targetedRetryAppliesItem() async throws {
-        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+        let harness = try await downloadedStore([Fixture.item("a")]) { _, _ in
             Fixture.changes()
         }
         let issue = InventorySyncIssue(
@@ -179,9 +206,11 @@ internal struct OnlineStoreRefreshTests {
             itemApplied: true, retryable: true)
         try harness.replica.apply(
             Fixture.changes(items: [Fixture.item("a", revision: 2)], issues: [issue]))
-        harness.transport.update { $0.item = { _ in
-            InventorySyncItemResult(item: Fixture.item("a", revision: 3))
-        } }
+        harness.transport.update {
+            $0.item = { _ in
+                InventorySyncItemResult(item: Fixture.item("a", revision: 3))
+            }
+        }
 
         await harness.store.retrySyncIssue(issue.id)
 
@@ -194,7 +223,7 @@ internal struct OnlineStoreRefreshTests {
 
     @Test("a failed targeted retry remains visible as a server sync failure")
     func failedTargetedRetryRemainsVisible() async throws {
-        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
+        let harness = try await downloadedStore([Fixture.item("a")]) { _, _ in
             Fixture.changes()
         }
         let issue = InventorySyncIssue(
@@ -203,14 +232,16 @@ internal struct OnlineStoreRefreshTests {
             itemApplied: true, retryable: true)
         try harness.replica.apply(
             Fixture.changes(items: [Fixture.item("a", revision: 2)], issues: [issue]))
-        harness.transport.update { $0.item = { _ in
-            throw RepositoryError.transport(
-                PopsError(
-                    code: "ios.inventory.sync.upstream_failure",
-                    message: "Inventory sync failed on the server.",
-                    retryable: true,
-                    kind: .server))
-        } }
+        harness.transport.update {
+            $0.item = { _ in
+                throw RepositoryError.transport(
+                    PopsError(
+                        code: "ios.inventory.sync.upstream_failure",
+                        message: "Inventory sync failed on the server.",
+                        retryable: true,
+                        kind: .server))
+            }
+        }
 
         await harness.store.retrySyncIssue(issue.id)
 
@@ -218,32 +249,6 @@ internal struct OnlineStoreRefreshTests {
         #expect(
             try harness.replica.read(.replicaStatus)
                 == .syncFailed(lastRefreshAt: Fixture.created))
-    }
-
-    @Test("a refresh before anything was downloaded asks the server nothing")
-    func refreshWhenEmpty() async throws {
-        let replica = try InventoryReplica(now: { Fixture.created })
-        let transport = FakeSyncTransport()
-        let store = OnlineInventoryStore(replica: replica, transport: transport)
-
-        await store.refresh()
-
-        #expect(transport.calls.snapshotCursors.isEmpty)
-        #expect(transport.calls.changesSince.isEmpty)
-        #expect(try replica.read(.replicaStatus) == .empty)
-    }
-
-    @Test("status() streams the layered status, not only the stored one")
-    func statusStreamsOverlay() async throws {
-        let harness = try await Self.downloaded([Fixture.item("a")]) { _, _ in
-            throw RepositoryError.transport("offline")
-        }
-        let store = harness.store
-        await store.refresh()
-
-        var statuses = store.status().makeAsyncIterator()
-
-        #expect(await statuses.next() == .offline(lastRefreshAt: Fixture.created))
     }
 }
 

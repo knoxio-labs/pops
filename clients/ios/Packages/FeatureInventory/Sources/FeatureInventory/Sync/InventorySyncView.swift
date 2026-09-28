@@ -108,7 +108,8 @@ internal struct InventorySyncView: View {
             } icon: {
                 Self.statusSymbol(status).image
                     .foregroundStyle(
-                        isStuck || isFailure ? Color.popsDestructive : Color.popsMutedForeground)
+                        isStuck || isFailure ? Color.popsDestructive : Color.popsMutedForeground
+                    )
                     .symbolEffect(.rotate, isActive: status == .updatingFields)
             }
             .accessibilityElement(children: .combine)
@@ -196,7 +197,11 @@ internal struct InventorySyncView: View {
         }
     }
 
-    private func resolved(_ page: InventorySyncPage) -> some View {
+    private static let resolvedShown = 3
+}
+
+extension InventorySyncView {
+    fileprivate func resolved(_ page: InventorySyncPage) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             Button {
                 showsResolved.toggle()
@@ -232,6 +237,4 @@ internal struct InventorySyncView: View {
             }
         }
     }
-
-    private static let resolvedShown = 3
 }
