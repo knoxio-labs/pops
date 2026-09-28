@@ -1,21 +1,6 @@
 import DesignSystem
 import SwiftUI
 
-extension InventoryPlaceTally {
-    /// Places, containers and items, in the order the browser's strip shows
-    /// them.
-    internal var tiles: [InventoryCountTile] {
-        [
-            InventoryCountTile(
-                title: "Places", count: places, symbol: InventorySymbol.location.system),
-            InventoryCountTile(
-                title: "Containers", count: containers,
-                symbol: InventorySymbol.openContainer.system),
-            InventoryCountTile(title: "Items", count: items, symbol: InventorySymbol.item.system),
-        ]
-    }
-}
-
 /// The empty browser's one control.
 internal struct InventoryAddPlaceButton: View {
     internal let action: () -> Void
