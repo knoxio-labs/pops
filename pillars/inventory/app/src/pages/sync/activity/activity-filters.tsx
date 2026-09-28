@@ -2,11 +2,12 @@ import { Search } from 'lucide-react';
 
 import { Button, DateRangeField, Select, TextInput, cn } from '@pops/ui';
 
-import { KIND_GROUP_LABELS, groupCounts, isActivityActor } from './activity-model.js';
+import { serverKindGroupCounts } from './activity-counts.js';
+import { KIND_GROUP_LABELS, isActivityActor } from './activity-model.js';
 
 import type { ReactElement } from 'react';
 
-import type { EventActor, EventModel } from '../../../foundation/model/model.js';
+import type { EventActor } from '../../../foundation/model/model.js';
 import type { ActivityFilter, KindGroup } from './activity-model.js';
 
 const ACTORS: ReadonlyArray<{ value: EventActor | 'anyone'; label: string }> = [
@@ -19,7 +20,7 @@ const ACTORS: ReadonlyArray<{ value: EventActor | 'anyone'; label: string }> = [
 
 /** Props for the Activity filter controls. */
 export interface ActivityFiltersProps {
-  events: readonly EventModel[];
+  kindCounts: Readonly<Record<string, number>>;
   filter: ActivityFilter;
   onChange?: (filter: ActivityFilter) => void;
 }
@@ -53,8 +54,12 @@ function KindChip({
 }
 
 /** Renders kind, actor, search, and inclusive date-range filters for Activity. */
-export function ActivityFilters({ events, filter, onChange }: ActivityFiltersProps): ReactElement {
-  const counts = groupCounts(events);
+export function ActivityFilters({
+  kindCounts,
+  filter,
+  onChange,
+}: ActivityFiltersProps): ReactElement {
+  const counts = serverKindGroupCounts(kindCounts);
   const set = (patch: Partial<ActivityFilter>): void => onChange?.({ ...filter, ...patch });
   return (
     <div className="flex shrink-0 flex-wrap items-end gap-2">

@@ -113,7 +113,7 @@ function rewindToBeforeMigration(): void {
   const removed = opened.raw
     .prepare('DELETE FROM __drizzle_migrations WHERE created_at >= ?')
     .run(MIGRATION_WHEN);
-  expect(removed.changes).toBe(5);
+  expect(removed.changes).toBe(6);
   opened.raw.close();
 }
 

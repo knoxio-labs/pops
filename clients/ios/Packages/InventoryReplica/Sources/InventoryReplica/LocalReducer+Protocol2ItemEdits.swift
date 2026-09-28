@@ -137,7 +137,8 @@ extension LocalReducer {
     private func protocol2Type(id: String, revision: Int) throws -> InventoryCatalogueType {
         guard try SyncMeta.read(db).catalogueRevision == revision,
             let catalogue = try Protocol2CatalogueRows.read(revision: revision, in: db),
-            let type = catalogue.types.first(where: { $0.id == id })
+            let found = catalogue.types.first(where: { $0.id == id }),
+            let type = catalogue.effectiveType(id: found.id)
         else { throw refusal(.typeUnknown, "unknown active type \(id)") }
         return type
     }

@@ -7,6 +7,7 @@ import { blankDraft } from './form-draft';
 import { deriveForm } from './form-view';
 import { ItemFormPage } from './item-form-page';
 
+import type { PhotoUploads } from '../../foundation/photos/use-photo-uploads';
 import type { FormSources } from './use-form-sources';
 import type { ItemFormApi } from './use-item-form';
 
@@ -57,6 +58,17 @@ function sources(): FormSources {
 
 function api(): ItemFormApi {
   const draft = blankDraft({ kind: 'location', locationId: 'garage' });
+  const photos: PhotoUploads = {
+    queue: [],
+    refused: [],
+    add: vi.fn(),
+    remove: vi.fn(),
+    retry: vi.fn(),
+    flush: vi.fn(async () => ({ attached: 0, queue: [] })),
+    reset: vi.fn(),
+    stagedCount: 0,
+    attachedCount: 0,
+  };
   return {
     draft,
     initial: draft,
@@ -66,6 +78,7 @@ function api(): ItemFormApi {
     saving: false,
     saveError: null,
     justCreated: null,
+    photos,
     cancelAsked: false,
     setCancelAsked: vi.fn(),
     requestCancel: vi.fn(),

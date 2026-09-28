@@ -11,6 +11,8 @@
  * - a producer answer that does not match the wire contract is a `502`, never
  *   data.
  */
+import { randomUUID } from 'node:crypto';
+
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { MobileInventoryItemSchema } from '../../contract/mobile-inventory-schemas.js';
@@ -37,6 +39,45 @@ function put(app: Express, token: string | null, path: string, body: object) {
     const request = r.put(path).send(body);
     return token === null ? request : request.set('Authorization', `Bearer ${token}`);
   });
+}
+
+function protocol2Type(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    revision: 3,
+    id: randomUUID(),
+    key: 'kit',
+    label: 'Kit',
+    description: null,
+    sortOrder: 0,
+    capabilities: [],
+    legacyLabels: [],
+    presentation: {},
+    archivedAt: null,
+    fields: [],
+    ...overrides,
+  };
+}
+
+function protocol2Catalogue(type: Record<string, unknown>): Record<string, unknown> {
+  return {
+    revision: {
+      revision: 3,
+      baseRevision: 2,
+      status: 'published',
+      minimumProtocol: 2,
+      created: {
+        actor: { kind: 'web', id: 'owner', label: 'Owner' },
+        at: '2026-09-24T00:00:00.000Z',
+      },
+      published: {
+        actor: { kind: 'web', id: 'owner', label: 'Owner' },
+        at: '2026-09-24T00:00:00.000Z',
+        note: null,
+      },
+      abandoned: null,
+    },
+    types: [type],
+  };
 }
 
 function aMutation(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
@@ -81,6 +122,54 @@ describe('the catalogue', () => {
     expect(res.body.version).toBe('cat-7');
     expect(res.body.types[0].key).toBe('box');
     expect(fake.catalogueCalls).toBe(1);
+  });
+});
+
+describe('GET /mobile/inventory/type-catalogue', () => {
+  it('relays an upstream type without parentTypeId without adding the key', async () => {
+    const fake = createInventoryFake({
+      catalogueRevisionResult: () => ({
+        kind: 'ok',
+        value: protocol2Catalogue(protocol2Type()),
+      }),
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const response = await get(app, token, '/mobile/inventory/type-catalogue?revision=3');
+
+    expect(response.status).toBe(200);
+    expect(response.body.types[0]).not.toHaveProperty('parentTypeId');
+  });
+
+  it('omits a null upstream parentTypeId from the response', async () => {
+    const fake = createInventoryFake({
+      catalogueRevisionResult: () => ({
+        kind: 'ok',
+        value: protocol2Catalogue(protocol2Type({ parentTypeId: null })),
+      }),
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const response = await get(app, token, '/mobile/inventory/type-catalogue?revision=3');
+
+    expect(response.status).toBe(200);
+    expect(response.body.types[0]).not.toHaveProperty('parentTypeId');
+  });
+
+  it('relays an upstream uuid parentTypeId unchanged', async () => {
+    const parentTypeId = randomUUID();
+    const fake = createInventoryFake({
+      catalogueRevisionResult: () => ({
+        kind: 'ok',
+        value: protocol2Catalogue(protocol2Type({ parentTypeId })),
+      }),
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const response = await get(app, token, '/mobile/inventory/type-catalogue?revision=3');
+
+    expect(response.status).toBe(200);
+    expect(response.body.types[0]?.parentTypeId).toBe(parentTypeId);
   });
 });
 
@@ -823,12 +912,30 @@ describe('sync ledger', () => {
           itemName: 'Box',
           openedAt: '2026-09-19T00:00:00.000Z',
           problem: 'The field was archived on the server.',
-          mine: { value: 'blue', source: 'device', at: '2026-09-19T00:00:00.000Z' },
+          typeId: 'type-1',
+          mine: {
+            value: 'blue',
+            source: 'device',
+            at: '2026-09-19T00:00:00.000Z',
+            target: { kind: 'field', fieldId: 'field-1', values: ['blue'] },
+          },
           theirs: { value: 'green', source: 'server', at: '2026-09-19T00:00:01.000Z' },
           code: { wanted: 'BOX-1', holder: 'item-2', suggested: 'BOX-2' },
           held: {
             title: 'Held values',
-            values: [{ field: 'colour', value: 'blue', fit: 'archived', replacement: 'colour-2' }],
+            values: [
+              {
+                field: 'colour',
+                value: 'blue',
+                fit: 'archived',
+                replacement: 'colour-2',
+                fieldId: 'field-1',
+                values: ['blue'],
+                replacementTypeId: 'type-2',
+                recordId: 'item-2',
+                recordKind: 'item',
+              },
+            ],
           },
           photo: { size: '9MB', limit: '8MB' },
           refused: { at: '2026-09-19T00:00:02.000Z', reason: 'too_large' },
@@ -855,7 +962,8 @@ describe('sync ledger', () => {
           itemName: 'Cable',
           outcome: 'kept_mine',
           at: '2026-09-18T23:00:00.000Z',
-          dropped: [{ field: 'length', value: '2m', fit: 'record-gone' }],
+          dropped: [{ field: 'length', value: '2m', fit: 'record-gone', fieldId: 'field-2' }],
+          itemId: 'item-1',
         },
       ],
     };

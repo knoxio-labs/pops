@@ -72,6 +72,7 @@ export const KNOWN_FIXTURE_COPY_PATHS = [
 
 const NEGATIVE_CATEGORIES = new Set([
   'malformed_value',
+  'missing_required_field',
   'unknown_kind',
   'protocol_above_supported',
 ]);

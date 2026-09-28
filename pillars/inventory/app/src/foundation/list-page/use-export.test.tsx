@@ -121,7 +121,8 @@ function field(
   typeId: string,
   id: string,
   label: string,
-  storage: 'stored' | 'computed'
+  storage: 'stored' | 'computed',
+  sortOrder = 0
 ): CatalogueField {
   return {
     allowOverride: storage === 'computed',
@@ -142,7 +143,7 @@ function field(
     referenceTypeIds: [],
     replacedBy: null,
     required: false,
-    sortOrder: 0,
+    sortOrder,
     storage,
     typeId,
   };
@@ -162,6 +163,7 @@ function catalogueType(
     key: id,
     label,
     legacyLabels: [],
+    parentTypeId: null,
     presentation: {},
     replacedBy: null,
     revision: 1,
@@ -389,7 +391,7 @@ describe('useItemsExport', () => {
 
   it('exports a computed field as its shown calculated or overridden value', async () => {
     const stored = field('type-tools', 'stored-field', 'Stored field', 'stored');
-    const computed = field('type-tools', 'computed-field', 'Computed field', 'computed');
+    const computed = field('type-tools', 'computed-field', 'Computed field', 'computed', 1);
     const type = catalogueType('type-tools', 'Tools', [stored, computed]);
     setSources({ types: [type] });
     mocks.webList.mockResolvedValue(

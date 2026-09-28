@@ -13,12 +13,14 @@ import { ItemsPage } from './items-page';
 import type { ReactElement } from 'react';
 
 import type { ItemRowModel } from '../../foundation/model/model';
+import type { TypeArrival } from '../../inventory-web/type-arrivals';
 import type { CatalogueType } from '../../inventory-web/useCatalogueLookups';
 import type { ItemRows } from '../../inventory-web/useWebItems';
 
 const mocks = vi.hoisted(() => ({
   useItemRows: vi.fn(),
   useCatalogueLookups: vi.fn(),
+  useTypeArrival: vi.fn(),
   usePlacementSources: vi.fn(),
   usePendingItemIds: vi.fn(),
   useItemVerbs: vi.fn(),
@@ -31,6 +33,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../inventory-web/useWebItems', () => ({ useItemRows: mocks.useItemRows }));
 vi.mock('../../inventory-web/useCatalogueLookups.js', () => ({
   useCatalogueLookups: mocks.useCatalogueLookups,
+}));
+vi.mock('../../inventory-web/type-arrivals.js', () => ({
+  useTypeArrival: mocks.useTypeArrival,
 }));
 vi.mock('../../inventory-web/usePlacementSources.js', () => ({
   usePlacementSources: mocks.usePlacementSources,
@@ -121,6 +126,7 @@ class TestIntersectionObserver implements IntersectionObserver {
 function catalogueType(key: string, label: string): CatalogueType {
   return {
     id: `type-${key}`,
+    parentTypeId: null,
     key,
     label,
     sortOrder: 0,
@@ -156,6 +162,10 @@ function rowsResult(overrides: Partial<ItemRows> = {}): ItemRows {
 
 let currentRows = rowsResult();
 let currentOnline = true;
+let currentArrival: { arrival: TypeArrival | null; dismiss: ReturnType<typeof vi.fn> } = {
+  arrival: null,
+  dismiss: vi.fn(),
+};
 let currentChanged: {
   groups: { entityCount: number }[];
   stale: boolean;
@@ -194,6 +204,7 @@ function renderPage(initialEntry = '/inventory/items'): void {
     isPending: false,
     error: null,
   }));
+  mocks.useTypeArrival.mockImplementation(() => currentArrival);
   mocks.usePlacementSources.mockImplementation(() => ({
     world: buildWorld([activeRow], [location]),
     recents: [],
@@ -222,6 +233,7 @@ beforeEach(() => {
   globalThis.IntersectionObserver = TestIntersectionObserver;
   currentRows = rowsResult();
   currentOnline = true;
+  currentArrival = { arrival: null, dismiss: vi.fn() };
   currentChanged = { groups: [], stale: false, reload: vi.fn() };
 });
 
@@ -472,6 +484,42 @@ describe('ItemsPage', () => {
     expect(
       screen.queryByText('Two items called Extension lead sit on Garage')
     ).not.toBeInTheDocument();
+  });
+
+  it('shows the Type arrived banner without a publisher and routes Review or Not now', () => {
+    const dismiss = vi.fn();
+    currentArrival = {
+      arrival: {
+        type: catalogueType('garden', 'Garden tools'),
+        matches: 2,
+      },
+      dismiss,
+    };
+    renderPage();
+
+    expect(screen.getByText('2 untyped items look like Garden tools')).toBeInTheDocument();
+    expect(
+      screen.getByText('Garden tools was published. Review them before anything changes.')
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review 2' }));
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/inventory/types/type-garden/arrived'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+    expect(dismiss).toHaveBeenCalledWith('type-garden');
+  });
+
+  it('uses singular copy when one item matches the arrived type', () => {
+    currentArrival = {
+      arrival: {
+        type: catalogueType('garden', 'Garden tools'),
+        matches: 1,
+      },
+      dismiss: vi.fn(),
+    };
+    renderPage();
+
+    expect(screen.getByText('1 untyped item looks like Garden tools')).toBeInTheDocument();
   });
 
   it('a failed read shows the error and Retry refetches', () => {

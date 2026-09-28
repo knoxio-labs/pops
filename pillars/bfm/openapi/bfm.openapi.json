@@ -7615,14 +7615,30 @@
                                   "field": {
                                     "type": "string"
                                   },
+                                  "fieldId": {
+                                    "type": "string"
+                                  },
                                   "fit": {
+                                    "type": "string"
+                                  },
+                                  "recordId": {
+                                    "type": "string"
+                                  },
+                                  "recordKind": {
                                     "type": "string"
                                   },
                                   "replacement": {
                                     "type": "string"
                                   },
+                                  "replacementTypeId": {
+                                    "type": "string"
+                                  },
                                   "value": {
                                     "type": "string"
+                                  },
+                                  "values": {
+                                    "items": {},
+                                    "type": "array"
                                   }
                                 },
                                 "required": ["field", "value", "fit"],
@@ -7656,6 +7672,37 @@
                             },
                             "source": {
                               "type": "string"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "containerId": {
+                                  "type": "string"
+                                },
+                                "fieldId": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "locationId": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "note": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "values": {
+                                  "items": {},
+                                  "nullable": true,
+                                  "type": "array"
+                                }
+                              },
+                              "required": ["kind"],
+                              "type": "object"
                             },
                             "value": {
                               "type": "string"
@@ -7711,12 +7758,46 @@
                             "source": {
                               "type": "string"
                             },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "containerId": {
+                                  "type": "string"
+                                },
+                                "fieldId": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "locationId": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "note": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "values": {
+                                  "items": {},
+                                  "nullable": true,
+                                  "type": "array"
+                                }
+                              },
+                              "required": ["kind"],
+                              "type": "object"
+                            },
                             "value": {
                               "type": "string"
                             }
                           },
                           "required": ["value", "source", "at"],
                           "type": "object"
+                        },
+                        "typeId": {
+                          "type": "string"
                         }
                       },
                       "required": ["id", "kind", "itemId", "itemName", "openedAt", "problem"],
@@ -7751,14 +7832,30 @@
                               "field": {
                                 "type": "string"
                               },
+                              "fieldId": {
+                                "type": "string"
+                              },
                               "fit": {
+                                "type": "string"
+                              },
+                              "recordId": {
+                                "type": "string"
+                              },
+                              "recordKind": {
                                 "type": "string"
                               },
                               "replacement": {
                                 "type": "string"
                               },
+                              "replacementTypeId": {
+                                "type": "string"
+                              },
                               "value": {
                                 "type": "string"
+                              },
+                              "values": {
+                                "items": {},
+                                "type": "array"
                               }
                             },
                             "required": ["field", "value", "fit"],
@@ -7767,6 +7864,9 @@
                           "type": "array"
                         },
                         "id": {
+                          "type": "string"
+                        },
+                        "itemId": {
                           "type": "string"
                         },
                         "itemName": {
@@ -9456,6 +9556,11 @@
                               "type": "string"
                             },
                             "type": "array"
+                          },
+                          "parentTypeId": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
                           },
                           "presentation": {
                             "additionalProperties": {},

@@ -35,3 +35,5 @@ globalThis.ResizeObserver ??= class ResizeObserver {
 afterEach(() => {
   resetInterruption();
 });
+
+Element.prototype.scrollIntoView ??= () => undefined;

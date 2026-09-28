@@ -9,14 +9,14 @@ import { ArchiveCatalogueDialog } from './ArchiveCatalogueDialog';
 import { CatalogueEditorContent } from './CatalogueEditorContent';
 import { type useTypeCataloguePage } from './useTypeCataloguePage';
 
-import type { CatalogueOperation } from '../catalogue-editor/types';
+import type { CatalogueOperationHandler } from '../catalogue-editor/types';
 
 type Page = ReturnType<typeof useTypeCataloguePage>;
 type ReadyPage = Page & { readonly catalogue: NonNullable<Page['catalogue']> };
 
 interface LayoutProps {
   readonly onAbandon: () => void;
-  readonly onOperation: (operation: CatalogueOperation) => void;
+  readonly onOperation: CatalogueOperationHandler;
   readonly onPublish: (input: { note: string | null; minimumProtocol?: number }) => void;
   readonly page: ReadyPage;
 }
@@ -67,9 +67,12 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
       </div>
       <AuditDialog open={page.auditOpen} onOpenChange={page.setAuditOpen} />
       <ArchiveCatalogueDialog
+        issueSources={page.issues.sources}
+        issues={[...page.issues.saved, ...page.issues.live]}
         target={page.archiveTarget}
         onOpenChange={(open) => !open && page.setArchiveTarget(null)}
         onOperation={onOperation}
+        types={page.types}
       />
     </div>
   );

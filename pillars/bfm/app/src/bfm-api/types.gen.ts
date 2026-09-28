@@ -2574,9 +2574,14 @@ export type MobileInventoryReportLedgerData = {
         title: string;
         values: Array<{
           field: string;
+          fieldId?: string;
           fit: string;
+          recordId?: string;
+          recordKind?: string;
           replacement?: string;
+          replacementTypeId?: string;
           value: string;
+          values?: Array<unknown>;
         }>;
       };
       id: string;
@@ -2586,6 +2591,15 @@ export type MobileInventoryReportLedgerData = {
       mine?: {
         at: string;
         source: string;
+        target?: {
+          containerId?: string;
+          fieldId?: string;
+          kind: string;
+          locationId?: string;
+          name?: string;
+          note?: string | null;
+          values?: Array<unknown> | null;
+        };
         value: string;
       };
       openedAt: string;
@@ -2601,8 +2615,18 @@ export type MobileInventoryReportLedgerData = {
       theirs?: {
         at: string;
         source: string;
+        target?: {
+          containerId?: string;
+          fieldId?: string;
+          kind: string;
+          locationId?: string;
+          name?: string;
+          note?: string | null;
+          values?: Array<unknown> | null;
+        };
         value: string;
       };
+      typeId?: string;
     }>;
     lastSyncAt?: string | null;
     reportedAt: string;
@@ -2610,11 +2634,17 @@ export type MobileInventoryReportLedgerData = {
       at: string;
       dropped?: Array<{
         field: string;
+        fieldId?: string;
         fit: string;
+        recordId?: string;
+        recordKind?: string;
         replacement?: string;
+        replacementTypeId?: string;
         value: string;
+        values?: Array<unknown>;
       }>;
       id: string;
+      itemId?: string;
       itemName: string;
       outcome: string;
     }>;
@@ -3175,6 +3205,7 @@ export type MobileInventoryCatalogueRevisionResponses = {
       key: string;
       label: string;
       legacyLabels: Array<string>;
+      parentTypeId?: string;
       presentation: {
         [key: string]: unknown;
       };

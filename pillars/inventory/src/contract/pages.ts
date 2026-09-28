@@ -38,6 +38,7 @@ export const INVENTORY_PAGES = [
       { path: 'connections/fixtures', bundleSlot: 'inventory-fixtures' },
       { path: 'fixtures/:id', bundleSlot: 'inventory-fixture' },
       { path: 'types', bundleSlot: 'inventory-type-catalogue' },
+      { path: 'types/:id', bundleSlot: 'inventory-type-catalogue' },
       { path: 'types/:id/arrived', bundleSlot: 'inventory-type-arrived' },
       { path: 'reports', bundleSlot: 'inventory-reports' },
       { path: 'labels', bundleSlot: 'inventory-labels' },
@@ -52,6 +53,9 @@ export const INVENTORY_PAGES = [
   },
 ] as const;
 
+/** Settings widgets supplied by the inventory remote bundle. */
+export const INVENTORY_SETTINGS_WIDGET_SLOTS = ['inventory-paperless'] as const;
+
 /**
  * Every bundle slot the inventory UI must supply a component for, the nested
  * ones included. A remote bundle exporting anything other than exactly these
@@ -65,3 +69,6 @@ type SlotsOf<T> = T extends { readonly bundleSlot: infer S }
   : never;
 
 export type InventoryPageSlot = SlotsOf<(typeof INVENTORY_PAGES)[number]>;
+
+/** A settings widget slot advertised by the inventory pillar. */
+export type InventorySettingsWidgetSlot = (typeof INVENTORY_SETTINGS_WIDGET_SLOTS)[number];

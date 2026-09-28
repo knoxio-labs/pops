@@ -4567,7 +4567,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4630,7 +4629,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4701,7 +4699,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -4771,7 +4768,6 @@ export interface operations {
       header?: never;
       path: {
         key:
-          | 'inventory.paperlessUrl'
           | 'inventory.labelSheet'
           | 'inventory.labelShows'
           | 'inventory.density'
@@ -5294,9 +5290,14 @@ export interface operations {
               title: string;
               values: {
                 field: string;
+                fieldId?: string;
                 fit: string;
+                recordId?: string;
+                recordKind?: string;
                 replacement?: string;
+                replacementTypeId?: string;
                 value: string;
+                values?: unknown[];
               }[];
             };
             id: string;
@@ -5307,6 +5308,15 @@ export interface operations {
               /** Format: date-time */
               at: string;
               source: string;
+              target?: {
+                containerId?: string;
+                fieldId?: string;
+                kind: string;
+                locationId?: string;
+                name?: string;
+                note?: string | null;
+                values?: unknown[] | null;
+              };
               value: string;
             };
             /** Format: date-time */
@@ -5325,8 +5335,18 @@ export interface operations {
               /** Format: date-time */
               at: string;
               source: string;
+              target?: {
+                containerId?: string;
+                fieldId?: string;
+                kind: string;
+                locationId?: string;
+                name?: string;
+                note?: string | null;
+                values?: unknown[] | null;
+              };
               value: string;
             };
+            typeId?: string;
           }[];
           /** Format: date-time */
           lastSyncAt: string | null;
@@ -5337,11 +5357,17 @@ export interface operations {
             at: string;
             dropped?: {
               field: string;
+              fieldId?: string;
               fit: string;
+              recordId?: string;
+              recordKind?: string;
               replacement?: string;
+              replacementTypeId?: string;
               value: string;
+              values?: unknown[];
             }[];
             id: string;
+            itemId?: string;
             itemName: string;
             outcome: string;
           }[];
@@ -5888,6 +5914,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6115,6 +6143,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6282,6 +6312,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6340,6 +6372,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -6588,6 +6622,8 @@ export interface operations {
                 key: string;
                 label: string;
                 legacyLabels: string[];
+                /** Format: uuid */
+                parentTypeId: string | null;
                 presentation: {
                   [key: string]: unknown;
                 };
@@ -6775,6 +6811,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6852,6 +6890,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -7093,6 +7133,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -7472,6 +7514,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -7715,6 +7759,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -8062,6 +8108,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -9761,9 +9809,14 @@ export interface operations {
                 title: string;
                 values: {
                   field: string;
+                  fieldId?: string;
                   fit: string;
+                  recordId?: string;
+                  recordKind?: string;
                   replacement?: string;
+                  replacementTypeId?: string;
                   value: string;
+                  values?: unknown[];
                 }[];
               };
               id: string;
@@ -9774,6 +9827,15 @@ export interface operations {
                 /** Format: date-time */
                 at: string;
                 source: string;
+                target?: {
+                  containerId?: string;
+                  fieldId?: string;
+                  kind: string;
+                  locationId?: string;
+                  name?: string;
+                  note?: string | null;
+                  values?: unknown[] | null;
+                };
                 value: string;
               };
               /** Format: date-time */
@@ -9792,8 +9854,18 @@ export interface operations {
                 /** Format: date-time */
                 at: string;
                 source: string;
+                target?: {
+                  containerId?: string;
+                  fieldId?: string;
+                  kind: string;
+                  locationId?: string;
+                  name?: string;
+                  note?: string | null;
+                  values?: unknown[] | null;
+                };
                 value: string;
               };
+              typeId?: string;
             }[];
             attentionCount: number;
             devices: {
@@ -9811,11 +9883,17 @@ export interface operations {
               deviceId: string;
               dropped?: {
                 field: string;
+                fieldId?: string;
                 fit: string;
+                recordId?: string;
+                recordKind?: string;
                 replacement?: string;
+                replacementTypeId?: string;
                 value: string;
+                values?: unknown[];
               }[];
               id: string;
+              itemId?: string;
               itemName: string;
               outcome: string;
             }[];

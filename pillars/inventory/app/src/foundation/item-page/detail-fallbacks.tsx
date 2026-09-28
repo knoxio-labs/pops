@@ -1,8 +1,9 @@
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, CloudOff } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { Button, Skeleton, cn } from '@pops/ui';
 
+import { OFFLINE_TITLE, StateBanner } from '../feedback/state-banner.js';
 import { INVENTORY_ICONS } from '../model/icons';
 import { PAGE_HEIGHT } from './section-parts';
 
@@ -57,28 +58,45 @@ export function ItemDetailProblem({
   variant,
   onRetry,
 }: {
-  variant: 'error' | 'not-found';
+  variant: 'error' | 'not-found' | 'unavailable';
   onRetry?: () => void;
 }): ReactElement {
-  const failed = variant === 'error';
-  const Icon = failed ? CircleAlert : INVENTORY_ICONS.item;
+  const failed = variant !== 'not-found';
+  const unavailable = variant === 'unavailable';
+  let Icon = INVENTORY_ICONS.item;
+  if (unavailable) Icon = CloudOff;
+  else if (failed) Icon = CircleAlert;
+  let heading = 'This item no longer exists';
+  if (unavailable) heading = 'This item is unavailable';
+  else if (failed) heading = 'This item could not be loaded';
   return (
     <div className={cn('flex flex-col items-center justify-center gap-4 text-center', PAGE_HEIGHT)}>
       <span className="flex size-12 items-center justify-center rounded-full bg-muted">
         <Icon className="size-6 text-muted-foreground" aria-hidden />
       </span>
       <div className="max-w-sm space-y-1">
-        <h1 className="text-lg font-semibold">
-          {failed ? 'This item could not be loaded' : 'This item no longer exists'}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {failed
-            ? 'The inventory service did not answer. Nothing was changed.'
-            : 'It was deleted on another device, or the link points at nothing.'}
-        </p>
+        <h1 className="text-lg font-semibold">{heading}</h1>
+        {failed ? (
+          <StateBanner
+            kind={unavailable ? 'offline' : 'error'}
+            title={
+              unavailable
+                ? OFFLINE_TITLE
+                : 'The inventory service did not answer. Nothing was changed.'
+            }
+            detail={unavailable ? 'Retry when the connection returns.' : undefined}
+            actionLabel={onRetry === undefined ? undefined : 'Retry'}
+            onAction={onRetry}
+            className="text-left"
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            It was deleted on another device, or the link points at nothing. Its code may belong to
+            something else now.
+          </p>
+        )}
       </div>
       <div className="flex gap-2">
-        {failed ? <Button onClick={onRetry}>Retry</Button> : null}
         <Button asChild variant={failed ? 'ghost' : 'default'}>
           <Link to="/inventory/items">Back to Items</Link>
         </Button>

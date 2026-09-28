@@ -177,14 +177,24 @@ internal enum InventoryProtocol2ValueText {
 
 internal enum InventoryProtocol2ReferenceTargets {
     internal static func allowed(
-        for field: InventoryCatalogueField, among targets: [InventoryProtocol2ReferenceTarget]
+        for field: InventoryCatalogueField, among targets: [InventoryProtocol2ReferenceTarget],
+        catalogue: InventoryCatalogueSnapshot?
     ) -> [InventoryProtocol2ReferenceTarget] {
         targets.filter { target in
             guard field.references.targetKinds.contains(target.kind) else { return false }
             guard target.kind == .item, !field.references.targetTypeIds.isEmpty else {
                 return true
             }
-            return target.typeId.map(field.references.targetTypeIds.contains) == true
+            guard let targetTypeId = target.typeId else { return false }
+            if let catalogue {
+                guard catalogue.types.contains(where: { $0.id == targetTypeId }) else {
+                    return field.references.targetTypeIds.contains(targetTypeId)
+                }
+                return field.references.targetTypeIds.contains {
+                    catalogue.type(targetTypeId, isOrDescendsFrom: $0)
+                }
+            }
+            return field.references.targetTypeIds.contains(targetTypeId)
         }
     }
 }

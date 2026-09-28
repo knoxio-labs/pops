@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import Testing
 
 @testable import InventoryReplica
@@ -115,6 +116,110 @@ internal struct CatalogueRebaseTests {
         let verdict = try Fixture.verdict(split, next: Fixture.baseFields)
 
         #expect(verdict == .rebased(.command(split), revision: 2))
+    }
+
+    private static let bedding = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab"
+    private static let sheet = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaac"
+    private static let size = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc"
+    private static let computed = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbd"
+    private static let fitted = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbe"
+
+    private static func inheritedCatalogue(
+        revision: Int, sizeRequired: Bool = false
+    ) -> InventoryCatalogueSnapshot {
+        let size = InventoryCatalogueField(
+            id: Self.size, typeId: Self.bedding, key: "size", label: "Size", sortOrder: 0,
+            kind: .enumeration, cardinality: .one, required: sizeRequired, storage: .stored,
+            enumOptions: [
+                InventoryCatalogueOption(
+                    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbf", key: "standard",
+                    label: "Standard", sortOrder: 0)
+            ])
+        let computed = InventoryCatalogueField(
+            id: Self.computed, typeId: Self.bedding, key: "computed", label: "Computed",
+            sortOrder: 1, kind: .boolean, cardinality: .one, required: false, storage: .computed,
+            expressionVersion: 1,
+            expression: .object(["op": .string("literal"), "value": .boolean(true)]),
+            allowOverride: true)
+        let fitted = InventoryCatalogueField(
+            id: Self.fitted, typeId: Self.sheet, key: "fitted", label: "Fitted", sortOrder: 0,
+            kind: .boolean, cardinality: .one, required: false, storage: .stored)
+        return InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: revision, minimumProtocol: 2),
+            types: [
+                InventoryCatalogueType(
+                    id: Self.bedding, key: "bedding", label: "Bedding", sortOrder: 0,
+                    fields: [size, computed]),
+                InventoryCatalogueType(
+                    id: Self.sheet, key: "sheet", label: "Sheet", sortOrder: 1,
+                    fields: [fitted], parentTypeId: Self.bedding),
+            ])
+    }
+
+    private static func inheritedReplica(
+        base: InventoryCatalogueSnapshot, target: InventoryCatalogueSnapshot
+    ) throws -> InventoryReplica {
+        let replica = try InventoryReplica()
+        let item = InventoryItem(
+            id: Fixture.lampId, revision: 1, seq: 1, catalogueRevision: 1, name: "Sheet",
+            typeId: Self.sheet, typeKey: "sheet", placement: .hand,
+            createdAt: Foundation.Date(timeIntervalSinceReferenceDate: 800_000_000),
+            updatedAt: Foundation.Date(timeIntervalSinceReferenceDate: 800_000_000))
+        try replica.apply(
+            InventorySnapshotPage(
+                epoch: "epoch-1", highWaterSeq: 10, catalogueVersion: "c1",
+                total: 1, items: [item], locations: [], nextCursor: nil, catalogueRevision: 1),
+            catalogue: base)
+        try replica.store(target)
+        return replica
+    }
+
+    @Test("a child create names an inherited field when it becomes required")
+    func inheritedRequiredFieldBlocksCreate() throws {
+        let base = Self.inheritedCatalogue(revision: 1)
+        let target = Self.inheritedCatalogue(revision: 2, sizeRequired: true)
+        let create = InventoryCommand.createProtocol2Item(
+            InventoryNewProtocol2Item(
+                id: "ffffffff-ffff-4fff-8fff-ffffffffffff", name: "Sheet", catalogueRevision: 1,
+                typeId: Self.sheet, placement: .hand))
+        let replica = try Self.inheritedReplica(base: base, target: target)
+
+        let verdict = try replica.database.read { db in
+            try CatalogueRebase.rebase(RebaseFixture.entry(create), onto: 2, in: db)
+        }
+
+        guard case .incompatible(let changes) = verdict else {
+            Issue.record(
+                "expected the inherited required field to block the create, got \(verdict)")
+            return
+        }
+        #expect(changes.first?.id == Self.size)
+        #expect(changes.first?.change == .nowRequired)
+    }
+
+    @Test("a child create override remains compatible on an inherited computed field")
+    func inheritedComputedOverrideMoves() throws {
+        let base = Self.inheritedCatalogue(revision: 1)
+        let target = Self.inheritedCatalogue(revision: 2)
+        let create = InventoryCommand.createProtocol2Item(
+            InventoryNewProtocol2Item(
+                id: "ffffffff-ffff-4fff-8fff-ffffffffffff", name: "Sheet", catalogueRevision: 1,
+                typeId: Self.sheet,
+                overrides: [
+                    InventoryProtocol2FieldValue(fieldId: Self.computed, values: [.boolean(true)])
+                ], placement: .hand))
+        let replica = try Self.inheritedReplica(base: base, target: target)
+
+        let verdict = try replica.database.read { db in
+            try CatalogueRebase.rebase(RebaseFixture.entry(create), onto: 2, in: db)
+        }
+
+        guard case .rebased(.command(.createProtocol2Item(let moved)), 2) = verdict else {
+            Issue.record("expected the inherited computed override to move, got \(verdict)")
+            return
+        }
+        #expect(moved.catalogueRevision == 2)
+        #expect(moved.overrides.map(\.fieldId) == [Self.computed])
     }
 }
 

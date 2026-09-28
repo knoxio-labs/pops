@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { publishItemTypeTree } from '../../../catalogue/__tests__/type-tree-fixture.js';
+import { readItemFieldValues } from '../../../catalogue/item-values.js';
 import { mutation, openHarness, seedItem, seedLocation, type Harness } from './test-utils.js';
 
 let h: Harness;
@@ -67,6 +69,70 @@ describe('item.changeType', () => {
     );
     expect(outcome).toMatchObject({ status: 'rejected', reason: 'quantity_container_conflict' });
     expect(h.item('screws')).toMatchObject({ isContainer: 0, quantity: 40 });
+  });
+
+  it('keeps inherited values on sheet to quilt-cover changes and rejects sheet-only values', () => {
+    const catalogue = publishItemTypeTree(h.db);
+    const toSheet = h.run(
+      mutation(
+        'item.changeType',
+        'lamp',
+        {
+          typeId: catalogue.sheetTypeId,
+          values: [
+            {
+              fieldId: catalogue.materialFieldId,
+              values: [{ optionId: catalogue.materialCottonOptionId }],
+            },
+          ],
+        },
+        { baseRevision: 1, catalogueRevision: catalogue.revision }
+      )
+    );
+    expect(toSheet).toMatchObject({ status: 'applied' });
+
+    const invalid = h.run(
+      mutation(
+        'item.changeType',
+        'lamp',
+        {
+          typeId: catalogue.quiltCoverTypeId,
+          values: [
+            {
+              fieldId: catalogue.materialFieldId,
+              values: [{ optionId: catalogue.materialCottonOptionId }],
+            },
+            { fieldId: catalogue.fittedFieldId, values: [true] },
+          ],
+        },
+        { baseRevision: 2, catalogueRevision: catalogue.revision }
+      )
+    );
+    expect(invalid).toMatchObject({ status: 'rejected', reason: 'invalid' });
+
+    const changed = h.run(
+      mutation(
+        'item.changeType',
+        'lamp',
+        {
+          typeId: catalogue.quiltCoverTypeId,
+          values: [
+            {
+              fieldId: catalogue.materialFieldId,
+              values: [{ optionId: catalogue.materialCottonOptionId }],
+            },
+          ],
+        },
+        { baseRevision: 2, catalogueRevision: catalogue.revision }
+      )
+    );
+    expect(changed).toMatchObject({ status: 'applied' });
+    expect(readItemFieldValues(h.db, 'lamp')).toContainEqual({
+      fieldId: catalogue.materialFieldId,
+      source: 'stored',
+      catalogueRevision: catalogue.revision,
+      values: [{ optionId: catalogue.materialCottonOptionId }],
+    });
   });
 
   it('reverts a type change by removing its persisted stored values', () => {

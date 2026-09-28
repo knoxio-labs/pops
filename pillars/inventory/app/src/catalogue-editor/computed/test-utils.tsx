@@ -93,6 +93,7 @@ function type(id: string, label: string, fields: readonly FieldShape[]): Catalog
     key: id,
     label,
     legacyLabels: [],
+    parentTypeId: null,
     presentation: {},
     replacedBy: null,
     revision: 3,

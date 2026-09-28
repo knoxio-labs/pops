@@ -26,6 +26,8 @@ function definitionId(sequence: number): string {
 }
 
 export const TYPE_ID = definitionId(1);
+export const INHERITED_REQUIRED_PARENT_TYPE_ID = definitionId(2);
+export const INHERITED_REQUIRED_CHILD_TYPE_ID = definitionId(3);
 
 export const FIELD_IDS = {
   shortTextOne: definitionId(10),
@@ -52,6 +54,7 @@ export const FIELD_IDS = {
   referenceMany: definitionId(31),
   computedField: definitionId(32),
   computedOverflow: definitionId(33),
+  inheritedRequired: definitionId(34),
 } as const;
 
 export type FieldKeyName = keyof typeof FIELD_IDS;

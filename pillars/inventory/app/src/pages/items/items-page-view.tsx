@@ -84,6 +84,8 @@ function useItemsPageView(model: ItemsPageModel) {
   const itemsExport = useItemsExport();
   const verbs = useListVerbs({
     rows: itemRows.rows,
+    webItems: itemRows.webItems,
+    catalogue: model.catalogue.catalogue,
     world: model.world,
     selection: model.selection,
     contentCounts: itemRows.contentCounts,
@@ -148,7 +150,7 @@ function ItemsPageContent({
 
 /** Renders the Items page around the server-backed model and its action hooks. */
 export function ItemsPageView({ model }: { model: ItemsPageModel }): ReactElement {
-  const { filters, itemRows, online, changed, duplicate } = model;
+  const { filters, itemRows, online, changed, duplicate, typeArrival } = model;
   const view = useItemsPageView(model);
   return (
     <InventoryPage
@@ -160,8 +162,17 @@ export function ItemsPageView({ model }: { model: ItemsPageModel }): ReactElemen
           online={online}
           changed={changed}
           duplicate={duplicate}
+          arrival={typeArrival.arrival}
           onDismiss={model.dismissDuplicate}
           onCompare={(name) => filters.setFilters({ q: name })}
+          onDismissArrival={() => {
+            const typeId = typeArrival.arrival?.type.id;
+            if (typeId !== undefined) typeArrival.dismiss(typeId);
+          }}
+          onReviewArrival={() => {
+            const typeId = typeArrival.arrival?.type.id;
+            if (typeId !== undefined) void model.navigate(`/inventory/types/${typeId}/arrived`);
+          }}
         />
       }
       toolbar={<ItemsToolbarSection model={model} />}

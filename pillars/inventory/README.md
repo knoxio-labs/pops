@@ -108,6 +108,16 @@ pass the field's own value rules (at most one on a `one` field) and never name
 an archived enum option. Clients pre-fill them on item create; the server never
 applies them, and changing one is compatible with no migration or re-send.
 
+Types may name one parent type. Each type authors its own fields and capabilities;
+the catalogue resolves effective fields and de-duplicated capabilities from the
+root through the type, while a type's descriptor still carries only its own
+definitions. Parent trees are validated for missing parents, cycles, archived
+parents, duplicate effective field keys and a maximum depth of three. A draft
+that introduces a parent requires protocol 3 to publish; this build supports
+protocol 3, but the production minimum remains owner-controlled and must be raised
+before publishing parent-type catalogues, after dependent clients are ready
+(POPS-4852).
+
 Generic field writes validate the complete stable-ID field set against its
 exact catalogue revision: kind, cardinality, required fields, storage authority,
 archived selections and live reference constraints are one atomic check.
@@ -204,8 +214,13 @@ projection, and the Swift evaluator must reproduce each result. Regenerate with
 `contracts/value-vectors-v1.json` does the same for stored values: every
 primitive kind and cardinality, absent and cleared fields, reference targets
 in each state and every computed state, written through the command engine and
-projected by `toSyncItem`, plus malformed values the engine refuses. BFM and the
-phone vendor it; regenerate with `mise run fixture:value-vectors`.
+projected by `toSyncItem`, plus malformed values the engine refuses. Its
+protocol-3 catalogue also has deterministic parent/child types where the child
+inherits a required `short_text` field; the `missing_required_field`
+`item.create` vector records the engine's `invalid` rejection. BFM and the
+phone vendor it; the phone rejects that negative before sending and drains the
+positive inherited-value create unchanged. Regenerate with
+`mise run fixture:value-vectors`.
 
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
@@ -285,7 +300,10 @@ The shell mounts the Items browser at `/inventory/items`. Search, type,
 placement, inactive, sort, view and page state live in the URL; the page sends
 those filters to `GET /web/items` and renders the server's totals and pages
 without client-side filtering or sorting. Table, compact and card views share
-the same URL state and keep scrolling within the list body.
+the same URL state and keep scrolling within the list body. Selecting rows also
+offers typed Set type and Set field sheets, plus reversible Retire and Discard
+actions; each applied item write records its own history event and one undo
+toast covers the completed batch.
 
 ### Web inventory routes and navigation
 
@@ -569,6 +587,9 @@ The same tasks are exposed through `mise.toml` (`mise run build`, `mise run test
   the OpenAPI projection. CI gates on drift.
 - `generate:manifest` — regenerates `src/contract/manifest.generated.ts`;
   `verify:manifest` (run first in `build`) fails the build on drift.
+- `generate:value-vectors` — regenerates `contracts/value-vectors-v1.json`;
+  copy it byte-for-byte to `pillars/bfm/contracts/value-vectors-v1.json` and
+  `clients/ios/Contracts/value-vectors-v1.json`.
 
 The contract (zod) is the single source of truth; OpenAPI, api-types, and the
 generated manifest are downstream projections. No hand-authored OpenAPI, no

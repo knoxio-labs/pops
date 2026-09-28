@@ -401,6 +401,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
           { path: 'connections/fixtures', bundleSlot: 'inventory-fixtures' },
           { path: 'fixtures/:id', bundleSlot: 'inventory-fixture' },
           { path: 'types', bundleSlot: 'inventory-type-catalogue' },
+          { path: 'types/:id', bundleSlot: 'inventory-type-catalogue' },
           { path: 'types/:id/arrived', bundleSlot: 'inventory-type-arrived' },
           { path: 'reports', bundleSlot: 'inventory-reports' },
           { path: 'labels', bundleSlot: 'inventory-labels' },

@@ -286,4 +286,19 @@ describe('usePlacementSources', () => {
     await waitFor(() => expect(result.current.createLocation.status).toBe('error'));
     expect(client.getQueryData<LocationTreeResponse>(LOCATION_TREE_QUERY_KEY)).toBe(beforeFailure);
   });
+
+  it('keeps the placement world stable when its source data has not changed', async () => {
+    const client = createTestQueryClient();
+    const { result, rerender } = renderHook(
+      () => usePlacementSources({ kind: 'place', locationId: 'room' }),
+      { wrapper: withQueryClient(client) }
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const world = result.current.world;
+
+    act(() => rerender());
+
+    expect(result.current.world).toBe(world);
+  });
 });

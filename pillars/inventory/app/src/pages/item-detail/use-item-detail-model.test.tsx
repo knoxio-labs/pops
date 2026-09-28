@@ -118,18 +118,27 @@ let primaryError: Error | null;
 let detailItem: WebGetResponse['item'] | null;
 let detailError: unknown;
 let detailRefetch: ReturnType<typeof vi.fn>;
+type Refetch = () => Promise<unknown>;
+let primaryLocationRefetch: Refetch;
+let primarySubjectRefetch: Refetch;
+let relatedLocationRefetch: Refetch;
+let relatedSubjectRefetch: Refetch;
 
-function source(world: PlacementWorld, error: Error | null) {
-  const refetch = vi.fn().mockResolvedValue({});
+function source(
+  world: PlacementWorld,
+  error: Error | null,
+  locationRefetch: Refetch,
+  subjectItemsRefetch: Refetch
+) {
   return {
     world,
     isLoading: false,
     isError: error !== null,
     error,
-    locationsQuery: { refetch },
-    openContainersQuery: { refetch },
-    closedContainersQuery: { refetch },
-    subjectItemsQuery: { refetch },
+    locationsQuery: { refetch: locationRefetch },
+    openContainersQuery: { refetch: locationRefetch },
+    closedContainersQuery: { refetch: locationRefetch },
+    subjectItemsQuery: { refetch: subjectItemsRefetch },
   };
 }
 
@@ -146,6 +155,10 @@ beforeEach(() => {
   detailItem = webItem;
   detailError = null;
   detailRefetch = vi.fn().mockResolvedValue({});
+  primaryLocationRefetch = vi.fn<Refetch>().mockResolvedValue({});
+  primarySubjectRefetch = vi.fn<Refetch>().mockResolvedValue({});
+  relatedLocationRefetch = vi.fn<Refetch>().mockResolvedValue({});
+  relatedSubjectRefetch = vi.fn<Refetch>().mockResolvedValue({});
 
   mocks.useCatalogueLookups.mockReturnValue({
     catalogue: undefined,
@@ -160,7 +173,12 @@ beforeEach(() => {
   mocks.usePendingItemIds.mockReturnValue(new Set<string>());
   mocks.usePlacementSources.mockImplementation((subject: PickerSubject) => {
     const ids = subject.kind === 'items' ? subject.ids : [];
-    return source(ids.includes('item-1') ? primaryWorld : emptyWorld, primaryError);
+    return source(
+      ids.includes('item-1') ? primaryWorld : emptyWorld,
+      primaryError,
+      ids.includes('item-1') ? primaryLocationRefetch : relatedLocationRefetch,
+      ids.includes('item-1') ? primarySubjectRefetch : relatedSubjectRefetch
+    );
   });
   mocks.useWebEvents.mockReturnValue({
     events: [],
@@ -228,8 +246,19 @@ describe('useItemDetailModel', () => {
     hook.result.current.retry();
 
     await waitFor(() => expect(detailRefetch).toHaveBeenCalledOnce());
+    expect(relatedLocationRefetch).toHaveBeenCalledTimes(3);
+    expect(relatedSubjectRefetch).toHaveBeenCalledOnce();
     expect(mocks.connectionsGraph).toHaveBeenCalledWith(
       expect.objectContaining({ query: { maxDepth: 10 } })
     );
+  });
+
+  it('uses the generic banner for a non-network auxiliary read error', async () => {
+    mocks.documentsListForItem.mockRejectedValue(new InventoryApiError('invalid request', 400));
+
+    const hook = renderModel();
+
+    await waitFor(() => expect(hook.result.current.banner).toBe('error'));
+    expect(hook.result.current.banner).not.toBe('unavailable');
   });
 });
