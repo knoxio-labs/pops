@@ -12,6 +12,7 @@ export interface HistoryListProps {
   events: readonly EventModel[];
   filtered: boolean;
   selectedId: string | null;
+  total: number;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   disabledReason?: string;
@@ -21,26 +22,56 @@ export interface HistoryListProps {
   onLoadMore: () => void;
 }
 
-function LoadMoreButton({
-  isFetchingNextPage,
-  onLoadMore,
-}: Pick<HistoryListProps, 'isFetchingNextPage' | 'onLoadMore'>) {
+type PagingProps = Pick<
+  HistoryListProps,
+  'total' | 'hasNextPage' | 'isFetchingNextPage' | 'onLoadMore'
+> & { shownCount: number };
+type LoadMoreProps = Pick<HistoryListProps, 'total' | 'isFetchingNextPage' | 'onLoadMore'> & {
+  shownCount: number;
+};
+
+function LoadMoreButton({ shownCount, total, isFetchingNextPage, onLoadMore }: LoadMoreProps) {
+  const remaining = Math.min(Math.max(total - shownCount, 0), 50);
   return (
     <Button size="sm" variant="outline" onClick={onLoadMore} disabled={isFetchingNextPage}>
-      {isFetchingNextPage ? 'Loading events…' : 'Load more events'}
+      {isFetchingNextPage ? 'Loading events…' : `Load ${remaining} more`}
     </Button>
+  );
+}
+
+function PagingFooter({
+  shownCount,
+  total,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
+}: PagingProps) {
+  if (!hasNextPage) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 border-t p-3">
+      <span className="text-xs text-muted-foreground">
+        {shownCount} of {total} shown
+      </span>
+      <LoadMoreButton
+        shownCount={shownCount}
+        total={total}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={onLoadMore}
+      />
+    </div>
   );
 }
 
 function HistoryEmpty({
   filtered,
+  total,
   hasNextPage,
   isFetchingNextPage,
   onClearFilter,
   onLoadMore,
 }: Pick<
   HistoryListProps,
-  'filtered' | 'hasNextPage' | 'isFetchingNextPage' | 'onClearFilter' | 'onLoadMore'
+  'filtered' | 'total' | 'hasNextPage' | 'isFetchingNextPage' | 'onClearFilter' | 'onLoadMore'
 >) {
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-center rounded-xl border bg-card">
@@ -61,11 +92,13 @@ function HistoryEmpty({
           ) : undefined
         }
       />
-      {hasNextPage ? (
-        <div className="flex justify-center border-t p-3">
-          <LoadMoreButton isFetchingNextPage={isFetchingNextPage} onLoadMore={onLoadMore} />
-        </div>
-      ) : null}
+      <PagingFooter
+        shownCount={0}
+        total={total}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={onLoadMore}
+      />
     </div>
   );
 }
@@ -107,6 +140,7 @@ export function HistoryList({
   events,
   filtered,
   selectedId,
+  total,
   hasNextPage,
   isFetchingNextPage,
   disabledReason,
@@ -119,6 +153,7 @@ export function HistoryList({
     return (
       <HistoryEmpty
         filtered={filtered}
+        total={total}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         onClearFilter={onClearFilter}
@@ -136,11 +171,13 @@ export function HistoryList({
         onUndo={onUndo}
         disabledReason={disabledReason}
       />
-      {hasNextPage ? (
-        <div className="flex justify-center border-t p-3">
-          <LoadMoreButton isFetchingNextPage={isFetchingNextPage} onLoadMore={onLoadMore} />
-        </div>
-      ) : null}
+      <PagingFooter
+        shownCount={events.length}
+        total={total}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={onLoadMore}
+      />
     </div>
   );
 }
