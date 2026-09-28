@@ -4,6 +4,7 @@ import { coreItem, coreWorld } from '../../foundation/test-fixtures/core';
 import {
   itemRecordCommand,
   placementArgumentCommand,
+  purchaseRecordCommand,
   thisItemCommands,
   uniquePlacementTargets,
 } from './palette-commands';
@@ -73,5 +74,24 @@ describe('inventory palette commands', () => {
 
     expect(entry.keywords).toEqual(expect.arrayContaining(['TV1', 'Electronics']));
     expect(entry.detail).toContain('TV1');
+  });
+
+  it('turns a purchase hit into a navigable palette record', () => {
+    const entry = purchaseRecordCommand({
+      id: 'purchase-1',
+      merchant: 'Kmart',
+      orderNumber: 'KM-123',
+      date: '2026-09-12T12:00:00.000Z',
+      totalCents: 1400,
+      currency: 'AUD',
+      matchedLine: 'Cable organiser, 3 pack',
+    });
+
+    expect(entry).toMatchObject({
+      id: 'purchase:purchase-1',
+      label: 'Cable organiser, 3 pack',
+      action: { kind: 'open-purchase', id: 'purchase-1' },
+      keywords: ['Kmart', 'KM-123', 'Cable organiser, 3 pack'],
+    });
   });
 });

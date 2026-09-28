@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { InventoryApiError } from '../inventory-api-helpers';
@@ -166,9 +166,15 @@ function CatalogueRoute({ navigateTo }: { readonly navigateTo?: string }) {
   return (
     <>
       <TypeCataloguePage />
+      <CurrentPath />
       {navigateTo === undefined ? null : <NavigationButton to={navigateTo} />}
     </>
   );
+}
+
+function CurrentPath() {
+  const location = useLocation();
+  return <output data-testid="current-path">{location.pathname}</output>;
 }
 
 function NavigationButton({ to }: { readonly to: string }) {
@@ -284,6 +290,18 @@ describe('TypeCataloguePage', () => {
     );
     expect(screen.getByRole('button', { name: /Type A/ })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: /Type C/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('updates the type route when selecting a type from the catalogue', async () => {
+    api.readCatalogue.mockResolvedValue({ data: navigationCatalogue, error: undefined });
+    renderPage('/inventory/types');
+
+    await screen.findByRole('button', { name: /Type A/ });
+    fireEvent.click(screen.getByRole('button', { name: /Type B/ }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('current-path')).toHaveTextContent(`/inventory/types/${TYPE_B_ID}`)
+    );
   });
 
   it('resets the editor state when navigating from type A to type B', async () => {
