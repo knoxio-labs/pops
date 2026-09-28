@@ -26,11 +26,12 @@ function catalogueType(
   key: string,
   label: string,
   sortOrder: number,
-  archivedAt: string | null = null
+  archivedAt: string | null = null,
+  parentTypeId: string | null = null
 ): CatalogueType {
   return {
     id: `type-${key}`,
-    parentTypeId: null,
+    parentTypeId,
     key,
     label,
     sortOrder,
@@ -69,8 +70,17 @@ describe('list filters', () => {
         catalogueType('alpha', 'Alpha', 1),
       ])
     ).toEqual([
-      { value: 'alpha', label: 'Alpha' },
-      { value: 'zeta', label: 'Zeta' },
+      { value: 'alpha', label: 'Alpha', parentTypeId: null },
+      { value: 'zeta', label: 'Zeta', parentTypeId: null },
+    ]);
+  });
+
+  it('builds path-labelled child options with parent metadata', () => {
+    const bedding = catalogueType('bedding', 'Bedding', 0);
+    const sheet = catalogueType('sheet', 'Sheet', 1, null, bedding.id);
+    expect(typeFilterOptions([bedding, sheet])).toEqual([
+      { value: 'bedding', label: 'Bedding', parentTypeId: null },
+      { value: 'sheet', label: 'Bedding › Sheet', parentTypeId: bedding.id },
     ]);
   });
 

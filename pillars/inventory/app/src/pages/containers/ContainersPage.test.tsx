@@ -96,7 +96,9 @@ const retiredBox = row('box-retired', 'Retired box', {
 function catalogueType(
   key: string,
   label: string,
-  options: Partial<Pick<CatalogueType, 'capabilities' | 'sortOrder' | 'archivedAt'>> = {}
+  options: Partial<
+    Pick<CatalogueType, 'capabilities' | 'sortOrder' | 'archivedAt' | 'parentTypeId'>
+  > = {}
 ): CatalogueType {
   return {
     id: `type-${key}`,
@@ -108,7 +110,7 @@ function catalogueType(
     description: null,
     fields: [],
     legacyLabels: [],
-    parentTypeId: null,
+    parentTypeId: options.parentTypeId ?? null,
     presentation: {},
     replacedBy: null,
     revision: 1,
@@ -188,6 +190,7 @@ function renderPage(initialEntry = '/inventory/containers'): void {
     types: [
       catalogueType('storage', 'Storage'),
       catalogueType('box', 'Box', { capabilities: ['containment'], sortOrder: 1 }),
+      catalogueType('box-lid', 'Box lid', { parentTypeId: 'type-box', sortOrder: 2 }),
     ],
     typeById: new Map(),
     typeNameById: new Map(),
@@ -276,7 +279,7 @@ describe('ContainersPage', () => {
     expect(screen.getByText('Holds')).toBeInTheDocument();
   });
 
-  it('offers only containment types and places in the container filters', () => {
+  it('offers effective containment types and places in the container filters', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
 
@@ -286,8 +289,13 @@ describe('ContainersPage', () => {
     const placeOptions = [...screen.getByLabelText('Where').querySelectorAll('option')].map(
       (option) => option.textContent
     );
-    expect(typeOptions).toEqual(['Any type', 'Box']);
+    expect(typeOptions).toEqual(['Any type', 'Box', 'Box › Box lid']);
     expect(placeOptions).toEqual(['Anywhere', 'Garage']);
+
+    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'box-lid' } });
+    await waitFor(() =>
+      expect(mocks.useItemRows.mock.calls.some(([query]) => query.typeKey === 'box-lid')).toBe(true)
+    );
   });
 
   it('changes the URL-backed state segment and sends the server filter', async () => {
