@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { testField, testType } from '../../catalogue-editor/type-tree-test-utils';
 import { buildWorld } from '../../foundation/model/placement-model';
 import { InventoryApiError } from '../../inventory-api-helpers.js';
 import { createTestQueryClient, withQueryClient } from '../../inventory-web/test-utils';
@@ -224,6 +225,63 @@ beforeEach(() => {
 });
 
 describe('useItemDetailModel', () => {
+  it('resolves inherited facts and the computed type hierarchy path', async () => {
+    const inherited = testField('field-material', 'type-bedding', 'material', {
+      label: 'Material',
+    });
+    const local = testField('field-fitted', 'type-sheet', 'fitted', {
+      kind: 'boolean',
+      label: 'Fitted',
+    });
+    const parent = {
+      ...testType('type-bedding', 'Bedding', null, { fields: [inherited] }),
+      capabilities: [],
+    };
+    const child = testType('type-sheet', 'Sheet', parent.id, { fields: [local] });
+    const types = [parent, child];
+    const typeById = new Map<string, (typeof types)[number]>();
+    const typeNameById = new Map<string, string>();
+    for (const type of types) {
+      typeById.set(type.id, type);
+      typeNameById.set(type.id, type.label);
+    }
+    const typedItem = { ...item, typeId: child.id, typeName: child.label };
+    primaryWorld = buildWorld(
+      [typedItem],
+      [{ id: 'study', name: 'Study', parentId: null, kind: 'room' }]
+    );
+    detailItem = {
+      ...webItem,
+      typeId: child.id,
+      typeKey: child.key,
+      fieldValues: [
+        { catalogueRevision: 1, fieldId: inherited.id, source: 'stored', values: ['Cotton'] },
+        { catalogueRevision: 1, fieldId: local.id, source: 'stored', values: [true] },
+      ],
+    };
+    mocks.useCatalogueLookups.mockReturnValue({
+      catalogue: undefined,
+      types,
+      typeById,
+      typeNameById,
+      typeForId: (id: string | null | undefined) =>
+        id === null || id === undefined ? null : (typeById.get(id) ?? null),
+      typeNameForId: (id: string | null | undefined) =>
+        id === null || id === undefined ? null : (typeById.get(id)?.label ?? null),
+      isPending: false,
+      error: null,
+    });
+
+    const hook = renderModel();
+
+    await waitFor(() => expect(hook.result.current.status).toBe('ready'));
+    expect(hook.result.current.model?.item.typeName).toBe('Bedding › Sheet');
+    expect(hook.result.current.model?.aggregate?.facts.map((fact) => fact.key)).toEqual([
+      'material',
+      'fitted',
+    ]);
+  });
+
   it('waits for the primary placement before becoming ready', async () => {
     primaryWorld = emptyWorld;
     const hook = renderModel();
