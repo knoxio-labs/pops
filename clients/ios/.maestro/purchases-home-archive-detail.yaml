@@ -20,6 +20,7 @@ name: Purchases home opens both archive scopes and a full detail
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
+- runFlow: subflows/select-transactions.yaml
 - assertVisible:
     id: 'transactions-list'
 - tapOn: 'Purchases'

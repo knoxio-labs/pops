@@ -89,15 +89,17 @@ name: Inventory automatically downloads, then creates, moves, discards and undoe
     text: 'Move'
     index: 0
 - scrollUntilVisible:
-    element: 'History, Collapsed'
+    element: 'History'
     direction: DOWN
 - assertNotVisible: 'Moved, Today'
-- tapOn: 'History, Collapsed'
-- assertVisible: 'History, Expanded'
+- tapOn: 'History'
+- assertVisible: 'Hide'
 - assertVisible: 'Moved, Today'
-- tapOn: 'History, Expanded'
+- tapOn: 'History'
+- assertVisible: 'Show'
 - assertNotVisible: 'Moved, Today'
-- tapOn: 'History, Collapsed'
+- tapOn: 'History'
+- assertVisible: 'Hide'
 - assertVisible: 'Moved, Today'
 - scrollUntilVisible:
     element: 'More'

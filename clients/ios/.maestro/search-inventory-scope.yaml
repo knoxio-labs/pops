@@ -146,6 +146,7 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - tapOn:
     text: 'Move'
     index: 0
+- tapOn: 'History'
 - assertVisible: 'Moved, Today'
 - tapOn:
     id: 'BackButton'

@@ -46,7 +46,7 @@
  * which is also the commoner real outage: a pillar serving its static contract
  * while whatever is behind it is not. The SDK maps any unmapped status onto
  * `unavailable` (`libs/sdk/src/client/rest-call.ts`), so the BFM answers
- * `upstream_unavailable` and the app says the sentence.
+ * `gateway.upstream_unavailable` and the app says the sentence.
  *
  * ## The `/openapi` switches
  *
@@ -544,7 +544,7 @@ export function buildRegistrySnapshot({
  * finance's own error envelope, which requires `message` and nothing else. The
  * status is what carries the meaning: the SDK maps everything it does not
  * model onto `unavailable`, so 503 is read by the BFM as "finance did not
- * answer" and reaches the phone as `upstream_unavailable`.
+ * answer" and reaches the phone as `gateway.upstream_unavailable`.
  */
 export const FINANCE_OUTAGE_BODY = {
   message: 'finance is not serving transactions right now',
