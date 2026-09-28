@@ -1,11 +1,12 @@
 /**
- * The label page's address: `/inventory/labels?ids=…&template=…&sheet=…`,
+ * The label page's address: `/inventory/labels?ids=…&shows=…&sheet=…`,
  * plus `contents=1` to print each listed box together with what is in it.
- * The ids are the job; everything else is a starting choice.
+ * The legacy `template` parameter remains readable for old links. The ids are
+ * the job; everything else is a starting choice.
  */
-import { DEFAULT_LABEL_CONTENT } from '@pops/inventory/labels';
+import { DEFAULT_LABEL_CONTENT, presetById } from '@pops/inventory/labels';
 
-import type { LabelContent, LabelTemplateChoice } from '@pops/inventory/labels';
+import type { LabelContent, LabelPresetId, LabelTemplateChoice } from '@pops/inventory/labels';
 
 /** The most items one label job holds, the `GET /web/items` `ids` limit. */
 export const MAX_LABEL_IDS = 200;
@@ -13,22 +14,23 @@ export const MAX_LABEL_IDS = 200;
 /** The label page's search parameters, parsed. */
 export interface LabelParams {
   ids: string[];
-  template: LabelTemplateChoice;
+  /** The selected named content preset, or null for an unknown explicit value. */
+  shows: LabelPresetId | null;
   content: LabelContent;
   sheetId: string | null;
   contents: boolean;
 }
 
-/** Stored defaults used when the URL does not explicitly choose a template or sheet. */
+/** Stored defaults used when the URL does not explicitly choose content or a sheet. */
 export interface LabelPageDefaults {
-  template: LabelTemplateChoice;
+  shows: LabelPresetId;
   content: LabelContent;
   sheetId: string | null;
 }
 
 /** Defaults used by standalone links before the inventory settings query resolves. */
 export const DEFAULT_LABEL_PAGE_DEFAULTS: LabelPageDefaults = {
-  template: 'auto',
+  shows: 'auto',
   content: DEFAULT_LABEL_CONTENT,
   sheetId: null,
 };
@@ -37,23 +39,23 @@ function isTemplateChoice(value: string | null): value is LabelTemplateChoice {
   return value === 'auto' || value === 'container' || value === 'item';
 }
 
-function templateFromSearch(
-  search: URLSearchParams,
-  fallback: LabelTemplateChoice
-): LabelTemplateChoice {
-  const template = search.get('template');
-  if (template === null) return fallback;
-  return isTemplateChoice(template) ? template : 'auto';
+function showsForTemplate(template: LabelTemplateChoice): LabelPresetId {
+  if (template === 'container') return 'qr-name-code';
+  if (template === 'item') return 'qr-code';
+  return 'auto';
 }
 
-function contentForTemplate(template: LabelTemplateChoice): LabelContent {
-  if (template === 'container') {
-    return { kind: 'parts', parts: ['qr', 'name', 'code'], fields: [] };
-  }
-  if (template === 'item') {
-    return { kind: 'parts', parts: ['qr', 'code'], fields: [] };
-  }
-  return DEFAULT_LABEL_CONTENT;
+function explicitShows(search: URLSearchParams): LabelPresetId | null | undefined {
+  if (search.has('shows')) return presetById(search.get('shows'))?.id ?? null;
+  if (!search.has('template')) return undefined;
+  const template = search.get('template');
+  return template !== null && isTemplateChoice(template) ? showsForTemplate(template) : null;
+}
+
+function contentForShows(shows: LabelPresetId | null): LabelContent {
+  return shows === null
+    ? DEFAULT_LABEL_CONTENT
+    : (presetById(shows)?.content ?? DEFAULT_LABEL_CONTENT);
 }
 
 /** The ids in `ids=`, trimmed, without blanks or repeats, capped at {@link MAX_LABEL_IDS}. */
@@ -71,12 +73,12 @@ export function readLabelParams(
   search: URLSearchParams,
   defaults: LabelPageDefaults = DEFAULT_LABEL_PAGE_DEFAULTS
 ): LabelParams {
-  const template = templateFromSearch(search, defaults.template);
-  const hasTemplate = search.has('template');
+  const requestedShows = explicitShows(search);
+  const shows = requestedShows === undefined ? defaults.shows : requestedShows;
   return {
     ids: parseIds(search.get('ids')),
-    template,
-    content: hasTemplate ? contentForTemplate(template) : defaults.content,
+    shows,
+    content: requestedShows === undefined ? defaults.content : contentForShows(shows),
     sheetId: search.get('sheet') ?? defaults.sheetId,
     contents: search.get('contents') === '1',
   };

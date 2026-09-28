@@ -9,10 +9,12 @@ import { unwrap } from '../../inventory-api-helpers.js';
 import { codesSuggest, webList } from '../../inventory-api/index.js';
 import { INVENTORY_SYNC_PROTOCOL } from '../../inventory-web/mutation-client.js';
 import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
+import { usePublishedCatalogue } from '../../inventory-web/useCatalogueLookups.js';
 import { MAX_LABEL_IDS } from './label-params';
 
 import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
+import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types.js';
 import type { WebListResponses } from '../../inventory-api/types.gen.js';
 
 /** One item as `GET /web/items` returns it. */
@@ -99,17 +101,88 @@ function useSuggestions(items: WebItem[]) {
   return suggestions;
 }
 
-function valueText(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function objectValueText(value: Record<string, unknown>, field?: CatalogueField): string {
+  if (field?.kind === 'enum' && typeof value.optionId === 'string') {
+    return (
+      field.enumOptions.find((option) => option.id === value.optionId)?.label ?? 'Unknown option'
+    );
   }
-  if (Array.isArray(value)) return value.map(valueText).filter(Boolean).join(', ');
-  if (typeof value === 'object') return JSON.stringify(value) ?? '';
+  if (
+    (typeof value.amount === 'string' || typeof value.amount === 'number') &&
+    typeof value.unit === 'string'
+  ) {
+    return `${value.amount} ${value.unit}`;
+  }
+  if (typeof value.targetId === 'string') return value.targetId;
+  return JSON.stringify(value) ?? '';
+}
+
+function valueText(value: unknown, field?: CatalogueField): string {
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => valueText(entry, field))
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (isRecord(value)) return objectValueText(value, field);
   return '';
 }
 
-function detailsFor(item: WebItem, contents: readonly LabelSubject[]): LabelDetails {
+function fieldValuesFor(item: WebItem, field: CatalogueField): readonly unknown[] {
+  const overrides = item.fieldValues.find(
+    (entry) => entry.fieldId === field.id && entry.source === 'override'
+  );
+  if (overrides !== undefined) return overrides.values;
+  const stored = item.fieldValues.find(
+    (entry) => entry.fieldId === field.id && entry.source === 'stored'
+  );
+  if (stored !== undefined) return stored.values;
+  const computed = item.computedValues.find((entry) => entry.fieldId === field.id);
+  if (computed?.state === 'ok' || computed?.state === 'overridden') return computed.values;
+  const legacy = item.fields[field.key] ?? item.fields[field.label];
+  return legacy === undefined ? [] : [legacy];
+}
+
+function catalogueDetailsFor(
+  item: WebItem,
+  contents: readonly LabelSubject[],
+  type: CatalogueType
+): LabelDetails {
+  const prefix = item.typeKey ?? type.key;
+  const fields: LabelFieldValue[] = [];
+  for (const field of type.fields) {
+    const value = fieldValuesFor(item, field)
+      .map((entry) => valueText(entry, field))
+      .filter(Boolean)
+      .join(', ');
+    if (value.length === 0) continue;
+    fields.push({ id: `${prefix}.${field.key}`, label: field.label, value });
+  }
+  return {
+    typeName: type.label,
+    fields,
+    contents: contents.map((subject) =>
+      subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name
+    ),
+  };
+}
+
+/** Builds printable label details from catalogue fields, with legacy fallback values. */
+export function detailsFor(
+  item: WebItem,
+  contents: readonly LabelSubject[],
+  types: ReadonlyMap<string, CatalogueType>
+): LabelDetails {
+  const type = item.typeId === null ? undefined : types.get(item.typeId);
+  if (type !== undefined) return catalogueDetailsFor(item, contents, type);
+
   const fields: LabelFieldValue[] = [];
   if (item.typeKey !== null) {
     for (const [key, rawValue] of Object.entries(item.fields)) {
@@ -129,6 +202,7 @@ function detailsFor(item: WebItem, contents: readonly LabelSubject[]): LabelDeta
 
 /** Loads the items behind `ids`, each box's contents, and codes to suggest. */
 export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
+  const { typeById } = usePublishedCatalogue();
   const listed = useQuery({
     queryKey: [...WEB_ITEMS_QUERY_KEY, 'labels', ids] as const,
     queryFn: () => listItems({ ids: ids.join(',') }),
@@ -155,7 +229,7 @@ export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
     missing: listed.data && !listed.isPlaceholderData ? ids.filter((id) => !byId.has(id)) : [],
     contents,
     details: new Map(
-      ordered.map((item) => [item.id, detailsFor(item, contents.get(item.id) ?? [])])
+      ordered.map((item) => [item.id, detailsFor(item, contents.get(item.id) ?? [], typeById)])
     ),
   };
 }
