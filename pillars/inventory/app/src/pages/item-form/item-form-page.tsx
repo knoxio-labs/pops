@@ -112,7 +112,7 @@ function FormCards({
 }): ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
       <div className="min-h-0 lg:overflow-y-auto">
         <IdentityCard
           api={api}
