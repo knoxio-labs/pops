@@ -190,4 +190,19 @@ describe('detailsFor', () => {
       fields: [{ id: 'legacy.Colour', label: 'Colour', value: 'White' }],
     });
   });
+
+  it('sorts box contents by name for the printed contents section', () => {
+    const legacy = { ...item, typeId: null, typeKey: 'legacy' };
+
+    expect(
+      detailsFor(
+        legacy,
+        [
+          { name: 'Zulu', quantity: 1 },
+          { name: 'Alpha', quantity: 1 },
+        ],
+        new Map()
+      ).contents
+    ).toEqual(['Alpha', 'Zulu']);
+  });
 });

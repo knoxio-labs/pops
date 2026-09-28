@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildWorld } from '../../../foundation/model/placement-model.js';
@@ -50,6 +51,26 @@ function renderPane() {
 }
 
 describe('ContentsPane', () => {
+  it('sorts direct contents by name by default', () => {
+    renderPane();
+
+    expect(
+      screen.getAllByRole('button', { name: /^Open / }).map((button) => button.textContent)
+    ).toEqual(['Desk lamp', 'USB cable']);
+  });
+
+  it('changes the contents order from the sort menu', async () => {
+    const user = userEvent.setup();
+    renderPane();
+
+    await user.click(screen.getByRole('button', { name: 'Sort contents' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Name (Z–A)' }));
+
+    expect(
+      screen.getAllByRole('button', { name: /^Open / }).map((button) => button.textContent)
+    ).toEqual(['USB cable', 'Desk lamp']);
+  });
+
   it('filters direct contents by name and code without changing the unpack state', () => {
     renderPane();
     const filter = screen.getByRole('textbox', { name: 'Filter what is in Archive box' });

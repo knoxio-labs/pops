@@ -224,8 +224,13 @@ describe('LabelsPage', () => {
 
     expect(await screen.findByRole('button', { name: 'Print 2 labels' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Label shows: Contents only' })).toBeInTheDocument();
-    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Espresso machine');
-    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Coffee cups ×6');
+    const contents = document.querySelector('[data-label-contents]');
+    if (!contents) throw new Error('no contents list on the label');
+    expect([...contents.querySelectorAll('li')].map((line) => line.textContent)).toEqual([
+      'Coffee cups ×6',
+      'Espresso machine',
+      'Milk jug',
+    ]);
   });
 
   it('opens the label-shows entry point and applies a preset to the preview', async () => {
@@ -278,7 +283,7 @@ describe('LabelsPage', () => {
 
   it('prints a box with its contents when asked, writing them into the address', async () => {
     renderPage(`?ids=${BOX}&contents=1`);
-    await waitFor(() => expect(addressIds()).toEqual([BOX, MACHINE, CUPS, JUG]));
+    await waitFor(() => expect(addressIds()).toEqual([BOX, CUPS, MACHINE, JUG]));
     expect(screen.getByTestId('address').textContent).not.toContain('contents');
     expect(await screen.findByText('Coffee cups')).toBeInTheDocument();
     expect(api.webList).toHaveBeenCalledWith({ query: { containingItemId: BOX, limit: 200 } });
@@ -287,7 +292,7 @@ describe('LabelsPage', () => {
   it("adds a box's contents from its row", async () => {
     renderPage(`?ids=${BOX}`);
     fireEvent.click(await screen.findByRole('button', { name: 'Add 3 inside' }));
-    await waitFor(() => expect(addressIds()).toEqual([BOX, MACHINE, CUPS, JUG]));
+    await waitFor(() => expect(addressIds()).toEqual([BOX, CUPS, MACHINE, JUG]));
   });
 
   it('removes an item from the job only', async () => {
