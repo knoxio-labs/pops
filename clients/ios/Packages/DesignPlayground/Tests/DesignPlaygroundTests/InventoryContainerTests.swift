@@ -126,21 +126,26 @@ internal struct InventoryContainerActionsTests {
         InventoryContainerActions.row(for: profile).map(\.id)
     }
 
-    @Test("an open container offers pick up, move, close and store here, in that order")
+    @Test("an open container leads with close, then move and store here")
     func openRow() {
-        #expect(ids(profile()) == ["pick-up", "move", "close", "store-here"])
+        #expect(ids(profile()) == ["close", "move", "store-here"])
         #expect(
             InventoryContainerActions.row(for: profile()).first { $0.id == "close" }?.symbol
                 == .close)
+        #expect(InventoryContainerActions.overflow(for: profile()).map(\.id) == ["pick-up"])
     }
 
     @Test("a closed container still offers store here, and opens without a seal")
     func closedRow() {
         let row = InventoryContainerActions.row(for: profile(access: .closed))
 
-        #expect(row.map(\.id) == ["pick-up", "move", "reopen", "store-here"])
+        #expect(row.map(\.id) == ["reopen", "move", "store-here"])
         #expect(row.allSatisfy { $0.confirmation == nil })
         #expect(row.first { $0.id == "reopen" }?.symbol == .open)
+        #expect(
+            InventoryContainerActions.overflow(for: profile(access: .closed)).map(\.id) == [
+                "pick-up"
+            ])
     }
 
     @Test("furniture is moved and stored into, never picked up, opened or closed")
@@ -148,12 +153,16 @@ internal struct InventoryContainerActionsTests {
         #expect(ids(profile(access: nil, isFurniture: true)) == ["move", "store-here"])
     }
 
-    @Test("a container in hand offers put back instead of pick up")
+    @Test("a container in hand moves Put back to More")
     func inHandRow() {
         let row = ids(profile(placement: .inHand(previous: "Kitchen")))
 
-        #expect(row.first == "put-back")
-        #expect(!row.contains("pick-up"))
+        #expect(row == ["close", "move", "store-here"])
+        #expect(
+            InventoryContainerActions.overflow(
+                for: profile(placement: .inHand(previous: "Kitchen"))
+            )
+            .map(\.id) == ["put-back"])
     }
 
     @Test("a retired container offers only restore")
