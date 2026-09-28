@@ -85,7 +85,7 @@ internal struct PurchasesHomeView: View {
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.lg)
         }
-        .scrollBounceBehavior(.basedOnSize)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .refreshable { await runRefresh() }
     }
 }
