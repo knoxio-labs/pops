@@ -4,6 +4,11 @@ import {
   EMPTY_COMPUTED_ENVIRONMENT,
   ComputedSectionProvider,
 } from './computed/computed-environment';
+import {
+  decimalPlacesFromInput,
+  presentationWithDecimalPlaces,
+  supportsDecimalPlaces,
+} from './decimal-places';
 import { savedExpressionVersion } from './expression/expression-version';
 import { expressionContext, fieldValueType, toWire } from './expression/wire';
 import { FieldFormActions } from './FieldFormActions';
@@ -105,6 +110,10 @@ function computedPart(value: FieldFormContextValue, typeId: string) {
 }
 
 function createOperation(value: FieldFormContextValue, typeId: string): CatalogueOperation {
+  const presentation = presentationWithDecimalPlaces(
+    { ...value.field?.presentation, highlighted: value.highlighted },
+    supportsDecimalPlaces(value.kind) ? decimalPlacesFromInput(value.decimalPlaces) : null
+  );
   return {
     kind: 'put_field',
     typeId,
@@ -112,7 +121,7 @@ function createOperation(value: FieldFormContextValue, typeId: string): Catalogu
     label: value.label.trim(),
     help: value.help.trim() === '' ? null : value.help.trim(),
     required: value.required,
-    presentation: { ...value.field?.presentation, highlighted: value.highlighted },
+    presentation,
     ...(value.shapeLocked
       ? {}
       : {

@@ -1,3 +1,8 @@
+import {
+  decimalPlacesFromPresentation,
+  formatDecimal,
+} from '../../catalogue-editor/decimal-places.js';
+
 import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types.js';
@@ -10,18 +15,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function objectValueText(value: Record<string, unknown>, field?: CatalogueField): string {
-  if (field?.kind === 'enum' && typeof value.optionId === 'string') {
-    return (
-      field.enumOptions.find((option) => option.id === value.optionId)?.label ?? 'Unknown option'
-    );
-  }
+function enumText(value: Record<string, unknown>, field?: CatalogueField): string | null {
+  if (field?.kind !== 'enum' || typeof value.optionId !== 'string') return null;
+  return (
+    field.enumOptions.find((option) => option.id === value.optionId)?.label ?? 'Unknown option'
+  );
+}
+
+function measurementText(value: Record<string, unknown>, field?: CatalogueField): string | null {
   if (
-    (typeof value.amount === 'string' || typeof value.amount === 'number') &&
-    typeof value.unit === 'string'
+    (typeof value.amount !== 'string' && typeof value.amount !== 'number') ||
+    typeof value.unit !== 'string'
   ) {
-    return `${value.amount} ${value.unit}`;
+    return null;
   }
+  return `${formatDecimal(value.amount, decimalPlacesFromPresentation(field?.presentation) ?? null)} ${value.unit}`;
+}
+
+function objectValueText(value: Record<string, unknown>, field?: CatalogueField): string {
+  const choice = enumText(value, field);
+  if (choice !== null) return choice;
+  const measurement = measurementText(value, field);
+  if (measurement !== null) return measurement;
   if (typeof value.targetId === 'string') return value.targetId;
   return JSON.stringify(value) ?? '';
 }

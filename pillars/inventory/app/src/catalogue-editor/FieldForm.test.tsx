@@ -168,6 +168,37 @@ describe('FieldForm configuration branches', () => {
     expect(onOperation).toHaveBeenCalledWith(expect.objectContaining({ fixedUnit: 'cm' }));
   });
 
+  it('submits decimal places for decimal and measurement fields', () => {
+    const onOperation = renderField(field({ kind: 'measurement', fixedUnit: 'L' }));
+
+    fireEvent.change(screen.getByLabelText('Decimal places'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ presentation: { highlighted: false, decimalPlaces: 1 } })
+    );
+  });
+
+  it('keeps the decimal-place option available for a computed measurement', () => {
+    const onOperation = renderField(
+      field({
+        kind: 'measurement',
+        fixedUnit: 'L',
+        storage: 'computed',
+        expressionVersion: 1,
+        expression: { op: 'literal', value: { amount: '24.0000', unit: 'L' } },
+      })
+    );
+
+    expect(screen.getByLabelText('Decimal places')).toBeEnabled();
+    fireEvent.change(screen.getByLabelText('Decimal places'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ presentation: { highlighted: false, decimalPlaces: 1 } })
+    );
+  });
+
   it('submits required, highlighted, and trimmed help text changes', () => {
     const onOperation = renderField(field());
 

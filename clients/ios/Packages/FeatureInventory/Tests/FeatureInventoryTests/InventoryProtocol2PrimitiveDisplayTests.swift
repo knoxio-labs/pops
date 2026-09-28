@@ -46,6 +46,12 @@ internal struct InventoryProtocol2PrimitiveDisplayTests {
                 value: .measurement(amount: try InventoryDecimal("48.000"), unit: "kg"),
                 field: field(.measurement, fixedUnit: "kg"), expected: "48.000 kg"),
             DisplayCase(
+                value: .measurement(amount: try InventoryDecimal("48.05"), unit: "kg"),
+                field: field(
+                    .measurement, fixedUnit: "kg",
+                    presentation: .object(["decimalPlaces": .number("1")])),
+                expected: "48.1 kg"),
+            DisplayCase(
                 value: .date(try InventoryCanonicalDate("2024-02-29")), field: field(.date),
                 expected: "2024-02-29"),
             DisplayCase(
@@ -65,11 +71,12 @@ internal struct InventoryProtocol2PrimitiveDisplayTests {
 
     private static func field(
         _ kind: InventoryPrimitiveKind, fixedUnit: String? = nil,
-        enumOptions: [InventoryCatalogueOption] = []
+        enumOptions: [InventoryCatalogueOption] = [],
+        presentation: InventoryJSON = .object([:])
     ) -> InventoryCatalogueField {
         InventoryCatalogueField(
             id: kind.rawValue, typeId: "type", key: kind.rawValue, label: kind.rawValue,
             sortOrder: 0, kind: kind, cardinality: .one, required: false, storage: .stored,
-            fixedUnit: fixedUnit, enumOptions: enumOptions)
+            fixedUnit: fixedUnit, presentation: presentation, enumOptions: enumOptions)
     }
 }

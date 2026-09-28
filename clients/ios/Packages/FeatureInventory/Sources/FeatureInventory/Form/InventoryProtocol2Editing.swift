@@ -227,11 +227,12 @@ internal enum InventoryProtocol2Display {
         switch primitive {
         case .string(let value): return value
         case .integer(let value): return String(value.value)
-        case .decimal(let value): return value.text
+        case .decimal(let value): return decimal(value.text, field: field)
         case .boolean(let value): return value ? "Yes" : "No"
         case .enumeration(let optionId):
             return enumeration(optionId, field: field)
-        case .measurement(let amount, let unit): return "\(amount.text) \(unit)"
+        case .measurement(let amount, let unit):
+            return "\(decimal(amount.text, field: field)) \(unit)"
         case .date(let value): return value.text
         case .dateTime(let value): return value.text
         case .url(let value): return value.text
@@ -247,6 +248,63 @@ internal enum InventoryProtocol2Display {
             return "Unknown option"
         }
         return InventoryProtocol2EnumOptions.label(of: option)
+    }
+
+    private static func decimal(_ text: String, field: InventoryCatalogueField) -> String {
+        guard let places = decimalPlaces(in: field) else { return text }
+        let parts = text.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+        guard let whole = parts.first else { return text }
+        var integer = String(whole)
+        var fraction = parts.count == 2 ? Array(parts[1]) : []
+        let negative = integer.first == "-"
+        if negative { integer.removeFirst() }
+        guard fraction.count > places else {
+            fraction.append(contentsOf: repeatElement("0", count: places - fraction.count))
+            let result = fraction.isEmpty ? integer : "\(integer).\(String(fraction))"
+            return negative && result != "0" && fraction.contains(where: { $0 != "0" })
+                ? "-\(result)"
+                : result
+        }
+
+        let discarded = fraction[places]
+        fraction = Array(fraction.prefix(places))
+        if discarded.wholeNumberValue ?? 0 >= 5 {
+            var digits = Array((integer + String(fraction)).utf8).map { Int($0) - 48 }
+            var index = digits.count - 1
+            while index >= 0 && digits[index] == 9 {
+                digits[index] = 0
+                index -= 1
+            }
+            if index < 0 {
+                digits.insert(1, at: 0)
+            } else {
+                digits[index] += 1
+            }
+            let coefficient = digits.map(String.init).joined()
+            if places == 0 {
+                integer = coefficient
+                fraction = []
+            } else {
+                integer = String(coefficient.dropLast(places))
+                fraction = Array(coefficient.suffix(places))
+            }
+        } else {
+            fraction.append(contentsOf: repeatElement("0", count: places - fraction.count))
+        }
+
+        let result = fraction.isEmpty ? integer : "\(integer).\(String(fraction))"
+        return negative && result != "0" && fraction.contains(where: { $0 != "0" })
+            ? "-\(result)"
+            : result
+    }
+
+    private static func decimalPlaces(in field: InventoryCatalogueField) -> Int? {
+        guard case .object(let presentation) = field.presentation,
+            case .number(let raw)? = presentation["decimalPlaces"],
+            raw.range(of: #"^[0-9]+$"#, options: .regularExpression) != nil,
+            let places = Int(raw), (0...9).contains(places)
+        else { return nil }
+        return places
     }
 
     private static func reference(

@@ -80,6 +80,8 @@ export interface ExpressionField {
   readonly unit?: string;
   readonly cardinality: 'one' | 'many';
   readonly storage: 'stored' | 'computed';
+  /** Fractional digits a client should use when displaying numeric values. */
+  readonly decimalPlaces?: number;
   readonly reference?: {
     readonly kinds: readonly ('item' | 'location')[];
     readonly typeIds: readonly string[];

@@ -1,5 +1,6 @@
 import { Checkbox, ComboboxSelect, Input, Textarea } from '@pops/ui';
 
+import { decimalPlacesFromPresentation } from '../../catalogue-editor/decimal-places';
 import { blankDraft } from '../../pages/item-form/form-draft';
 import { ReferenceField } from '../../pages/item-form/reference-field';
 import { type BulkFieldInput } from './bulk-action-model.js';
@@ -23,6 +24,7 @@ function formFieldOf(field: CatalogueType['fields'][number]): FormFieldDef {
     allowOverride: field.allowOverride,
     help: field.help,
     fixedUnit: field.fixedUnit,
+    decimalPlaces: decimalPlacesFromPresentation(field.presentation),
     enumOptions: field.enumOptions,
     referenceKinds: field.referenceKinds,
     referenceTypeIds: field.referenceTypeIds,
