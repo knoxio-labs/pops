@@ -125,11 +125,11 @@ describe('type-tree', () => {
     };
     const parent = {
       ...type('root', 'Bedding', null, [sharedParent, reference]),
-      capabilities: ['containment'] as const,
+      capabilities: ['containment'],
     };
     const child = {
       ...type('child', 'Sheet', 'root', [field('shared', 'child', 'child-name', 0)]),
-      capabilities: [] as const,
+      capabilities: [],
     };
     const leaf = type('leaf', 'Fitted sheet', 'child');
 
