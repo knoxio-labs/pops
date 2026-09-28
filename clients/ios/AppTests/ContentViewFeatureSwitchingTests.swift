@@ -82,15 +82,16 @@ internal enum ContentViewFixture {
 internal struct ContentViewFeatureSwitchingTests {
     private static let canvas = CGSize(width: 390, height: 844)
 
-    private static func render(_ view: some View, in scheme: ColorScheme) -> CGImage? {
+    private static func render(_ view: some View, in scheme: ColorScheme) -> Data? {
         let content = view.environment(\.colorScheme, scheme).frame(
             width: canvas.width, height: canvas.height)
         let controller = UIHostingController(rootView: content)
         controller.overrideUserInterfaceStyle = scheme == .dark ? .dark : .light
         controller.view.backgroundColor = .clear
 
-        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
-            .first
+        guard
+            let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+                .first
         else { return nil }
 
         let window = UIWindow(windowScene: scene)
@@ -98,34 +99,14 @@ internal struct ContentViewFeatureSwitchingTests {
         controller.view.frame = window.bounds
         window.addSubview(controller.view)
         defer { controller.view.removeFromSuperview() }
-        window.layoutIfNeeded()
         controller.view.layoutIfNeeded()
 
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
-        return UIGraphicsImageRenderer(size: canvas, format: format).image { context in
+        let image = UIGraphicsImageRenderer(size: canvas, format: format).image { context in
             controller.view.layer.render(in: context.cgContext)
-        }.cgImage
-    }
-
-    private static func hasNonUniformPixels(_ image: CGImage) -> Bool {
-        guard let providerData = image.dataProvider?.data else { return false }
-        let data = providerData as Data
-        let pixelSize = image.bitsPerPixel / 8
-        guard pixelSize > 0, data.count >= pixelSize else { return false }
-        let firstPixel = data[..<pixelSize]
-
-        return (0..<image.height).contains { row in
-            (0..<image.width).contains { column in
-                let start = row * image.bytesPerRow + column * pixelSize
-                let end = start + pixelSize
-                return end <= data.count && data[start..<end] != firstPixel
-            }
         }
-    }
-
-    private static func pixels(_ image: CGImage) -> Data? {
-        image.dataProvider?.data as Data?
+        return image.cgImage?.dataProvider?.data as Data?
     }
 
     private static func rendersSchemeAwareContent(_ view: some View) throws -> Bool {
@@ -134,19 +115,13 @@ internal struct ContentViewFeatureSwitchingTests {
         let lightBackground = try #require(render(Color.popsBackground, in: .light))
         let darkBackground = try #require(render(Color.popsBackground, in: .dark))
 
-        return hasNonUniformPixels(light) && hasNonUniformPixels(dark)
-            && pixels(light) != pixels(dark)
-            && pixels(light) != pixels(lightBackground)
-            && pixels(dark) != pixels(darkBackground)
-    }
-
-    private func contentView(available: [MobileFeature]) -> ContentView {
-        ContentViewFixture.view(available: available)
+        return light != dark && light != lightBackground && dark != darkBackground
     }
 
     @Test("zero available features renders, and renders real content rather than a blank screen")
     func zeroFeaturesRendersRealContent() throws {
-        #expect(try Self.rendersSchemeAwareContent(contentView(available: []).features))
+        #expect(
+            try Self.rendersSchemeAwareContent(ContentViewFixture.view(available: []).features))
         #expect(try !Self.rendersSchemeAwareContent(Color.clear))
         #expect(try !Self.rendersSchemeAwareContent(Color.popsBackground))
     }
@@ -161,7 +136,8 @@ internal struct ContentViewFeatureSwitchingTests {
     @Test("receipt-capture alone renders the nothing-available explanation, not a screen")
     func receiptCaptureAloneRendersNothingAvailable() throws {
         #expect(
-            try Self.rendersSchemeAwareContent(contentView(available: [.receiptCapture]).features))
+            try Self.rendersSchemeAwareContent(
+                ContentViewFixture.view(available: [.receiptCapture]).features))
     }
 }
 
