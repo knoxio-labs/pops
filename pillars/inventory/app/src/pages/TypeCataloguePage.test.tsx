@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PAGE_HEIGHT } from '../foundation/frame/page-frame';
 import { InventoryApiError } from '../inventory-api-helpers';
 
 import type { TypesReadCatalogueResponses } from '../inventory-api/types.gen';
@@ -240,6 +241,29 @@ beforeEach(() => {
 });
 
 describe('TypeCataloguePage', () => {
+  it('bounds the loading state to the shared page frame', async () => {
+    const catalogueResponse: { data: Catalogue; error: undefined } = {
+      data: published,
+      error: undefined,
+    };
+    let resolveCatalogue = (_value: typeof catalogueResponse): void => undefined;
+    const pendingCatalogue = new Promise<typeof catalogueResponse>((resolve) => {
+      resolveCatalogue = resolve;
+    });
+    api.readCatalogue.mockReturnValue(pendingCatalogue);
+    renderPage();
+
+    expect(screen.getByText('Loading type catalogue…')).toHaveClass(
+      'min-h-0',
+      'overflow-hidden',
+      PAGE_HEIGHT
+    );
+
+    await act(async () => {
+      resolveCatalogue(catalogueResponse);
+    });
+  });
+
   it('contains desktop editor scrolling within its fixed frame', async () => {
     renderPage();
 
@@ -247,8 +271,11 @@ describe('TypeCataloguePage', () => {
 
     const card = document.querySelector<HTMLElement>('[data-slot="card"]');
     if (card === null) throw new Error('Expected the catalogue editor card');
+    const page = card.parentElement?.parentElement;
+    if (page === null || page === undefined) throw new Error('Expected the catalogue page frame');
+    expect(page).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
     expect(card).toHaveClass('lg:col-span-3', 'lg:flex', 'lg:flex-col');
-    expect(card).toHaveClass('lg:h-[calc(100vh-13.25rem)]');
+    expect(card).toHaveClass('min-h-0', 'min-w-0');
 
     const cardContent = card.querySelector<HTMLElement>('[data-slot="card-content"]');
     if (cardContent === null) throw new Error('Expected the catalogue editor content');
@@ -260,6 +287,13 @@ describe('TypeCataloguePage', () => {
       'lg:overflow-hidden'
     );
     expect(cardContent.children[1]).toHaveClass('lg:min-h-0', 'lg:flex-1', 'lg:overflow-y-auto');
+    expect(card.parentElement).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-y-auto',
+      'lg:grid-rows-1',
+      'lg:overflow-hidden'
+    );
 
     const typeColumn = screen
       .getByRole('heading', { name: 'Item types' })
@@ -559,6 +593,11 @@ describe('TypeCataloguePage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reload' }));
 
     expect(await screen.findByText('Failed to load the type catalogue.')).toBeInTheDocument();
+    const errorHeader = screen.getByRole('heading', { name: 'Type catalogue' });
+    const errorPage = errorHeader.closest('header')?.parentElement;
+    if (errorPage === null || errorPage === undefined)
+      throw new Error('Expected the catalogue error frame');
+    expect(errorPage).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByDisplayValue('Recovered after retry')).toBeInTheDocument();
