@@ -1,6 +1,5 @@
 import AppCore
 import DesignSystem
-import Foundation
 import SwiftUI
 
 /// The type, from the catalogue this phone last downloaded.

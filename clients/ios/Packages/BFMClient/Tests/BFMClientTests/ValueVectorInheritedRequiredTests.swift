@@ -1,9 +1,6 @@
 import AppCore
-import Foundation
 import InventoryReplica
 import Testing
-
-@testable import BFMClient
 
 @Suite("Value vectors: inherited required fields", .timeLimit(.minutes(1)))
 internal struct ValueVectorInheritedRequiredTests {
