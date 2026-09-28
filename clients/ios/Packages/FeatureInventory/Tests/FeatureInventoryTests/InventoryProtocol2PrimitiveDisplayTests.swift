@@ -26,6 +26,35 @@ internal struct InventoryProtocol2PrimitiveDisplayTests {
         }
     }
 
+    @Test("negative decimal and measurement displays preserve their sign")
+    func negativeDecimalDisplayPreservesSign() throws {
+        let cases = [
+            DisplayCase(
+                value: .decimal(try InventoryDecimal("-5")),
+                field: Self.field(
+                    .decimal, presentation: .object(["decimalPlaces": .number("2")])),
+                expected: "-5.00"),
+            DisplayCase(
+                value: .measurement(amount: try InventoryDecimal("-5.001"), unit: "kg"),
+                field: Self.field(
+                    .measurement, fixedUnit: "kg",
+                    presentation: .object(["decimalPlaces": .number("2")])),
+                expected: "-5.00 kg"),
+            DisplayCase(
+                value: .decimal(try InventoryDecimal("-0.05")),
+                field: Self.field(
+                    .decimal, presentation: .object(["decimalPlaces": .number("1")])),
+                expected: "-0.1"),
+        ]
+
+        for item in cases {
+            #expect(
+                InventoryProtocol2Display.text(
+                    for: [item.value], field: item.field, referenceLabel: { _ in nil })
+                    == item.expected)
+        }
+    }
+
     private static func displayCases(
         enumOption: InventoryCatalogueOption
     ) throws -> [DisplayCase] {
@@ -46,6 +75,12 @@ internal struct InventoryProtocol2PrimitiveDisplayTests {
                 value: .measurement(amount: try InventoryDecimal("48.000"), unit: "kg"),
                 field: field(.measurement, fixedUnit: "kg"), expected: "48.000 kg"),
             DisplayCase(
+                value: .measurement(amount: try InventoryDecimal("48.05"), unit: "kg"),
+                field: field(
+                    .measurement, fixedUnit: "kg",
+                    presentation: .object(["decimalPlaces": .number("1")])),
+                expected: "48.1 kg"),
+            DisplayCase(
                 value: .date(try InventoryCanonicalDate("2024-02-29")), field: field(.date),
                 expected: "2024-02-29"),
             DisplayCase(
@@ -65,11 +100,12 @@ internal struct InventoryProtocol2PrimitiveDisplayTests {
 
     private static func field(
         _ kind: InventoryPrimitiveKind, fixedUnit: String? = nil,
-        enumOptions: [InventoryCatalogueOption] = []
+        enumOptions: [InventoryCatalogueOption] = [],
+        presentation: InventoryJSON = .object([:])
     ) -> InventoryCatalogueField {
         InventoryCatalogueField(
             id: kind.rawValue, typeId: "type", key: kind.rawValue, label: kind.rawValue,
             sortOrder: 0, kind: kind, cardinality: .one, required: false, storage: .stored,
-            fixedUnit: fixedUnit, enumOptions: enumOptions)
+            fixedUnit: fixedUnit, presentation: presentation, enumOptions: enumOptions)
     }
 }

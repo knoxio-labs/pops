@@ -1,3 +1,4 @@
+import { decimalPlacesFromPresentation } from '../../catalogue-editor/decimal-places';
 import { ancestorIds, effectiveFields } from '../../lib/type-tree.js';
 
 import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
@@ -36,6 +37,7 @@ export interface FormFieldDef {
   readonly allowOverride: boolean;
   readonly help: string | null;
   readonly fixedUnit: string | null;
+  readonly decimalPlaces?: number | null;
   readonly enumOptions: readonly FormEnumOption[];
   readonly referenceKinds: readonly ('item' | 'location')[];
   readonly referenceTypeIds: readonly string[];
@@ -111,6 +113,7 @@ export function formTypesOf(
           allowOverride: field.allowOverride,
           help: field.help,
           fixedUnit: field.fixedUnit,
+          decimalPlaces: decimalPlacesFromPresentation(field.presentation),
           enumOptions: field.enumOptions,
           referenceKinds: field.referenceKinds,
           referenceTypeIds: field.referenceTypeIds,

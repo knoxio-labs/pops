@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { formatWireValue } from './preview-model';
 import { catalogueTypes, chooseOption, renderComputedField } from './test-utils';
 
 import type { CatalogueDescriptor, CatalogueField } from '../types';
@@ -109,6 +110,12 @@ beforeEach(() => {
 });
 
 describe('try on an item', () => {
+  it('rounds a computed measurement preview to its configured display precision', () => {
+    expect(
+      formatWireValue({ amount: '24.0000', unit: 'L' }, { kind: 'measurement', decimalPlaces: 1 })
+    ).toBe('24.0 L');
+  });
+
   it('says there is nothing to try it on when there is no published catalogue and no draft', () => {
     renderComputedField({ volume: PRODUCT });
 

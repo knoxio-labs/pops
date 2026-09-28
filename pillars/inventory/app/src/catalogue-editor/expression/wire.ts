@@ -1,4 +1,5 @@
 import { descendantIds, effectiveFields } from '../../lib/type-tree';
+import { decimalPlacesFromPresentation } from '../decimal-places';
 import { EMPTY } from './edit';
 
 import type {
@@ -92,6 +93,7 @@ export function fromWire(value: unknown): ExpressionNode {
 }
 
 function expressionField(field: CatalogueField, types: readonly CatalogueType[]): ExpressionField {
+  const decimalPlaces = decimalPlacesFromPresentation(field.presentation);
   const referenceTypeIds = [
     ...new Set(
       field.referenceTypeIds.flatMap((typeId) => [typeId, ...descendantIds(types, typeId)])
@@ -104,6 +106,7 @@ function expressionField(field: CatalogueField, types: readonly CatalogueType[])
     ...(field.fixedUnit === null ? {} : { unit: field.fixedUnit }),
     cardinality: field.cardinality,
     storage: field.storage,
+    ...(decimalPlaces === null ? {} : { decimalPlaces }),
     ...(field.archivedAt === null ? {} : { archived: true }),
     ...(field.kind === 'reference'
       ? { reference: { kinds: field.referenceKinds, typeIds: referenceTypeIds } }
