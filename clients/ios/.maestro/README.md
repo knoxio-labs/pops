@@ -55,7 +55,9 @@ Everything in there is called through `runFlow` and takes values from its
 caller, so driven on its own it would fail on the ones nobody passed it.
 `select-transactions.yaml` and `open-transactions.yaml` keep the
 secondary-feature route through More consistent across healthy and error-state
-flows that need the Transactions screen.
+flows that need the Transactions screen. Purchases flows use
+`open-purchases.yaml` to open their primary tab rather than assuming the
+Transactions sheet contains a Purchases control.
 
 ## The acceptance flow, kept out of the glob
 

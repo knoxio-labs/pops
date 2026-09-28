@@ -20,10 +20,7 @@ name: Purchases home opens both archive scopes and a full detail
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-- runFlow: subflows/select-transactions.yaml
-- assertVisible:
-    id: 'transactions-list'
-- tapOn: 'Purchases'
+- runFlow: subflows/open-purchases.yaml
 
 # The figure comes from the month-summary request. The tiles carry server
 # counts; in particular, one current-month unmatched purchase differs from the
