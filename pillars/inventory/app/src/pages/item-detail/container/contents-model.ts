@@ -1,16 +1,35 @@
 import { deepContents } from '../../../foundation/model/placement-model.js';
+import { compareInventoryNames } from '../../../lib/sort-names.js';
 
 import type { ItemRowModel } from '../../../foundation/model/model.js';
 import type { PlacementWorld } from '../../../foundation/model/placement-model.js';
+
+/** The sort choices available for direct container contents. */
+export const CONTENTS_SORT_OPTIONS = ['name-asc', 'name-desc'] as const;
+
+/** Identifies the direction used to order direct container contents by name. */
+export type ContentsSort = (typeof CONTENTS_SORT_OPTIONS)[number];
+
+/** The default direct-content order shown in a container. */
+export const DEFAULT_CONTENTS_SORT: ContentsSort = 'name-asc';
+
+function sortRows(rows: readonly ItemRowModel[], sort: ContentsSort): ItemRowModel[] {
+  const comparator =
+    sort === 'name-desc'
+      ? (left: ItemRowModel, right: ItemRowModel) => compareInventoryNames(right, left)
+      : compareInventoryNames;
+  return rows.toSorted(comparator);
+}
 
 /** Returns direct-content rows matching a case-insensitive name or code filter. */
 export function visibleContentRows(
   inside: readonly string[],
   world: PlacementWorld,
-  query: string
+  query: string,
+  sort: ContentsSort = DEFAULT_CONTENTS_SORT
 ): ItemRowModel[] {
   const needle = query.trim().toLocaleLowerCase();
-  return inside
+  const rows = inside
     .map((id) => world.items.get(id))
     .filter((row): row is ItemRowModel => row !== undefined)
     .filter((row) => {
@@ -20,6 +39,7 @@ export function visibleContentRows(
         row.code?.toLocaleLowerCase().includes(needle) === true
       );
     });
+  return sortRows(rows, sort);
 }
 
 /** Counts nested contents while using server totals when a child total is available. */

@@ -1,6 +1,17 @@
+import { ArrowDownAZ, ChevronDown } from 'lucide-react';
+
 import { Button } from '@pops/ui';
+import {
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+} from '@pops/ui';
 
 import { INVENTORY_ICONS } from '../../../foundation/model/icons.js';
+import { CONTENTS_SORT_OPTIONS, type ContentsSort } from './contents-model.js';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -15,6 +26,8 @@ export interface ContentsToolbarProps {
   readOnly: boolean;
   readOnlyReason?: string;
   search: ReactNode;
+  sort: ContentsSort;
+  onSort: (sort: ContentsSort) => void;
 }
 
 function countLine(count: number, nested: number): string {
@@ -22,7 +35,52 @@ function countLine(count: number, nested: number): string {
   return nested > 0 ? `${direct}, ${nested} more nested` : direct;
 }
 
-/** Renders the direct-content count, filter, and Unpack action. */
+const SORT_LABELS: Record<ContentsSort, string> = {
+  'name-asc': 'Name (A–Z)',
+  'name-desc': 'Name (Z–A)',
+};
+
+function isContentsSort(value: string): value is ContentsSort {
+  return CONTENTS_SORT_OPTIONS.some((option) => option === value);
+}
+
+function ContentsSortMenu({
+  sort,
+  onSort,
+}: Pick<ContentsToolbarProps, 'sort' | 'onSort'>): ReactElement {
+  return (
+    <DropdownMenuRoot>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          aria-label="Sort contents"
+          prefix={<ArrowDownAZ className="size-4" aria-hidden />}
+          suffix={<ChevronDown className="size-4" aria-hidden />}
+        >
+          {SORT_LABELS[sort]}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={sort}
+          onValueChange={(value) => {
+            if (isContentsSort(value)) onSort(value);
+          }}
+        >
+          {CONTENTS_SORT_OPTIONS.map((option) => (
+            <DropdownMenuRadioItem key={option} value={option}>
+              {SORT_LABELS[option]}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenuRoot>
+  );
+}
+
+/** Renders the direct-content count, filter, sort menu, and Unpack action. */
 export function ContentsToolbar({
   count,
   nested,
@@ -31,6 +89,8 @@ export function ContentsToolbar({
   readOnly,
   readOnlyReason,
   search,
+  sort,
+  onSort,
 }: ContentsToolbarProps): ReactElement {
   const TakeOut = INVENTORY_ICONS.takeOut;
   const reason =
@@ -45,6 +105,7 @@ export function ContentsToolbar({
         <p className="truncate text-xs text-muted-foreground">{countLine(count, nested)}</p>
       </div>
       {search}
+      {count > 0 ? <ContentsSortMenu sort={sort} onSort={onSort} /> : null}
       {state.phase === 'browse' ? (
         <Button
           size="sm"

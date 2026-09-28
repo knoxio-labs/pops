@@ -1,3 +1,4 @@
+import { compareInventoryNames } from '../../lib/sort-names.js';
 import { effectiveType, typePathLabel } from '../../lib/type-tree.js';
 
 import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
@@ -77,9 +78,11 @@ function catalogueDetailsFor(
   return {
     typeName: typePathLabel([...types.values()], type.id) || type.label,
     fields,
-    contents: contents.map((subject) =>
-      subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name
-    ),
+    contents: contents
+      .toSorted(compareInventoryNames)
+      .map((subject) =>
+        subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name
+      ),
   };
 }
 
@@ -103,8 +106,10 @@ export function detailsFor(
   return {
     typeName: item.typeKey,
     fields,
-    contents: contents.map((subject) =>
-      subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name
-    ),
+    contents: contents
+      .toSorted(compareInventoryNames)
+      .map((subject) =>
+        subject.quantity > 1 ? `${subject.name} ×${subject.quantity}` : subject.name
+      ),
   };
 }
