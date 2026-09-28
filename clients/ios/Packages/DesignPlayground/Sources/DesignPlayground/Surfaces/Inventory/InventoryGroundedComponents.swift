@@ -3,15 +3,7 @@ import SwiftUI
 
 extension View {
     @ViewBuilder internal func inventoryGroundedSwipeActionsContainer() -> some View {
-        #if compiler(>=6.4)
-            if #available(iOS 27.0, macOS 27.0, *) {
-                swipeActionsContainer()
-            } else {
-                self
-            }
-        #else
-            self
-        #endif
+        popsGroundedSwipeActionsContainer()
     }
 
     @ViewBuilder internal func inventoryGroundedSwipeActions<Actions: View>(
@@ -19,20 +11,8 @@ extension View {
         onPresentationChanged: @escaping (Bool) -> Void,
         @ViewBuilder actions: () -> Actions
     ) -> some View {
-        #if compiler(>=6.4)
-            if #available(iOS 27.0, macOS 27.0, *) {
-                swipeActions(
-                    edge: edge,
-                    allowsFullSwipe: false,
-                    content: actions,
-                    onPresentationChanged: onPresentationChanged
-                )
-            } else {
-                swipeActions(edge: edge, allowsFullSwipe: false, content: actions)
-            }
-        #else
-            swipeActions(edge: edge, allowsFullSwipe: false, content: actions)
-        #endif
+        popsGroundedSwipeActions(
+            edge: edge, onPresentationChanged: onPresentationChanged, actions: actions)
     }
 
     internal func inventoryGroundedSwipeRow(isActive: Bool) -> some View {
