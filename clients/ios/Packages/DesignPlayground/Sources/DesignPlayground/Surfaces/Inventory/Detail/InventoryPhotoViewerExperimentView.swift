@@ -9,13 +9,50 @@ internal enum InventoryPhotoViewerDesignPresentation {
     case sheet
 }
 
+private enum InventoryPhotoViewerExperimentPreviewState: String, CaseIterable, Identifiable {
+    case ready
+    case loading
+    case unavailable
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .ready: "Ready"
+        case .loading: "Loading"
+        case .unavailable: "Unavailable"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .ready: "photo"
+        case .loading: "arrow.clockwise"
+        case .unavailable: "photo.badge.exclamationmark"
+        }
+    }
+}
+
 internal struct InventoryPhotoViewerExperimentView: View {
     internal let presentation: InventoryPhotoViewerDesignPresentation
-    private let photos = InventoryItemDetailFixtures.rich.photos
+    @State private var previewState: InventoryPhotoViewerExperimentPreviewState = .ready
     @State private var viewing: InventoryPhoto?
 
     internal var body: some View {
         presentedSurface
+    }
+
+    private var photos: [InventoryPhoto] {
+        switch previewState {
+        case .ready:
+            InventoryItemDetailFixtures.rich.photos
+        case .loading:
+            InventoryItemDetailFixtures.rich.photos.map {
+                InventoryPhoto(caption: $0.caption, isBroken: false)
+            }
+        case .unavailable:
+            InventoryItemDetailFixtures.brokenPhoto.photos
+        }
     }
 
     @ViewBuilder private var presentedSurface: some View {
@@ -58,7 +95,7 @@ internal struct InventoryPhotoViewerExperimentView: View {
                         Text("Espresso machine")
                             .font(.popsTitle)
                             .foregroundStyle(Color.popsForeground)
-                        Text("3 photos")
+                        Text("\(photos.count) photos")
                             .font(.popsCaption)
                             .foregroundStyle(Color.popsMutedForeground)
                     }
@@ -85,6 +122,19 @@ internal struct InventoryPhotoViewerExperimentView: View {
             }
             .background(Color.popsBackground)
             .navigationTitle("Espresso machine")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu("Preview state", systemImage: "slider.horizontal.3") {
+                        ForEach(InventoryPhotoViewerExperimentPreviewState.allCases) { state in
+                            Button {
+                                previewState = state
+                            } label: {
+                                Label(state.title, systemImage: state.symbol)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
