@@ -49,17 +49,38 @@ function referenceLabel(
   return world.locations.get(reference.targetId)?.name ?? 'Unknown place';
 }
 
-/** Converts stored catalogue values into the draft shape used by inline editors. */
+function catalogueTypesFor(
+  type: CatalogueType | null,
+  types: readonly CatalogueType[] | undefined
+): readonly CatalogueType[] {
+  if (types !== undefined) return types;
+  if (type === null) return [];
+  return [type];
+}
+
+function formTypeFor(
+  type: CatalogueType | null,
+  types: readonly CatalogueType[] | undefined
+): ReturnType<typeof formTypesOf>[number] | null {
+  return (
+    formTypesOf({ types: catalogueTypesFor(type, types) }).find(
+      (candidate) => candidate.id === type?.id
+    ) ?? null
+  );
+}
+
+/** Converts stored values into inline-editor drafts, resolving inherited fields from `types`. */
 export function draftsFromValues(
   type: CatalogueType | null,
   values: readonly FactValueInput[],
-  world: PlacementWorld
+  world: PlacementWorld,
+  types: readonly CatalogueType[] = type === null ? [] : [type]
 ): FieldDrafts {
   const text: Record<string, readonly string[]> = {};
   const refs: Record<string, readonly ReferenceChoice[]> = {};
   const booleans: Record<string, boolean> = {};
   const byField = new Map(values.map((value) => [value.fieldId, value] as const));
-  const formType = type === null ? null : (formTypesOf({ types: [type] })[0] ?? null);
+  const formType = formTypeFor(type, types);
 
   for (const field of formType?.fields ?? []) {
     const rawValues = byField.get(field.id)?.values ?? [];

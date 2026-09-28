@@ -6,6 +6,7 @@ import { usePendingItemIds } from '../../inventory-web/item-verbs.js';
 import { useCatalogueLookups } from '../../inventory-web/useCatalogueLookups.js';
 import { useWebEvents } from '../../inventory-web/useWebEvents.js';
 import { useWebItemDetail } from '../../inventory-web/useWebItemDetail.js';
+import { effectiveFields, typePath } from '../../lib/type-tree.js';
 import { useAuxiliaryQueries, useConnectionSources } from './detail-read-queries';
 import {
   aggregateFor,
@@ -19,8 +20,26 @@ import {
   statusFor,
 } from './use-item-detail-state';
 
+import type { ItemRowModel } from '../../foundation/model/model';
+import type { WebGetResponse } from '../../inventory-api/types.gen.js';
+import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 import type { ItemDetailModel } from './detail-model';
 import type { ItemDetailBannerState } from './use-item-detail-state';
+
+function resolvedTypeAndItem(
+  types: readonly CatalogueType[],
+  typeForId: (id: string | null | undefined) => CatalogueType | null,
+  webItem: WebGetResponse['item'] | null,
+  displayedItem: ItemRowModel | null
+): { type: CatalogueType | null; item: ItemRowModel | null } {
+  const rawType = typeForId(webItem?.typeId ?? displayedItem?.typeId);
+  const type = rawType === null ? null : { ...rawType, fields: effectiveFields(types, rawType.id) };
+  if (displayedItem === null || rawType === null) return { type, item: displayedItem };
+  return {
+    type,
+    item: { ...displayedItem, typeName: typePath(types, rawType.id).join(' › ') },
+  };
+}
 
 function itemDetailReadSignals(
   detailQuery: ReturnType<typeof useWebItemDetail>,
@@ -76,10 +95,16 @@ export function useItemDetailModel(id: string): ItemDetailModelState {
   const webItem = detailQuery.data?.item ?? null;
   const sources = useConnectionSources(id, webItem);
   const auxiliary = useAuxiliaryQueries(id);
-  const baseItem = displayItem(sources.primary.world.items.get(id), pendingIds);
-  const type = catalogue.typeForId(webItem?.typeId ?? baseItem?.typeId);
+  const displayedItem = displayItem(sources.primary.world.items.get(id), pendingIds);
+  const resolved = resolvedTypeAndItem(
+    catalogue.types,
+    catalogue.typeForId,
+    webItem,
+    displayedItem
+  );
+  const { type, item: baseItem } = resolved;
   const typeNames = catalogue.typeNameById;
-  const aggregate = aggregateFor(webItem, type, sources.relatedWorld);
+  const aggregate = aggregateFor(webItem, type, sources.relatedWorld, catalogue.types);
   const documents = documentsFor(auxiliary.documentsQuery);
   const paperless = paperlessFor(auxiliary.paperlessQuery);
   const connections = connectionsFor(id, sources, auxiliary);

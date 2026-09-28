@@ -152,7 +152,8 @@ function field(
 function catalogueType(
   id: string,
   label: string,
-  fields: readonly CatalogueField[] = []
+  fields: readonly CatalogueField[] = [],
+  parentTypeId: string | null = null
 ): CatalogueType {
   return {
     archivedAt: null,
@@ -163,7 +164,7 @@ function catalogueType(
     key: id,
     label,
     legacyLabels: [],
-    parentTypeId: null,
+    parentTypeId,
     presentation: {},
     replacedBy: null,
     revision: 1,
@@ -432,6 +433,34 @@ describe('useItemsExport', () => {
     expect(lines.find((line) => line.startsWith('unavailable,'))).toContain(',plastic,');
     expect(lines.find((line) => line.startsWith('overridden,'))).not.toContain('override,override');
     expect(lines.find((line) => line.startsWith('missing,'))).toBe('missing,Tools,1,,Garage,,,');
+  });
+
+  it('exports inherited fields before the child fields', async () => {
+    const inherited = field('type-bedding', 'material', 'Material', 'stored');
+    const local = field('type-sheet', 'fitted', 'Fitted', 'stored', 1);
+    const parent = catalogueType('type-bedding', 'Bedding', [inherited]);
+    const child = catalogueType('type-sheet', 'Sheet', [local], parent.id);
+    setSources({ types: [parent, child] });
+    mocks.webList.mockResolvedValue(
+      ok(
+        page([
+          item('sheet', {
+            typeId: child.id,
+            typeKey: child.key,
+            fieldValues: [storedValue(inherited.id, ['cotton']), storedValue(local.id, ['yes'])],
+          }),
+        ])
+      )
+    );
+    const { result } = renderHook(() => useItemsExport());
+
+    await act(async () => {
+      await result.current.exportView(filters);
+    });
+
+    const lines = downloadedCsv().split('\r\n');
+    expect(lines[0]).toBe('Name,Type,Quantity,Code,Where,Note,Material,Fitted');
+    expect(lines[1]).toBe('sheet,Bedding › Sheet,1,,Garage,,cotton,yes');
   });
 
   it('downloads nothing and reports a failed page request', async () => {

@@ -9,6 +9,7 @@ import {
 } from '../../foundation/list-page/list-filters.js';
 import { OfflineBanner } from '../../foundation/list-page/list-states.js';
 import { containersSearch } from '../../inventory-web/items-url-filters.js';
+import { effectiveCapabilities } from '../../lib/type-tree.js';
 import { containerSegmentOptions } from './containers-model.js';
 import { ContainersPackingStrip } from './containers-packing-strip.js';
 
@@ -33,8 +34,13 @@ function showToolbar(model: ContainersPageModel): boolean {
 /** Renders the filter toolbar, state segments, and server-backed summary. */
 export function ContainersToolbar({ model }: { model: ContainersPageModel }): ReactElement | null {
   if (!showToolbar(model) || model.summary.data === undefined) return null;
-  const types = typeFilterOptions(
-    model.typeOptions.filter((type) => type.capabilities.includes('containment'))
+  const containerTypeKeys = new Set(
+    model.typeOptions
+      .filter((type) => effectiveCapabilities(model.typeOptions, type.id).includes('containment'))
+      .map((type) => type.key)
+  );
+  const types = typeFilterOptions(model.typeOptions).filter((type) =>
+    containerTypeKeys.has(type.value)
   );
   const places = placeFilterOptions(model.placeOptions, []);
   return (

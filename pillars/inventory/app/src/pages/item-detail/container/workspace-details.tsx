@@ -102,7 +102,7 @@ export function ContainerDetails({
         ) : (
           <FactsSection
             facts={model.aggregate.facts}
-            typeName={model.aggregate.type?.label ?? model.item.typeName}
+            typeName={model.item.typeName ?? model.aggregate.type?.label ?? null}
             layout="list"
             readOnly={readOnly}
           />

@@ -118,6 +118,54 @@ describe('changeTypeWrite', () => {
     });
   });
 
+  it('matches fields inherited by both source and replacement types', () => {
+    const sourceField = field('network-colour', 'colour', {
+      kind: 'enum',
+      enumOptions: [option('network-sage', 'sage')],
+    });
+    const targetField = field('router-colour', 'colour', {
+      kind: 'enum',
+      enumOptions: [option('router-sage', 'sage')],
+    });
+    const source = {
+      ...type('type-network', 'network', 'Network', []),
+      parentTypeId: 'network-base',
+    };
+    const replacement = {
+      ...type('type-router', 'router', 'Router', []),
+      parentTypeId: 'router-base',
+    };
+
+    const result = changeTypeWrite(
+      repair(
+        [
+          { ...replacementMarker, replacementTypeId: replacement.id },
+          {
+            field: 'Colour',
+            value: 'Sage',
+            fit: 'fits',
+            fieldId: sourceField.id,
+            values: [{ optionId: 'network-sage' }],
+          },
+        ],
+        { typeId: source.id }
+      ),
+      [
+        type('network-base', 'network-base', 'Network base', [sourceField]),
+        source,
+        type('router-base', 'router-base', 'Router base', [targetField]),
+        replacement,
+      ]
+    );
+
+    expect(result).toEqual({
+      kind: 'change-type',
+      typeKey: 'router',
+      replacement: 'Router',
+      values: [{ fieldId: targetField.id, values: [{ optionId: 'router-sage' }] }],
+    });
+  });
+
   it('names a value whose target differs in kind or cardinality', () => {
     const result = changeTypeWrite(
       repair([

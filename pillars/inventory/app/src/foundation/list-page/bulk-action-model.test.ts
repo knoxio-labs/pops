@@ -70,6 +70,14 @@ function type(id: string, fields: readonly CatalogueField[]): CatalogueType {
   };
 }
 
+function childType(
+  id: string,
+  parentTypeId: string,
+  fields: readonly CatalogueField[] = []
+): CatalogueType {
+  return { ...type(id, fields), parentTypeId };
+}
+
 function catalogue(types: readonly CatalogueType[]): Catalogue {
   const actor = { id: 'test', kind: 'web' as const, label: 'Test' };
   return {
@@ -261,6 +269,29 @@ describe('bulk action model', () => {
       sharedTypeFieldLabels(row('item-1', 'type-old'), target, {
         types: [type('type-old', [oldStored, shared, sharedReference, override]), target],
       })
-    ).toEqual(['Shared', 'Related']);
+    ).toEqual(['Related', 'Shared']);
+  });
+
+  it('uses inherited fields for bulk candidates and type changes', () => {
+    const inherited = field('type-parent', 'material', 'Material');
+    const parent = type('type-parent', [inherited]);
+    const child = childType('type-child', parent.id);
+    const types = [parent, child];
+    const published = catalogue(types);
+
+    expect(bulkFieldCandidates([row('item-1', child.id)], ['item-1'], published)).toEqual([
+      { field: inherited, have: 1, itemIds: ['item-1'] },
+    ]);
+    expect(
+      typeChangeValues(
+        [
+          webItem('item-1', [
+            { catalogueRevision: 1, fieldId: inherited.id, source: 'stored', values: ['cotton'] },
+          ]),
+        ],
+        child,
+        types
+      ).get('item-1')
+    ).toEqual([{ fieldId: inherited.id, values: ['cotton'] }]);
   });
 });
