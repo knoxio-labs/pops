@@ -125,6 +125,8 @@ services:
       INVENTORY_SELF_BASE_URL: http://inventory-api:3002
       INVENTORY_IMAGES_DIR: /data/inventory/images
       INVENTORY_DOCUMENTS_DIR: /data/inventory/documents
+      CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
       POPS_REGISTRY_ENABLED: 'true'
     expose:
       - '3002'
