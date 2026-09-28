@@ -240,6 +240,35 @@ beforeEach(() => {
 });
 
 describe('TypeCataloguePage', () => {
+  it('contains desktop editor scrolling within its fixed frame', async () => {
+    renderPage();
+
+    await screen.findAllByText('Electronics');
+
+    const card = document.querySelector<HTMLElement>('[data-slot="card"]');
+    if (card === null) throw new Error('Expected the catalogue editor card');
+    expect(card).toHaveClass('lg:col-span-3', 'lg:flex', 'lg:flex-col');
+    expect(card).toHaveClass('lg:h-[calc(100vh-13.25rem)]');
+
+    const cardContent = card.querySelector<HTMLElement>('[data-slot="card-content"]');
+    if (cardContent === null) throw new Error('Expected the catalogue editor content');
+    expect(cardContent).toHaveClass(
+      'lg:flex',
+      'lg:min-h-0',
+      'lg:flex-1',
+      'lg:flex-col',
+      'lg:overflow-hidden'
+    );
+    expect(cardContent.children[1]).toHaveClass('lg:min-h-0', 'lg:flex-1', 'lg:overflow-y-auto');
+
+    const typeColumn = screen
+      .getByRole('heading', { name: 'Item types' })
+      .closest('section')?.parentElement;
+    if (typeColumn === null || typeColumn === undefined)
+      throw new Error('Expected the type navigation column');
+    expect(typeColumn).toHaveClass('lg:h-full', 'lg:min-h-0', 'lg:overflow-y-auto');
+  });
+
   it('renders the persisted catalogue and its fields', async () => {
     renderPage();
 

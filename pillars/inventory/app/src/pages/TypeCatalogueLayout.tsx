@@ -14,6 +14,8 @@ import type { CatalogueOperationHandler } from '../catalogue-editor/types';
 type Page = ReturnType<typeof useTypeCataloguePage>;
 type ReadyPage = Page & { readonly catalogue: NonNullable<Page['catalogue']> };
 
+const CARD_HEIGHT = 'lg:h-[calc(100vh-13.25rem)]';
+
 interface LayoutProps {
   readonly onAbandon: () => void;
   readonly onOperation: CatalogueOperationHandler;
@@ -37,7 +39,7 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
       />
       <RevisionNotice page={page} />
       <div className="grid gap-5 lg:grid-cols-4">
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 lg:h-full lg:min-h-0 lg:overflow-y-auto">
           <TypeList
             types={page.types}
             selectedId={page.selectedTypeId}
@@ -45,23 +47,27 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
             onSelect={page.selectType}
           />
         </div>
-        <Card className="lg:col-span-3">
-          <CardHeader className="space-y-5">
+        <Card className={cn('lg:col-span-3 lg:flex lg:flex-col', CARD_HEIGHT)}>
+          <CardHeader className="lg:shrink-0">
             <EditorTitle page={page} />
-            <EditorSteps mode={page.mode} />
           </CardHeader>
-          <CardContent className="space-y-6">
-            <CatalogueEditorContent page={page} onOperation={onOperation} />
-            <PublishPanel
-              catalogue={page.catalogue}
-              readiness={page.readiness}
-              error={page.error}
-              isPending={page.isPending}
-              onReload={() => void page.reload()}
-              onAbandon={onAbandon}
-              onPublish={onPublish}
-              onRecheck={page.recheckCompatibility}
-            />
+          <CardContent className="space-y-6 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden">
+            <EditorSteps mode={page.mode} />
+            <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+              <CatalogueEditorContent page={page} onOperation={onOperation} />
+            </div>
+            <div className="lg:shrink-0">
+              <PublishPanel
+                catalogue={page.catalogue}
+                readiness={page.readiness}
+                error={page.error}
+                isPending={page.isPending}
+                onReload={() => void page.reload()}
+                onAbandon={onAbandon}
+                onPublish={onPublish}
+                onRecheck={page.recheckCompatibility}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -117,7 +123,7 @@ function EditorTitle({ page }: { readonly page: ReadyPage }) {
 function EditorSteps({ mode }: { readonly mode: Page['mode'] }) {
   const activeStep = mode === 'type' || mode === 'new-type' ? 0 : 1;
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-3 lg:shrink-0">
       {['Type details', 'Fields', 'Review & publish'].map((step, index) => (
         <div
           key={step}
