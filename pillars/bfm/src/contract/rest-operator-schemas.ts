@@ -21,6 +21,12 @@ export const OPERATOR_ERR_RESPONSES = {
   401: ErrorBodySchema,
 } as const;
 
+/** Additional failures produced when a caller presents a service account. */
+export const PAIRING_SERVICE_ACCOUNT_ERR_RESPONSES = {
+  403: ErrorBodySchema,
+  503: ErrorBodySchema,
+} as const;
+
 /**
  * What `POST /operator/pairing/codes` returns.
  *

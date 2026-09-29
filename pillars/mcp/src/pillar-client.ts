@@ -30,6 +30,7 @@ import type { PillarHandle, ServerPillarOptions } from '@pops/pillar-sdk/server'
 
 const PILLAR_API_URL_ENV_VARS: Readonly<Record<string, string>> = {
   inventory: 'POPS_INVENTORY_API_URL',
+  bfm: 'POPS_BFM_API_URL',
   finance: 'POPS_FINANCE_API_URL',
   registry: 'POPS_REGISTRY_API_URL',
   media: 'POPS_MEDIA_API_URL',

@@ -5509,9 +5509,17 @@ export type OperatorIssuePairingCodeErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 429
    */
   429: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type OperatorIssuePairingCodeError =

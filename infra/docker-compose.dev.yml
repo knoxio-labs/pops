@@ -940,13 +940,13 @@ services:
     networks:
       - backend
     secrets:
-      - pops_api_key
+      - pops_mcp_api_key
     environment:
       NODE_ENV: production
       # pops-mcp reaches every pillar through the REST pillar SDK (per-pillar
       # POPS_*_API_URL with built-in docker-network defaults); the legacy single
       # POPS_API_URL tRPC client was removed in the 02 decommission.
-      POPS_API_KEY_FILE: /run/secrets/pops_api_key
+      POPS_API_KEY_FILE: /run/secrets/pops_mcp_api_key
       MCP_PORT: '3011'
     ports:
       - '${MCP_BIND_ADDR:-0.0.0.0}:3011:3011'
@@ -1155,6 +1155,8 @@ secrets:
     file: ../secrets/finance_api_key
   pops_api_key:
     file: ../secrets/pops_api_key
+  pops_mcp_api_key:
+    file: ../secrets/pops_mcp_api_key
   tmdb_api_key:
     file: ../secrets/tmdb_api_key
   thetvdb_api_key:

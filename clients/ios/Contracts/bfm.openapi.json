@@ -17359,6 +17359,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "429": {
             "content": {
               "application/json": {
@@ -17368,6 +17378,16 @@
               }
             },
             "description": "429"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "Mint a single-use pairing code. The plaintext is returned once and never again",
