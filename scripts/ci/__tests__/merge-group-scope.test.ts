@@ -291,7 +291,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
         "github.event_name == 'merge_group' || inputs['full-validation'] == true"
       );
     }
-    expect(namedStep('UI flow (Maestro, against a real BFM)')?.['timeout-minutes']).toBe(30);
+    expect(namedStep('UI flow (Maestro, against a real BFM)')?.['timeout-minutes']).toBe(45);
 
     expect(namedStep('Release carries no BFM host')?.if).toBeUndefined();
 

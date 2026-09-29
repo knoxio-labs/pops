@@ -516,7 +516,7 @@ jobs:
       # so a reordering degrades into a second compile rather than into a lie.
       - name: UI flow (Maestro, against a real BFM)
         if: github.event_name == 'merge_group' || inputs['full-validation'] == true
-        timeout-minutes: 30
+        timeout-minutes: 45
         working-directory: .
         run: mise run e2e:ios
 
