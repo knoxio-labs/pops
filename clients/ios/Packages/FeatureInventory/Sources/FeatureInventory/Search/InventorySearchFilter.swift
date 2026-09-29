@@ -138,7 +138,7 @@ public struct InventorySearchFilter: Equatable, Sendable {
     private func matchesMissing(_ record: InventoryRecord) -> Bool {
         switch missing {
         case .nothing: true
-        case .type: record.typeKey == nil
+        case .type: record.typeKeys.isEmpty
         case .code: record.code == nil
         case .photo: record.photo == nil
         }

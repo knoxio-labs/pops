@@ -62,6 +62,35 @@ internal struct InventoryContainerPageTests {
         #expect(profile.contents.entries.map(\.id) == ["mug"])
     }
 
+    @Test("Contents labels protocol-2 items with their catalogue type")
+    func protocol2ContentsTypeName() {
+        let container = InventoryItem(
+            id: "box", revision: 1, seq: 1, name: "Kitchen box", typeId: "container",
+            typeKey: nil, placement: .hand,
+            containment: InventoryContainment(access: .open, isFull: false),
+            createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
+        let item = InventoryItem(
+            id: "book", revision: 1, seq: 2, catalogueRevision: 1, name: "Book",
+            typeId: "book", typeKey: nil, placement: .container(container.id),
+            createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
+        let source = FormFixtureSource(
+            items: [container, item],
+            containerContents: [container.id: [item]],
+            protocol2Catalogue: InventoryCatalogueSnapshot(
+                revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
+                types: [
+                    InventoryCatalogueType(
+                        id: "container", key: "container", label: "Container", sortOrder: 0),
+                    InventoryCatalogueType(id: "book", key: "book", label: "Book", sortOrder: 1),
+                ]))
+
+        let profile = InventoryContainerProfile(
+            reading: source, container: container, now: FormFixture.epoch)
+
+        #expect(profile.contents.entries.first?.typeName == "Book")
+        #expect(profile.contents.types == ["Book"])
+    }
+
     @Test("A record that is not a container is not found rather than drawn as one")
     func plainItemIsMissing() async throws {
         let store = Self.store()

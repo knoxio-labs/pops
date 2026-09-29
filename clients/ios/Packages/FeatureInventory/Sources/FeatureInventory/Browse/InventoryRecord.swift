@@ -16,8 +16,8 @@ internal struct InventoryRecord: Identifiable, Equatable, Sendable {
     internal let name: String
     internal let typeKey: String?
     internal let typeKeys: Set<String>
-    /// The catalogue's name for `typeKey`, or the key itself when this
-    /// phone's catalogue does not know it yet.
+    /// The catalogue's name for the item's type, or its legacy key when this
+    /// phone's catalogue does not know that type yet.
     internal let typeName: String?
     internal let code: String?
     internal let quantity: InventoryQuantity
@@ -56,6 +56,27 @@ internal struct InventoryRecord: Identifiable, Equatable, Sendable {
     private static let recentWindow: TimeInterval = 7 * 24 * 60 * 60
 }
 
+internal enum InventoryTypeNameResolver {
+    internal static func name(
+        for item: InventoryItem, catalogue: InventoryCatalogue,
+        protocol2Catalogue: InventoryCatalogueSnapshot?
+    ) -> String? {
+        if let protocol2Catalogue {
+            let type =
+                item.typeId.flatMap { typeId in
+                    protocol2Catalogue.types.first { $0.id == typeId }
+                }
+                ?? item.typeKey.flatMap { typeKey in
+                    protocol2Catalogue.types.first { $0.key == typeKey }
+                }
+            if let type {
+                return protocol2Catalogue.effectiveType(id: type.id)?.label ?? type.label
+            }
+        }
+        return item.typeKey.map { catalogue.type(forKey: $0)?.name ?? $0 }
+    }
+}
+
 /// Builds records from one state of the store, so every row on a screen is
 /// read against the same catalogue, ledger and placements.
 internal struct InventoryRecordReader {
@@ -76,7 +97,8 @@ internal struct InventoryRecordReader {
         InventoryRecord(
             id: item.id, name: item.name, typeKey: item.typeKey,
             typeKeys: Self.typeKeys(for: item, in: protocol2Catalogue),
-            typeName: item.typeKey.map { catalogue.type(forKey: $0)?.name ?? $0 },
+            typeName: InventoryTypeNameResolver.name(
+                for: item, catalogue: catalogue, protocol2Catalogue: protocol2Catalogue),
             code: item.code, quantity: item.quantity, lifecycle: item.lifecycle,
             access: item.containment?.access, placement: placement(item.placement),
             path: places.path(of: item.placement), sync: rowSync.sync(of: item.id),
