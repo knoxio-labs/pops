@@ -40,6 +40,26 @@ internal struct PopsPhotoTests {
 
         #expect(PopsPhoto.isDecodable(png))
     }
+
+    @Test(
+        "fit and fill preserve different aspect-ratio behavior",
+        .comparisonSurvivesAnUncompiledCatalog)
+    @MainActor
+    func contentModesAreVisible() throws {
+        let png = try #require(
+            PopsTestImage.pngData(width: 8, height: 4), "the fixture image could not be encoded")
+        let plate = { (contentMode: ContentMode) in
+            PopsPhoto(
+                data: png, placeholderSymbol: "doc.text.viewfinder", contentMode: contentMode
+            )
+            .frame(width: PopsSize.pageWidth, height: PopsSize.pageHeight)
+        }
+
+        let fill = try #require(PrimitiveRenderingTests.render(plate(.fill), in: .light))
+        let fit = try #require(PrimitiveRenderingTests.render(plate(.fit), in: .light))
+
+        #expect(fill != fit)
+    }
 }
 
 /// The vocabulary of status glyphs, asserted as values.

@@ -38,15 +38,21 @@ import SwiftUI
 public struct PopsPhoto: View {
     private let data: Data?
     private let placeholderSymbol: String
+    private let contentMode: ContentMode
 
     /// - Parameters:
     ///   - data: the encoded image. `nil`, or bytes no decoder here
     ///     recognises, draws the placeholder.
     ///   - placeholderSymbol: the SF Symbol drawn when there is no picture —
     ///     what the plate is *for*, so an empty one still says something.
-    public init(data: Data?, placeholderSymbol: String) {
+    ///   - contentMode: how a decoded image fills the plate. `.fill` keeps
+    ///     the existing card treatment; `.fit` preserves the whole image.
+    public init(
+        data: Data?, placeholderSymbol: String, contentMode: ContentMode = .fill
+    ) {
         self.data = data
         self.placeholderSymbol = placeholderSymbol
+        self.contentMode = contentMode
     }
 
     public var body: some View {
@@ -64,7 +70,7 @@ public struct PopsPhoto: View {
             if let image = Self.decode(data) {
                 image
                     .resizable()
-                    .scaledToFill()
+                    .aspectRatio(contentMode: contentMode)
             } else {
                 Image(systemName: placeholderSymbol)
                     .font(.popsTitle)
@@ -75,11 +81,10 @@ public struct PopsPhoto: View {
 
     /// Whether these bytes are a picture this build can draw.
     ///
-    /// `internal` rather than private so a test can ask the question without
-    /// rasterising anything — on a lane where the colour catalogue did not
-    /// compile, a picture and a placeholder rasterise to the same nothing, so
-    /// the render comparison cannot answer it and this can.
-    internal nonisolated static func isDecodable(_ data: Data?) -> Bool {
+    /// Public so a feature that loads bytes asynchronously can distinguish an
+    /// unavailable image from a decoded image before handing it to an
+    /// interactive viewer.
+    public nonisolated static func isDecodable(_ data: Data?) -> Bool {
         decode(data) != nil
     }
 

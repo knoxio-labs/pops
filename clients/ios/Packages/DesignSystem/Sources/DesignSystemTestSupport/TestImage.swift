@@ -18,20 +18,22 @@ public enum PopsTestImage {
     /// which callers should surface rather than skip past: a fixture that
     /// silently became `nil` turns "the picture is drawn" into a comparison
     /// between two placeholders.
-    public static func pngData() -> Data? {
-        let side = 4
+    /// - Parameters:
+    ///   - width: Encoded pixel width.
+    ///   - height: Encoded pixel height.
+    public static func pngData(width: Int = 4, height: Int = 4) -> Data? {
         guard
             let context = CGContext(
                 data: nil,
-                width: side,
-                height: side,
+                width: width,
+                height: height,
                 bitsPerComponent: 8,
                 bytesPerRow: 0,
                 space: CGColorSpaceCreateDeviceRGB(),
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         context.setFillColor(red: 0.9, green: 0.1, blue: 0.1, alpha: 1)
-        context.fill(CGRect(x: 0, y: 0, width: side, height: side))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
 
         guard let image = context.makeImage() else { return nil }
         let encoded = NSMutableData()
