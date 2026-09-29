@@ -55,6 +55,33 @@ internal struct InventorySymbol: Hashable, Sendable {
     internal static let library = InventorySymbol(system: "photo.on.rectangle")
     internal static let unavailable = InventorySymbol(system: "slash.circle")
 
+    /// Maps a catalogue's platform-neutral icon token to an iOS symbol.
+    internal static func catalogue(_ token: InventoryCatalogueIconToken) -> InventorySymbol {
+        catalogueSymbols[token] ?? item
+    }
+
+    private static let catalogueSymbols: [InventoryCatalogueIconToken: InventorySymbol] = [
+        .item: item,
+        .book: InventorySymbol(system: "book.closed"),
+        .furniture: InventorySymbol(system: "cabinet"),
+        .textiles: InventorySymbol(system: "square.stack.3d.up"),
+        .bedding: InventorySymbol(system: "bed.double"),
+        .pillows: InventorySymbol(system: "square.on.square"),
+        .electronics: InventorySymbol(system: "powerplug"),
+        .cable: InventorySymbol(system: "cable.connector"),
+        .tools: InventorySymbol(system: "wrench.and.screwdriver"),
+        .kitchen: InventorySymbol(system: "fork.knife"),
+        .bar: InventorySymbol(system: "wineglass"),
+        .containers: InventorySymbol(system: "shippingbox"),
+        .art: InventorySymbol(system: "photo.artframe"),
+        .clothing: InventorySymbol(system: "tshirt"),
+        .outdoor: InventorySymbol(system: "tent"),
+        .plant: InventorySymbol(system: "leaf"),
+        .cleaning: InventorySymbol(system: "sparkles"),
+        .document: InventorySymbol(system: "doc"),
+        .key: InventorySymbol(system: "key"),
+    ]
+
     /// A row's kind glyph: a container by its access, anything else as an
     /// item.
     internal static func record(access: InventoryAccess?) -> InventorySymbol {

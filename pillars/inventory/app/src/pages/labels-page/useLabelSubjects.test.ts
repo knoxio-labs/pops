@@ -112,6 +112,16 @@ const item: WebItem = {
 };
 
 describe('detailsFor', () => {
+  it('carries field icons to print details independently of field names', () => {
+    const configured = {
+      ...type,
+      fields: [{ ...colour, label: 'Renamed field', presentation: { icon: 'PackageOpenUp' } }],
+    };
+    expect(detailsFor(item, [], new Map([[type.id, configured]])).fields).toEqual([
+      { id: 'appliance.colour', label: 'Renamed field', value: 'Red', icon: 'PackageOpenUp' },
+    ]);
+  });
+
   it('uses catalogue labels and display values for enum and measurement fields', () => {
     const details = detailsFor(item, [], new Map([[type.id, type]]));
 

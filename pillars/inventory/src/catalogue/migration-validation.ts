@@ -1,5 +1,5 @@
 import { CatalogueApiError } from './authoring-types.js';
-import { migrationValidationIssue as issue } from './migration-coverage.js';
+import { migrationValidationIssue as issue } from './migration-coverage-issues.js';
 
 import type { items } from '../db/schema.js';
 import type { CatalogueIssue } from './authoring-types.js';
@@ -8,7 +8,9 @@ import type { CatalogueMigration, CatalogueMigrationStep } from './migration-typ
 
 /** Returns the destination field whose owning type receives a migration step. */
 export function migrationStepTargetFieldId(step: CatalogueMigrationStep): string {
-  return step.kind === 'copy' || step.kind === 'convert_decimal' ? step.toFieldId : step.fieldId;
+  if (step.kind === 'copy' || step.kind === 'convert_decimal') return step.toFieldId;
+  if (step.kind === 'copy_legacy_value') return step.toFieldId;
+  return step.fieldId;
 }
 
 function migrationStepSourceFieldId(step: CatalogueMigrationStep): string | undefined {
@@ -19,11 +21,14 @@ function requiredStepFields(
   coverage: RequiredMigrationCoverage,
   rows: readonly (typeof items.$inferSelect)[]
 ): Set<string> {
-  const liveTypeIds = new Set(rows.flatMap((row) => (row.typeId === null ? [] : [row.typeId])));
   return new Set(
     coverage.affectedFieldIds.filter((fieldId) => {
-      const typeId = coverage.fieldTypeIds.get(fieldId);
-      return typeId !== undefined && liveTypeIds.has(typeId);
+      return rows.some(
+        (row) =>
+          row.typeId !== null &&
+          (coverage.baseEffectiveFieldIds.get(row.typeId)?.has(fieldId) === true ||
+            coverage.candidateEffectiveFieldIds.get(row.typeId)?.has(fieldId) === true)
+      );
     })
   );
 }
@@ -46,7 +51,16 @@ function stepSourceIssues(
           `Unknown source field ${sourceFieldId}`
         )
       );
-    } else if (targetTypeId !== undefined && sourceTypeId !== targetTypeId) {
+    } else if (
+      targetTypeId !== undefined &&
+      !coverage.selectedTypeIds.some((typeId) => {
+        const baseFields = coverage.baseEffectiveFieldIds.get(typeId);
+        const candidateFields = coverage.candidateEffectiveFieldIds.get(typeId);
+        const sourceAvailable =
+          Boolean(baseFields?.has(sourceFieldId)) || Boolean(candidateFields?.has(sourceFieldId));
+        return sourceAvailable && Boolean(candidateFields?.has(migrationStepTargetFieldId(step)));
+      })
+    ) {
       issues.push(
         issue(
           'migration.steps',

@@ -1,3 +1,29 @@
+/// A semantic icon name carried by catalogue presentation metadata.
+///
+/// The value is platform-neutral. Each client maps it to its native icon set,
+/// and unknown or absent values fall back to ``item``.
+public enum InventoryCatalogueIconToken: String, Codable, CaseIterable, Hashable, Sendable {
+    case item
+    case book
+    case furniture
+    case textiles
+    case bedding
+    case pillows
+    case electronics
+    case cable
+    case tools
+    case kitchen
+    case bar
+    case containers
+    case art
+    case clothing
+    case outdoor
+    case plant
+    case cleaning
+    case document
+    case key
+}
+
 /// An enum option whose stable identity survives label and order changes.
 public struct InventoryCatalogueOption: Codable, Identifiable, Hashable, Sendable {
     public let id: String
@@ -197,6 +223,16 @@ public struct InventoryCatalogueSnapshot: Codable, Hashable, Sendable {
             replacedBy: own.replacedBy, parentTypeId: own.parentTypeId)
     }
 
+    /// Resolves the nearest icon token on the type or one of its ancestors.
+    /// Presentation is optional and mutable, so older snapshots safely use
+    /// the generic item glyph.
+    public func iconToken(for typeId: String) -> InventoryCatalogueIconToken {
+        for type in ancestry(ofType: typeId).reversed() {
+            if let token = type.presentation.iconToken { return token }
+        }
+        return .item
+    }
+
     /// Whether `typeId` is the same as or descends from `ancestorTypeId`.
     public func type(_ typeId: String, isOrDescendsFrom ancestorTypeId: String) -> Bool {
         ancestry(ofType: typeId).contains { $0.id == ancestorTypeId }
@@ -206,5 +242,14 @@ public struct InventoryCatalogueSnapshot: Codable, Hashable, Sendable {
         _ left: InventoryCatalogueField, _ right: InventoryCatalogueField
     ) -> Bool {
         left.sortOrder != right.sortOrder ? left.sortOrder < right.sortOrder : left.key < right.key
+    }
+}
+
+extension InventoryJSON {
+    fileprivate var iconToken: InventoryCatalogueIconToken? {
+        guard case .object(let values) = self,
+            case .string(let raw)? = values["icon"]
+        else { return nil }
+        return InventoryCatalogueIconToken(rawValue: raw)
     }
 }

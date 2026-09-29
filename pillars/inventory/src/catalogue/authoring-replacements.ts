@@ -1,5 +1,6 @@
 import { issue } from './authoring-shared.js';
 import { fieldById, typeById } from './catalogue-lineage.js';
+import { ancestorIds } from './catalogue-tree.js';
 
 import type { CatalogueIssue } from './authoring-types.js';
 import type { Replaceable } from './catalogue-lineage.js';
@@ -85,11 +86,12 @@ function fieldTypeIssue(
 ): CatalogueIssue | null {
   if (replacement.typeId === field.typeId) return null;
   if (typeById(draft, field.typeId)?.replacedBy === replacement.typeId) return null;
+  if (ancestorIds(draft.types, field.typeId).includes(replacement.typeId)) return null;
   return issue(
     field.id,
     'replacedBy',
     'replacement_type_mismatch',
-    'A replacement field belongs to the same type, or to the type that replaces it'
+    'A replacement field belongs to the same type, an ancestor type, or the type that replaces it'
   );
 }
 
@@ -98,7 +100,8 @@ function fieldTypeIssue(
  * Recorded lineage never changes, and a replaced definition stays archived.
  * Lineage new in this draft must name a live definition of the same kind
  * that exists in the draft, without a cycle; a replacement field belongs to
- * the replaced field's type or to the type that replaces that type.
+ * the replaced field's type, one of its ancestor types, or the type that
+ * replaces that type.
  */
 export function validateCatalogueReplacements(
   base: PersistedCatalogue,

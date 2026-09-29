@@ -83,4 +83,13 @@ internal struct ContentViewTabSelectionTests {
             ContentView.shownFeature(chosen: ContentView.moreTab, available: [Self.receipts])
                 == Self.receipts)
     }
+
+    @Test("the More tab exposes the identifier used by the UI flow")
+    func moreTabAccessibilityIsWired() {
+        #expect(
+            ContentViewFeatureSwitchingWiringTests.contentViewSource.contains(
+                ".accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)"
+            )
+        )
+    }
 }

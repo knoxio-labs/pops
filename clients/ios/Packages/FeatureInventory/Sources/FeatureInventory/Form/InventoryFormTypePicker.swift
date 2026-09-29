@@ -1,6 +1,10 @@
 import DesignSystem
 import SwiftUI
 
+/// The shared full-height type picker used by item forms and search filters.
+///
+/// Item forms opt into recent saved types; filters keep their existing `Any`
+/// choice but use the same tree, search and selection treatment.
 internal struct InventoryFormTypePicker: View {
     @Binding internal var selection: String?
     internal let options: [InventoryFormTypeOption]
@@ -8,12 +12,16 @@ internal struct InventoryFormTypePicker: View {
     internal let noneAccessibilityIdentifier: String?
     internal let onChoose: (@MainActor (String?) -> Void)?
     private let initialQuery: String
+    private let showsRecents: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var query: String
+    @State private var tree: InventoryTypePickerTreeState
+    @State private var recentIDs: [String]
 
     internal init(
         selection: Binding<String?>, options: [InventoryFormTypeOption], title: String = "Type",
         noneTitle: String? = nil, noneAccessibilityIdentifier: String? = nil, query: String = "",
+        showsRecents: Bool = false,
         onChoose: (@MainActor (String?) -> Void)? = nil
     ) {
         _selection = selection
@@ -23,165 +31,183 @@ internal struct InventoryFormTypePicker: View {
         self.onChoose = onChoose
         navigationTitle = title
         initialQuery = query
+        self.showsRecents = showsRecents
         _query = State(initialValue: query)
+        _tree = State(
+            initialValue: InventoryTypePickerTreeState(
+                options: options, selectedID: selection.wrappedValue))
+        _recentIDs = State(
+            initialValue: showsRecents
+                ? InventoryTypeRecents.load(
+                    validIDs: Set(options.filter { !$0.isArchived }.map(\.id)))
+                : [])
     }
 
     private let navigationTitle: String
 
     internal var body: some View {
-        List {
+        VStack(spacing: PopsSpacing.zero) {
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                rootRows
+                if showsRecents { recentSection }
+                if let noneTitle { noneRow(title: noneTitle) }
+                InventoryFormTypeTreeView(tree: tree, selection: selection) { id in
+                    choose(id)
+                }
             } else {
                 searchRows
             }
         }
-        .inventoryInsetGroupedList()
+        .background(Color.popsBackground)
         .navigationTitle(navigationTitle)
         .searchable(text: $query, prompt: "Search types")
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+        }
         .onAppear { query = initialQuery }
     }
 
-    @ViewBuilder private var rootRows: some View {
-        Section {
-            if let noneTitle {
-                noneRow(title: noneTitle)
-            }
-            ForEach(children(of: nil)) { option in
-                nodeRow(option)
-            }
-        }
-    }
-
-    @ViewBuilder private var searchRows: some View {
-        Section {
-            ForEach(searchOptions) { option in
-                Button {
-                    choose(option.id)
-                } label: {
-                    optionLabel(
-                        name: option.path, isSelected: selection == option.id,
-                        isArchived: option.isArchived)
+    @ViewBuilder private var recentSection: some View {
+        let visible = recentIDs.compactMap { id in options.first { $0.id == id } }
+        if !visible.isEmpty {
+            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                HStack {
+                    Text("Recent types")
+                        .font(.popsSubheadline.weight(.semibold))
+                        .foregroundStyle(Color.popsMutedForeground)
+                    Spacer()
+                    Button("Clear") {
+                        InventoryTypeRecents.removeAll()
+                        recentIDs.removeAll()
+                    }
+                    .font(.popsCaption)
+                    .frame(minHeight: PopsSize.touchTarget)
+                    .accessibilityLabel("Clear recent types")
                 }
-                .disabled(option.isArchived)
-                .accessibilityIdentifier(option.accessibilityIdentifier)
+                .padding(.horizontal, PopsSpacing.lg)
+                ScrollView(.horizontal) {
+                    HStack(spacing: PopsSpacing.md) {
+                        ForEach(visible) { option in
+                            Button {
+                                choose(option.id)
+                            } label: {
+                                Label(option.label, systemImage: option.symbol.system)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                    .padding(.horizontal, PopsSpacing.lg)
+                                    .padding(.vertical, PopsSpacing.sm)
+                                    .frame(minHeight: PopsSize.touchTarget)
+                                    .background(
+                                        selection == option.id
+                                            ? Color.popsInventory.opacity(0.12) : Color.popsSurface,
+                                        in: .capsule)
+                            }
+                            .accessibilityIdentifier(option.accessibilityIdentifier)
+                            .accessibilityAddTraits(selection == option.id ? .isSelected : [])
+                        }
+                    }
+                    .font(.popsSubheadline)
+                    .padding(.horizontal, PopsSpacing.lg)
+                }
+                .scrollIndicators(.hidden)
             }
+            .padding(.top, PopsSpacing.sm)
+            .padding(.bottom, PopsSpacing.lg)
+            Divider()
         }
     }
 
-    private func level(for parentID: String) -> some View {
-        List {
-            if let parent = options.first(where: { $0.id == parentID }) {
-                Section {
+    private var searchRows: some View {
+        ScrollView {
+            LazyVStack(spacing: PopsSpacing.zero) {
+                if searchOptions.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                    Button("Show tree") { query = "" }
+                        .frame(minHeight: PopsSize.touchTarget)
+                }
+                ForEach(searchOptions) { option in
                     Button {
-                        choose(parent.id)
+                        choose(option.id)
                     } label: {
-                        optionLabel(
-                            name: "Choose \(parent.label)", isSelected: selection == parent.id,
-                            isArchived: parent.isArchived)
+                        HStack(spacing: PopsSpacing.md) {
+                            option.symbol.image.foregroundStyle(Color.popsInventory)
+                            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                                Text(option.label).font(.popsBody)
+                                Text(option.path)
+                                    .font(.popsCaption)
+                                    .foregroundStyle(Color.popsMutedForeground)
+                            }
+                            Spacer(minLength: PopsSpacing.sm)
+                            if selection == option.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.popsInventory)
+                            }
+                        }
+                        .padding(.horizontal, PopsSpacing.lg)
+                        .frame(
+                            maxWidth: .infinity, minHeight: PopsSize.touchTarget,
+                            alignment: .leading
+                        )
+                        .contentShape(.rect)
                     }
-                    .disabled(parent.isArchived)
-                    .accessibilityIdentifier(parent.accessibilityIdentifier)
-                    ForEach(children(of: parentID)) { option in
-                        nodeRow(option)
-                    }
+                    .buttonStyle(.plain)
+                    .disabled(option.isArchived)
+                    .accessibilityIdentifier(option.accessibilityIdentifier)
+                    .accessibilityLabel(
+                        selection == option.id
+                            ? "Selected \(option.label)" : "Choose \(option.label)"
+                    )
+                    .accessibilityHint(option.path)
+                    .accessibilityAddTraits(selection == option.id ? .isSelected : [])
+                    Divider().padding(.leading, PopsSpacing.lg)
                 }
             }
-        }
-        .inventoryInsetGroupedList()
-        .navigationTitle(options.first(where: { $0.id == parentID })?.label ?? navigationTitle)
-    }
-
-    @ViewBuilder private func nodeRow(_ option: InventoryFormTypeOption) -> some View {
-        if option.hasChildren {
-            NavigationLink {
-                AnyView(level(for: option.id))
-            } label: {
-                optionLabel(name: option.label, isSelected: selection == option.id)
-            }
-            .accessibilityIdentifier(option.accessibilityIdentifier)
-        } else {
-            Button {
-                choose(option.id)
-            } label: {
-                optionLabel(
-                    name: option.label, isSelected: selection == option.id,
-                    isArchived: option.isArchived)
-            }
-            .disabled(option.isArchived)
-            .accessibilityIdentifier(option.accessibilityIdentifier)
+            .padding(.vertical, PopsSpacing.sm)
         }
     }
 
     @ViewBuilder private func noneRow(title: String) -> some View {
-        if let identifier = noneAccessibilityIdentifier {
-            Button {
-                choose(nil)
-            } label: {
-                optionLabel(name: title, isSelected: selection == nil)
+        Button {
+            choose(nil)
+        } label: {
+            HStack {
+                Text(title)
+                Spacer(minLength: PopsSpacing.sm)
+                if selection == nil {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.popsInventory)
+                }
             }
-            .accessibilityIdentifier(identifier)
-        } else {
-            Button {
-                choose(nil)
-            } label: {
-                optionLabel(name: title, isSelected: selection == nil)
-            }
+            .padding(.horizontal, PopsSpacing.lg)
+            .frame(minHeight: PopsSize.touchTarget)
         }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(noneAccessibilityIdentifier ?? "")
+        .accessibilityAddTraits(selection == nil ? .isSelected : [])
     }
 
     private var searchOptions: [InventoryFormTypeOption] {
-        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        return
-            options
-            .filter { $0.path.localizedCaseInsensitiveContains(query) }
+        let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return options.filter { $0.path.localizedCaseInsensitiveContains(value) }
             .sorted { left, right in
                 switch left.path.localizedCaseInsensitiveCompare(right.path) {
                 case .orderedAscending: true
                 case .orderedDescending: false
-                case .orderedSame:
-                    left.id.localizedCaseInsensitiveCompare(right.id) == .orderedAscending
+                case .orderedSame: left.id < right.id
                 }
             }
-    }
-
-    private func children(of parentID: String?) -> [InventoryFormTypeOption] {
-        options
-            .filter { $0.parentID == parentID }
-            .sorted { left, right in
-                switch left.label.localizedCaseInsensitiveCompare(right.label) {
-                case .orderedAscending: true
-                case .orderedDescending: false
-                case .orderedSame:
-                    left.id.localizedCaseInsensitiveCompare(right.id) == .orderedAscending
-                }
-            }
-    }
-
-    private func optionLabel(name: String, isSelected: Bool, isArchived: Bool = false) -> some View
-    {
-        HStack {
-            Text(name)
-                .foregroundStyle(
-                    isArchived ? Color.popsMutedForeground : Color.popsForeground
-                )
-            Spacer(minLength: PopsSpacing.sm)
-            if isSelected {
-                Image(systemName: "checkmark")
-                    .foregroundStyle(Color.popsInventory)
-                    .accessibilityHidden(true)
-            }
-        }
     }
 
     private func choose(_ id: String?) {
-        if let onChoose {
-            onChoose(id)
+        guard id == nil || options.contains(where: { $0.id == id && !$0.isArchived }) else {
             return
         }
-        dismiss()
-        Task { @MainActor in
+        if let onChoose {
+            onChoose(id)
+        } else {
             selection = id
+            dismiss()
         }
     }
 }

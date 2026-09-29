@@ -143,6 +143,7 @@ internal struct ContentView: View {
                             screen(for: feature)
                         }
                     }
+                    .accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)
                 }
                 if hasSearch {
                     Tab(value: Self.searchTab, role: .search) {

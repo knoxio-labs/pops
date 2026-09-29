@@ -11,6 +11,7 @@ import {
 } from './decimal-places';
 import { savedExpressionVersion } from './expression/expression-version';
 import { expressionContext, fieldValueType, toWire } from './expression/wire';
+import { presentationWithIcon } from './field-icon';
 import { FieldFormActions } from './FieldFormActions';
 import { FieldFormBehaviour } from './FieldFormBehaviour';
 import { FieldFormConstraints } from './FieldFormConstraints';
@@ -111,7 +112,10 @@ function computedPart(value: FieldFormContextValue, typeId: string) {
 
 function createOperation(value: FieldFormContextValue, typeId: string): CatalogueOperation {
   const presentation = presentationWithDecimalPlaces(
-    { ...value.field?.presentation, highlighted: value.highlighted },
+    presentationWithIcon(
+      { ...value.field?.presentation, highlighted: value.highlighted },
+      value.icon
+    ),
     supportsDecimalPlaces(value.kind) ? decimalPlacesFromInput(value.decimalPlaces) : null
   );
   return {

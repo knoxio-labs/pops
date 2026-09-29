@@ -1,7 +1,8 @@
+import { fitCodePt } from './code-fit.js';
+import { estimateLines, fitList, fitNamePt, nameLineHeight } from './label-fitting.js';
 /**
- * How one label's parts share its die-cut. Three arrangements: the QR alone,
- * filling the label; the QR beside a text column (the approved box and item
- * labels); and text alone across the whole label. A part shown alone is set
+ * How one label's parts share its die-cut: QR alone, QR beside text,
+ * QR and metadata above contents, or text alone. A part shown alone is set
  * as large as the label allows; parts sharing it use the sheet's own scale,
  * and a list that runs out of room ends in "+N more" instead of overflowing.
  *
@@ -9,17 +10,17 @@
  * sizing in `@pops/inventory/labels` takes; the renderer clips as a last
  * guard, so an estimate that runs long loses a line, never the next label.
  */
-import { fitCodePt } from './code-fit.js';
-import { estimateLines, fitList, fitNamePt, nameLineHeight } from './label-fitting.js';
+import { headerPlan } from './label-header-layout.js';
 import { MIN_QR_MM, templateFits, textWidthMm } from './sheet-layouts.js';
 
-import type { LabelFieldValue, ResolvedLabel } from './label-content.js';
-import type { FittedList } from './label-fitting.js';
+import type { ResolvedLabel } from './label-content.js';
+import type { LabelPlan } from './label-plan.js';
 import type { PrintSubject } from './label-subject.js';
 import type { SheetLayout } from './sheet-layouts.js';
 
 export { estimateLines, fitList, fitNamePt } from './label-fitting.js';
 export type { FittedList } from './label-fitting.js';
+export type { LabelArrangement, LabelPlan } from './label-plan.js';
 
 const MM_PER_PT = 25.4 / 72;
 const LIST_LEADING = 1.3;
@@ -30,21 +31,6 @@ const HERO_CODE_MAX_PT = 96;
 const TEXT_ONLY_BOOST = 1.25;
 /** Share of the label a part shown alone may take, so it never touches the die-cut. */
 const HERO_SHARE = 0.85;
-
-/** How the label is divided. */
-export type LabelArrangement = 'qr-fill' | 'qr-beside' | 'text';
-
-/** One label, measured: where the QR goes and how big each text part is set. */
-export interface LabelPlan {
-  arrangement: LabelArrangement;
-  /** The QR's side in millimetres, or null when the label has no QR. */
-  qrMm: number | null;
-  /** The name's size and the most lines it may take before it ends in an ellipsis. */
-  name: { pt: number; lines: number } | null;
-  code: { pt: number } | null;
-  fields: FittedList<LabelFieldValue> | null;
-  contents: FittedList<string> | null;
-}
 
 function floorToHalf(value: number): number {
   return Math.floor(value * 2) / 2;
@@ -193,5 +179,7 @@ export function planLabel(
       contents: null,
     };
   }
+  const header = headerPlan(label, subject, layout);
+  if (header) return header;
   return isSolo(label) ? soloPlan(label, subject, layout) : sharedPlan(label, subject, layout);
 }

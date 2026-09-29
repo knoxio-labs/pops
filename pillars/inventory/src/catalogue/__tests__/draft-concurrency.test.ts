@@ -10,6 +10,7 @@ import {
   publishCatalogueDraft,
   readCurrentCatalogueDraft,
 } from '../authoring.js';
+import { loadPublishedCatalogue } from '../catalogue.js';
 
 import type { CatalogueDescriptor } from '../authoring.js';
 
@@ -87,6 +88,41 @@ describe('catalogue draft optimistic concurrency', () => {
     expect(second.draft.revision.draftVersion).toBe(3);
     expect(persistedVersion(created.revision.revision)).toBe(3);
     expect(readCurrentCatalogueDraft(database.db).revision.draftVersion).toBe(3);
+  });
+
+  it('persists field presentation icons through publication and read', () => {
+    const created = createCatalogueDraft(database.db, BASE_REVISION, AUTHOR);
+    const type = firstType(created);
+    const edited = patchCatalogueDraft(database.db, target(created), [
+      {
+        kind: 'put_field',
+        typeId: type.id,
+        key: 'package',
+        label: 'Package',
+        fieldKind: 'short_text',
+        presentation: { icon: 'PackageOpenUp' },
+      },
+    ]);
+    const draftField = edited.draft.types
+      .find((entry) => entry.id === type.id)
+      ?.fields.find((field) => field.key === 'package');
+    expect(draftField?.presentation).toEqual({ icon: 'PackageOpenUp' });
+
+    publishCatalogueDraft(
+      database.db,
+      edited.draft.revision.revision,
+      {
+        baseRevision: BASE_REVISION,
+        expectedDraftVersion: edited.draft.revision.draftVersion,
+        note: null,
+      },
+      AUTHOR
+    );
+    const published = loadPublishedCatalogue(database.db, edited.draft.revision.revision);
+    const publishedField = published?.types
+      .find((entry) => entry.id === type.id)
+      ?.fields.find((field) => field.key === 'package');
+    expect(publishedField?.presentation).toEqual({ icon: 'PackageOpenUp' });
   });
 
   it('rejects the second of two editors that read the same version without overwriting', () => {
