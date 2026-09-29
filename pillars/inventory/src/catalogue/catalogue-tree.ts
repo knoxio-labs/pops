@@ -7,7 +7,7 @@ import type {
 type TypeTreeNode = Pick<PersistedItemType, 'id' | 'parentTypeId'>;
 
 /** Maximum supported depth for a type tree, counting a root as depth one. */
-export const MAX_TYPE_TREE_DEPTH = 3;
+export const MAX_TYPE_TREE_DEPTH = 5;
 
 /** The result of walking a type's parent chain. */
 export interface TypeChain {

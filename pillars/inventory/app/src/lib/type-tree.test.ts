@@ -67,7 +67,7 @@ describe('type-tree', () => {
       type('leaf', 'Pillowcase', 'middle'),
     ];
 
-    expect(MAX_TYPE_TREE_DEPTH).toBe(3);
+    expect(MAX_TYPE_TREE_DEPTH).toBe(5);
     expect(ancestorIds(types, 'leaf')).toEqual(['root', 'middle']);
     expect(typeDepth(types, 'leaf')).toBe(3);
     expect(typeHeight(types, 'root')).toBe(3);

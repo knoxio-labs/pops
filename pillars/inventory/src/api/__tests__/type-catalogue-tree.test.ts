@@ -252,13 +252,15 @@ describe('type catalogue parent trees', () => {
     });
   });
 
-  it('rejects a type tree at depth four', async () => {
+  it('accepts a type tree at depth five and rejects depth six', async () => {
     const api = apiFor('web');
     const root = await createType(await createDraft(api), 'depth-root');
     const first = await createType(root.context, 'depth-first', root.type.id);
     const second = await createType(first.context, 'depth-second', first.type.id);
-    const result = await patchDraft(second.context, [
-      { kind: 'put_type', key: 'depth-four', label: 'depth-four', parentTypeId: second.type.id },
+    const third = await createType(second.context, 'depth-third', second.type.id);
+    const fourth = await createType(third.context, 'depth-fourth', third.type.id);
+    const result = await patchDraft(fourth.context, [
+      { kind: 'put_type', key: 'depth-six', label: 'depth-six', parentTypeId: fourth.type.id },
     ]);
 
     expect(result.response.status, JSON.stringify(result.response.body)).toBe(400);

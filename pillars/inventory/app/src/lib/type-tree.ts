@@ -1,7 +1,7 @@
 import type { CatalogueField, CatalogueType } from '../catalogue-editor/types';
 
 /** Maximum supported depth for a catalogue type tree, counting a root as one. */
-export const MAX_TYPE_TREE_DEPTH = 3;
+export const MAX_TYPE_TREE_DEPTH = 5;
 
 type TypeIndex = ReadonlyMap<string, CatalogueType>;
 
