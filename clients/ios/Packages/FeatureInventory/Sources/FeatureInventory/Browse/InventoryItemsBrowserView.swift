@@ -64,7 +64,7 @@ internal struct InventoryItemsBrowserView: View {
             .popsMotion(value: model.query)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .containerRelativeFrame(.horizontal, alignment: .leading)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .scrollDismissesKeyboard(.immediately)
@@ -136,6 +136,7 @@ internal struct InventoryItemsBrowserSkeleton: View {
                 PopsListSkeleton(rows: 8)
             }
             .padding(.horizontal, PopsSpacing.lg)
+            .containerRelativeFrame(.horizontal, alignment: .leading)
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
