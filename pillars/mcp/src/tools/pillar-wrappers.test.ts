@@ -12,6 +12,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { bfmTools } from './bfm.js';
 import { cerebrumTools } from './cerebrum.js';
 import { contacts, finance } from './finance-client.js';
 import { connectionTools } from './inventory-connections.js';
@@ -52,7 +53,7 @@ vi.mock('../pillar-client.js', () => ({
   getPillar: () => h.recordingHandle(),
 }));
 
-const PILLAR_IDS = ['finance', 'contacts', 'inventory', 'media', 'cerebrum', 'purchases'];
+const PILLAR_IDS = ['finance', 'contacts', 'inventory', 'media', 'cerebrum', 'purchases', 'bfm'];
 
 function handlerFor(tools: readonly ToolDef[], name: string): ToolDef['handler'] {
   const tool = tools.find((t) => t.name === name);
@@ -118,6 +119,11 @@ describe('pillar client wrappers resolve to [domain, proc] operationIds', () => 
   it('purchases merchantSpend tool → analytics.merchantSpend', async () => {
     await handlerFor(purchasesTools, 'purchases.analytics.merchantSpend')({});
     expect(h.lastPath()).toEqual(['analytics', 'merchantSpend']);
+  });
+
+  it('bfm pairing-code tool → operator.issuePairingCode', async () => {
+    await handlerFor(bfmTools, 'bfm.devicePairing.issueCode')({});
+    expect(h.lastPath()).toEqual(['operator', 'issuePairingCode']);
   });
 
   it('never prefixes the operationId with a pillar id', async () => {

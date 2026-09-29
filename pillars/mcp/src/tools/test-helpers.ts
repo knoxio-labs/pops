@@ -93,6 +93,20 @@ export const mockPillarPurchases = {
   },
 };
 
+export const mockPillarBfm = {
+  bfm: {
+    operator: {
+      issuePairingCode: vi.fn().mockResolvedValue(
+        callOk({
+          code: 'fixture-code',
+          pairingUrl: 'https://bfm.example.test/devices/pair?code=fixture-code',
+          expiresAt: '2026-09-29T00:00:00.000Z',
+        })
+      ),
+    },
+  },
+};
+
 const PILLAR_MOCKS = {
   inventory: mockPillarInventory,
   finance: mockPillarFinance,
@@ -100,6 +114,7 @@ const PILLAR_MOCKS = {
   cerebrum: mockPillarCerebrum,
   contacts: mockPillarContacts,
   purchases: mockPillarPurchases,
+  bfm: mockPillarBfm,
 } as const;
 
 /**

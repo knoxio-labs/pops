@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 64 tools; a new adapter that breaks one is a bug even
+These hold across all 70 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -38,6 +38,10 @@ though nothing enforces it mechanically.
   named in the refusal — MCP does not itself hold the caller's grant to
   pre-empt the call (see `ToolDef.scope`'s docstring), so the actionable step
   is always "grant this scope", never a retry.
+
+- **The BFM pairing tool is metadata-only.** `bfm.devicePairing.issueCode`
+  returns the one-time code, pairing URL, and expiry from BFM. It never calls
+  device listing or revocation routes and never receives device credentials.
 
 ## Routing that does not follow the name
 
