@@ -164,6 +164,7 @@ internal struct InventoryFormTypePicker: View {
                 }
             }
             .padding(.vertical, PopsSpacing.sm)
+            .popsMotion(value: selection)
         }
     }
 

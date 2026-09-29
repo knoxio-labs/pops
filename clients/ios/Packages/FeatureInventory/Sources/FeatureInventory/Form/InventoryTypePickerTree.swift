@@ -75,6 +75,12 @@ internal final class InventoryTypePickerTreeState {
 
     private func expandInitialBranches() {
         let target = min(5, options.count)
+        let roots = children(of: nil)
+        if roots.count <= 2 {
+            for root in roots where hasChildren(root.id) {
+                expandedIDs.insert(root.id)
+            }
+        }
         while rows.count < target {
             guard let candidate = rows.first(where: { hasChildren($0.id) && !$0.isExpanded })
             else { return }

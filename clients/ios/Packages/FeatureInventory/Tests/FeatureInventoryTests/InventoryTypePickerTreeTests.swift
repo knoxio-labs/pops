@@ -31,6 +31,26 @@ internal struct InventoryTypePickerTreeTests {
         #expect(!tree.rows.contains { $0.id == "one-a" })
     }
 
+    @Test("two root branches both open when the catalogue has only two roots")
+    func twoRootsOpenTogether() {
+        let options = [
+            Self.option("cover", label: "Cushion cover", children: true),
+            Self.option("cover-a", label: "Cover A", parent: "cover"),
+            Self.option("cover-b", label: "Cover B", parent: "cover"),
+            Self.option("cover-c", label: "Cover C", parent: "cover"),
+            Self.option("cushion", label: "Cushion", children: true),
+            Self.option("cushion-a", label: "Cushion A", parent: "cushion"),
+            Self.option("cushion-b", label: "Cushion B", parent: "cushion"),
+            Self.option("cushion-c", label: "Cushion C", parent: "cushion"),
+        ]
+        let tree = InventoryTypePickerTreeState(options: options, selectedID: nil)
+
+        #expect(tree.rows.contains { $0.id == "cover-a" })
+        #expect(tree.rows.contains { $0.id == "cushion-a" })
+        #expect(tree.rows.first { $0.id == "cover" }?.isExpanded == true)
+        #expect(tree.rows.first { $0.id == "cushion" }?.isExpanded == true)
+    }
+
     @Test("selected ancestors open without moving focus")
     func selectedPath() {
         let options = [

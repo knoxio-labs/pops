@@ -100,6 +100,7 @@ internal struct InventoryFormTypeTreeView: View {
             in: .rect(cornerRadius: PopsRadius.control)
         )
         .popsMotion(value: row.isExpanded)
+        .popsMotion(value: selection)
     }
 
     @ViewBuilder private func leadingControl(for row: InventoryTypePickerTreeRow) -> some View {
