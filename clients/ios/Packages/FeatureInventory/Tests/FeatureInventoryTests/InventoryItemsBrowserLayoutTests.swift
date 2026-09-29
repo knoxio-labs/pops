@@ -1,6 +1,8 @@
 import DesignSystem
 import Foundation
+import Synchronization
 import Testing
+
 @testable import FeatureInventory
 
 #if os(macOS)
@@ -25,6 +27,32 @@ import Testing
             subview.place(
                 at: bounds.origin, anchor: .topLeading,
                 proposal: ProposedViewSize(width: width, height: bounds.height))
+        }
+    }
+
+    private final class SizeProbe: Sendable {
+        let size = Mutex(CGSize.zero)
+    }
+
+    private struct SizeReportingLayout: Layout {
+        let probe: SizeProbe
+
+        func sizeThatFits(
+            proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+        ) -> CGSize {
+            guard let subview = subviews.first else { return .zero }
+            let size = subview.sizeThatFits(proposal)
+            probe.size.withLock { $0 = size }
+            return size
+        }
+
+        func placeSubviews(
+            in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+        ) {
+            guard let subview = subviews.first else { return }
+            subview.place(
+                at: bounds.origin, anchor: .topLeading,
+                proposal: ProposedViewSize(width: bounds.width, height: bounds.height))
         }
     }
 
@@ -60,6 +88,7 @@ internal struct InventoryItemsBrowserLayoutTests {
     func browserContentIsBoundToTheViewport() {
         #expect(Self.source.contains("ScrollView(.vertical)"))
         #expect(Self.source.contains(".containerRelativeFrame(.horizontal, alignment: .leading)"))
+        #expect(Self.source.contains("InventoryItemsBrowserSkeleton"))
     }
 
     @Test("item rows give their descriptive column the width left by row controls")
@@ -93,6 +122,41 @@ internal struct InventoryItemsBrowserLayoutTests {
             #expect(
                 host.fittingSize.width <= 320,
                 "Measured browser controls at \(host.fittingSize.width) points")
+        }
+
+        @Test("the vertical scroll proposal keeps browser content inside its viewport")
+        @MainActor
+        func scrollContentFitsTheViewport() {
+            let probe = SizeProbe()
+            let tiles = InventoryCountTiles(tiles: [
+                InventoryCountTile(title: "Items", count: 60, symbol: "cube"),
+                InventoryCountTile(title: "In hand", count: 0, symbol: "hand.raised"),
+                InventoryCountTile(title: "Untyped", count: 0, symbol: "archivebox"),
+                InventoryCountTile(title: "Recent", count: 60, symbol: "clock.arrow.circlepath"),
+            ])
+            let search = PopsSearchBar(
+                query: .constant(""), tint: .popsInventory, prompt: "Search items",
+                isFiltered: false, onFilter: {},
+                add: PopsSearchBarAdd(label: "New item", action: {}))
+            let host = NSHostingView(
+                rootView: FixedWidthLayout(width: 320) {
+                    ScrollView(.vertical) {
+                        InventoryBrowserScrollContent {
+                            SizeReportingLayout(probe: probe) {
+                                VStack(spacing: PopsSpacing.lg) {
+                                    tiles
+                                    search
+                                }
+                                .padding(.horizontal, PopsSpacing.lg)
+                            }
+                        }
+                    }
+                })
+            host.layoutSubtreeIfNeeded()
+
+            #expect(
+                probe.size.withLock { $0.width } <= 320,
+                "Measured scroll content at \(probe.size.withLock { $0.width }) points")
         }
 
         @Test("a long item code wraps inside the phone viewport")
