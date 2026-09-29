@@ -163,6 +163,7 @@ describe('the iOS analyzer lane', () => {
       );
       const log = readFileSync(join(setup.artifacts, 'analyze.log'), 'utf8');
       expect(log).toContain('analyzer stdout marker');
+      expect(log).toContain('analyzer stderr marker');
       expect(log.includes('Found 0 violations')).toBe(!interrupt);
     },
     15000
@@ -192,5 +193,6 @@ describe('the iOS analyzer lane', () => {
     expect(readFileSync(join(repo, 'clients/ios/mise.toml'), 'utf8')).toContain(
       'run = "bash scripts/analyzer-lane.sh"'
     );
+    expect(readFileSync(lane, 'utf8')).toContain('tail -c "+$((offset + 1))" "$output_log"');
   });
 });

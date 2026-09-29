@@ -3,9 +3,8 @@ import Foundation
 import Synchronization
 import Testing
 
-@testable import FeatureInventory
-
-#if os(macOS)
+#if os(macOS) && canImport(AppKit)
+    @testable import FeatureInventory
     import AppKit
     import SwiftUI
 
@@ -96,7 +95,7 @@ internal struct InventoryItemsBrowserLayoutTests {
         #expect(Self.rowSource.contains(".frame(maxWidth: .infinity, alignment: .leading)"))
     }
 
-    #if os(macOS)
+    #if os(macOS) && canImport(AppKit)
         @Test("browser controls fit inside the phone viewport")
         @MainActor
         func browserControlsFitTheViewport() {
