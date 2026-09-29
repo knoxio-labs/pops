@@ -51,7 +51,7 @@ internal struct PurchaseDetailScreenWiringTests {
         #expect(Self.viewer.contains("PopsPagedPhotoViewer("))
         #expect(Self.viewer.contains("model.openReceipt(at: index)"))
         #expect(Self.viewer.contains("PurchaseDetailAccessibility.viewerClose"))
-        #expect(Self.header.contains(".accessibilityElement(children: .ignore)"))
+        #expect(Self.header.contains(".accessibilityRepresentation"))
         #expect(Self.header.contains("PurchaseDetailAccessibility.receiptPlate"))
     }
 

@@ -78,12 +78,13 @@ internal struct PurchaseDetailHeader: View {
                     }
             }
             .buttonStyle(.plain)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(
-                PurchaseDetailCopy.receiptLabel(pages: detail.receiptURIs.count)
-            )
-            .accessibilityHint("Opens the receipt")
-            .accessibilityIdentifier(PurchaseDetailAccessibility.receiptPlate)
+            .accessibilityRepresentation {
+                Button(
+                    PurchaseDetailCopy.receiptLabel(pages: detail.receiptURIs.count),
+                    action: { open(first.pageIndex) })
+                    .accessibilityHint("Opens the receipt")
+                    .accessibilityIdentifier(PurchaseDetailAccessibility.receiptPlate)
+            }
         }
     }
 
