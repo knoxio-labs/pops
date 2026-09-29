@@ -109,11 +109,12 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 # stopped being compiled — the app-does-not-compile signal now comes from the
 # step below, about a minute later than it used to.
 
-# NO `push` TRIGGER, and that is a decision (POPS-4152). Relevant pull requests
-# run the native lane before merge, while a frozen promotion can call the full
-# lane below against current main — suite, analyzer, Release check and UI flow.
-# A reusable call does not suppress the native pull-request run; an iOS-relevant
-# promotion therefore gets the quick native verdict as well as the full caller
+# NO `push` TRIGGER, and that is a decision (POPS-4152). Relevant ordinary pull
+# requests run the native lane before merge, while a frozen promotion can call
+# the full lane below against current main — suite, analyzer, Release check and
+# UI flow. Promotion and integration pull requests skip the native invocation
+# because their reusable full-validation call includes that suite and more; a
+# second macOS allocation only consumes the scarce runner without adding a
 # verdict.
 # A push run would build a commit only after it landed, where a red result could
 # no longer stop anything. CI Gate reads an absent run on a push as filtered out.
@@ -221,15 +222,18 @@ jobs:
   quality:
     name: build + test + lint + UI flow
     needs: [scope]
-    # A reusable full-validation call always runs. On a native pull request the
-    # event's `paths:` filter already decided and `scope` is skipped, so this
-    # must not inherit that skip. On a merge group it runs only on an explicit
-    # `selected=true`: a `scope` job that FAILED leaves the output empty, so this
-    # stays skipped and the workflow goes red on the scope job — never green
-    # over an unbuilt tree.
+    # A reusable full-validation call always runs. On an ordinary native pull
+    # request the event's `paths:` filter already decided and `scope` is skipped,
+    # so this must not inherit that skip. Promotion and integration pull
+    # requests are already covered by promotion-quality.yml's reusable full
+    # call, which includes this job with `full-validation: true`; skipping the
+    # direct invocation keeps the scarce macOS pool for one lane per candidate.
+    # On a merge group it runs only on an explicit `selected=true`: a `scope` job
+    # that FAILED leaves the output empty, so this stays skipped and the workflow
+    # goes red on the scope job — never green over an unbuilt tree.
     #
-    # A pull request runs it only when its base is the default branch. A PR
-    # stacked on another branch skips it: a stack of eight iOS PRs otherwise
+    # An ordinary pull request runs it only when its base is the default branch.
+    # A PR stacked on another branch skips it: a stack of eight iOS PRs otherwise
     # starts eight macOS jobs on every rebase and holds the whole five-runner
     # pool for an hour (POPS-4150). It gets the lane once it is rebased onto
     # main, and the merge queue runs it regardless, so nothing reaches main
@@ -240,7 +244,9 @@ jobs:
         inputs['full-validation'] == true ||
         (github.event_name == 'merge_group' && needs.scope.outputs.selected == 'true') ||
         (github.event_name == 'pull_request' &&
-          github.event.pull_request.base.ref == github.event.repository.default_branch)
+          github.event.pull_request.base.ref == github.event.repository.default_branch &&
+          !startsWith(github.head_ref, 'promotion/') &&
+          !startsWith(github.head_ref, 'integration/'))
       ) }}
     runs-on: xcode-27
     # Analyzer observations: 50m03s for 1,551 files, 43m09s for 1,558, and
@@ -420,14 +426,15 @@ jobs:
       # ejection instead of a red PR; `mise run lint:analyze` locally still
       # answers it before a push.
       #
-      # Every lane gives the simulator action the same bound. A reusable
-      # full-validation call and the merge queue run the analyzer only after
+      # Native PRs retain a 25-minute simulator bound; reusable full-validation
+      # and merge-group lanes get 35 minutes for a cold xcode-27 compile. A
+      # reusable full-validation call and the merge queue run the analyzer only after
       # that test succeeds. `--skip-deps` is mandatory there: `test` already
       # ran `build:for-testing`, producing the compiler log and derived data the
       # analyzer reads, so preparing lint:analyze's dependency would compile the
       # same tree a second time.
       - name: Test (iOS Simulator)
-        timeout-minutes: 25
+        timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 35 || 25 }}
         env:
           POPS_IOS_TEST_ARTIFACTS: ${{ runner.temp }}/ios-test-diagnostics
         run: mise run test

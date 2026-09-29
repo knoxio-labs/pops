@@ -261,7 +261,9 @@ describe('the scope job is wired to the workflow it scopes', () => {
     const pullRequestSuite = namedStep('Test (iOS Simulator)');
     expect(pullRequestSuite?.if).toBeUndefined();
     expect(pullRequestSuite?.run).toBe('mise run test');
-    expect(pullRequestSuite?.['timeout-minutes']).toBe(25);
+    expect(pullRequestSuite?.['timeout-minutes']).toBe(
+      "${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 35 || 25 }}"
+    );
     expect(
       isMapping(pullRequestSuite?.env) ? pullRequestSuite.env.POPS_IOS_TEST_ARTIFACTS : undefined
     ).toBe('${{ runner.temp }}/ios-test-diagnostics');
@@ -366,11 +368,13 @@ describe("ios-quality.yml's macOS job condition", () => {
   // stacked-PR policy (POPS-4150), and a regex over it would still pass with
   // an operator flipped. GitHub's expression grammar as this condition uses it
   // — quoted literals, `==`, `!=`, `&&`, `||`, `!`, property access and
-  // `cancelled()` — is also valid JavaScript once `==`/`!=` are made strict.
+  // `cancelled()` and `startsWith()` — are also valid JavaScript once
+  // `==`/`!=` are made strict.
   type Event = {
     eventName: string;
     selected?: string;
     baseRef?: string;
+    headRef?: string;
     fullValidation?: boolean;
     cancelled?: boolean;
   };
@@ -383,6 +387,7 @@ describe("ios-quality.yml's macOS job condition", () => {
     const js = body.replace(/==/gu, '===').replace(/!=/gu, '!==');
     const github = {
       event_name: event.eventName,
+      head_ref: event.headRef ?? '',
       event: {
         pull_request: event.baseRef === undefined ? null : { base: { ref: event.baseRef } },
         repository: { default_branch: 'main' },
@@ -390,13 +395,29 @@ describe("ios-quality.yml's macOS job condition", () => {
     };
     const needs = { scope: { outputs: { selected: event.selected ?? '' } } };
     const inputs = { 'full-validation': event.fullValidation === true };
-    const evaluate = new Function('github', 'needs', 'inputs', 'cancelled', `return (${js});`) as (
+    const evaluate = new Function(
+      'github',
+      'needs',
+      'inputs',
+      'cancelled',
+      'startsWith',
+      `return (${js});`
+    ) as (
       g: typeof github,
       n: typeof needs,
       i: typeof inputs,
-      c: () => boolean
+      c: () => boolean,
+      startsWith: (value: string, prefix: string) => boolean
     ) => unknown;
-    return evaluate(github, needs, inputs, () => event.cancelled === true) === true;
+    return (
+      evaluate(
+        github,
+        needs,
+        inputs,
+        () => event.cancelled === true,
+        (value, prefix) => value.startsWith(prefix)
+      ) === true
+    );
   }
 
   it.each([
@@ -405,6 +426,16 @@ describe("ios-quality.yml's macOS job condition", () => {
       'a PR stacked on another branch',
       false,
       { eventName: 'pull_request', baseRef: 'pops-1-lower' },
+    ],
+    [
+      'a promotion PR uses the reusable full-validation lane',
+      false,
+      { eventName: 'pull_request', baseRef: 'main', headRef: 'promotion/workstream' },
+    ],
+    [
+      'an integration PR uses the reusable full-validation lane',
+      false,
+      { eventName: 'pull_request', baseRef: 'main', headRef: 'integration/workstream' },
     ],
     [
       'a reusable full-validation call regardless of PR base',
