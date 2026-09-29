@@ -23,10 +23,6 @@ internal struct TypePickerDraftView: View {
                             .frame(minHeight: PopsSize.touchTarget)
                     }
                 }
-                if session.typeID != nil {
-                    Button("No type yet") { session.typeID = nil }
-                        .frame(minHeight: PopsSize.touchTarget)
-                }
             }
             if session.typeID == nil {
                 TypePickerAssistSection(session: session, browse: { picking = true })
@@ -36,15 +32,6 @@ internal struct TypePickerDraftView: View {
                 TextField("Location", text: $session.location)
             } footer: {
                 Text("Only a name is required. Each item gets its own photos.")
-            }
-            Section {
-                Button("Create & add another") { _ = session.save(keepingType: true) }
-                    .frame(minHeight: PopsSize.touchTarget)
-                    .disabled(session.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            } footer: {
-                if let last = session.saved.last {
-                    Label("Added: \(last.name)", systemImage: "checkmark")
-                }
             }
         }
         .playgroundInsetGroupedList()
@@ -60,12 +47,24 @@ internal struct TypePickerDraftView: View {
                 }
             }
         }
-        .playgroundTrailingBarItem {
-            Button("Create") {
-                if session.save() { finish() }
+        .toolbar {
+            ToolbarItemGroup(placement: .confirmationAction) {
+                Button {
+                    if session.save() { finish() }
+                } label: {
+                    Image(systemName: "checkmark")
+                }
+                .accessibilityLabel("Create")
+                .disabled(session.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .playgroundProminentGlassButton()
+                Button {
+                    _ = session.save(keepingType: true)
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Create another")
+                .disabled(session.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .disabled(session.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .playgroundProminentGlassButton()
         }
         .confirmationDialog("Discard this item?", isPresented: $cancelling) {
             Button("Discard", role: .destructive) {

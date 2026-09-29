@@ -67,10 +67,9 @@ internal struct TypePickerTreeView: View {
                     choose(tree.focusID)
                 } label: {
                     Label(
-                        selectedID == tree.focusID
-                            ? "Selected" : tree.focusID == "item" ? "Use Item" : "Use this type",
+                        TypePickerTaxonomy.node(tree.focusID)?.name ?? "Item",
                         systemImage: selectedID == tree.focusID
-                            ? "checkmark.circle.fill" : "plus.circle"
+                            ? "checkmark.circle.fill" : "circle"
                     )
                     .font(.popsCaption)
                     .frame(minHeight: PopsSize.touchTarget)

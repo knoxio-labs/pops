@@ -2,6 +2,7 @@ import DesignSystem
 import SwiftUI
 
 internal struct TypePickerChoicesView: View {
+    @Environment(\.dismiss) private var dismiss
     let session: TypePickerSession
     let choose: (String?) -> Void
     @State private var query: String
@@ -34,41 +35,56 @@ internal struct TypePickerChoicesView: View {
         .navigationTitle("Choose type")
         .playgroundTitleDisplay(large: false)
         .searchable(text: $query, prompt: "Search all types")
-        .playgroundTrailingBarItem {
-            Button("No type yet") { choose(nil) }
+        .navigationBarBackButtonHidden()
+        .playgroundLeadingBarItem {
+            Button("Cancel") { dismiss() }
         }
     }
 
     @ViewBuilder private var recents: some View {
         if !session.recentTypeIDs.isEmpty {
-            ScrollView(.horizontal) {
-                HStack(spacing: PopsSpacing.sm) {
-                    Text("Recent").foregroundStyle(Color.popsMutedForeground)
-                    ForEach(session.recentTypeIDs.compactMap(TypePickerTaxonomy.node)) { node in
-                        Button {
-                            choose(node.id)
-                        } label: {
-                            Label(
-                                node.name,
-                                systemImage: session.typeID == node.id
-                                    ? "checkmark.circle.fill" : node.symbol)
-                        }
-                        .accessibilityAddTraits(session.typeID == node.id ? .isSelected : [])
-                        .padding(.horizontal, PopsSpacing.md)
-                        .frame(minHeight: PopsSize.touchTarget)
-                        .background(
-                            session.typeID == node.id
-                                ? Color.popsInventory.opacity(0.12) : Color.popsSurface,
-                            in: .capsule)
-                    }
+            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                HStack {
+                    Text("Recent types")
+                        .font(.popsSubheadline.weight(.semibold))
+                        .foregroundStyle(Color.popsMutedForeground)
+                    Spacer()
                     Button("Clear", action: session.clearRecentTypes)
+                        .font(.popsCaption)
                         .frame(minHeight: PopsSize.touchTarget)
                         .accessibilityLabel("Clear recent types")
                 }
-                .font(.popsSubheadline)
                 .padding(.horizontal, PopsSpacing.lg)
+                ScrollView(.horizontal) {
+                    HStack(spacing: PopsSpacing.md) {
+                        ForEach(session.recentTypeIDs.compactMap(TypePickerTaxonomy.node)) { node in
+                            Button {
+                                choose(node.id)
+                            } label: {
+                                Label(
+                                    node.name,
+                                    systemImage: session.typeID == node.id
+                                        ? "checkmark.circle.fill" : node.symbol
+                                )
+                                .fixedSize(horizontal: true, vertical: false)
+                                .padding(.horizontal, PopsSpacing.lg)
+                                .padding(.vertical, PopsSpacing.sm)
+                                .frame(minHeight: PopsSize.touchTarget)
+                                .background(
+                                    session.typeID == node.id
+                                        ? Color.popsInventory.opacity(0.12) : Color.popsSurface,
+                                    in: .capsule)
+                            }
+                            .accessibilityAddTraits(session.typeID == node.id ? .isSelected : [])
+                        }
+                    }
+                    .font(.popsSubheadline)
+                    .padding(.horizontal, PopsSpacing.lg)
+                }
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
+            .padding(.top, PopsSpacing.sm)
+            .padding(.bottom, PopsSpacing.lg)
             Divider()
         }
     }

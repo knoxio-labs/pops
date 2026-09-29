@@ -5,78 +5,136 @@ internal struct TypePickerType: Identifiable, Hashable {
     internal let name: String
     internal let parentID: String?
     internal let aliases: [String]
+    internal let symbol: String
+
+    internal init(
+        id: String, name: String, parentID: String?, aliases: [String],
+        symbol: String = "square.grid.2x2"
+    ) {
+        self.id = id
+        self.name = name
+        self.parentID = parentID
+        self.aliases = aliases
+        self.symbol = symbol
+    }
 }
 
 internal enum TypePickerTaxonomy {
     internal static let types: [TypePickerType] = [
-        type("item", "Item"),
-        type("book", "Book", parent: "item", aliases: ["books"]),
-        type("furniture", "Furniture", parent: "item"),
+        type("item", "Item", symbol: "square.grid.2x2"),
+        type("book", "Book", symbol: "book.closed", parent: "item", aliases: ["books"]),
+        type("furniture", "Furniture", symbol: "cabinet", parent: "item"),
         type(
-            "storage-furniture", "Storage furniture", parent: "furniture",
+            "storage-furniture", "Storage furniture", symbol: "cabinet", parent: "furniture",
             aliases: ["shelf", "cabinet"]),
-        type("home-textiles", "Home textiles", parent: "item", aliases: ["linen"]),
         type(
-            "textile-soft-furnishing", "Textile & soft furnishing", parent: "home-textiles",
+            "home-textiles", "Home textiles", symbol: "square.stack", parent: "item",
+            aliases: ["linen"]),
+        type(
+            "textile-soft-furnishing", "Textile & soft furnishing", symbol: "square.stack",
+            parent: "home-textiles",
             aliases: ["fabric"]),
-        type("towel", "Towel", parent: "home-textiles", aliases: ["bath towel"]),
-        type("bedding", "Bedding", parent: "home-textiles", aliases: ["bed linen"]),
-        type("sheet", "Sheet", parent: "bedding", aliases: ["bedsheet"]),
-        type("quilt", "Quilt", parent: "bedding", aliases: ["doona", "duvet"]),
         type(
-            "quilt-cover", "Quilt cover", parent: "bedding",
+            "towel", "Towel", symbol: "square.stack", parent: "home-textiles",
+            aliases: ["bath towel"]),
+        type(
+            "bedding", "Bedding", symbol: "bed.double", parent: "home-textiles",
+            aliases: ["bed linen"]),
+        type("sheet", "Sheet", symbol: "bed.double", parent: "bedding", aliases: ["bedsheet"]),
+        type(
+            "quilt", "Quilt", symbol: "bed.double", parent: "bedding", aliases: ["doona", "duvet"]),
+        type(
+            "quilt-cover", "Quilt cover", symbol: "bed.double", parent: "bedding",
             aliases: ["doona cover", "duvet cover"]),
-        type("blanket", "Blanket", parent: "bedding", aliases: ["throw"]),
+        type("blanket", "Blanket", symbol: "bed.double", parent: "bedding", aliases: ["throw"]),
         type(
-            "mattress-protector", "Mattress protector", parent: "bedding",
+            "mattress-protector", "Mattress protector", symbol: "bed.double", parent: "bedding",
             aliases: ["mattress cover"]),
         type(
-            "pillows-cushions", "Pillows & cushions", parent: "home-textiles",
+            "pillows-cushions", "Pillows & cushions", symbol: "square.on.square",
+            parent: "home-textiles",
             aliases: ["soft furnishings"]),
-        type("pillows", "Pillows", parent: "pillows-cushions"),
-        type("pillow", "Pillow", parent: "pillows", aliases: ["bed pillow"]),
-        type("pillowcase", "Pillowcase", parent: "pillows", aliases: ["pillow case"]),
-        type("cushions", "Cushions", parent: "pillows-cushions"),
+        type("pillows", "Pillows", symbol: "square.on.square", parent: "pillows-cushions"),
         type(
-            "cushion", "Cushion", parent: "cushions",
+            "pillow", "Pillow", symbol: "square.on.square", parent: "pillows",
+            aliases: ["bed pillow"]),
+        type(
+            "pillowcase", "Pillowcase", symbol: "square.on.square", parent: "pillows",
+            aliases: ["pillow case"]),
+        type("cushions", "Cushions", symbol: "square.on.square", parent: "pillows-cushions"),
+        type(
+            "cushion", "Cushion", symbol: "square.on.square", parent: "cushions",
             aliases: ["decorative pillow", "cushion insert"]),
-        type("cushion-cover", "Cushion cover", parent: "cushions", aliases: ["cushion case"]),
         type(
-            "electrical-electronics", "Electrical & electronics", parent: "item",
+            "cushion-cover", "Cushion cover", symbol: "square.on.square", parent: "cushions",
+            aliases: ["cushion case"]),
+        type(
+            "electrical-electronics", "Electrical & electronics", symbol: "powerplug",
+            parent: "item",
             aliases: ["electricals"]),
         type(
-            "electronics-appliance", "Electronics & appliance", parent: "electrical-electronics",
+            "electronics-appliance", "Electronics & appliance", symbol: "powerplug",
+            parent: "electrical-electronics",
             aliases: ["appliance"]),
         type(
-            "light-bulb", "Light bulb", parent: "electrical-electronics",
+            "light-bulb", "Light bulb", symbol: "lightbulb", parent: "electrical-electronics",
             aliases: ["lamp", "globe"]),
-        type("cable", "Cable", parent: "electrical-electronics", aliases: ["cord", "lead"]),
-        type("charger", "Charger", parent: "electrical-electronics", aliases: ["power adapter"]),
-        type("tools-supplies", "Tools & supplies", parent: "item"),
-        type("tool", "Tool", parent: "tools-supplies"),
-        type("maker-supply", "Maker supply", parent: "tools-supplies", aliases: ["craft supply"]),
-        type("hardware-material", "Hardware & material", parent: "tools-supplies"),
-        type("tape", "Tape", parent: "tools-supplies", aliases: ["adhesive tape"]),
-        type("fitting", "Fitting", parent: "tools-supplies", aliases: ["fixture"]),
-        type("kitchen-bar", "Kitchen & bar", parent: "item"),
-        type("kitchen-cookware", "Kitchen & cookware", parent: "kitchen-bar"),
         type(
-            "bar-brewing-gear", "Bar & brewing gear", parent: "kitchen-bar",
+            "cable", "Cable", symbol: "cable.connector", parent: "electrical-electronics",
+            aliases: ["cord", "lead"]),
+        type(
+            "charger", "Charger", symbol: "cable.connector", parent: "electrical-electronics",
+            aliases: ["power adapter"]),
+        type(
+            "tools-supplies", "Tools & supplies", symbol: "wrench.and.screwdriver", parent: "item"),
+        type("tool", "Tool", symbol: "wrench.and.screwdriver", parent: "tools-supplies"),
+        type(
+            "maker-supply", "Maker supply", symbol: "square.grid.2x2", parent: "tools-supplies",
+            aliases: ["craft supply"]),
+        type(
+            "hardware-material", "Hardware & material", symbol: "wrench.and.screwdriver",
+            parent: "tools-supplies"),
+        type(
+            "tape", "Tape", symbol: "square.grid.2x2", parent: "tools-supplies",
+            aliases: ["adhesive tape"]),
+        type(
+            "fitting", "Fitting", symbol: "wrench.and.screwdriver", parent: "tools-supplies",
+            aliases: ["fixture"]),
+        type("kitchen-bar", "Kitchen & bar", symbol: "fork.knife", parent: "item"),
+        type("kitchen-cookware", "Kitchen & cookware", symbol: "fork.knife", parent: "kitchen-bar"),
+        type(
+            "bar-brewing-gear", "Bar & brewing gear", symbol: "wineglass", parent: "kitchen-bar",
             aliases: ["coffee gear"]),
         type(
-            "alcohol-bottle", "Alcohol bottle", parent: "kitchen-bar", aliases: ["wine", "spirits"]),
-        type("containers-luggage", "Containers & luggage", parent: "item"),
-        type("storage-box", "Storage box", parent: "containers-luggage", aliases: ["bin", "tub"]),
-        type("case-bag", "Case & bag", parent: "containers-luggage", aliases: ["luggage"]),
-        type("art-frame", "Art & frame", parent: "item", aliases: ["artwork", "picture frame"]),
-        type("clothing-accessory", "Clothing & accessory", parent: "item", aliases: ["apparel"]),
+            "alcohol-bottle", "Alcohol bottle", symbol: "wineglass", parent: "kitchen-bar",
+            aliases: ["wine", "spirits"]),
+        type("containers-luggage", "Containers & luggage", symbol: "shippingbox", parent: "item"),
         type(
-            "outdoor-camping-bbq", "Outdoor, camping & BBQ", parent: "item", aliases: ["barbecue"]),
-        type("plant", "Plant", parent: "item", aliases: ["houseplant"]),
-        type("cleaning-supply", "Cleaning supply", parent: "item", aliases: ["cleaner"]),
-        type("document-valuable", "Document & valuable", parent: "item", aliases: ["paperwork"]),
-        type("key", "Key", parent: "item", aliases: ["keys"]),
-        type("other-item", "Other item", parent: "item", aliases: ["miscellaneous"]),
+            "storage-box", "Storage box", symbol: "shippingbox", parent: "containers-luggage",
+            aliases: ["bin", "tub"]),
+        type(
+            "case-bag", "Case & bag", symbol: "bag", parent: "containers-luggage",
+            aliases: ["luggage"]),
+        type(
+            "art-frame", "Art & frame", symbol: "photo.artframe", parent: "item",
+            aliases: ["artwork", "picture frame"]),
+        type(
+            "clothing-accessory", "Clothing & accessory", symbol: "tshirt", parent: "item",
+            aliases: ["apparel"]),
+        type(
+            "outdoor-camping-bbq", "Outdoor, camping & BBQ", symbol: "tent", parent: "item",
+            aliases: ["barbecue"]),
+        type("plant", "Plant", symbol: "leaf", parent: "item", aliases: ["houseplant"]),
+        type(
+            "cleaning-supply", "Cleaning supply", symbol: "sparkles", parent: "item",
+            aliases: ["cleaner"]),
+        type(
+            "document-valuable", "Document & valuable", symbol: "doc", parent: "item",
+            aliases: ["paperwork"]),
+        type("key", "Key", symbol: "key", parent: "item", aliases: ["keys"]),
+        type(
+            "other-item", "Other item", symbol: "square.grid.2x2", parent: "item",
+            aliases: ["miscellaneous"]),
     ]
 
     internal static func children(of parentID: String?) -> [TypePickerType] {
@@ -120,10 +178,11 @@ internal enum TypePickerTaxonomy {
     private static func type(
         _ id: String,
         _ name: String,
+        symbol: String,
         parent: String? = nil,
         aliases: [String] = []
     ) -> TypePickerType {
-        TypePickerType(id: id, name: name, parentID: parent, aliases: aliases)
+        TypePickerType(id: id, name: name, parentID: parent, aliases: aliases, symbol: symbol)
     }
 
     private static func path(for id: String) -> [TypePickerType] {

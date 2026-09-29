@@ -4,6 +4,15 @@ import Testing
 
 @Suite("Type picker taxonomy")
 internal struct TypePickerTaxonomyTests {
+    @Test("type icons belong to metadata and can be reused independent of the picker")
+    func iconMetadata() {
+        let custom = TypePickerType(
+            id: "custom", name: "Custom", parentID: "item", aliases: [], symbol: "star")
+        #expect(custom.symbol == "star")
+        #expect(TypePickerTaxonomy.node("book")?.symbol == "book.closed")
+        #expect(TypePickerTaxonomy.types.allSatisfy { !$0.symbol.isEmpty })
+    }
+
     @Test("the fictional taxonomy is complete, uniquely identified, and connected to Item")
     func coverage() {
         let types = TypePickerTaxonomy.types

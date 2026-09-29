@@ -142,12 +142,16 @@ extra vertical padding, retain 44pt minimum touch targets, and grow with text.
 The default state opens the picker directly. Cushions branch expanded compares
 the same open branch in all variants. The complete rehearsal starts at
 Inventory: New item, sample photos, type, name, location, then Create or
-Create & add another. The second draft retains type and location but starts with its
+Create another (the plus action beside Create in the navigation bar, matching
+`FeatureInventory/Form/InventoryItemFormView.swift`). The second draft retains type and location but starts with its
 own name and photos. Search covers aliases and ancestor names globally even
-when the tree is focused. Parent types and No type yet remain selectable. Reopening reveals the selected
+when the tree is focused. Every type, including Item, remains selectable. A tap selects and returns to
+the draft immediately; Cancel returns without changing the type. Reopening reveals the selected
 type, with a checkmark in the tree, recents and search results. Initial opening
 expands sparse branches until five options are visible or the catalogue is
-exhausted; subsequent collapse remains under user control. Compact rows use
+exhausted; subsequent collapse remains under user control. Recent types have a separate heading and padded horizontal chips. Type icons
+are stored on the fictional type metadata for reuse across views; production
+catalogue icon tokens and client mappings are tracked in POPS-5250. Compact rows use
 semantic selection tint, SF Symbols and shared motion tokens; Reduce Motion
 disables expansion and focus animations.
 
