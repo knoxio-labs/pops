@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import FeatureInventory
 
-#if os(macOS)
+#if os(macOS) && canImport(AppKit)
     import AppKit
     import SwiftUI
 
@@ -65,7 +65,7 @@ internal struct InventoryItemsBrowserLayoutTests {
         #expect(Self.rowSource.contains(".frame(maxWidth: .infinity, alignment: .leading)"))
     }
 
-    #if os(macOS)
+    #if os(macOS) && canImport(AppKit)
         @Test("a long item code wraps inside the phone viewport")
         @MainActor
         func longCodeFitsTheRow() {
