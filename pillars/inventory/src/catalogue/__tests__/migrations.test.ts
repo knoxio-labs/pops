@@ -270,6 +270,48 @@ describe('executeCatalogueMigration granting containment (ADR-002 D3)', () => {
     expect(harness.item('cable-group')).toMatchObject({ isContainer: 0, quantity: 3 });
   });
 
+  it('does not revalidate quantity when containment already existed', () => {
+    const harness = openHarness();
+    const base = loadPublishedCatalogue(harness.db, 1);
+    const furniture = base?.types.find((type) => type.key === 'furniture');
+    if (!furniture) throw new Error('furniture fixture is missing');
+    seedItem(harness, {
+      id: 'existing-container-group',
+      typeKey: 'furniture',
+      isContainer: true,
+      quantity: 3,
+    });
+    publishCandidate(harness, {
+      reparentTypeId: furniture.id,
+      addRequiredField: false,
+    });
+    const candidate = loadPublishedCatalogue(harness.db, 2);
+    if (!candidate) throw new Error('candidate catalogue was not published');
+    const candidateFurniture = candidate.types.find((type) => type.id === furniture.id);
+    if (!candidateFurniture) throw new Error('candidate furniture fixture is missing');
+    const affectedFieldIds = changedEffectiveFieldIds(furniture, candidateFurniture);
+
+    expect(
+      executeCatalogueMigration(
+        harness.db,
+        {
+          name: 'preserve-existing-containment',
+          fromRevision: 1,
+          toRevision: 2,
+          affectedTypeIds: [furniture.id],
+          affectedFieldIds,
+          steps: dropSteps(affectedFieldIds),
+        },
+        candidate,
+        '2026-09-22T00:00:00.000Z'
+      )
+    ).toEqual({ name: 'preserve-existing-containment', affectedItems: 0 });
+    expect(harness.item('existing-container-group')).toMatchObject({
+      isContainer: 1,
+      quantity: 3,
+    });
+  });
+
   it('grants containment when every live item of the type already has quantity 1', () => {
     const harness = openHarness();
     seedItem(harness, { id: 'cable-single', typeKey: 'cable', quantity: 1 });
