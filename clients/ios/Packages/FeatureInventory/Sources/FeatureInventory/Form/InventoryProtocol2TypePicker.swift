@@ -1,4 +1,5 @@
 import AppCore
+import DesignSystem
 import SwiftUI
 
 internal struct InventoryProtocol2TypePicker: View {
@@ -12,8 +13,12 @@ internal struct InventoryProtocol2TypePicker: View {
             pickerIsPresented = true
         } label: {
             LabeledContent("Type") {
-                Text(selectedLabel)
-                    .foregroundStyle(Color.popsMutedForeground)
+                HStack(spacing: PopsSpacing.sm) {
+                    selectedSymbol.image
+                        .foregroundStyle(Color.popsInventory)
+                    Text(selectedLabel)
+                }
+                .foregroundStyle(Color.popsMutedForeground)
             }
         }
         .buttonStyle(.plain)
@@ -23,9 +28,7 @@ internal struct InventoryProtocol2TypePicker: View {
                     get: { selected?.typeId }, set: { model.selectProtocol2Type($0) }),
                 options: InventoryFormTypeOptions.protocol2All(
                     catalogue, selectedId: selected?.typeId),
-                noneTitle: model.offersNoType ? "No type yet" : nil,
-                noneAccessibilityIdentifier: model.offersNoType
-                    ? InventoryAccessibility.itemTypeNone : nil,
+                showsRecents: true,
                 onChoose: { id in
                     model.selectProtocol2Type(id)
                     pickerIsPresented = false
@@ -39,5 +42,10 @@ internal struct InventoryProtocol2TypePicker: View {
             let type = catalogue.effectiveType(id: typeId)
         else { return "No type yet" }
         return type.label
+    }
+
+    private var selectedSymbol: InventorySymbol {
+        guard let typeId = selected?.typeId else { return .item }
+        return .catalogue(catalogue.iconToken(for: typeId))
     }
 }

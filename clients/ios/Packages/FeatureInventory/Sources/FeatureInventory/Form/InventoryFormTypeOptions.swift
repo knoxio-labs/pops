@@ -9,10 +9,12 @@ internal struct InventoryFormTypeOption: Identifiable, Equatable {
     internal let depth: Int
     internal let isArchived: Bool
     internal let hasChildren: Bool
+    internal let symbol: InventorySymbol
 
     internal init(
         id: String, label: String, parentID: String? = nil, path: String? = nil,
-        depth: Int = 0, isArchived: Bool = false, hasChildren: Bool = false
+        depth: Int = 0, isArchived: Bool = false, hasChildren: Bool = false,
+        symbol: InventorySymbol = .item
     ) {
         self.id = id
         self.label = label
@@ -21,6 +23,7 @@ internal struct InventoryFormTypeOption: Identifiable, Equatable {
         self.depth = depth
         self.isArchived = isArchived
         self.hasChildren = hasChildren
+        self.symbol = symbol
     }
 
     /// The option's handle for a driver: its words are owner-authored and
@@ -44,22 +47,33 @@ internal enum InventoryFormTypeOptions {
     internal static func protocol2All(
         _ catalogue: InventoryCatalogueSnapshot, selectedId: String?
     ) -> [InventoryFormTypeOption] {
-        alphabeticallyByPath(
-            catalogue.types.compactMap { type in
-                guard type.archivedAt == nil || type.id == selectedId else { return nil }
-                let ancestry = catalogue.ancestry(ofType: type.id)
-                let effective = catalogue.effectiveType(id: type.id) ?? type
-                let parentID = ancestry.dropLast().last?.id
-                let path = ancestry.map(\.label).joined(separator: " › ")
-                let hasChildren = catalogue.types.contains { child in
-                    (child.archivedAt == nil || child.id == selectedId)
-                        && child.parentTypeId == type.id
-                        && catalogue.type(child.id, isOrDescendsFrom: type.id)
+        let included: [InventoryFormTypeOption] = catalogue.types.compactMap { type in
+            guard type.archivedAt == nil || type.id == selectedId else { return nil }
+            let ancestry = catalogue.ancestry(ofType: type.id)
+            let effective = catalogue.effectiveType(id: type.id) ?? type
+            let parentID = ancestry.dropLast().last?.id
+            let path = ancestry.map(\.label).joined(separator: " › ")
+            let hasChildren = catalogue.types.contains { child in
+                (child.archivedAt == nil || child.id == selectedId)
+                    && child.parentTypeId == type.id
+                    && catalogue.type(child.id, isOrDescendsFrom: type.id)
+            }
+            return InventoryFormTypeOption(
+                id: type.id, label: effective.label, parentID: parentID,
+                path: path, depth: max(ancestry.count - 1, 0),
+                isArchived: type.archivedAt != nil, hasChildren: hasChildren,
+                symbol: .catalogue(catalogue.iconToken(for: type.id)))
+        }
+        let ids = Set(included.map(\.id))
+        return alphabeticallyByPath(
+            included.map { option in
+                guard let parentID = option.parentID, ids.contains(parentID) else {
+                    return InventoryFormTypeOption(
+                        id: option.id, label: option.label, path: option.path,
+                        depth: 0, isArchived: option.isArchived, hasChildren: option.hasChildren,
+                        symbol: option.symbol)
                 }
-                return InventoryFormTypeOption(
-                    id: type.id, label: effective.label, parentID: parentID,
-                    path: path, depth: max(ancestry.count - 1, 0),
-                    isArchived: type.archivedAt != nil, hasChildren: hasChildren)
+                return option
             })
     }
 
@@ -84,7 +98,12 @@ internal enum InventoryFormTypeOptions {
 
     /// A protocol-1 catalogue's types, keyed by type key.
     internal static func legacy(_ types: [InventoryType]) -> [InventoryFormTypeOption] {
-        alphabetically(types.map { InventoryFormTypeOption(id: $0.key, label: $0.name) })
+        alphabetically(
+            types.map {
+                InventoryFormTypeOption(
+                    id: $0.key, label: $0.name,
+                    symbol: .catalogue(InventoryCatalogueIconToken(rawValue: $0.key) ?? .item))
+            })
     }
 
     /// A filter's type names, retaining their protocol-2 parent relationships.
@@ -97,7 +116,8 @@ internal enum InventoryFormTypeOptions {
                     id: type.key, label: type.name, parentID: type.parentKey,
                     path: ancestry.map(\.name).joined(separator: " › "),
                     depth: max(ancestry.count - 1, 0),
-                    hasChildren: types.contains { $0.parentKey == type.key })
+                    hasChildren: types.contains { $0.parentKey == type.key },
+                    symbol: .catalogue(type.iconToken))
             })
     }
 
