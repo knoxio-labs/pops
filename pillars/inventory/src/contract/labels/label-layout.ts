@@ -13,13 +13,14 @@ import { estimateLines, fitList, fitNamePt, nameLineHeight } from './label-fitti
 import { headerPlan } from './label-header-layout.js';
 import { MIN_QR_MM, templateFits, textWidthMm } from './sheet-layouts.js';
 
-import type { LabelFieldValue, ResolvedLabel } from './label-content.js';
-import type { FittedList } from './label-fitting.js';
+import type { ResolvedLabel } from './label-content.js';
+import type { LabelPlan } from './label-plan.js';
 import type { PrintSubject } from './label-subject.js';
 import type { SheetLayout } from './sheet-layouts.js';
 
 export { estimateLines, fitList, fitNamePt } from './label-fitting.js';
 export type { FittedList } from './label-fitting.js';
+export type { LabelArrangement, LabelPlan } from './label-plan.js';
 
 const MM_PER_PT = 25.4 / 72;
 const LIST_LEADING = 1.3;
@@ -30,30 +31,6 @@ const HERO_CODE_MAX_PT = 96;
 const TEXT_ONLY_BOOST = 1.25;
 /** Share of the label a part shown alone may take, so it never touches the die-cut. */
 const HERO_SHARE = 0.85;
-
-/** How the label is divided. */
-export type LabelArrangement = 'qr-fill' | 'qr-beside' | 'qr-header' | 'text';
-
-/** One label, measured: where the QR goes and how big each text part is set. */
-export interface LabelPlan {
-  arrangement: LabelArrangement;
-  /** Geometry of a top header and the full-width contents below it, when they fit. */
-  header?: {
-    heightMm: number;
-    columns: 1 | 2 | 3;
-    columnGapMm: number;
-    bodyGapMm: number;
-    headingHeightMm: number;
-    rows: number;
-  };
-  /** The QR's side in millimetres, or null when the label has no QR. */
-  qrMm: number | null;
-  /** The name's size and the most lines it may take before it ends in an ellipsis. */
-  name: { pt: number; lines: number } | null;
-  code: { pt: number } | null;
-  fields: FittedList<LabelFieldValue> | null;
-  contents: FittedList<string> | null;
-}
 
 function floorToHalf(value: number): number {
   return Math.floor(value * 2) / 2;

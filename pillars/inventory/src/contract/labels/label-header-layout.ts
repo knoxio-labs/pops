@@ -3,7 +3,7 @@ import { estimateLines, fitList } from './label-fitting.js';
 import { LABEL_GAP_MM, MIN_QR_MM, MIN_TEXT_MM } from './sheet-layouts.js';
 
 import type { ResolvedLabel } from './label-content.js';
-import type { LabelPlan } from './label-layout.js';
+import type { LabelPlan } from './label-plan.js';
 import type { PrintSubject } from './label-subject.js';
 import type { SheetLayout } from './sheet-layouts.js';
 
