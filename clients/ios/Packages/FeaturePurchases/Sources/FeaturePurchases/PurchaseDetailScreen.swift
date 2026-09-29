@@ -18,22 +18,25 @@ internal struct PurchaseDetailScreen: View {
             switch model.phase {
             case .loading:
                 PurchaseDetailSkeleton()
+                    .accessibilityIdentifier(PurchaseDetailAccessibility.root)
             case .loaded(let detail, let refresh):
                 PurchaseDetailPage(
                     detail: detail,
                     refresh: refresh,
                     model: model,
-                    dependencies: dependencies)
+                    dependencies: dependencies
+                )
+                .accessibilityIdentifier(PurchaseDetailAccessibility.root)
             case .failed(let failure):
                 PurchaseDetailFailureView(failure: failure) {
                     Task { await model.retry() }
                 }
+                .accessibilityIdentifier(PurchaseDetailAccessibility.root)
             }
         }
         .transition(.opacity)
         .popsMotion(PopsMotion.smooth, value: model.phase)
         .tint(.popsPurchases)
-        .accessibilityIdentifier(PurchaseDetailAccessibility.root)
         .task { await model.load() }
         .onChange(of: refreshFailure) { _, failure in
             guard let failure else { return }

@@ -51,12 +51,16 @@ internal struct PurchaseDetailScreenWiringTests {
         #expect(Self.viewer.contains("PopsPagedPhotoViewer("))
         #expect(Self.viewer.contains("model.openReceipt(at: index)"))
         #expect(Self.viewer.contains("PurchaseDetailAccessibility.viewerClose"))
-        #expect(Self.header.contains(".accessibilityRepresentation"))
+        #expect(Self.header.contains(".accessibilityElement(children: .ignore)"))
         #expect(Self.header.contains("PurchaseDetailAccessibility.receiptPlate"))
     }
 
     @Test("stable automation identifiers retain their public spelling")
     func stableIdentifiers() {
+        #expect(
+            Self.screen.components(
+                separatedBy: ".accessibilityIdentifier(PurchaseDetailAccessibility.root)"
+            ).count == 4)
         #expect(Self.accessibility.contains("\"purchase-detail\""))
         #expect(Self.accessibility.contains("\"purchase-detail-receipt\""))
         #expect(Self.accessibility.contains("\"purchase-detail-edit\""))
