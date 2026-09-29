@@ -72,9 +72,10 @@ public struct PopsZoomablePhoto: View {
     private var pan: some Gesture {
         DragGesture()
             .onChanged { value in
-                offset = CGSize(
-                    width: committedOffset.width + value.translation.width,
-                    height: committedOffset.height + value.translation.height
+                offset = PopsZoomablePhotoPresentation.offset(
+                    committedOffset: committedOffset,
+                    translation: value.translation,
+                    scale: scale
                 )
             }
             .onEnded { _ in committedOffset = offset }
@@ -94,5 +95,17 @@ public struct PopsZoomablePhoto: View {
     private func recentre() {
         offset = .zero
         committedOffset = .zero
+    }
+}
+
+internal enum PopsZoomablePhotoPresentation {
+    internal static func offset(
+        committedOffset: CGSize, translation: CGSize, scale: CGFloat
+    ) -> CGSize {
+        let effectiveScale = max(scale, 1)
+        return CGSize(
+            width: committedOffset.width + translation.width * effectiveScale,
+            height: committedOffset.height + translation.height * effectiveScale
+        )
     }
 }
