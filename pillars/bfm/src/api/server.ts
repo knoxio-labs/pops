@@ -174,6 +174,9 @@ const app = createBfmApiApp(
   {
     serviceAccountVerifier: createRegistryServiceAccountVerifier({
       registryUrl: sdkConfig.registryUrl,
+      ...(sdkConfig.serviceAccountVerifyTimeoutMs === undefined
+        ? {}
+        : { timeoutMs: sdkConfig.serviceAccountVerifyTimeoutMs }),
     }),
   }
 );
