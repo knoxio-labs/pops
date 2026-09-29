@@ -127,6 +127,35 @@ catalogue somebody has broken.
 
 ## Running it
 
+### Inventory type picker experiment
+
+Open **Experiments → How do you choose a type without learning the whole
+catalogue?** Four approaches share a fictional copy of the evolving Item
+hierarchy: search with recents, a tree browser, contextual related types, and
+photo suggestions that require confirmation. The companion Inventory surface
+is **Type picker · Search & recents**.
+
+Each approach supports the same rehearsal: New item, sample photos, type,
+name, location, then Create or Create & add another. Add a cushion cover and
+then its cushion; the second draft retains location but starts with its own
+name and photos. The inspector can start at a photographed cover, the next
+draft, an unsuccessful search, or unavailable photo suggestions. Parents remain
+selectable, and No type yet is available. This is a focused picker rehearsal,
+not the production form's complete property editor. Camera, recognition,
+upload and persistence are simulated; reopening the surface resets the session.
+
+The alternatives apply Apple's guidance on [search suggestions and
+recents](https://developer.apple.com/design/human-interface-guidelines/searching)
+and [reducing data entry](https://developer.apple.com/design/human-interface-guidelines/entering-data).
+The contextual approach tests NN/g's recommendation to [keep related
+destinations nearby](https://www.nngroup.com/articles/menu-design/).
+Photo candidates deliberately leave cover versus insert to the person;
+[Vision classification](https://developer.apple.com/documentation/vision/classifying-images-for-categorization-and-search)
+produces candidate labels, not inventory identities. These sources motivate
+the alternatives; they do not establish a winning design or measured time saving.
+
+### Build and test
+
 `PopsPlayground` is its own app target and its own installable app, sharing the
 DesignSystem with `Pops` and sharing nothing else — so what lands on a
 reviewer's phone carries no pairing, no keychain entry and no BFM host.
