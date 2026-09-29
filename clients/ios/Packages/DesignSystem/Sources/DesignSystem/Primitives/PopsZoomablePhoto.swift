@@ -11,14 +11,7 @@ public struct PopsZoomablePhoto: View {
     private let placeholderSymbol: String
     private let contentMode: ContentMode
 
-    @State private var scale: CGFloat = 1
-    @State private var committedScale: CGFloat = 1
-    @State private var offset: CGSize = .zero
-    @State private var committedOffset: CGSize = .zero
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private let maximumScale: CGFloat = 6
-    private let doubleTapScale: CGFloat = 2.5
 
     /// Creates an interactive photo plate.
     ///
@@ -36,83 +29,21 @@ public struct PopsZoomablePhoto: View {
     }
 
     public var body: some View {
-        interactionSurface
-            .animation(
-                PopsMotion.animation(PopsMotion.snappy, reduceMotion: reduceMotion),
-                value: scale
-            )
-            .onTapGesture(count: 2) { toggleZoom() }
-    }
-
-    @ViewBuilder private var interactionSurface: some View {
-        let surface = ZStack {
-            picture
-                .scaleEffect(scale)
-                .offset(offset)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-
-        if scale > 1 {
-            surface.gesture(pan.simultaneously(with: magnify))
-        } else {
-            surface.gesture(magnify)
-        }
-    }
-
-    @ViewBuilder private var picture: some View {
-        PopsPhoto(
-            data: data, placeholderSymbol: placeholderSymbol, contentMode: contentMode
+        PopsZoomablePhotoPlatform(
+            data: data,
+            placeholderSymbol: placeholderSymbol,
+            contentMode: contentMode,
+            reduceMotion: reduceMotion
         )
-        .padding(PopsSpacing.xl)
-    }
-
-    private var magnify: some Gesture {
-        MagnifyGesture()
-            .onChanged { value in
-                scale = min(max(committedScale * value.magnification, 1), maximumScale)
-            }
-            .onEnded { _ in
-                committedScale = scale
-                if scale == 1 { recentre() }
-            }
-    }
-
-    private var pan: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                offset = PopsZoomablePhotoPresentation.panOffset(
-                    committedOffset: committedOffset,
-                    translation: value.translation
-                )
-            }
-            .onEnded { _ in committedOffset = offset }
-    }
-
-    private func toggleZoom() {
-        if scale > 1 {
-            scale = 1
-            committedScale = 1
-            recentre()
-        } else {
-            scale = doubleTapScale
-            committedScale = doubleTapScale
-        }
-    }
-
-    private func recentre() {
-        offset = .zero
-        committedOffset = .zero
     }
 }
 
 internal enum PopsZoomablePhotoPresentation {
-    internal static func panOffset(
-        committedOffset: CGSize, translation: CGSize
-    ) -> CGSize {
-        return CGSize(
-            width: committedOffset.width + translation.width,
-            height: committedOffset.height + translation.height
-        )
+    static let minimumScale: CGFloat = 1
+    static let maximumScale: CGFloat = 6
+    static let doubleTapScale: CGFloat = 2.5
+
+    static func scaleAfterDoubleTap(currentScale: CGFloat) -> CGFloat {
+        currentScale > minimumScale ? minimumScale : doubleTapScale
     }
 }
