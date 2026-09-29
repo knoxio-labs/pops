@@ -41,30 +41,32 @@ internal struct InventoryItemsBrowserView: View {
 
     private func content(_ catalogue: InventoryItemsCatalogue) -> some View {
         ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                PopsPageTitle(title: "Items")
-                if let offline = model.offlineLine {
-                    InventoryLocationNoticeLine(
-                        symbol: InventorySymbol.offline.system, tint: .popsWarning, text: offline)
+            InventoryBrowserScrollContent {
+                VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                    PopsPageTitle(title: "Items")
+                    if let offline = model.offlineLine {
+                        InventoryLocationNoticeLine(
+                            symbol: InventorySymbol.offline.system, tint: .popsWarning,
+                            text: offline)
+                    }
+                    if catalogue.records.isEmpty {
+                        PopsDashedActionButton(
+                            title: "Add an item", symbol: InventorySymbol.item.system,
+                            tint: .popsInventory
+                        ) { itemForm?(.create(placement: nil)) }
+                        .popsFadeIn()
+                    } else {
+                        InventoryCountTiles(tiles: model.tiles)
+                        searchBar
+                        list
+                    }
                 }
-                if catalogue.records.isEmpty {
-                    PopsDashedActionButton(
-                        title: "Add an item", symbol: InventorySymbol.item.system,
-                        tint: .popsInventory
-                    ) { itemForm?(.create(placement: nil)) }
-                    .popsFadeIn()
-                } else {
-                    InventoryCountTiles(tiles: model.tiles)
-                    searchBar
-                    list
-                }
+                .popsMotion(value: model.filter)
+                .popsMotion(value: model.sort)
+                .popsMotion(value: model.query)
+                .padding(.horizontal, PopsSpacing.lg)
+                .padding(.bottom, PopsSpacing.xxl)
             }
-            .popsMotion(value: model.filter)
-            .popsMotion(value: model.sort)
-            .popsMotion(value: model.query)
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.bottom, PopsSpacing.xxl)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .scrollDismissesKeyboard(.immediately)
@@ -120,22 +122,37 @@ internal struct InventoryItemsBrowserView: View {
     }
 }
 
+internal struct InventoryBrowserScrollContent<Content: View>: View {
+    private let content: Content
+
+    internal init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    internal var body: some View {
+        content
+            .containerRelativeFrame(.horizontal, alignment: .leading)
+    }
+}
+
 /// The browser before its items arrive.
 internal struct InventoryItemsBrowserSkeleton: View {
     @ScaledMetric(relativeTo: .body) private var fieldHeight = PopsSize.touchTarget
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                PopsPageTitle(title: "Items")
+            InventoryBrowserScrollContent {
                 VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                    InventoryCountTilesSkeleton(count: 4)
-                    Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
+                    PopsPageTitle(title: "Items")
+                    VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                        InventoryCountTilesSkeleton(count: 4)
+                        Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
+                    }
+                    .popsShimmer()
+                    PopsListSkeleton(rows: 8)
                 }
-                .popsShimmer()
-                PopsListSkeleton(rows: 8)
+                .padding(.horizontal, PopsSpacing.lg)
             }
-            .padding(.horizontal, PopsSpacing.lg)
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
