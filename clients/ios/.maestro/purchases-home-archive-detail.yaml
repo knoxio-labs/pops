@@ -37,6 +37,7 @@ name: Purchases home opens both archive scopes and a full detail
     id: 'purchases-home-unmatched'
 - assertVisible: 'Unmatched'
 - assertVisible: 'Corner Store.*'
+- assertVisible: 'Market.*'
 - assertNotVisible: 'Hardware Shop.*'
 
 - tapOn: 'Corner Store.*'

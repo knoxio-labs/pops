@@ -127,6 +127,53 @@ catalogue somebody has broken.
 
 ## Running it
 
+### Inventory type picker screen
+
+Open **Screens → Inventory → Choose item type** for the screen design.
+Joao selected explicit focus on 2026-09-29: branches expand in place and
+ancestors hide only on request. The screen includes global search, recent
+types, and optional photo suggestions. The settled experiment retains three behaviours of one compact
+custom tree: Expanded outline retains every ancestor; Automatic focus hides
+older levels as a deeper branch opens; Focus when I ask exposes a scope
+control on each branch. All types returns to the root, and the focused heading
+opens the ancestor menu. Chevrons expand; type labels select. Rows have no
+extra vertical padding, retain 44pt minimum touch targets, and grow with text.
+
+The default state opens the picker directly. Cushions branch expanded compares
+the same open branch in all variants. The complete rehearsal starts at
+Inventory: New item, sample photos, type, name, location, then Create or
+Create another (the plus action beside Create in the navigation bar, matching
+`FeatureInventory/Form/InventoryItemFormView.swift`). The second draft retains type and location but starts with its
+own name and photos. Search covers aliases and ancestor names globally even
+when the tree is focused. Every type, including Item, remains selectable. A tap selects and returns to
+the draft immediately; Cancel returns without changing the type. Reopening reveals the selected
+type, with a checkmark in the tree, recents and search results. Initial opening
+expands sparse branches until five options are visible or the catalogue is
+exhausted; subsequent collapse remains under user control. Recent types have a separate heading and padded horizontal chips. Type icons
+are stored on the fictional type metadata for reuse across views; production
+catalogue icon tokens and client mappings are tracked in POPS-5250. Compact rows use
+semantic selection tint, SF Symbols and shared motion tokens; Reduce Motion
+disables expansion and focus animations.
+
+The first photo starts a simulated suggestion request only while no type is
+chosen. Manual selection, dismissal, removing the last photo, and discarding
+or saving the draft invalidate the request; stale results never change the
+next draft. Suggested, unavailable and manual paths all leave Create usable.
+Camera, classification, upload and persistence remain explicit simulations;
+this is a picker rehearsal, not the production form's complete property editor.
+Reopening the surface resets the session.
+
+The shared search and recents follow Apple's [search guidance](https://developer.apple.com/design/human-interface-guidelines/searching).
+The compact tree explores [keeping related destinations nearby](https://www.nngroup.com/articles/menu-design/).
+For a real photo suggestion, iOS 27 [Foundation Models image prompting](https://developer.apple.com/documentation/FoundationModels/analyzing-images-with-multimodal-prompting)
+can evaluate an image against a supplied catalogue; [model availability](https://developer.apple.com/documentation/FoundationModels/generating-content-and-performing-tasks-with-foundation-models)
+must be checked at runtime. Apple's [Vision classifier](https://developer.apple.com/documentation/vision/classifyimagerequest)
+instead returns its supported label vocabulary. Neither establishes accuracy
+for cover versus insert: candidates need confirmation, an unknown outcome,
+and evaluation on representative photos before production use (POPS-5249).
+
+### Build and test
+
 `PopsPlayground` is its own app target and its own installable app, sharing the
 DesignSystem with `Pops` and sharing nothing else — so what lands on a
 reviewer's phone carries no pairing, no keychain entry and no BFM host.

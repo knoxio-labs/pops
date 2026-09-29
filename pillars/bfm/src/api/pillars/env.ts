@@ -21,6 +21,9 @@ export const DISCOVERY_FETCH_TIMEOUT_MS_ENV = 'POPS_DISCOVERY_FETCH_TIMEOUT_MS';
 /** Where the reachability probe's per-pillar `/openapi` deadline is overridden, if it is at all. */
 export const PROBE_TIMEOUT_MS_ENV = 'POPS_PROBE_TIMEOUT_MS';
 
+/** Where the registry-backed service-account verifier's request deadline is overridden, if it is at all. */
+export const SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS_ENV = 'POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS';
+
 /** Where discovery reads the pillar snapshot from. */
 export const REGISTRY_URL_ENV = 'POPS_REGISTRY_URL';
 
@@ -146,6 +149,32 @@ export function resolveProbeTimeoutMs(env: NodeJS.ProcessEnv = process.env): num
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new BootEnvError(
       `[bfm-api] ${PROBE_TIMEOUT_MS_ENV} must be a positive integer; got '${raw}'`
+    );
+  }
+  return parsed;
+}
+
+/**
+ * Resolve the registry-backed service-account verifier's request deadline from
+ * `POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS`, in milliseconds.
+ *
+ * `undefined` when unset — the SDK's own default (3s) stands, which is what
+ * every real deployment gets. The iOS acceptance harness raises it because
+ * its loopback registry, BFM process, simulator and Maestro share a loaded
+ * CI runner and the verifier must not turn scheduling delay into an
+ * authentication outage.
+ *
+ * @throws {BootEnvError} If set to something other than a positive integer.
+ */
+export function resolveServiceAccountVerifyTimeoutMs(
+  env: NodeJS.ProcessEnv = process.env
+): number | undefined {
+  const raw = env[SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS_ENV];
+  if (raw === undefined || raw.trim() === '') return undefined;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new BootEnvError(
+      `[bfm-api] ${SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS_ENV} must be a positive integer; got '${raw}'`
     );
   }
   return parsed;

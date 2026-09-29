@@ -15,14 +15,9 @@ const blockedClassifications: ReadonlySet<CatalogueCompatibility['classification
 ]);
 
 const changeCopy: Readonly<Record<string, { readonly detail: string; readonly title: string }>> = {
-  migration_through_subtypes_unsupported: {
-    detail:
-      'The web editor does not invent a migration. Keep the field optional or make the change through the supported catalogue workflow.',
-    title: 'Required changes stop at the parent boundary',
-  },
   published_type_parent_changed: {
-    detail: 'This editor draws the refusal; it does not offer a migration.',
-    title: 'Published type parent cannot change',
+    detail: 'Publish this parent change with a migration covering the type and its descendants.',
+    title: 'Published type parent change requires migration',
   },
   type_parent_set: {
     detail: 'New subtypes require the type-tree protocol before they can be published.',

@@ -2,6 +2,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import { items } from '../db/schema.js';
 import { CatalogueApiError } from './authoring-types.js';
+import { loadPublishedCatalogue } from './catalogue.js';
 import { validateItemFieldValuesForType } from './item-values.js';
 import { validateMigrationHeader } from './migration-coverage.js';
 import { applyMigrationStep, loadMigrationItemValues } from './migration-steps.js';
@@ -56,6 +57,7 @@ function assertContainmentCanChange(
  * one row at a time.
  */
 function assertContainmentQuantityCompatible(
+  base: PersistedCatalogue,
   candidate: PersistedCatalogue,
   rows: readonly (typeof items.$inferSelect)[]
 ): void {
@@ -63,7 +65,13 @@ function assertContainmentQuantityCompatible(
   for (const row of rows) {
     if (row.typeId === null || row.quantity <= 1) continue;
     const type = candidate.types.find((entry) => entry.id === row.typeId);
-    if (!type?.effectiveCapabilities.includes('containment')) continue;
+    const baseType = base.types.find((entry) => entry.id === row.typeId);
+    if (
+      !type?.effectiveCapabilities.includes('containment') ||
+      baseType?.effectiveCapabilities.includes('containment')
+    ) {
+      continue;
+    }
     offendersByType.set(type.id, (offendersByType.get(type.id) ?? 0) + 1);
   }
   for (const [typeId, count] of offendersByType) {
@@ -81,14 +89,16 @@ function dryRunMigration(
   candidate: PersistedCatalogue,
   coverage: RequiredMigrationCoverage
 ): readonly DryRunItem[] {
-  const typeIds = new Set(coverage.affectedTypeIds);
+  const typeIds = new Set(coverage.selectedTypeIds);
   const rows = db
     .select()
     .from(items)
     .where(isNull(items.deletedAt))
     .all()
     .filter((row) => row.typeId !== null && typeIds.has(row.typeId));
-  assertContainmentQuantityCompatible(candidate, rows);
+  const base = loadPublishedCatalogue(db, migration.fromRevision);
+  if (base === null) throw new Error(`catalogue ${migration.fromRevision} is not published`);
+  assertContainmentQuantityCompatible(base, candidate, rows);
   validateMigrationSteps(migration, coverage, rows);
   return rows.map((row) => {
     const type = candidate.types.find((entry) => entry.id === row.typeId);
@@ -98,8 +108,13 @@ function dryRunMigration(
     const before = loadMigrationItemValues(db, row.id);
     const after = before.map((entry) => ({ ...entry, values: [...entry.values] }));
     for (const step of migration.steps) {
-      if (coverage.fieldTypeIds.get(migrationStepTargetFieldId(step)) === row.typeId) {
-        applyMigrationStep(after, step, candidate);
+      const targetFieldId = migrationStepTargetFieldId(step);
+      const candidateFields =
+        row.typeId === null ? undefined : coverage.candidateEffectiveFieldIds.get(row.typeId);
+      const baseFields =
+        row.typeId === null ? undefined : coverage.baseEffectiveFieldIds.get(row.typeId);
+      if (candidateFields?.has(targetFieldId) || baseFields?.has(targetFieldId)) {
+        applyMigrationStep(after, step, candidate, row);
       }
     }
     const validated = validateItemFieldValuesForType(db, type, after, row.id);

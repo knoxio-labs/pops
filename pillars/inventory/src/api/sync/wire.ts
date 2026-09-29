@@ -56,6 +56,21 @@ function projectionIssue(code: string, message: string): SyncItemProjectionIssue
   return { fieldId: null, fieldKey: null, code, message };
 }
 
+function syncProjectionIssues(
+  issues: readonly SyncItemProjectionIssue[],
+  fieldValues: readonly ReadItemFieldValue[],
+  protocol: number
+): readonly SyncItemProjectionIssue[] {
+  if (protocol < 2) return issues;
+  const canonicalFieldIds = new Set(fieldValues.map((field) => field.fieldId));
+  return issues.filter(
+    (issue) =>
+      issue.code !== 'field_definition_missing' ||
+      issue.fieldId === null ||
+      !canonicalFieldIds.has(issue.fieldId)
+  );
+}
+
 function loadFieldExtras(db: CommandDb, ids: readonly string[], protocol: number): FieldExtras {
   const fields = new Map<string, Protocol1Fields>();
   const fieldValues = new Map<string, readonly ReadItemFieldValue[]>();
@@ -69,10 +84,11 @@ function loadFieldExtras(db: CommandDb, ids: readonly string[], protocol: number
 
   for (const item of itemTypes) {
     const issues: SyncItemProjectionIssue[] = [];
+    let legacyProjectionIssues: readonly SyncItemProjectionIssue[] = [];
     try {
       const projection = loadLegacyFieldsWithIssues(db, item.id, protocol);
       fields.set(item.id, projection.fields);
-      issues.push(...projection.issues);
+      legacyProjectionIssues = projection.issues;
     } catch (error) {
       console.error('[inventory-sync] legacy projection failed', { itemId: item.id, error });
       fields.set(item.id, {});
@@ -84,10 +100,13 @@ function loadFieldExtras(db: CommandDb, ids: readonly string[], protocol: number
       );
     }
     try {
-      fieldValues.set(item.id, readItemFieldValuesForSync(db, item.id));
+      const canonicalValues = readItemFieldValuesForSync(db, item.id);
+      fieldValues.set(item.id, canonicalValues);
+      issues.push(...syncProjectionIssues(legacyProjectionIssues, canonicalValues, protocol));
     } catch (error) {
       console.error('[inventory-sync] canonical projection failed', { itemId: item.id, error });
       fieldValues.set(item.id, []);
+      issues.push(...legacyProjectionIssues);
       issues.push(
         projectionIssue(
           'sync_value_projection_failed',

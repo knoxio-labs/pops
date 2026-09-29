@@ -18,6 +18,7 @@ import {
   resolveInternalBaseUrls,
   resolveProbeTimeoutMs,
   resolveRegistryUrl,
+  resolveServiceAccountVerifyTimeoutMs,
 } from '../env.js';
 
 describe('resolveRegistryUrl', () => {
@@ -178,5 +179,40 @@ describe('resolveProbeTimeoutMs', () => {
     expect(() => resolveProbeTimeoutMs({ POPS_PROBE_TIMEOUT_MS: 'nope' })).toThrow(
       /POPS_PROBE_TIMEOUT_MS/
     );
+  });
+});
+
+describe('resolveServiceAccountVerifyTimeoutMs', () => {
+  it('reads absence as "leave the verifier default alone", not as zero', () => {
+    expect(resolveServiceAccountVerifyTimeoutMs({})).toBeUndefined();
+  });
+
+  it('treats a blank value as unset, not as an override', () => {
+    expect(
+      resolveServiceAccountVerifyTimeoutMs({ POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS: '   ' })
+    ).toBeUndefined();
+  });
+
+  it('parses a positive integer override', () => {
+    expect(
+      resolveServiceAccountVerifyTimeoutMs({ POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS: '30000' })
+    ).toBe(30_000);
+  });
+
+  it.each([
+    ['zero', '0'],
+    ['a negative number', '-3000'],
+    ['a fraction', '3000.5'],
+    ['not a number', 'thirty-thousand'],
+  ])('rejects %s', (_label, value) => {
+    expect(() =>
+      resolveServiceAccountVerifyTimeoutMs({ POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS: value })
+    ).toThrow(BootEnvError);
+  });
+
+  it('names the variable in the error', () => {
+    expect(() =>
+      resolveServiceAccountVerifyTimeoutMs({ POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS: 'nope' })
+    ).toThrow(/POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS/);
   });
 });

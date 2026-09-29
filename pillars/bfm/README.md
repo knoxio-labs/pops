@@ -813,22 +813,23 @@ pnpm --filter @pops/bfm build
 
 ## Environment
 
-| Var                            | Default                    | Notes                                                                       |
-| ------------------------------ | -------------------------- | --------------------------------------------------------------------------- |
-| `PORT`                         | `3014`                     | HTTP listen port.                                                           |
-| `BFM_SELF_BASE_URL`            | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                      |
-| `BFM_PUBLIC_BASE_URL`          | `BFM_SELF_BASE_URL`        | The origin the **phone** dials. Baked into the pairing QR — see below.      |
-| `BFM_SQLITE_PATH`              | `./data/bfm.db`            | Where `bfm.db` lives. Falls back to `dirname(SQLITE_PATH)`.                 |
-| `BUILD_VERSION`                | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.                 |
-| `CLOUDFLARE_ACCESS_TEAM_NAME`  | —                          | **Required in production**, or `/operator/*` answers 401 to all.            |
-| `CLOUDFLARE_ACCESS_AUD`        | —                          | Access application `aud`. Set it wherever the team hosts more than one.     |
-| `POPS_REGISTRY_ENABLED`        | `false`                    | Opt-in self-registration with the `registry` pillar.                        |
-| `POPS_REGISTRY_URL`            | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.                 |
-| `POPS_INTERNAL_API_KEY_FILE`   | —                          | Path to the mounted service-account secret. Preferred over the next row.    |
-| `POPS_INTERNAL_API_KEY`        | —                          | The key inline, for local dev. One of these two is **required**.            |
-| `POPS_INTERNAL_BASE_URLS`      | —                          | `id:baseUrl[,…]`. Overrides the discovered base URL for those ids only.     |
-| `BFM_ACCESS_TOKEN_SECRET_FILE` | —                          | Path to the mounted access-token signing secret. Preferred over the next.   |
-| `BFM_ACCESS_TOKEN_SECRET`      | —                          | The signing secret inline, for local dev. One of these two is **required**. |
+| Var                                      | Default                    | Notes                                                                                       |
+| ---------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------- |
+| `PORT`                                   | `3014`                     | HTTP listen port.                                                                           |
+| `BFM_SELF_BASE_URL`                      | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                                      |
+| `BFM_PUBLIC_BASE_URL`                    | `BFM_SELF_BASE_URL`        | The origin the **phone** dials. Baked into the pairing QR — see below.                      |
+| `BFM_SQLITE_PATH`                        | `./data/bfm.db`            | Where `bfm.db` lives. Falls back to `dirname(SQLITE_PATH)`.                                 |
+| `BUILD_VERSION`                          | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.                                 |
+| `CLOUDFLARE_ACCESS_TEAM_NAME`            | —                          | **Required in production**, or `/operator/*` answers 401 to all.                            |
+| `CLOUDFLARE_ACCESS_AUD`                  | —                          | Access application `aud`. Set it wherever the team hosts more than one.                     |
+| `POPS_REGISTRY_ENABLED`                  | `false`                    | Opt-in self-registration with the `registry` pillar.                                        |
+| `POPS_REGISTRY_URL`                      | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.                                 |
+| `POPS_INTERNAL_API_KEY_FILE`             | —                          | Path to the mounted service-account secret. Preferred over the next row.                    |
+| `POPS_INTERNAL_API_KEY`                  | —                          | The key inline, for local dev. One of these two is **required**.                            |
+| `POPS_INTERNAL_BASE_URLS`                | —                          | `id:baseUrl[,…]`. Overrides the discovered base URL for those ids only.                     |
+| `POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS` | SDK default (3s)           | Registry self-check deadline; the iOS acceptance harness raises this for loaded CI runners. |
+| `BFM_ACCESS_TOKEN_SECRET_FILE`           | —                          | Path to the mounted access-token signing secret. Preferred over the next.                   |
+| `BFM_ACCESS_TOKEN_SECRET`                | —                          | The signing secret inline, for local dev. One of these two is **required**.                 |
 
 `BFM_PUBLIC_BASE_URL` and `BFM_SELF_BASE_URL` are the same host only in dev and
 must not be conflated in production. The self URL is the in-cluster origin bfm

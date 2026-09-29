@@ -391,6 +391,37 @@ describe('the purchases stub', () => {
     }
   });
 
+  it('restores seeded history and switches between flows', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      stub.setReachable(true);
+      stub.setSearchOutage(true);
+      await fetch(`${stub.url}/purchases/manual`, {
+        method: 'POST',
+        body: JSON.stringify({
+          merchantEntityName: 'Temporary Shop',
+          totalCents: 100,
+          items: [{ name: 'Temporary item', quantity: 1, lineTotalCents: 100 }],
+        }),
+      });
+
+      stub.reset();
+
+      expect(stub.isReachable()).toBe(false);
+      expect(stub.isSearchOutage()).toBe(false);
+      const list = await fetch(`${stub.url}/purchases?limit=10`);
+      const body = await list.json();
+      expect(body.total).toBe(seededPurchases().length);
+      expect(body.items.map((row: { id: string }) => row.id)).toEqual([
+        'purchase-september-unsettled',
+        'purchase-august-linked',
+        'purchase-july-partial',
+      ]);
+    } finally {
+      await stub.close();
+    }
+  });
+
   it.each([
     ['/purchases?limit=0', 'VALIDATION_ERROR'],
     ['/purchases?limit=501', 'VALIDATION_ERROR'],
