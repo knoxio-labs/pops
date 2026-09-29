@@ -10,6 +10,7 @@ import type { CatalogueMigrationStep } from '../migration-types.js';
 
 const CABLE_TYPE_ID = 'b5ea5cd3-73b3-56dc-92e1-374eac720990';
 const CHARGER_TYPE_ID = 'f87ec1bf-55c1-53ec-9363-1a719e9c2dc3';
+const BULB_TYPE_ID = '59538480-6e82-5ccc-b7be-f1cfd15b9af6';
 const REQUIRED_FIELD_ID = '50000000-0000-5000-8000-000000000001';
 const INHERITED_ROOT_TYPE_ID = '60000000-0000-6000-8000-000000000001';
 const INHERITED_ROOT_FIELD_ID = '70000000-0000-7000-8000-000000000001';
@@ -66,6 +67,10 @@ function publishCandidate(
     readonly addRequiredField?: boolean;
     readonly requiredFieldKind?: 'decimal' | 'short_text';
     readonly addLegacyFields?: boolean;
+    readonly additionalParentChanges?: readonly {
+      readonly typeId: string;
+      readonly parentTypeId: string | null;
+    }[];
   } = {}
 ): void {
   const sourceRevision = options.sourceRevision ?? 1;
@@ -172,6 +177,11 @@ function publishCandidate(
         options.reparentTypeId
       );
   }
+  for (const parentChange of options.additionalParentChanges ?? []) {
+    harness.raw
+      .prepare(`UPDATE item_types SET parent_type_id = ? WHERE revision = ? AND id = ?`)
+      .run(parentChange.parentTypeId, candidateRevision, parentChange.typeId);
+  }
   harness.raw
     .prepare(
       `UPDATE catalogue_revisions
@@ -183,53 +193,55 @@ function publishCandidate(
 
 function publishContainmentGrant(
   harness: ReturnType<typeof openHarness>,
-  reparentTypeId?: string
+  reparentTypeId?: string,
+  sourceRevision = 1,
+  candidateRevision = sourceRevision + 1
 ): void {
   harness.raw
     .prepare(
       `INSERT INTO catalogue_revisions
          (revision, base_revision, status, minimum_protocol, created_actor_kind, created_at)
-       VALUES (2, 1, 'draft', 2, 'web', 'now')`
+       VALUES (?, ?, 'draft', 2, 'web', 'now')`
     )
-    .run();
+    .run(candidateRevision, sourceRevision);
   harness.raw
     .prepare(
       `INSERT INTO item_types
-       SELECT 2, id, key, label, description, sort_order,
+       SELECT ?, id, key, label, description, sort_order,
               CASE WHEN id = ? THEN '["containment"]' ELSE capabilities_json END,
               legacy_labels_json, presentation_json, archived_at, replaced_by, parent_type_id
-       FROM item_types WHERE revision = 1`
+       FROM item_types WHERE revision = ?`
     )
-    .run(CABLE_TYPE_ID);
+    .run(candidateRevision, CABLE_TYPE_ID, sourceRevision);
   if (reparentTypeId !== undefined) {
     harness.raw
-      .prepare(`UPDATE item_types SET parent_type_id = ? WHERE revision = 2 AND id = ?`)
-      .run(CABLE_TYPE_ID, reparentTypeId);
+      .prepare(`UPDATE item_types SET parent_type_id = ? WHERE revision = ? AND id = ?`)
+      .run(CABLE_TYPE_ID, candidateRevision, reparentTypeId);
   }
   harness.raw
     .prepare(
       `INSERT INTO item_type_fields
-       SELECT 2, id, type_id, key, label, help, sort_order, kind, cardinality, required,
+       SELECT ?, id, type_id, key, label, help, sort_order, kind, cardinality, required,
               storage, fixed_unit, reference_kinds_json, reference_type_ids_json,
               expression_version, expression_json, allow_override, presentation_json, archived_at,
               replaced_by, default_values_json
-       FROM item_type_fields WHERE revision = 1`
+       FROM item_type_fields WHERE revision = ?`
     )
-    .run();
+    .run(candidateRevision, sourceRevision);
   harness.raw
     .prepare(
       `INSERT INTO field_enum_options
-       SELECT 2, id, field_id, key, label, sort_order, archived_at
-       FROM field_enum_options WHERE revision = 1`
+       SELECT ?, id, field_id, key, label, sort_order, archived_at
+       FROM field_enum_options WHERE revision = ?`
     )
-    .run();
+    .run(candidateRevision, sourceRevision);
   harness.raw
     .prepare(
       `UPDATE catalogue_revisions
        SET status = 'published', published_actor_kind = 'web', published_at = 'now'
-       WHERE revision = 2`
+       WHERE revision = ?`
     )
-    .run();
+    .run(candidateRevision);
 }
 
 describe('executeCatalogueMigration granting containment (ADR-002 D3)', () => {
@@ -285,9 +297,14 @@ describe('executeCatalogueMigration granting containment (ADR-002 D3)', () => {
 
   it('grants inherited containment to live items of candidate descendants', () => {
     const harness = openHarness();
-    seedItem(harness, { id: 'charger-child', typeKey: 'charger', quantity: 1 });
-    publishContainmentGrant(harness, CHARGER_TYPE_ID);
-    const candidate = loadPublishedCatalogue(harness.db, 2);
+    seedItem(harness, { id: 'bulb-grandchild', typeKey: 'bulb', quantity: 1 });
+    publishCandidate(harness, {
+      addRequiredField: false,
+      reparentTypeId: CHARGER_TYPE_ID,
+      additionalParentChanges: [{ typeId: BULB_TYPE_ID, parentTypeId: CHARGER_TYPE_ID }],
+    });
+    publishContainmentGrant(harness, undefined, 2, 3);
+    const candidate = loadPublishedCatalogue(harness.db, 3);
     if (!candidate) throw new Error('candidate catalogue was not published');
 
     expect(
@@ -295,17 +312,17 @@ describe('executeCatalogueMigration granting containment (ADR-002 D3)', () => {
         harness.db,
         {
           name: 'grant-cable-containment',
-          fromRevision: 1,
-          toRevision: 2,
-          affectedTypeIds: [CABLE_TYPE_ID, CHARGER_TYPE_ID],
-          affectedFieldIds: [...CABLE_INHERITED_FIELD_IDS],
-          steps: dropSteps(CABLE_INHERITED_FIELD_IDS),
+          fromRevision: 2,
+          toRevision: 3,
+          affectedTypeIds: [CABLE_TYPE_ID],
+          affectedFieldIds: [],
+          steps: [],
         },
         candidate,
         '2026-09-22T00:00:00.000Z'
       )
     ).toEqual({ name: 'grant-cable-containment', affectedItems: 1 });
-    expect(harness.item('charger-child')).toMatchObject({ isContainer: 1, access: 'open' });
+    expect(harness.item('bulb-grandchild')).toMatchObject({ isContainer: 1, access: 'open' });
   });
 });
 
