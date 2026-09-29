@@ -40,7 +40,7 @@ internal struct InventoryItemsBrowserView: View {
     }
 
     private func content(_ catalogue: InventoryItemsCatalogue) -> some View {
-        ScrollView {
+        ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 PopsPageTitle(title: "Items")
                 if let offline = model.offlineLine {
@@ -64,6 +64,7 @@ internal struct InventoryItemsBrowserView: View {
             .popsMotion(value: model.query)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .scrollDismissesKeyboard(.immediately)
