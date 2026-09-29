@@ -883,6 +883,7 @@ function pathParameter(template, pathname, marker = '{id}') {
 
 /**
  * Starts the purchases origin the bfm probes.
+ * `resetHistory` restores the seeded purchase records without changing reachability or outage switches.
  *
  * @param {{ contract?: Record<string, unknown>, host?: string }} options
  * @returns {Promise<{
@@ -894,6 +895,7 @@ function pathParameter(template, pathname, marker = '{id}') {
  *   isReachable: () => boolean,
  *   setSearchOutage: (active: boolean) => void,
  *   isSearchOutage: () => boolean,
+ *   resetHistory: () => void,
  * }>}
  */
 export async function startPurchasesStub({
@@ -1038,5 +1040,8 @@ export async function startPurchasesStub({
       searchOutage = active;
     },
     isSearchOutage: () => searchOutage,
+    resetHistory: () => {
+      store.splice(0, store.length, ...seededPurchases());
+    },
   };
 }

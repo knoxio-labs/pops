@@ -454,10 +454,15 @@ export const SERVICE_ACCOUNT_SELF_PATH = '/service-accounts/self';
 
 /**
  * Who the BFM's key belongs to, as the registry answers it: the grant the
- * inventory relay needs (the registry's `bfm` account holds `inventory.sync`,
- * `.types`, `.codes` and `.media`; the root scope covers all four here).
+ * inventory relay and the MCP-backed pairing flow need. The root inventory
+ * scope covers the relay routes, while the pairing scope is intentionally
+ * exact.
  */
-export const BFM_SERVICE_ACCOUNT = { id: 'sa-bfm', name: 'bfm', scopes: ['inventory'] };
+export const BFM_SERVICE_ACCOUNT = {
+  id: 'sa-bfm',
+  name: 'bfm',
+  scopes: ['inventory', 'bfm.operator.issuePairingCode'],
+};
 
 /**
  * The registry snapshot the BFM reads, with finance pointed at this stub and
@@ -486,13 +491,14 @@ export const BFM_SERVICE_ACCOUNT = { id: 'sa-bfm', name: 'bfm', scopes: ['invent
  * `inventory` is listed the same way whenever an address for it was supplied,
  * pointed at the gate `inventory-pillar.mjs` puts in front of the real pillar.
  *
- * @param {{ financeBaseUrl: string, purchasesBaseUrl?: string, inventoryBaseUrl?: string, now?: string }} options
+ * @param {{ financeBaseUrl: string, purchasesBaseUrl?: string, inventoryBaseUrl?: string, bfmBaseUrl?: string, now?: string }} options
  * @returns {{ fetchedAt: string, pillars: Array<import('./purchases-stub.mjs').RegistryEntry> }}
  */
 export function buildRegistrySnapshot({
   financeBaseUrl,
   purchasesBaseUrl,
   inventoryBaseUrl,
+  bfmBaseUrl,
   now = new Date().toISOString(),
 }) {
   return {
@@ -534,7 +540,55 @@ export function buildRegistrySnapshot({
       ...(inventoryBaseUrl === undefined
         ? []
         : [inventoryRegistryEntry({ baseUrl: inventoryBaseUrl, now })]),
+      ...(bfmBaseUrl === undefined ? [] : [bfmRegistryEntry({ baseUrl: bfmBaseUrl, now })]),
     ],
+  };
+}
+
+/**
+ * The BFM entry is present only in the MCP harness variant. The real registry
+ * learns this entry when BFM self-registers; the fixture has to advertise the
+ * future BFM address before that process starts so the MCP server's REST SDK
+ * can discover and call it.
+ *
+ * @param {{ baseUrl: string, now: string }} options
+ * @returns {import('./purchases-stub.mjs').RegistryEntry}
+ */
+function bfmRegistryEntry({ baseUrl, now }) {
+  return {
+    pillarId: 'bfm',
+    baseUrl,
+    registered: true,
+    status: 'healthy',
+    lastHeartbeatAt: now,
+    manifest: {
+      pillar: 'bfm',
+      version: '1.0.0',
+      contract: {
+        package: '@pops/bfm',
+        version: '1.0.0',
+        tag: 'contract-bfm@v1.0.0',
+      },
+      routes: { queries: [], mutations: [], subscriptions: [] },
+      search: { adapters: [] },
+      ai: { tools: [] },
+      uri: { types: [] },
+      consumedSettings: { keys: [] },
+      nav: {
+        id: 'bfm',
+        label: 'Devices',
+        labelKey: 'bfm',
+        icon: 'smartphone',
+        color: 'indigo',
+        basePath: '/bfm',
+        order: 80,
+        items: [{ path: '', label: 'Devices', labelKey: 'bfm.devices', icon: 'smartphone' }],
+      },
+      pages: [{ path: '', index: true, bundleSlot: 'bfm-devices' }],
+      assetsBaseUrl: '/bfm-ui/bfm.js',
+      stylesheetUrl: '/bfm-ui/bfm.css',
+      healthcheck: { path: '/health' },
+    },
   };
 }
 
@@ -579,7 +633,7 @@ const CONTRACT_MISMATCH_BODY = '<html><body>404 Not Found</body></html>';
  * holding `inventory`, the grant the real inventory pillar checks the BFM's
  * calls against; any other key is refused.
  *
- * @param {{ rows: Array<Record<string, unknown>>, accounts?: Array<Record<string, unknown>>, contract?: Record<string, unknown>, purchasesBaseUrl?: string, inventoryBaseUrl?: string, serviceAccountKey?: string, host?: string }} options
+ * @param {{ rows: Array<Record<string, unknown>>, accounts?: Array<Record<string, unknown>>, contract?: Record<string, unknown>, purchasesBaseUrl?: string, inventoryBaseUrl?: string, bfmBaseUrl?: string, serviceAccountKey?: string, host?: string }} options
  * @returns {Promise<{
  *   url: string,
  *   port: number,
@@ -598,6 +652,7 @@ export async function startUpstreamStub({
   contract = readFinanceContract(),
   purchasesBaseUrl,
   inventoryBaseUrl,
+  bfmBaseUrl,
   serviceAccountKey,
   host = '127.0.0.1',
 }) {
@@ -667,6 +722,7 @@ export async function startUpstreamStub({
           financeBaseUrl: `http://${host}:${address.port}`,
           purchasesBaseUrl,
           inventoryBaseUrl,
+          bfmBaseUrl,
         })
       );
     }

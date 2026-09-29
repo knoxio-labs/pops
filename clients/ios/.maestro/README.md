@@ -32,13 +32,25 @@ That boots a real `@pops/bfm` against a temporary SQLite database, points it at
 a registry-and-finance fixture, starts the control plane the recovery flows
 throw their switches through, builds the app if it needs building, installs it
 on the simulator every other lane uses, and runs each flow against a pairing
-code minted for it over the BFM's own operator route.
+code minted for it over the BFM's own operator route. To exercise the
+production MCP path as well, use:
+
+```bash
+mise run e2e:ios:mcp
+```
+
+That starts a real MCP process with the fixture's narrowly scoped service
+account, asks `bfm.devicePairing.issueCode` for each flow's code, and passes
+only the returned code into Maestro. The bearer used between the host bridge
+and MCP never enters the simulator or a Maestro variable.
 `scripts/ios-e2e/run.mjs` is that command and carries the reasoning for each
 part of it, including why it runs the pillar with Node rather than Docker and
 why it does not use port 3014.
 
 `mise run e2e:ios -- --serve-only` stops after booting: it prints both server
 addresses and a live pairing code so the screens can be driven by hand.
+`mise run e2e:ios:mcp -- --serve-only` does the same through MCP. In either
+case, the code is printed once and is consumed by the first pairing attempt.
 
 `mise -C clients/ios run e2e` is the client's half on its own. It takes
 `POPS_BFM_BASE_URL` and `POPS_E2E_CONTROL_URL` and speaks nothing but HTTP to
@@ -55,9 +67,10 @@ Everything in there is called through `runFlow` and takes values from its
 caller, so driven on its own it would fail on the ones nobody passed it.
 `select-transactions.yaml` and `open-transactions.yaml` keep the
 secondary-feature route through More consistent across healthy and error-state
-flows that need the Transactions screen. Purchases flows use
-`open-purchases.yaml` to open their primary tab rather than assuming the
-Transactions sheet contains a Purchases control.
+flows that need the Transactions screen. Purchases flows use `open-purchases.yaml`
+to wait for their own seeded home rather than assuming Transactions is the
+initial tab. History flows open the disclosure before asserting its events;
+the accessibility label and expanded/collapsed value are separate fields.
 
 ## The acceptance flow, kept out of the glob
 
@@ -193,6 +206,10 @@ The transaction rows the flows expect come from
 `scripts/ios-e2e/transactions-fixture.mjs`. Purchase rows and month figures
 come from `scripts/ios-e2e/purchases-stub.mjs`. Changing a merchant, account or
 amount there fails the flow that reads it, which is the point.
+Before each flow and driver retry, the harness's `/__e2e/reset` restores the
+seeded purchase history as well as the outage switches. A manual purchase
+persists for its own flow; later archive and search flows start from the same
+three seeded purchases regardless of execution order.
 
 ## The seams the recovery flows throw
 

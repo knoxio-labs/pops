@@ -11,10 +11,16 @@ internal struct InventoryPlacedEntry: Identifiable, Equatable {
     /// The first photo's content hash, when the item has one.
     internal let photo: String?
 
-    internal init(item: InventoryItem, catalogue: InventoryCatalogue) {
+    internal init(
+        item: InventoryItem, catalogue: InventoryCatalogue,
+        protocol2Catalogue: InventoryCatalogueSnapshot? = nil
+    ) {
         id = item.id
         name = item.name
-        typeName = item.typeKey.flatMap { catalogue.type(forKey: $0)?.name } ?? "No type yet"
+        typeName =
+            InventoryTypeNameResolver.name(
+                for: item, catalogue: catalogue, protocol2Catalogue: protocol2Catalogue)
+            ?? "No type yet"
         symbol = InventorySymbol.record(access: item.containment?.access).system
         quantity = item.quantity.count
         photo = item.photos.first?.sha256
@@ -71,6 +77,7 @@ extension InventoryLocationTree {
     /// left out of every list and count, as they are everywhere else.
     internal init(reading source: any InventoryQuerySource) {
         let catalogue = source.inventoryCatalogue()
+        let protocol2Catalogue = source.inventoryProtocol2Catalogue()
         nodes = source.inventoryLocationTree().filter { !$0.isDeleted }.map { location in
             let here = source.inventoryContents(ofLocation: location.id).filter {
                 $0.placement == .location(location.id) && $0.isLive
@@ -78,7 +85,8 @@ extension InventoryLocationTree {
             return InventoryLocationNode(
                 id: location.id, name: location.name, parentID: location.parentId,
                 items: here.filter { !$0.isContainer }.map {
-                    InventoryPlacedEntry(item: $0, catalogue: catalogue)
+                    InventoryPlacedEntry(
+                        item: $0, catalogue: catalogue, protocol2Catalogue: protocol2Catalogue)
                 },
                 containers: here.filter(\.isContainer).map { container in
                     InventoryPlacedContainer(
@@ -87,7 +95,11 @@ extension InventoryLocationTree {
                         photo: container.photos.first?.sha256,
                         contents: source.inventoryContents(ofContainer: container.id)
                             .filter(\.isLive)
-                            .map { InventoryPlacedEntry(item: $0, catalogue: catalogue) })
+                            .map {
+                                InventoryPlacedEntry(
+                                    item: $0, catalogue: catalogue,
+                                    protocol2Catalogue: protocol2Catalogue)
+                            })
                 })
         }
     }

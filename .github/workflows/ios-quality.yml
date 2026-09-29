@@ -243,14 +243,10 @@ jobs:
           github.event.pull_request.base.ref == github.event.repository.default_branch)
       ) }}
     runs-on: xcode-27
-    # A wedged simulator is the classic macOS-CI failure and it does not fail —
-    # it hangs. Without a ceiling that burns the job's full 6h default. The
-    # The current full lane takes about 85 minutes with the analyzer over the
-    # 1,558-file tree. It also has to cover the tail: when several iOS lanes
-    # share the macOS runners the shared compile alone can take 46 minutes.
-    # Keep enough headroom for the Release check and UI flow so the job reports
-    # a real failure instead of being killed by its outer ceiling (POPS-4215).
-    timeout-minutes: 150
+    # Analyzer observations: 66m47s for 1,584 files in the current promotion run.
+    # The full job limit also covers host/simulator tests and Release/UI validation;
+    # these measurements are not a duration guarantee.
+    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 150 || 100 }}
     defaults:
       run:
         working-directory: clients/ios
@@ -293,9 +289,12 @@ jobs:
       # below, which remains cold so the analyzer sees every source file. An
       # exact hit reuses products for unchanged iOS sources; a manifest-only
       # restore gives SwiftPM an incremental starting point and SwiftPM still
-      # validates every input before executing the tests.
-      - name: Cache host-toolchain package builds
-        uses: actions/cache@v6
+      # validates every input before executing the tests. Restore and save are
+      # separate so a successful host suite publishes its products before a
+      # later simulator failure can suppress a combined cache action's post job.
+      - name: Restore host-toolchain package builds
+        id: host-package-cache
+        uses: actions/cache/restore@v6
         with:
           path: clients/ios/Packages/*/.build
           key: host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_XCODE_BUILD }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved', 'clients/ios/Packages/*/Sources/**', 'clients/ios/Packages/*/Tests/**') }}
@@ -311,6 +310,13 @@ jobs:
       # step takes, not after the rest of the job's compile.
       - name: Test packages (host toolchain)
         run: mise run test:packages
+
+      - name: Save host-toolchain package builds
+        if: success() && steps.host-package-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: clients/ios/Packages/*/.build
+          key: ${{ steps.host-package-cache.outputs.cache-primary-key }}
 
       - name: Generate Pops.xcodeproj
         run: mise run generate
@@ -405,8 +411,8 @@ jobs:
 
       # WHERE EACH LANE SPENDS ITS MINUTES. The shared compile is ~2 minutes and
       # the simulator suite ~3; `swiftlint analyze` over the whole tree was ~19.5
-      # (run 35408330810, 693 files, 2026-09-19), while the current tree has
-      # 1,558 analyzer inputs and scales to roughly 44 minutes. A pull request
+      # minutes at 693 files (run 35408330810), but the current 1,581-file tree
+      # took about 61 minutes on the full-validation candidate. A pull request
       # therefore runs the suite and not the analyzer (POPS-4149): every macOS job shares
       # GitHub's five-runner pool, and runs were waiting 20-40 minutes for a
       # runner. An unused declaration or unused import is reported as a queue
@@ -429,8 +435,19 @@ jobs:
         if: >-
           success() &&
           (github.event_name == 'merge_group' || inputs['full-validation'] == true)
-        timeout-minutes: 60
+        timeout-minutes: 75
+        env:
+          POPS_IOS_ANALYZER_ARTIFACTS: ${{ runner.temp }}/ios-analyzer-diagnostics
         run: mise run --skip-deps lint:analyze
+
+      - name: SwiftLint analyzer log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-analyzer-debug
+          path: ${{ runner.temp }}/ios-analyzer-diagnostics
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Simulator test log and result bundle
         if: failure()
@@ -499,6 +516,7 @@ jobs:
       # so a reordering degrades into a second compile rather than into a lie.
       - name: UI flow (Maestro, against a real BFM)
         if: github.event_name == 'merge_group' || inputs['full-validation'] == true
+        timeout-minutes: 45
         working-directory: .
         run: mise run e2e:ios
 

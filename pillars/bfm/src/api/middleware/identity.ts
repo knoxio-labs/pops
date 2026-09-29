@@ -5,11 +5,10 @@
  * deliberately drops two of that chain's legs. Both omissions are the point
  * of this file, because bfm's perimeter is not the registry's:
  *
- * **No service-account leg.** The registry authenticates `x-api-key` against
- * its own `service_accounts` table. bfm has no such table, and the registry
- * exposes no endpoint to verify a presented key — only list/create/revoke. So
- * there is nothing an `x-api-key` could be checked against here, and a machine
- * caller has no business minting pairing codes or revoking handsets anyway.
+ * **No global service-account leg.** The pairing-code route has a separate,
+ * narrow registry-backed service-account gate. This middleware does not turn a
+ * machine credential into a human operator, so device listing and revocation
+ * remain human-only.
  * The service account bfm itself holds is for its OUTBOUND calls to sibling
  * pillars, which is the opposite direction.
  *
@@ -39,6 +38,8 @@ import { UnauthorizedError } from '../shared/errors.js';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
+import type { ServiceAccountPrincipal } from '@pops/pillar-sdk/server';
+
 /** The authenticated human principal — a Cloudflare Access session identity. */
 export interface OperatorPrincipal {
   email: string;
@@ -50,6 +51,7 @@ export interface OperatorPrincipal {
  */
 export interface IdentityLocals {
   operator?: OperatorPrincipal | null;
+  pairingServiceAccount?: ServiceAccountPrincipal | null;
 }
 
 /** The dev-fallback operator. Never reachable with `NODE_ENV=production`. */
@@ -116,6 +118,34 @@ export function createIdentityMiddleware(env: NodeJS.ProcessEnv = process.env): 
  */
 export function readPrincipal(res: Response): OperatorPrincipal | null {
   return (res.locals as IdentityLocals).operator ?? null;
+}
+
+/** Read the scoped service-account principal attached to the pairing route. */
+export function readPairingServiceAccount(res: Response): ServiceAccountPrincipal | null {
+  return (res.locals as IdentityLocals).pairingServiceAccount ?? null;
+}
+
+/** The identities permitted to mint a pairing code. */
+export type PairingIssuer =
+  | { readonly kind: 'operator'; readonly email: string }
+  | { readonly kind: 'service-account'; readonly id: string; readonly name: string };
+
+/**
+ * Require either the human operator principal or the pairing route's verified
+ * service-account principal.
+ */
+export function requirePairingIssuer(res: Response): PairingIssuer {
+  const operator = readPrincipal(res);
+  if (operator !== null) return { kind: 'operator', email: operator.email };
+
+  const serviceAccount = readPairingServiceAccount(res);
+  if (serviceAccount !== null) {
+    return { kind: 'service-account', id: serviceAccount.id, name: serviceAccount.name };
+  }
+
+  throw new UnauthorizedError(
+    'This endpoint requires an operator session or authorised service account.'
+  );
 }
 
 /**

@@ -6,18 +6,21 @@ internal struct InventoryFormTypePicker: View {
     internal let options: [InventoryFormTypeOption]
     internal let noneTitle: String?
     internal let noneAccessibilityIdentifier: String?
+    internal let onChoose: (@MainActor (String?) -> Void)?
     private let initialQuery: String
     @Environment(\.dismiss) private var dismiss
     @State private var query: String
 
     internal init(
         selection: Binding<String?>, options: [InventoryFormTypeOption], title: String = "Type",
-        noneTitle: String? = nil, noneAccessibilityIdentifier: String? = nil, query: String = ""
+        noneTitle: String? = nil, noneAccessibilityIdentifier: String? = nil, query: String = "",
+        onChoose: (@MainActor (String?) -> Void)? = nil
     ) {
         _selection = selection
         self.options = options
         self.noneTitle = noneTitle
         self.noneAccessibilityIdentifier = noneAccessibilityIdentifier
+        self.onChoose = onChoose
         navigationTitle = title
         initialQuery = query
         _query = State(initialValue: query)
@@ -172,6 +175,10 @@ internal struct InventoryFormTypePicker: View {
     }
 
     private func choose(_ id: String?) {
+        if let onChoose {
+            onChoose(id)
+            return
+        }
         dismiss()
         Task { @MainActor in
             selection = id

@@ -152,6 +152,11 @@ public final class InventoryReplica: Sendable {
         try write { try ReplicaApply.changes(page, now: now(), in: $0) }
     }
 
+    /// Applies a targeted item retry without advancing the change-feed cursor.
+    public func apply(_ result: InventorySyncItemResult) throws {
+        try write { try ReplicaApply.item(result, now: now(), in: $0) }
+    }
+
     /// Stores the served catalogue and re-indexes search, because type
     /// labels are searchable. Every type it adds to a previously stored
     /// catalogue is queued as a type arrival.

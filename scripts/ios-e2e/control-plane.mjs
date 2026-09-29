@@ -194,11 +194,11 @@ function agedAuthorization(header, secret) {
  *     isFinanceContractMismatch: () => boolean,
  *   },
  *   purchases: {
- *     reset: () => void,
  *     setReachable: (active: boolean) => void,
  *     isReachable: () => boolean,
  *     setSearchOutage: (active: boolean) => void,
  *     isSearchOutage: () => boolean,
+ *     resetHistory: () => void,
  *   },
  *   inventory: {
  *     setReachable: (active: boolean) => void,
@@ -252,7 +252,12 @@ export async function startControlPlane({
       upstream.setFinanceOutage(false);
       upstream.setFinanceOpenApiUnreachable(false);
       upstream.setFinanceContractMismatch(false);
-      purchases.reset();
+      // Back to withheld, which is the state every flow written before
+      // `receipt-capture` existed was written against. A flow that wants the
+      // second tab arms it for itself.
+      purchases.setReachable(false);
+      purchases.setSearchOutage(false);
+      purchases.resetHistory();
       inventory.setReachable(false);
       inventory.setSyncOutage(false);
       return { status: 200, body: state() };

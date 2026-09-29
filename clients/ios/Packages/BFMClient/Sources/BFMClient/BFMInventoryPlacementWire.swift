@@ -97,6 +97,29 @@ extension Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPay
     }
 }
 
+extension Operations.MobileInventory_item.Output.Ok.Body.JsonPayload.ItemPayload
+    .PlacementPayload: WirePlacementValue
+{
+    internal var wire: WirePlacement {
+        switch self {
+        case .case1(let location): .location(location.locationId)
+        case .case2(let container): .container(container.itemId)
+        case .case3: .hand
+        }
+    }
+}
+
+extension Operations.MobileInventory_item.Output.Ok.Body.JsonPayload.ItemPayload
+    .PreviousPlacementPayload: WirePreviousPlacementValue
+{
+    internal var wire: WirePreviousPlacement {
+        switch self {
+        case .case1(let location): .location(location.locationId)
+        case .case2(let container): .container(container.itemId)
+        }
+    }
+}
+
 extension Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.EventsPayloadPayload
     .BeforePayload.PlacementPayload: WirePlacementValue
 {

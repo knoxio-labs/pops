@@ -95,6 +95,20 @@ internal struct InventoryItemDetailPhotoTests {
         #expect(store.commands.isEmpty)
     }
 
+    @Test("photo reorder actions stop at both ends of the gallery")
+    func reorderDirectionsRespectGalleryBoundaries() {
+        let photos = [
+            InventoryDetailPhoto(sha256: "a", caption: "A"),
+            InventoryDetailPhoto(sha256: "b", caption: "B"),
+            InventoryDetailPhoto(sha256: "c", caption: "C"),
+        ]
+
+        #expect(photos.reorderedIds(moving: "a", .earlier) == nil)
+        #expect(photos.reorderedIds(moving: "a", .later) == ["b", "a", "c"])
+        #expect(photos.reorderedIds(moving: "c", .later) == nil)
+        #expect(photos.reorderedIds(moving: "c", .earlier) == ["a", "c", "b"])
+    }
+
     @Test("retaking a photo attaches the new bytes where the old one stood and removes it")
     func retakeReplacesPhoto() async throws {
         let store = Self.storeWithPhotos(["a", "b"])
@@ -112,5 +126,51 @@ internal struct InventoryItemDetailPhotoTests {
                 .removePhoto(itemId: "tv", sha256: "a"),
             ])
         #expect(await model.awaitDetail { $0.photos.map(\.sha256) == [newSha, "b"] } != nil)
+    }
+
+    @Test("the detail viewer starts on the tapped photo and labels its pages")
+    func viewerPresentationUsesOpeningPhoto() {
+        let photos = [
+            InventoryDetailPhoto(sha256: "a", caption: "Front"),
+            InventoryDetailPhoto(sha256: "b", caption: ""),
+            InventoryDetailPhoto(sha256: "c", caption: "Back"),
+        ]
+
+        #expect(InventoryPhotoViewerPresentation.initialIndex(photos[2], in: photos) == 2)
+        #expect(
+            InventoryPhotoViewerPresentation.initialIndex(
+                InventoryDetailPhoto(sha256: "unknown", caption: ""), in: photos) == 0)
+        #expect(InventoryPhotoViewerPresentation.label(photos[0], index: 0) == "Front")
+        #expect(InventoryPhotoViewerPresentation.label(photos[1], index: 1) == "Photo 2")
+    }
+
+    @Test("the detail viewer loads the full rendition and rejects undecodable bytes")
+    func viewerLoadsFullRendition() async {
+        let photo = InventoryDetailPhoto(sha256: "photo", caption: "Photo")
+        var requested: (String, InventoryPhotoVariant)?
+        let unavailable = await InventoryPhotoViewerPresentation.loadData(
+            for: photo,
+            cachedData: nil,
+            load: { sha256, variant in
+                requested = (sha256, variant)
+                return Data("not an image".utf8)
+            })
+
+        #expect(unavailable == nil)
+        #expect(requested?.0 == "photo")
+        #expect(requested?.1 == .full)
+
+        var calledForCachedData = false
+        let cached = Data("still not an image".utf8)
+        let cachedResult = await InventoryPhotoViewerPresentation.loadData(
+            for: photo,
+            cachedData: cached,
+            load: { _, _ in
+                calledForCachedData = true
+                return nil
+            })
+
+        #expect(cachedResult == nil)
+        #expect(!calledForCachedData)
     }
 }

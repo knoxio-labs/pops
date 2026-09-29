@@ -84,6 +84,7 @@ internal struct PurchaseDetailHeader: View {
             )
             .accessibilityHint("Opens the receipt")
             .accessibilityIdentifier(PurchaseDetailAccessibility.receiptPlate)
+            .accessibilityElement(children: .ignore)
         }
     }
 

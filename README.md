@@ -131,6 +131,8 @@ The shell fronts the stack via its nginx reverse proxy and routes browser traffi
 
 See [`AGENTS.md`](AGENTS.md) for the full command reference, repo structure, data flows, and coding standards.
 
+Small related PRs can target `integration/<workstream>` for affected checks and review. A frozen promotion to `main` runs the full validation suite against current main; the merge queue stays off. See the [integration and promotion workflow](.github/workflows/README.md#integration-workstreams-and-frozen-promotion) for the commands and merge requirements.
+
 ### Key Commands
 
 Run `mise tasks` for the authoritative list. The common cross-repo gates:
@@ -178,7 +180,7 @@ cp .env.example .env                  # then edit: POPS_DOMAIN, image tag, watch
 # (or leave the file empty if the corresponding integration is unused).
 mkdir -p secrets && cd secrets
 for name in claude_api_key up_bank_token up_webhook_secret notion_api_token \
-            telegram_bot_token finance_api_key pops_api_key \
+            telegram_bot_token finance_api_key pops_api_key pops_mcp_api_key \
             instagram_cookies tmdb_api_key thetvdb_api_key \
             paperless_secret_key paperless_admin_password; do
   : > "$name"

@@ -22,9 +22,9 @@ name: Purchases home opens both archive scopes and a full detail
 
 - runFlow: subflows/open-purchases.yaml
 
-# The figure comes from the month-summary request. The Unmatched tile is the
-# whole unsettled backlog, so its count differs from the one current-month
-# unmatched purchase in the figure.
+# The figure comes from the month-summary request. The tiles carry server
+# counts; the unmatched tile covers both unsettled purchases across the whole
+# backlog, while the month figure covers the single September purchase.
 - assertVisible: 'A\$12\.50'
 - assertVisible:
     id: 'purchases-home-unmatched'

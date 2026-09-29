@@ -36,6 +36,7 @@ internal struct InventorySyncCapsule: View {
         case .synchronizing(let progress):
             "Syncing · \(progress.formatted(.percent.precision(.fractionLength(0))))"
         case .needsAttention(let count): "\(count) need attention"
+        case .syncFailed: "Sync failed"
         }
     }
 
@@ -49,6 +50,7 @@ internal struct InventorySyncCapsule: View {
         case .offline: "wifi.slash"
         case .synchronizing: "arrow.trianglehead.2.clockwise.rotate.90"
         case .needsAttention: "exclamationmark.triangle.fill"
+        case .syncFailed: "exclamationmark.triangle.fill"
         }
     }
 
@@ -58,6 +60,7 @@ internal struct InventorySyncCapsule: View {
         case .offline: Color.popsMutedForeground
         case .synchronizing: Color.popsAccent
         case .needsAttention: Color.popsWarning
+        case .syncFailed: Color.popsDestructive
         }
     }
 }

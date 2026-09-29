@@ -24,7 +24,7 @@ Then replace the placeholder line.
 | `pops_purchases_api_key` | The `plaintextKey` from minting the `purchases` service account — runbook in [`pillars/purchases/README.md`](../../../pillars/purchases/README.md). |
 | `claude_api_key`         | The shared Anthropic API credential already provisioned at `secrets/claude_api_key`; receipt extraction cannot accept uploads without it.           |
 
-It is **not the same value as `pops_api_key`** (moltbot and the MCP gateway)
+It is **not the same value as `pops_api_key`** (moltbot), `pops_mcp_api_key`,
 or `pops_bfm_api_key`. purchases gets its own account so revoking one consumer
 does not take the others down with it, so `last_used_at` attributes traffic to
 a single process, and so the grant can be exactly the four domains purchases

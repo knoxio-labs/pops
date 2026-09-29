@@ -91,6 +91,7 @@ name: Inventory automatically downloads, then creates, moves, discards and undoe
 - scrollUntilVisible:
     element: 'History'
     direction: DOWN
+- assertVisible: 'Show'
 - assertNotVisible: 'Moved, Today'
 - tapOn: 'History'
 - assertVisible: 'Hide'
@@ -99,7 +100,6 @@ name: Inventory automatically downloads, then creates, moves, discards and undoe
 - assertVisible: 'Show'
 - assertNotVisible: 'Moved, Today'
 - tapOn: 'History'
-- assertVisible: 'Hide'
 - assertVisible: 'Moved, Today'
 - scrollUntilVisible:
     element: 'More'

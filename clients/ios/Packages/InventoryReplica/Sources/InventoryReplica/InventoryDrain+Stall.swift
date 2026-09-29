@@ -9,7 +9,7 @@ extension InventoryDrain {
     /// since no network retry moves it. A stall already showing keeps the
     /// time it began.
     func report(_ error: any Error) {
-        online.noteFailure(error)
+        online.noteFailure(error, showsSyncFailure: false)
         guard Self.stallsSending(error) else { return }
         let kind = String(describing: type(of: error))
         let detail = String(reflecting: error)

@@ -81,6 +81,24 @@ internal struct ReplicaApplyTests {
         #expect(try replica.syncPosition().since == 42)
     }
 
+    @Test("an item issue survives the feed and a clean targeted retry clears it")
+    func itemIssueIsDurableUntilTargetedRetry() throws {
+        let replica = try Fixture.downloaded(items: [Fixture.item("a")])
+        let issue = InventorySyncIssue(
+            itemId: "a", itemName: "a", seq: 21, code: "enum_option_unknown",
+            fieldId: "field", fieldKey: "format", message: "The format value is not available.",
+            itemApplied: true, retryable: true)
+
+        try replica.apply(Fixture.changes(items: [Fixture.item("a", revision: 2)], issues: [issue]))
+
+        #expect(try replica.read(.syncLedger).issues == [issue])
+        try replica.apply(
+            InventorySyncItemResult(item: Fixture.item("a", revision: 3), issues: []))
+
+        #expect(try replica.read(.syncLedger).issues.isEmpty)
+        #expect(try replica.read(.item(id: "a"))?.revision == 3)
+    }
+
     @Test("a tombstone removes the item from every query")
     func tombstoneRemovesItem() throws {
         let replica = try Fixture.downloaded(

@@ -124,6 +124,7 @@ public struct InventorySnapshotPage: Hashable, Sendable {
     public let catalogueRevision: Int?
     public let total: Int
     public let items: [InventoryItem]
+    public let issues: [InventorySyncIssue]
     public let locations: [InventoryLocation]
     public let nextCursor: String?
 
@@ -131,7 +132,7 @@ public struct InventorySnapshotPage: Hashable, Sendable {
         epoch: String, highWaterSeq: Int, minimumProtocol: Int = 1, catalogueVersion: String,
         total: Int,
         items: [InventoryItem], locations: [InventoryLocation], nextCursor: String?,
-        catalogueRevision: Int? = nil
+        catalogueRevision: Int? = nil, issues: [InventorySyncIssue] = []
     ) {
         self.epoch = epoch
         self.highWaterSeq = highWaterSeq
@@ -139,6 +140,7 @@ public struct InventorySnapshotPage: Hashable, Sendable {
         self.catalogueVersion = catalogueVersion
         self.total = total
         self.items = items
+        self.issues = issues
         self.locations = locations
         self.nextCursor = nextCursor
         self.catalogueRevision = catalogueRevision
@@ -151,6 +153,7 @@ public struct InventoryChangesPage: Hashable, Sendable {
     public let epoch: String
     public let minimumProtocol: Int
     public let items: [InventoryItem]
+    public let issues: [InventorySyncIssue]
     public let locations: [InventoryLocation]
     public let events: [InventoryEvent]
     public let nextSince: Int
@@ -162,15 +165,68 @@ public struct InventoryChangesPage: Hashable, Sendable {
         epoch: String, minimumProtocol: Int = 1, items: [InventoryItem],
         locations: [InventoryLocation],
         events: [InventoryEvent], nextSince: Int, hasMore: Bool, catalogueVersion: String,
-        catalogueRevision: Int? = nil
+        catalogueRevision: Int? = nil, issues: [InventorySyncIssue] = []
     ) {
         self.epoch = epoch
         self.minimumProtocol = minimumProtocol
         self.items = items
+        self.issues = issues
         self.locations = locations
         self.events = events
         self.nextSince = nextSince
         self.hasMore = hasMore
+        self.catalogueVersion = catalogueVersion
+        self.catalogueRevision = catalogueRevision
+    }
+}
+
+/// A server-side item projection problem that did not abort the surrounding
+/// snapshot or change-feed page. The stable item values remain authoritative;
+/// `itemApplied` says whether this page also carried the item row.
+public struct InventorySyncIssue: Identifiable, Hashable, Sendable {
+    public let itemId: String
+    public let itemName: String
+    public let seq: Int
+    public let code: String
+    public let fieldId: String?
+    public let fieldKey: String?
+    public let message: String
+    public let itemApplied: Bool
+    public let retryable: Bool
+
+    public init(
+        itemId: String, itemName: String, seq: Int, code: String, fieldId: String?,
+        fieldKey: String?, message: String, itemApplied: Bool, retryable: Bool
+    ) {
+        self.itemId = itemId
+        self.itemName = itemName
+        self.seq = seq
+        self.code = code
+        self.fieldId = fieldId
+        self.fieldKey = fieldKey
+        self.message = message
+        self.itemApplied = itemApplied
+        self.retryable = retryable
+    }
+
+    public var id: String {
+        [itemId, String(seq), code, fieldId ?? ""].joined(separator: ":")
+    }
+}
+
+/// The targeted read used to retry one item without replaying the whole feed.
+public struct InventorySyncItemResult: Hashable, Sendable {
+    public let item: InventoryItem?
+    public let issues: [InventorySyncIssue]
+    public let catalogueVersion: String
+    public let catalogueRevision: Int?
+
+    public init(
+        item: InventoryItem?, issues: [InventorySyncIssue] = [], catalogueVersion: String = "",
+        catalogueRevision: Int? = nil
+    ) {
+        self.item = item
+        self.issues = issues
         self.catalogueVersion = catalogueVersion
         self.catalogueRevision = catalogueRevision
     }
@@ -242,6 +298,10 @@ public protocol InventorySyncTransport: Sendable {
     ///   is beyond the server's high-water mark or `epoch` is one it does not
     ///   recognise.
     func fetchChanges(since: Int, epoch: String, limit: Int) async throws -> InventoryChangesPage
+
+    /// Reads one item after a page reported an item-specific projection issue.
+    /// The result is applied without moving the change-feed cursor.
+    func fetchItem(itemId: String) async throws -> InventorySyncItemResult
 
     func fetchItemEvents(itemId: String, cursor: String?, limit: Int) async throws
         -> InventoryEventPage

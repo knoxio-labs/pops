@@ -43,6 +43,7 @@ import {
   type PillarBootstrapHandle,
 } from '@pops/pillar-sdk/bootstrap';
 import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import {
   assertRefreshTokenRetentionCoversTtl,
@@ -147,28 +148,35 @@ const pairingCodeTtlMs = resolvePairingCodeTtlMs();
 // `resolveProbeTimeoutMs`'s doc comment for the one caller that raises it.
 const probeTimeoutMs = resolveProbeTimeoutMs();
 
-const app = createBfmApiApp({
-  version,
-  db: bfmDb.db,
-  accessTokenSigningKey,
-  publicBaseUrl,
-  internalBaseUrls: sdkConfig.internalBaseUrls,
-  probeTimeoutMs,
-  finance,
-  inventory,
-  inventoryMedia,
-  purchases,
-  contacts,
-  barcode,
-  barcodeLogger: {
-    info: (message, context) => {
-      process.stdout.write(`${JSON.stringify({ scope: 'bfm-api', message, ...context })}\n`);
+const app = createBfmApiApp(
+  {
+    version,
+    db: bfmDb.db,
+    accessTokenSigningKey,
+    publicBaseUrl,
+    internalBaseUrls: sdkConfig.internalBaseUrls,
+    probeTimeoutMs,
+    finance,
+    inventory,
+    inventoryMedia,
+    purchases,
+    contacts,
+    barcode,
+    barcodeLogger: {
+      info: (message, context) => {
+        process.stdout.write(`${JSON.stringify({ scope: 'bfm-api', message, ...context })}\n`);
+      },
     },
+    refreshTokenTtlMs,
+    issuanceLimiter,
+    pairingCodeTtlMs,
   },
-  refreshTokenTtlMs,
-  issuanceLimiter,
-  pairingCodeTtlMs,
-});
+  {
+    serviceAccountVerifier: createRegistryServiceAccountVerifier({
+      registryUrl: sdkConfig.registryUrl,
+    }),
+  }
+);
 
 let pruneCredentialsWorker: PruneCredentialsWorkerHandle | undefined;
 const server = app.listen(port, () => {

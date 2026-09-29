@@ -99,6 +99,31 @@ internal struct InventorySyncRepairRowView: View {
     }
 }
 
+/// One item-specific server failure: the item remains named and the user can
+/// retry only that item, without replaying the rest of the feed.
+internal struct InventorySyncIssueRowView: View {
+    internal let row: InventorySyncIssueRow
+    internal let loadPhoto: @MainActor (String) async -> Data?
+    internal let onRetry: () -> Void
+
+    internal var body: some View {
+        InventorySyncRowLabel(display: row.display, caption: row.problem, loadPhoto: loadPhoto) {
+            if row.issue.retryable {
+                Button("Retry", action: onRetry)
+                    .buttonStyle(.borderless)
+                    .frame(minHeight: PopsSize.touchTarget)
+            } else {
+                InventorySymbol.attention.image
+                    .font(.popsHeadline)
+                    .foregroundStyle(Color.popsDestructive)
+                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+                    .accessibilityLabel("Needs attention")
+            }
+        }
+        .accessibilityHint(row.issue.retryable ? "Retry this item" : "No retry available")
+    }
+}
+
 /// Why a waiting change is not being sent: turning while the phone fetches
 /// newer fields, amber when only an app update moves it, red when nothing
 /// will.

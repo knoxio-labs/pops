@@ -53,6 +53,7 @@ internal struct PurchaseDetailScreenWiringTests {
         #expect(Self.viewer.contains("PurchaseDetailAccessibility.viewerClose"))
         #expect(Self.header.contains(".accessibilityElement(children: .ignore)"))
         #expect(Self.header.contains("PurchaseDetailAccessibility.receiptPlate"))
+        #expect(Self.header.contains(".accessibilityElement(children: .ignore)"))
     }
 
     @Test("stable automation identifiers retain their public spelling")
