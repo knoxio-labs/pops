@@ -19,7 +19,7 @@ import { startAcceptanceStack, type AcceptanceStack } from './test-helpers-accep
 
 const conflictSchema = z.object({
   code: z.literal('inventory.catalogue.draft_conflict'),
-  currentDraftVersion: z.number().int().positive(),
+  details: z.object({ currentDraftVersion: z.number().int().positive() }),
 });
 const currentDraftSchema = z.union([
   z.object({ draft: descriptorSchema }).transform((body) => body.draft),
@@ -66,7 +66,7 @@ describe('S4 catalogue draft concurrency', () => {
       { kind: 'put_type', key: 'acc_from_b', label: 'From editor B' },
     ]);
     expect(stale.status).toBe(409);
-    expect(conflictSchema.parse(stale.body).currentDraftVersion).toBe(editorA.version);
+    expect(conflictSchema.parse(stale.body).details.currentDraftVersion).toBe(editorA.version);
     const unchanged = await editorBReads();
     expect(unchanged.revision.draftVersion).toBe(editorA.version);
     expect(unchanged.types.some((type) => type.key === 'acc_from_b')).toBe(false);

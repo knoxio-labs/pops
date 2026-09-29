@@ -53,11 +53,13 @@ internal enum BFMRepositoryFailure {
             switch popsError.code {
             case "invalid_token", "device_revoked", "capability_not_granted":
                 return .unauthorized
-            case "upstream_unavailable", "upstream_degraded", "upstream_misconfigured":
+            case "gateway.upstream_unavailable", "gateway.upstream_degraded",
+                "gateway.upstream_misconfigured", "upstream_unavailable", "upstream_degraded",
+                "upstream_misconfigured":
                 return .unavailable
-            case "upstream_contract_mismatch":
+            case "gateway.upstream_contract_mismatch", "upstream_contract_mismatch":
                 return .contractMismatch
-            case "upstream_conflict":
+            case "gateway.upstream_conflict", "upstream_conflict":
                 return .conflict(popsError.code)
             default:
                 return .transport(popsError)
@@ -88,13 +90,13 @@ internal enum BFMRepositoryFailure {
     /// The BFM's upstream vocabulary, collapsed onto what a screen can do
     /// about it — but not past the three distinctions that matter.
     ///
-    /// `upstream_unavailable`, `upstream_contract_mismatch`, and
-    /// `upstream_conflict` must not converge. The first is "the pillar behind
-    /// this is not answering", worth retrying; the second is "it answered
+    /// `gateway.upstream_unavailable`, `gateway.upstream_contract_mismatch`,
+    /// and `gateway.upstream_conflict` must not converge. The first is "the pillar
+    /// behind this is not answering", worth retrying; the second is "it answered
     /// something this build cannot read"; the third is a write collision that
     /// preserves its wire reason because retrying the same input cannot work.
     ///
-    /// `upstream_misconfigured` joins the unavailable side rather than the
+    /// `gateway.upstream_misconfigured` joins the unavailable side rather than the
     /// mismatch one: a pillar whose configuration is wrong is not serving,
     /// and nothing about the phone's build is implicated. Matched on the raw
     /// string because the generator emits one closed enum per status and
@@ -102,11 +104,13 @@ internal enum BFMRepositoryFailure {
     /// identical case.
     internal static func upstreamFailure(_ code: String, operation: String) -> RepositoryError {
         switch code {
-        case "upstream_unavailable", "upstream_degraded", "upstream_misconfigured":
+        case "gateway.upstream_unavailable", "gateway.upstream_degraded",
+            "gateway.upstream_misconfigured", "upstream_unavailable", "upstream_degraded",
+            "upstream_misconfigured":
             return .unavailable
-        case "upstream_contract_mismatch":
+        case "gateway.upstream_contract_mismatch", "upstream_contract_mismatch":
             return .contractMismatch
-        case "upstream_conflict":
+        case "gateway.upstream_conflict", "upstream_conflict":
             return .conflict(code)
         default:
             return .transport("\(operation): upstream \(code)")

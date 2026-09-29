@@ -333,7 +333,7 @@ internal struct ContentViewTabSwitcherTests {
 @Suite("ContentView feature switching wiring")
 internal struct ContentViewFeatureSwitchingWiringTests {
     /// `.../AppTests/ContentViewFeatureSwitchingTests.swift`
-    private static let contentViewSource: String = {
+    internal static let contentViewSource: String = {
         let path = URL(filePath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
