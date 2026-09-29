@@ -400,6 +400,78 @@ describe('the snapshot', () => {
     expect(fake.snapshotCalls).toEqual([{ cursor: 'abc', limit: 10 }]);
   });
 
+  it('relays item-specific sync issues beside an applied item', async () => {
+    const issue = {
+      itemId: 'item-1',
+      itemName: 'Drill',
+      seq: 3,
+      code: 'enum_option_unknown',
+      fieldId: 'e2396721-1ef8-5bff-b7af-bef0c9aee964',
+      fieldKey: 'Fitting',
+      message: 'The “Fitting” value is not available in the current sync catalogue.',
+      itemApplied: true,
+      retryable: true,
+    };
+    const fake = createInventoryFake({
+      snapshotResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          highWaterSeq: 3,
+          minimumProtocol: 2,
+          catalogueVersion: 'cat-1',
+          total: 1,
+          items: [drillItem()],
+          issues: [issue],
+          locations: [],
+          nextCursor: null,
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, '/mobile/inventory/sync/snapshot');
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.issues).toEqual([issue]);
+  });
+
+  it('reads one item and its issues for a targeted retry', async () => {
+    const issue = {
+      itemId: 'item-1',
+      itemName: 'Drill',
+      seq: 3,
+      code: 'enum_option_unknown',
+      fieldId: 'e2396721-1ef8-5bff-b7af-bef0c9aee964',
+      fieldKey: 'Fitting',
+      message: 'The “Fitting” value is not available in the current sync catalogue.',
+      itemApplied: true,
+      retryable: true,
+    };
+    const fake = createInventoryFake({
+      itemResult: {
+        'item-1': {
+          kind: 'ok',
+          value: {
+            item: drillItem(),
+            issues: [issue],
+            catalogueVersion: 'cat-1',
+            catalogueRevision: null,
+          },
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, '/mobile/inventory/sync/items/item-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.item.id).toBe('item-1');
+    expect(res.body.issues).toEqual([issue]);
+    expect(fake.itemCalls).toEqual([{ id: 'item-1' }]);
+  });
+
   it('answers minimumProtocol 1 for a page from an inventory pillar that predates the rollout gate', async () => {
     const fake = createInventoryFake({
       snapshotResult: {

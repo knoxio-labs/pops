@@ -94,7 +94,7 @@ export function BulkSetFieldSheet({
         field={field}
         input={input}
         compatibleCount={compatibleCount}
-        patch={field === undefined ? null : bulkFieldPatch(field, input)}
+        patch={field === undefined ? null : bulkFieldPatch(field, input, catalogue?.types ?? [])}
         busy={busy}
         onOpenChange={onOpenChange}
         onConfirm={onConfirm}

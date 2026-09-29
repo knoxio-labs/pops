@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { InventoryApiError } from '../inventory-api-helpers';
+import { MCP_PUBLISH_TOOL } from './computed/EditorNotices';
 import { PublishPanel } from './PublishPanel';
 
 import type { CatalogueCompatibility, CatalogueDescriptor, CatalogueReadiness } from './types';
@@ -104,13 +105,27 @@ describe('PublishPanel', () => {
       });
 
       expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
-      expect(
-        screen.getByText(
-          /cannot publish without replacing the incompatible definition or supplying the explicit named migration/u
-        )
-      ).toBeInTheDocument();
+      if (classification === 'forbidden')
+        expect(
+          screen.getByText(
+            /cannot publish without replacing the incompatible definition or supplying the explicit named migration/u
+          )
+        ).toBeInTheDocument();
     }
   );
+
+  it('names the MCP publish route for migration-required drafts', () => {
+    renderPanel({
+      readiness: {
+        status: 'ready',
+        compatibility: compatibility('migration_required'),
+        operations: [],
+      },
+    });
+
+    expect(screen.getByText('Migration required: publish through MCP')).toBeInTheDocument();
+    expect(screen.getByText(MCP_PUBLISH_TOOL)).toBeInTheDocument();
+  });
 
   it('refuses to publish a forbidden result even when the disabled button is clicked', () => {
     const { onPublish } = renderPanel({
@@ -177,7 +192,7 @@ describe('PublishPanel', () => {
     });
 
     expect(screen.queryByText('Passed')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Migration required').length).toBeGreaterThan(0);
+    expect(screen.getByText('Migration required: publish through MCP')).toBeInTheDocument();
   });
 
   it('renders every structured validation issue returned by Inventory', () => {

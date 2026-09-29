@@ -43,7 +43,15 @@ describe('InventoryPage', () => {
 
     const body = screen.getByTestId('body');
     const frame = body.parentElement?.parentElement;
-    expect(frame).toHaveClass('relative', 'flex', 'min-h-120', 'flex-col', 'gap-4', PAGE_HEIGHT);
+    expect(frame).toHaveClass(
+      'relative',
+      'flex',
+      'min-h-120',
+      'flex-col',
+      'gap-4',
+      'overflow-hidden',
+      PAGE_HEIGHT
+    );
     expect(body.parentElement).toHaveClass('flex', 'min-h-0', 'flex-1', 'flex-col', 'body-token');
 
     const renderedOrder = [

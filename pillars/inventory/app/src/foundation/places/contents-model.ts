@@ -38,6 +38,11 @@ interface GroupOptions {
   ancestors?: ReadonlySet<string>;
 }
 
+interface ContentMatches {
+  boxIds: ReadonlySet<string>;
+  groupIds: ReadonlySet<string>;
+}
+
 function groupsFor(world: PlacementWorld, box: ItemRowModel, options: GroupOptions): BoxGroup[] {
   const { depth, keep, ancestors = new Set() } = options;
   if (ancestors.has(box.id)) return [];
@@ -52,6 +57,52 @@ function groupsFor(world: PlacementWorld, box: ItemRowModel, options: GroupOptio
         groupsFor(world, entry, { depth: depth + 1, keep, ancestors: nextAncestors })
       ),
   ];
+}
+
+function parentBoxId(group: BoxGroup): string | null {
+  return group.box.placement.kind === 'container' ? group.box.placement.containerId : null;
+}
+
+function includeMatchingAncestors(
+  groups: readonly BoxGroup[],
+  groupByBoxId: ReadonlyMap<string, BoxGroup>,
+  matchingGroups: Set<string>
+): void {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const group of groups) {
+      const parentId = parentBoxId(group);
+      if (
+        matchingGroups.has(group.box.id) &&
+        parentId !== null &&
+        groupByBoxId.has(parentId) &&
+        !matchingGroups.has(parentId)
+      ) {
+        matchingGroups.add(parentId);
+        changed = true;
+      }
+    }
+  }
+}
+
+function contentMatches(contents: PlaceContents, needle: string): ContentMatches {
+  const boxIds = new Set<string>();
+  const groupIds = new Set<string>();
+  const groupByBoxId = new Map(contents.boxes.map((group) => [group.box.id, group]));
+
+  for (const group of contents.boxes) {
+    if (matches(needle, group.box.name, group.box.code)) {
+      boxIds.add(group.box.id);
+      groupIds.add(group.box.id);
+    }
+    if (group.contents.some((entry) => matches(needle, entry.name, entry.code))) {
+      groupIds.add(group.box.id);
+    }
+  }
+
+  includeMatchingAncestors(contents.boxes, groupByBoxId, groupIds);
+  return { boxIds, groupIds };
 }
 
 /** Builds a place's contents, excluding inactive rows unless requested. */
@@ -82,9 +133,13 @@ export function placeContents(
 export function filterContents(contents: PlaceContents, query: string): PlaceContents {
   const needle = query.trim().toLowerCase();
   if (needle === '') return contents;
+  const { boxIds, groupIds } = contentMatches(contents, needle);
+
   const boxes = contents.boxes.flatMap((group) => {
-    if (matches(needle, group.box.name, group.box.code)) return [group];
-    const matching = group.contents.filter((item) => matches(needle, item.name, item.code));
+    if (boxIds.has(group.box.id)) return [group];
+    const matching = group.contents.filter(
+      (item) => matches(needle, item.name, item.code) || groupIds.has(item.id)
+    );
     return matching.length === 0 ? [] : [{ ...group, contents: matching }];
   });
   return {

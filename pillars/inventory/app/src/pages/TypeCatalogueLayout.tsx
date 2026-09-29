@@ -5,6 +5,7 @@ import { Badge, Button, Card, CardContent, CardHeader, PageHeader, cn } from '@p
 import { AuditDialog } from '../catalogue-editor/AuditDialog';
 import { TypeList } from '../catalogue-editor/CatalogueNavigation';
 import { PublishPanel } from '../catalogue-editor/PublishPanel';
+import { PAGE_HEIGHT } from '../foundation/frame/page-frame.js';
 import { ArchiveCatalogueDialog } from './ArchiveCatalogueDialog';
 import { CatalogueEditorContent } from './CatalogueEditorContent';
 import { type useTypeCataloguePage } from './useTypeCataloguePage';
@@ -24,7 +25,7 @@ interface LayoutProps {
 /** Composes the focused catalogue navigation, editor, review, and audit surfaces. */
 export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }: LayoutProps) {
   return (
-    <div className="space-y-6">
+    <div className={cn('flex min-h-0 flex-col gap-6 overflow-hidden', PAGE_HEIGHT)}>
       <PageHeader
         title="Type catalogue"
         description="Edit one persisted draft, validate compatibility, then publish an atomic revision."
@@ -36,8 +37,8 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
         }
       />
       <RevisionNotice page={page} />
-      <div className="grid gap-5 lg:grid-cols-4">
-        <div className="lg:col-span-1">
+      <div className="grid min-h-0 min-w-0 flex-1 gap-5 overflow-y-auto lg:grid-cols-4 lg:grid-rows-1 lg:overflow-hidden">
+        <div className="min-h-0 lg:col-span-1 lg:h-full lg:min-h-0 lg:overflow-y-auto">
           <TypeList
             types={page.types}
             selectedId={page.selectedTypeId}
@@ -45,23 +46,27 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
             onSelect={page.selectType}
           />
         </div>
-        <Card className="lg:col-span-3">
-          <CardHeader className="space-y-5">
+        <Card className="min-h-0 min-w-0 lg:col-span-3 lg:flex lg:flex-col">
+          <CardHeader className="lg:shrink-0">
             <EditorTitle page={page} />
-            <EditorSteps mode={page.mode} />
           </CardHeader>
-          <CardContent className="space-y-6">
-            <CatalogueEditorContent page={page} onOperation={onOperation} />
-            <PublishPanel
-              catalogue={page.catalogue}
-              readiness={page.readiness}
-              error={page.error}
-              isPending={page.isPending}
-              onReload={() => void page.reload()}
-              onAbandon={onAbandon}
-              onPublish={onPublish}
-              onRecheck={page.recheckCompatibility}
-            />
+          <CardContent className="space-y-6 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden">
+            <EditorSteps mode={page.mode} />
+            <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+              <CatalogueEditorContent page={page} onOperation={onOperation} />
+            </div>
+            <div className="lg:shrink-0">
+              <PublishPanel
+                catalogue={page.catalogue}
+                readiness={page.readiness}
+                error={page.error}
+                isPending={page.isPending}
+                onReload={() => void page.reload()}
+                onAbandon={onAbandon}
+                onPublish={onPublish}
+                onRecheck={page.recheckCompatibility}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -117,7 +122,7 @@ function EditorTitle({ page }: { readonly page: ReadyPage }) {
 function EditorSteps({ mode }: { readonly mode: Page['mode'] }) {
   const activeStep = mode === 'type' || mode === 'new-type' ? 0 : 1;
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-3 lg:shrink-0">
       {['Type details', 'Fields', 'Review & publish'].map((step, index) => (
         <div
           key={step}
@@ -140,7 +145,7 @@ function EditorSteps({ mode }: { readonly mode: Page['mode'] }) {
 
 TypeCatalogueLayout.Error = function Error({ onRetry }: { readonly onRetry: () => void }) {
   return (
-    <div className="space-y-6">
+    <div className={cn('flex min-h-0 flex-col gap-6 overflow-hidden', PAGE_HEIGHT)}>
       <PageHeader
         title="Type catalogue"
         description="Define the fields and behaviour available to inventory items."

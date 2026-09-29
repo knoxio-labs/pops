@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 
 import { Button, cn } from '@pops/ui';
 
@@ -25,7 +25,7 @@ export function EgoFab({ open, onToggle }: EgoFabProps) {
       )}
       aria-label={open ? 'Close chat' : 'Open chat'}
     >
-      <Sparkles className="h-6 w-6" />
+      <MessageSquare className="h-6 w-6" />
     </Button>
   );
 }

@@ -2,12 +2,14 @@ import { Cable, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { Button, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { Button } from '@pops/ui';
 
 import { OFFLINE_REASON, StateBanner } from '../../foundation/feedback/state-banner.js';
 import { InventoryPage } from '../../foundation/frame/page-frame.js';
 import { ListError, ListSkeleton, OfflineBanner } from '../../foundation/list-page/list-states.js';
+import { ConnectionsTabs } from '../../foundation/secondary-page/connections-tabs.js';
 import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
+import { useConnectionsTabCounts } from '../../inventory-web/useConnectionsTabCounts.js';
 import { ConnectEndsDialog } from './connect-ends-dialog.js';
 import { ConnectionsList } from './connections-list.js';
 import { ConnectionsSelectionActions } from './connections-selection-actions.js';
@@ -36,23 +38,6 @@ function ConnectButton({ online, onOpen }: { online: boolean; onOpen: () => void
         Connect
       </Button>
     </HintTooltip>
-  );
-}
-
-function ConnectionsTabs(): ReactElement {
-  const navigate = useNavigate();
-  return (
-    <Tabs
-      value="connections"
-      onValueChange={(value) => {
-        if (value === 'fixtures') void navigate('/inventory/connections/fixtures');
-      }}
-    >
-      <TabsList aria-label="Connections and fixtures">
-        <TabsTrigger value="connections">Connections</TabsTrigger>
-        <TabsTrigger value="fixtures">Fixtures</TabsTrigger>
-      </TabsList>
-    </Tabs>
   );
 }
 
@@ -110,6 +95,8 @@ function RegistryBody({ model, actions }: ConnectionsPageViewProps): ReactElemen
 
 /** Renders the Connections page shell and its current presentation. */
 export function ConnectionsPageView({ model, actions }: ConnectionsPageViewProps): ReactElement {
+  const navigate = useNavigate();
+  const counts = useConnectionsTabCounts();
   const [connectOpen, setConnectOpen] = useState(false);
   const staleBanner = model.changed.stale ? (
     <StateBanner
@@ -127,7 +114,15 @@ export function ConnectionsPageView({ model, actions }: ConnectionsPageViewProps
       icon={Cable}
       description="What plugs into, feeds or pairs with what, across the house."
       actions={<ConnectButton online={model.online} onOpen={() => setConnectOpen(true)} />}
-      tabs={<ConnectionsTabs />}
+      tabs={
+        <ConnectionsTabs
+          value="connections"
+          counts={counts}
+          onChange={(value) => {
+            if (value === 'fixtures') void navigate('/inventory/connections/fixtures');
+          }}
+        />
+      }
       banner={!model.online ? <OfflineBanner /> : staleBanner}
       bodyClassName="gap-3"
       dock={

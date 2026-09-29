@@ -1,0 +1,6 @@
+appId: com.knoxiolabs.pops.local
+name: Open Purchases home
+---
+- tapOn: 'Purchases'
+- assertVisible:
+    id: 'purchases-home-list'

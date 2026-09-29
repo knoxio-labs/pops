@@ -2,79 +2,24 @@
 import { and, eq } from 'drizzle-orm';
 
 import { itemFieldValues, items } from '../db/schema.js';
-import { resolveProtocol1TypeById, type PersistedItemTypeField } from './catalogue.js';
-import { protocol1RangeFields } from './protocol-1-range.js';
+import { resolveProtocol1TypeById } from './catalogue.js';
 import {
-  Protocol1ValueError,
-  type Protocol1FieldValue,
-  type Protocol1Fields,
-} from './protocol-1-types.js';
-import { parseCanonicalValue } from './value-dispatch.js';
+  projectLegacyRow,
+  projectRange,
+  type Protocol1Projection,
+  type Protocol1ProjectionIssue,
+} from './protocol-1-projection.js';
 
 import type { CommandDb } from '../db/command-db.js';
+import type { Protocol1Fields } from './protocol-1-types.js';
 
-function objectValue(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function optionValue(value: unknown): value is { readonly optionId: string } {
-  return objectValue(value) && typeof value['optionId'] === 'string';
-}
-
-function measurementValue(
-  value: unknown
-): value is { readonly amount: string; readonly unit: string } {
-  return (
-    objectValue(value) && typeof value['amount'] === 'string' && typeof value['unit'] === 'string'
-  );
-}
-
-function projectValue(field: PersistedItemTypeField, valueJson: string): Protocol1FieldValue {
-  const readable =
-    field.kind === 'enum' ? { ...field, archivedEnumOptionIds: new Set<string>() } : field;
-  const value = parseCanonicalValue(readable, valueJson).value;
-  if (typeof value === 'string' || typeof value === 'boolean') return value;
-  if (optionValue(value)) {
-    const option = field.enumOptions.find((candidate) => candidate.id === value.optionId);
-    if (!option) throw new Protocol1ValueError(field.key, 'contains an unknown enum option');
-    return option.label;
-  }
-  if (measurementValue(value)) {
-    const amount = Number(value.amount);
-    if (!Number.isFinite(amount)) {
-      throw new Protocol1ValueError(field.key, 'cannot be represented by protocol 1');
-    }
-    return { value: amount, unit: value.unit };
-  }
-  throw new Protocol1ValueError(field.key, `cannot be represented by protocol 1 (${field.kind})`);
-}
-
-function projectRange(
-  fields: Record<string, Protocol1FieldValue>,
-  type: Parameters<typeof protocol1RangeFields>[0]
-): void {
-  const range = protocol1RangeFields(type);
-  if (!range) return;
-  const low = fields[range.minimum.key];
-  const high = fields[range.maximum.key];
-  delete fields[range.minimum.key];
-  delete fields[range.maximum.key];
-  if (
-    objectValue(low) &&
-    objectValue(high) &&
-    typeof low['value'] === 'number' &&
-    typeof high['value'] === 'number' &&
-    low['unit'] === high['unit'] &&
-    typeof low['unit'] === 'string'
-  ) {
-    fields['Colour temperature'] = { low: low['value'], high: high['value'], unit: low['unit'] };
-  }
-}
+export type { Protocol1Projection, Protocol1ProjectionIssue } from './protocol-1-projection.js';
 
 function loadLegacyFields(
   db: CommandDb,
   itemId: string,
-  cardinality: 'reject' | 'omit'
+  cardinality: 'reject' | 'omit',
+  issues: Protocol1ProjectionIssue[] | undefined = undefined
 ): Protocol1Fields {
   const item = db.select({ typeId: items.typeId }).from(items).where(eq(items.id, itemId)).get();
   if (!item?.typeId) return {};
@@ -85,22 +30,13 @@ function loadLegacyFields(
     .from(itemFieldValues)
     .where(and(eq(itemFieldValues.itemId, itemId), eq(itemFieldValues.source, 'stored')))
     .all();
-  const fields: Record<string, Protocol1FieldValue> = {};
+  const fields: Protocol1Fields = {};
   const definitions = new Map(type.fields.map((field) => [field.id, field]));
   const multipleValueFieldIds = new Set(
     rows.filter((row) => row.ordinal !== 0).map((row) => row.fieldId)
   );
-  for (const row of rows) {
-    if (row.ordinal !== 0) {
-      if (cardinality === 'reject') {
-        throw new Protocol1ValueError(row.fieldId, 'has cardinality unsupported by protocol 1');
-      }
-      continue;
-    }
-    if (multipleValueFieldIds.has(row.fieldId)) continue;
-    const field = definitions.get(row.fieldId);
-    if (field) fields[field.key] = projectValue(field, row.valueJson);
-  }
+  const options = { definitions, multipleValueFieldIds, cardinality, issues };
+  for (const row of rows) projectLegacyRow(fields, row, options);
   projectRange(fields, type);
   return fields;
 }
@@ -121,4 +57,21 @@ export function loadLegacyFieldsForProtocol(
   protocol: number
 ): Protocol1Fields {
   return loadLegacyFields(db, itemId, protocol >= 2 ? 'omit' : 'reject');
+}
+
+/**
+ * Builds the compatibility projection without allowing one incompatible
+ * stored value to abort a page. Canonical stable-ID values remain readable;
+ * callers surface the returned issues beside the item.
+ */
+export function loadLegacyFieldsWithIssues(
+  db: CommandDb,
+  itemId: string,
+  protocol: number
+): Protocol1Projection {
+  const issues: Protocol1ProjectionIssue[] = [];
+  return {
+    fields: loadLegacyFields(db, itemId, protocol >= 1 ? 'omit' : 'reject', issues),
+    issues,
+  };
 }

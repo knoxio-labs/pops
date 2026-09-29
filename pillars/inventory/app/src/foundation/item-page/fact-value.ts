@@ -1,4 +1,5 @@
 import { formatWireValue } from '../../catalogue-editor/computed/preview-model';
+import { decimalPlacesFromPresentation } from '../../catalogue-editor/decimal-places';
 
 import type { CatalogueField } from '../../catalogue-editor/types';
 import type { PlacementWorld } from '../model/placement-model';
@@ -33,7 +34,10 @@ function formatValue(value: unknown, field: CatalogueField, world: PlacementWorl
       if (option !== null) return option;
     }
   }
-  return formatWireValue(value);
+  return formatWireValue(value, {
+    kind: field.kind,
+    decimalPlaces: decimalPlacesFromPresentation(field.presentation) ?? undefined,
+  });
 }
 
 /** Formats one catalogue field's wire values as one display line. */

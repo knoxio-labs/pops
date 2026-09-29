@@ -122,6 +122,21 @@ export const MobileInventoryItemSchema = z.object({
 
 export type MobileInventoryItem = z.infer<typeof MobileInventoryItemSchema>;
 
+/** A non-fatal item projection problem returned beside a sync page. */
+export const MobileInventoryItemIssueSchema = z.object({
+  itemId: z.string(),
+  itemName: z.string(),
+  seq: z.number().int(),
+  code: z.string(),
+  fieldId: z.string().nullable(),
+  fieldKey: z.string().nullable(),
+  message: z.string(),
+  itemApplied: z.boolean(),
+  retryable: z.boolean(),
+});
+
+export type MobileInventoryItemIssue = z.infer<typeof MobileInventoryItemIssueSchema>;
+
 /** A place in the tree. Tombstones carry `deletedAt`. */
 export const MobileInventoryLocationSchema = z.object({
   id: z.string(),
@@ -211,6 +226,7 @@ export const MobileInventorySnapshotSchema = z.object({
   catalogueRevision: z.number().int().positive().nullable().default(null),
   total: z.number().int(),
   items: z.array(MobileInventoryItemSchema),
+  issues: z.array(MobileInventoryItemIssueSchema).optional(),
   locations: z.array(MobileInventoryLocationSchema),
   nextCursor: z.string().nullable(),
 });
@@ -222,6 +238,7 @@ export const MobileInventoryChangesSchema = z.object({
   epoch: z.string(),
   minimumProtocol: z.number().int().positive().default(1),
   items: z.array(MobileInventoryItemSchema),
+  issues: z.array(MobileInventoryItemIssueSchema).optional(),
   locations: z.array(MobileInventoryLocationSchema),
   events: z.array(MobileInventoryEventSchema),
   nextSince: z.number().int(),
@@ -231,6 +248,16 @@ export const MobileInventoryChangesSchema = z.object({
 });
 
 export type MobileInventoryChanges = z.infer<typeof MobileInventoryChangesSchema>;
+
+/** One targeted item read and the issues found while projecting it. */
+export const MobileInventoryItemResultSchema = z.object({
+  item: MobileInventoryItemSchema.nullable(),
+  issues: z.array(MobileInventoryItemIssueSchema).optional(),
+  catalogueVersion: z.string().default(''),
+  catalogueRevision: z.number().int().positive().nullable().default(null),
+});
+
+export type MobileInventoryItemResult = z.infer<typeof MobileInventoryItemResultSchema>;
 
 /** One page of one item's history, newest first. */
 export const MobileInventoryItemHistorySchema = z.object({

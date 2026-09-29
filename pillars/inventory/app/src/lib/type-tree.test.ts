@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ancestorIds,
   descendantIds,
+  effectiveCapabilities,
   effectiveFields,
   MAX_TYPE_TREE_DEPTH,
   typeDepth,
@@ -112,6 +113,37 @@ describe('type-tree', () => {
       'root-z',
       'child-a',
       'leaf-a',
+    ]);
+  });
+
+  it('inherits capabilities, expands reference targets, and lets a child replace a field', () => {
+    const sharedParent = field('shared', 'root', 'parent-name', 0);
+    const reference = {
+      ...field('reference', 'root', 'related', 1),
+      kind: 'reference' as const,
+      referenceTypeIds: ['root'],
+    };
+    const parent = {
+      ...type('root', 'Bedding', null, [sharedParent, reference]),
+      capabilities: ['containment'],
+    };
+    const child = {
+      ...type('child', 'Sheet', 'root', [field('shared', 'child', 'child-name', 0)]),
+      capabilities: [],
+    };
+    const leaf = type('leaf', 'Fitted sheet', 'child');
+
+    const resolved = effectiveFields([parent, child, leaf], 'leaf');
+
+    expect(resolved.map(({ id, label }) => [id, label])).toEqual([
+      ['shared', 'child-name'],
+      ['reference', 'related'],
+    ]);
+    expect(effectiveCapabilities([parent, child, leaf], 'leaf')).toEqual(['containment']);
+    expect(resolved.find((candidate) => candidate.id === 'reference')?.referenceTypeIds).toEqual([
+      'root',
+      'child',
+      'leaf',
     ]);
   });
 

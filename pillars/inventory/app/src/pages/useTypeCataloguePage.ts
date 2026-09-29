@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 
 import { useCatalogueEditor } from '../catalogue-editor/useCatalogueEditor';
 import {
@@ -16,6 +16,7 @@ import type { ArchiveTarget, EditorMode } from './cataloguePageTypes';
  * navigation changes the parameter without remounting the page.
  */
 export function useTypeCataloguePage() {
+  const navigate = useNavigate();
   const { mode, selectedFieldId, setMode, setSelectedFieldId, setStoredTypeId, storedTypeId } =
     useTypeRouteState();
   const model = useCatalogueEditor();
@@ -38,6 +39,7 @@ export function useTypeCataloguePage() {
   });
   const navigation = useCataloguePageNavigation({
     fields: data.fields,
+    navigate,
     onOperation: actions.applyOperation,
     selectedType: data.selectedType,
     setMode,

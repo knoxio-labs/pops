@@ -1,6 +1,5 @@
 import AppCore
 import DesignSystem
-import Foundation
 import SwiftUI
 
 /// The type, from the catalogue this phone last downloaded.
@@ -8,20 +7,29 @@ internal struct InventoryFormTypeRow: View {
     internal let types: [InventoryType]
     internal let offersNone: Bool
     @Binding internal var typeKey: String?
+    @State private var pickerIsPresented = false
 
     internal var body: some View {
-        NavigationLink {
-            InventoryFormTypePicker(
-                selection: $typeKey,
-                options: InventoryFormTypeOptions.legacy(types),
-                noneTitle: offersNone ? "No type yet" : nil,
-                noneAccessibilityIdentifier: offersNone
-                    ? InventoryAccessibility.itemTypeNone : nil)
+        Button {
+            pickerIsPresented = true
         } label: {
             LabeledContent("Type") {
                 Text(selectedLabel)
                     .foregroundStyle(Color.popsMutedForeground)
             }
+        }
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $pickerIsPresented) {
+            InventoryFormTypePicker(
+                selection: $typeKey,
+                options: InventoryFormTypeOptions.legacy(types),
+                noneTitle: offersNone ? "No type yet" : nil,
+                noneAccessibilityIdentifier: offersNone
+                    ? InventoryAccessibility.itemTypeNone : nil,
+                onChoose: { id in
+                    typeKey = id
+                    pickerIsPresented = false
+                })
         }
         .accessibilityIdentifier(InventoryAccessibility.itemTypePicker)
     }

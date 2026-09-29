@@ -65,7 +65,7 @@ internal struct InventoryItemsBrowserView: View {
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .scrollDismissesKeyboard(.immediately)
         .popsCollapsingTitle("Items")
         .background(Color.popsBackground)

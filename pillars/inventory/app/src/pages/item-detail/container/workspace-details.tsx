@@ -73,7 +73,13 @@ export function containerSectionSpecs(
       count: model.eventCount,
       summary: historySummary(model),
       flagged: model.eventCount === null,
-      body: <HistoryPreviewSection itemId={itemId} eventCount={model.eventCount} />,
+      body: (
+        <HistoryPreviewSection
+          itemId={itemId}
+          eventCount={model.eventCount}
+          events={model.events}
+        />
+      ),
     },
   ];
 }
@@ -96,7 +102,7 @@ export function ContainerDetails({
         ) : (
           <FactsSection
             facts={model.aggregate.facts}
-            typeName={model.aggregate.type?.label ?? model.item.typeName}
+            typeName={model.item.typeName ?? model.aggregate.type?.label ?? null}
             layout="list"
             readOnly={readOnly}
           />

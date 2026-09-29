@@ -1,6 +1,5 @@
 import AppCore
 import Foundation
-import SwiftUI
 import Testing
 
 @testable import FeatureInventory
@@ -61,9 +60,48 @@ internal struct InventoryFormTypeOptionsTests {
     func typePickerLeavesNavigationOwnershipWithCaller() throws {
         let source = try pickerSource()
 
-        #expect(source.contains(".navigationDestination(for: String.self)"))
+        #expect(!source.contains(".navigationDestination(for: String.self)"))
         #expect(!source.contains("NavigationStack"))
         #expect(!source.contains("NavigationPath"))
+    }
+
+    @Test("parent rows use explicit destinations within the caller's stack")
+    func parentRowsUseExplicitDestinations() throws {
+        let source = try pickerSource()
+
+        #expect(source.contains("NavigationLink {"))
+        #expect(source.contains("level(for: option.id)"))
+        #expect(!source.contains(".navigationDestination(for: String.self)"))
+    }
+
+    @Test("selection commits after the picker begins dismissal")
+    func selectionCommitsAfterDismissalBegins() throws {
+        let source = try pickerSource()
+        let chooseBody = try #require(
+            source.split(separator: "private func choose").last.map(String.init))
+        let dismiss = try #require(chooseBody.range(of: "dismiss()")?.lowerBound)
+        let task = try #require(chooseBody.range(of: "Task { @MainActor in")?.lowerBound)
+        let selection = try #require(chooseBody.range(of: "selection = id")?.lowerBound)
+
+        #expect(dismiss < task)
+        #expect(task < selection)
+    }
+
+    @Test("form rows own picker dismissal so the item form stays presented")
+    func formRowsOwnPickerDismissal() throws {
+        let picker = try pickerSource()
+        let rows = try formRowsSource()
+        let protocol2Rows = try protocol2PickerSource()
+
+        #expect(picker.contains("if let onChoose"))
+        #expect(picker.contains("onChoose(id)"))
+        #expect(rows.contains("@State private var pickerIsPresented = false"))
+        #expect(rows.contains(".navigationDestination(isPresented: $pickerIsPresented)"))
+        #expect(rows.contains("pickerIsPresented = false"))
+        #expect(
+            protocol2Rows.contains(".navigationDestination(isPresented: $pickerIsPresented)")
+        )
+        #expect(protocol2Rows.contains("pickerIsPresented = false"))
     }
 
     @Test("search \"pillowcase\" returns its path")
@@ -114,12 +152,23 @@ internal struct InventoryFormTypeOptionsTests {
     }
 
     private func pickerSource() throws -> String {
+        try source("Form/InventoryFormTypePicker.swift")
+    }
+
+    private func formRowsSource() throws -> String {
+        try source("Form/InventoryItemFormRows.swift")
+    }
+
+    private func protocol2PickerSource() throws -> String {
+        try source("Form/InventoryProtocol2TypePicker.swift")
+    }
+
+    private func source(_ relativePath: String) throws -> String {
         let packageRoot = URL(filePath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let file = packageRoot.appending(
-            path: "Sources/FeatureInventory/Form/InventoryFormTypePicker.swift")
+        let file = packageRoot.appending(path: "Sources/FeatureInventory/\(relativePath)")
         return try String(contentsOf: file, encoding: .utf8)
     }
 }

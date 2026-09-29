@@ -80,7 +80,7 @@ jobs:
       full-validation: true
   validation:
     name: Promotion validation
-    if: always()
+    if: ${{ !cancelled() }}
     needs: [classify, quality, units, apps, rust, frontend, browser, images, registry, ios]
     runs-on: ubuntu-latest
     steps:

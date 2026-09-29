@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
+import { PAGE_HEIGHT } from '../../foundation/frame/page-frame';
 import { buildWorld } from '../../foundation/model/placement-model';
 import { blankDraft } from './form-draft';
 import { deriveForm } from './form-view';
@@ -110,6 +111,24 @@ describe('ItemFormPage', () => {
     expect(screen.getByText('Garage')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save and start another' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Suggest a code' })).toBeDisabled();
+
+    const header = screen.getByRole('heading', { name: 'New item' }).closest('header');
+    if (header === null) throw new Error('Form header was not rendered');
+    const page = header.parentElement;
+    if (page === null) throw new Error('Form page frame was not rendered');
+    expect(page).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+
+    const cards = page.children.item(1);
+    if (cards === null) throw new Error('Form cards were not rendered');
+    expect(cards).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-y-auto',
+      'lg:grid-rows-1',
+      'lg:overflow-hidden'
+    );
+    expect(cards.firstElementChild).toHaveClass('min-h-0', 'lg:overflow-y-auto');
+    expect(cards.lastElementChild).toHaveClass('min-w-0', 'lg:min-h-0', 'lg:overflow-y-auto');
   });
 
   it('does not render the type-specific body before a type is selected', () => {

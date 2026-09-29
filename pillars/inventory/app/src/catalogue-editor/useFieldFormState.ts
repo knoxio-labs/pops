@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { decimalPlacesInput, decimalPlacesInputIsValid } from './decimal-places';
 import { EMPTY } from './expression/edit';
 import { fromWire, toWire } from './expression/wire';
 import { catalogueKeyFromLabel } from './types';
@@ -41,6 +42,7 @@ function initialIdentity(field?: CatalogueField) {
 function initialShape(field?: CatalogueField) {
   return {
     cardinality: orDefault(field?.cardinality, 'one' as const),
+    decimalPlaces: decimalPlacesInput(field?.presentation),
     fixedUnit: orDefault(field?.fixedUnit, ''),
     kind: orDefault(field?.kind, 'short_text' as const),
     required: orDefault(field?.required, false),
@@ -81,6 +83,7 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
   const [help, setHelp] = useState(initial.help);
   const [kind, setKind] = useState<FieldKind>(initial.kind);
   const [cardinality, setCardinality] = useState<'one' | 'many'>(initial.cardinality);
+  const [decimalPlaces, setDecimalPlaces] = useState(initial.decimalPlaces);
   const [required, setRequired] = useState(initial.required);
   const [highlighted, setHighlighted] = useState(initial.highlighted);
   const [fixedUnit, setFixedUnit] = useState(initial.fixedUnit);
@@ -96,6 +99,7 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
   return {
     allowOverride,
     cardinality,
+    decimalPlaces,
     expression,
     fixedUnit,
     help,
@@ -110,6 +114,7 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
     storage,
     setAllowOverride,
     setCardinality,
+    setDecimalPlaces,
     setExpression,
     setFixedUnit,
     setHelp,
@@ -136,6 +141,7 @@ function isValid(value: FieldFormContextValue): boolean {
   return (
     value.label.trim() !== '' &&
     (value.field !== undefined || value.keyValue !== '') &&
+    decimalPlacesInputIsValid(value.decimalPlaces) &&
     (value.kind !== 'measurement' || value.fixedUnit.trim() !== '') &&
     (value.kind !== 'reference' || value.referenceKinds.length > 0) &&
     (value.storage === 'stored' || toWire(value.expression) !== null)

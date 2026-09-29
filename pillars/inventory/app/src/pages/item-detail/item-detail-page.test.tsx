@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppContextProvider } from '@pops/navigation';
 
+import { PAGE_HEIGHT } from '../../foundation/item-page/section-parts';
 import { buildWorld } from '../../foundation/model/placement-model';
 import { ShortcutProvider } from '../../foundation/shortcuts/shortcut-provider';
 import { InventoryApiError } from '../../inventory-api-helpers.js';
@@ -15,11 +16,23 @@ import { itemDetailBannerState } from './use-item-detail-state';
 
 import type { ReactElement } from 'react';
 
+import type {
+  WebChangesHeadResponse,
+  WebSyncLedgerGetResponse,
+} from '../../inventory-api/types.gen';
 import type { ItemDetailModel } from './detail-model';
 
-const mocks = vi.hoisted(() => ({ useItemDetailModel: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  useChangedElsewhere: vi.fn(),
+  useItemDetailModel: vi.fn(),
+  useSyncLedger: vi.fn(),
+}));
 
 vi.mock('./use-item-detail-model', () => ({ useItemDetailModel: mocks.useItemDetailModel }));
+vi.mock('../../inventory-web/useChangedElsewhere.js', () => ({
+  useChangedElsewhere: mocks.useChangedElsewhere,
+}));
+vi.mock('../../inventory-web/useSyncLedger.js', () => ({ useSyncLedger: mocks.useSyncLedger }));
 vi.mock('./detail-store-here', () => ({
   DetailStoreHereSheet: (props: {
     open: boolean;
@@ -91,8 +104,45 @@ const model: ItemDetailModel = {
   eventCount: 0,
 };
 
+const changedGroup: WebChangesHeadResponse['groups'][number] = {
+  actorId: 'phone-1',
+  actorKind: 'device',
+  actorLabel: 'Phone',
+  entityCount: 1,
+  eventCount: 1,
+  kindCounts: { edited: 1 },
+  latestServerTime: '2026-09-01T00:01:00Z',
+};
+
+const conflictCase: WebSyncLedgerGetResponse['attention'][number] = {
+  id: 'case-1',
+  itemId: 'item-1',
+  itemName: 'Desk lamp',
+  kind: 'field',
+  problem: 'The name',
+  deviceId: 'phone-1',
+  openedAt: '2026-09-01T00:01:00Z',
+  mine: { at: '2026-09-01T00:01:00Z', source: 'Web', value: 'Desk lamp' },
+  theirs: { at: '2026-09-01T00:01:00Z', source: 'Phone', value: 'Lamp' },
+};
+
+const conflictLedger: WebSyncLedgerGetResponse = {
+  attention: [conflictCase],
+  attentionCount: 1,
+  devices: [],
+  receivedHead: null,
+  resolved: [],
+  waiting: [],
+};
+
 function LocationProbe(): ReactElement {
-  return <output data-testid="route">{useLocation().pathname}</output>;
+  const location = useLocation();
+  return (
+    <output data-testid="route">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
 }
 
 function NavigationProbe(): ReactElement {
@@ -135,6 +185,15 @@ beforeEach(() => {
     banner: null,
     retry: vi.fn(),
   });
+  mocks.useChangedElsewhere.mockReturnValue({ groups: [], stale: false, reload: vi.fn() });
+  mocks.useSyncLedger.mockReturnValue({
+    ledger: undefined,
+    status: 'pending',
+    error: null,
+    reportedSince: [],
+    stale: false,
+    reload: vi.fn(),
+  });
 });
 
 describe('ItemDetailPage', () => {
@@ -144,6 +203,26 @@ describe('ItemDetailPage', () => {
     const detail = screen.getAllByLabelText('Facts rail').at(0);
     if (detail === undefined) throw new Error('Facts rail was not rendered');
     expect(header.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('gives the loaded split view one page height and a bounded body', () => {
+    renderPage();
+
+    const header = screen.getByTestId('item-detail-header');
+    const page = header.parentElement;
+    if (page === null) throw new Error('Detail page frame was not rendered');
+    expect(page).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+
+    const content = page.children.item(1);
+    if (content === null) throw new Error('Detail content frame was not rendered');
+    expect(content).toHaveClass('min-h-0', 'flex-1', 'flex-col');
+
+    const rail = screen.getAllByLabelText('Facts rail').at(0);
+    if (rail === undefined) throw new Error('Facts rail was not rendered');
+    const split = rail.parentElement;
+    if (split === null) throw new Error('Detail split body was not rendered');
+    expect(split).toHaveClass('min-h-0', 'flex-1');
+    expect(split.parentElement).toHaveClass('min-h-0', 'flex-1');
   });
 
   it('renders a retry state for a failed lead read', () => {
@@ -230,6 +309,31 @@ describe('ItemDetailPage', () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('opens a matching conflict case in Sync', () => {
+    mocks.useChangedElsewhere.mockReturnValue({
+      groups: [changedGroup],
+      stale: true,
+      reload: vi.fn(),
+    });
+    mocks.useSyncLedger.mockReturnValue({
+      ledger: conflictLedger,
+      status: 'success',
+      error: null,
+      reportedSince: [],
+      stale: false,
+      reload: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(
+      screen.getByText('The name was changed on Phone while you were editing it.')
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Resolve in Sync' }));
+
+    expect(screen.getByTestId('route')).toHaveTextContent('/inventory/sync?case=case-1');
   });
 
   it('uses the unavailable state for an unavailable lead read', () => {

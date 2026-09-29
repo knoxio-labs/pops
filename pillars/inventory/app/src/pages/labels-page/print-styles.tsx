@@ -21,6 +21,7 @@ const PRINT_CSS = `
   }
   :has(.${PRINT_ROOT_CLASS}) {
     margin: 0 !important; padding: 0 !important; border: 0 !important; gap: 0 !important;
+    display: block !important;
     min-height: 0 !important; height: auto !important; max-width: none !important;
     position: static !important; overflow: visible !important; zoom: 1 !important;
     transform: none !important; box-shadow: none !important;

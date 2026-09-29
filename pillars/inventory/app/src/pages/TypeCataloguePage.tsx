@@ -1,5 +1,8 @@
 import { toast } from 'sonner';
 
+import { cn } from '@pops/ui';
+
+import { PAGE_HEIGHT } from '../foundation/frame/page-frame.js';
 import { TypeCatalogueLayout } from './TypeCatalogueLayout';
 import { useTypeCataloguePage } from './useTypeCataloguePage';
 
@@ -10,7 +13,14 @@ export function TypeCataloguePage() {
   const page = useTypeCataloguePage();
   if (page.loading)
     return (
-      <p className="py-16 text-center text-sm text-muted-foreground">Loading type catalogue…</p>
+      <p
+        className={cn(
+          'min-h-0 overflow-hidden py-16 text-center text-sm text-muted-foreground',
+          PAGE_HEIGHT
+        )}
+      >
+        Loading type catalogue…
+      </p>
     );
   if (page.catalogue === undefined)
     return <TypeCatalogueLayout.Error onRetry={() => void page.reload()} />;

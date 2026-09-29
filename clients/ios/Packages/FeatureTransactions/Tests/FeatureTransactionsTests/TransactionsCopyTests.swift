@@ -44,6 +44,29 @@ internal struct TransactionsCopyTests {
         #expect(!outage.lowercased().contains("no transactions"))
     }
 
+    @Test("a structured gateway outage keeps the transaction outage explanation")
+    func structuredGatewayOutage() {
+        let error = PopsError(
+            code: "gateway.upstream_unavailable", message: "The upstream service is unavailable.",
+            requestID: "outage-request", retryable: true, kind: .server)
+
+        #expect(
+            TransactionsCopy.message(for: .transport(error))
+                == TransactionsCopy.message(for: .unavailable))
+    }
+
+    @Test(
+        "other structured failures are not reported as a gateway outage",
+        arguments: ["ios.net.offline", "bfm.contract_mismatch", "gateway.unknown"])
+    func otherStructuredFailures(code: String) {
+        let error = PopsError(
+            code: code, message: "Diagnostic detail", retryable: true, kind: .server)
+
+        #expect(
+            TransactionsCopy.message(for: .transport(error))
+                == TransactionsCopy.message(for: .transport("diagnostic")))
+    }
+
     /// The diagnostic in a transport failure is for a log. Nobody holding a
     /// phone can act on a URLError code, and putting one on screen reads as the
     /// app having broken rather than the network having.

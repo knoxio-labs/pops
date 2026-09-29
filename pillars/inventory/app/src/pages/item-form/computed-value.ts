@@ -1,3 +1,5 @@
+import { formatDecimal } from '../../catalogue-editor/decimal-places';
+
 import type { FormFieldDef } from './field-model';
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -28,7 +30,13 @@ function formatMeasurement(field: FormFieldDef, value: unknown): FormattedComput
   const amount = stringValue(value, 'amount');
   const unit = stringValue(value, 'unit');
   return amount !== null && unit !== null && unit === field.fixedUnit
-    ? { text: `${amount} ${unit}`, valid: true }
+    ? { text: `${formatDecimal(amount, field.decimalPlaces ?? null)} ${unit}`, valid: true }
+    : { text: 'Invalid value.', valid: false };
+}
+
+function formatDecimalValue(field: FormFieldDef, value: unknown): FormattedComputedValue {
+  return typeof value === 'string' || typeof value === 'number'
+    ? { text: formatDecimal(value, field.decimalPlaces ?? null), valid: true }
     : { text: 'Invalid value.', valid: false };
 }
 
@@ -62,6 +70,8 @@ export function formatComputedValueResult(
       return formatEnum(field, value);
     case 'measurement':
       return formatMeasurement(field, value);
+    case 'decimal':
+      return formatDecimalValue(field, value);
     case 'reference':
       return formatReference(value);
     case 'boolean':

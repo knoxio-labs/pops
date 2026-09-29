@@ -128,6 +128,29 @@ internal struct InventoryItemDetailViewModelTests {
         #expect(model.undoOffer?.message == "Restored")
     }
 
+    @Test("an active item's detail row includes Edit")
+    func activeItemShowsEditInActionRow() async throws {
+        let model = InventoryItemDetailViewModel(itemId: "tv", store: Self.store())
+        let (task, loaded) = await model.startAndAwaitDetail()
+        defer { task.cancel() }
+        let record = try #require(loaded?.record)
+
+        #expect(InventoryItemDetailPrimaryAction.row(for: record).map(\.id).contains("edit"))
+    }
+
+    @Test("a specialized item row appends Edit after its supplied actions")
+    func specializedItemRowShowsEdit() async throws {
+        let model = InventoryItemDetailViewModel(itemId: "tv", store: Self.store())
+        let (task, loaded) = await model.startAndAwaitDetail()
+        defer { task.cancel() }
+        let record = try #require(loaded?.record)
+        let close = InventoryAction("close", "Close", symbol: .close)
+
+        #expect(
+            InventoryItemDetailActionRowModel.row(for: record, actions: [close]).map(\.id)
+                == ["close", "edit"])
+    }
+
     @Test("Destroy leaves no Undo and withdraws one already up")
     func destroyWithdrawsUndo() async throws {
         let store = Self.store()

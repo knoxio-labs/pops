@@ -31,7 +31,11 @@ export {
   validateProtocol1Fields,
 } from './protocol-1-values.js';
 export { clearItemFieldValues, copyItemFieldValues } from './protocol-1-copy.js';
-export { loadLegacyFieldsForProtocol, loadProtocol1Fields } from './protocol-1-read.js';
+export {
+  loadLegacyFieldsForProtocol,
+  loadLegacyFieldsWithIssues,
+  loadProtocol1Fields,
+} from './protocol-1-read.js';
 export { Protocol1ValueError } from './protocol-1-types.js';
 export { projectProtocol1Catalogue } from './protocol-1-catalogue.js';
 export type {
@@ -47,6 +51,7 @@ export type {
   Protocol1MeasurementValue,
   Protocol1RangeValue,
 } from './protocol-1-types.js';
+export type { Protocol1Projection, Protocol1ProjectionIssue } from './protocol-1-read.js';
 export { canonicalizeValue, parseCanonicalValue } from './value-dispatch.js';
 export { PRIMITIVE_KINDS, ValueValidationError } from './value-codec.js';
 export {
@@ -54,6 +59,7 @@ export {
   assertIncomingReferencesPermitType,
   ItemFieldSetError,
   readItemFieldValues,
+  readItemFieldValuesForSync,
   replaceValidatedItemFieldValues,
   validateItemFieldValues,
   validateItemFieldValuesForType,

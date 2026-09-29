@@ -158,6 +158,7 @@ describe('scopes derived for the sync surface', () => {
       .toSorted();
     expect(scopes).toEqual([
       'GET /sync/changes inventory.sync.changes',
+      'GET /sync/items/:id inventory.sync.item',
       'GET /sync/items/:id/events inventory.sync.itemEvents',
       'GET /sync/snapshot inventory.sync.snapshot',
       'GET /types inventory.types.catalogue',

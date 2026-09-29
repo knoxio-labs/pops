@@ -2,6 +2,8 @@ import { useMemo, type Dispatch, type SetStateAction } from 'react';
 
 import { findCreated, publishedField, reorderField, resolveTypeId } from './cataloguePageHelpers';
 
+import type { NavigateFunction } from 'react-router';
+
 import type { CatalogueField, CatalogueOperation, CatalogueType } from '../catalogue-editor/types';
 import type { useCatalogueEditor } from '../catalogue-editor/useCatalogueEditor';
 import type { EditorMode } from './cataloguePageTypes';
@@ -92,6 +94,7 @@ export function useCataloguePageActions({
 /** Owns selection transitions and ordered-field movement for the focused editor. */
 export function useCataloguePageNavigation({
   fields,
+  navigate,
   onOperation,
   selectedType,
   setMode,
@@ -99,6 +102,7 @@ export function useCataloguePageNavigation({
   setStoredTypeId,
 }: {
   readonly fields: readonly CatalogueField[];
+  readonly navigate: NavigateFunction;
   readonly onOperation: (operation: CatalogueOperation) => Promise<unknown>;
   readonly selectedType: CatalogueType | null;
   readonly setMode: Dispatch<SetStateAction<EditorMode>>;
@@ -109,6 +113,7 @@ export function useCataloguePageNavigation({
     setStoredTypeId(id);
     setSelectedFieldId(null);
     setMode('type');
+    void navigate(`/inventory/types/${encodeURIComponent(id)}`);
   }
   function createType(): void {
     setMode('new-type');

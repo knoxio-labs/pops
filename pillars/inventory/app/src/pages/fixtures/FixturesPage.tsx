@@ -2,13 +2,15 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { Button, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { Button } from '@pops/ui';
 
 import { OFFLINE_REASON, StateBanner } from '../../foundation/feedback/state-banner.js';
 import { InventoryPage } from '../../foundation/frame/page-frame.js';
 import { OfflineBanner } from '../../foundation/list-page/list-states.js';
 import { INVENTORY_ICONS } from '../../foundation/model/icons.js';
+import { ConnectionsTabs } from '../../foundation/secondary-page/connections-tabs.js';
 import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
+import { useConnectionsTabCounts } from '../../inventory-web/useConnectionsTabCounts.js';
 import { FixtureFormDialog } from './fixture-form-dialog.js';
 import { FixturesList } from './fixtures-list.js';
 import { useFixturesPageModel } from './fixtures-page-model.js';
@@ -50,23 +52,6 @@ function NewFixtureButton({ online, onNew }: { online: boolean; onNew: () => voi
   );
 }
 
-function ConnectionsTabs(): ReactElement {
-  const navigate = useNavigate();
-  return (
-    <Tabs
-      value="fixtures"
-      onValueChange={(value) => {
-        if (value === 'connections') void navigate('/inventory/connections');
-      }}
-    >
-      <TabsList aria-label="Connections and fixtures">
-        <TabsTrigger value="connections">Connections</TabsTrigger>
-        <TabsTrigger value="fixtures">Fixtures</TabsTrigger>
-      </TabsList>
-    </Tabs>
-  );
-}
-
 function FixtureOverlay({
   model,
   formOpen,
@@ -102,10 +87,40 @@ function updateFixtureFilter(
   if (patch.kind !== undefined) filters.setKindDraft(patch.kind);
 }
 
+function FixtureTabs({
+  counts,
+  navigate,
+}: {
+  counts: ReturnType<typeof useConnectionsTabCounts>;
+  navigate: ReturnType<typeof useNavigate>;
+}): ReactElement {
+  return (
+    <ConnectionsTabs
+      value="fixtures"
+      counts={counts}
+      onChange={(value) => {
+        if (value === 'connections') void navigate('/inventory/connections');
+      }}
+    />
+  );
+}
+
+async function saveFixture(
+  model: ReturnType<typeof useFixturesPageModel>,
+  editing: FixtureListRow | undefined,
+  navigate: ReturnType<typeof useNavigate>,
+  draft: Parameters<FixtureFormDialogProps['onSave']>[0]
+): ReturnType<FixtureFormDialogProps['onSave']> {
+  const saved = await model.mutations.save({ id: editing?.id, draft });
+  if (editing === undefined) void navigate(`/inventory/fixtures/${saved.id}`);
+  return saved;
+}
+
 /** Renders the Connections Fixtures tab and its create/edit dialog. */
 export function FixturesPage(): ReactElement {
   const model = useFixturesPageModel();
   const navigate = useNavigate();
+  const counts = useConnectionsTabCounts();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FixtureListRow | undefined>();
   const openNew = (): void => {
@@ -116,13 +131,8 @@ export function FixturesPage(): ReactElement {
     setEditing(fixture);
     setFormOpen(true);
   };
-  const save = async (
-    draft: Parameters<FixtureFormDialogProps['onSave']>[0]
-  ): ReturnType<FixtureFormDialogProps['onSave']> => {
-    const saved = await model.mutations.save({ id: editing?.id, draft });
-    if (editing === undefined) void navigate(`/inventory/fixtures/${saved.id}`);
-    return saved;
-  };
+  const save = (draft: Parameters<FixtureFormDialogProps['onSave']>[0]) =>
+    saveFixture(model, editing, navigate, draft);
 
   return (
     <InventoryPage
@@ -130,7 +140,7 @@ export function FixturesPage(): ReactElement {
       icon={INVENTORY_ICONS.connection}
       description="What plugs into, feeds or pairs with what, across the house."
       actions={<NewFixtureButton online={model.online} onNew={openNew} />}
-      tabs={<ConnectionsTabs />}
+      tabs={<FixtureTabs counts={counts} navigate={navigate} />}
       banner={!model.online ? <OfflineBanner /> : staleBanner(model)}
       bodyClassName="gap-3"
       overlay={

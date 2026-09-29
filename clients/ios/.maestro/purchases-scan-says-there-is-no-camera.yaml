@@ -15,10 +15,7 @@ name: Purchases scan explains that the Simulator has no camera
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-- assertVisible:
-    id: 'transactions-list'
-- tapOn: 'Purchases'
+- runFlow: subflows/open-purchases.yaml
 - assertVisible: 'A\$12\.50'
-- tapOn:
-    id: 'purchases-capture-scan'
+- tapOn: 'Scan a receipt'
 - assertVisible: 'No camera on this device'

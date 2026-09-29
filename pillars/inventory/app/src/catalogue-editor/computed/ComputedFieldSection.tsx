@@ -10,8 +10,9 @@ import { expressionIssues } from './issues';
 import { previewStateFrom } from './preview-model';
 import { ResultPreview } from './ResultPreview';
 import { useComputedPreview } from './useComputedPreview';
+import { useOwnField } from './useOwnField';
 
-import type { ExpressionContext, ExpressionField } from '@pops/inventory/expression';
+import type { ExpressionContext } from '@pops/inventory/expression';
 
 import type { InventoryApiIssue } from '../../inventory-api-helpers';
 import type { CatalogueOperation } from '../types';
@@ -61,21 +62,6 @@ function previewState(inputs: PreviewInputs): PreviewState {
     default:
       return { state: 'idle' };
   }
-}
-
-function useOwnField(): ExpressionField {
-  const form = useFieldFormContext();
-  return {
-    id: form.field?.id ?? '',
-    label: form.label.trim() === '' ? 'This field' : form.label.trim(),
-    kind: form.kind,
-    cardinality: 'one',
-    storage: 'computed',
-    options: (form.field?.enumOptions ?? []).map((option) => ({
-      id: option.id,
-      label: option.label,
-    })),
-  };
 }
 
 function migrationFor(

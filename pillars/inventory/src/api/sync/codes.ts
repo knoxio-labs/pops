@@ -58,9 +58,9 @@ function escapeRegExp(value: string): string {
   return value.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function typeLetterFor(db: CommandDb, typeKey: string | undefined): string {
+function typeLetterFor(db: CommandDb, typeKey: string | undefined, name: string): string {
   const type = typeKey === undefined ? null : resolvePublishedType(db, { key: typeKey });
-  return firstLetter(type?.label ?? '') ?? 'X';
+  return firstLetter(type?.label ?? '') ?? firstLetter(name) ?? 'X';
 }
 
 function suggestionsFromPattern(db: CommandDb, pattern: CodePattern, typeLetter: string): string[] {
@@ -89,7 +89,7 @@ function suggestionsFromPattern(db: CommandDb, pattern: CodePattern, typeLetter:
 /**
  * Deterministic code suggestions. Explicit stems retain the legacy collision
  * repair behavior; otherwise the persisted inventory pattern controls the
- * prefix, suffix, width, and type-letter fallback.
+ * prefix, suffix, width, and type/name-letter fallback.
  */
 export function suggestCodes(db: CommandDb, request: SuggestRequest): string[] {
   const settings = readCodeSettings(db);
@@ -98,5 +98,5 @@ export function suggestCodes(db: CommandDb, request: SuggestRequest): string[] {
 
   const pattern = parseCodePattern(settings.pattern) ?? parseCodePattern(DEFAULT_CODE_PATTERN);
   if (pattern === null) throw new Error('default inventory code pattern is invalid');
-  return suggestionsFromPattern(db, pattern, typeLetterFor(db, request.typeKey));
+  return suggestionsFromPattern(db, pattern, typeLetterFor(db, request.typeKey, request.name));
 }

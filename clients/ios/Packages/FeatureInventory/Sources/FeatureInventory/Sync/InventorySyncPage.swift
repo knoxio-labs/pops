@@ -14,6 +14,7 @@ internal struct InventorySyncPage: Equatable, Sendable {
     /// record for the row it is drawn beside.
     internal let waitingRows: [InventorySyncWaitingRow]
     internal let repairRows: [InventorySyncRepairRow]
+    internal let issueRows: [InventorySyncIssueRow]
     internal let resolvedRows: [InventorySyncResolvedRow]
 
     internal static func query() -> InventoryQuery<InventorySyncPage> {
@@ -30,6 +31,7 @@ internal struct InventorySyncPage: Equatable, Sendable {
             .count
         waitingRows = Self.buildWaitingRows(ledger, reading: source)
         repairRows = Self.buildRepairRows(ledger, reading: source)
+        issueRows = Self.buildIssueRows(ledger, reading: source)
         resolvedRows = Self.buildResolvedRows(ledger, reading: source)
     }
 
@@ -46,6 +48,8 @@ internal struct InventorySyncPage: Equatable, Sendable {
 internal enum InventorySyncHeaderStatus: Equatable {
     case online(lastRefreshAt: Date?)
     case offline(lastRefreshAt: Date?)
+    case serverFailure(lastRefreshAt: Date?)
+    case partial(issues: Int)
     case syncing(count: Int)
     /// Sending is stuck on something no network retry fixes
     /// (`InventorySendingStall`): louder than offline, since what is waiting
@@ -59,6 +63,9 @@ internal enum InventorySyncHeaderStatus: Equatable {
         let sendingCount = page.sending.count
         let holds = page.ledger.waiting.compactMap(\.hold)
         if case .blocked = page.status { return .offline(lastRefreshAt: nil) }
+        if case .syncFailed(let since) = page.status {
+            return .serverFailure(lastRefreshAt: since)
+        }
         if page.ledger.sendingStall != nil || holds.contains(.stalled) {
             return .stuck(waiting: page.ledger.waiting.count)
         }
@@ -67,11 +74,12 @@ internal enum InventorySyncHeaderStatus: Equatable {
             return .offline(lastRefreshAt: since)
         case .refreshing where sendingCount > 0:
             return .syncing(count: sendingCount)
-        case .empty, .downloading, .current, .refreshing, .blocked:
+        case .empty, .downloading, .current, .refreshing, .syncFailed, .blocked:
             break
         }
         if sendingCount > 0 { return .syncing(count: sendingCount) }
         if holds.contains(.waitingForFields) { return .updatingFields }
+        if !page.issueRows.isEmpty { return .partial(issues: page.issueRows.count) }
         return .online(lastRefreshAt: nil)
     }
 }

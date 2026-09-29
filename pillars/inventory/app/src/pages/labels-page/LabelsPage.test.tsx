@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
+import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import { SHEET_STORAGE_KEY } from './label-storage';
 
 const api = vi.hoisted(() => ({
@@ -13,6 +14,7 @@ const api = vi.hoisted(() => ({
   syncMutations: vi.fn(),
   searchSearch: vi.fn(),
   settingsList: vi.fn(),
+  typesReadCatalogue: vi.fn(),
 }));
 
 vi.mock('../../inventory-api/index.js', () => ({
@@ -21,6 +23,7 @@ vi.mock('../../inventory-api/index.js', () => ({
   syncMutations: (...args: unknown[]) => api.syncMutations(...args),
   searchSearch: (...args: unknown[]) => api.searchSearch(...args),
   settingsList: (...args: unknown[]) => api.settingsList(...args),
+  typesReadCatalogue: (...args: unknown[]) => api.typesReadCatalogue(...args),
 }));
 
 import { LabelsPage } from './LabelsPage';
@@ -118,6 +121,21 @@ beforeEach(() => {
     ok({ outcomes: [mutationOutcome(body)] })
   );
   api.searchSearch.mockResolvedValue(ok({ hits: [] }));
+  api.typesReadCatalogue.mockResolvedValue(
+    ok({
+      revision: {
+        abandoned: null,
+        baseRevision: null,
+        created: { actor: { id: null, kind: 'migration', label: null }, at: '2026-09-01' },
+        draftVersion: 1,
+        minimumProtocol: 1,
+        published: null,
+        revision: 1,
+        status: 'published',
+      },
+      types: [],
+    })
+  );
   api.settingsList.mockResolvedValue(
     ok({
       data: [
@@ -207,8 +225,13 @@ describe('LabelsPage', () => {
 
     expect(await screen.findByRole('button', { name: 'Print 2 labels' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Label shows: Contents only' })).toBeInTheDocument();
-    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Espresso machine');
-    expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Coffee cups ×6');
+    const contents = document.querySelector('[data-label-contents]');
+    if (!contents) throw new Error('no contents list on the label');
+    expect([...contents.querySelectorAll('li')].map((line) => line.textContent)).toEqual([
+      'Coffee cups ×6',
+      'Espresso machine',
+      'Milk jug',
+    ]);
   });
 
   it('opens the label-shows entry point and applies a preset to the preview', async () => {
@@ -218,6 +241,9 @@ describe('LabelsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Contents only/ }));
 
     expect(screen.getByRole('button', { name: 'Label shows: Contents only' })).toBeInTheDocument();
+    expect(new URLSearchParams(screen.getByTestId('address').textContent ?? '').get('shows')).toBe(
+      'contents'
+    );
     expect(document.querySelector('[data-label-contents]')).toHaveTextContent('Milk jug');
   });
 
@@ -228,6 +254,27 @@ describe('LabelsPage', () => {
       '/inventory/items'
     );
     expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/inventory');
+  });
+
+  it('keeps the page frame bounded and the sheets on their own scroll surface', async () => {
+    renderPage(`?ids=${GRINDER}`);
+
+    const heading = await screen.findByRole('heading', { name: 'Print labels' });
+    await screen.findByRole('button', { name: 'Print 1 label' });
+    const header = heading.closest('header');
+    if (header === null || header.parentElement === null) {
+      throw new Error('Label page frame was not rendered');
+    }
+    expect(header.parentElement).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+
+    const labels = screen.getByRole('region', { name: 'Labels' });
+    expect(labels).toHaveClass('min-h-0', 'min-w-0');
+    const preview = labels.lastElementChild;
+    if (preview === null) throw new Error('Label preview was not rendered');
+    expect(preview).toHaveClass('min-h-0', 'min-w-0', 'flex-1');
+    const sheets = preview.lastElementChild;
+    if (sheets === null) throw new Error('Label sheets were not rendered');
+    expect(sheets).toHaveClass('min-h-0', 'flex-1', 'overflow-auto');
   });
 
   it('loads the listed items by id and gives a box two labels, a thing one', async () => {
@@ -258,7 +305,7 @@ describe('LabelsPage', () => {
 
   it('prints a box with its contents when asked, writing them into the address', async () => {
     renderPage(`?ids=${BOX}&contents=1`);
-    await waitFor(() => expect(addressIds()).toEqual([BOX, MACHINE, CUPS, JUG]));
+    await waitFor(() => expect(addressIds()).toEqual([BOX, CUPS, MACHINE, JUG]));
     expect(screen.getByTestId('address').textContent).not.toContain('contents');
     expect(await screen.findByText('Coffee cups')).toBeInTheDocument();
     expect(api.webList).toHaveBeenCalledWith({ query: { containingItemId: BOX, limit: 200 } });
@@ -267,7 +314,7 @@ describe('LabelsPage', () => {
   it("adds a box's contents from its row", async () => {
     renderPage(`?ids=${BOX}`);
     fireEvent.click(await screen.findByRole('button', { name: 'Add 3 inside' }));
-    await waitFor(() => expect(addressIds()).toEqual([BOX, MACHINE, CUPS, JUG]));
+    await waitFor(() => expect(addressIds()).toEqual([BOX, CUPS, MACHINE, JUG]));
   });
 
   it('removes an item from the job only', async () => {

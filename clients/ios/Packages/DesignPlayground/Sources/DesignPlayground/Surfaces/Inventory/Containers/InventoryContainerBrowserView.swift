@@ -74,7 +74,7 @@ internal struct InventoryContainerBrowserView: View {
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .inventoryCollapsingTitle("Containers")
         .inventoryGroundedSwipeActionsContainer()
         .background(Color.popsBackground)

@@ -69,6 +69,30 @@ internal struct InventoryItemsBrowserTests {
         #expect(model.shown.map(\.detailLine) == ["No type · Garage", "No type · In hand"])
     }
 
+    @Test("protocol-2 types are shown and excluded from the untyped count")
+    func protocol2TypeInList() async {
+        let type = InventoryCatalogueType(
+            id: "book", key: "book", label: "Book", sortOrder: 0)
+        let item = InventoryItem(
+            id: "book-item", revision: 1, seq: 1, catalogueRevision: 1, name: "Book",
+            typeId: type.id, typeKey: nil, placement: .hand,
+            createdAt: Fixture.now, updatedAt: Fixture.now)
+        let store = RecordingFormStore(
+            FormFixtureSource(
+                items: [item],
+                protocol2Catalogue: InventoryCatalogueSnapshot(
+                    revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
+                    types: [type])))
+        let model = InventoryItemsBrowserViewModel(store: store, now: { Fixture.now })
+        let task = await Self.loaded(model)
+        defer { task.cancel() }
+
+        #expect(model.shown.first?.detailLine == "Book · In hand")
+        #expect(model.tiles.first { $0.title == "Untyped" }?.count == Int.zero)
+        model.filter.missing = .type
+        #expect(model.shown.isEmpty)
+    }
+
     @Test("Include inactive brings a discarded item into the list but never into the counts")
     func includeInactive() async {
         let model = Self.model(Self.store())

@@ -168,9 +168,12 @@ import type {
   SyncChangesData,
   SyncChangesErrors,
   SyncChangesResponses,
+  SyncItemData,
+  SyncItemErrors,
   SyncItemEventsData,
   SyncItemEventsErrors,
   SyncItemEventsResponses,
+  SyncItemResponses,
   SyncMutationsData,
   SyncMutationsErrors,
   SyncMutationsResponses,
@@ -1072,6 +1075,17 @@ export const syncChanges = <ThrowOnError extends boolean = false>(
 ): RequestResult<SyncChangesResponses, SyncChangesErrors, ThrowOnError> =>
   (options.client ?? client).get<SyncChangesResponses, SyncChangesErrors, ThrowOnError>({
     url: '/sync/changes',
+    ...options,
+  });
+
+/**
+ * Read one item and any compatibility issues recorded while projecting it
+ */
+export const syncItem = <ThrowOnError extends boolean = false>(
+  options: Options<SyncItemData, ThrowOnError>
+): RequestResult<SyncItemResponses, SyncItemErrors, ThrowOnError> =>
+  (options.client ?? client).get<SyncItemResponses, SyncItemErrors, ThrowOnError>({
+    url: '/sync/items/{id}',
     ...options,
   });
 

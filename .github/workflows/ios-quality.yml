@@ -243,10 +243,11 @@ jobs:
           github.event.pull_request.base.ref == github.event.repository.default_branch)
       ) }}
     runs-on: xcode-27
-    # Analyzer observations: 50m03s for 1,551 files and 43m09s for 1,558.
+    # Analyzer observations: 50m03s for 1,551 files, 43m09s for 1,558, and
+    # 66m47s for 1,584 in the current promotion run.
     # The full job limit also covers host/simulator tests and Release/UI validation;
     # these measurements are not a duration guarantee.
-    timeout-minutes: 100
+    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 150 || 100 }}
     defaults:
       run:
         working-directory: clients/ios
@@ -289,9 +290,12 @@ jobs:
       # below, which remains cold so the analyzer sees every source file. An
       # exact hit reuses products for unchanged iOS sources; a manifest-only
       # restore gives SwiftPM an incremental starting point and SwiftPM still
-      # validates every input before executing the tests.
-      - name: Cache host-toolchain package builds
-        uses: actions/cache@v6
+      # validates every input before executing the tests. Restore and save are
+      # separate so a successful host suite publishes its products before a
+      # later simulator failure can suppress a combined cache action's post job.
+      - name: Restore host-toolchain package builds
+        id: host-package-cache
+        uses: actions/cache/restore@v6
         with:
           path: clients/ios/Packages/*/.build
           key: host-tests-${{ runner.os }}-${{ runner.arch }}-xcode-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_XCODE_BUILD }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved', 'clients/ios/Packages/*/Sources/**', 'clients/ios/Packages/*/Tests/**') }}
@@ -307,6 +311,13 @@ jobs:
       # step takes, not after the rest of the job's compile.
       - name: Test packages (host toolchain)
         run: mise run test:packages
+
+      - name: Save host-toolchain package builds
+        if: success() && steps.host-package-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: clients/ios/Packages/*/.build
+          key: ${{ steps.host-package-cache.outputs.cache-primary-key }}
 
       - name: Generate Pops.xcodeproj
         run: mise run generate
@@ -400,9 +411,10 @@ jobs:
       # drifts, and the moment it does a green local run stops meaning anything.
 
       # WHERE EACH LANE SPENDS ITS MINUTES. The shared compile is ~2 minutes and
-      # the simulator suite ~3; `swiftlint analyze` over the whole tree is ~19.5
-      # (run 35408330810, 693 files, 2026-09-19). A pull request therefore runs
-      # the suite and not the analyzer (POPS-4149): every macOS job shares
+      # the simulator suite ~3; `swiftlint analyze` over the whole tree was ~19.5
+      # minutes at 693 files (run 35408330810), but the current 1,581-file tree
+      # took about 61 minutes on the full-validation candidate. A pull request
+      # therefore runs the suite and not the analyzer (POPS-4149): every macOS job shares
       # GitHub's five-runner pool, and runs were waiting 20-40 minutes for a
       # runner. An unused declaration or unused import is reported as a queue
       # ejection instead of a red PR; `mise run lint:analyze` locally still
@@ -424,8 +436,19 @@ jobs:
         if: >-
           success() &&
           (github.event_name == 'merge_group' || inputs['full-validation'] == true)
-        timeout-minutes: 40
+        timeout-minutes: 75
+        env:
+          POPS_IOS_ANALYZER_ARTIFACTS: ${{ runner.temp }}/ios-analyzer-diagnostics
         run: mise run --skip-deps lint:analyze
+
+      - name: SwiftLint analyzer log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-analyzer-debug
+          path: ${{ runner.temp }}/ios-analyzer-diagnostics
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Simulator test log and result bundle
         if: failure()
@@ -494,6 +517,7 @@ jobs:
       # so a reordering degrades into a second compile rather than into a lie.
       - name: UI flow (Maestro, against a real BFM)
         if: github.event_name == 'merge_group' || inputs['full-validation'] == true
+        timeout-minutes: 45
         working-directory: .
         run: mise run e2e:ios
 

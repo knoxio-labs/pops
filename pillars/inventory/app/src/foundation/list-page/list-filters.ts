@@ -1,3 +1,5 @@
+import { typePathLabel } from '../../lib/type-tree.js';
+
 import type { ItemsUrlFilters } from '../../inventory-web/items-url-filters.js';
 import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 import type { ItemRowModel, LocationModel } from '../model/model.js';
@@ -6,6 +8,7 @@ import type { ItemRowModel, LocationModel } from '../model/model.js';
 export interface FilterOption {
   value: string;
   label: string;
+  parentTypeId?: string | null;
 }
 
 /** One removable non-text filter shown below a list toolbar. */
@@ -29,12 +32,16 @@ export function isNarrowed(filters: ItemsUrlFilters): boolean {
   return filters.q.trim() !== '' || activeFilterCount(filters) > 0;
 }
 
-/** Builds sorted options for the non-archived published catalogue types. */
+/** Builds sorted, path-labelled options for the non-archived published catalogue types. */
 export function typeFilterOptions(types: readonly CatalogueType[]): FilterOption[] {
   return types
     .filter((type) => type.archivedAt === null)
     .toSorted((left, right) => left.sortOrder - right.sortOrder)
-    .map((type) => ({ value: type.key, label: type.label }));
+    .map((type) => ({
+      value: type.key,
+      label: typePathLabel(types, type.id) || type.label,
+      parentTypeId: type.parentTypeId,
+    }));
 }
 
 function locationOptions(locations: readonly LocationModel[]): FilterOption[] {

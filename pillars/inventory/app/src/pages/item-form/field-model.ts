@@ -1,3 +1,6 @@
+import { decimalPlacesFromPresentation } from '../../catalogue-editor/decimal-places';
+import { ancestorIds, effectiveFields } from '../../lib/type-tree.js';
+
 import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
 
 /** The editor-facing kinds supported by the item form. */
@@ -34,6 +37,7 @@ export interface FormFieldDef {
   readonly allowOverride: boolean;
   readonly help: string | null;
   readonly fixedUnit: string | null;
+  readonly decimalPlaces?: number | null;
   readonly enumOptions: readonly FormEnumOption[];
   readonly referenceKinds: readonly ('item' | 'location')[];
   readonly referenceTypeIds: readonly string[];
@@ -46,6 +50,8 @@ export interface FormTypeDef {
   readonly key: string;
   readonly label: string;
   readonly description: string | null;
+  /** The published parent id, when this type belongs below another type. */
+  readonly parentTypeId?: string | null;
   readonly containment: boolean;
   readonly fields: readonly FormFieldDef[];
 }
@@ -73,22 +79,29 @@ export const EMPTY_DRAFTS: FieldDrafts = {
   booleans: {},
 };
 
-/** Converts the published catalogue shape into the form's stable view model. */
+function effectiveCapabilitiesFor(types: readonly CatalogueType[], id: string): readonly string[] {
+  const typeById = new Map(types.map((type) => [type.id, type]));
+  const path = [...ancestorIds(types, id), id];
+  return [...new Set(path.flatMap((typeId) => typeById.get(typeId)?.capabilities ?? []))];
+}
+
+/** Converts published types into form definitions with root-first effective fields and capabilities. */
 export function formTypesOf(
   catalogue: { readonly types: readonly CatalogueType[] } | undefined
 ): FormTypeDef[] {
-  return (catalogue?.types ?? [])
-    .filter((type) => type.archivedAt === null)
+  const allTypes = catalogue?.types ?? [];
+  const activeTypes = allTypes.filter((type) => type.archivedAt === null);
+  return activeTypes
     .toSorted((left, right) => left.sortOrder - right.sortOrder)
     .map((type) => ({
       id: type.id,
       key: type.key,
       label: type.label,
       description: type.description,
-      containment: type.capabilities.includes('containment'),
-      fields: type.fields
+      parentTypeId: type.parentTypeId,
+      containment: effectiveCapabilitiesFor(allTypes, type.id).includes('containment'),
+      fields: effectiveFields(allTypes, type.id)
         .filter((field) => field.archivedAt === null)
-        .toSorted((left, right) => left.sortOrder - right.sortOrder)
         .map((field) => ({
           id: field.id,
           key: field.key,
@@ -100,6 +113,7 @@ export function formTypesOf(
           allowOverride: field.allowOverride,
           help: field.help,
           fixedUnit: field.fixedUnit,
+          decimalPlaces: decimalPlacesFromPresentation(field.presentation),
           enumOptions: field.enumOptions,
           referenceKinds: field.referenceKinds,
           referenceTypeIds: field.referenceTypeIds,

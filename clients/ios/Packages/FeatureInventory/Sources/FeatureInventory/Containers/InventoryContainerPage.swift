@@ -52,6 +52,7 @@ internal struct InventoryContainerPage: View {
         return InventoryItemDetailView(
             detail: item.onContainerPage, model: detail,
             actions: InventoryContainerVerb.row(for: profile.item).map(\.action),
+            moreActions: InventoryContainerVerb.overflow(for: profile.item).map(\.action),
             onAction: { action in
                 guard let verb = InventoryContainerVerb(action: action) else { return }
                 Task { await model.perform(verb, on: profile) }

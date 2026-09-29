@@ -21,6 +21,12 @@ internal enum InventorySyncSurfaces {
                 "needs-attention", "Three need attention", .online(lastSynced: "4 min ago"),
                 InventorySyncLedger(repairs: Fixtures.repairs, resolved: Fixtures.resolved)),
             syncState(
+                "server-failure", "Sync failed", .serverFailure(lastSynced: "4 min ago"),
+                InventorySyncLedger(resolved: Fixtures.resolved)),
+            syncState(
+                "partial-sync", "One item needs attention", .partial(issueCount: 1),
+                InventorySyncLedger(issues: Fixtures.issues, resolved: Fixtures.resolved)),
+            syncState(
                 "all-synced", "All synced", .online(lastSynced: "2 min ago"),
                 InventorySyncLedger(resolved: Fixtures.resolved)),
             syncState(

@@ -53,7 +53,7 @@ internal struct InventoryInHandView: View {
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .popsGroundedSwipeActionsContainer()
         .popsCollapsingTitle("In hand")
         .background(Color.popsBackground)

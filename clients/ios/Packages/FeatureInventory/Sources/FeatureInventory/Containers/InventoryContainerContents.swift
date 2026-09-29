@@ -94,13 +94,17 @@ internal struct InventoryContainerProfile: Identifiable, Equatable {
         reading source: any InventoryQuerySource, container item: InventoryItem, now: Date = .now
     ) {
         let catalogue = source.inventoryCatalogue()
-        let typeName = { (key: String?) in key.flatMap { catalogue.type(forKey: $0)?.name } }
+        let protocol2Catalogue = source.inventoryProtocol2Catalogue()
+        let typeName = { (item: InventoryItem) in
+            InventoryTypeNameResolver.name(
+                for: item, catalogue: catalogue, protocol2Catalogue: protocol2Catalogue)
+        }
         self.item = item
-        self.typeName = typeName(item.typeKey)
+        self.typeName = typeName(item)
         crumbs = InventoryPlacementCrumbs(source: source).names(of: item.placement)
         contents = InventoryContainerContents(
             entries: source.inventoryContents(ofContainer: item.id).filter(\.isLive).map {
-                InventoryContainedEntry(item: $0, typeName: typeName($0.typeKey), now: now)
+                InventoryContainedEntry(item: $0, typeName: typeName($0), now: now)
             })
     }
 

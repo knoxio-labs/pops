@@ -49,4 +49,22 @@ internal struct InventoryItemDetailPrimaryActionTests {
     func openContainerPicksUpToo() {
         #expect(primary(Fixtures.kitchenBox) == "pick-up")
     }
+
+    @Test("an active item's row includes Edit outside More")
+    func activeItemShowsEditInActionRow() {
+        let row = InventoryItemDetailPrimaryAction.row(for: Fixtures.television, style: style)
+
+        #expect(row.map(\.id).contains("edit"))
+    }
+
+    @Test("a specialized item row appends Edit after its supplied actions")
+    func specializedItemRowShowsEdit() {
+        let close = InventoryAction("close", "Close", symbol: .close, heading: .container)
+
+        #expect(
+            InventoryItemDetailActionRowModel.row(
+                for: Fixtures.television, style: style, actions: [close]
+            )
+            .map(\.id) == ["close", "edit"])
+    }
 }

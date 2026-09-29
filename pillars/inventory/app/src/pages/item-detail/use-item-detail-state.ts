@@ -51,15 +51,16 @@ function connectionModel({ id, graph, fixtureLinks, fixtures, world }: Connectio
   return toDetailConnections(id, graph ?? EMPTY_GRAPH, fixtureLinks ?? [], fixtures ?? [], world);
 }
 
-/** Maps the web item aggregate into the detail model's facts, provenance, and photos. */
+/** Maps the web item aggregate into detail facts, using the full type tree when provided. */
 export function aggregateFor(
   item: WebGetResponse['item'] | null,
   type: CatalogueType | null,
-  relatedWorld: ItemDetailModel['relatedWorld']
+  relatedWorld: ItemDetailModel['relatedWorld'],
+  types?: readonly CatalogueType[]
 ): ItemDetailModel['aggregate'] {
   if (item === null) return null;
   return {
-    facts: toDetailFacts(item, type, relatedWorld),
+    facts: toDetailFacts(item, type, relatedWorld, types),
     type,
     fieldValues: item.fieldValues,
     provenance: toDetailProvenance(item.provenance),
@@ -111,6 +112,7 @@ interface BuildModelInput {
   paperless: ItemDetailModel['paperless'];
   paperlessBaseUrl: string | null;
   connections: ItemDetailModel['connections'];
+  events: ItemDetailModel['events'];
   eventCount: number | null;
 }
 
@@ -126,7 +128,7 @@ export function buildModel(input: BuildModelInput): ItemDetailModel | null {
     paperless: input.paperless,
     paperlessBaseUrl: input.paperlessBaseUrl,
     connections: input.connections,
-    events: [],
+    events: input.events,
     eventCount: input.eventCount,
   };
 }

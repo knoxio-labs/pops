@@ -54,6 +54,16 @@ internal struct PopsPagedPhotoViewerTests {
         #expect(source.contains("onPageChange(pageIndex)"))
     }
 
+    @Test("the viewer forwards the caller's aspect-ratio policy to each page")
+    func contentModeWiring() throws {
+        let source = try String(
+            contentsOf: Self.primitives.appending(path: "PopsPagedPhotoViewer.swift"),
+            encoding: .utf8)
+
+        #expect(source.contains("contentMode: ContentMode = .fill"))
+        #expect(source.contains("contentMode: contentMode"))
+    }
+
     private static let primitives = URL(filePath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()

@@ -1,8 +1,8 @@
 import AppCore
 
-/// The verbs a container's page puts in its action row: Pick up or Put back,
-/// Move, Open or Close, Store here. An inactive container is offered only
-/// Restore, and only when its lifecycle can be walked back.
+/// The verbs a container's page puts in its action row: Open or Close, Move,
+/// Store here. Pick up or Put back lives in More. An inactive container is
+/// offered only Restore, and only when its lifecycle can be walked back.
 ///
 /// Store here is offered whatever the access state: closing a box stops
 /// casual packing, not a deliberate "this goes in there".
@@ -21,11 +21,20 @@ internal enum InventoryContainerVerb: String, Identifiable, CaseIterable {
         guard item.lifecycle == .active else {
             return item.lifecycle.isRestorable ? [.restore] : []
         }
-        let holding: InventoryContainerVerb =
-            item.placement == .hand && item.previousPlacement.map(Self.isLive) == true
-            ? .putBack : .pickUp
         let access: InventoryContainerVerb = item.containment?.access == .open ? .close : .open
-        return [holding, .move, access, .storeHere]
+        return [access, .move, .storeHere]
+    }
+
+    /// The container's placement action for the More menu, kept out of the
+    /// row so Open or Close remains its first action.
+    internal static func overflow(for item: InventoryItem) -> [InventoryContainerVerb] {
+        guard item.lifecycle == .active else { return [] }
+        return [holding(for: item)]
+    }
+
+    private static func holding(for item: InventoryItem) -> InventoryContainerVerb {
+        item.placement == .hand && item.previousPlacement.map(Self.isLive) == true
+            ? .putBack : .pickUp
     }
 
     private static func isLive(_ previous: InventoryPreviousPlacement) -> Bool {
