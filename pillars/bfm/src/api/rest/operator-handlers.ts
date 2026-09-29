@@ -1,11 +1,13 @@
 /**
  * Handlers for the `operator.*` sub-router.
  *
- * Every route opens with `requireOperator(readPrincipal(res))`. That is not
+ * Pairing-code issuance accepts either the human operator principal or the
+ * exact registry-backed service-account scope. Device listing and revocation
+ * remain human-only through `requireOperator(readPrincipal(res))`. That is not
  * belt-and-braces: bfm's own hostname has Cloudflare Access bypassed so the
  * phone can reach the device-facing routes, and this same Express app answers
- * there, so an anonymous caller genuinely arrives at these handlers. The gate
- * is what turns them away.
+ * there, so an anonymous caller genuinely arrives at these handlers. The gates
+ * are what turn such callers away.
  *
  * The gate runs BEFORE the rate limiter on purpose. Limiting first would let
  * an unauthenticated caller consume an authenticated operator's budget — the
@@ -13,7 +15,7 @@
  */
 import { bfmDeviceContract } from '../../contract/rest-device.js';
 import { issuePairingCode, listDevices, revokeDevice } from '../../db/index.js';
-import { readPrincipal, requireOperator } from '../middleware/identity.js';
+import { readPrincipal, requireOperator, requirePairingIssuer } from '../middleware/identity.js';
 import { NotFoundError, TooManyRequestsError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
@@ -28,7 +30,7 @@ type Req = ServerInferRequest<typeof bfmOperatorContract>;
 
 export interface OperatorHandlerDeps {
   db: BfmDb;
-  /** Budget for pairing-code issuance, keyed per operator. */
+  /** Budget for pairing-code issuance, keyed by human email or service-account id. */
   issuanceLimiter: RateLimiter;
   /**
    * The BFM's public, Access-bypassed origin — where the phone sends
@@ -62,9 +64,11 @@ export function makeOperatorHandlers(deps: OperatorHandlerDeps) {
   return {
     issuePairingCode: ({ res }: { res: Response }) =>
       runHttp(() => {
-        const operator = requireOperator(readPrincipal(res));
+        const issuer = requirePairingIssuer(res);
+        const limiterKey =
+          issuer.kind === 'operator' ? issuer.email : `service-account:${issuer.id}`;
 
-        const decision = deps.issuanceLimiter.check(operator.email);
+        const decision = deps.issuanceLimiter.check(limiterKey);
         if (!decision.allowed) {
           res.setHeader('Retry-After', String(decision.retryAfterSeconds));
           throw new TooManyRequestsError(decision.retryAfterSeconds);

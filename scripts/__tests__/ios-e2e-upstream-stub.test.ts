@@ -621,6 +621,32 @@ describe('the inventory entry on the roster', () => {
   });
 });
 
+describe('the BFM entry on the MCP roster', () => {
+  it('advertises the future BFM address with a complete manifest when requested', () => {
+    const withBfm = buildRegistrySnapshot({
+      financeBaseUrl: 'http://127.0.0.1:4010',
+      bfmBaseUrl: 'http://127.0.0.1:4030',
+      now: '2026-09-19T00:00:00.000Z',
+    });
+    const without = buildRegistrySnapshot({
+      financeBaseUrl: 'http://127.0.0.1:4010',
+      now: '2026-09-19T00:00:00.000Z',
+    });
+
+    expect(withBfm.pillars.map((pillar) => [pillar.pillarId, pillar.baseUrl])).toContainEqual([
+      'bfm',
+      'http://127.0.0.1:4030',
+    ]);
+    expect(withBfm.pillars.find((pillar) => pillar.pillarId === 'bfm')?.manifest).toMatchObject({
+      pillar: 'bfm',
+      contract: { package: '@pops/bfm' },
+      nav: { id: 'bfm' },
+      pages: [{ bundleSlot: 'bfm-devices' }],
+    });
+    expect(without.pillars.map((pillar) => pillar.pillarId)).not.toContain('bfm');
+  });
+});
+
 describe('the service-account verification route', () => {
   let stub: Awaited<ReturnType<typeof startUpstreamStub>>;
 

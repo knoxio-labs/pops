@@ -31,7 +31,7 @@ It also holds a service-account credential and one way to spend it — see
 | `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.                                                                      |
 | `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.                                                                    |
 | `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.                                                                       |
-| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.                                                                 |
+| `POST /operator/pairing/codes`         | Mints a single-use pairing code for a human operator or the exact registry-backed MCP scope. The plaintext is returned once and never again.     |
 | `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.                                                                          |
 | `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.                                                               |
 | `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.                                                                        |
@@ -220,15 +220,20 @@ refuse `/operator/*` wholesale at the edge (POPS-1389), which it could not do if
 the operator device list and the public `POST /devices/pair` both sat under
 `/devices`.
 
-`src/api/middleware/identity.ts` resolves the principal and deliberately drops
-two legs of the registry's otherwise-identical chain. Both omissions are
-load-bearing and the file states why at length; in short:
+`src/api/middleware/identity.ts` resolves the human principal and deliberately
+does not make it a global machine principal. The pairing route has a separate,
+route-specific registry-backed service-account gate; the file states why the
+split is load-bearing. In short:
 
-- **No service-account leg.** bfm holds no `service_accounts` table and the
-  registry exposes no endpoint to verify a presented key, so there is nothing an
-  `x-api-key` could be checked against. Machine callers have no business minting
-  pairing codes anyway — the account bfm holds is for its _outbound_ calls.
-  POPS-1473 tracks the registry-side verify endpoint if that changes.
+- **Pairing issuance has one service-account leg.** The route accepts a
+  registry-verified key only when its exact `bfm.operator.issuePairingCode`
+  scope is present. The MCP gateway uses that grant to obtain a code for an
+  iOS simulator; it cannot list devices or revoke them. The BFM account used
+  for outbound sibling calls is a different direction and a different
+  credential.
+- **The remaining operator routes stay human-only.** Device listing and
+  revocation continue to require the Cloudflare Access operator principal,
+  even when the caller presents a valid service-account key.
 - **No "trust the tunnel" fallback.** The registry reads a missing
   `CLOUDFLARE_ACCESS_TEAM_NAME` as "we are only reachable through a protected
   tunnel". On a hostname that bypasses Access, that would resolve every caller
@@ -544,8 +549,7 @@ while its predecessor still names it.
 `app/` is the `@pops/app-bfm` frontend module — the operator's device surface,
 mounted by the shell at `/bfm` and labelled **Devices** on the app rail. It
 lives in the shell rather than on the phone because the shell already sits
-behind Cloudflare Access, which is what makes "only the operator can mint a
-pairing code" true. See [`app/README.md`](./app/README.md).
+behind Cloudflare Access. See [`app/README.md`](./app/README.md).
 
 That app is why `src/contract/manifest.ts` now exports a runtime
 `ModuleManifest` alongside the contract type: `libs/module-registry` discovers
@@ -559,11 +563,13 @@ registration is a separate mechanism and still goes through the
 ## What deliberately does not live here
 
 - **Destructive and administrative operations.** Deleting a record, revoking a
-  device, minting a pairing code, editing a service account: those stay on the
-  operator surface behind Cloudflare Access, because the recovery from a
-  mis-tap there is a restore rather than another edit, and because the blast
-  radius is the fleet rather than one record. Everything else is admissible one
-  capability at a time —
+  device and editing a service account stay on the human operator surface
+  behind Cloudflare Access, because the recovery from a mis-tap there is a
+  restore rather than another edit, and because the blast radius is the fleet
+  rather than one record. Pairing-code issuance is the deliberate exception:
+  the same route also admits the exact registry-backed MCP scope and returns
+  only the one-time code metadata. Everything else is admissible one capability
+  at a time —
   [ADR-048](../../docs/architecture/adr-048-mobile-capability-scopes.md), with
   the vocabulary in `src/contract/capabilities.ts` and
   `src/contract/__tests__/mobile-capabilities.test.ts` enforcing that no mobile
@@ -630,9 +636,11 @@ never again. Write it into the secret file the deployment mounts —
 `pops_bfm_api_key`, shape and first-run steps in
 [`infra/secrets.example/bfm/`](../../infra/secrets.example/bfm/README.md) — and
 point `POPS_INTERNAL_API_KEY_FILE` at it. bfm gets its own account rather than
-sharing `pops_api_key` with moltbot and the MCP gateway, so revoking one
-consumer does not take the others down and `last_used_at` attributes traffic to
-a single process.
+sharing credentials with Moltbot or the MCP gateway, so revoking one consumer
+does not take the others down and `last_used_at` attributes traffic to a single
+process. The MCP gateway's separate key is provisioned with only
+`bfm.operator.issuePairingCode`; see
+[`infra/secrets.example/mcp/`](../../infra/secrets.example/mcp/README.md).
 
 Rotate by minting a replacement, swapping the file, restarting, verifying the
 replacement account has the complete scope list above and that bfm can reach

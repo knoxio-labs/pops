@@ -24,10 +24,10 @@ Then replace the placeholder line in each.
 | `bfm_jwt_signing_key` | 32 bytes of CSPRNG output, base64: `openssl rand -base64 32`. Not a passphrase, not reused from anything else.                    |
 
 `pops_bfm_api_key` is **not the same value as `pops_api_key`**. That one belongs
-to moltbot and the MCP gateway. bfm gets its own account so revoking one
-consumer does not take the others down with it, and so `last_used_at` attributes
-traffic to a single process. Its plaintext is shown exactly once at creation —
-save it before it scrolls off.
+to moltbot; the MCP gateway uses its own `pops_mcp_api_key`. bfm gets its own
+account so revoking one consumer does not take the others down with it, and so
+`last_used_at` attributes traffic to a single process. Its plaintext is shown
+exactly once at creation — save it before it scrolls off.
 
 Newlines are fine in either file — both are trimmed before use.
 

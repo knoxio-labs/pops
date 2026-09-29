@@ -854,9 +854,10 @@ run = "bash scripts/analyzer-lane.sh"
 # ADR-043 says a client consumes the federation over HTTP and never reaches
 # into a pillar's directory, so booting `@pops/bfm` belongs to the repo root —
 # `mise run e2e:ios` there does both halves and is the one command to run. What
-# this task does over HTTP, it does through the BFM's published contract:
-# `POST /operator/pairing/codes` is the same route the operator's Devices page
-# calls.
+# this task does over HTTP, it does through a published contract. Pairing can
+# use the BFM route directly, or the root harness can hand this task an MCP
+# endpoint with `POPS_E2E_PAIRING_ISSUER=mcp`. The latter keeps the
+# simulator-facing task free of the BFM service-account credential.
 #
 # IT DOES NOT BUILD EITHER, unless it has to. `build:for-testing` wipes its own
 # derived-data directory and recompiles the whole tree — seven minutes, and the
@@ -873,6 +874,8 @@ set -o pipefail
 
 base="${POPS_BFM_BASE_URL:-}"
 control="${POPS_E2E_CONTROL_URL:-}"
+pairing_issuer="${POPS_E2E_PAIRING_ISSUER:-direct}"
+mcp_url="${POPS_MCP_URL:-}"
 if [ -z "$base" ] || [ -z "$control" ]; then
   echo "e2e: no POPS_BFM_BASE_URL and/or POPS_E2E_CONTROL_URL. This lane drives the app" >&2
   echo "     against a BFM that is already running; it does not start one. From the" >&2
@@ -884,6 +887,19 @@ if [ -z "$base" ] || [ -z "$control" ]; then
   echo "     age a token against a BFM nobody here controls." >&2
   exit 1
 fi
+case "$pairing_issuer" in
+  direct) ;;
+  mcp)
+    if [ -z "$mcp_url" ]; then
+      echo "e2e: POPS_MCP_URL is required when POPS_E2E_PAIRING_ISSUER=mcp." >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "e2e: POPS_E2E_PAIRING_ISSUER must be 'direct' or 'mcp'." >&2
+    exit 1
+    ;;
+esac
 
 app="$POPS_IOS_DERIVED_DATA/Build/Products/Debug-iphonesimulator/Pops.app"
 
@@ -995,12 +1011,20 @@ for flow in $flows; do
     # `|| true` so a refused connection or an HTTP error reaches the message
     # below rather than aborting the task under `set -e` with a bare curl
     # exit code.
-    code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
-      -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
+    if [ "$pairing_issuer" = mcp ]; then
+      code=$(node ../../scripts/ios-e2e/mcp-pairing-code.mjs || true)
+    else
+      code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
+        -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
+    fi
     if [ -z "$code" ]; then
-      echo "e2e: $base/operator/pairing/codes returned no code. A 401 here means that BFM" >&2
-      echo "     is running with NODE_ENV=production, where the route needs a Cloudflare" >&2
-      echo "     Access identity this task has no way to present." >&2
+      echo "e2e: $pairing_issuer pairing issuer returned no code." >&2
+      if [ "$pairing_issuer" = direct ]; then
+        echo "     A 401 means BFM is running with NODE_ENV=production, where the direct" >&2
+        echo "     operator route needs a Cloudflare Access identity this task cannot present." >&2
+      else
+        echo "     Check MCP reachability, its inbound bearer token, and the BFM service-account scope." >&2
+      fi
       exit 1
     fi
 
