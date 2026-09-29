@@ -128,28 +128,49 @@ internal struct InventoryItemDetailPhotoTests {
         #expect(await model.awaitDetail { $0.photos.map(\.sha256) == [newSha, "b"] } != nil)
     }
 
-    @Test("the detail viewer wires the approved full-screen photo interactions")
-    func viewerWiring() throws {
-        let root = URL(filePath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let gallery = try String(
-            contentsOf:
-                root.appending(
-                    path: "Sources/FeatureInventory/Detail/InventoryItemDetailPhotoGallery.swift"),
-            encoding: .utf8)
-        let viewer = try String(
-            contentsOf:
-                root.appending(
-                    path: "Sources/FeatureInventory/Detail/InventoryItemDetailPhotoViewer.swift"),
-            encoding: .utf8)
-        let source = gallery + viewer
+    @Test("the detail viewer starts on the tapped photo and labels its pages")
+    func viewerPresentationUsesOpeningPhoto() {
+        let photos = [
+            InventoryDetailPhoto(sha256: "a", caption: "Front"),
+            InventoryDetailPhoto(sha256: "b", caption: ""),
+            InventoryDetailPhoto(sha256: "c", caption: "Back"),
+        ]
 
-        #expect(source.contains(".popsStage(item: $viewing)"))
-        #expect(source.contains(".tabViewStyle(.page(indexDisplayMode: .never))"))
-        #expect(source.contains("contentMode: .fit"))
-        #expect(source.contains("ShareLink("))
-        #expect(source.contains("PopsPhoto.isDecodable"))
+        #expect(InventoryPhotoViewerPresentation.initialIndex(photos[2], in: photos) == 2)
+        #expect(
+            InventoryPhotoViewerPresentation.initialIndex(
+                InventoryDetailPhoto(sha256: "unknown", caption: ""), in: photos) == 0)
+        #expect(InventoryPhotoViewerPresentation.label(photos[0], index: 0) == "Front")
+        #expect(InventoryPhotoViewerPresentation.label(photos[1], index: 1) == "Photo 2")
+    }
+
+    @Test("the detail viewer loads the full rendition and rejects undecodable bytes")
+    func viewerLoadsFullRendition() async {
+        let photo = InventoryDetailPhoto(sha256: "photo", caption: "Photo")
+        var requested: (String, InventoryPhotoVariant)?
+        let unavailable = await InventoryPhotoViewerPresentation.loadData(
+            for: photo,
+            cachedData: nil,
+            load: { sha256, variant in
+                requested = (sha256, variant)
+                return Data("not an image".utf8)
+            })
+
+        #expect(unavailable == nil)
+        #expect(requested?.0 == "photo")
+        #expect(requested?.1 == .full)
+
+        var calledForCachedData = false
+        let cached = Data("still not an image".utf8)
+        let cachedResult = await InventoryPhotoViewerPresentation.loadData(
+            for: photo,
+            cachedData: cached,
+            load: { _, _ in
+                calledForCachedData = true
+                return nil
+            })
+
+        #expect(cachedResult == nil)
+        #expect(!calledForCachedData)
     }
 }

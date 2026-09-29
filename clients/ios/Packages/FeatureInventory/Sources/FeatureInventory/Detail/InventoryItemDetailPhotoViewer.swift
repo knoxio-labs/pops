@@ -21,7 +21,9 @@ internal struct InventoryItemDetailLightbox: View {
         self.photos = photos
         self.load = load
         self.manage = manage
-        _index = State(initialValue: photos.firstIndex(of: opening) ?? 0)
+        _index = State(
+            initialValue: InventoryPhotoViewerPresentation.initialIndex(
+                opening, in: photos))
     }
 
     private var current: InventoryDetailPhoto? {
@@ -151,7 +153,7 @@ internal struct InventoryItemDetailLightbox: View {
     }
 
     private func photoLabel(_ photo: InventoryDetailPhoto, index: Int) -> String {
-        photo.caption.isEmpty ? "Photo \(index + 1)" : photo.caption
+        InventoryPhotoViewerPresentation.label(photo, index: index)
     }
 }
 
@@ -202,12 +204,11 @@ private struct InventoryItemDetailPhotoPage: View {
             }
         }
         .task(id: "\(photo.sha256)-\(retry)") {
-            if let data {
-                state = .shown(data)
-                return
-            }
             state = .waiting
-            guard let data = await load(photo.sha256, .full), PopsPhoto.isDecodable(data) else {
+            guard
+                let data = await InventoryPhotoViewerPresentation.loadData(
+                    for: photo, cachedData: data, load: load)
+            else {
                 state = .unavailable
                 return
             }
