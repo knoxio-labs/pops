@@ -5,9 +5,19 @@ internal struct InventoryProtocol2TypePicker: View {
     let model: InventoryItemFormModel
     let catalogue: InventoryCatalogueSnapshot
     let selected: InventoryProtocol2Draft?
+    @State private var pickerIsPresented = false
 
     internal var body: some View {
-        NavigationLink {
+        Button {
+            pickerIsPresented = true
+        } label: {
+            LabeledContent("Type") {
+                Text(selectedLabel)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+        }
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $pickerIsPresented) {
             InventoryFormTypePicker(
                 selection: Binding(
                     get: { selected?.typeId }, set: { model.selectProtocol2Type($0) }),
@@ -15,12 +25,11 @@ internal struct InventoryProtocol2TypePicker: View {
                     catalogue, selectedId: selected?.typeId),
                 noneTitle: model.offersNoType ? "No type yet" : nil,
                 noneAccessibilityIdentifier: model.offersNoType
-                    ? InventoryAccessibility.itemTypeNone : nil)
-        } label: {
-            LabeledContent("Type") {
-                Text(selectedLabel)
-                    .foregroundStyle(Color.popsMutedForeground)
-            }
+                    ? InventoryAccessibility.itemTypeNone : nil,
+                onChoose: { id in
+                    model.selectProtocol2Type(id)
+                    pickerIsPresented = false
+                })
         }
         .accessibilityIdentifier(InventoryAccessibility.itemTypePicker)
     }
