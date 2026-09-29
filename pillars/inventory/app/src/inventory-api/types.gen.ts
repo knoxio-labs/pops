@@ -5066,6 +5066,11 @@ export type TypesManagePublishDraftData = {
             toFieldId: string;
           }
         | {
+            kind: 'copy_legacy_value';
+            source: 'replacementValue' | 'resaleValue';
+            toFieldId: string;
+          }
+        | {
             fieldId: string;
             kind: 'set_default';
             values: Array<unknown>;

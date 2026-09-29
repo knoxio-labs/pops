@@ -297,6 +297,45 @@ describe('item rows on the wire', () => {
     });
   });
 
+  it('does not report a legacy missing-field issue when protocol 2 carries the canonical value', async () => {
+    const target = harness();
+    const book = randomUUID();
+    await apply(target, createItem(book, 'The Dispossessed'));
+    publishManyAuthorField(target);
+    target.db.db.update(items).set({ typeId: BOOK_TYPE_ID }).where(eq(items.id, book)).run();
+    target.db.db
+      .insert(itemFieldValues)
+      .values([
+        {
+          itemId: book,
+          fieldId: AUTHOR_FIELD_ID,
+          source: 'stored',
+          ordinal: 0,
+          valueJson: '"Ursula K. Le Guin"',
+          catalogueRevision: 2,
+          createdAt: '2026-09-27T00:00:02.000Z',
+          updatedAt: '2026-09-27T00:00:02.000Z',
+        },
+      ])
+      .run();
+
+    const { issues, items: rows } = await feed(target, PROTOCOL_2);
+    const row = rows.find((candidate) => candidate.id === book);
+    expect(row?.fieldValues).toContainEqual({
+      fieldId: AUTHOR_FIELD_ID,
+      source: 'stored',
+      catalogueRevision: 2,
+      values: ['Ursula K. Le Guin'],
+    });
+    expect(issues).not.toContainEqual(
+      expect.objectContaining({
+        itemId: book,
+        fieldId: AUTHOR_FIELD_ID,
+        code: 'field_definition_missing',
+      })
+    );
+  });
+
   it('keeps the change page alive when a stored enum option is absent from the catalogue', async () => {
     const target = harness();
     const item = randomUUID();

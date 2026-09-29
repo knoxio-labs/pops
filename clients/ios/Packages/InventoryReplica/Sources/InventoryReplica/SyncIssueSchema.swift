@@ -25,6 +25,22 @@ extension ReplicaSchema {
                     CREATE INDEX sync_item_issue_item ON \(syncIssueTableName)(item_id);
                     """)
         }
+        migrator.registerMigration("v17_remove_resolved_legacy_projection_issues") { db in
+            try db.execute(
+                sql: """
+                    DELETE FROM \(syncIssueTableName)
+                    WHERE code = 'field_definition_missing'
+                      AND item_applied = 1
+                      AND field_id IS NOT NULL
+                      AND EXISTS (
+                          SELECT 1
+                          FROM item_field_value_base
+                          WHERE item_field_value_base.item_id = \(syncIssueTableName).item_id
+                            AND item_field_value_base.field_id = \(syncIssueTableName).field_id
+                            AND item_field_value_base.source = 'stored'
+                      )
+                    """)
+        }
     }
 }
 
@@ -37,7 +53,7 @@ internal enum SyncIssueRows {
                 sql: "DELETE FROM \(ReplicaSchema.syncIssueTableName) WHERE item_id = ?",
                 arguments: [itemId])
         }
-        for issue in issues {
+        for issue in issues where try !isResolvedLegacyProjectionIssue(issue, in: db) {
             try db.execute(
                 sql: """
                     INSERT INTO \(ReplicaSchema.syncIssueTableName)
@@ -62,6 +78,24 @@ internal enum SyncIssueRows {
                     storedDate(now),
                 ])
         }
+    }
+
+    private static func isResolvedLegacyProjectionIssue(
+        _ issue: InventorySyncIssue, in db: Database
+    ) throws -> Bool {
+        guard issue.code == "field_definition_missing", issue.itemApplied,
+            let fieldId = issue.fieldId
+        else { return false }
+        return try Bool.fetchOne(
+            db,
+            sql: """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM item_field_value_base
+                    WHERE item_id = ? AND field_id = ? AND source = 'stored'
+                )
+                """,
+            arguments: [issue.itemId, fieldId]) ?? false
     }
 
     static func read(in db: Database) throws -> [InventorySyncIssue] {

@@ -171,7 +171,7 @@ internal struct InventoryItemFormView: View {
                     model: model, catalogue: catalogue, selected: model.protocol2Draft)
             } else {
                 InventoryFormTypeRow(
-                    types: model.catalogue.types, offersNone: model.offersNoType,
+                    types: model.catalogue.types,
                     typeKey: Binding(
                         get: { model.draft.typeKey }, set: { model.selectLegacyType($0) }))
             }

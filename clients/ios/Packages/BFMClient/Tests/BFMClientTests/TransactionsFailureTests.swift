@@ -47,11 +47,11 @@ internal struct TransactionsFailureTests {
     func upstreamDistinctionSurvives() async {
         let unavailable = await error(
             status: .serviceUnavailable,
-            json: TransactionsWire.upstream(code: "upstream_unavailable")
+            json: TransactionsWire.upstream(code: "gateway.upstream_unavailable")
         )
         let mismatch = await error(
             status: .badGateway,
-            json: TransactionsWire.upstream(code: "upstream_contract_mismatch")
+            json: TransactionsWire.upstream(code: "gateway.upstream_contract_mismatch")
         )
 
         #expect(unavailable == .unavailable)
@@ -62,9 +62,9 @@ internal struct TransactionsFailureTests {
     @Test(
         "every upstream code lands where a screen can act on it",
         arguments: [
-            ("upstream_degraded", RepositoryError.unavailable),
-            ("upstream_misconfigured", RepositoryError.unavailable),
-            ("upstream_conflict", RepositoryError.conflict("upstream_conflict")),
+            ("gateway.upstream_degraded", RepositoryError.unavailable),
+            ("gateway.upstream_misconfigured", RepositoryError.unavailable),
+            ("gateway.upstream_conflict", RepositoryError.conflict("gateway.upstream_conflict")),
             ("not_found", RepositoryError.transport("")),
         ]
     )

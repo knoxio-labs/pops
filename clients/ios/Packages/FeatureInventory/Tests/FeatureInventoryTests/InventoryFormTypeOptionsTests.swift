@@ -65,26 +65,44 @@ internal struct InventoryFormTypeOptionsTests {
         #expect(!source.contains("NavigationPath"))
     }
 
-    @Test("parent rows use explicit destinations within the caller's stack")
-    func parentRowsUseExplicitDestinations() throws {
+    @Test("parent rows expand within the caller's stack")
+    func parentRowsExpandInPlace() throws {
         let source = try pickerSource()
 
-        #expect(source.contains("NavigationLink {"))
-        #expect(source.contains("level(for: option.id)"))
-        #expect(!source.contains(".navigationDestination(for: String.self)"))
+        #expect(source.contains("InventoryTypePickerTreeState"))
+        #expect(source.contains("InventoryFormTypeTreeView"))
+        #expect(!source.contains("NavigationLink {"))
     }
 
     @Test("selection commits after the picker begins dismissal")
     func selectionCommitsAfterDismissalBegins() throws {
         let source = try pickerSource()
-        let chooseBody = try #require(
-            source.split(separator: "private func choose").last.map(String.init))
-        let dismiss = try #require(chooseBody.range(of: "dismiss()")?.lowerBound)
-        let task = try #require(chooseBody.range(of: "Task { @MainActor in")?.lowerBound)
-        let selection = try #require(chooseBody.range(of: "selection = id")?.lowerBound)
+        #expect(source.contains("if let onChoose"))
+        #expect(source.contains("onChoose(id)"))
+        #expect(source.contains("Button(\"Cancel\")"))
+    }
 
-        #expect(dismiss < task)
-        #expect(task < selection)
+    @Test("the picker keeps search, selection, accessibility and motion wiring")
+    func pickerPresentationContract() throws {
+        let picker = try pickerSource()
+        let tree = try source("Form/InventoryFormTypeTreeView.swift")
+
+        #expect(picker.contains(".searchable(text: $query"))
+        #expect(picker.contains(".popsMotion(value: selection)"))
+        #expect(tree.contains(".transition(.opacity)"))
+        #expect(tree.contains(".popsMotion(value: tree.rows)"))
+        #expect(tree.contains(".popsMotion(value: selection)"))
+        #expect(tree.contains("checkmark.circle.fill"))
+        #expect(
+            tree.contains(".accessibilityAddTraits(selection == row.id ? .isSelected : [])"))
+    }
+
+    @Test("every semantic catalogue icon has a native symbol mapping")
+    func catalogueIconMappingsAreComplete() {
+        for token in InventoryCatalogueIconToken.allCases {
+            #expect(!InventorySymbol.catalogue(token).system.isEmpty)
+        }
+        #expect(InventorySymbol.catalogue(.item).system == "cube")
     }
 
     @Test("form rows own picker dismissal so the item form stays presented")
@@ -110,6 +128,19 @@ internal struct InventoryFormTypeOptionsTests {
             Self.catalogue, query: "pillowcase", selectedId: nil)
 
         #expect(results.map(\.path) == ["Bedding › Pillows › Pillowcase"])
+    }
+
+    @Test("protocol-2 options carry the catalogue icon into the native mapping")
+    func protocol2OptionCarriesIcon() {
+        let type = InventoryCatalogueType(
+            id: "icon-type", key: "icon-type", label: "Icon type", sortOrder: 0,
+            presentation: .object(["icon": .string("bedding")]))
+        let catalogue = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2), types: [type])
+
+        let option = InventoryFormTypeOptions.protocol2All(catalogue, selectedId: nil).first
+
+        #expect(option?.symbol.system == "bed.double")
     }
 
     @Test("an archived type stays listed only for the item already of it")

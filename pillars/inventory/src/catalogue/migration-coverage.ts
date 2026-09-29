@@ -1,10 +1,12 @@
 import { CatalogueApiError } from './authoring-types.js';
+import { descendantIds } from './catalogue-tree.js';
 import { loadPublishedCatalogue } from './catalogue.js';
 import { findDiscardedOverrides } from './compatibility-preview.js';
 import { classifyCatalogueCompatibility } from './compatibility.js';
+import { addEffectiveFieldCoverage } from './migration-coverage-fields.js';
+import { compareMigrationCoverage } from './migration-coverage-issues.js';
 
 import type { CommandDb } from '../domain/commands/entities.js';
-import type { CatalogueIssue } from './authoring-types.js';
 import type { PersistedCatalogue, PersistedItemTypeField } from './catalogue-types.js';
 import type { CatalogueCompatibilityResult } from './compatibility.js';
 import type { CatalogueMigration } from './migration-types.js';
@@ -12,23 +14,17 @@ import type { CatalogueMigration } from './migration-types.js';
 /** Server-derived definitions that a catalogue migration must cover exactly. */
 export interface RequiredMigrationCoverage {
   readonly affectedTypeIds: readonly string[];
+  readonly selectedTypeIds: readonly string[];
   readonly affectedFieldIds: readonly string[];
   readonly fieldTypeIds: ReadonlyMap<string, string>;
+  readonly baseEffectiveFieldIds: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly candidateEffectiveFieldIds: ReadonlyMap<string, ReadonlySet<string>>;
 }
 
 interface DefinitionOwners {
   readonly definitionTypeIds: Map<string, string>;
   readonly definitionFieldIds: Map<string, string>;
   readonly fieldTypeIds: Map<string, string>;
-}
-
-/** Creates a structured issue for migration manifest and step validation. */
-export function migrationValidationIssue(
-  path: string,
-  code: string,
-  message: string
-): CatalogueIssue {
-  return { definitionId: null, path, code, message };
 }
 
 function indexField(owners: DefinitionOwners, typeId: string, field: PersistedItemTypeField): void {
@@ -56,6 +52,40 @@ function definitionOwners(catalogues: readonly PersistedCatalogue[]): Definition
   return owners;
 }
 
+function effectiveFieldIds(
+  catalogue: PersistedCatalogue
+): ReadonlyMap<string, ReadonlySet<string>> {
+  return new Map(
+    catalogue.types.map((type) => [type.id, new Set(type.effectiveFields.map((field) => field.id))])
+  );
+}
+
+function selectedTypeIds(
+  catalogue: PersistedCatalogue,
+  affectedTypeIds: readonly string[]
+): readonly string[] {
+  return [
+    ...new Set(
+      affectedTypeIds.flatMap((typeId) => [typeId, ...descendantIds(catalogue.types, typeId)])
+    ),
+  ].toSorted();
+}
+
+function addCompatibilityCoverage(
+  compatibility: CatalogueCompatibilityResult,
+  owners: DefinitionOwners,
+  affectedTypeIds: Set<string>,
+  affectedFieldIds: Set<string>
+): void {
+  for (const change of compatibility.changes) {
+    if (change.classification !== 'migration_required') continue;
+    const typeId = owners.definitionTypeIds.get(change.definitionId);
+    const fieldId = owners.definitionFieldIds.get(change.definitionId);
+    if (typeId !== undefined) affectedTypeIds.add(typeId);
+    if (fieldId !== undefined) affectedFieldIds.add(fieldId);
+  }
+}
+
 function requiredCoverage(
   base: PersistedCatalogue,
   candidate: PersistedCatalogue,
@@ -64,48 +94,32 @@ function requiredCoverage(
   const owners = definitionOwners([base, candidate]);
   const affectedTypeIds = new Set<string>();
   const affectedFieldIds = new Set<string>();
-  for (const change of compatibility.changes) {
-    if (change.classification !== 'migration_required') continue;
-    const typeId = owners.definitionTypeIds.get(change.definitionId);
-    const fieldId = owners.definitionFieldIds.get(change.definitionId);
-    if (typeId !== undefined) affectedTypeIds.add(typeId);
-    if (fieldId !== undefined) affectedFieldIds.add(fieldId);
-  }
+  addCompatibilityCoverage(compatibility, owners, affectedTypeIds, affectedFieldIds);
+  const affectedTypeIdList = [...affectedTypeIds].toSorted();
+  const selectedTypeIdList = selectedTypeIds(candidate, affectedTypeIdList);
+  const candidateFieldsById = new Map(
+    candidate.types.flatMap((type) => type.fields).map((field) => [field.id, field])
+  );
+  const baseEffectiveFieldIds = effectiveFieldIds(base);
+  const candidateEffectiveFieldIds = effectiveFieldIds(candidate);
+  addEffectiveFieldCoverage(
+    selectedTypeIdList,
+    {
+      candidateFieldsById,
+      fieldTypeIds: owners.fieldTypeIds,
+      baseEffectiveFieldIds,
+      candidateEffectiveFieldIds,
+    },
+    affectedFieldIds
+  );
   return {
-    affectedTypeIds: [...affectedTypeIds].toSorted(),
+    affectedTypeIds: affectedTypeIdList,
+    selectedTypeIds: selectedTypeIdList,
     affectedFieldIds: [...affectedFieldIds].toSorted(),
     fieldTypeIds: owners.fieldTypeIds,
+    baseEffectiveFieldIds,
+    candidateEffectiveFieldIds,
   };
-}
-
-function compareCoverage(
-  path: 'affectedTypeIds' | 'affectedFieldIds',
-  declared: readonly string[],
-  required: readonly string[]
-): CatalogueIssue[] {
-  const declaredSet = new Set(declared);
-  const requiredSet = new Set(required);
-  const issues: CatalogueIssue[] = [];
-  if (declaredSet.size !== declared.length) {
-    issues.push(
-      migrationValidationIssue(path, 'duplicate_definition', `${path} contains duplicate ids`)
-    );
-  }
-  for (const id of requiredSet) {
-    if (!declaredSet.has(id)) {
-      issues.push(
-        migrationValidationIssue(path, 'affected_definition_missing', `${path} omits ${id}`)
-      );
-    }
-  }
-  for (const id of declaredSet) {
-    if (!requiredSet.has(id)) {
-      issues.push(
-        migrationValidationIssue(path, 'affected_definition_unrelated', `${path} includes ${id}`)
-      );
-    }
-  }
-  return issues;
 }
 
 /** Validates revisions and exact manifest coverage against the persisted catalogue diff. */
@@ -146,8 +160,16 @@ export function validateMigrationHeader(
   }
   const coverage = requiredCoverage(base, candidate, compatibility);
   const issues = [
-    ...compareCoverage('affectedTypeIds', migration.affectedTypeIds, coverage.affectedTypeIds),
-    ...compareCoverage('affectedFieldIds', migration.affectedFieldIds, coverage.affectedFieldIds),
+    ...compareMigrationCoverage(
+      'affectedTypeIds',
+      migration.affectedTypeIds,
+      coverage.affectedTypeIds
+    ),
+    ...compareMigrationCoverage(
+      'affectedFieldIds',
+      migration.affectedFieldIds,
+      coverage.affectedFieldIds
+    ),
   ];
   if (issues.length > 0) {
     throw new CatalogueApiError(

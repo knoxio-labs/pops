@@ -1,5 +1,6 @@
 import { archiveDefinition, archiveEnumOption } from './inventory-catalogue-archive-schema.js';
 import { fieldDefaultValues, nullableExpression } from './inventory-catalogue-expression-schema.js';
+import { migrationStepSchema } from './inventory-catalogue-migration-schema.js';
 
 export {
   EXPRESSION_BINARY_OPS,
@@ -136,66 +137,6 @@ export const catalogueOperationSchema = {
     archiveDefinition,
     archiveEnumOption,
     reorderDefinitions,
-  ],
-} as const;
-
-const migrationStepSchema = {
-  oneOf: [
-    {
-      type: 'object',
-      additionalProperties: false,
-      properties: { kind: { const: 'copy' }, fromFieldId: uuid, toFieldId: uuid },
-      required: ['kind', 'fromFieldId', 'toFieldId'],
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        kind: { const: 'set_default' },
-        fieldId: uuid,
-        values: { type: 'array', items: {} },
-      },
-      required: ['kind', 'fieldId', 'values'],
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        kind: { const: 'map_enum' },
-        fieldId: uuid,
-        optionIds: { type: 'object', additionalProperties: uuid },
-      },
-      required: ['kind', 'fieldId', 'optionIds'],
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        kind: { const: 'convert_decimal' },
-        fromFieldId: uuid,
-        toFieldId: uuid,
-        factor: { type: 'string' },
-      },
-      required: ['kind', 'fromFieldId', 'toFieldId', 'factor'],
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        kind: { const: 'replace_reference' },
-        fieldId: uuid,
-        targetKind: { type: 'string', enum: ['item', 'location'] },
-        fromTargetId: uuid,
-        toTargetId: uuid,
-      },
-      required: ['kind', 'fieldId', 'targetKind', 'fromTargetId', 'toTargetId'],
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      properties: { kind: { const: 'drop_value' }, fieldId: uuid },
-      required: ['kind', 'fieldId'],
-    },
   ],
 } as const;
 

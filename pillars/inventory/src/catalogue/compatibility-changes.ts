@@ -1,4 +1,3 @@
-import { descendantIds } from './catalogue-tree.js';
 import {
   compareAddedFields,
   compareNewTypeFields,
@@ -17,12 +16,6 @@ const RANK: Record<CatalogueCompatibilityClassification, number> = {
   migration_required: 2,
   forbidden: 3,
 };
-
-const MIGRATION_FIELD_CODES = new Set([
-  'computed_overrides_in_use',
-  'field_became_required',
-  'non_optional_field_added',
-]);
 
 function addChange(
   changes: CatalogueCompatibilityChange[],
@@ -46,7 +39,7 @@ function compareType(
     addChange(changes, 'forbidden', base.id, 'published_type_key_changed');
   }
   if (base.parentTypeId !== candidate.parentTypeId) {
-    addChange(changes, 'forbidden', base.id, 'published_type_parent_changed');
+    addChange(changes, 'migration_required', base.id, 'published_type_parent_changed');
   }
   const capabilitiesChanged =
     base.capabilities.length !== candidate.capabilities.length ||
@@ -136,35 +129,6 @@ function newTypeChanges(
   return changes;
 }
 
-function migrationTypeId(
-  candidate: PersistedCatalogue,
-  change: CatalogueCompatibilityChange
-): string | undefined {
-  if (candidate.types.some((type) => type.id === change.definitionId)) return change.definitionId;
-  if (!MIGRATION_FIELD_CODES.has(change.code)) return undefined;
-  return candidate.types
-    .flatMap((type) => type.fields)
-    .find((field) => field.id === change.definitionId)?.typeId;
-}
-
-function migrationThroughSubtypeChanges(
-  candidate: PersistedCatalogue,
-  changes: readonly CatalogueCompatibilityChange[]
-): CatalogueCompatibilityChange[] {
-  const restrictions: CatalogueCompatibilityChange[] = [];
-  for (const change of changes) {
-    if (change.classification !== 'migration_required') continue;
-    const typeId = migrationTypeId(candidate, change);
-    if (typeId === undefined || descendantIds(candidate.types, typeId).length === 0) continue;
-    restrictions.push({
-      classification: 'forbidden',
-      definitionId: change.definitionId,
-      code: 'migration_through_subtypes_unsupported',
-    });
-  }
-  return restrictions;
-}
-
 /**
  * Collects every compatibility change between two complete catalogue snapshots.
  * `fieldsHoldingOverrides` names computed fields on which a live item holds an
@@ -179,7 +143,6 @@ export function collectCatalogueChanges(
   const baseKinds = new Set(base.types.flatMap((type) => type.fields.map((field) => field.kind)));
   changes.push(...existingTypeChanges(base, candidate, baseKinds, fieldsHoldingOverrides));
   changes.push(...newTypeChanges(base, candidate, baseKinds));
-  changes.push(...migrationThroughSubtypeChanges(candidate, changes));
   return changes;
 }
 

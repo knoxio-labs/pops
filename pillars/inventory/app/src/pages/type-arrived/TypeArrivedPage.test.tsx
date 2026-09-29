@@ -264,7 +264,7 @@ describe('TypeArrivedPage', () => {
       })
     );
     const list = within(screen.getByRole('grid', { name: 'Matched items' }));
-    expect(list.getByText('Garden tools')).toBeInTheDocument();
+    expect(await list.findByText('Garden tools')).toBeInTheDocument();
     expect(list.getByText('Workshop')).toBeInTheDocument();
   });
 

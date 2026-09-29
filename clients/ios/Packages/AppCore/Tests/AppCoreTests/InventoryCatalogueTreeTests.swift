@@ -83,4 +83,20 @@ internal struct InventoryCatalogueTreeTests {
         #expect(Self.catalogue.type(Self.sheet, isOrDescendsFrom: Self.bedding))
         #expect(!Self.catalogue.type(Self.bedding, isOrDescendsFrom: Self.sheet))
     }
+
+    @Test("icon tokens inherit from the nearest ancestor and reject unknown values")
+    func iconTokenResolution() {
+        let parent = InventoryCatalogueType(
+            id: "icon-parent", key: "icon-parent", label: "Parent", sortOrder: 0,
+            presentation: .object(["icon": .string("bedding")]))
+        let child = InventoryCatalogueType(
+            id: "icon-child", key: "icon-child", label: "Child", sortOrder: 1,
+            presentation: .object(["icon": .string("not-a-token")]), parentTypeId: "icon-parent")
+        let catalogue = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
+            types: [parent, child])
+
+        #expect(catalogue.iconToken(for: "icon-child") == .bedding)
+        #expect(catalogue.iconToken(for: "missing") == .item)
+    }
 }

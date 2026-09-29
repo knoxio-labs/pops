@@ -106,4 +106,23 @@ describe('configureBfmServerSdk', () => {
 
     expect(discovery.timeouts).toEqual([20_000]);
   });
+
+  it('leaves the service-account verifier timeout at the SDK default when unset', () => {
+    recordingDiscovery();
+
+    const config = configureBfmServerSdk({ ...KEY_ENV });
+
+    expect(config.serviceAccountVerifyTimeoutMs).toBeUndefined();
+  });
+
+  it('returns the service-account verifier timeout override for the HTTP server', () => {
+    recordingDiscovery();
+
+    const config = configureBfmServerSdk({
+      ...KEY_ENV,
+      POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS: '30000',
+    });
+
+    expect(config.serviceAccountVerifyTimeoutMs).toBe(30_000);
+  });
 });

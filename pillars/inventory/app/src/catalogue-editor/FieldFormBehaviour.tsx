@@ -1,6 +1,16 @@
 import { Archive } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle, Label, Switch } from '@pops/ui';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  FIELD_ICON_OPTIONS,
+  FieldIcon,
+  isFieldIconName,
+  Label,
+  Select,
+  Switch,
+} from '@pops/ui';
 
 import { ComputedFieldSection } from './computed/ComputedFieldSection';
 import { useFieldFormContext } from './FieldFormContext';
@@ -10,6 +20,7 @@ export function FieldFormBehaviour() {
   const { field, shapeLocked, storage } = useFieldFormContext();
   return (
     <>
+      <FieldIconControl />
       <div className="grid gap-3 sm:grid-cols-2">
         <FieldToggle
           id="catalogue-required"
@@ -52,6 +63,31 @@ export function FieldFormBehaviour() {
         </Alert>
       )}
     </>
+  );
+}
+
+function FieldIconControl() {
+  const { icon, setIcon } = useFieldFormContext();
+  const unsupported = icon !== '' && !isFieldIconName(icon);
+  return (
+    <div className="space-y-2">
+      <Select
+        label="Icon"
+        value={icon}
+        onChange={(event) => setIcon(event.target.value)}
+        prefix={isFieldIconName(icon) ? <FieldIcon name={icon} /> : undefined}
+        className="min-h-11"
+        aria-describedby="catalogue-icon-help"
+        options={[
+          { value: '', label: 'None — use field name' },
+          ...FIELD_ICON_OPTIONS,
+          ...(unsupported ? [{ value: icon, label: `Unavailable icon (${icon})` }] : []),
+        ]}
+      />
+      <p id="catalogue-icon-help" className="text-xs text-muted-foreground">
+        Replaces the field name on printed labels. Other views keep the name.
+      </p>
+    </div>
   );
 }
 

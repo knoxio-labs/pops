@@ -7,9 +7,11 @@ import {
   ExpressionV1Schema,
   PrimitiveWireValueSchema,
 } from './rest-catalogue-expression-schema.js';
+import { CatalogueTypePresentationSchema } from './rest-catalogue-presentation-schemas.js';
 import { ErrorBodySchema } from './rest-schemas.js';
 
 const AnyJson = z.unknown();
+export { CatalogueIconTokenSchema } from './rest-catalogue-presentation-schemas.js';
 export const CataloguePrimitiveKindSchema = z.enum([
   'short_text',
   'long_text',
@@ -83,7 +85,7 @@ const CatalogueDefinitionTypeSchema = z.object({
   sortOrder: z.number().int().min(0),
   capabilities: z.array(z.string()),
   legacyLabels: z.array(z.string()),
-  presentation: z.record(z.string(), z.unknown()),
+  presentation: CatalogueTypePresentationSchema,
   archivedAt: z.string().nullable(),
   replacedBy: z.uuid().nullable(),
   fields: z.array(CatalogueDefinitionFieldSchema),
@@ -134,7 +136,7 @@ export const CataloguePutTypeSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
   capabilities: z.array(z.string().min(1).max(64)).max(16).optional(),
   legacyLabels: z.array(z.string().min(1).max(200)).max(50).optional(),
-  presentation: z.record(z.string(), z.unknown()).optional(),
+  presentation: CatalogueTypePresentationSchema.optional(),
   archivedAt: z.string().nullable().optional(),
 });
 

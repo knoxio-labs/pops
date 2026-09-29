@@ -890,6 +890,7 @@ function pathParameter(template, pathname, marker = '{id}') {
  *   url: string,
  *   port: number,
  *   close: () => Promise<void>,
+ *   reset: () => void,
  *   setReachable: (active: boolean) => void,
  *   isReachable: () => boolean,
  *   setSearchOutage: (active: boolean) => void,
@@ -919,6 +920,12 @@ export async function startPurchasesStub({
   // `finance-stops-answering.js`'s "reachable but its data route refuses"
   // shape rather than taking the whole pillar down.
   let searchOutage = false;
+
+  const reset = () => {
+    store.splice(0, store.length, ...seededPurchases());
+    reachable = false;
+    searchOutage = false;
+  };
 
   // Serialised once rather than per probe, for the reason `upstream-stub.mjs`
   // gives about finance's much larger document: a stringify inside the handler
@@ -1024,6 +1031,7 @@ export async function startPurchasesStub({
         server.closeAllConnections();
         server.close(() => resolve());
       }),
+    reset,
     setReachable: (active) => {
       reachable = active;
     },

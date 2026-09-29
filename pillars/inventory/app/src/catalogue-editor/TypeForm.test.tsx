@@ -11,10 +11,13 @@ const bedding = testType('bedding', 'Bedding', null);
 const pillows = testType('pillows', 'Pillows', 'bedding');
 const pillowcase = testType('pillowcase', 'Pillowcase', 'pillows');
 const sheet = testType('sheet', 'Sheet', 'bedding');
+const storage = testType('storage', 'Storage', 'bedding');
+const shelf = testType('shelf', 'Shelf', 'storage');
+const bin = testType('bin', 'Bin', 'shelf');
 const archived = testType('archived', 'Archived', null, {
   archivedAt: '2026-09-26T00:00:00.000Z',
 });
-const types = [bedding, pillows, pillowcase, sheet, archived];
+const types = [bedding, pillows, pillowcase, sheet, storage, shelf, bin, archived];
 
 function renderForm(
   options: {
@@ -49,7 +52,9 @@ describe('TypeForm parent chooser', () => {
       'Pillowcase: A type cannot be parented below its descendant.'
     );
     expect(reasons).toHaveTextContent('Archived: Archived types cannot become parents.');
-    expect(reasons).toHaveTextContent('Sheet: Depth 4 exceeds the cap of 3.');
+    expect(reasons).toHaveTextContent(
+      'Bedding › Storage › Shelf › Bin: Depth 6 exceeds the cap of 5.'
+    );
 
     fireEvent.click(screen.getByRole('combobox', { name: 'Parent' }));
 
@@ -66,6 +71,10 @@ describe('TypeForm parent chooser', () => {
       'true'
     );
     expect(screen.getByRole('option', { name: 'Bedding › Sheet' })).toHaveAttribute(
+      'aria-disabled',
+      'false'
+    );
+    expect(screen.getByRole('option', { name: 'Bedding › Storage › Shelf › Bin' })).toHaveAttribute(
       'aria-disabled',
       'true'
     );

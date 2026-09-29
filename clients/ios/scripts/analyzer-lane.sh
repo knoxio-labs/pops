@@ -27,12 +27,21 @@ set +e
 swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml \
   <&0 >"$output_log" 2>&1 &
 analyzer_pid=$!
-tail -n +1 -F "$output_log" &
-tail_pid=$!
+offset=0
+while kill -0 "$analyzer_pid" 2>/dev/null; do
+  size=$(wc -c < "$output_log")
+  if [ "$size" -gt "$offset" ]; then
+    tail -c "+$((offset + 1))" "$output_log"
+    offset=$size
+  fi
+  sleep 0.05
+done
 wait "$analyzer_pid"
 status=$?
-kill "$tail_pid" 2>/dev/null
-wait "$tail_pid" 2>/dev/null || true
+size=$(wc -c < "$output_log")
+if [ "$size" -gt "$offset" ]; then
+  tail -c "+$((offset + 1))" "$output_log"
+fi
 set -e
 
 # Same reasoning as app-test-lane.sh's executed-test count: absence is a

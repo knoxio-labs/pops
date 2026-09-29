@@ -7593,6 +7593,14 @@ export interface operations {
                   toFieldId: string;
                 }
               | {
+                  /** @enum {string} */
+                  kind: 'copy_legacy_value';
+                  /** @enum {string} */
+                  source: 'replacementValue' | 'resaleValue';
+                  /** Format: uuid */
+                  toFieldId: string;
+                }
+              | {
                   /** Format: uuid */
                   fieldId: string;
                   /** @enum {string} */

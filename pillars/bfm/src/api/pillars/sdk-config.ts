@@ -36,6 +36,7 @@ import {
   resolveDiscoveryFetchTimeoutMs,
   resolveInternalBaseUrls,
   resolveRegistryUrl,
+  resolveServiceAccountVerifyTimeoutMs,
 } from './env.js';
 import { MissingServiceAccountKeyError, resolveServiceAccountKey } from './service-account.js';
 
@@ -51,6 +52,8 @@ export interface BfmSdkConfig {
   registryUrl: string;
   /** Empty when nothing is configured — the "no overrides" case, unwrapped. */
   internalBaseUrls: Readonly<Record<string, string>>;
+  /** Undefined when the registry-backed verifier should use its SDK default. */
+  serviceAccountVerifyTimeoutMs: number | undefined;
 }
 
 /**
@@ -70,6 +73,7 @@ export function configureBfmServerSdk(env: NodeJS.ProcessEnv = process.env): Bfm
 
   const internalBaseUrls = resolveInternalBaseUrls(env);
   const registryUrl = resolveRegistryUrl(env);
+  const serviceAccountVerifyTimeoutMs = resolveServiceAccountVerifyTimeoutMs(env);
 
   configureServerSdk({
     // Passed explicitly rather than left to the SDK's own env fallback: only
@@ -91,5 +95,9 @@ export function configureBfmServerSdk(env: NodeJS.ProcessEnv = process.env): Bfm
   const discoveryFetchTimeoutMs = resolveDiscoveryFetchTimeoutMs(env);
   if (discoveryFetchTimeoutMs !== undefined) setFetchTimeoutMs(discoveryFetchTimeoutMs);
 
-  return { registryUrl, internalBaseUrls: internalBaseUrls ?? {} };
+  return {
+    registryUrl,
+    internalBaseUrls: internalBaseUrls ?? {},
+    serviceAccountVerifyTimeoutMs,
+  };
 }

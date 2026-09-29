@@ -37,7 +37,7 @@ internal struct RuntimeErrorDecodingTests {
         return popsError
     }
 
-    @Test("an ADR-054 envelope reaches the repository intact")
+    @Test("an ADR-054 upstream outage envelope maps to unavailable")
     func decodesEnvelope() async throws {
         let transport = StubTransport { _, _ in
             var fields = HTTPFields()
@@ -57,13 +57,9 @@ internal struct RuntimeErrorDecodingTests {
             )
         }
 
-        let error = try await failure(transport: transport)
-
-        #expect(error.code == "gateway.upstream_unavailable")
-        #expect(error.message == "Inventory is unavailable.")
-        #expect(error.requestID == "body-request")
-        #expect(error.retryable)
-        #expect(error.kind == .server)
+        await #expect(throws: RepositoryError.unavailable) {
+            try await service(transport: transport).bootstrap()
+        }
     }
 
     @Test("a non-envelope response falls back to its HTTP status")

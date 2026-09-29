@@ -55,10 +55,13 @@ internal final class CountingGatedInventoryStore: InventoryStore, @unchecked Sen
             defer { current.holdNext = false }
             return current.holdNext
         }
-        enter.yield()
-        guard shouldHold else { return }
+        guard shouldHold else {
+            enter.yield()
+            return
+        }
         await withCheckedContinuation { continuation in
             state.withLock { $0.continuation = continuation }
+            enter.yield()
         }
     }
 

@@ -5,6 +5,7 @@ import { loadPublishedCatalogue } from './catalogue.js';
 import { parseCanonicalValue } from './value-dispatch.js';
 
 import type { ItemFieldValueSource } from '../db/schema.js';
+import type { items } from '../db/schema.js';
 import type { CommandDb } from '../domain/commands/entities.js';
 import type { PersistedCatalogue, PersistedItemTypeField } from './catalogue-types.js';
 import type { CatalogueMigrationStep } from './migration-types.js';
@@ -120,15 +121,37 @@ function replaceReference(
   });
 }
 
+function copyLegacyValue(
+  values: MutableFieldValues[],
+  step: Extract<CatalogueMigrationStep, { kind: 'copy_legacy_value' }>,
+  legacy: typeof items.$inferSelect,
+  candidate: PersistedCatalogue
+): void {
+  if (findValues(values, step.toFieldId)) return;
+  const value = legacy[step.source];
+  if (value === null) return;
+  if (!Number.isFinite(value)) {
+    throw new Error(`${step.source} on ${legacy.id} is not finite`);
+  }
+  const field = fieldById(candidate, step.toFieldId);
+  if (field.kind !== 'measurement' || field.fixedUnit === null) {
+    throw new Error(`${step.toFieldId} is not a fixed-unit measurement`);
+  }
+  setValues(values, field, [{ amount: String(value), unit: field.fixedUnit }]);
+}
+
 /** Applies one closed migration step to an in-memory item field set. */
 export function applyMigrationStep(
   values: MutableFieldValues[],
   step: CatalogueMigrationStep,
-  candidate: PersistedCatalogue
+  candidate: PersistedCatalogue,
+  legacy: typeof items.$inferSelect
 ): void {
   if (step.kind === 'copy') {
     const source = findValues(values, step.fromFieldId);
     if (source) setValues(values, fieldById(candidate, step.toFieldId), source.values);
+  } else if (step.kind === 'copy_legacy_value') {
+    copyLegacyValue(values, step, legacy, candidate);
   } else if (step.kind === 'set_default') {
     const field = fieldById(candidate, step.fieldId);
     if (!findValues(values, field.id)) setValues(values, field, step.values);

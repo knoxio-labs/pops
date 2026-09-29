@@ -12,7 +12,7 @@ function readiness(changes: CatalogueCompatibility['changes']): CatalogueReadine
       affectedIds: [],
       affectedItems: 0,
       changes,
-      classification: 'forbidden',
+      classification: 'migration_required',
       discardedOverrides: [],
     },
     operations: [],
@@ -20,12 +20,12 @@ function readiness(changes: CatalogueCompatibility['changes']): CatalogueReadine
 }
 
 describe('CompatibilityPreview type-tree changes', () => {
-  it('renders the POPS-4851 copy for parent and migration compatibility codes', () => {
+  it('renders the migration copy for parent and protocol compatibility codes', () => {
     render(
       <CompatibilityPreview
         readiness={readiness([
           {
-            classification: 'forbidden',
+            classification: 'migration_required',
             code: 'published_type_parent_changed',
             definitionId: 'sheet',
           },
@@ -34,31 +34,21 @@ describe('CompatibilityPreview type-tree changes', () => {
             code: 'type_parent_set',
             definitionId: 'pillowcase',
           },
-          {
-            classification: 'migration_required',
-            code: 'migration_through_subtypes_unsupported',
-            definitionId: 'bedding',
-          },
         ])}
       />
     );
 
-    expect(screen.getByText('Published type parent cannot change')).toBeInTheDocument();
+    expect(screen.getByText('Published type parent change requires migration')).toBeInTheDocument();
     expect(screen.getByText('Type parent set')).toBeInTheDocument();
-    expect(screen.getByText('Required changes stop at the parent boundary')).toBeInTheDocument();
     expect(
-      screen.getByText('This editor draws the refusal; it does not offer a migration.')
+      screen.getByText(
+        'Publish this parent change with a migration covering the type and its descendants.'
+      )
     ).toBeInTheDocument();
     expect(
       screen.getByText('New subtypes require the type-tree protocol before they can be published.')
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'The web editor does not invent a migration. Keep the field optional or make the change through the supported catalogue workflow.'
-      )
-    ).toBeInTheDocument();
     expect(screen.getByText('published_type_parent_changed')).toBeInTheDocument();
     expect(screen.getByText('type_parent_set')).toBeInTheDocument();
-    expect(screen.getByText('migration_through_subtypes_unsupported')).toBeInTheDocument();
   });
 });
