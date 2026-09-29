@@ -149,6 +149,7 @@ describe('GET /openapi', () => {
       '/mobile/inventory/media/{sha256}',
       '/mobile/inventory/mutations',
       '/mobile/inventory/sync/changes',
+      '/mobile/inventory/sync/items/{id}',
       '/mobile/inventory/sync/ledger',
       '/mobile/inventory/sync/snapshot',
       '/mobile/inventory/type-catalogue',

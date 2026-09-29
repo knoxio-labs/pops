@@ -47,6 +47,10 @@ internal final class InventorySyncViewModel {
         await store.refresh()
     }
 
+    internal func retry(_ issue: InventorySyncIssue) async {
+        await store.retrySyncIssue(issue.id)
+    }
+
     /// The row's thumbnail, or nil when it cannot be had; the row then shows
     /// the kind's glyph.
     internal func thumbnail(_ sha256: String) async -> Data? {

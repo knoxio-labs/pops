@@ -43,7 +43,7 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
     let pageSize: Int
     private let mintMutationId: @Sendable () -> String
     private let now: @Sendable () -> Date
-    private let sequencer = SyncSequencer()
+    let sequencer = SyncSequencer()
     /// The seq of the event each applied change wrote, by mutation id: what
     /// `undo(_:)` reverts. Held for this process only, as the Undo offer is.
     private let revertibleEvents = Mutex<[String: Int]>([:])
@@ -122,8 +122,8 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
         try await sequencer.run { try await self.downloadNow() }
     }
 
-    /// Failures are not thrown: they show in `status()` as offline or
-    /// blocked, and the next refresh tries again.
+    /// Failures are not thrown: they show in the status stream as offline,
+    /// sync failed, or blocked, and the next refresh tries again.
     public func refresh() async {
         try? await sequencer.run { try await self.refreshNow() }
     }

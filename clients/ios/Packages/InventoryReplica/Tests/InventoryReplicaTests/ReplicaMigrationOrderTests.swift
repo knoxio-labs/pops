@@ -21,9 +21,9 @@ internal struct ReplicaMigrationOrderTests {
                 "v8_computed_values", "v9_local_computed_values", "v10_catalogue_update_hold",
                 "v11_nullable_catalogue_revision", "v12_catalogue_hold_reason",
                 "v13_catalogue_lineage", "v14_catalogue_field_defaults",
-                "v15_catalogue_type_parent",
+                "v15_catalogue_type_parent", "v16_sync_item_issues",
             ]
-            #expect(Array(applied.suffix(8)) == expected)
+            #expect(Array(applied.suffix(9)) == expected)
             #expect(try db.tableExists(ComputedValueRows.localTableName))
             #expect(try Self.mutationLogColumns(db).contains("awaiting_catalogue_after"))
         }

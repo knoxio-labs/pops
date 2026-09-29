@@ -17,10 +17,7 @@
  * bfm's own OpenAPI and Swift codegen.
  */
 import { MobileInventoryLedgerReportResponseSchema } from '../../contract/mobile-inventory-ledger-schemas.js';
-import {
-  MobileCodeSuggestResponseSchema,
-  MobileMutationsResponseSchema,
-} from '../../contract/mobile-inventory-mutation-schemas.js';
+import { MobileMutationsResponseSchema } from '../../contract/mobile-inventory-mutation-schemas.js';
 import {
   MobileInventoryChangesSchema,
   MobileInventoryItemHistorySchema,
@@ -28,6 +25,8 @@ import {
 } from '../../contract/mobile-inventory-schemas.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import { createMobileInventoryCatalogueClient } from './catalogue-client.js';
+import { callSuggestCodes } from './client-codes.js';
+import { callItem } from './client-item.js';
 import { withInventoryActor } from './handle-factory.js';
 
 import type {
@@ -42,6 +41,7 @@ import type {
 import type {
   MobileInventoryChanges,
   MobileInventoryItemHistory,
+  MobileInventoryItemResult,
   MobileInventorySnapshot,
 } from '../../contract/mobile-inventory-schemas.js';
 import type { GatewayOutcome, PillarGateway } from '../pillars/gateway.js';
@@ -49,9 +49,11 @@ import type {
   InventoryCatalogueRouter,
   MobileInventoryCatalogueClient,
 } from './catalogue-client.js';
+import type { ItemRequest, SuggestCodesRequest } from './client-types.js';
 
-/** The inventory pillar id — matches its registered manifest name. */
 export const INVENTORY_PILLAR_ID = 'inventory';
+
+export type { ItemRequest, SuggestCodesRequest } from './client-types.js';
 
 /** The subset of inventory's router bfm calls. See `client.ts` header. */
 export type InventorySyncRouter = InventoryCatalogueRouter & {
@@ -103,16 +105,11 @@ export interface LedgerReportRequest {
   readonly actorHeader: string;
 }
 
-export interface SuggestCodesRequest {
-  readonly name: string;
-  readonly typeKey: string | null;
-  readonly stem: string | null;
-}
-
 export interface MobileInventoryClient extends MobileInventoryCatalogueClient {
   snapshot(request: SnapshotRequest): Promise<GatewayOutcome<MobileInventorySnapshot>>;
   changes(request: ChangesRequest): Promise<GatewayOutcome<MobileInventoryChanges>>;
   itemHistory(request: ItemHistoryRequest): Promise<GatewayOutcome<MobileInventoryItemHistory>>;
+  item(request: ItemRequest): Promise<GatewayOutcome<MobileInventoryItemResult>>;
   mutations(request: MutationsRequest): Promise<GatewayOutcome<MobileMutationsResponse>>;
   reportLedger(
     request: LedgerReportRequest
@@ -209,31 +206,13 @@ async function callReportLedger(
   );
 }
 
-async function callSuggestCodes(
-  gateway: PillarGateway,
-  request: SuggestCodesRequest
-): Promise<GatewayOutcome<MobileCodeSuggestResponse>> {
-  const outcome = await gateway.call<InventorySyncRouter, unknown>(INVENTORY_PILLAR_ID, (handle) =>
-    handle.codes.suggest({
-      name: request.name,
-      ...(request.typeKey === null ? {} : { typeKey: request.typeKey }),
-      ...(request.stem === null ? {} : { stem: request.stem }),
-    })
-  );
-  return parseOrMismatch(
-    INVENTORY_PILLAR_ID,
-    outcome,
-    MobileCodeSuggestResponseSchema,
-    'codes.suggest'
-  );
-}
-
 export function createMobileInventoryClient(gateway: PillarGateway): MobileInventoryClient {
   return {
     ...createMobileInventoryCatalogueClient(gateway),
     snapshot: (request) => callSnapshot(gateway, request),
     changes: (request) => callChanges(gateway, request),
     itemHistory: (request) => callItemHistory(gateway, request),
+    item: (request) => callItem(gateway, request),
     mutations: (request) => callMutations(gateway, request),
     reportLedger: (request) => callReportLedger(gateway, request),
     suggestCodes: (request) => callSuggestCodes(gateway, request),

@@ -99,6 +99,7 @@ function snapshotPage(minimumProtocol = 2): Record<string, unknown> {
     catalogueRevision: fixture.currentRevision,
     total: items.length,
     items,
+    issues: [],
     locations,
     nextCursor: null,
   };

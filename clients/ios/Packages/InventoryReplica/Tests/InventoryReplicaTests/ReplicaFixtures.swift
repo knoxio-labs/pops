@@ -49,11 +49,12 @@ internal enum Fixture {
 
     static func changes(
         items: [InventoryItem] = [], locations: [InventoryLocation] = [],
-        events: [InventoryEvent] = [], epoch: String = epoch, nextSince: Int = 20
+        events: [InventoryEvent] = [], epoch: String = epoch, nextSince: Int = 20,
+        issues: [InventorySyncIssue] = []
     ) -> InventoryChangesPage {
         InventoryChangesPage(
             epoch: epoch, items: items, locations: locations, events: events,
-            nextSince: nextSince, hasMore: false, catalogueVersion: "cat-1")
+            nextSince: nextSince, hasMore: false, catalogueVersion: "cat-1", issues: issues)
     }
 
     static func event(seq: Int, itemId: String, kind: InventoryEventKind = .edited)

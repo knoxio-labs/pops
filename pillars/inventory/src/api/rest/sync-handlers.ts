@@ -23,7 +23,8 @@ import { storeLedgerReport } from '../sync/ledger.js';
 import { readMinProtocol, readSyncState } from '../sync/meta.js';
 import { requireProtocol } from '../sync/protocol.js';
 import { readSnapshotPage } from '../sync/snapshot.js';
-import { projectItems, toSyncLocation } from '../sync/wire.js';
+import { projectItemsWithIssues, toSyncLocation } from '../sync/wire.js';
+import { makeItemSyncHandler } from './sync-item-handler.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 import type { Request, Response } from 'express';
@@ -71,6 +72,7 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
             minimumProtocol,
           };
         });
+        const projected = await projectItemsWithIssues(page, documents);
         return {
           status: 200 as const,
           body: {
@@ -80,7 +82,8 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
             catalogueVersion: catalogue.version,
             catalogueRevision,
             total: page.total,
-            items: await projectItems(page, documents),
+            items: projected.items,
+            issues: projected.issues,
             locations: page.locations.map(toSyncLocation),
             nextCursor: page.nextCursor,
           },
@@ -100,12 +103,14 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
             minimumProtocol,
           };
         });
+        const projected = await projectItemsWithIssues(page, documents);
         return {
           status: 200 as const,
           body: {
             epoch: page.epoch,
             minimumProtocol,
-            items: await projectItems(page, documents),
+            items: projected.items,
+            issues: projected.issues,
             locations: page.locations.map(toSyncLocation),
             events: page.syncEvents,
             nextSince: page.nextSince,
@@ -125,6 +130,8 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
         if (!page) throw new SyncRequestError(404, 'not_found', `item '${params.id}' not found`);
         return { status: 200 as const, body: page };
       }),
+
+    item: makeItemSyncHandler(db, documents),
 
     mutations: ({ body, headers, req }: SyncReq['mutations'] & { req: Request }) =>
       runSync(async () => {

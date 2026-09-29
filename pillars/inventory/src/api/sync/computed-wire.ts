@@ -1,12 +1,13 @@
 import {
   loadPublishedCatalogue,
-  readEffectiveItemFieldValuesForItems,
+  readEffectiveItemFieldValues,
   type EffectiveItemFieldValue,
   type ReadItemFieldValue,
 } from '../../catalogue/index.js';
 
 import type { SyncComputedValue } from '../../contract/rest-sync-computed-schemas.js';
 import type { CommandDb } from '../../domain/commands/index.js';
+import type { SyncItemProjectionIssue } from './wire-types.js';
 
 type EvaluatedDependency = SyncComputedValue['dependencies'][number];
 
@@ -71,6 +72,51 @@ export function toComputedWire(
   };
 }
 
+/** Computed values and item-scoped issues produced during one sync read. */
+export interface ComputedValuesProjection {
+  readonly values: ReadonlyMap<string, readonly SyncComputedValue[]>;
+  readonly issues: ReadonlyMap<string, readonly SyncItemProjectionIssue[]>;
+}
+
+function projectionIssue(fieldId: string | null, message: string): SyncItemProjectionIssue {
+  return {
+    fieldId,
+    fieldKey: null,
+    code: 'computed_projection_failed',
+    message,
+  };
+}
+
+function projectComputedValues(
+  itemId: string,
+  effective: readonly EffectiveItemFieldValue[],
+  persisted: ReadonlyMap<string, readonly ReadItemFieldValue[]>,
+  issues: Map<string, SyncItemProjectionIssue[]>
+): SyncComputedValue[] {
+  const projected: SyncComputedValue[] = [];
+  for (const value of effective) {
+    try {
+      const wire = toComputedWire(itemId, value, persisted.get(itemId) ?? []);
+      if (wire !== null) projected.push(wire);
+    } catch (error) {
+      console.error('[inventory-sync] computed value projection failed', {
+        itemId,
+        fieldId: value.fieldId,
+        error,
+      });
+      const itemIssues = issues.get(itemId) ?? [];
+      itemIssues.push(
+        projectionIssue(
+          value.fieldId,
+          'A computed value could not be prepared for sync. No value was changed.'
+        )
+      );
+      issues.set(itemId, itemIssues);
+    }
+  }
+  return projected;
+}
+
 /**
  * Evaluates every computed field of `ids` against the active published
  * catalogue, through one dependency snapshot in the caller's read
@@ -81,17 +127,33 @@ export function loadComputedValues(
   db: CommandDb,
   ids: readonly string[],
   persisted: ReadonlyMap<string, readonly ReadItemFieldValue[]>
-): ReadonlyMap<string, readonly SyncComputedValue[]> {
+): ComputedValuesProjection {
   const catalogue = loadPublishedCatalogue(db);
-  if (catalogue === null || ids.length === 0) return new Map();
-  const effective = readEffectiveItemFieldValuesForItems(db, catalogue, ids);
-  return new Map(
-    ids.map((itemId) => [
+  if (catalogue === null || ids.length === 0) {
+    return { values: new Map(), issues: new Map() };
+  }
+  const effective = new Map<string, readonly EffectiveItemFieldValue[]>();
+  const issues = new Map<string, SyncItemProjectionIssue[]>();
+  for (const itemId of ids) {
+    try {
+      effective.set(itemId, readEffectiveItemFieldValues(db, catalogue, itemId));
+    } catch (error) {
+      console.error('[inventory-sync] computed projection failed', { itemId, error });
+      effective.set(itemId, []);
+      issues.set(itemId, [
+        projectionIssue(
+          null,
+          'A computed value could not be evaluated for this item. No value was changed.'
+        ),
+      ]);
+    }
+  }
+  const values = new Map<string, SyncComputedValue[]>();
+  for (const itemId of ids) {
+    values.set(
       itemId,
-      (effective.get(itemId) ?? []).flatMap((value) => {
-        const wire = toComputedWire(itemId, value, persisted.get(itemId) ?? []);
-        return wire === null ? [] : [wire];
-      }),
-    ])
-  );
+      projectComputedValues(itemId, effective.get(itemId) ?? [], persisted, issues)
+    );
+  }
+  return { values, issues };
 }

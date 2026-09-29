@@ -10,6 +10,7 @@ extension InMemoryInventoryStore {
         var locations: [String: InventoryLocation]
         var catalogue: InventoryCatalogue
         var repairs: [InventoryRepair]
+        var issues: [InventorySyncIssue]
         var resolved: [InventoryResolvedEntry]
         var media: [String: Data]
         var events: [InventoryEvent]
@@ -115,7 +116,8 @@ extension InMemoryInventoryStore {
 
         func inventorySyncLedger() -> InventoryReplicaSyncLedger {
             InventoryReplicaSyncLedger(
-                waiting: waiting, repairs: repairs, resolved: resolved, sendingStall: sendingStall)
+                waiting: waiting, repairs: repairs, resolved: resolved, sendingStall: sendingStall,
+                issues: issues)
         }
 
         func inventoryReplicaStatus() -> InventoryReplicaStatus { replicaStatus }

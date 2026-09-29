@@ -5,6 +5,8 @@ import SwiftUI
 internal enum InventorySyncConnection: Equatable {
     case online(lastSynced: String)
     case offline(lastSynced: String)
+    case serverFailure(lastSynced: String?)
+    case partial(issueCount: Int)
     case syncing
     /// Fetching the catalogue's newer fields before a held change can move.
     case updatingFields
@@ -15,6 +17,7 @@ internal enum InventorySyncConnection: Equatable {
         switch self {
         case .online: .synced
         case .offline: .offline
+        case .serverFailure, .partial: .attention
         case .syncing: .queued
         case .updatingFields: .refreshFields
         case .stuck: .attention
@@ -115,6 +118,10 @@ internal struct InventorySyncView: View {
         switch connection {
         case .online(let lastSynced): "Synced \(lastSynced)"
         case .offline(let lastSynced): "Offline · synced \(lastSynced)"
+        case .serverFailure(let lastSynced):
+            lastSynced.map { "Sync failed · last synced \($0)" } ?? "Sync failed"
+        case .partial(let issueCount):
+            "Synced with \(issueCount) \(issueCount == 1 ? "item" : "items") needing attention"
         case .syncing: "Syncing \(ledger.waiting.count) changes"
         case .updatingFields: "Updating fields"
         case .stuck: "Can't send \(ledger.waiting.count) changes"
@@ -127,7 +134,7 @@ internal struct InventorySyncView: View {
                 title: "Waiting", count: ledger.waiting.count, symbol: InventorySymbol.queued.system
             ),
             InventoryCountTile(
-                title: "Needs attention", count: ledger.repairs.count,
+                title: "Needs attention", count: ledger.repairs.count + ledger.issues.count,
                 symbol: InventorySymbol.attention.system),
             InventoryCountTile(
                 title: "Resolved today", count: ledger.resolvedToday,
@@ -138,14 +145,21 @@ internal struct InventorySyncView: View {
     private var needsAttention: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             InventoryLocationSectionHeader(
-                title: "Needs attention", trailing: "\(ledger.repairs.count)")
-            InventoryLocationPanel(rows: ledger.repairs) { repair in
-                NavigationLink(value: InventoryRepairRoute(repair: repair)) {
-                    InventoryRepairListRow(repair: repair) {
-                        offer = ledger.resolve(repair.id)
+                title: "Needs attention", trailing: "\(ledger.repairs.count + ledger.issues.count)")
+            if !ledger.repairs.isEmpty {
+                InventoryLocationPanel(rows: ledger.repairs) { repair in
+                    NavigationLink(value: InventoryRepairRoute(repair: repair)) {
+                        InventoryRepairListRow(repair: repair) {
+                            offer = ledger.resolve(repair.id)
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+            }
+            if !ledger.issues.isEmpty {
+                InventoryLocationPanel(rows: ledger.issues) { issue in
+                    InventorySyncIssueRow(issue: issue)
+                }
             }
         }
         .transition(.opacity)

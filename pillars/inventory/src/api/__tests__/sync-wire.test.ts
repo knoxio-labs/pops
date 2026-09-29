@@ -5,13 +5,18 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { loadProtocol1Fields } from '../../catalogue/index.js';
-import { SyncEventSchema, SyncItemSchema } from '../../contract/rest-sync-schemas.js';
+import {
+  SyncEventSchema,
+  SyncItemIssueSchema,
+  SyncItemSchema,
+} from '../../contract/rest-sync-schemas.js';
 import {
   catalogueRevisions,
+  fieldEnumOptions,
   itemDocuments,
   itemFieldValues,
   items,
@@ -36,6 +41,7 @@ import type { z } from 'zod';
 import type { DocumentsClient } from '../documents/client.js';
 
 type SyncEvent = z.infer<typeof SyncEventSchema>;
+type SyncItemIssue = z.infer<typeof SyncItemIssueSchema>;
 type SyncItem = z.infer<typeof SyncItemSchema>;
 
 const transport = createTestTransport();
@@ -114,13 +120,17 @@ function publishManyAuthorField(target: SyncHarness): void {
     .run();
 }
 
-async function feed(target: SyncHarness): Promise<{ items: SyncItem[]; events: SyncEvent[] }> {
-  const epoch = (await target.api.get('/sync/snapshot').set(PROTOCOL)).body.epoch as string;
-  const response = await target.api.get('/sync/changes').set(PROTOCOL).query({ since: 0, epoch });
+async function feed(
+  target: SyncHarness,
+  protocol: Record<string, string> = PROTOCOL
+): Promise<{ items: SyncItem[]; events: SyncEvent[]; issues: SyncItemIssue[] }> {
+  const epoch = (await target.api.get('/sync/snapshot').set(protocol)).body.epoch as string;
+  const response = await target.api.get('/sync/changes').set(protocol).query({ since: 0, epoch });
   expect(response.status).toBe(200);
   return {
     items: SyncItemSchema.array().parse(response.body.items),
     events: SyncEventSchema.array().parse(response.body.events),
+    issues: SyncItemIssueSchema.array().parse(response.body.issues),
   };
 }
 
@@ -257,6 +267,23 @@ describe('item rows on the wire', () => {
       catalogueRevision: 2,
       values: ['Ursula K. Le Guin', 'Second Author'],
     });
+    expect(SyncItemIssueSchema.array().parse(response.body.issues)).toContainEqual(
+      expect.objectContaining({
+        itemId: book,
+        code: 'field_cardinality_unsupported',
+        fieldId: AUTHOR_FIELD_ID,
+        fieldKey: null,
+        itemApplied: true,
+        retryable: true,
+      })
+    );
+
+    const targeted = await target.api.get(`/sync/items/${book}`).set(PROTOCOL_2);
+    expect(targeted.status).toBe(200);
+    expect(targeted.body.item.id).toBe(book);
+    expect(targeted.body.issues).toContainEqual(
+      expect.objectContaining({ itemId: book, code: 'field_cardinality_unsupported' })
+    );
 
     const web = await target.api.get(`/web/items/${book}`);
     expect(web.status).toBe(200);
@@ -268,6 +295,101 @@ describe('item rows on the wire', () => {
       catalogueRevision: 2,
       values: ['Ursula K. Le Guin', 'Second Author'],
     });
+  });
+
+  it('keeps the change page alive when a stored enum option is absent from the catalogue', async () => {
+    const target = harness();
+    const item = randomUUID();
+    await apply(target, createItem(item, 'Legacy enum item'));
+
+    const field = target.db.db
+      .select()
+      .from(itemTypeFields)
+      .all()
+      .find((candidate) => candidate.kind === 'enum' && candidate.storage === 'stored');
+    expect(field).toBeDefined();
+    if (!field) return;
+    const option = target.db.db
+      .select()
+      .from(fieldEnumOptions)
+      .where(
+        and(eq(fieldEnumOptions.revision, field.revision), eq(fieldEnumOptions.fieldId, field.id))
+      )
+      .get();
+    expect(option).toBeDefined();
+    if (!option) return;
+
+    target.db.db.update(items).set({ typeId: field.typeId }).where(eq(items.id, item)).run();
+    target.db.db
+      .insert(itemFieldValues)
+      .values({
+        itemId: item,
+        fieldId: field.id,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: JSON.stringify({ optionId: randomUUID() }),
+        catalogueRevision: field.revision,
+        createdAt: '2026-09-27T00:00:02.000Z',
+        updatedAt: '2026-09-27T00:00:02.000Z',
+      })
+      .run();
+
+    const { issues, items: rows } = await feed(target, PROTOCOL_2);
+    expect(rows).toContainEqual(expect.objectContaining({ id: item }));
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        itemId: item,
+        code: 'enum_option_unknown',
+        fieldId: field.id,
+        itemApplied: true,
+        retryable: true,
+      })
+    );
+  });
+
+  it('keeps healthy items on the page when another item has malformed canonical data', async () => {
+    const target = harness();
+    const [broken, healthy] = [randomUUID(), randomUUID()];
+    await apply(target, createItem(broken, 'Broken item'), createItem(healthy, 'Healthy item'));
+
+    const field = target.db.db
+      .select()
+      .from(itemTypeFields)
+      .all()
+      .find((candidate) => candidate.kind === 'short_text' && candidate.storage === 'stored');
+    expect(field).toBeDefined();
+    if (!field) return;
+
+    target.db.db.update(items).set({ typeId: field.typeId }).where(eq(items.id, broken)).run();
+    target.db.db
+      .insert(itemFieldValues)
+      .values({
+        itemId: broken,
+        fieldId: field.id,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: '[]',
+        catalogueRevision: field.revision,
+        createdAt: '2026-09-27T00:00:02.000Z',
+        updatedAt: '2026-09-27T00:00:02.000Z',
+      })
+      .run();
+
+    const { items: rows, issues } = await feed(target, PROTOCOL_2);
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: broken }),
+        expect.objectContaining({ id: healthy }),
+      ])
+    );
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        itemId: broken,
+        code: 'sync_value_projection_failed',
+        itemApplied: true,
+        retryable: true,
+      })
+    );
   });
 
   it('carries protocol-2 stable identities and canonical persisted values beside the compatibility projection', async () => {

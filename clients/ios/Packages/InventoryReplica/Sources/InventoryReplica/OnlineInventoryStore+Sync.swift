@@ -47,6 +47,24 @@ extension OnlineInventoryStore {
         try await recovering { try await self.resync() }
     }
 
+    /// Retries one item-specific server projection issue without moving the
+    /// feed cursor or replaying unrelated items.
+    public func retrySyncIssue(_ issueId: InventorySyncIssue.ID) async {
+        do {
+            try await sequencer.run { try await self.retrySyncIssueNow(issueId) }
+        } catch {
+            noteFailure(error)
+        }
+    }
+
+    private func retrySyncIssueNow(_ issueId: InventorySyncIssue.ID) async throws {
+        guard let issue = try replica.read(.syncLedger).issues.first(where: { $0.id == issueId })
+        else { return }
+        let result = try await transport.fetchItem(itemId: issue.itemId)
+        try await apply(result)
+        noteReached()
+    }
+
     private func resync() async throws {
         replica.updateActivity { $0.isDownloading = true }
         defer { replica.updateActivity { $0.isDownloading = false } }
@@ -118,6 +136,17 @@ extension OnlineInventoryStore {
             referencedCatalogues: try await unheldCatalogues(namedBy: page.items, pinned: revision))
     }
 
+    private func apply(_ result: InventorySyncItemResult) async throws {
+        guard let revision = result.catalogueRevision else {
+            return try replica.apply(result)
+        }
+        let catalogue = try await exactCatalogue(revision)
+        let items = result.item.map { [$0] } ?? []
+        try replica.apply(
+            result, catalogue: catalogue,
+            referencedCatalogues: try await unheldCatalogues(namedBy: items, pinned: revision))
+    }
+
     /// Every revision other than the pinned one that the page's items name
     /// and this phone does not hold. A publication leaves an unchanged item's
     /// values at the revision they were written under, so a page can name
@@ -158,15 +187,28 @@ extension OnlineInventoryStore {
     func noteReached() {
         replica.updateActivity {
             $0.isOffline = false
+            $0.syncFailed = false
             $0.blocked = nil
         }
     }
 
-    func noteFailure(_ error: any Error) {
+    func noteFailure(_ error: any Error, showsSyncFailure: Bool = true) {
         if let reason = Self.blockReason(for: error) {
-            replica.updateActivity { $0.blocked = reason }
+            replica.updateActivity {
+                $0.blocked = reason
+                $0.isOffline = false
+                $0.syncFailed = false
+            }
         } else if Self.isUnreachable(error) {
-            replica.updateActivity { $0.isOffline = true }
+            replica.updateActivity {
+                $0.isOffline = true
+                $0.syncFailed = false
+            }
+        } else if showsSyncFailure {
+            replica.updateActivity {
+                $0.isOffline = false
+                $0.syncFailed = true
+            }
         }
     }
 
@@ -184,8 +226,11 @@ extension OnlineInventoryStore {
 
     static func isUnreachable(_ error: any Error) -> Bool {
         switch error as? RepositoryError {
-        case .transport, .unavailable: true
-        default: false
+        case .transport(let detail):
+            guard let kind = detail.popsError?.kind else { return true }
+            return kind == .offline || kind == .timeout
+        case .unavailable: return true
+        default: return false
         }
     }
 

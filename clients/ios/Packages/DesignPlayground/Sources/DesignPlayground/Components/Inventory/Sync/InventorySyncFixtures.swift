@@ -75,6 +75,12 @@ internal enum InventorySyncFixtures {
     /// What the Sync page lists under Needs attention.
     internal static let repairs: [InventoryRepair] = [placement, code, photo]
 
+    internal static let issues: [InventorySyncIssue] = [
+        InventorySyncIssue(
+            id: "catalogue-value", recordID: "television", title: "Samsung television",
+            problem: "One field could not be read from the server.", retryable: true)
+    ]
+
     /// Every kind the repair page stages.
     internal static let everyRepair: [InventoryRepair] = [placement, name, code, deleted, photo]
 

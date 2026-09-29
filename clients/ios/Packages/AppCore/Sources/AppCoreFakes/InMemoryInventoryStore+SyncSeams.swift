@@ -35,6 +35,15 @@ extension InMemoryInventoryStore {
         notify(snapshot)
     }
 
+    /// Replaces the item-specific server issues shown by the Sync page.
+    public func setSyncIssues(_ issues: [InventorySyncIssue]) {
+        let snapshot = state.withLock { current -> State in
+            current.issues = issues
+            return current
+        }
+        notify(snapshot)
+    }
+
     /// Adds a mutation waiting to sync, for a test exercising the Sync page
     /// and a row's mark without a real mutation log (B3/B4).
     public func addWaitingMutation(_ mutation: InventoryQueuedMutation) {

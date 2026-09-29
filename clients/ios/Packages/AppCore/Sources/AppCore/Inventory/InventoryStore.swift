@@ -19,6 +19,9 @@ public enum InventoryReplicaStatus: Hashable, Sendable {
     case refreshing
     case offline(lastRefreshAt: Date?)
     case stale(lastRefreshAt: Date?)
+    /// The server answered, but the sync request failed. This is distinct
+    /// from `offline`: the phone has a reachable server to retry.
+    case syncFailed(lastRefreshAt: Date?)
     /// Session expired, or this build is below the server's minimum
     /// protocol version (`426 client_too_old`).
     case blocked(reason: InventoryBlockReason)
@@ -39,6 +42,8 @@ public struct InventoryReplicaSyncLedger: Hashable, Sendable {
     public let waiting: [InventoryQueuedMutation]
     public let repairs: [InventoryRepair]
     public let resolved: [InventoryResolvedEntry]
+    /// Item-specific server projection problems returned by a sync page.
+    public let issues: [InventorySyncIssue]
     /// Set while sending is stuck on something no network retry fixes; nil
     /// otherwise, including while the phone is merely offline.
     public let sendingStall: InventorySendingStall?
@@ -47,11 +52,13 @@ public struct InventoryReplicaSyncLedger: Hashable, Sendable {
         waiting: [InventoryQueuedMutation] = [],
         repairs: [InventoryRepair] = [],
         resolved: [InventoryResolvedEntry] = [],
-        sendingStall: InventorySendingStall? = nil
+        sendingStall: InventorySendingStall? = nil,
+        issues: [InventorySyncIssue] = []
     ) {
         self.waiting = waiting
         self.repairs = repairs
         self.resolved = resolved
+        self.issues = issues
         self.sendingStall = sendingStall
     }
 }
@@ -161,6 +168,10 @@ public protocol InventoryStore: Sendable {
     /// Catches the replica up from wherever it last stopped.
     func refresh() async
 
+    /// Retries one server-reported item issue through the targeted sync read.
+    /// A failed retry remains visible in the ledger and status stream.
+    func retrySyncIssue(_ issueId: InventorySyncIssue.ID) async
+
     /// Whether the replica has never completed a first download, read once
     /// against the stored state rather than through ``status()``, whose
     /// stream stays open for as long as anything reads it. What
@@ -197,6 +208,10 @@ public protocol InventoryStore: Sendable {
     /// is never sent to the server. A key settled before its type ever
     /// arrived is still recorded, and is not asked about when it does.
     func settleTypeArrival(typeKey: String) async throws
+}
+
+extension InventoryStore {
+    public func retrySyncIssue(_ issueId: InventorySyncIssue.ID) async {}
 }
 
 extension InventoryStore {

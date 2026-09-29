@@ -2929,6 +2929,17 @@ export type SyncChangesResponses = {
       undoable: boolean;
     }>;
     hasMore: boolean;
+    issues?: Array<{
+      code: string;
+      fieldId: string | null;
+      fieldKey: string | null;
+      itemApplied: boolean;
+      itemId: string;
+      itemName: string;
+      message: string;
+      retryable: boolean;
+      seq: number;
+    }>;
     items: Array<{
       access: 'open' | 'closed' | null;
       catalogueRevision: number | null;
@@ -3063,6 +3074,177 @@ export type SyncChangesResponses = {
 };
 
 export type SyncChangesResponse = SyncChangesResponses[keyof SyncChangesResponses];
+
+export type SyncItemData = {
+  body?: never;
+  headers?: {
+    'pops-inventory-protocol'?: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/sync/items/{id}';
+};
+
+export type SyncItemErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 426
+   */
+  426: ErrorBody;
+};
+
+export type SyncItemError = SyncItemErrors[keyof SyncItemErrors];
+
+export type SyncItemResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueRevision: number | null;
+    catalogueVersion: string;
+    issues?: Array<{
+      code: string;
+      fieldId: string | null;
+      fieldKey: string | null;
+      itemApplied: boolean;
+      itemId: string;
+      itemName: string;
+      message: string;
+      retryable: boolean;
+      seq: number;
+    }>;
+    item: {
+      access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
+      code: string | null;
+      computedValues: Array<
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            source: 'computed';
+            state: 'ok';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            override: {
+              catalogueRevision: number;
+            };
+            source: 'computed';
+            state: 'overridden';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            failedFieldId: string;
+            fieldId: string;
+            missingInputs: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
+            reason: string;
+            source: 'computed';
+            state: 'unavailable';
+            traversedItemIds: Array<string>;
+          }
+      >;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      legacyType: string | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeId: string | null;
+      typeKey: string | null;
+      updatedAt: string;
+    } | null;
+  };
+};
+
+export type SyncItemResponse = SyncItemResponses[keyof SyncItemResponses];
 
 export type SyncItemEventsData = {
   body?: never;
@@ -3468,6 +3650,17 @@ export type SyncSnapshotResponses = {
     catalogueVersion: string;
     epoch: string;
     highWaterSeq: number;
+    issues?: Array<{
+      code: string;
+      fieldId: string | null;
+      fieldKey: string | null;
+      itemApplied: boolean;
+      itemId: string;
+      itemName: string;
+      message: string;
+      retryable: boolean;
+      seq: number;
+    }>;
     items: Array<{
       access: 'open' | 'closed' | null;
       catalogueRevision: number | null;
