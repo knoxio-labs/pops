@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 
-@testable import Pops
-
 @Suite("Inventory search wiring")
 internal struct InventorySearchWiringTests {
     private static let source: String = {

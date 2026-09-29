@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 
-@testable import DesignSystem
-
 @Suite("Grounded swipe actions")
 internal struct PopsGroundedSwipeTests {
     private static let source: String = {

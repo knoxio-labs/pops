@@ -198,6 +198,7 @@ function agedAuthorization(header, secret) {
  *     isReachable: () => boolean,
  *     setSearchOutage: (active: boolean) => void,
  *     isSearchOutage: () => boolean,
+ *     resetHistory: () => void,
  *   },
  *   inventory: {
  *     setReachable: (active: boolean) => void,
@@ -256,6 +257,7 @@ export async function startControlPlane({
       // second tab arms it for itself.
       purchases.setReachable(false);
       purchases.setSearchOutage(false);
+      purchases.resetHistory();
       inventory.setReachable(false);
       inventory.setSyncOutage(false);
       return { status: 200, body: state() };

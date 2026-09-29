@@ -55,7 +55,10 @@ Everything in there is called through `runFlow` and takes values from its
 caller, so driven on its own it would fail on the ones nobody passed it.
 `select-transactions.yaml` and `open-transactions.yaml` keep the
 secondary-feature route through More consistent across healthy and error-state
-flows that need the Transactions screen.
+flows that need the Transactions screen. Purchases flows use `open-purchases.yaml`
+to wait for their own seeded home rather than assuming Transactions is the
+initial tab. History flows open the disclosure before asserting its events;
+the accessibility label and expanded/collapsed value are separate fields.
 
 ## The acceptance flow, kept out of the glob
 
@@ -191,6 +194,10 @@ The transaction rows the flows expect come from
 `scripts/ios-e2e/transactions-fixture.mjs`. Purchase rows and month figures
 come from `scripts/ios-e2e/purchases-stub.mjs`. Changing a merchant, account or
 amount there fails the flow that reads it, which is the point.
+Before each flow and driver retry, the harness's `/__e2e/reset` restores the
+seeded purchase history as well as the outage switches. A manual purchase
+persists for its own flow; later archive and search flows start from the same
+three seeded purchases regardless of execution order.
 
 ## The seams the recovery flows throw
 

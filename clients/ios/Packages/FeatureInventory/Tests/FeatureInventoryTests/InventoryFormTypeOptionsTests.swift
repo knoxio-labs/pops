@@ -1,6 +1,5 @@
 import AppCore
 import Foundation
-import SwiftUI
 import Testing
 
 @testable import FeatureInventory
