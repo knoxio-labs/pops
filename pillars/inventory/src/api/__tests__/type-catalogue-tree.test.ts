@@ -471,7 +471,7 @@ describe('type catalogue parent trees', () => {
     );
   });
 
-  it('forbids changing a published type parent during publication', async () => {
+  it('requires a migration to change a published type parent during publication', async () => {
     const api = apiFor('web');
     const currentResponse = await api.get('/type-catalogue');
     const current: CatalogueBody = currentResponse.body;
@@ -486,7 +486,7 @@ describe('type catalogue parent trees', () => {
 
     const published = await publishDraft(changed.context);
     expect(published.status, JSON.stringify(published.body)).toBe(409);
-    expect(published.body.code).toBe('inventory.catalogue.change_forbidden');
+    expect(published.body.code).toBe('inventory.catalogue.migration_required');
     expect(published.body.details.issues).toContainEqual({
       definitionId: parent.id,
       path: '$',
@@ -495,7 +495,7 @@ describe('type catalogue parent trees', () => {
     });
   });
 
-  it('reports migration through subtypes on the patch response', async () => {
+  it('reports required-field migration through subtypes on the patch response', async () => {
     const api = apiFor('web');
     const initial = await createDraft(api);
     const parent = await createType(initial, 'migration-parent');
@@ -527,11 +527,11 @@ describe('type catalogue parent trees', () => {
 
     expect(changed.response.status, JSON.stringify(changed.response.body)).toBe(200);
     const body: DraftResponseBody = changed.response.body;
-    expect(body.compatibility.classification).toBe('forbidden');
+    expect(body.compatibility.classification).toBe('migration_required');
     expect(body.compatibility.changes).toContainEqual({
-      classification: 'forbidden',
+      classification: 'migration_required',
       definitionId: field.id,
-      code: 'migration_through_subtypes_unsupported',
+      code: 'field_became_required',
     });
   });
 

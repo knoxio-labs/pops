@@ -2,6 +2,11 @@ import { z } from 'zod';
 
 export const CatalogueMigrationStepSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('copy'), fromFieldId: z.uuid(), toFieldId: z.uuid() }),
+  z.object({
+    kind: z.literal('copy_legacy_value'),
+    source: z.enum(['replacementValue', 'resaleValue']),
+    toFieldId: z.uuid(),
+  }),
   z.object({ kind: z.literal('set_default'), fieldId: z.uuid(), values: z.array(z.unknown()) }),
   z.object({
     kind: z.literal('map_enum'),

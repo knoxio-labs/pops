@@ -147,6 +147,33 @@ describe('replacement lineage authoring', () => {
     expect(catalogue && replacingField(catalogue, lumens)?.id).toBe(brightness);
   });
 
+  it('allows a shared ancestor field to replace a descendant field', () => {
+    const session = seeded();
+    patch(session, [{ kind: 'put_type', key: 'object', label: 'Object' }]);
+    const object = typeId(session.draft, 'object');
+    const lamp = typeId(session.draft, 'lamp');
+    patch(session, [
+      { kind: 'put_type', id: lamp, parentTypeId: object },
+      {
+        kind: 'put_field',
+        typeId: object,
+        key: 'shared_lumens',
+        label: 'Lumens',
+        fieldKind: 'short_text',
+        ...STORED,
+      },
+    ]);
+
+    const lumens = fieldId(session.draft, 'lumens');
+    const sharedLumens = fieldId(session.draft, 'shared_lumens');
+    patch(session, [{ kind: 'archive_field', id: lumens, replacedBy: sharedLumens }]);
+
+    expect(field(session.draft, lumens)).toMatchObject({
+      archivedAt: expect.any(String),
+      replacedBy: sharedLumens,
+    });
+  });
+
   it('records lineage on a field archived earlier without moving its archive time', () => {
     const session = seeded();
     const lumens = fieldId(session.draft, 'lumens');

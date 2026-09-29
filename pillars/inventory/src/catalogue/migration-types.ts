@@ -4,6 +4,11 @@ import type { PrimitiveWireValue } from './value-types.js';
 export type CatalogueMigrationStep =
   | { readonly kind: 'copy'; readonly fromFieldId: string; readonly toFieldId: string }
   | {
+      readonly kind: 'copy_legacy_value';
+      readonly source: 'replacementValue' | 'resaleValue';
+      readonly toFieldId: string;
+    }
+  | {
       readonly kind: 'set_default';
       readonly fieldId: string;
       readonly values: readonly PrimitiveWireValue[];
