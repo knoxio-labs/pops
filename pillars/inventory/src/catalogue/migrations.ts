@@ -81,7 +81,7 @@ function dryRunMigration(
   candidate: PersistedCatalogue,
   coverage: RequiredMigrationCoverage
 ): readonly DryRunItem[] {
-  const typeIds = new Set(coverage.affectedTypeIds);
+  const typeIds = new Set(coverage.selectedTypeIds);
   const rows = db
     .select()
     .from(items)
@@ -98,8 +98,13 @@ function dryRunMigration(
     const before = loadMigrationItemValues(db, row.id);
     const after = before.map((entry) => ({ ...entry, values: [...entry.values] }));
     for (const step of migration.steps) {
-      if (coverage.fieldTypeIds.get(migrationStepTargetFieldId(step)) === row.typeId) {
-        applyMigrationStep(after, step, candidate);
+      const targetFieldId = migrationStepTargetFieldId(step);
+      const candidateFields =
+        row.typeId === null ? undefined : coverage.candidateEffectiveFieldIds.get(row.typeId);
+      const baseFields =
+        row.typeId === null ? undefined : coverage.baseEffectiveFieldIds.get(row.typeId);
+      if (candidateFields?.has(targetFieldId) || baseFields?.has(targetFieldId)) {
+        applyMigrationStep(after, step, candidate, row);
       }
     }
     const validated = validateItemFieldValuesForType(db, type, after, row.id);

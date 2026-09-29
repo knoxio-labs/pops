@@ -150,12 +150,12 @@ describe('classifyCatalogueCompatibility', () => {
     });
   });
 
-  it('forbids changing the parent of a published type', () => {
+  it('requires a migration to change the parent of a published type', () => {
     const base = catalogue(1, [type([field()]), namedType('type-b', 'type-b', [])]);
     const candidate = catalogue(2, [type([field()]), namedType('type-b', 'type-b', [], 'type-a')]);
 
     expect(classifyCatalogueCompatibility(base, candidate).changes).toContainEqual({
-      classification: 'forbidden',
+      classification: 'migration_required',
       definitionId: 'type-b',
       code: 'published_type_parent_changed',
     });
@@ -181,29 +181,24 @@ describe('classifyCatalogueCompatibility', () => {
     });
   });
 
-  it('forbids a required-field migration through a subtype', () => {
+  it('allows a required-field migration through a subtype', () => {
     const child = namedType('type-b', 'type-b', [], 'type-a');
     const base = catalogue(1, [type([field()]), child]);
     const candidate = catalogue(2, [type([field({ required: true })]), child]);
 
     expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
-      classification: 'forbidden',
+      classification: 'migration_required',
       changes: [
         {
           classification: 'migration_required',
           definitionId: 'field-a',
           code: 'field_became_required',
         },
-        {
-          classification: 'forbidden',
-          definitionId: 'field-a',
-          code: 'migration_through_subtypes_unsupported',
-        },
       ],
     });
   });
 
-  it('counts archived descendants when forbidding a required-field migration', () => {
+  it('allows a required-field migration when a descendant is archived', () => {
     const child = namedType('type-b', 'type-b', [], 'type-a');
     const base = catalogue(1, [type([field()]), child]);
     const candidate = catalogue(2, [
@@ -211,11 +206,9 @@ describe('classifyCatalogueCompatibility', () => {
       { ...child, archivedAt: '2026-09-27T00:00:00.000Z' },
     ]);
 
-    expect(classifyCatalogueCompatibility(base, candidate).changes).toContainEqual({
-      classification: 'forbidden',
-      definitionId: 'field-a',
-      code: 'migration_through_subtypes_unsupported',
-    });
+    const result = classifyCatalogueCompatibility(base, candidate);
+
+    expect(result.classification).toBe('migration_required');
   });
 
   describe('a new type', () => {

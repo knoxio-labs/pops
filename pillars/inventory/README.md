@@ -112,7 +112,7 @@ Types may name one parent type. Each type authors its own fields and capabilitie
 the catalogue resolves effective fields and de-duplicated capabilities from the
 root through the type, while a type's descriptor still carries only its own
 definitions. Parent trees are validated for missing parents, cycles, archived
-parents, duplicate effective field keys and a maximum depth of three. A draft
+parents, duplicate effective field keys and a maximum depth of five. A draft
 that introduces a parent requires protocol 3 to publish; this build supports
 protocol 3, but the production minimum remains owner-controlled and must be raised
 before publishing parent-type catalogues, after dependent clients are ready
