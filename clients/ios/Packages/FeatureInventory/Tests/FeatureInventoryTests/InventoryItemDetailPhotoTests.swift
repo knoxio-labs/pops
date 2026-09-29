@@ -95,6 +95,20 @@ internal struct InventoryItemDetailPhotoTests {
         #expect(store.commands.isEmpty)
     }
 
+    @Test("photo reorder actions stop at both ends of the gallery")
+    func reorderDirectionsRespectGalleryBoundaries() {
+        let photos = [
+            InventoryDetailPhoto(sha256: "a", caption: "A"),
+            InventoryDetailPhoto(sha256: "b", caption: "B"),
+            InventoryDetailPhoto(sha256: "c", caption: "C"),
+        ]
+
+        #expect(photos.reorderedIds(moving: "a", .earlier) == nil)
+        #expect(photos.reorderedIds(moving: "a", .later) == ["b", "a", "c"])
+        #expect(photos.reorderedIds(moving: "c", .later) == nil)
+        #expect(photos.reorderedIds(moving: "c", .earlier) == ["a", "c", "b"])
+    }
+
     @Test("retaking a photo attaches the new bytes where the old one stood and removes it")
     func retakeReplacesPhoto() async throws {
         let store = Self.storeWithPhotos(["a", "b"])
@@ -112,5 +126,30 @@ internal struct InventoryItemDetailPhotoTests {
                 .removePhoto(itemId: "tv", sha256: "a"),
             ])
         #expect(await model.awaitDetail { $0.photos.map(\.sha256) == [newSha, "b"] } != nil)
+    }
+
+    @Test("the detail viewer wires the approved full-screen photo interactions")
+    func viewerWiring() throws {
+        let root = URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let gallery = try String(
+            contentsOf:
+                root.appending(
+                    path: "Sources/FeatureInventory/Detail/InventoryItemDetailPhotoGallery.swift"),
+            encoding: .utf8)
+        let viewer = try String(
+            contentsOf:
+                root.appending(
+                    path: "Sources/FeatureInventory/Detail/InventoryItemDetailPhotoViewer.swift"),
+            encoding: .utf8)
+        let source = gallery + viewer
+
+        #expect(source.contains(".popsStage(item: $viewing)"))
+        #expect(source.contains(".tabViewStyle(.page(indexDisplayMode: .never))"))
+        #expect(source.contains("contentMode: .fit"))
+        #expect(source.contains("ShareLink("))
+        #expect(source.contains("PopsPhoto.isDecodable"))
     }
 }
