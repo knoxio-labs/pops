@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { decimalPlacesInput, decimalPlacesInputIsValid } from './decimal-places';
 import { EMPTY } from './expression/edit';
 import { fromWire, toWire } from './expression/wire';
+import { fieldIconFromPresentation } from './field-icon';
 import { catalogueKeyFromLabel } from './types';
 
 import type { ExpressionNode } from '@pops/inventory/expression';
@@ -33,6 +34,7 @@ function initialIdentity(field?: CatalogueField) {
   return {
     help: orDefault(field?.help, ''),
     highlighted: field?.presentation.highlighted === true,
+    icon: fieldIconFromPresentation(field?.presentation) ?? '',
     keyEdited: field !== undefined,
     keyValue: orDefault(field?.key, ''),
     label: orDefault(field?.label, ''),
@@ -86,6 +88,7 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
   const [decimalPlaces, setDecimalPlaces] = useState(initial.decimalPlaces);
   const [required, setRequired] = useState(initial.required);
   const [highlighted, setHighlighted] = useState(initial.highlighted);
+  const [icon, setIcon] = useState(initial.icon);
   const [fixedUnit, setFixedUnit] = useState(initial.fixedUnit);
   const [referenceKinds, setReferenceKinds] = useState<readonly ('item' | 'location')[]>(
     initial.referenceKinds
@@ -104,6 +107,7 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
     fixedUnit,
     help,
     highlighted,
+    icon,
     keyEdited,
     keyValue,
     kind,
@@ -119,6 +123,7 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
     setFixedUnit,
     setHelp,
     setHighlighted,
+    setIcon,
     setKeyEdited,
     setKeyValue,
     setKind,

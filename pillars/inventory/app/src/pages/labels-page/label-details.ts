@@ -2,6 +2,7 @@ import {
   decimalPlacesFromPresentation,
   formatDecimal,
 } from '../../catalogue-editor/decimal-places.js';
+import { fieldIconFromPresentation } from '../../catalogue-editor/field-icon.js';
 import { compareInventoryNames } from '../../lib/sort-names.js';
 import { effectiveType, typePathLabel } from '../../lib/type-tree.js';
 
@@ -87,7 +88,13 @@ function catalogueDetailsFor(
       .join(', ');
     if (value.length === 0) continue;
     const ownerKey = types.get(field.typeId)?.key ?? itemTypeKey;
-    fields.push({ id: `${ownerKey}.${field.key}`, label: field.label, value });
+    const icon = fieldIconFromPresentation(field.presentation);
+    fields.push({
+      id: `${ownerKey}.${field.key}`,
+      label: field.label,
+      value,
+      ...(icon === undefined ? {} : { icon }),
+    });
   }
   return {
     typeName: typePathLabel([...types.values()], type.id) || type.label,

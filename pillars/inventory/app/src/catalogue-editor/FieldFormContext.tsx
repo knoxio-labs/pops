@@ -18,6 +18,7 @@ export interface FieldFormContextValue {
   readonly fixedUnit: string;
   readonly help: string;
   readonly highlighted: boolean;
+  readonly icon: string;
   readonly keyValue: string;
   readonly kind: FieldKind;
   readonly label: string;
@@ -36,6 +37,7 @@ export interface FieldFormContextValue {
   readonly setFixedUnit: Dispatch<SetStateAction<string>>;
   readonly setHelp: Dispatch<SetStateAction<string>>;
   readonly setHighlighted: Dispatch<SetStateAction<boolean>>;
+  readonly setIcon: Dispatch<SetStateAction<string>>;
   readonly setKeyValue: Dispatch<SetStateAction<string>>;
   readonly setKind: Dispatch<SetStateAction<FieldKind>>;
   readonly setLabel: Dispatch<SetStateAction<string>>;
