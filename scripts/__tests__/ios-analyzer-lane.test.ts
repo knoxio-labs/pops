@@ -193,6 +193,6 @@ describe('the iOS analyzer lane', () => {
     expect(readFileSync(join(repo, 'clients/ios/mise.toml'), 'utf8')).toContain(
       'run = "bash scripts/analyzer-lane.sh"'
     );
-    expect(readFileSync(lane, 'utf8')).toContain('tail -n +1 -f "$output_log"');
+    expect(readFileSync(lane, 'utf8')).toContain('tail -n +1 -F "$output_log"');
   });
 });

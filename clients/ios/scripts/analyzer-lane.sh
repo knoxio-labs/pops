@@ -27,7 +27,7 @@ set +e
 swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml \
   <&0 >"$output_log" 2>&1 &
 analyzer_pid=$!
-tail -n +1 -f "$output_log" &
+tail -n +1 -F "$output_log" &
 tail_pid=$!
 wait "$analyzer_pid"
 status=$?
