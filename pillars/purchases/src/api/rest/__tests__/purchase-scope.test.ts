@@ -29,4 +29,11 @@ describe('resolvePurchaseScope with a bound that names no instant', () => {
 
     expect(resolution.ok).toBe(true);
   });
+
+  it('carries an inventory item URI into the shared purchase scope', () => {
+    const inventoryItemUri = 'pops://inventory/item/item-1';
+    const resolution = resolvePurchaseScope({ ...base, inventoryItemUri });
+
+    expect(resolution).toEqual({ ok: true, scope: { inventoryItemUri } });
+  });
 });

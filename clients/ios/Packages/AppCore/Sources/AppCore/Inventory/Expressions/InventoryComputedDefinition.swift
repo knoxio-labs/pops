@@ -1,5 +1,3 @@
-import Foundation
-
 /// An explicit value that supersedes a computed field, and the catalogue
 /// revision it was written against.
 public struct InventoryComputedOverride: Hashable, Sendable {
@@ -127,7 +125,7 @@ extension InventoryCatalogueSnapshot {
     /// catalogue revision.
     public var fieldKinds: [String: InventoryPrimitiveKind] {
         Dictionary(
-            types.flatMap(\.fields).map { ($0.id, $0.kind) },
+            types.flatMap { effectiveType(id: $0.id)?.fields ?? [] }.map { ($0.id, $0.kind) },
             uniquingKeysWith: { first, _ in first })
     }
 }

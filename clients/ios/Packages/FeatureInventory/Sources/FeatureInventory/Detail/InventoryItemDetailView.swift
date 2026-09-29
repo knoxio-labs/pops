@@ -10,12 +10,13 @@ import SwiftUI
 /// is compact grouped rows that follow it up the screen.
 ///
 /// A capability's own section arrives through `capability`, and its verbs
-/// through `actions` and `onAction`; without them the page is exactly the
-/// plain item page.
+/// through `actions`, `moreActions` and `onAction`; without them the page is
+/// exactly the plain item page.
 internal struct InventoryItemDetailView<Capability: View>: View {
     internal let detail: InventoryItemDetail
     @Bindable internal var model: InventoryItemDetailViewModel
     private let actions: [InventoryAction]?
+    private let moreActions: [InventoryAction]
     private let onAction: ((InventoryAction) -> Void)?
     private let capability: Capability
     @State private var destroying = false
@@ -29,12 +30,14 @@ internal struct InventoryItemDetailView<Capability: View>: View {
         detail: InventoryItemDetail,
         model: InventoryItemDetailViewModel,
         actions: [InventoryAction]? = nil,
+        moreActions: [InventoryAction] = [],
         onAction: ((InventoryAction) -> Void)? = nil,
         @ViewBuilder capability: () -> Capability
     ) {
         self.detail = detail
         self.model = model
         self.actions = actions
+        self.moreActions = moreActions
         self.onAction = onAction
         self.capability = capability()
     }
@@ -48,8 +51,9 @@ internal struct InventoryItemDetailView<Capability: View>: View {
                 InventoryItemDetailFacts(detail: detail)
                 InventoryItemDetailLifecycleNotice(detail: detail)
                 InventoryItemDetailActionRow(
-                    actions: actions ?? InventoryItemDetailPrimaryAction.row(for: detail.record),
-                    onAction: onAction ?? act)
+                    actions: InventoryItemDetailActionRowModel.row(
+                        for: detail.record, actions: actions),
+                    onAction: handleAction)
                 sections
             }
             .popsMotion(value: detail)
@@ -63,7 +67,8 @@ internal struct InventoryItemDetailView<Capability: View>: View {
         .toolbar {
             InventoryItemDetailToolbar(
                 record: detail.record, destroying: $destroying, open: openPending,
-                perform: perform, destroy: { Task { await model.destroy() } })
+                moreActions: moreActions, onAction: handleAction, perform: perform,
+                destroy: { Task { await model.destroy() } })
         }
         .navigationDestination(for: InventoryItemHistoryRoute.self) { _ in
             InventoryItemHistoryView(
@@ -113,7 +118,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     }
 
     private var sections: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+        VStack(alignment: .leading, spacing: PopsSpacing.xl) {
             InventoryItemDetailSyncBanner(
                 detail: detail, resolve: { Task { await model.resolveConflict() } },
                 retry: refresh)
@@ -127,6 +132,14 @@ internal struct InventoryItemDetailView<Capability: View>: View {
             InventoryItemDetailNoteSection(note: detail.note)
             InventoryItemDetailHistorySection(
                 itemId: detail.record.id, activity: detail.activity, onUndo: revert)
+        }
+    }
+
+    private func handleAction(_ action: InventoryAction) {
+        if action.id == "edit" {
+            openPending(.edit)
+        } else {
+            (onAction ?? act)(action)
         }
     }
 
@@ -145,9 +158,8 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     }
 
     /// Routes a pending screen to the real item form: editing for `.edit`,
-    /// focused on the code field for `.label`. Shared by the action row
-    /// (`act`) and the toolbar's own Edit button, which used to open its own
-    /// placeholder and so disagreed with `act` about what Edit did.
+    /// focused on the code field for `.label`. Shared by the action row and
+    /// More menu so they cannot disagree about what Edit does.
     private func openPending(_ screen: InventoryItemDetailPending) {
         InventoryItemDetailRouting.present(screen, itemId: detail.record.id, itemForm: itemForm)
     }

@@ -6,7 +6,8 @@ import { WEB_ITEMS_MAX_IDS } from '@pops/inventory';
 import { buildWorld } from '../foundation/model/placement-model';
 import { unwrap } from '../inventory-api-helpers.js';
 import { locationsCreate, locationsTree, webList } from '../inventory-api/index.js';
-import { appendLocationTree, flattenLocationTree, toItemRowModel } from './item-row-model.js';
+import { flattenLocationTree, toItemRowModel } from './item-row-model.js';
+import { appendNode, nextSortOrder } from './location-tree-cache.js';
 import { LOCATION_TREE_QUERY_KEY, PLACEMENT_SOURCES_QUERY_KEY } from './queryKeys.js';
 import { useRecents } from './recents.js';
 import { useCatalogueLookups } from './useCatalogueLookups.js';
@@ -22,7 +23,6 @@ import type {
 const PLACEMENT_PAGE_LIMIT = WEB_ITEMS_MAX_IDS;
 
 type WebItemFilters = Omit<WebListData['query'], 'cursor' | 'limit'>;
-type LocationTreeResponse = LocationsTreeResponses[200];
 type WebItem = Parameters<typeof toItemRowModel>[0];
 const EMPTY_LOCATION_TREE: LocationTreeNode[] = [];
 
@@ -140,13 +140,15 @@ function useCreateLocation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ name, parentId }: CreateLocationInput) =>
-      unwrap(await locationsCreate({ body: { name, parentId, sortOrder: 0 } })),
+    mutationFn: async ({ name, parentId }: CreateLocationInput) => {
+      const cache = queryClient.getQueryData<LocationsTreeResponses[200]>(LOCATION_TREE_QUERY_KEY);
+      const sortOrder = nextSortOrder(cache, parentId);
+      return unwrap(await locationsCreate({ body: { name, parentId, sortOrder } }));
+    },
     onSuccess: (response) => {
-      queryClient.setQueryData<LocationTreeResponse>(LOCATION_TREE_QUERY_KEY, (current) => {
+      queryClient.setQueryData<LocationsTreeResponses[200]>(LOCATION_TREE_QUERY_KEY, (current) => {
         if (current === undefined) return current;
-        const data = appendLocationTree(current.data, response.data);
-        return data === current.data ? current : { ...current, data };
+        return appendNode(current, { ...response.data, children: [] });
       });
     },
   });
@@ -161,7 +163,10 @@ export function usePlacementSources(subject: PickerSubject) {
   const recentState = useRecents();
   const subjectChunks = useMemo(() => subjectChunksFor(subject), [subject]);
   const queries = usePlacementQueries(subjectChunks);
-  const mapperContext = { typeNames: catalogue.typeNameById };
+  const mapperContext = useMemo(
+    () => ({ typeNames: catalogue.typeNameById }),
+    [catalogue.typeNameById]
+  );
   const itemSources = usePlacementItems(queries, mapperContext);
   const locationSources = usePlacementLocations(queries.locationsQuery);
   const world = useMemo(

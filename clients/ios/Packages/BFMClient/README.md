@@ -8,7 +8,7 @@ Inventory mutation requests carry the catalogue revision stored with the
 queued edit. `BFMInventoryTransport` forwards that pin as its own wire field;
 it is not command-specific data and therefore does not belong inside `args`.
 
-The same transport relays barcode lookups through `/mobile/barcode/lookup/{code}`. It maps a found response into AppCore's facts-only product, preserves a definite `not_found`, and reduces unavailable answers, HTTP refusals and transport failures to `.unavailable` so scanning remains an optional assist.
+The same transport relays barcode lookups through `/mobile/barcode/lookup/{code}`. It maps a found response into AppCore's facts-only product and preserves definite misses and unsupported product categories. Failures retain their safe code, request ID and retryability as `PopsError`, including unavailable provider answers, authentication or permission refusals, network failures and unreadable responses. Scanning remains optional: the form records failures in Recent errors and keeps text capture available.
 
 ## The client is generated, committed, and gated
 
@@ -67,6 +67,13 @@ It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's un
 ## The repositories
 
 `BFMTransactionsRepository`, `BFMReceiptCaptureRepository` and `BFMBootstrapService` conform to `AppCore`'s `TransactionsRepository`, `ReceiptCaptureRepository` and `BootstrapService`. They are the reason this package depends on `AppCore` at all, and the reason `ModuleBoundaryTests` names it — with `Auth` — as one of the two packages allowed to hold a concrete implementation of a seam.
+
+Inventory sync reads (`snapshot`, `changes`, and both catalogue reads) accept a
+default-no-op `SyncReadFailureObserver`. The app composition binds it to Recent
+errors in the background context, so a failed automatic refresh retains only a
+safe POPS error code, request id when supplied, and classification without
+showing a banner or recording request or response contents. Cancellation is
+silent and a failed read emits one record after its normal error mapping.
 
 ### Bootstrap
 

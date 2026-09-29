@@ -11,7 +11,7 @@ function fixture(overrides: Record<string, string> = {}, failure?: string) {
     'git rev-parse HEAD': sha,
     'gh repo view --json nameWithOwner --jq .nameWithOwner': 'knoxio-labs/pops',
     'gh api user --jq .login': 'knoxio',
-    'gh api repos/knoxio-labs/pops/rules/branches/main --jq [.[] | select(.type == "required_status_checks") | .parameters | select(.strict_required_status_checks_policy == true) | .required_status_checks[] | select(.context == "Promotion validation")] | length':
+    'gh api repos/knoxio-labs/pops/rules/branches/main --jq [.[] | select(.type == "required_status_checks") | .parameters | .required_status_checks[] | select(.context == "Promotion validation")] | length':
       '1',
     'git rev-parse origin/integration/inventory': sha,
     'git diff --name-only origin/main...HEAD': 'pillars/inventory/src/index.ts',
@@ -52,7 +52,7 @@ describe('integration promotion', () => {
     { 'gh api user --jq .login': 'someone-else' },
     { 'gh repo view --json nameWithOwner --jq .nameWithOwner': 'other/repo' },
     {
-      'gh api repos/knoxio-labs/pops/rules/branches/main --jq [.[] | select(.type == "required_status_checks") | .parameters | select(.strict_required_status_checks_policy == true) | .required_status_checks[] | select(.context == "Promotion validation")] | length':
+      'gh api repos/knoxio-labs/pops/rules/branches/main --jq [.[] | select(.type == "required_status_checks") | .parameters | .required_status_checks[] | select(.context == "Promotion validation")] | length':
         '0',
     },
   ])('refuses unsafe promotion before mutating refs: %j', (overrides) => {
@@ -63,10 +63,11 @@ describe('integration promotion', () => {
     ).toBe(false);
   });
 
-  it.each(['mise lint', 'mise typecheck'])('does not publish after %s fails', (failure) => {
-    const f = fixture({}, failure);
+  it('does not publish or open a PR after the affected gate fails', () => {
+    const f = fixture({}, 'mise check');
     expect(() => promoteIntegration(f.run)).toThrow('command failed');
     expect(f.calls.some((call) => call.startsWith('git push'))).toBe(false);
+    expect(f.calls.some((call) => call.startsWith('gh pr create'))).toBe(false);
   });
 
   it('refuses an already-integrated tree after merging current main', () => {
@@ -75,18 +76,27 @@ describe('integration promotion', () => {
     expect(f.calls.some((call) => call.startsWith('git push'))).toBe(false);
   });
 
-  it('runs both checks before publishing and returns to integration', () => {
+  it('accepts a required promotion gate without strict freshness and validates before publishing', () => {
     const f = fixture();
     promoteIntegration(f.run);
+    const freeze = f.calls.findIndex((call) => call.startsWith('git commit --allow-empty'));
+    const check = f.calls.indexOf('mise check');
     const push = f.calls.indexOf(`git push -u origin promotion/inventory/${sha}`);
-    expect(f.calls.indexOf('mise lint')).toBeGreaterThan(
+    expect(check).toBeGreaterThan(
       f.calls.indexOf('git merge -m chore: refresh promotion from main origin/main')
     );
-    expect(f.calls.some((call) => call.startsWith('git commit --allow-empty'))).toBe(true);
-    expect(push).toBeGreaterThan(f.calls.indexOf('mise lint'));
-    expect(push).toBeGreaterThan(f.calls.indexOf('mise typecheck'));
+    expect(freeze).toBeGreaterThan(-1);
+    expect(check).toBeGreaterThan(freeze);
+    expect(push).toBeGreaterThan(check);
     expect(
       f.calls.some((call) => call.startsWith('gh pr create --base main --head promotion/'))
+    ).toBe(true);
+    expect(
+      f.calls.some(
+        (call) =>
+          call.startsWith('gh pr create ') &&
+          call.includes('Validation: mise check passed before push.')
+      )
     ).toBe(true);
     expect(f.calls.at(-1)).toBe('git switch integration/inventory');
   });

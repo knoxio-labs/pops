@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import { matchRoutes, MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
-import { SearchPreservingRedirect } from './routes';
+import { inventoryRoutePath } from './navigation-paths';
+import { routes, SearchPreservingRedirect } from './routes';
 
 function LocationDisplay() {
   const location = useLocation();
@@ -67,5 +68,14 @@ describe('SearchPreservingRedirect', () => {
   it('preserves the incoming query on the legacy report redirect', () => {
     renderRedirect('/inventory/report?year=2024', '/inventory/reports');
     expect(screen.getByTestId('location').textContent).toBe('/inventory/reports?year=2024');
+  });
+});
+
+describe('inventory routes', () => {
+  it('mounts the type catalogue at /inventory/types/:id', () => {
+    const matches = matchRoutes(routes, inventoryRoutePath('/inventory/types/router'));
+
+    expect(matches).not.toBeNull();
+    expect(matches?.at(-1)?.route.path).toBe('types/:id');
   });
 });

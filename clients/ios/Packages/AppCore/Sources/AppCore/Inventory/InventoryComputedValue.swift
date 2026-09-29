@@ -1,5 +1,3 @@
-import Foundation
-
 /// How one computed field evaluated, on the server or on this phone.
 public enum InventoryComputedEvaluation: Codable, Hashable, Sendable {
     /// The expression's value.

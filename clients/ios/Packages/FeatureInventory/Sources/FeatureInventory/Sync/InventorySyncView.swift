@@ -83,7 +83,7 @@ internal struct InventorySyncView: View {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 header(page)
                 InventoryCountTiles(tiles: tiles(page))
-                if !page.repairRows.isEmpty { needsAttention(page) }
+                if !page.repairRows.isEmpty || !page.issueRows.isEmpty { needsAttention(page) }
                 if !page.waitingRows.isEmpty { waiting(page) }
                 if !page.resolvedRows.isEmpty { resolved(page) }
             }
@@ -99,6 +99,7 @@ internal struct InventorySyncView: View {
     private func header(_ page: InventorySyncPage) -> some View {
         let status = InventorySyncHeaderStatus.derive(page: page)
         let isStuck = if case .stuck = status { true } else { false }
+        let isFailure = if case .serverFailure = status { true } else { false }
         return HStack(spacing: PopsSpacing.sm) {
             Label {
                 Text(Self.statusLine(status))
@@ -106,11 +107,19 @@ internal struct InventorySyncView: View {
                     .contentTransition(.numericText())
             } icon: {
                 Self.statusSymbol(status).image
-                    .foregroundStyle(isStuck ? Color.popsDestructive : Color.popsMutedForeground)
+                    .foregroundStyle(
+                        isStuck || isFailure ? Color.popsDestructive : Color.popsMutedForeground
+                    )
                     .symbolEffect(.rotate, isActive: status == .updatingFields)
             }
             .accessibilityElement(children: .combine)
             if isStuck {
+                Spacer(minLength: PopsSpacing.sm)
+                Button("Try again") { Task { await model.refresh() } }
+                    .buttonStyle(.borderless)
+                    .frame(minHeight: PopsSize.touchTarget)
+            }
+            if isFailure {
                 Spacer(minLength: PopsSpacing.sm)
                 Button("Try again") { Task { await model.refresh() } }
                     .buttonStyle(.borderless)
@@ -127,7 +136,7 @@ internal struct InventorySyncView: View {
                 symbol: InventorySymbol.queued.system
             ),
             InventoryCountTile(
-                title: "Needs attention", count: page.repairRows.count,
+                title: "Needs attention", count: page.repairRows.count + page.issueRows.count,
                 symbol: InventorySymbol.attention.system),
             InventoryCountTile(
                 title: "Resolved today", count: page.resolvedToday,
@@ -138,7 +147,8 @@ internal struct InventorySyncView: View {
     private func needsAttention(_ page: InventorySyncPage) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             InventoryGroundedSectionHeader(
-                title: "Needs attention", status: "\(page.repairRows.count)")
+                title: "Needs attention",
+                status: "\(page.repairRows.count + page.issueRows.count)")
             InventoryGroundedListPanel {
                 VStack(spacing: PopsSpacing.zero) {
                     ForEach(page.repairRows) { row in
@@ -149,6 +159,17 @@ internal struct InventorySyncView: View {
                         }
                         .buttonStyle(.plain)
                         if row.id != page.repairRows.last?.id {
+                            PopsDivider().padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                        }
+                    }
+                    if !page.repairRows.isEmpty && !page.issueRows.isEmpty {
+                        PopsDivider().padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                    }
+                    ForEach(page.issueRows) { row in
+                        InventorySyncIssueRowView(
+                            row: row, loadPhoto: { await model.thumbnail($0) },
+                            onRetry: { Task { await model.retry(row.issue) } })
+                        if row.id != page.issueRows.last?.id {
                             PopsDivider().padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
                         }
                     }
@@ -176,7 +197,11 @@ internal struct InventorySyncView: View {
         }
     }
 
-    private func resolved(_ page: InventorySyncPage) -> some View {
+    private static let resolvedShown = 3
+}
+
+extension InventorySyncView {
+    fileprivate func resolved(_ page: InventorySyncPage) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             Button {
                 showsResolved.toggle()
@@ -212,6 +237,4 @@ internal struct InventorySyncView: View {
             }
         }
     }
-
-    private static let resolvedShown = 3
 }

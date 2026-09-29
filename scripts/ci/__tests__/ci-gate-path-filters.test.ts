@@ -123,6 +123,21 @@ describe('matchesPathFilter (as embedded in ci-gate.yml)', () => {
     );
   });
 
+  it('selects iOS Quality when an inventory web diff also changes the server', async () => {
+    const { matchesPathFilter } = await runEmbeddedScript();
+    expect(
+      matchesPathFilter('iOS Quality', [
+        'pillars/inventory/app/src/App.tsx',
+        'pillars/inventory/src/api/server.ts',
+      ])
+    ).toBe(true);
+  });
+
+  it('selects iOS Quality for a shared action change alone', async () => {
+    const { matchesPathFilter } = await runEmbeddedScript();
+    expect(matchesPathFilter('iOS Quality', ['.github/actions/setup-mise/action.yml'])).toBe(true);
+  });
+
   it('is null (unknown, not a match) when the diff could not be determined', async () => {
     const { matchesPathFilter } = await runEmbeddedScript();
     expect(matchesPathFilter('iOS Quality', null)).toBeNull();

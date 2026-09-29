@@ -54,7 +54,10 @@ internal enum LocalComputedValues {
                     SELECT item_id FROM \(ComputedValueRows.tableName)
                     UNION SELECT item_id FROM \(ComputedValueRows.localTableName)
                     """))
-        for type in catalogue.types where type.fields.contains(where: { $0.storage == .computed }) {
+        for type in catalogue.types {
+            guard let effective = catalogue.effectiveType(id: type.id),
+                effective.fields.contains(where: { $0.storage == .computed })
+            else { continue }
             itemIds.formUnion(
                 try String.fetchAll(
                     db,

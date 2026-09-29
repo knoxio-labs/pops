@@ -9,11 +9,13 @@ import SwiftUI
 public struct PopsZoomablePhoto: View {
     private let data: Data?
     private let placeholderSymbol: String
+    private let contentMode: ContentMode
 
     @State private var scale: CGFloat = 1
     @State private var committedScale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var committedOffset: CGSize = .zero
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let maximumScale: CGFloat = 6
     private let doubleTapScale: CGFloat = 2.5
@@ -23,22 +25,32 @@ public struct PopsZoomablePhoto: View {
     /// - Parameters:
     ///   - data: Encoded image bytes. `nil` or undecodable bytes draw the placeholder.
     ///   - placeholderSymbol: The SF Symbol drawn when `data` has no decodable image.
-    public init(data: Data?, placeholderSymbol: String) {
+    ///   - contentMode: How the decoded image fills its plate. `.fill` is the
+    ///     existing default; `.fit` keeps the complete photograph visible.
+    public init(
+        data: Data?, placeholderSymbol: String, contentMode: ContentMode = .fill
+    ) {
         self.data = data
         self.placeholderSymbol = placeholderSymbol
+        self.contentMode = contentMode
     }
 
     public var body: some View {
         picture
             .scaleEffect(scale)
             .offset(offset)
-            .animation(.snappy(duration: 0.2), value: scale)
+            .animation(
+                PopsMotion.animation(PopsMotion.snappy, reduceMotion: reduceMotion),
+                value: scale
+            )
             .onTapGesture(count: 2) { toggleZoom() }
     }
 
     @ViewBuilder private var picture: some View {
-        let plate = PopsPhoto(data: data, placeholderSymbol: placeholderSymbol)
-            .padding(PopsSpacing.xl)
+        let plate = PopsPhoto(
+            data: data, placeholderSymbol: placeholderSymbol, contentMode: contentMode
+        )
+        .padding(PopsSpacing.xl)
         if scale > 1 {
             plate.gesture(pan.simultaneously(with: magnify))
         } else {
@@ -60,9 +72,10 @@ public struct PopsZoomablePhoto: View {
     private var pan: some Gesture {
         DragGesture()
             .onChanged { value in
-                offset = CGSize(
-                    width: committedOffset.width + value.translation.width,
-                    height: committedOffset.height + value.translation.height
+                offset = PopsZoomablePhotoPresentation.offset(
+                    committedOffset: committedOffset,
+                    translation: value.translation,
+                    scale: scale
                 )
             }
             .onEnded { _ in committedOffset = offset }
@@ -82,5 +95,17 @@ public struct PopsZoomablePhoto: View {
     private func recentre() {
         offset = .zero
         committedOffset = .zero
+    }
+}
+
+internal enum PopsZoomablePhotoPresentation {
+    internal static func offset(
+        committedOffset: CGSize, translation: CGSize, scale: CGFloat
+    ) -> CGSize {
+        let effectiveScale = max(scale, 1)
+        return CGSize(
+            width: committedOffset.width + translation.width * effectiveScale,
+            height: committedOffset.height + translation.height * effectiveScale
+        )
     }
 }

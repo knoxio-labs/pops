@@ -1,3 +1,4 @@
+import { bfmTools } from './bfm.js';
 import { cerebrumTools } from './cerebrum.js';
 import { financeTools } from './finance.js';
 import { fixtureTools } from './inventory-fixtures.js';
@@ -10,6 +11,7 @@ import type { ToolDef } from './tool-def.js';
 export type { ToolDef } from './tool-def.js';
 
 export const allTools: readonly ToolDef[] = [
+  ...bfmTools,
   ...inventoryTools,
   ...fixtureTools,
   ...financeTools,

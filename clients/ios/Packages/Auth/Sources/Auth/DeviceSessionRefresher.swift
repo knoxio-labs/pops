@@ -43,6 +43,9 @@ public actor DeviceSessionRefresher {
 
     private var rotation: Task<DeviceTokens, any Error>?
     private var revocation: Task<Void, Never>?
+    #if DEBUG
+        private var revocationJoinObserver: @Sendable () -> Void = {}
+    #endif
 
     /// Bumped every time credentials are destroyed. A rotation that started
     /// before the bump must not write what it obtained — see ``rotateTokens(at:)``.
@@ -168,12 +171,23 @@ public actor DeviceSessionRefresher {
     /// of concurrent requests all get the same `403`, and there is no reason
     /// for twenty of them to each wipe a keychain.
     public func deviceWasRevoked() async {
-        if let revocation { return await revocation.value }
+        if let revocation {
+            #if DEBUG
+                revocationJoinObserver()
+            #endif
+            return await revocation.value
+        }
         let task = Task { await self.destroyCredentials() }
         revocation = task
         defer { revocation = nil }
         await task.value
     }
+
+    #if DEBUG
+        internal func observeRevocationJoins(_ observer: @escaping @Sendable () -> Void) {
+            revocationJoinObserver = observer
+        }
+    #endif
 }
 
 extension DeviceSessionRefresher {

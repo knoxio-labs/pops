@@ -1,6 +1,7 @@
 import { samePlacement } from '../../foundation/model/placement-model';
 import { codeBlocksSave } from './code-assist';
 import { valueCount } from './field-model';
+import { fieldError, referenceError } from './field-rules';
 
 import type { Placement } from '../../foundation/model/model';
 import type { FormFieldDef, FormTypeDef } from './field-model';
@@ -56,12 +57,26 @@ function notCarriedFor(
   });
 }
 
+function fieldErrorFor(field: FormFieldDef, draft: ItemDraft): string | null {
+  if (field.storage === 'computed') {
+    const override = draft.overrides[field.id];
+    return fieldError(field, override === undefined ? [] : [override]);
+  }
+  if (field.kind === 'reference') return referenceError(field, draft.fields.refs[field.id] ?? []);
+  if (field.kind === 'boolean') return null;
+  return fieldError(field, draft.fields.text[field.id] ?? []);
+}
+
 /** Derives validation, visible fields and blockers for the current draft. */
 export function deriveForm(draft: ItemDraft, types: readonly FormTypeDef[]): FormView {
   const type = types.find((candidate) => candidate.id === draft.typeId) ?? null;
   const nameError = draft.name.trim() === '' ? 'Name is required.' : null;
   const quantity = quantityError(draft, type);
-  const fieldErrors: Readonly<Record<string, string>> = {};
+  const fieldErrors: Record<string, string> = {};
+  for (const field of type?.fields ?? []) {
+    const error = fieldErrorFor(field, draft);
+    if (error !== null) fieldErrors[field.id] = error;
+  }
   const blockers = [
     nameError,
     quantity,
@@ -79,13 +94,36 @@ export function deriveForm(draft: ItemDraft, types: readonly FormTypeDef[]): For
   };
 }
 
-function sameFields(a: ItemDraft, b: ItemDraft): boolean {
-  return JSON.stringify([a.fields, a.overrides]) === JSON.stringify([b.fields, b.overrides]);
+function normalizedFields(draft: ItemDraft): string {
+  const text = Object.fromEntries(
+    Object.entries(draft.fields.text)
+      .map(([fieldId, values]) => [fieldId, values.filter((value) => value.trim() !== '')] as const)
+      .filter(([, values]) => values.length > 0)
+      .toSorted(([left], [right]) => left.localeCompare(right))
+  );
+  const refs = Object.fromEntries(
+    Object.entries(draft.fields.refs)
+      .map(([fieldId, choices]) => [fieldId, choices.map((choice) => choice.id)] as const)
+      .filter(([, ids]) => ids.length > 0)
+      .toSorted(([left], [right]) => left.localeCompare(right))
+  );
+  const booleans = Object.fromEntries(
+    Object.entries(draft.fields.booleans).toSorted(([left], [right]) => left.localeCompare(right))
+  );
+  const overrides = Object.fromEntries(
+    Object.entries(draft.overrides).toSorted(([left], [right]) => left.localeCompare(right))
+  );
+  return JSON.stringify({ text, refs, booleans, overrides });
 }
 
-/** Returns whether cancelling would discard work not present at opening. */
-export function hasStagedWork(draft: ItemDraft, initial: ItemDraft): boolean {
+function sameFields(a: ItemDraft, b: ItemDraft): boolean {
+  return normalizedFields(a) === normalizedFields(b);
+}
+
+/** Returns whether cancelling would discard draft or photo work not present at opening. */
+export function hasStagedWork(draft: ItemDraft, initial: ItemDraft, photoWorkCount = 0): boolean {
   return (
+    photoWorkCount > 0 ||
     draft.name !== initial.name ||
     draft.typeId !== initial.typeId ||
     draft.quantity !== initial.quantity ||

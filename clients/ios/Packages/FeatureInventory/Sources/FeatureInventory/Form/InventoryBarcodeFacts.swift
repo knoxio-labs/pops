@@ -3,6 +3,7 @@ import Foundation
 
 internal enum InventoryBarcodeFacts {
     internal static func facts(_ product: InventoryBarcodeProduct) -> [InventoryPrefillFact] {
+        let authors = authorNames(product, explicitRoleOnly: true)
         let contributors = product.contributors.compactMap { contributor -> String? in
             guard let name = nonempty(contributor.name) else { return nil }
             if let role = nonempty(contributor.role) { return "\(name) (\(role))" }
@@ -11,6 +12,7 @@ internal enum InventoryBarcodeFacts {
         let properties: [(String, String?)] = [
             ("Title", product.title),
             ("Subtitle", product.subtitle),
+            ("Author", authors.joined(separator: ", ")),
             ("Contributors", contributors.joined(separator: ", ")),
             ("Publisher", product.publisher),
             ("Published", product.publishedDate),
@@ -27,7 +29,16 @@ internal enum InventoryBarcodeFacts {
         }
     }
 
-    private static func nonempty(_ value: String?) -> String? {
+    internal static func normalized(_ value: String) -> String {
+        value.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: Locale(identifier: "en_US_POSIX")
+        )
+        .lowercased()
+        .filter { $0.isLetter || $0.isNumber }
+    }
+
+    internal static func nonempty(_ value: String?) -> String? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty
         else {
             return nil

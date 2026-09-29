@@ -16,6 +16,7 @@ internal enum ReplicaSchema {
     /// The mutation log's table name, fixed here so the on-disk fallback
     /// knows what to keep (`registerMutationLog(in:)` creates it).
     static let mutationLogTableName = "mutation_log"
+    static let syncIssueTableName = "sync_item_issue"
 
     /// What the on-disk fallback keeps: this phone's unsent changes, the
     /// repairs opened on the ones the server would not take, with what was
@@ -24,6 +25,7 @@ internal enum ReplicaSchema {
     static let preservedTableNames =
         [
             mutationLogTableName, repairTableName, resolvedEntryTableName, mediaTableName,
+            syncIssueTableName,
         ] + catalogueTables
 
     /// Opens (or creates) the on-disk replica at `path` and brings it to the
@@ -136,6 +138,8 @@ extension ReplicaSchema {
         registerCatalogueHoldReason(in: &migrator)
         registerCatalogueLineage(in: &migrator)
         registerCatalogueFieldDefaults(in: &migrator)
+        registerCatalogueTypeParent(in: &migrator)
+        registerSyncIssues(in: &migrator)
         return migrator
     }
 

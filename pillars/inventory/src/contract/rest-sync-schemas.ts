@@ -99,6 +99,19 @@ export const SyncItemSchema = z.object({
   deletedAt: z.string().nullable(),
 });
 
+/** A non-fatal item projection problem returned with a sync page. */
+export const SyncItemIssueSchema = z.object({
+  itemId: z.string(),
+  itemName: z.string(),
+  seq: z.number().int(),
+  code: z.string(),
+  fieldId: z.string().nullable(),
+  fieldKey: z.string().nullable(),
+  message: z.string(),
+  itemApplied: z.boolean(),
+  retryable: z.boolean(),
+});
+
 /** A place in the tree. Tombstones carry `deletedAt`. */
 export const SyncLocationSchema = z.object({
   id: z.string(),

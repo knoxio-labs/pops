@@ -50,7 +50,13 @@ export interface InventoryPageProps {
 /** A full-height inventory page whose body leaves scrolling to its children. */
 export function InventoryPage(props: InventoryPageProps) {
   return (
-    <div className={cn('relative flex min-h-120 flex-col gap-4', PAGE_HEIGHT, props.className)}>
+    <div
+      className={cn(
+        'relative flex min-h-120 flex-col gap-4 overflow-hidden',
+        PAGE_HEIGHT,
+        props.className
+      )}
+    >
       <PageHeader
         title={props.title}
         description={props.description}

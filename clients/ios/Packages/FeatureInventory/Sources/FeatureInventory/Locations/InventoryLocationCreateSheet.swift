@@ -68,7 +68,8 @@ internal struct InventoryLocationCreateSheet: View {
             }
             .sheet(isPresented: $choosingParent) {
                 InventoryDestinationPickerSheet(
-                    title: "Inside", commitTitle: "Choose", tree: tree,
+                    title: "Inside", commitTitle: "Choose",
+                    tree: InventoryDestinationTree(locations: tree),
                     onChoose: { parent = $0 })
             }
         }

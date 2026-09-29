@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 69 tools', () => {
-    expect(allTools).toHaveLength(69);
+  it('exports exactly 70 tools', () => {
+    expect(allTools).toHaveLength(70);
   });
 
   it('includes all inventory write tools', () => {
@@ -85,6 +85,10 @@ describe('allTools', () => {
     ]) {
       expect(names.has(required), `missing tool: ${required}`).toBe(true);
     }
+  });
+
+  it('includes the BFM pairing-code tool', () => {
+    expect(allTools.map((tool) => tool.name)).toContain('bfm.devicePairing.issueCode');
   });
 
   it('all tool names are unique', () => {

@@ -20,6 +20,8 @@ export interface NewItemButtonProps {
   offline?: boolean;
   /** Opens the page each choice leads to. */
   onNavigate?: (path: string) => void;
+  /** Overrides the primary item's destination while leaving bulk destinations unchanged. */
+  newPath?: string;
 }
 
 /** New item, with a menu for bulk entry and CSV import. */
@@ -27,6 +29,7 @@ export function NewItemButton({
   label = 'New item',
   offline = false,
   onNavigate,
+  newPath = '/inventory/items/new',
 }: NewItemButtonProps) {
   return (
     <span className="flex items-center">
@@ -40,7 +43,7 @@ export function NewItemButton({
           aria-disabled={offline || undefined}
           className={cn('rounded-r-none', offline && 'opacity-50')}
           prefix={<Plus className="size-4" aria-hidden />}
-          onClick={offline ? undefined : () => onNavigate?.('/inventory/items/new')}
+          onClick={offline ? undefined : () => onNavigate?.(newPath)}
         >
           {label}
         </Button>

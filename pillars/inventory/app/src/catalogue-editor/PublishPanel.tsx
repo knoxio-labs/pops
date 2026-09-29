@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle, Badge, Button } from '@pops/ui';
 import { InventoryApiError } from '../inventory-api-helpers';
 import { isStaleDraftCode } from './catalogue-draft';
 import { CompatibilityPreview } from './CompatibilityPreview';
+import { MCP_PUBLISH_TOOL } from './computed/EditorNotices';
 import { PublishDialog } from './PublishDialog';
 
 import type { CatalogueCompatibility, CatalogueDescriptor, CatalogueReadiness } from './types';
@@ -141,14 +142,24 @@ function PublishedStatus({ catalogue }: { readonly catalogue: CatalogueDescripto
 }
 
 function BlockedNotice({ compatibility }: { readonly compatibility: CatalogueCompatibility }) {
+  const migrationRequired = compatibility.classification === 'migration_required';
   return (
     <Alert variant="destructive">
       <TriangleAlert />
-      <AlertTitle>{labels[compatibility.classification]}</AlertTitle>
-      <AlertDescription>
-        This draft cannot publish without replacing the incompatible definition or supplying the
-        explicit named migration through the management API.
-      </AlertDescription>
+      <AlertTitle>
+        {migrationRequired ? 'Migration required: publish through MCP' : labels.forbidden}
+      </AlertTitle>
+      {migrationRequired ? (
+        <AlertDescription>
+          This editor does not publish migrations. Publish the draft with a named migration using{' '}
+          <code className="font-mono">{MCP_PUBLISH_TOOL}</code>.
+        </AlertDescription>
+      ) : (
+        <AlertDescription>
+          This draft cannot publish without replacing the incompatible definition or supplying the
+          explicit named migration through the management API.
+        </AlertDescription>
+      )}
     </Alert>
   );
 }

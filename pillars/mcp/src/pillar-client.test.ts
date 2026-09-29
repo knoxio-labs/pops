@@ -87,6 +87,7 @@ describe('getPillar — API key resolution', () => {
 describe('getPillar — base-URL resolution', () => {
   const BASE_URL_ENV_KEYS = [
     'POPS_INVENTORY_API_URL',
+    'POPS_BFM_API_URL',
     'POPS_FINANCE_API_URL',
     'POPS_REGISTRY_API_URL',
     'POPS_MEDIA_API_URL',

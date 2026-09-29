@@ -4,7 +4,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { FieldForm } from './FieldForm';
 
-import type { CatalogueField, CatalogueType } from './types';
+import type { InventoryApiIssue } from '../inventory-api-helpers';
+import type {
+  CatalogueField,
+  CatalogueIssueSource,
+  CatalogueOperation,
+  CatalogueType,
+} from './types';
 
 const TYPE_ID = '11111111-1111-4111-8111-111111111111';
 const KIND_LABELS = [
@@ -58,6 +64,7 @@ function type(fields: CatalogueField[]): CatalogueType {
     key: 'equipment',
     label: 'Equipment',
     legacyLabels: [],
+    parentTypeId: null,
     presentation: {},
     replacedBy: null,
     revision: 1,
@@ -65,7 +72,12 @@ function type(fields: CatalogueField[]): CatalogueType {
   };
 }
 
-function renderField(target: CatalogueField, siblings: CatalogueField[] = [], published = false) {
+function renderField(
+  target: CatalogueField,
+  siblings: CatalogueField[] = [],
+  published = false,
+  issues: readonly InventoryApiIssue[] = []
+) {
   const itemType = type([target, ...siblings]);
   const onOperation = vi.fn();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -74,8 +86,32 @@ function renderField(target: CatalogueField, siblings: CatalogueField[] = [], pu
       <FieldForm
         field={target}
         isPending={false}
+        issues={issues}
         onOperation={onOperation}
         published={published}
+        type={itemType}
+        types={[itemType]}
+      />
+    </QueryClientProvider>
+  );
+  return onOperation;
+}
+
+function renderNewField(
+  issues: readonly InventoryApiIssue[],
+  issueSources: readonly CatalogueIssueSource[]
+) {
+  const itemType = type([]);
+  const onOperation = vi.fn();
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <FieldForm
+        isPending={false}
+        issueSources={issueSources}
+        issues={issues}
+        onOperation={onOperation}
+        published={false}
         type={itemType}
         types={[itemType]}
       />
@@ -130,6 +166,37 @@ describe('FieldForm configuration branches', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
 
     expect(onOperation).toHaveBeenCalledWith(expect.objectContaining({ fixedUnit: 'cm' }));
+  });
+
+  it('submits decimal places for decimal and measurement fields', () => {
+    const onOperation = renderField(field({ kind: 'measurement', fixedUnit: 'L' }));
+
+    fireEvent.change(screen.getByLabelText('Decimal places'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ presentation: { highlighted: false, decimalPlaces: 1 } })
+    );
+  });
+
+  it('keeps the decimal-place option available for a computed measurement', () => {
+    const onOperation = renderField(
+      field({
+        kind: 'measurement',
+        fixedUnit: 'L',
+        storage: 'computed',
+        expressionVersion: 1,
+        expression: { op: 'literal', value: { amount: '24.0000', unit: 'L' } },
+      })
+    );
+
+    expect(screen.getByLabelText('Decimal places')).toBeEnabled();
+    fireEvent.change(screen.getByLabelText('Decimal places'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ presentation: { highlighted: false, decimalPlaces: 1 } })
+    );
   });
 
   it('submits required, highlighted, and trimmed help text changes', () => {
@@ -258,6 +325,52 @@ describe('FieldForm configuration branches', () => {
     expect(screen.getByLabelText('Many')).toBeDisabled();
     expect(screen.getByLabelText('Fixed unit')).toBeDisabled();
     expect(screen.getByText('Published shape is locked')).toBeInTheDocument();
+  });
+
+  it('renders inherited key duplicates beside the field key control', () => {
+    const target = field();
+    renderField(target, [], false, [
+      {
+        code: 'inherited_key_duplicate',
+        definitionId: target.id,
+        message: 'Key already belongs to an inherited field',
+        path: 'key',
+      },
+    ]);
+
+    expect(screen.getByText('Key already belongs to an inherited field')).toBeInTheDocument();
+  });
+
+  it('anchors a minted new-field inherited-key issue to the key control', () => {
+    const operation = {
+      kind: 'put_field',
+      typeId: TYPE_ID,
+      key: 'material',
+      label: 'Material',
+      help: null,
+      required: false,
+      presentation: { highlighted: false },
+      fieldKind: 'short_text',
+      cardinality: 'one',
+      storage: 'stored',
+      fixedUnit: null,
+      referenceKinds: [],
+      referenceTypeIds: [],
+      expressionVersion: null,
+      expression: null,
+      allowOverride: false,
+    } satisfies CatalogueOperation;
+    const issue: InventoryApiIssue = {
+      code: 'inherited_key_duplicate',
+      definitionId: 'minted-field-id',
+      message: 'Key already belongs to an inherited field',
+      path: 'key',
+    };
+    renderNewField([issue], [{ issues: [issue], operations: [operation] }]);
+
+    fireEvent.change(screen.getByLabelText('Field label'), { target: { value: 'Material' } });
+
+    expect(screen.getByText('Key already belongs to an inherited field')).toBeInTheDocument();
   });
 
   it('blocks saving a computed field while its expression is empty', () => {

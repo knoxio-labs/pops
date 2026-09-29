@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
+import { resolveTypeTree } from '../catalogue-tree.js';
 import { classifyCatalogueCompatibility } from '../compatibility.js';
 
 import type {
   PersistedCatalogue,
-  PersistedItemType,
-  PersistedItemTypeField,
+  UnresolvedItemType,
+  UnresolvedItemTypeField,
 } from '../catalogue-types.js';
 
-function field(overrides: Partial<PersistedItemTypeField> = {}): PersistedItemTypeField {
+function field(overrides: Partial<UnresolvedItemTypeField> = {}): UnresolvedItemTypeField {
   return {
     id: 'field-a',
     typeId: 'type-a',
@@ -37,7 +38,7 @@ function field(overrides: Partial<PersistedItemTypeField> = {}): PersistedItemTy
   };
 }
 
-function type(fields: readonly PersistedItemTypeField[]): PersistedItemType {
+function type(fields: readonly UnresolvedItemTypeField[]): UnresolvedItemType {
   return {
     revision: 1,
     id: 'type-a',
@@ -50,13 +51,28 @@ function type(fields: readonly PersistedItemTypeField[]): PersistedItemType {
     presentation: {},
     archivedAt: null,
     replacedBy: null,
+    parentTypeId: null,
     fields,
+  };
+}
+
+function namedType(
+  id: string,
+  key: string,
+  fields: readonly UnresolvedItemTypeField[],
+  parentTypeId: string | null = null
+): UnresolvedItemType {
+  return {
+    ...type(fields.map((entry) => ({ ...entry, typeId: id }))),
+    id,
+    key,
+    parentTypeId,
   };
 }
 
 function catalogue(
   revision: number,
-  types: readonly PersistedItemType[],
+  types: readonly UnresolvedItemType[],
   minimumProtocol = 1
 ): PersistedCatalogue {
   return {
@@ -66,7 +82,7 @@ function catalogue(
       status: revision === 1 ? 'published' : 'draft',
       minimumProtocol,
     },
-    types: types.map((entry) => ({ ...entry, revision })),
+    types: resolveTypeTree(types.map((entry) => ({ ...entry, revision }))),
   };
 }
 
@@ -123,8 +139,87 @@ describe('classifyCatalogueCompatibility', () => {
     expect(classifyCatalogueCompatibility(base, candidate).classification).toBe('protocol_gated');
   });
 
+  it('protocol-gates a new subtype', () => {
+    const base = catalogue(1, [type([field()])]);
+    const candidate = catalogue(2, [type([field()]), namedType('type-b', 'type-b', [], 'type-a')]);
+
+    expect(classifyCatalogueCompatibility(base, candidate).changes).toContainEqual({
+      classification: 'protocol_gated',
+      definitionId: 'type-b',
+      code: 'type_parent_set',
+    });
+  });
+
+  it('forbids changing the parent of a published type', () => {
+    const base = catalogue(1, [type([field()]), namedType('type-b', 'type-b', [])]);
+    const candidate = catalogue(2, [type([field()]), namedType('type-b', 'type-b', [], 'type-a')]);
+
+    expect(classifyCatalogueCompatibility(base, candidate).changes).toContainEqual({
+      classification: 'forbidden',
+      definitionId: 'type-b',
+      code: 'published_type_parent_changed',
+    });
+  });
+
+  it('keeps an optional field added to a parent compatible', () => {
+    const child = namedType('type-b', 'type-b', [], 'type-a');
+    const base = catalogue(1, [type([field()]), child]);
+    const candidate = catalogue(2, [
+      type([field(), field({ id: 'field-b', key: 'field-b' })]),
+      child,
+    ]);
+
+    expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
+      classification: 'compatible',
+      changes: [
+        {
+          classification: 'compatible',
+          definitionId: 'field-b',
+          code: 'optional_field_added',
+        },
+      ],
+    });
+  });
+
+  it('forbids a required-field migration through a subtype', () => {
+    const child = namedType('type-b', 'type-b', [], 'type-a');
+    const base = catalogue(1, [type([field()]), child]);
+    const candidate = catalogue(2, [type([field({ required: true })]), child]);
+
+    expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
+      classification: 'forbidden',
+      changes: [
+        {
+          classification: 'migration_required',
+          definitionId: 'field-a',
+          code: 'field_became_required',
+        },
+        {
+          classification: 'forbidden',
+          definitionId: 'field-a',
+          code: 'migration_through_subtypes_unsupported',
+        },
+      ],
+    });
+  });
+
+  it('counts archived descendants when forbidding a required-field migration', () => {
+    const child = namedType('type-b', 'type-b', [], 'type-a');
+    const base = catalogue(1, [type([field()]), child]);
+    const candidate = catalogue(2, [
+      type([field({ required: true })]),
+      { ...child, archivedAt: '2026-09-27T00:00:00.000Z' },
+    ]);
+
+    expect(classifyCatalogueCompatibility(base, candidate).changes).toContainEqual({
+      classification: 'forbidden',
+      definitionId: 'field-a',
+      code: 'migration_through_subtypes_unsupported',
+    });
+  });
+
   describe('a new type', () => {
-    function newType(fields: readonly PersistedItemTypeField[]): PersistedItemType {
+    function newType(fields: readonly UnresolvedItemTypeField[]): UnresolvedItemType {
       return {
         ...type(fields.map((entry) => ({ ...entry, typeId: 'type-b' }))),
         id: 'type-b',
@@ -150,12 +245,12 @@ describe('classifyCatalogueCompatibility', () => {
         { classification: 'compatible', definitionId: 'type-b', code: 'type_added' },
         {
           classification: 'protocol_gated',
-          definitionId: 'field-when',
+          definitionId: 'field-link',
           code: 'primitive_kind_added',
         },
         {
           classification: 'protocol_gated',
-          definitionId: 'field-link',
+          definitionId: 'field-when',
           code: 'primitive_kind_added',
         },
       ]);

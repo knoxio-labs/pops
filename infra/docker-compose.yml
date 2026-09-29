@@ -125,6 +125,8 @@ services:
       INVENTORY_SELF_BASE_URL: http://inventory-api:3002
       INVENTORY_IMAGES_DIR: /data/inventory/images
       INVENTORY_DOCUMENTS_DIR: /data/inventory/documents
+      CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
       POPS_REGISTRY_ENABLED: 'true'
     expose:
       - '3002'
@@ -1548,7 +1550,7 @@ services:
   # no /mcp route yet (it becomes registry-driven in feat/dynamic-nginx-registry),
   # so unpublishing here would make the gateway unreachable. Moving MCP behind the
   # shell proxy is tracked as a follow-up.
-  # Requires a service-account API key provisioned in pops-api.
+  # Requires a dedicated service-account API key provisioned in the registry.
   # Enable with:  docker compose --profile mcp up -d
   pops-mcp:
     image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-mcp:${POPS_IMAGE_TAG:-main}
@@ -1561,14 +1563,14 @@ services:
     networks:
       - backend
     secrets:
-      - source: pops_api_key
+      - source: pops_mcp_api_key
         mode: 0444
     environment:
       NODE_ENV: production
       # pops-mcp now reaches every pillar through the REST pillar SDK
       # (per-pillar POPS_*_API_URL with built-in docker-network defaults); the
       # legacy single POPS_API_URL tRPC client was removed in the 02 decommission.
-      POPS_API_KEY_FILE: /run/secrets/pops_api_key
+      POPS_API_KEY_FILE: /run/secrets/pops_mcp_api_key
       MCP_PORT: '3011'
       # Inbound shared secret. When set, every POST /mcp must send
       # `Authorization: Bearer <token>`; unset leaves the route open and logs a
@@ -1713,6 +1715,10 @@ secrets:
     file: ../secrets/finance_api_key
   pops_api_key:
     file: ../secrets/pops_api_key
+  # MCP's outbound grant is separate from moltbot's shared credential so
+  # pairing-code issuance can be revoked without changing the bot.
+  pops_mcp_api_key:
+    file: ../secrets/pops_mcp_api_key
   # bfm's own service account, deliberately NOT the shared pops_api_key:
   # separate accounts are what make revocation and the audit trail
   # per-consumer. Mounted by `bfm-api`.

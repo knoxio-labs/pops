@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
 
 import { useCatalogueEditor } from '../catalogue-editor/useCatalogueEditor';
 import {
@@ -9,12 +10,16 @@ import {
 
 import type { ArchiveTarget, EditorMode } from './cataloguePageTypes';
 
-/** Provides catalogue page selection and mutation behaviour independently from its layout. */
+/**
+ * Provides catalogue page selection and mutation behaviour independently from its layout.
+ * A `:id` route parameter selects the matching type and is reconciled during render when
+ * navigation changes the parameter without remounting the page.
+ */
 export function useTypeCataloguePage() {
+  const navigate = useNavigate();
+  const { mode, selectedFieldId, setMode, setSelectedFieldId, setStoredTypeId, storedTypeId } =
+    useTypeRouteState();
   const model = useCatalogueEditor();
-  const [storedTypeId, setStoredTypeId] = useState<string | null>(null);
-  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
-  const [mode, setMode] = useState<EditorMode>('type');
   const [auditOpen, setAuditOpen] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<ArchiveTarget | null>(null);
   const data = useCataloguePageData(
@@ -34,6 +39,7 @@ export function useTypeCataloguePage() {
   });
   const navigation = useCataloguePageNavigation({
     fields: data.fields,
+    navigate,
     onOperation: actions.applyOperation,
     selectedType: data.selectedType,
     setMode,
@@ -62,5 +68,27 @@ export function useTypeCataloguePage() {
     setAuditOpen,
     setMode,
     mode,
+  };
+}
+
+function useTypeRouteState() {
+  const { id } = useParams<{ id?: string }>();
+  const [lastSeenId, setLastSeenId] = useState(id);
+  const [storedTypeId, setStoredTypeId] = useState<string | null>(id ?? null);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [mode, setMode] = useState<EditorMode>('type');
+  if (id !== lastSeenId) {
+    setLastSeenId(id);
+    setStoredTypeId(id ?? null);
+    setSelectedFieldId(null);
+    setMode('type');
+  }
+  return {
+    mode,
+    selectedFieldId,
+    setMode,
+    setSelectedFieldId,
+    setStoredTypeId,
+    storedTypeId,
   };
 }

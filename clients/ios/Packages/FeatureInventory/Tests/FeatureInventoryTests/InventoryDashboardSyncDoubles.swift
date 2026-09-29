@@ -2,8 +2,6 @@ import AppCore
 import Foundation
 import Synchronization
 
-@testable import FeatureInventory
-
 /// Counts `refresh()` and `download()` calls, answers `hasNeverDownloaded()`
 /// from a flag a test sets, and can hold one call open until released — so a
 /// test can prove two callers overlap on it before letting it finish.

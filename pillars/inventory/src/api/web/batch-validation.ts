@@ -1,6 +1,6 @@
 import { and, eq, isNull } from 'drizzle-orm';
 
-import { loadPublishedCatalogue } from '../../catalogue/index.js';
+import { ancestorIds, loadPublishedCatalogue } from '../../catalogue/index.js';
 import {
   type WebBatchBody,
   type WebBatchColumn,
@@ -86,16 +86,36 @@ export function createWebBatchContext(db: CommandDb): WebBatchContext {
   };
 }
 
-/** Resolve a non-archived published type by its case-insensitive display label. */
+function typePathLabel(
+  catalogue: PersistedCatalogue,
+  type: PersistedItemType,
+  typesById: ReadonlyMap<string, PersistedItemType>
+): string {
+  return [...ancestorIds(catalogue.types, type.id), type.id]
+    .map((typeId) => typesById.get(typeId)?.label)
+    .filter((label): label is string => label !== undefined)
+    .join(' › ');
+}
+
+/** Resolve one active published type by key, leaf label, or full label path. */
 export function resolveBatchType(
   catalogue: PersistedCatalogue | null,
   value: string
 ): PersistedItemType | null | undefined {
   const key = normalized(value);
   if (key === '') return null;
-  return catalogue?.types.find(
-    (type) => type.archivedAt === null && normalized(type.label) === key
+  if (catalogue === null) return undefined;
+
+  const typesById = new Map(catalogue.types.map((type) => [type.id, type]));
+  const matches = catalogue.types.filter(
+    (type) =>
+      type.archivedAt === null &&
+      (normalized(type.key) === key ||
+        normalized(type.label) === key ||
+        normalized(typePathLabel(catalogue, type, typesById)) === key)
   );
+  if (matches.length !== 1) return undefined;
+  return matches[0];
 }
 
 function quantityIssue(
@@ -107,7 +127,7 @@ function quantityIssue(
   if (!/^\d+$/u.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < 1) {
     return { code: 'quantity_invalid', message: 'Quantity is a whole number, 1 or more.' };
   }
-  if (type?.capabilities.includes('containment') === true && Number(value) > 1) {
+  if (type?.effectiveCapabilities.includes('containment') === true && Number(value) > 1) {
     return {
       code: 'quantity_container',
       message: `A ${type.label} is a container, so its quantity is 1.`,

@@ -9,8 +9,34 @@ import { useCataloguePreview } from './useCataloguePreview';
 import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type { CatalogueDescriptor, CatalogueReadiness, CompatibilitySnapshot } from './types';
 
+function catalogueIssues(
+  patchDraft: ReturnType<typeof useCatalogueMutations>['patchDraft'],
+  preview: ReturnType<typeof useCataloguePreview>
+) {
+  const saved = issuesOf(patchDraft.error);
+  const live = issuesOf(preview.error);
+  const savedOperation = patchDraft.error === null ? null : (patchDraft.variables ?? null);
+  return {
+    live,
+    liveOperation: preview.errorOperations,
+    saved,
+    savedOperation,
+    sources: [
+      { issues: saved, operations: savedOperation },
+      { issues: live, operations: preview.errorOperations },
+    ],
+  };
+}
+
 function issuesOf(error: unknown): readonly InventoryApiIssue[] {
   return error instanceof InventoryApiError ? error.issues : [];
+}
+
+function catalogueStatus(errors: readonly (unknown | null)[], pending: readonly boolean[]) {
+  return {
+    error: errors.find((candidate) => candidate !== null),
+    isPending: pending.some(Boolean),
+  };
 }
 
 async function readCurrentDraft(): Promise<CatalogueDescriptor | null> {
@@ -59,32 +85,27 @@ export function useCatalogueEditor() {
   const [editorEpoch, setEditorEpoch] = useState(0);
   const { draftQuery, publishedQuery } = useCatalogueQueries();
   const cataloguePreview = useCataloguePreview(queryClient, setCompatibility);
-
   const { abandonDraft, createDraft, patchDraft, publishDraft } = useCatalogueMutations(
     queryClient,
     publishedQuery.data,
     setCompatibility,
     cataloguePreview.cancel
   );
-
   const catalogue =
     draftQuery.error === null ? (draftQuery.data ?? publishedQuery.data) : undefined;
-  const error = [
-    publishedQuery.error,
-    draftQuery.error,
-    cataloguePreview.error,
-    createDraft.error,
-    patchDraft.error,
-    publishDraft.error,
-    abandonDraft.error,
-  ].find((candidate) => candidate !== null);
-  const isPending = [
-    createDraft.isPending,
-    patchDraft.isPending,
-    publishDraft.isPending,
-    abandonDraft.isPending,
-  ].some(Boolean);
-
+  const { error, isPending } = catalogueStatus(
+    [
+      publishedQuery.error,
+      draftQuery.error,
+      cataloguePreview.error,
+      createDraft.error,
+      patchDraft.error,
+      publishDraft.error,
+      abandonDraft.error,
+    ],
+    [createDraft.isPending, patchDraft.isPending, publishDraft.isPending, abandonDraft.isPending]
+  );
+  const issues = catalogueIssues(patchDraft, cataloguePreview);
   return {
     abandonDraft,
     catalogue,
@@ -92,7 +113,7 @@ export function useCatalogueEditor() {
     error,
     readiness: toReadiness(compatibility, catalogue),
     isLoading: publishedQuery.isLoading || draftQuery.isLoading,
-    issues: { saved: issuesOf(patchDraft.error), live: issuesOf(cataloguePreview.error) },
+    issues,
     isPending,
     patchDraft,
     previewOperation: cataloguePreview.preview,

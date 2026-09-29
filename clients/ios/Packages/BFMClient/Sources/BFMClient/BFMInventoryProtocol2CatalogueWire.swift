@@ -24,10 +24,33 @@ internal func protocol2Catalogue(
             sortOrder: type.sortOrder, fields: try type.fields.map(protocol2Field(from:)),
             capabilities: type.capabilities, legacyLabels: type.legacyLabels,
             presentation: try protocol2JSON(object: type.presentation.additionalProperties),
-            archivedAt: type.archivedAt, replacedBy: type.replacedBy
+            archivedAt: type.archivedAt, replacedBy: type.replacedBy,
+            parentTypeId: type.parentTypeId
         )
     }
+    try validateParentTypes(types)
     return InventoryCatalogueSnapshot(revision: revision, types: types)
+}
+
+private func validateParentTypes(_ types: [InventoryCatalogueType]) throws {
+    let byId = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
+    for type in types {
+        guard let parentTypeId = type.parentTypeId else { continue }
+        guard parentTypeId != type.id, byId[parentTypeId] != nil else {
+            throw RepositoryError.contractMismatch
+        }
+
+        var visited: Set<String> = [type.id]
+        var currentId = parentTypeId
+        while let current = byId[currentId] {
+            guard visited.insert(current.id).inserted else {
+                throw RepositoryError.contractMismatch
+            }
+            guard let nextId = current.parentTypeId else { break }
+            guard byId[nextId] != nil else { throw RepositoryError.contractMismatch }
+            currentId = nextId
+        }
+    }
 }
 
 private typealias Protocol2FieldPayload =

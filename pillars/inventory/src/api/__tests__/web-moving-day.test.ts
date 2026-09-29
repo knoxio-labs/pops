@@ -67,7 +67,20 @@ interface DestinationFixture {
   options: { storage: string; parents: string };
 }
 
-function installDestinationCatalogue(fieldKey = 'Destination'): DestinationFixture {
+interface InheritedDestinationFixture extends DestinationFixture {
+  childTypeId: string;
+}
+
+function installDestinationCatalogue(): DestinationFixture;
+function installDestinationCatalogue(fieldKey: string): DestinationFixture;
+function installDestinationCatalogue(
+  fieldKey: string,
+  childTypeId: string
+): InheritedDestinationFixture;
+function installDestinationCatalogue(
+  fieldKey = 'Destination',
+  childTypeId?: string
+): DestinationFixture | InheritedDestinationFixture {
   const typeId = randomUUID();
   const fieldId = randomUUID();
   const storage = randomUUID();
@@ -98,6 +111,22 @@ function installDestinationCatalogue(fieldKey = 'Destination'): DestinationFixtu
       presentationJson: JSON.stringify({}),
     })
     .run();
+  if (childTypeId !== undefined) {
+    harness.db.db
+      .insert(itemTypes)
+      .values({
+        revision: 2,
+        id: childTypeId,
+        key: 'moving-box-child',
+        label: 'Moving box child',
+        parentTypeId: typeId,
+        sortOrder: 1,
+        capabilitiesJson: JSON.stringify(['containment']),
+        legacyLabelsJson: JSON.stringify([]),
+        presentationJson: JSON.stringify({}),
+      })
+      .run();
+  }
   harness.db.db
     .insert(itemTypeFields)
     .values({
@@ -136,7 +165,12 @@ function installDestinationCatalogue(fieldKey = 'Destination'): DestinationFixtu
     .set({ status: 'published', publishedActorKind: 'web', publishedAt: createdAt })
     .where(eq(catalogueRevisions.revision, 2))
     .run();
-  return { typeId, fieldId, options: { storage, parents } };
+  const fixture = { typeId, fieldId, options: { storage, parents } };
+  return childTypeId === undefined ? fixture : { ...fixture, childTypeId };
+}
+
+function installInheritedDestinationCatalogue(): InheritedDestinationFixture {
+  return installDestinationCatalogue('Destination', randomUUID());
 }
 
 function setBoxType(id: string, typeId: string): void {
@@ -206,6 +240,26 @@ describe('GET /web/moving-day', () => {
     await apply(createItem(boxId, 'Parents box'));
     setBoxState(boxId, 'open');
     setBoxType(boxId, fixture.typeId);
+    setDestination(boxId, fixture.fieldId, fixture.options.parents);
+
+    const result = await moving();
+
+    expect(result.boxes[0]?.destination).toEqual({
+      optionKey: 'parents',
+      label: "Parents' house",
+    });
+    expect(result.destinationOptions).toEqual([
+      { optionKey: 'storage', label: 'Storage' },
+      { optionKey: 'parents', label: "Parents' house" },
+    ]);
+  });
+
+  it('destination reads a parent-owned field inherited by a child container type', async () => {
+    const fixture = installInheritedDestinationCatalogue();
+    const boxId = randomUUID();
+    await apply(createItem(boxId, 'Child box'));
+    setBoxState(boxId, 'open');
+    setBoxType(boxId, fixture.childTypeId);
     setDestination(boxId, fixture.fieldId, fixture.options.parents);
 
     const result = await moving();

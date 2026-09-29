@@ -8,6 +8,7 @@ import SwiftUI
 public struct PopsPagedPhotoViewer: View {
     private let images: [Data]
     private let placeholderSymbol: String
+    private let contentMode: ContentMode
     private let onPageChange: (Int) -> Void
 
     @State private var index: Int
@@ -18,15 +19,19 @@ public struct PopsPagedPhotoViewer: View {
     ///   - images: Encoded images in display order. An empty collection draws no pages.
     ///   - initialIndex: The initially visible page. Values outside `images` are clamped.
     ///   - placeholderSymbol: The SF Symbol drawn when a page cannot decode its image.
+    ///   - contentMode: How each decoded image fills its page. `.fill` keeps
+    ///     existing consumers unchanged; `.fit` preserves the full image.
     ///   - onPageChange: Called when paging selects another image.
     public init(
         images: [Data],
         initialIndex: Int = 0,
         placeholderSymbol: String,
+        contentMode: ContentMode = .fill,
         onPageChange: @escaping (Int) -> Void = { _ in }
     ) {
         self.images = images
         self.placeholderSymbol = placeholderSymbol
+        self.contentMode = contentMode
         self.onPageChange = onPageChange
         _index = State(
             initialValue: PopsPagedPhotoViewerPresentation.clampedIndex(
@@ -37,7 +42,8 @@ public struct PopsPagedPhotoViewer: View {
         TabView(selection: $index) {
             ForEach(images.indices, id: \.self) { pageIndex in
                 PopsZoomablePhoto(
-                    data: images[pageIndex], placeholderSymbol: placeholderSymbol
+                    data: images[pageIndex], placeholderSymbol: placeholderSymbol,
+                    contentMode: contentMode
                 )
                 .id(PageIdentity(index: pageIndex, data: images[pageIndex]))
                 .tag(pageIndex)

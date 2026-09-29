@@ -234,6 +234,26 @@ describe('the scope job is wired to the workflow it scopes', () => {
     );
   });
 
+  it.each([
+    ['pull_request', undefined, 100],
+    ['pull_request', false, 100],
+    ['pull_request', true, 150],
+    ['merge_group', undefined, 150],
+    ['merge_group', false, 150],
+  ])('budgets the %s full=%s iOS job at %s minutes', (event, full, expected) => {
+    const expression = jobsOf('ios-quality.yml').get('quality')?.['timeout-minutes'];
+    if (typeof expression !== 'string') throw new Error('Missing lane-specific timeout expression');
+    const evaluate = new Function(
+      'github',
+      'inputs',
+      `return (${expression.replace(/^\s*\$\{\{\s*|\s*\}\}\s*$/gu, '').replace(/==/gu, '===')});`
+    ) as (
+      github: { event_name: string },
+      inputs: { 'full-validation': boolean | undefined }
+    ) => unknown;
+    expect(evaluate({ event_name: event }, { 'full-validation': full })).toBe(expected);
+  });
+
   it('runs the analyzer and Maestro in every explicit full lane', () => {
     const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
     const namedStep = (name: string) => steps.find((step) => step.name === name);
@@ -250,7 +270,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
       "success() && (github.event_name == 'merge_group' || inputs['full-validation'] == true)"
     );
     expect(fullSuite?.run).toBe('mise run --skip-deps lint:analyze');
-    expect(fullSuite?.['timeout-minutes']).toBe(40);
+    expect(fullSuite?.['timeout-minutes']).toBe(75);
     const debugArtifact = namedStep('Simulator test log and result bundle');
     expect(debugArtifact?.if).toBe('failure()');
     expect(debugArtifact?.uses).toBe('actions/upload-artifact@v7');
@@ -271,6 +291,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
         "github.event_name == 'merge_group' || inputs['full-validation'] == true"
       );
     }
+    expect(namedStep('UI flow (Maestro, against a real BFM)')?.['timeout-minutes']).toBe(45);
 
     expect(namedStep('Release carries no BFM host')?.if).toBeUndefined();
 
@@ -299,19 +320,44 @@ describe('the scope job is wired to the workflow it scopes', () => {
       'never'
     );
     expect(names.indexOf('Lint (swift-format + SwiftLint)')).toBeLessThan(
-      names.indexOf('Cache host-toolchain package builds')
+      names.indexOf('Restore host-toolchain package builds')
     );
-    expect(names.indexOf('Cache host-toolchain package builds')).toBeLessThan(
+    expect(names.indexOf('Restore host-toolchain package builds')).toBeLessThan(
       names.indexOf('Test packages (host toolchain)')
     );
+    expect(names.indexOf('Test packages (host toolchain)')).toBeLessThan(
+      names.indexOf('Save host-toolchain package builds')
+    );
+    expect(names.indexOf('Save host-toolchain package builds')).toBeLessThan(
+      names.indexOf('Generate Pops.xcodeproj')
+    );
 
-    const cache = steps.find((step) => step.name === 'Cache host-toolchain package builds');
-    const cacheInputs = isMapping(cache?.with) ? cache.with : undefined;
-    expect(cacheInputs?.path).toBe('clients/ios/Packages/*/.build');
-    expect(cacheInputs?.key).toMatch(/POPS_XCODE_VERSION/u);
-    expect(cacheInputs?.key).toMatch(/Packages\/\*\/Sources/u);
-    expect(cacheInputs?.key).toMatch(/Packages\/\*\/Tests/u);
-    expect(JSON.stringify(cacheInputs)).not.toMatch(/DerivedData/u);
+    const restore = steps.find((step) => step.name === 'Restore host-toolchain package builds');
+    const restoreInputs = isMapping(restore?.with) ? restore.with : undefined;
+    expect(restore?.id).toBe('host-package-cache');
+    expect(restore?.uses).toBe('actions/cache/restore@v6');
+    expect(restoreInputs?.path).toBe('clients/ios/Packages/*/.build');
+    expect(restoreInputs?.key).toMatch(/POPS_XCODE_VERSION/u);
+    expect(restoreInputs?.key).toMatch(/POPS_XCODE_BUILD/u);
+    expect(restoreInputs?.key).toMatch(/Packages\/\*\/Sources/u);
+    expect(restoreInputs?.key).toMatch(/Packages\/\*\/Tests/u);
+    expect(JSON.stringify(restoreInputs)).not.toMatch(/DerivedData/u);
+
+    const save = steps.find((step) => step.name === 'Save host-toolchain package builds');
+    const saveInputs = isMapping(save?.with) ? save.with : undefined;
+    expect(save?.if).toBe("success() && steps.host-package-cache.outputs.cache-hit != 'true'");
+    expect(save?.uses).toBe('actions/cache/save@v6');
+    expect(saveInputs).toEqual({
+      path: 'clients/ios/Packages/*/.build',
+      key: '${{ steps.host-package-cache.outputs.cache-primary-key }}',
+    });
+    const combinedHostCaches = steps.filter(
+      (step) =>
+        step.uses === 'actions/cache@v6' &&
+        isMapping(step.with) &&
+        step.with.path === 'clients/ios/Packages/*/.build'
+    );
+    expect(combinedHostCaches).toEqual([]);
   });
 });
 

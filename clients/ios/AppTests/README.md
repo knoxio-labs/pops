@@ -35,6 +35,7 @@ Probed here, on a booted simulator, in this target: a `UIWindow(windowScene:)` g
 The difference is what is being asserted on. `TabView` is bridged to a real `UITabBarController` **child view controller**, and mounting does build those. A SwiftUI leaf has no UIKit object behind it at all: the content is drawn into a display list, and accessibility elements are built on demand for an attached accessibility client, which no unit-test process has. So:
 
 - **view-controller-shaped questions** — is there a tab bar, how many tabs, which is selected — are answerable here, and `ContentViewTabSwitcherTests` is the pattern;
+- **pixel-shaped questions** — did a SwiftUI leaf draw content rather than only its adaptive background — are answered by attaching its hosting view to a scene-backed window and synchronously rendering the view's layer; `ContentViewFeatureSwitchingTests` keeps transparent and background-only controls beside that assertion;
 - **accessibility-identifier questions** are not, in any test process. They are answered by the Maestro flows in [`../.maestro`](../.maestro), which drive a real accessibility client, and held in the meantime by source-shaped wiring suites — `ReceiptResultAccessibilityWiringTests` is the worked example, including what such a suite can and cannot see.
 
 ## What is here
@@ -63,6 +64,8 @@ What the suite proves is that the Security-framework calls in `SecureEnclaveKeyS
 It lives in this target rather than in `Packages/Auth` for the same reason `KeychainTokenStoreTests` does: the key is created `kSecAttrIsPermanent` in the data-protection keychain, so an unhosted package test bundle would fail on the keychain before reaching the Enclave, with a failure nobody could attribute.
 
 ## Running it
+
+`PopsTests` needs the canonical fakes from `Packages/AppCore/Sources/AppCoreFakes`, but it must not link the `AppCoreFakes` SwiftPM product. That product has a static dependency on `AppCore`; loading it into this hosted test bundle would put one `AppCore` copy in `Pops` and another in `PopsTests`, making equal-looking errors and concrete types different at runtime. `project.yml` therefore compiles the shared fake source directory directly into `PopsTests` while keeping `AppCore` import-only. `mise run lint` checks that graph without building, and the full simulator task checks the generated link inputs and Mach-O symbols before executing tests: `AppCore.o` and AppCore's nominal type descriptors must exist only in the host. Functions added by the canonical fake sources are extensions compiled in `PopsTests`; their symbols name the extended AppCore types but do not define another runtime identity.
 
 ```bash
 mise run test:app     # this target alone, on the simulator

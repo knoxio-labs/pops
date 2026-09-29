@@ -56,6 +56,7 @@ const catalogue: Catalogue = {
       key: 'cable',
       label: 'Cables',
       legacyLabels: [],
+      parentTypeId: null,
       presentation: {},
       replacedBy: null,
       revision: 3,
@@ -247,6 +248,9 @@ describe('useWebItems', () => {
         note: 'Short cable',
         updatedAt: '2026-09-02T00:00:00.000Z',
       },
+    ]);
+    expect(result.current.webItems).toEqual([
+      expect.objectContaining({ id: 'item-1', name: 'Cable box' }),
     ]);
     expect(result.current.total).toBe(1);
     expect(result.current.unfilteredTotal).toBe(3);

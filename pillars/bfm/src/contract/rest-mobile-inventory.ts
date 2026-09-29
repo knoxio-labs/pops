@@ -35,6 +35,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { requires } from './capabilities.js';
+import { mobileInventoryItemContract } from './mobile-inventory-item-contract.js';
 import {
   MobileInventoryLedgerReportBodySchema,
   MobileInventoryLedgerReportResponseSchema,
@@ -184,6 +185,7 @@ export const mobileInventoryContract = c.router({
     summary: "One item's history, newest first",
     metadata: requires('inventory.read'),
   },
+  item: mobileInventoryItemContract,
   mutations: {
     method: 'POST',
     path: '/mobile/inventory/mutations',

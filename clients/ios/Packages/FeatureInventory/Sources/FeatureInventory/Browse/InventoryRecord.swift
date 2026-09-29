@@ -15,8 +15,9 @@ internal struct InventoryRecord: Identifiable, Equatable, Sendable {
     internal let id: InventoryItem.ID
     internal let name: String
     internal let typeKey: String?
-    /// The catalogue's name for `typeKey`, or the key itself when this
-    /// phone's catalogue does not know it yet.
+    internal let typeKeys: Set<String>
+    /// The catalogue's name for the item's type, or its legacy key when this
+    /// phone's catalogue does not know that type yet.
     internal let typeName: String?
     internal let code: String?
     internal let quantity: InventoryQuantity
@@ -55,16 +56,39 @@ internal struct InventoryRecord: Identifiable, Equatable, Sendable {
     private static let recentWindow: TimeInterval = 7 * 24 * 60 * 60
 }
 
+internal enum InventoryTypeNameResolver {
+    internal static func name(
+        for item: InventoryItem, catalogue: InventoryCatalogue,
+        protocol2Catalogue: InventoryCatalogueSnapshot?
+    ) -> String? {
+        if let protocol2Catalogue {
+            let type =
+                item.typeId.flatMap { typeId in
+                    protocol2Catalogue.types.first { $0.id == typeId }
+                }
+                ?? item.typeKey.flatMap { typeKey in
+                    protocol2Catalogue.types.first { $0.key == typeKey }
+                }
+            if let type {
+                return protocol2Catalogue.effectiveType(id: type.id)?.label ?? type.label
+            }
+        }
+        return item.typeKey.map { catalogue.type(forKey: $0)?.name ?? $0 }
+    }
+}
+
 /// Builds records from one state of the store, so every row on a screen is
 /// read against the same catalogue, ledger and placements.
 internal struct InventoryRecordReader {
     private let places: InventoryPlaceNames
     private let catalogue: InventoryCatalogue
+    private let protocol2Catalogue: InventoryCatalogueSnapshot?
     private let rowSync: InventoryRowSync
 
     internal init(source: any InventoryQuerySource) {
         places = InventoryPlaceNames(source: source)
         catalogue = source.inventoryCatalogue()
+        protocol2Catalogue = source.inventoryProtocol2Catalogue()
         rowSync = InventoryRowSync(
             status: source.inventoryReplicaStatus(), ledger: source.inventorySyncLedger())
     }
@@ -72,17 +96,55 @@ internal struct InventoryRecordReader {
     internal func record(_ item: InventoryItem) -> InventoryRecord {
         InventoryRecord(
             id: item.id, name: item.name, typeKey: item.typeKey,
-            typeName: item.typeKey.map { catalogue.type(forKey: $0)?.name ?? $0 },
+            typeKeys: Self.typeKeys(for: item, in: protocol2Catalogue),
+            typeName: InventoryTypeNameResolver.name(
+                for: item, catalogue: catalogue, protocol2Catalogue: protocol2Catalogue),
             code: item.code, quantity: item.quantity, lifecycle: item.lifecycle,
             access: item.containment?.access, placement: placement(item.placement),
             path: places.path(of: item.placement), sync: rowSync.sync(of: item.id),
             photo: item.photos.first?.sha256, createdAt: item.createdAt)
     }
 
+    private static func typeKeys(
+        for item: InventoryItem, in catalogue: InventoryCatalogueSnapshot?
+    ) -> Set<String> {
+        guard let catalogue else { return item.typeKey.map { [$0] } ?? [] }
+        let found =
+            item.typeId.flatMap { typeId in
+                catalogue.types.first { $0.id == typeId }
+            }
+            ?? item.typeKey.flatMap { typeKey in
+                catalogue.types.first { $0.key == typeKey }
+            }
+        guard let found else { return item.typeKey.map { [$0] } ?? [] }
+        return Set(catalogue.ancestry(ofType: found.id).map(\.key))
+    }
+
     /// The catalogue's type names, alphabetically, for the filter sheet.
     internal var typeNames: [InventoryTypeName] {
-        catalogue.types.map { InventoryTypeName(key: $0.key, name: $0.name) }
-            .sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
+        if let protocol2Catalogue {
+            return protocol2Catalogue.types
+                .map { type in
+                    let ancestry = protocol2Catalogue.ancestry(ofType: type.id)
+                    return InventoryTypeName(
+                        key: type.key, name: type.label,
+                        parentKey: ancestry.dropLast().last?.key)
+                }
+                .sorted(by: Self.typeNameOrder)
+        }
+        return catalogue.types
+            .map { InventoryTypeName(key: $0.key, name: $0.name) }
+            .sorted(by: Self.typeNameOrder)
+    }
+
+    private static func typeNameOrder(_ left: InventoryTypeName, _ right: InventoryTypeName) -> Bool
+    {
+        switch left.name.localizedCaseInsensitiveCompare(right.name) {
+        case .orderedAscending: true
+        case .orderedDescending: false
+        case .orderedSame:
+            left.key.localizedCaseInsensitiveCompare(right.key) == .orderedAscending
+        }
     }
 
     private func placement(_ placement: InventoryPlacement) -> InventoryRecord.Placement {
@@ -101,12 +163,15 @@ public struct InventoryTypeName: Identifiable, Hashable, Sendable {
     public let key: String
     /// The reader-facing catalogue name.
     public let name: String
+    /// The stable key of this type's protocol-2 parent, or nil for a root.
+    public let parentKey: String?
 
     public var id: String { key }
 
     /// Creates a type option from its catalogue key and display name.
-    public init(key: String, name: String) {
+    public init(key: String, name: String, parentKey: String? = nil) {
         self.key = key
         self.name = name
+        self.parentKey = parentKey
     }
 }

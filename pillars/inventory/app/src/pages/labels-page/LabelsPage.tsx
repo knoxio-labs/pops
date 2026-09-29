@@ -9,19 +9,29 @@ import { Plus, Printer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
-import { Alert, AlertDescription, AlertTitle, Button, PageHeader, Skeleton } from '@pops/ui';
+import { matchingPreset } from '@pops/inventory/labels';
+import { Alert, AlertDescription, AlertTitle, Button, PageHeader, Skeleton, cn } from '@pops/ui';
 
+import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
+import {
+  DEFAULT_INVENTORY_DEFAULTS,
+  labelContentForShows,
+  useInventoryDefaults,
+} from '../../inventory-web/useInventoryDefaults.js';
 import { AddDialog } from './add-dialog';
 import { MAX_LABEL_IDS, readLabelParams } from './label-params';
+import { loadSheetId } from './label-storage';
+import { LabelsSelection } from './labels-selection';
 import { PrintOptions } from './print-options';
 import { PrintPreview } from './print-preview';
 import { LabelPrintStyles } from './print-styles';
-import { SelectionPanel } from './selection-panel';
 import { useLabelJob } from './useLabelJob';
 import { useLabelSubjects } from './useLabelSubjects';
 import { useSaveCode } from './useSaveCode';
 
-import type { LabelParams } from './label-params';
+import type { LabelContent } from '@pops/inventory/labels';
+
+import type { LabelPageDefaults, LabelParams } from './label-params';
 import type { LabelSubjects } from './useLabelSubjects';
 
 function printLabel(count: number): string {
@@ -49,11 +59,12 @@ function Header({ count, onPrint }: { count: number; onPrint?: () => void }) {
   );
 }
 
-const GRID = 'grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]';
+const GRID =
+  'grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 overflow-y-auto lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden';
 
 function LabelsLoading() {
   return (
-    <div className="space-y-4">
+    <div className={cn('flex min-h-0 flex-col gap-4 overflow-hidden', PAGE_HEIGHT)}>
       <Header count={0} />
       <div className={GRID}>
         <div className="space-y-3" aria-busy="true" aria-label="Loading items">
@@ -71,9 +82,9 @@ function LabelsLoading() {
   );
 }
 
-function useIdsParam() {
+function useIdsParam(defaults: LabelPageDefaults) {
   const [search, setSearch] = useSearchParams();
-  const params = readLabelParams(search);
+  const params = readLabelParams(search, defaults);
   const setIds = (ids: string[], dropContents = false) =>
     setSearch(
       (current) => {
@@ -84,7 +95,19 @@ function useIdsParam() {
       },
       { replace: true }
     );
-  return { params, setIds };
+  const setContent = (content: LabelContent) =>
+    setSearch(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('template');
+        const preset = matchingPreset(content);
+        if (preset === null) next.delete('shows');
+        else next.set('shows', preset.id);
+        return next;
+      },
+      { replace: true }
+    );
+  return { params, setIds, setContent };
 }
 
 /**
@@ -111,14 +134,24 @@ function LabelsContent({
   data,
   params,
   setIds,
+  setContent,
 }: {
   data: LabelSubjects;
   params: LabelParams;
   setIds: (ids: string[]) => void;
+  setContent: (content: LabelContent) => void;
 }) {
-  const job = useLabelJob(data.subjects, { template: params.template, sheetId: params.sheetId });
+  const job = useLabelJob(data.subjects, {
+    content: params.content,
+    details: data.details,
+    sheetId: params.sheetId,
+  });
   const { save } = useSaveCode();
   const [addOpen, setAddOpen] = useState(false);
+  const changeContent = (content: LabelContent): void => {
+    job.setContent(content);
+    setContent(content);
+  };
   const add = (ids: string[]) => setIds([...params.ids, ...ids]);
   const addControl = (
     <AddDialog
@@ -134,24 +167,20 @@ function LabelsContent({
     />
   );
   return (
-    <div className="space-y-4">
+    <div className={cn('flex min-h-0 flex-col gap-4 overflow-hidden', PAGE_HEIGHT)}>
       <LabelPrintStyles />
       <Header count={job.labels.length} onPrint={job.block ? undefined : job.print} />
       <div className={GRID}>
-        <aside className="flex min-w-0 flex-col lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:self-start">
-          <SelectionPanel
-            subjects={data.subjects}
-            contents={data.contents}
-            missing={data.missing}
-            saveCode={save}
-            addControl={addControl}
-            onOpenAdd={() => setAddOpen(true)}
-            onAdd={add}
-            onRemove={(id) => setIds(params.ids.filter((held) => held !== id))}
-          />
-        </aside>
-        <section className="flex min-w-0 flex-col gap-4" aria-label="Labels">
-          <PrintOptions job={job} />
+        <LabelsSelection
+          data={data}
+          saveCode={save}
+          addControl={addControl}
+          onOpenAdd={() => setAddOpen(true)}
+          onAdd={add}
+          onRemove={(id) => setIds(params.ids.filter((held) => held !== id))}
+        />
+        <section className="flex min-h-0 min-w-0 flex-col gap-4" aria-label="Labels">
+          <PrintOptions job={job} onContentChange={changeContent} />
           <PrintPreview job={job} />
         </section>
       </div>
@@ -161,10 +190,17 @@ function LabelsContent({
 
 /** The label print page. */
 export function LabelsPage() {
-  const { params, setIds } = useIdsParam();
+  const settings = useInventoryDefaults();
+  const stored = settings.data ?? DEFAULT_INVENTORY_DEFAULTS;
+  const defaults: LabelPageDefaults = {
+    shows: stored.labelShows,
+    content: labelContentForShows(stored.labelShows),
+    sheetId: loadSheetId() ?? stored.labelSheet,
+  };
+  const { params, setIds, setContent } = useIdsParam(defaults);
   const data = useLabelSubjects(params.ids);
   useExpandContents(params, data, setIds);
-  if (data.isLoading || params.contents) return <LabelsLoading />;
+  if (settings.isPending || data.isLoading || params.contents) return <LabelsLoading />;
   if (data.error) {
     return (
       <Alert variant="destructive">
@@ -173,5 +209,5 @@ export function LabelsPage() {
       </Alert>
     );
   }
-  return <LabelsContent data={data} params={params} setIds={setIds} />;
+  return <LabelsContent data={data} params={params} setIds={setIds} setContent={setContent} />;
 }

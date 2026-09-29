@@ -13,6 +13,7 @@ type ReferenceKind = 'item' | 'location';
 /** Controlled field form values shared by independently rendered sections. */
 export interface FieldFormContextValue {
   readonly cardinality: 'one' | 'many';
+  readonly decimalPlaces: string;
   readonly field?: CatalogueField;
   readonly fixedUnit: string;
   readonly help: string;
@@ -30,6 +31,7 @@ export interface FieldFormContextValue {
   readonly expression: ExpressionNode;
   readonly setAllowOverride: Dispatch<SetStateAction<boolean>>;
   readonly setCardinality: Dispatch<SetStateAction<'one' | 'many'>>;
+  readonly setDecimalPlaces: Dispatch<SetStateAction<string>>;
   readonly setExpression: Dispatch<SetStateAction<ExpressionNode>>;
   readonly setFixedUnit: Dispatch<SetStateAction<string>>;
   readonly setHelp: Dispatch<SetStateAction<string>>;

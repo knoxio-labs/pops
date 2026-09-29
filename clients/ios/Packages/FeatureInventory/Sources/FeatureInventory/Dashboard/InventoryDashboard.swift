@@ -91,6 +91,8 @@ internal enum InventoryDashboardSync: Equatable, Sendable {
     case synchronizing(progress: Double)
     /// Open repairs waiting for a person.
     case needsAttention(count: Int)
+    /// The server answered with a sync failure; the phone is not offline.
+    case syncFailed
 
     /// Reads the pill from the replica's state and its ledger. Repairs come
     /// first because they are the only state that waits for a person; then a
@@ -99,7 +101,9 @@ internal enum InventoryDashboardSync: Equatable, Sendable {
     internal static func derive(
         status: InventoryReplicaStatus, ledger: InventoryReplicaSyncLedger
     ) -> InventoryDashboardSync {
-        if !ledger.repairs.isEmpty { return .needsAttention(count: ledger.repairs.count) }
+        if !ledger.repairs.isEmpty || !ledger.issues.isEmpty {
+            return .needsAttention(count: ledger.repairs.count + ledger.issues.count)
+        }
         switch status {
         case .downloading(let progress):
             return .synchronizing(progress: progress)
@@ -107,6 +111,8 @@ internal enum InventoryDashboardSync: Equatable, Sendable {
             return .offline(since: since)
         case .blocked:
             return .offline(since: nil)
+        case .syncFailed:
+            return .syncFailed
         case .empty, .current, .refreshing:
             break
         }

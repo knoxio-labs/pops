@@ -14,17 +14,19 @@ xcodegen = "2.46.0"
 # formats, one intended scope, so they move together.
 SWIFT_SOURCES = "App AppTests Packages Playground Tools"
 
-# Xcode cannot be a `[tools]` pin — mise does not install it — so this is the
-# one committed declaration both the CI job and `verify:xcode-version` below
-# read, rather than two hand-kept copies. It matters because `swift-format`
-# ships inside the toolchain and is therefore the one check whose verdict
-# depends on which Xcode ran it; a local Xcode other than this one can
-# format-lint differently from CI, and `mise run lint` refuses to trust that
-# difference rather than let it pass silently.
+# Xcode cannot be a `[tools]` pin — mise does not install it — so these are the
+# committed declarations both the CI job and `verify:xcode-version` below read,
+# rather than two hand-kept copies. The marketing version selects the installed
+# app; the build number distinguishes a stable release from a beta with the
+# same marketing version. That matters because `swift-format` and SwiftPM
+# compile against the toolchain, so a local Xcode other than this one can
+# format-lint or build differently from CI, and `mise run lint` refuses to trust
+# that difference rather than let it pass silently.
 # The value must be an Xcode the runner image in `ios-quality.yml` and
 # `ios-testflight.yml` actually carries, and that image decides how high the iOS
 # floor can go — see the `deploymentTarget` note in project.yml.
 POPS_XCODE_VERSION = "27.0"
+POPS_XCODE_BUILD = "27A266a"
 
 # The simulator `mise run test` and `mise run test:app` boot. Named rather than
 # left to xcodebuild's choice so the local run and the CI run test the same
@@ -96,7 +98,7 @@ xcodegen generate
 
 [tasks.build]
 description = "Build the app for the iOS Simulator"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 # Names the simulator rather than `generic/platform=iOS Simulator`, for the same
 # reason `build:for-testing` below does: a generic destination has no active
 # architecture, so Xcode forces project.yml's Debug `ONLY_ACTIVE_ARCH: YES` back
@@ -115,7 +117,7 @@ run = 'xcodebuild -project Pops.xcodeproj -scheme Pops -destination "platform=iO
 
 [tasks."build:device"]
 description = "Build a signed Release for a physical iPhone"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 # -allowProvisioningUpdates lets automatic signing register the App ID and fetch
 # a profile, which is what Xcode does on its own when you press Run. Without it
 # the first build on a machine fails with "No profiles for … were found".
@@ -127,6 +129,7 @@ run = "xcodebuild -project Pops.xcodeproj -scheme Pops -destination 'generic/pla
 # App Store Connect setup gets proved without waiting for a merge.
 [tasks."release:testflight"]
 description = "Archive Pops or PopsPlayground at HEAD and upload it to TestFlight (needs an App Store Connect API key)"
+depends = ["verify:xcode-version"]
 run = "scripts/testflight.sh"
 
 # What "install it on my phone" means: the LOCAL flavour (`.local` bundle id,
@@ -135,7 +138,7 @@ run = "scripts/testflight.sh"
 # picks a phone when more than one is paired. See scripts/install-on-phone.sh.
 [tasks."install:phone"]
 description = "Build the local flavour and install + launch it on the paired iPhone, beside the TestFlight app"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = "scripts/install-on-phone.sh"
 
 [tasks."build:packages"]
@@ -191,7 +194,7 @@ done
 [tasks."build:for-testing"]
 description = "Compile the tree once for the simulator, keeping the compiler log `test` and `lint:analyze` share"
 hide = true
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = '''
 set -eu
 set -o pipefail
@@ -339,6 +342,7 @@ if [ "$covered" -eq 0 ]; then
 fi
 
 mise run verify:app-test-target
+scripts/check-app-test-linkage.sh built "$POPS_IOS_DERIVED_DATA"
 
 set --
 for name in $names; do
@@ -439,7 +443,7 @@ exit $status
 # could start skipping on the runner and CI would stay green.
 [tasks."test:app"]
 description = "Run the app's test target on the iOS Simulator, and assert it ran something"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = '''
 set -eu
 set -o pipefail
@@ -465,7 +469,7 @@ scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=lat
 # is, if anything, more reason a skip would go unremarked, not less.
 [tasks."test:device"]
 description = "Run the app's test target on a physical iPhone"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = '''
 set -eu
 set -o pipefail
@@ -620,13 +624,13 @@ exit $status
 # is exercised on every run rather than only on a machine that happens to have
 # the wrong Xcode installed.
 [tasks."verify:xcode-version"]
-description = "Local Xcode matches the version CI pins (POPS_XCODE_VERSION in [env] above)"
+description = "Local Xcode matches the version and build CI pins in [env] above"
 hide = true
 run = '''
 set -u
 status=0
 scripts/check-xcode-version.sh self-test || status=1
-scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" || status=1
+scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" "$POPS_XCODE_BUILD" || status=1
 exit $status
 '''
 
@@ -653,6 +657,22 @@ run = "scripts/install-on-phone.sh self-test"
 description = "The pre-upload camera purpose-string check still rejects what App Store Connect rejects"
 hide = true
 run = "scripts/check-camera-purpose.sh self-test"
+
+[tasks."verify:app-package-pin"]
+description = "The generated app graph keeps Swift Collections on the Xcode-compatible exact version"
+hide = true
+run = '''
+scripts/check-app-package-pin.sh self-test
+scripts/check-app-package-pin.sh check project.yml
+'''
+
+[tasks."verify:app-test-linkage"]
+description = "Hosted app tests reuse the host's single AppCore runtime copy"
+hide = true
+run = '''
+scripts/check-app-test-linkage.sh self-test
+scripts/check-app-test-linkage.sh project project.yml AppTests
+'''
 
 [tasks."verify:feature-repository-errors"]
 description = "Feature packages do not discard awaited repository failures with try?"
@@ -707,6 +727,8 @@ mise run verify:feature-repository-errors || status=1
 mise run verify:release-version || status=1
 mise run verify:install-on-phone || status=1
 mise run verify:camera-purpose || status=1
+mise run verify:app-package-pin || status=1
+mise run verify:app-test-linkage || status=1
 
 if mise run verify:xcode-version; then
   mise run swift-format lint || status=1
@@ -766,7 +788,7 @@ set -u
 # failure there is a real defect rather than the mismatch being opted into.
 scripts/check-xcode-version.sh self-test || exit 1
 
-if ! scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION"; then
+if ! scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" "$POPS_XCODE_BUILD"; then
   printf '\nformat:unpinned: proceeding on the toolchain above, by explicit request.\n' >&2
   printf '                 The rule-list drift check below still applies, and still refuses.\n' >&2
   printf '                 Read the diff before committing: these are this toolchain\47s rules.\n\n' >&2
@@ -808,77 +830,7 @@ mise run swift-format format
 [tasks."lint:analyze"]
 description = "SwiftLint's analyzer rules against the shared compiler log (unused_import; unused_declaration off until POPS-4533)"
 depends = ["build:for-testing"]
-run = '''
-set -eu
-set -o pipefail
-
-log="$POPS_IOS_COMPILER_LOG"
-
-# Absence is a failure, not a pass — the same rule as everything else here. A
-# missing log would otherwise reach `swiftlint analyze` as an empty one and
-# report zero violations over zero files.
-if [ ! -s "$log" ]; then
-  echo "lint:analyze: no compiler log at $log. 'mise run build:for-testing'" >&2
-  echo "              writes it; without one these two rules see nothing." >&2
-  exit 1
-fi
-
-status=0
-output=$(swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml 2>&1) || status=$?
-printf '%s\n' "$output"
-
-# Same reasoning as app-test-lane.sh's executed-test count: absence is a
-# failure, not a pass. A log with nothing usable in it reports zero
-# violations in zero files, which reads exactly like a clean pass unless
-# something reads the file count back out and refuses to call zero a result.
-#
-# Zero is not the only shape that lies, though — a log covering half the
-# repo still reports a healthy, nonzero count for the half it did see, which
-# is exactly how this task shipped blind to every package's `Tests/` in the
-# first place. So the floor below is the tree itself, read back out fresh on
-# every run, rather than a constant: a future regression of the same shape (a
-# target quietly dropped from the log again) fails here instead of reading as
-# a second clean pass.
-#
-# The floor is `App`, `AppTests` and `Packages` — not `Tools`, though
-# `.swiftlint.yml`'s `included:` names that too. `Tools/generate-device-
-# signature-fixture.swift` is a loose script run by hand via `swift <path>`,
-# never a member of any target the app, `PopsTests` or a package builds — no
-# compiler log this task can produce will ever name it, so counting it here
-# would fail this guard forever. `swiftlint lint` still lints it straight
-# from source; only the analyzer rules, which need a build, cannot reach it.
-#
-# Counted by hand here rather than through `scripts/swift-sources.sh list`,
-# on purpose: that script enumerates the FORMATTER's file set, which now
-# also drops any file whose first line is a shebang — a distinction that
-# exists for `swift-format` alone and means nothing to `swiftlint lint` or
-# to `.swiftlint.yml`'s `included:`/`excluded:`. Reusing it here would let
-# this floor silently track a different tool's notion of scope, which is the
-# exact failure this task exists to close, one layer further in. `.build`,
-# `Generated` and `Package.swift` are excluded because `.swiftlint.yml`
-# excludes them too — the same reasoning as CGFloat's `always_keep_imports`
-# entry in that file: build configuration and generated code are not the
-# application code these two rules are about.
-analyzed=$(printf '%s' "$output" | sed -nE 's/.*in ([0-9]+) files\.$/\1/p' | tail -1)
-# `sed -E '/pattern/d'` rather than `grep -vE`: under `set -o pipefail`, `grep`
-# exits 1 when nothing matches (here: no non-Package.swift file at all), which
-# would abort this pipeline before the guard below ever runs and replace its
-# message with a bare pipeline failure. `sed` exits 0 regardless of how many
-# lines it deleted, so an empty result still reaches the check as $total=0.
-total=$(find App AppTests Packages \
-    \( -name .build -o -name Generated \) -type d -prune \
-    -o -type f -name '*.swift' -print \
-  | sed -E '/^Packages\/[^/]+\/Package\.swift$/d' \
-  | wc -l | tr -d ' ')
-if [ -z "$analyzed" ] || [ "$analyzed" -lt "$total" ]; then
-  echo "lint:analyze: analyzed ${analyzed:-0} file(s), but $total live under" >&2
-  echo "              App, AppTests and Packages (excluding Package.swift) —" >&2
-  echo "              the compiler log did not cover the whole tree." >&2
-  exit 1
-fi
-
-exit $status
-'''
+run = "bash scripts/analyzer-lane.sh"
 
 # Generates this client's canonical copy and stops there. The BFM vendors its
 # own copy and a repo-root guard fails on drift, so regenerating without
@@ -902,9 +854,10 @@ exit $status
 # ADR-043 says a client consumes the federation over HTTP and never reaches
 # into a pillar's directory, so booting `@pops/bfm` belongs to the repo root —
 # `mise run e2e:ios` there does both halves and is the one command to run. What
-# this task does over HTTP, it does through the BFM's published contract:
-# `POST /operator/pairing/codes` is the same route the operator's Devices page
-# calls.
+# this task does over HTTP, it does through a published contract. Pairing can
+# use the BFM route directly, or the root harness can hand this task an MCP
+# endpoint with `POPS_E2E_PAIRING_ISSUER=mcp`. The latter keeps the
+# simulator-facing task free of the BFM service-account credential.
 #
 # IT DOES NOT BUILD EITHER, unless it has to. `build:for-testing` wipes its own
 # derived-data directory and recompiles the whole tree — seven minutes, and the
@@ -914,13 +867,15 @@ exit $status
 # and says which it did.
 [tasks.e2e]
 description = "Drive every UI flow on the simulator against a running BFM (repo root: `mise run e2e:ios`)"
-depends = ["generate"]
+depends = ["generate", "verify:xcode-version"]
 run = '''
 set -eu
 set -o pipefail
 
 base="${POPS_BFM_BASE_URL:-}"
 control="${POPS_E2E_CONTROL_URL:-}"
+pairing_issuer="${POPS_E2E_PAIRING_ISSUER:-direct}"
+mcp_url="${POPS_MCP_URL:-}"
 if [ -z "$base" ] || [ -z "$control" ]; then
   echo "e2e: no POPS_BFM_BASE_URL and/or POPS_E2E_CONTROL_URL. This lane drives the app" >&2
   echo "     against a BFM that is already running; it does not start one. From the" >&2
@@ -932,6 +887,19 @@ if [ -z "$base" ] || [ -z "$control" ]; then
   echo "     age a token against a BFM nobody here controls." >&2
   exit 1
 fi
+case "$pairing_issuer" in
+  direct) ;;
+  mcp)
+    if [ -z "$mcp_url" ]; then
+      echo "e2e: POPS_MCP_URL is required when POPS_E2E_PAIRING_ISSUER=mcp." >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "e2e: POPS_E2E_PAIRING_ISSUER must be 'direct' or 'mcp'." >&2
+    exit 1
+    ;;
+esac
 
 app="$POPS_IOS_DERIVED_DATA/Build/Products/Debug-iphonesimulator/Pops.app"
 
@@ -1043,12 +1011,20 @@ for flow in $flows; do
     # `|| true` so a refused connection or an HTTP error reaches the message
     # below rather than aborting the task under `set -e` with a bare curl
     # exit code.
-    code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
-      -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
+    if [ "$pairing_issuer" = mcp ]; then
+      code=$(node ../../scripts/ios-e2e/mcp-pairing-code.mjs || true)
+    else
+      code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
+        -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
+    fi
     if [ -z "$code" ]; then
-      echo "e2e: $base/operator/pairing/codes returned no code. A 401 here means that BFM" >&2
-      echo "     is running with NODE_ENV=production, where the route needs a Cloudflare" >&2
-      echo "     Access identity this task has no way to present." >&2
+      echo "e2e: $pairing_issuer pairing issuer returned no code." >&2
+      if [ "$pairing_issuer" = direct ]; then
+        echo "     A 401 means BFM is running with NODE_ENV=production, where the direct" >&2
+        echo "     operator route needs a Cloudflare Access identity this task cannot present." >&2
+      else
+        echo "     Check MCP reachability, its inbound bearer token, and the BFM service-account scope." >&2
+      fi
       exit 1
     fi
 

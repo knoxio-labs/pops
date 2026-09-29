@@ -31,7 +31,7 @@ internal struct InventoryItemDetailHeroPhotos: View {
             .overlay(alignment: .bottom) {
                 if photos.count > 1 { strip }
             }
-            .sheet(item: $viewing) { photo in
+            .popsStage(item: $viewing) { photo in
                 InventoryItemDetailLightbox(
                     photos: photos, opening: photo, load: load, manage: manage)
             }
@@ -50,7 +50,7 @@ internal struct InventoryItemDetailHeroPhotos: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(first.caption)
-            .modifier(InventoryPhotoMenu(photo: first, manage: manage))
+            .modifier(InventoryPhotoMenu(photo: first, photos: photos, manage: manage))
         } else {
             InventoryItemDetailPicture(photo: nil, variant: .medium, symbol: symbol, load: load)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -69,7 +69,7 @@ internal struct InventoryItemDetailHeroPhotos: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(photo.caption)
-                    .modifier(InventoryPhotoMenu(photo: photo, manage: manage))
+                    .modifier(InventoryPhotoMenu(photo: photo, photos: photos, manage: manage))
                 }
             }
             .padding(PopsSpacing.md)
@@ -102,6 +102,7 @@ internal struct InventoryPhotoManagement {
 /// photo is not already at that end.
 private struct InventoryPhotoMenu: ViewModifier {
     let photo: InventoryDetailPhoto
+    let photos: [InventoryDetailPhoto]
     let manage: InventoryPhotoManagement?
 
     func body(content: Content) -> some View {
@@ -114,8 +115,12 @@ private struct InventoryPhotoMenu: ViewModifier {
                         manage.retake(photo.sha256, .library)
                     }
                 }
-                Button("Move earlier") { manage.move(photo.sha256, .earlier) }
-                Button("Move later") { manage.move(photo.sha256, .later) }
+                if photos.reorderedIds(moving: photo.sha256, .earlier) != nil {
+                    Button("Move earlier") { manage.move(photo.sha256, .earlier) }
+                }
+                if photos.reorderedIds(moving: photo.sha256, .later) != nil {
+                    Button("Move later") { manage.move(photo.sha256, .later) }
+                }
                 Button("Delete", role: .destructive) { manage.remove(photo.sha256) }
             }
         } else {
@@ -209,76 +214,5 @@ internal struct InventoryItemDetailPlate: View {
             RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
                 .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
         )
-    }
-}
-
-/// The full-screen view a tap on a photograph opens, one at a time, stepped
-/// by hand with two buttons because the paged tab style does not exist on
-/// the host toolchain this package also builds for.
-internal struct InventoryItemDetailLightbox: View {
-    internal let photos: [InventoryDetailPhoto]
-    internal let load: InventoryPhotoLoader
-    internal let manage: InventoryPhotoManagement?
-    @Environment(\.dismiss) private var dismiss
-    @State private var index: Int
-
-    internal init(
-        photos: [InventoryDetailPhoto], opening: InventoryDetailPhoto,
-        load: @escaping InventoryPhotoLoader, manage: InventoryPhotoManagement? = nil
-    ) {
-        self.photos = photos
-        self.load = load
-        self.manage = manage
-        _index = State(initialValue: photos.firstIndex(of: opening) ?? 0)
-    }
-
-    private var current: InventoryDetailPhoto { photos[index] }
-
-    internal var body: some View {
-        NavigationStack {
-            VStack(spacing: PopsSpacing.md) {
-                InventoryItemDetailPlate(photo: current, variant: .full, load: load)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                Text(current.caption)
-                    .font(.popsSubheadline)
-                    .foregroundStyle(Color.popsMutedForeground)
-                if photos.count > 1 { paging }
-            }
-            .padding(PopsSpacing.lg)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
-                if let manage {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu("Manage", systemImage: "ellipsis.circle") {
-                            Button("Retake") {
-                                manage.retake(
-                                    current.sha256,
-                                    InventoryCameraAvailability.isAvailable ? .camera : .library)
-                            }
-                            Button("Move earlier") { manage.move(current.sha256, .earlier) }
-                            Button("Move later") { manage.move(current.sha256, .later) }
-                            Button("Delete", role: .destructive) {
-                                manage.remove(current.sha256)
-                                dismiss()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var paging: some View {
-        HStack(spacing: PopsSpacing.lg) {
-            Button("Previous") { index = max(0, index - 1) }
-                .disabled(index == 0)
-            Text("\(index + 1) of \(photos.count)")
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-            Button("Next") { index = min(photos.count - 1, index + 1) }
-                .disabled(index == photos.count - 1)
-        }
     }
 }

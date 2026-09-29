@@ -33,6 +33,12 @@ extension Operations.MobileInventory_changes.Output.Forbidden.Body.JsonPayload: 
     }
 }
 
+extension Operations.MobileInventory_item.Output.Forbidden.Body.JsonPayload: WireForbiddenBody {
+    internal var capabilityNotGranted: String? {
+        if case .case2(let denied) = self { denied.capability } else { nil }
+    }
+}
+
 extension Operations.MobileInventory_itemHistory.Output.Forbidden.Body.JsonPayload:
     WireForbiddenBody
 {

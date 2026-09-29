@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Whether the Xcode running this shell is the one `clients/ios/mise.toml`
-# pins for CI, and the message to print when it is not.
+# Whether the Xcode running this shell is the exact toolchain
+# `clients/ios/mise.toml` pins for CI, and the message to print when it is not.
 #
 # `xcrun swift-format --version` cannot answer this question — on a beta
 # toolchain it reports the single word "main", not something comparable to
@@ -44,7 +44,20 @@ parse_installed_version() {
     awk '/^Xcode / { print $2; exit }' <<<"$1"
 }
 
-# The message this file exists to produce, addressed at both versions by
+parse_installed_build() {
+    awk '/^Build version / { print $3; exit }' <<<"$1"
+}
+
+pin_matches() {
+    local pinned_version="$1" pinned_build="$2" actual_version="$3" actual_build="$4"
+    [ "$actual_version" = "$pinned_version" ] && [ "$actual_build" = "$pinned_build" ]
+}
+
+pin_does_not_match() {
+    ! pin_matches "$@"
+}
+
+# The message this file exists to produce, addressing both parts of the pin by
 # name — the whole point of POPS-1436 over the silence that preceded it.
 # The opt-in task `report_mismatch` points at. Named here rather than inlined
 # so the self-test can prove `clients/ios/mise.toml` still defines it — a
@@ -52,20 +65,20 @@ parse_installed_version() {
 OPT_IN_FORMAT_TASK="format:unpinned"
 
 report_mismatch() {
-    local pinned="$1" actual="$2"
+    local pinned_version="$1" pinned_build="$2" actual_version="$3" actual_build="$4"
     {
-        printf 'check-xcode-version: local Xcode is %s, but clients/ios/mise.toml (and CI) pins %s.\n' \
-            "$actual" "$pinned"
+        printf 'check-xcode-version: local Xcode is %s (build %s), but clients/ios/mise.toml (and CI) pins %s (build %s).\n' \
+            "$actual_version" "$actual_build" "$pinned_version" "$pinned_build"
         printf '                      swift-format ships inside the toolchain, so this Xcode can\n'
         printf '                      format-lint differently than CI without warning. Install Xcode\n'
-        printf '                      %s and point xcode-select at it — adjust the path below to\n' \
-            "$pinned"
-        printf '                      match how Xcode is installed on this machine, e.g.:\n'
+        printf '                      %s (build %s) and point xcode-select at it — adjust the path\n' \
+            "$pinned_version" "$pinned_build"
+        printf '                      below to match how Xcode is installed on this machine, e.g.:\n'
         printf '                        sudo xcode-select -s /Applications/Xcode_%s.app/Contents/Developer\n' \
-            "$pinned"
+            "$pinned_version"
         printf '\n'
         printf '                      If you have to act on this toolchain\47s advisory lint findings\n'
-        printf '                      before you can install %s, ask for it by name:\n' "$pinned"
+        printf '                      before you can install the pinned toolchain, ask for it by name:\n'
         printf '                        mise run -C clients/ios %s\n' "$OPT_IN_FORMAT_TASK"
         printf '                      That still runs the rule-list drift check the wrapper exists\n'
         printf '                      for; a hand-written `xcrun swift-format format` does not.\n'
@@ -77,23 +90,24 @@ report_mismatch() {
 # ---------------------------------------------------------------------------
 
 cmd_check() {
-    local pinned="${1-}"
-    if [ -z "$pinned" ]; then
-        die "no pinned version given." "usage: check-xcode-version.sh check <version>"
+    local pinned_version="${1-}" pinned_build="${2-}"
+    if [ -z "$pinned_version" ] || [ -z "$pinned_build" ]; then
+        die "no complete pinned version given." "usage: check-xcode-version.sh check <version> <build>"
     fi
 
     local raw
     if ! raw="$(xcodebuild -version 2>&1)"; then
         die "'xcodebuild -version' failed — no Xcode selected, or its license isn't accepted. It printed:" "$raw"
     fi
-    local actual
-    actual="$(parse_installed_version "$raw")"
-    if [ -z "$actual" ]; then
-        die "could not read a version out of 'xcodebuild -version'. It printed:" "$raw"
+    local actual_version actual_build
+    actual_version="$(parse_installed_version "$raw")"
+    actual_build="$(parse_installed_build "$raw")"
+    if [ -z "$actual_version" ] || [ -z "$actual_build" ]; then
+        die "could not read the Xcode version and build out of 'xcodebuild -version'. It printed:" "$raw"
     fi
 
-    if [ "$actual" != "$pinned" ]; then
-        report_mismatch "$pinned" "$actual"
+    if ! pin_matches "$pinned_version" "$pinned_build" "$actual_version" "$actual_build"; then
+        report_mismatch "$pinned_version" "$pinned_build" "$actual_version" "$actual_build"
         return 1
     fi
 }
@@ -115,13 +129,16 @@ expect() {
 cmd_self_test() {
     local status=0
 
-    # 1. A release toolchain's `xcodebuild -version` parses to its marketing
-    #    version, which is the format both `mise.toml`'s pin and CI's runner
-    #    directory names use.
+    # 1. A release toolchain's `xcodebuild -version` parses to the marketing
+    #    version and build that the pin needs to distinguish exact toolchains.
     local release
     release="$(parse_installed_version $'Xcode 26.6\nBuild version 17A5305d')"
     expect "parsed 'Xcode 26.6\\nBuild version 17A5305d' as '$release', not '26.6'." \
         [ "$release" = "26.6" ] || status=1
+    local release_build
+    release_build="$(parse_installed_build $'Xcode 26.6\nBuild version 17A5305d')"
+    expect "parsed the release build as '$release_build', not '17A5305d'." \
+        [ "$release_build" = "17A5305d" ] || status=1
 
     # 2. A beta toolchain parses the same way — this is the case
     #    `xcrun swift-format --version` cannot handle at all (it prints
@@ -131,6 +148,10 @@ cmd_self_test() {
     beta="$(parse_installed_version $'Xcode 27.0\nBuild version 27A5209h')"
     expect "parsed a beta 'xcodebuild -version' as '$beta', not '27.0'." \
         [ "$beta" = "27.0" ] || status=1
+    local beta_build
+    beta_build="$(parse_installed_build $'Xcode 27.0\nBuild version 27A5209h')"
+    expect "parsed the beta build as '$beta_build', not '27A5209h'." \
+        [ "$beta_build" = "27A5209h" ] || status=1
 
     # 3. Unparseable output — a toolchain that changed its banner, or a
     #    command that failed silently — yields an empty string rather than a
@@ -140,24 +161,40 @@ cmd_self_test() {
     empty="$(parse_installed_version 'Xcode-select: no output')"
     expect "parsed unrecognised output as '$empty' instead of empty." \
         [ -z "$empty" ] || status=1
+    local empty_build
+    empty_build="$(parse_installed_build 'Xcode-select: no output')"
+    expect "parsed an unrecognised build as '$empty_build' instead of empty." \
+        [ -z "$empty_build" ] || status=1
 
-    # 4. The message names both versions — the acceptance bar for POPS-1436,
+    # 4. Same marketing versions with different build numbers are not a match.
+    expect "accepted the exact pinned version and build." \
+        pin_matches 27.0 27A266a 27.0 27A266a || status=1
+    expect "rejected a beta build with the same marketing version." \
+        pin_does_not_match 27.0 27A266a 27.0 27A5209h || status=1
+    expect "rejected a different marketing version with the pinned build." \
+        pin_does_not_match 27.0 27A266a 26.6 27A266a || status=1
+
+    # 5. The message names both parts of the pin — the acceptance bar for POPS-1436,
     #    not incidental phrasing.
     local message
-    message="$(report_mismatch 26.6 27.0 2>&1)" || true
+    message="$(report_mismatch 26.6 17A5305d 27.0 27A5209h 2>&1)" || true
     expect "mismatch message omitted the pinned version (26.6)." \
         grep -q '26\.6' <<<"$message" || status=1
     expect "mismatch message omitted the local version (27.0)." \
         grep -q '27\.0' <<<"$message" || status=1
+    expect "mismatch message omitted the pinned build (17A5305d)." \
+        grep -q '17A5305d' <<<"$message" || status=1
+    expect "mismatch message omitted the local build (27A5209h)." \
+        grep -q '27A5209h' <<<"$message" || status=1
 
-    # 5. The message names the opt-in route out. POPS-2912: without it, the
+    # 6. The message names the opt-in route out. POPS-2912: without it, the
     #    only way to act on advisory findings was a hand-written `xcrun
     #    swift-format format`, which skips the wrapper's rule-list drift
     #    check — the bypass ran around the guard instead of through it.
     expect "mismatch message omitted the opt-in task ($OPT_IN_FORMAT_TASK)." \
         grep -qF "$OPT_IN_FORMAT_TASK" <<<"$message" || status=1
 
-    # 6. And that task actually exists. A message naming a task mise does not
+    # 7. And that task actually exists. A message naming a task mise does not
     #    define sends the reader somewhere worse than the hand-written
     #    invocation it is trying to replace.
     local manifest="${SCRIPT_DIR}/../mise.toml"
@@ -165,7 +202,7 @@ cmd_self_test() {
         grep -qF "[tasks.\"$OPT_IN_FORMAT_TASK\"]" "$manifest" || status=1
 
     if [ "$status" -eq 0 ]; then
-        printf 'check-xcode-version: parsing, the mismatch message, and the opt-in task all hold.\n'
+        printf 'check-xcode-version: parsing, build matching, the mismatch message, and the opt-in task all hold.\n'
     fi
     return "$status"
 }
@@ -181,6 +218,6 @@ case "${1-}" in
         cmd_self_test
         ;;
     *)
-        die "unknown mode '${1-}' — expected 'check <version>' or 'self-test'."
+        die "unknown mode '${1-}' — expected 'check <version> <build>' or 'self-test'."
         ;;
 esac

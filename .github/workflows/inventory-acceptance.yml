@@ -31,7 +31,8 @@ name: Inventory Acceptance
 # default, which runs the suite and writes `*.records.json` with no
 # `*.packet.json` (`run.mjs`'s own behaviour when neither flag is passed).
 # Fill both to get a packet `scripts/implementation-evidence.mjs` can
-# validate for that PR/ticket.
+# validate for that PR/ticket. The iOS issuer defaults to direct BFM pairing;
+# dispatching with `ios_pairing_issuer: mcp` exercises the MCP-backed path.
 
 on:
   workflow_dispatch:
@@ -44,6 +45,13 @@ on:
         description: "Also run the Maestro iOS layer (xcode-27, tens of minutes)"
         type: boolean
         default: false
+      ios_pairing_issuer:
+        description: "Issuer for the Maestro pairing code"
+        type: choice
+        options:
+          - direct
+          - mcp
+        default: direct
       pull_request:
         description: "PR number to write an evidence packet for (leave blank for records only)"
         type: string
@@ -163,7 +171,8 @@ jobs:
           if [ -n "${{ inputs.pull_request }}" ]; then
             args+=(--pull-request "${{ inputs.pull_request }}" --pr-issue "${{ inputs.pr_issue }}")
           fi
-          node scripts/inventory-acceptance/run.mjs "${args[@]}"
+          POPS_E2E_PAIRING_ISSUER="${{ inputs.ios_pairing_issuer }}" \
+            node scripts/inventory-acceptance/run.mjs "${args[@]}"
 
       - name: Upload evidence
         if: always()

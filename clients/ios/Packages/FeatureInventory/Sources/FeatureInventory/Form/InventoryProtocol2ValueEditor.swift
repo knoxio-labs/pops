@@ -18,6 +18,7 @@ internal struct InventoryProtocol2ValueEditor: View {
     /// many-valued field's several — the caller decides which, since only it
     /// knows the entry's position, if any.
     let identifier: String
+    let catalogue: InventoryCatalogueSnapshot?
     let referenceTargets: [InventoryProtocol2ReferenceTarget]
     let setText: (String) -> Void
     let setValue: (InventoryPrimitiveValue?) -> Void
@@ -26,6 +27,7 @@ internal struct InventoryProtocol2ValueEditor: View {
     internal init(
         field: InventoryCatalogueField, entry: InventoryProtocol2DraftEntry, label: String,
         showsLabel: Bool = true, identifier: String,
+        catalogue: InventoryCatalogueSnapshot?,
         referenceTargets: [InventoryProtocol2ReferenceTarget], setText: @escaping (String) -> Void,
         setValue: @escaping (InventoryPrimitiveValue?) -> Void,
         setReferenceKind: @escaping (InventoryReferenceTargetKind) -> Void
@@ -35,6 +37,7 @@ internal struct InventoryProtocol2ValueEditor: View {
         self.label = label
         self.showsLabel = showsLabel
         self.identifier = identifier
+        self.catalogue = catalogue
         self.referenceTargets = referenceTargets
         self.setText = setText
         self.setValue = setValue
@@ -138,7 +141,7 @@ internal struct InventoryProtocol2ValueEditor: View {
 
     @ViewBuilder private var referenceEditor: some View {
         let allowed = InventoryProtocol2ReferenceTargets.allowed(
-            for: field, among: referenceTargets)
+            for: field, among: referenceTargets, catalogue: catalogue)
         let current = referenceValue
         let kinds = field.references.targetKinds.sorted { $0.rawValue < $1.rawValue }
         let selectedKind = entry.referenceKind ?? current?.targetKind ?? kinds.first ?? .item
@@ -190,17 +193,6 @@ internal struct InventoryProtocol2ValueEditor: View {
         }
     }
 
-    private func referenceSelection(
-        allowed: [InventoryProtocol2ReferenceTarget], selectedKind: InventoryReferenceTargetKind
-    ) -> Binding<String> {
-        Binding(
-            get: { referenceValue?.targetId ?? "" },
-            set: { id in
-                let target = allowed.first { $0.id == id && $0.kind == selectedKind }
-                setValue(target.map { .reference($0.value) })
-            })
-    }
-
     private var placeholder: String {
         InventoryProtocol2FieldHint.placeholder(for: field, showsLabel: showsLabel)
     }
@@ -230,5 +222,18 @@ internal struct InventoryProtocol2ValueEditor: View {
     private func readOnlyReference(_ reference: InventoryReferenceValue) -> String {
         InventoryProtocol2Display.text(
             for: [.reference(reference)], field: field, referenceLabel: { _ in nil })
+    }
+}
+
+extension InventoryProtocol2ValueEditor {
+    private func referenceSelection(
+        allowed: [InventoryProtocol2ReferenceTarget], selectedKind: InventoryReferenceTargetKind
+    ) -> Binding<String> {
+        Binding(
+            get: { referenceValue?.targetId ?? "" },
+            set: { id in
+                let target = allowed.first { $0.id == id && $0.kind == selectedKind }
+                setValue(target.map { .reference($0.value) })
+            })
     }
 }

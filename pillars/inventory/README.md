@@ -108,6 +108,16 @@ pass the field's own value rules (at most one on a `one` field) and never name
 an archived enum option. Clients pre-fill them on item create; the server never
 applies them, and changing one is compatible with no migration or re-send.
 
+Types may name one parent type. Each type authors its own fields and capabilities;
+the catalogue resolves effective fields and de-duplicated capabilities from the
+root through the type, while a type's descriptor still carries only its own
+definitions. Parent trees are validated for missing parents, cycles, archived
+parents, duplicate effective field keys and a maximum depth of three. A draft
+that introduces a parent requires protocol 3 to publish; this build supports
+protocol 3, but the production minimum remains owner-controlled and must be raised
+before publishing parent-type catalogues, after dependent clients are ready
+(POPS-4852).
+
 Generic field writes validate the complete stable-ID field set against its
 exact catalogue revision: kind, cardinality, required fields, storage authority,
 archived selections and live reference constraints are one atomic check.
@@ -204,8 +214,13 @@ projection, and the Swift evaluator must reproduce each result. Regenerate with
 `contracts/value-vectors-v1.json` does the same for stored values: every
 primitive kind and cardinality, absent and cleared fields, reference targets
 in each state and every computed state, written through the command engine and
-projected by `toSyncItem`, plus malformed values the engine refuses. BFM and the
-phone vendor it; regenerate with `mise run fixture:value-vectors`.
+projected by `toSyncItem`, plus malformed values the engine refuses. Its
+protocol-3 catalogue also has deterministic parent/child types where the child
+inherits a required `short_text` field; the `missing_required_field`
+`item.create` vector records the engine's `invalid` rejection. BFM and the
+phone vendor it; the phone rejects that negative before sending and drains the
+positive inherited-value create unchanged. Regenerate with
+`mise run fixture:value-vectors`.
 
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
@@ -273,13 +288,31 @@ cell issues, and valid rows commit without rolling back other rows. Omit
 `true` to return `valid` outcomes while rolling back all item, event, mutation,
 and sequence writes.
 
+The inventory app exposes `/inventory/items/bulk-new` as a controlled,
+spreadsheet-like grid over that endpoint. It accepts tab-separated and CSV
+pastes, validates typed rows after a short debounce, creates ready rows while
+leaving refused rows in place, and supports undo, Items navigation, and label
+printing for the items created by the last batch.
+
 ### Web Items browser
 
 The shell mounts the Items browser at `/inventory/items`. Search, type,
 placement, inactive, sort, view and page state live in the URL; the page sends
 those filters to `GET /web/items` and renders the server's totals and pages
 without client-side filtering or sorting. Table, compact and card views share
-the same URL state and keep scrolling within the list body.
+the same URL state and keep scrolling within the list body. Selecting rows also
+offers typed Set type and Set field sheets, plus reversible Retire and Discard
+actions; each applied item write records its own history event and one undo
+toast covers the completed batch.
+
+### Web inventory routes and navigation
+
+The web app's route table lives in `app/src/routes.tsx`, while the rail and
+PageNav projection comes from the contract in `app/src/nav.ts`. Absolute
+destinations used by global shortcuts are kept in `app/src/navigation-paths.ts`.
+The app test suite resolves every PageNav item and shortcut destination against
+the mounted route table so a navigation entry cannot silently point at an
+unmounted page.
 
 ## Registration
 
@@ -380,7 +413,10 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
 - Protocol 2 item rows carry the persisted `typeId` and canonical
   stable-field-ID `fieldValues` (each with its source and catalogue revision).
   The existing `typeKey` and `fields` projection remains alongside them for
-  protocol-1 readers during the transition.
+  protocol-1 readers during the transition. Canonical `many` values remain
+  complete in `fieldValues`; when one cannot fit the single-value legacy shape,
+  protocol 2 omits that entire field from `fields` rather than truncating the
+  value or failing the page. Protocol 1 keeps rejecting that cardinality.
 - Sync and web item rows also carry `computedValues`: one entry per computed
   field, evaluated against the active catalogue at read time, with `state`
   `ok`, `overridden` or `unavailable` (plus `reason`, `failedFieldId` and `missingInputs`), the
@@ -551,6 +587,9 @@ The same tasks are exposed through `mise.toml` (`mise run build`, `mise run test
   the OpenAPI projection. CI gates on drift.
 - `generate:manifest` — regenerates `src/contract/manifest.generated.ts`;
   `verify:manifest` (run first in `build`) fails the build on drift.
+- `generate:value-vectors` — regenerates `contracts/value-vectors-v1.json`;
+  copy it byte-for-byte to `pillars/bfm/contracts/value-vectors-v1.json` and
+  `clients/ios/Contracts/value-vectors-v1.json`.
 
 The contract (zod) is the single source of truth; OpenAPI, api-types, and the
 generated manifest are downstream projections. No hand-authored OpenAPI, no
@@ -580,9 +619,8 @@ that exist:
   fixture is, who calls it, and what it deliberately does not do.
 - [`src/api/modules/reports/`](src/api/modules/reports/README.md) — the
   read-only report surface and the warranty window it does not own.
-  [`app/src/pages/item-detail/`](app/src/pages/item-detail/README.md),
-  [`app/src/pages/item-form/`](app/src/pages/item-form/README.md),
-  [`location-tree-page/`](app/src/pages/location-tree-page/README.md).
+- [`app/src/pages/item-detail/`](app/src/pages/item-detail/README.md)
+- [`app/src/pages/item-form/`](app/src/pages/item-form/README.md)
 
 Everything else is documented by the file header comments in the directory
 itself.

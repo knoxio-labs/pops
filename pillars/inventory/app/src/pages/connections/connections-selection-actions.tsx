@@ -17,7 +17,7 @@ export interface ConnectionsSelectionActionsProps {
   readonly onLabels: () => void;
 }
 
-/** Renders trace, label, and disconnect actions for selected connection rows. */
+/** Renders disconnect, trace, and label actions for selected connection rows. */
 export function ConnectionsSelectionActions({
   model,
   online,
@@ -27,9 +27,16 @@ export function ConnectionsSelectionActions({
 }: ConnectionsSelectionActionsProps): ReactElement {
   const selectedRow =
     model.selection.count === 1
-      ? model.registry.rows.find((row) => model.selection.isSelected(row.id))
+      ? model.resolvedRows.find((row) => model.selection.isSelected(row.id))
       : undefined;
   const actions: SelectionBarAction[] = [
+    {
+      id: 'disconnect',
+      label: `Disconnect ${model.selection.count}`,
+      icon: Unlink,
+      disabledReason: online ? undefined : OFFLINE_REASON,
+      onSelect: onDisconnect,
+    },
     {
       id: 'trace',
       label: 'Trace',
@@ -42,21 +49,15 @@ export function ConnectionsSelectionActions({
       id: 'label',
       label: 'Print labels',
       icon: Tag,
+      shortcutId: 'label',
       onSelect: onLabels,
-    },
-    {
-      id: 'disconnect',
-      label: 'Disconnect',
-      icon: Unlink,
-      disabledReason: online ? undefined : OFFLINE_REASON,
-      onSelect: onDisconnect,
     },
   ];
 
   return (
     <SelectionBar
       count={model.selection.count}
-      loadedCount={model.registry.rows.length}
+      loadedCount={model.resolvedRows.length}
       coverage={model.selection.coverage}
       actions={actions}
       onSelectAll={model.selection.onHeaderToggle}

@@ -38,6 +38,10 @@ internal final class InventoryLocationPageModel {
         _ = await (tree, notice)
     }
 
+    internal func thumbnail(_ sha256: String) async -> Data? {
+        try? await runner.store.photo(sha256, variant: .thumb)
+    }
+
     /// The notice to draw, once the ledger has answered.
     internal var shownNotice: InventoryLocationNotice? {
         guard case .loaded(let notice) = notice.phase else { return nil }

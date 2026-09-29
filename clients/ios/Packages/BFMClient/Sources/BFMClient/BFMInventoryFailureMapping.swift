@@ -26,6 +26,16 @@ internal enum BFMInventoryCommonFailure {
 }
 
 internal enum BFMInventoryFailureMapping {
+    internal static func syncServerError(for code: String, operation: String) -> RepositoryError {
+        RepositoryError.transport(
+            PopsError(
+                code: "ios.inventory.sync.upstream_failure",
+                message: "Inventory sync failed on the server.",
+                retryable: code != "upstream_misconfigured",
+                kind: .server
+            ))
+    }
+
     internal static func repositoryError(
         for failure: BFMInventoryCommonFailure, operation: String
     ) -> RepositoryError {

@@ -70,7 +70,7 @@ internal struct InventoryRepairView: View {
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .scrollBounceBehavior(.basedOnSize)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .background(Color.popsBackground)
         .navigationTitle("Repair")
         .playgroundTitleDisplay(large: false)

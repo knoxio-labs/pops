@@ -133,6 +133,46 @@ internal struct InventorySearchFilterTests {
         #expect(!filter.matches(Fixture.record("a", type: nil)))
     }
 
+    @Test("choosing a parent type matches subtype items")
+    func typeFilterUsesProtocol2Lineage() {
+        let catalogue = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
+            types: [
+                InventoryCatalogueType(
+                    id: "bedding", key: "bedding", label: "Bedding", sortOrder: 0),
+                InventoryCatalogueType(
+                    id: "sheet", key: "sheet", label: "Sheet", sortOrder: 1,
+                    parentTypeId: "bedding"),
+                InventoryCatalogueType(
+                    id: "archived-parent", key: "archived-parent", label: "Archived parent",
+                    sortOrder: 2, archivedAt: "2026-09-01"),
+                InventoryCatalogueType(
+                    id: "active-child", key: "active-child", label: "Active child", sortOrder: 3,
+                    parentTypeId: "archived-parent"),
+            ])
+        let item = InventoryItem(
+            id: "sheet-item", revision: 1, seq: 1, catalogueRevision: 1, name: "Sheet",
+            typeId: "sheet", typeKey: nil, placement: .hand,
+            createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
+        let source = FormFixtureSource(items: [item], protocol2Catalogue: catalogue)
+        let record = InventoryRecordReader(source: source).record(item)
+        let typeNames = InventoryRecordReader(source: source).typeNames
+        var filter = InventorySearchFilter()
+        filter.type = typeNames.first { $0.key == "bedding" }
+
+        #expect(record.typeKey == nil)
+        #expect(record.typeKeys == ["bedding", "sheet"])
+        #expect(typeNames.first { $0.key == "sheet" }?.parentKey == "bedding")
+        #expect(filter.matches(record))
+
+        let typeOptions = InventoryFormTypeOptions.filter(typeNames)
+        #expect(typeNames.contains { $0.key == "archived-parent" })
+        #expect(typeOptions.first { $0.id == "active-child" }?.parentID == "archived-parent")
+        #expect(
+            typeOptions.first { $0.id == "active-child" }?.path
+                == "Archived parent › Active child")
+    }
+
     @Test("the summary names every narrowing in order, and is empty with none")
     func summary() {
         #expect(InventorySearchFilter().summary.isEmpty)

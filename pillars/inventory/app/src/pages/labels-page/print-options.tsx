@@ -8,38 +8,15 @@ import { labelsPerSheet, MIN_QR_MM } from '@pops/inventory/labels';
  */
 import { NumberInput, Tabs, TabsList, TabsTrigger } from '@pops/ui';
 
+import { LabelShowsPicker } from './label-shows-picker';
 import { OptionField } from './print-option-field';
 import { SheetChoice } from './print-sheet-choice';
 
-import type { LabelTemplateChoice, PrintSubject } from '@pops/inventory/labels';
+import type { LabelContent, PrintSubject } from '@pops/inventory/labels';
 
 import type { PrintJob } from './useLabelJob';
 
 const COPY_CHOICES = ['1', '2', '3', '4'] as const;
-
-function isTemplateChoice(value: string): value is LabelTemplateChoice {
-  return value === 'auto' || value === 'container' || value === 'item';
-}
-
-function TemplateChoice({ job }: { job: PrintJob }) {
-  if (!job.fits.item) return null;
-  return (
-    <OptionField label="Template">
-      <Tabs
-        value={job.template}
-        onValueChange={(value) => {
-          if (isTemplateChoice(value)) job.setTemplate(value);
-        }}
-      >
-        <TabsList aria-label="Template">
-          <TabsTrigger value="auto">Auto</TabsTrigger>
-          {job.fits.container ? <TabsTrigger value="container">Box</TabsTrigger> : null}
-          <TabsTrigger value="item">Item</TabsTrigger>
-        </TabsList>
-      </Tabs>
-    </OptionField>
-  );
-}
 
 function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind'] }) {
   const label = kind === 'container' ? 'Copies per box' : 'Copies per item';
@@ -66,7 +43,7 @@ function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind']
  * nothing: a QR smaller than its minimum is a label no phone reads.
  */
 export function SheetFitNotice({ job }: { job: PrintJob }) {
-  if (!job.fits.item) {
+  if (job.block === 'too-small') {
     return (
       <p className="rounded-md border border-destructive/40 px-3 py-2 text-sm" role="alert">
         These labels are too small for a QR code a phone can read, which needs a {MIN_QR_MM} mm
@@ -74,10 +51,19 @@ export function SheetFitNotice({ job }: { job: PrintJob }) {
       </p>
     );
   }
-  if (!job.fits.container) {
+  if (job.adjustments.trimmed > 0) {
     return (
       <p className="rounded-md bg-muted/60 px-3 py-2 text-sm" role="status">
-        These labels are too narrow for the box label, so boxes get the item label: QR and code.
+        {job.adjustments.trimmed} {job.adjustments.trimmed === 1 ? 'label was' : 'labels were'}
+        trimmed to fit this sheet.
+      </p>
+    );
+  }
+  if (job.adjustments.fallback > 0) {
+    return (
+      <p className="rounded-md bg-muted/60 px-3 py-2 text-sm" role="status">
+        {job.adjustments.fallback} {job.adjustments.fallback === 1 ? 'label fell' : 'labels fell'}{' '}
+        back to a name or code.
       </p>
     );
   }
@@ -108,15 +94,27 @@ export function StartAtControl({ job }: { job: PrintJob }) {
   );
 }
 
-/** Template, sheet and copies, in one wrapping row, and what the sheet cannot fit. */
-export function PrintOptions({ job, customOpen }: { job: PrintJob; customOpen?: boolean }) {
+/** Label content, sheet and copies, in one wrapping row, and what the sheet cannot fit. */
+export function PrintOptions({
+  job,
+  customOpen,
+  onContentChange,
+}: {
+  job: PrintJob;
+  customOpen?: boolean;
+  onContentChange?: (content: LabelContent) => void;
+}) {
   const hasBoxes = job.subjects.some((subject) => subject.kind === 'container');
   const hasItems = job.subjects.some((subject) => subject.kind === 'item');
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <SheetChoice job={job} customOpen={customOpen} />
-        <TemplateChoice job={job} />
+        <LabelShowsPicker
+          content={job.content}
+          fields={job.fields}
+          onChange={onContentChange ?? job.setContent}
+        />
         {hasBoxes ? <CopiesChoice job={job} kind="container" /> : null}
         {hasItems ? <CopiesChoice job={job} kind="item" /> : null}
       </div>

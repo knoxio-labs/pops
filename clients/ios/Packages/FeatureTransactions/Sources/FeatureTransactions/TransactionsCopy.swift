@@ -71,6 +71,9 @@ internal enum TransactionsCopy {
             return "This version of Pops cannot read what the server sent. Update the app."
         case .conflict:
             return "That change conflicts with something already saved."
+        case .transport(let failure)
+        where failure.popsError?.code == "gateway.upstream_unavailable":
+            return message(for: .unavailable)
         case .transport:
             // The payload is a diagnostic and stays out of this. Nobody holding
             // a phone can act on a URLError code.

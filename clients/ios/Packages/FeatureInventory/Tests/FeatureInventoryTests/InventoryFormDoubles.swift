@@ -10,6 +10,7 @@ import Synchronization
 internal struct FormFixtureSource: InventoryQuerySource {
     var items: [InventoryItem] = []
     var locations: [InventoryLocation] = []
+    var containerContents: [String: [InventoryItem]] = [:]
     var catalogue = InventoryCatalogue(version: "test", units: [], types: [])
     var protocol2Catalogue: InventoryCatalogueSnapshot?
     var status: InventoryReplicaStatus = .current
@@ -23,7 +24,9 @@ internal struct FormFixtureSource: InventoryQuerySource {
     func inventoryLocation(id: String) -> InventoryLocation? { locations.first { $0.id == id } }
     func inventoryLocationTree() -> [InventoryLocation] { locations }
     func inventoryContents(ofLocation locationId: String) -> [InventoryItem] { [] }
-    func inventoryContents(ofContainer containerId: String) -> [InventoryItem] { [] }
+    func inventoryContents(ofContainer containerId: String) -> [InventoryItem] {
+        containerContents[containerId] ?? []
+    }
     func inventoryInHand() -> [InventoryItem] { [] }
     func inventoryOpenContainers() -> [InventoryItem] { [] }
     func inventoryContainers() -> [InventoryItem] {

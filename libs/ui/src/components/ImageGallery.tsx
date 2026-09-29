@@ -2,27 +2,16 @@
  * ImageGallery — primary photo + thumbnail strip + lightbox overlay with
  * keyboard navigation. Reusable across any domain with image galleries.
  */
-import { ChevronLeft, ChevronRight, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { cn } from '../lib/utils';
-import { Button } from '../primitives/button';
+import { ImageErrorFallback } from './image-gallery-fallback';
+import { Lightbox } from './image-gallery-lightbox';
+import { Thumbnails } from './image-gallery-thumbnails';
 
-export interface ImageGalleryItem {
-  id: string;
-  src: string;
-  caption?: string;
-  alt?: string;
-}
+import type { ImageGalleryItem, ImageGalleryProps } from './image-gallery-types';
 
-export interface ImageGalleryProps {
-  items: ImageGalleryItem[];
-  /** Optional delete callback per item. If provided, renders a delete button. */
-  onDelete?: (id: string) => void;
-  /** Enable arrow-key navigation in the lightbox. Default `true`. */
-  keyboardNav?: boolean;
-  className?: string;
-}
+export type { ImageGalleryItem, ImageGalleryProps } from './image-gallery-types';
 
 function useGalleryNav(itemsLength: number) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -62,139 +51,88 @@ function useLightboxKeys(
   }, [enabled, goPrev, goNext, onClose]);
 }
 
-function Thumbnails({
-  items,
-  activeIndex,
-  onPick,
-}: {
+interface GalleryContentProps {
   items: ImageGalleryItem[];
-  activeIndex: number;
-  onPick: (i: number) => void;
-}) {
-  return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
-      {items.map((item, i) => (
-        <button
-          key={item.id}
-          type="button"
-          onClick={() => onPick(i)}
-          aria-label={`Show image ${i + 1}`}
-          aria-current={i === activeIndex}
-          className={cn(
-            'relative h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 transition-all',
-            i === activeIndex ? 'border-ring' : 'border-transparent opacity-70 hover:opacity-100'
-          )}
-        >
-          <img src={item.src} alt={item.alt ?? ''} className="h-full w-full object-cover" />
-        </button>
-      ))}
-    </div>
-  );
-}
-
-interface LightboxProps {
   active: ImageGalleryItem;
-  itemsLength: number;
+  activeIndex: number;
+  lightboxOpen: boolean;
   onDelete?: (id: string) => void;
+  failedIds: ReadonlySet<string>;
+  onPick: (index: number) => void;
+  onImageError: (id: string) => void;
+  onOpenLightbox: () => void;
   goPrev: () => void;
   goNext: () => void;
-  onClose: () => void;
+  onCloseLightbox: () => void;
 }
 
-function Lightbox({ active, itemsLength, onDelete, goPrev, goNext, onClose }: LightboxProps) {
+function GalleryMainImage({
+  active,
+  failed,
+  onOpenLightbox,
+  onImageError,
+}: {
+  active: ImageGalleryItem;
+  failed: boolean;
+  onOpenLightbox: () => void;
+  onImageError: (id: string) => void;
+}) {
+  if (failed) {
+    return <ImageErrorFallback className="overflow-hidden rounded-md border border-border" />;
+  }
+
   return (
-    <div
-      role="dialog"
-      aria-modal
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay-scrim/90 p-4"
-      onClick={onClose}
+    <button
+      type="button"
+      onClick={onOpenLightbox}
+      className="group relative overflow-hidden rounded-md border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <div className="relative max-h-full max-w-6xl" onClick={(e) => e.stopPropagation()}>
-        <img
-          src={active.src}
-          alt={active.alt ?? active.caption ?? ''}
-          className="max-h-[calc(100vh-6rem)] max-w-full object-contain"
-        />
-        {active.caption ? (
-          <div className="mt-2 text-center text-sm text-on-media/80">{active.caption}</div>
-        ) : null}
-        <div className="absolute right-2 top-2 flex gap-1">
-          {onDelete ? (
-            <Button
-              size="icon-sm"
-              variant="destructive"
-              aria-label="Delete image"
-              onClick={() => onDelete(active.id)}
-            >
-              <Trash2 />
-            </Button>
-          ) : null}
-          <Button size="icon-sm" variant="secondary" aria-label="Close gallery" onClick={onClose}>
-            <X />
-          </Button>
+      <img
+        src={active.src}
+        alt={active.alt ?? active.caption ?? ''}
+        className="aspect-video w-full object-contain transition-transform group-hover:scale-[1.01]"
+        onError={() => onImageError(active.id)}
+      />
+      {active.caption ? (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-overlay-scrim/70 to-transparent p-3 text-left text-sm text-on-media">
+          {active.caption}
         </div>
-        {itemsLength > 1 ? (
-          <>
-            <Button
-              size="icon-sm"
-              variant="secondary"
-              aria-label="Previous image"
-              onClick={goPrev}
-              className="absolute left-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronLeft />
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="secondary"
-              aria-label="Next image"
-              onClick={goNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronRight />
-            </Button>
-          </>
-        ) : null}
-      </div>
-    </div>
+      ) : null}
+    </button>
   );
 }
 
-export function ImageGallery({
+function GalleryContent({
   items,
+  active,
+  activeIndex,
+  lightboxOpen,
   onDelete,
-  keyboardNav = true,
-  className,
-}: ImageGalleryProps) {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const { activeIndex, setActiveIndex, goPrev, goNext } = useGalleryNav(items.length);
-  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
-  useLightboxKeys(lightboxOpen && keyboardNav, goPrev, goNext, closeLightbox);
-
-  const active = items[activeIndex];
-  if (items.length === 0 || !active) return null;
-
+  failedIds,
+  onPick,
+  onImageError,
+  onOpenLightbox,
+  goPrev,
+  goNext,
+  onCloseLightbox,
+}: GalleryContentProps) {
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
-      <button
-        type="button"
-        onClick={() => setLightboxOpen(true)}
-        className="group relative overflow-hidden rounded-md border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <img
-          src={active.src}
-          alt={active.alt ?? active.caption ?? ''}
-          className="aspect-video w-full object-contain transition-transform group-hover:scale-[1.01]"
-        />
-        {active.caption ? (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-overlay-scrim/70 to-transparent p-3 text-left text-sm text-on-media">
-            {active.caption}
-          </div>
-        ) : null}
-      </button>
+    <div className="flex flex-col gap-3">
+      <GalleryMainImage
+        active={active}
+        failed={failedIds.has(active.id)}
+        onOpenLightbox={onOpenLightbox}
+        onImageError={onImageError}
+      />
 
       {items.length > 1 ? (
-        <Thumbnails items={items} activeIndex={activeIndex} onPick={setActiveIndex} />
+        <Thumbnails
+          items={items}
+          activeIndex={activeIndex}
+          onPick={onPick}
+          failedIds={failedIds}
+          onImageError={onImageError}
+        />
       ) : null}
 
       {lightboxOpen ? (
@@ -202,11 +140,55 @@ export function ImageGallery({
           active={active}
           itemsLength={items.length}
           onDelete={onDelete}
+          failed={failedIds.has(active.id)}
+          onImageError={onImageError}
           goPrev={goPrev}
           goNext={goNext}
-          onClose={closeLightbox}
+          onClose={onCloseLightbox}
         />
       ) : null}
+    </div>
+  );
+}
+
+/** Renders a navigable image gallery and explains when an image cannot load. */
+export function ImageGallery({
+  items,
+  onDelete,
+  keyboardNav = true,
+  className,
+}: ImageGalleryProps) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [failedIds, setFailedIds] = useState<ReadonlySet<string>>(() => new Set());
+  const { activeIndex, setActiveIndex, goPrev, goNext } = useGalleryNav(items.length);
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+  const markImageFailed = useCallback((id: string) => {
+    setFailedIds((current) => {
+      if (current.has(id)) return current;
+      return new Set([...current, id]);
+    });
+  }, []);
+  useLightboxKeys(lightboxOpen && keyboardNav, goPrev, goNext, closeLightbox);
+
+  const active = items[activeIndex];
+  if (items.length === 0 || !active) return null;
+
+  return (
+    <div className={cn('flex flex-col gap-3', className)}>
+      <GalleryContent
+        items={items}
+        active={active}
+        activeIndex={activeIndex}
+        lightboxOpen={lightboxOpen}
+        onDelete={onDelete}
+        failedIds={failedIds}
+        onPick={setActiveIndex}
+        onImageError={markImageFailed}
+        onOpenLightbox={() => setLightboxOpen(true)}
+        goPrev={goPrev}
+        goNext={goNext}
+        onCloseLightbox={closeLightbox}
+      />
     </div>
   );
 }

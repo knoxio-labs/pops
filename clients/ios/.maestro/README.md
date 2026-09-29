@@ -5,20 +5,20 @@ the phone does — everything else stops at the view model. They cover pairing,
 recoveries, purchase capture and browsing, and Inventory, each starting from
 an unpaired launch:
 
-| Flow                                            | What it proves                                                                                                                                                                                                                                                                                                     |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pairing-to-transaction-detail.yaml`            | A pairing code reaches the list, and a row reaches the full record behind it.                                                                                                                                                                                                                                      |
-| `expired-session-refreshes-silently.yaml`       | A refused access token is renewed and the request retried, with nothing on screen.                                                                                                                                                                                                                                 |
-| `revoked-device-returns-to-pairing.yaml`        | A revoked device lands back on pairing, saying which of the two reasons it was.                                                                                                                                                                                                                                    |
-| `unreachable-transactions-say-so.yaml`          | Transactions that cannot be fetched say so instead of reading as an empty list.                                                                                                                                                                                                                                    |
-| `root-says-so-when-nothing-is-usable.yaml`      | A feature the BFM reports `unavailable` never opens its screen; the root says so and Try again leaves it once the pillar answers.                                                                                                                                                                                  |
-| `root-contract-mismatch-reads-differently.yaml` | A pillar answering something unreadable reads as a different sentence from `unavailable`, not the same one.                                                                                                                                                                                                        |
-| `purchases-home-archive-detail.yaml`            | Purchases loads its month figure and archive counts, filters Unmatched, opens a complete detail, then pages All through its oldest month.                                                                                                                                                                          |
-| `purchases-hand-entry.yaml`                     | Purchases opens hand entry from Add, saves a manual purchase, and returns to its highlighted row on Home.                                                                                                                                                                                                          |
-| `purchases-scan-says-there-is-no-camera.yaml`   | Purchases Scan reaches the capture presenter and reports the Simulator's unavailable camera.                                                                                                                                                                                                                       |
-| `inventory-smoke.yaml`                          | Inventory downloads from the real inventory pillar, then creates a place and an item, moves it, discards it and undoes the discard, each write landing on the phone first and draining to the pillar; then creates a place while every relayed sync request fails and sees it drain once the pillar answers again. |
-| `search-inventory-scope.yaml`                   | The universal search screen scoped to Inventory matches the shipped Inventory search: ranking, opening a result, the scoped recent, the filter sheet showing only Inventory's fields, bulk Pick up and Undo, Move, a waiting-to-sync mark under a sync outage, and the scan glyph.                                 |
-| `search-purchases.yaml`                         | Search finds a seeded purchase by merchant, shows the Purchases section and chip count in All, scopes to it, fails and recovers when the search route alone refuses, and opens the purchase's detail.                                                                                                              |
+| Flow                                            | What it proves                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pairing-to-transaction-detail.yaml`            | A pairing code reaches the list, and a row reaches the full record behind it.                                                                                                                                                                                                                                                              |
+| `expired-session-refreshes-silently.yaml`       | A refused access token is renewed and the request retried, with nothing on screen.                                                                                                                                                                                                                                                         |
+| `revoked-device-returns-to-pairing.yaml`        | A revoked device lands back on pairing, saying which of the two reasons it was.                                                                                                                                                                                                                                                            |
+| `unreachable-transactions-say-so.yaml`          | Transactions that cannot be fetched say so instead of reading as an empty list.                                                                                                                                                                                                                                                            |
+| `root-says-so-when-nothing-is-usable.yaml`      | A feature the BFM reports `unavailable` never opens its screen; the root says so and Try again leaves it once the pillar answers.                                                                                                                                                                                                          |
+| `root-contract-mismatch-reads-differently.yaml` | A pillar answering something unreadable reads as a different sentence from `unavailable`, not the same one.                                                                                                                                                                                                                                |
+| `purchases-home-archive-detail.yaml`            | Purchases loads its month figure and archive counts, filters Unmatched, opens a complete detail, then pages All through its oldest month.                                                                                                                                                                                                  |
+| `purchases-hand-entry.yaml`                     | Purchases opens hand entry from Add, saves a manual purchase, and returns to its highlighted row on Home.                                                                                                                                                                                                                                  |
+| `purchases-scan-says-there-is-no-camera.yaml`   | Purchases Scan reaches the capture presenter and reports the Simulator's unavailable camera.                                                                                                                                                                                                                                               |
+| `inventory-smoke.yaml`                          | Pairing automatically downloads Inventory from the real pillar, then the flow creates a place and an item, moves it, discards it and undoes the discard, each write landing on the phone first and draining to the pillar; it then creates a place while every relayed sync request fails and sees it drain once the pillar answers again. |
+| `search-inventory-scope.yaml`                   | After pairing automatically downloads Inventory, the universal search screen scoped to Inventory matches the shipped Inventory search: ranking, opening a result, the scoped recent, the filter sheet showing only Inventory's fields, bulk Pick up and Undo, Move, a waiting-to-sync mark under a sync outage, and the scan glyph.        |
+| `search-purchases.yaml`                         | Search finds a seeded purchase by merchant, shows the Purchases section and chip count in All, scopes to it, fails and recovers when the search route alone refuses, and opens the purchase's detail.                                                                                                                                      |
 
 ## Running them
 
@@ -32,13 +32,25 @@ That boots a real `@pops/bfm` against a temporary SQLite database, points it at
 a registry-and-finance fixture, starts the control plane the recovery flows
 throw their switches through, builds the app if it needs building, installs it
 on the simulator every other lane uses, and runs each flow against a pairing
-code minted for it over the BFM's own operator route.
+code minted for it over the BFM's own operator route. To exercise the
+production MCP path as well, use:
+
+```bash
+mise run e2e:ios:mcp
+```
+
+That starts a real MCP process with the fixture's narrowly scoped service
+account, asks `bfm.devicePairing.issueCode` for each flow's code, and passes
+only the returned code into Maestro. The bearer used between the host bridge
+and MCP never enters the simulator or a Maestro variable.
 `scripts/ios-e2e/run.mjs` is that command and carries the reasoning for each
 part of it, including why it runs the pillar with Node rather than Docker and
 why it does not use port 3014.
 
 `mise run e2e:ios -- --serve-only` stops after booting: it prints both server
 addresses and a live pairing code so the screens can be driven by hand.
+`mise run e2e:ios:mcp -- --serve-only` does the same through MCP. In either
+case, the code is printed once and is consumed by the first pairing attempt.
 
 `mise -C clients/ios run e2e` is the client's half on its own. It takes
 `POPS_BFM_BASE_URL` and `POPS_E2E_CONTROL_URL` and speaks nothing but HTTP to
@@ -55,7 +67,10 @@ Everything in there is called through `runFlow` and takes values from its
 caller, so driven on its own it would fail on the ones nobody passed it.
 `select-transactions.yaml` and `open-transactions.yaml` keep the
 secondary-feature route through More consistent across healthy and error-state
-flows that need the Transactions screen.
+flows that need the Transactions screen. Purchases flows use `open-purchases.yaml`
+to wait for their own seeded home rather than assuming Transactions is the
+initial tab. History flows open the disclosure before asserting its events;
+the accessibility label and expanded/collapsed value are separate fields.
 
 ## The acceptance flow, kept out of the glob
 
@@ -191,6 +206,10 @@ The transaction rows the flows expect come from
 `scripts/ios-e2e/transactions-fixture.mjs`. Purchase rows and month figures
 come from `scripts/ios-e2e/purchases-stub.mjs`. Changing a merchant, account or
 amount there fails the flow that reads it, which is the point.
+Before each flow and driver retry, the harness's `/__e2e/reset` restores the
+seeded purchase history as well as the outage switches. A manual purchase
+persists for its own flow; later archive and search flows start from the same
+three seeded purchases regardless of execution order.
 
 ## The seams the recovery flows throw
 

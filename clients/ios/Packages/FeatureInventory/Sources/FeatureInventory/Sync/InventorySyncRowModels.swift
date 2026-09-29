@@ -40,6 +40,16 @@ internal struct InventorySyncRepairRow: Identifiable, Equatable, Sendable {
     internal var id: String { repair.id }
 }
 
+/// One item-specific server projection issue, kept visible until its targeted
+/// retry returns a clean item.
+internal struct InventorySyncIssueRow: Identifiable, Equatable, Sendable {
+    internal let issue: InventorySyncIssue
+    internal let display: InventorySyncEntityDisplay
+
+    internal var id: String { issue.id }
+    internal var problem: String { issue.message }
+}
+
 extension InventoryQueueHold {
     internal var caption: String {
         switch self {
@@ -94,6 +104,20 @@ extension InventorySyncPage {
                 repair: repair,
                 display: display(for: repair.entityKind, id: repair.entityId, source: source),
                 problem: catalogue?.problem ?? problem(for: repair), catalogue: catalogue)
+        }
+    }
+
+    internal static func buildIssueRows(
+        _ ledger: InventoryReplicaSyncLedger, reading source: any InventoryQuerySource
+    ) -> [InventorySyncIssueRow] {
+        ledger.issues.map { issue in
+            InventorySyncIssueRow(
+                issue: issue,
+                display: source.inventoryItem(id: issue.itemId).map {
+                    InventorySyncEntityDisplay(
+                        name: $0.name, symbol: .record(access: $0.containment?.access),
+                        photo: $0.photos.first?.sha256)
+                } ?? InventorySyncEntityDisplay(name: issue.itemName, symbol: .item, photo: nil))
         }
     }
 

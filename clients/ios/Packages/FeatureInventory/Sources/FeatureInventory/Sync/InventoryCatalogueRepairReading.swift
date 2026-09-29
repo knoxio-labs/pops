@@ -52,15 +52,19 @@ internal struct InventoryCatalogueRepairReading {
     }
 
     internal func field(_ id: String) -> InventoryCatalogueField? {
-        catalogue?.types.lazy.flatMap(\.fields).first { $0.id == id }
+        guard let catalogue else { return nil }
+        return catalogue.types.lazy.compactMap { catalogue.effectiveType(id: $0.id) }
+            .flatMap(\.fields).first { $0.id == id }
     }
 
     internal func type(_ id: String) -> InventoryCatalogueType? {
-        catalogue?.types.first { $0.id == id }
+        catalogue?.effectiveType(id: id)
     }
 
     internal func option(_ id: String) -> InventoryCatalogueOption? {
-        catalogue?.types.lazy.flatMap(\.fields).flatMap(\.enumOptions).first { $0.id == id }
+        guard let catalogue else { return nil }
+        return catalogue.types.lazy.compactMap { catalogue.effectiveType(id: $0.id) }
+            .flatMap(\.fields).flatMap(\.enumOptions).first { $0.id == id }
     }
 
     /// The label of a replacement, field or type.
@@ -131,7 +135,7 @@ internal struct InventoryCatalogueRepairReading {
         guard !references.isEmpty else { return nil }
         if assumed { return stale == .targetMissing ? .recordGone : .recordNotAllowed }
         let offered = InventoryProtocol2ReferenceTargets.allowed(
-            for: field, among: referenceTargets)
+            for: field, among: referenceTargets, catalogue: catalogue)
         let outOfReach = references.first { reference in
             !offered.contains { $0.names(reference) }
         }

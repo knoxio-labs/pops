@@ -1,5 +1,7 @@
 import { ApiError, unwrap as unwrapApi } from '@pops/pillar-sdk/client';
 
+import { reportResponse } from './foundation/interruptions/interruption-store.js';
+
 import type { ApiErrorIssue, ApiResult } from '@pops/pillar-sdk/client';
 
 /** One definition-level validation issue returned by catalogue authoring. */
@@ -7,8 +9,21 @@ export type InventoryApiIssue = ApiErrorIssue;
 
 export { ApiError as InventoryApiError };
 
+type InventoryApiResponseWithUrl = NonNullable<ApiResult<unknown>['response']> & {
+  readonly url: string;
+};
+
+function hasUrl(response: ApiResult<unknown>['response']): response is InventoryApiResponseWithUrl {
+  return response !== undefined && 'url' in response && typeof response.url === 'string';
+}
+
+function reportInventoryResponse(response: ApiResult<unknown>['response']): void {
+  if (hasUrl(response)) reportResponse(response);
+}
+
 /** Returns an inventory client payload or throws the shared browser {@link ApiError}. */
 export function unwrap<T>(result: ApiResult<T>): T {
+  reportInventoryResponse(result.response);
   return unwrapApi(result, {
     fallbackMessage: 'inventory API request failed',
     noDataMessage: 'inventory API returned no data',

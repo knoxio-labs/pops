@@ -24,6 +24,8 @@ import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
 
 import type { Express } from 'express';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
+
 import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
 import type { BfmApiDeps } from '../app.js';
 import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
@@ -37,6 +39,7 @@ import type { MobileInventoryClient } from '../inventory/client.js';
 import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 import type { MobilePurchasesClient } from '../purchases/client.js';
+import type { MobileBarcodeRelayLogger } from '../rest/mobile-barcode-handlers.js';
 
 /** Long enough to satisfy the resolver's floor; fixed so a failure is reproducible. */
 export const TEST_SIGNING_SECRET = 'test-signing-key-0123456789abcdef';
@@ -81,6 +84,8 @@ export interface TestAppOptions {
   version?: string;
   /** Drives the operator identity middleware. See {@link PRODUCTION_ENV}. */
   env?: NodeJS.ProcessEnv;
+  /** Verifier seam for the pairing route's inbound service-account gate. */
+  serviceAccountVerifier?: ServiceAccountVerifier;
   issuanceLimiter?: RateLimiter;
   pairingCodeTtlMs?: number;
   refreshTokenTtlMs?: number;
@@ -118,6 +123,8 @@ export interface TestAppOptions {
   contacts?: MobileContactsClient;
   /** Where the `/mobile/barcode/*` route gets its lookup outcome. */
   barcode?: MobileBarcodeClient;
+  /** Captures privacy-safe barcode relay events. */
+  barcodeLogger?: MobileBarcodeRelayLogger;
   /**
    * Where the `/mobile/inventory/*` routes get their data. Defaults, like
    * `finance`, to a client over a gateway whose handle factory throws.
@@ -189,6 +196,7 @@ function passthroughDeps(options: TestAppOptions): Partial<BfmApiDeps> {
     ...(options.receiptRateLimit === undefined
       ? {}
       : { receiptRateLimit: options.receiptRateLimit }),
+    ...(options.barcodeLogger === undefined ? {} : { barcodeLogger: options.barcodeLogger }),
     ...(options.refreshChallenges === undefined
       ? {}
       : { refreshChallenges: options.refreshChallenges }),
@@ -242,7 +250,12 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     ...passthroughDeps(options),
   };
 
-  const appOptions: CreateBfmApiAppOptions = options.env === undefined ? {} : { env: options.env };
+  const appOptions: CreateBfmApiAppOptions = {
+    ...(options.env === undefined ? {} : { env: options.env }),
+    ...(options.serviceAccountVerifier === undefined
+      ? {}
+      : { serviceAccountVerifier: options.serviceAccountVerifier }),
+  };
 
   return {
     app: createBfmApiApp(deps, appOptions),

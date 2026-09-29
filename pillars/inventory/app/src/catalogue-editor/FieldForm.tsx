@@ -4,6 +4,11 @@ import {
   EMPTY_COMPUTED_ENVIRONMENT,
   ComputedSectionProvider,
 } from './computed/computed-environment';
+import {
+  decimalPlacesFromInput,
+  presentationWithDecimalPlaces,
+  supportsDecimalPlaces,
+} from './decimal-places';
 import { savedExpressionVersion } from './expression/expression-version';
 import { expressionContext, fieldValueType, toWire } from './expression/wire';
 import { FieldFormActions } from './FieldFormActions';
@@ -15,9 +20,15 @@ import { EnumOptions } from './FieldFormOptions';
 import { useFieldFormState } from './useFieldFormState';
 import { useOperationPreview } from './useOperationPreview';
 
+import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type { ComputedFieldEnvironment } from './computed/computed-environment';
 import type { FieldFormContextValue } from './FieldFormContext';
-import type { CatalogueField, CatalogueOperation, CatalogueType } from './types';
+import type {
+  CatalogueField,
+  CatalogueIssueSources,
+  CatalogueOperation,
+  CatalogueType,
+} from './types';
 
 interface FieldFormProps {
   readonly computed?: ComputedFieldEnvironment;
@@ -27,6 +38,8 @@ interface FieldFormProps {
   readonly onRestore?: () => void;
   readonly onOperation: (operation: CatalogueOperation) => void;
   readonly onPreview?: (operation: CatalogueOperation) => void;
+  readonly issueSources?: CatalogueIssueSources;
+  readonly issues?: readonly InventoryApiIssue[];
   readonly published: boolean;
   readonly type: CatalogueType;
   readonly types: readonly CatalogueType[];
@@ -56,7 +69,13 @@ export function FieldForm(props: FieldFormProps) {
             props.onOperation(operation);
           }}
         >
-          <FieldFormIdentity onKeyChange={state.changeKey} onLabelChange={state.changeLabel} />
+          <FieldFormIdentity
+            issueSources={props.issueSources}
+            issues={props.issues}
+            operation={operation}
+            onKeyChange={state.changeKey}
+            onLabelChange={state.changeLabel}
+          />
           <FieldFormConstraints />
           <FieldFormBehaviour />
           {props.field !== undefined && state.context.kind === 'enum' && (
@@ -91,6 +110,10 @@ function computedPart(value: FieldFormContextValue, typeId: string) {
 }
 
 function createOperation(value: FieldFormContextValue, typeId: string): CatalogueOperation {
+  const presentation = presentationWithDecimalPlaces(
+    { ...value.field?.presentation, highlighted: value.highlighted },
+    supportsDecimalPlaces(value.kind) ? decimalPlacesFromInput(value.decimalPlaces) : null
+  );
   return {
     kind: 'put_field',
     typeId,
@@ -98,7 +121,7 @@ function createOperation(value: FieldFormContextValue, typeId: string): Catalogu
     label: value.label.trim(),
     help: value.help.trim() === '' ? null : value.help.trim(),
     required: value.required,
-    presentation: { ...value.field?.presentation, highlighted: value.highlighted },
+    presentation,
     ...(value.shapeLocked
       ? {}
       : {

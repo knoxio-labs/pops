@@ -20,17 +20,15 @@ name: Purchases home opens both archive scopes and a full detail
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-- assertVisible:
-    id: 'transactions-list'
-- tapOn: 'Purchases'
+- runFlow: subflows/open-purchases.yaml
 
 # The figure comes from the month-summary request. The tiles carry server
-# counts; in particular, one current-month unmatched purchase differs from the
-# two unsettled rows in the first archive page.
+# counts; the unmatched tile covers both unsettled purchases across the whole
+# backlog, while the month figure covers the single September purchase.
 - assertVisible: 'A\$12\.50'
 - assertVisible:
     id: 'purchases-home-unmatched'
-    text: '1, Unmatched'
+    text: '2, Unmatched'
 - assertVisible:
     id: 'purchases-home-all'
     text: '3, All purchases'

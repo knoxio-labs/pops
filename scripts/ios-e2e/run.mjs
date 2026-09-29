@@ -54,12 +54,14 @@
  * is not `/__e2e/` to the pillar. The recovery flows pair against it, because
  * each of them needs something to change mid-run — a token aged past its
  * expiry, finance refusing to answer — and an HTTP endpoint is the only thing a
- * Maestro flow can reach outside the phone. The happy-path flow does not, and
- * still dials the pillar directly.
+ * Maestro flow can reach outside the phone. The happy path can obtain its
+ * pairing code directly from BFM or through the real MCP gateway, selected
+ * with `--pairing-issuer`.
  *
  * Usage:
- *   node scripts/ios-e2e/run.mjs              run every flow, then tear everything down
- *   node scripts/ios-e2e/run.mjs --serve-only boot the federation, print how to reach it, wait
+ *   node scripts/ios-e2e/run.mjs                         run every flow, then tear everything down
+ *   node scripts/ios-e2e/run.mjs --pairing-issuer=mcp     run the MCP pairing path
+ *   node scripts/ios-e2e/run.mjs --serve-only             boot, print addresses/code, and wait
  *
  * Exit 0 = the flow passed. Exit 1 = it did not, or the federation would not
  * come up. Exit 2 = usage error.
@@ -78,6 +80,7 @@ import { seededAccounts } from './accounts-fixture.mjs';
 import { startControlPlane } from './control-plane.mjs';
 import { spawnInventoryPillar, startInventoryGate } from './inventory-pillar.mjs';
 import { publishUserDefinedType } from './inventory-user-type.mjs';
+import { issuePairingCodeViaMcp } from './mcp-pairing-code.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
 import { boundAddress } from './server-address.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
@@ -344,16 +347,54 @@ async function probeHealth(health) {
 }
 
 /**
- * Asks the BFM for a pairing code, the way the operator's Devices page does.
+ * Poll the MCP process this harness started until its key-aware readiness
+ * route confirms that the tool surface is loaded.
+ *
+ * @param {URL} baseURL
+ * @param {import('node:child_process').ChildProcess} child
+ * @returns {Promise<void>}
+ */
+async function waitForMcpReady(baseURL, child) {
+  const deadline = Date.now() + BOOT_TIMEOUT_MS;
+  const ready = new URL('/ready', baseURL);
+
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      throw new HarnessError(
+        `the MCP server ${describeEnd(child.exitCode, child.signalCode)} before answering ${ready}. ` +
+          'Its output is above.'
+      );
+    }
+
+    try {
+      const response = await fetch(ready, { signal: AbortSignal.timeout(1000) });
+      if (response.ok) {
+        const body = await response.json();
+        if (body?.status === 'ready' && body?.apiKeyConfigured === true && body?.tools === 70) {
+          return;
+        }
+      }
+    } catch {
+      // The process is still starting or the port is not bound yet.
+    }
+    await sleep(BOOT_POLL_MS);
+  }
+
+  throw new HarnessError(`the MCP server did not answer ${ready} within ${BOOT_TIMEOUT_MS}ms`);
+}
+
+/**
+ * Asks the BFM directly for a pairing code, the way the operator's Devices
+ * page does. The MCP path uses {@link issuePairingCodeViaMcp} instead.
  *
  * `/operator/*` needs no credential outside production — `resolveOperator` in
  * `pillars/bfm/src/api/middleware/identity.ts` falls back to a development
  * operator whenever `NODE_ENV` is not `production` — and this harness sets
  * `NODE_ENV=test` for exactly that reason.
  *
- * Only `--serve-only` calls this. The flow's own code is minted by the
- * `clients/ios` half, over the same route, because that half must work against
- * any BFM it is handed and cannot import anything from here.
+ * Only the direct `--serve-only` path calls this. The flow's code is minted by
+ * the `clients/ios` half, which selects the direct or MCP HTTP endpoint without
+ * importing anything from a pillar.
  *
  * @param {URL} baseURL
  * @returns {Promise<{ code: string, expiresAt: string }>}
@@ -402,9 +443,23 @@ function stop(child) {
 async function main() {
   const args = process.argv.slice(2);
   const serveOnly = args.includes('--serve-only');
-  const unknown = args.filter((arg) => arg !== '--serve-only');
+  const issuerArgument = args.find((arg) => arg.startsWith('--pairing-issuer='));
+  const pairingIssuer =
+    issuerArgument?.slice('--pairing-issuer='.length) ??
+    process.env['POPS_E2E_PAIRING_ISSUER'] ??
+    'direct';
+  const unknown = args.filter(
+    (arg) => arg !== '--serve-only' && !arg.startsWith('--pairing-issuer=')
+  );
   if (unknown.length > 0) {
     process.stderr.write(`ios-e2e: unknown argument(s): ${unknown.join(' ')}\n`);
+    process.exitCode = 2;
+    return;
+  }
+  if (pairingIssuer !== 'direct' && pairingIssuer !== 'mcp') {
+    process.stderr.write(
+      `ios-e2e: unsupported pairing issuer '${pairingIssuer}'. Use direct or mcp.\n`
+    );
     process.exitCode = 2;
     return;
   }
@@ -473,6 +528,7 @@ async function main() {
       accounts: seededAccounts,
       purchasesBaseUrl: purchases.url,
       inventoryBaseUrl: inventory.url,
+      bfmBaseUrl: pairingIssuer === 'mcp' ? baseURL.origin : undefined,
       serviceAccountKey: SERVICE_ACCOUNT_KEY,
       host: HOST,
     });
@@ -534,6 +590,31 @@ async function main() {
     await waitForHealth(baseURL, buildVersion, bfm);
     process.stdout.write(`ios-e2e: bfm on ${baseURL.origin}, database under ${dataDir}\n`);
 
+    let mcpBaseURL;
+    if (pairingIssuer === 'mcp') {
+      await run('pnpm', ['--filter', '@pops/mcp...', 'build']);
+      const mcpPort = await allocatePort();
+      mcpBaseURL = new URL(`http://${HOST}:${mcpPort}`);
+      const mcp = spawn('node', [join(REPO_ROOT, 'pillars/mcp/dist/index.js')], {
+        cwd: REPO_ROOT,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          NODE_ENV: 'production',
+          MCP_PORT: String(mcpPort),
+          POPS_API_KEY_FILE: '',
+          POPS_INTERNAL_API_KEY: '',
+          POPS_API_KEY: SERVICE_ACCOUNT_KEY,
+          POPS_BFM_API_URL: baseURL.origin,
+          POPS_REGISTRY_URL: upstream.url,
+          MCP_INBOUND_TOKEN: process.env['MCP_INBOUND_TOKEN'] ?? '',
+        },
+      });
+      teardown.unshift(() => stop(mcp));
+      await waitForMcpReady(mcpBaseURL, mcp);
+      process.stdout.write(`ios-e2e: MCP on ${mcpBaseURL.origin}, pairing issuer enabled\n`);
+    }
+
     const control = await startControlPlane({
       bfmBaseUrl: baseURL.origin,
       accessTokenSecret: ACCESS_TOKEN_SECRET,
@@ -559,7 +640,13 @@ async function main() {
     process.stdout.write(`ios-e2e: control plane on ${control.url}, proxying to the bfm\n`);
 
     if (serveOnly) {
-      const { code, expiresAt } = await mintPairingCode(baseURL);
+      const { code, expiresAt } =
+        pairingIssuer === 'mcp'
+          ? await issuePairingCodeViaMcp({
+              endpoint: new URL('/mcp', mcpBaseURL).toString(),
+              token: process.env['MCP_INBOUND_TOKEN'],
+            })
+          : await mintPairingCode(baseURL);
       process.stdout.write(
         `\nios-e2e: server address ${baseURL.origin}\n` +
           `ios-e2e: recovery-flow server address ${control.url} (same bfm, switchable)\n` +
@@ -572,13 +659,17 @@ async function main() {
       return;
     }
 
-    await run('mise', ['-C', 'clients/ios', 'run', 'e2e'], {
-      env: {
-        ...process.env,
-        POPS_BFM_BASE_URL: baseURL.origin,
-        POPS_E2E_CONTROL_URL: control.url,
-      },
-    });
+    /** @type {NodeJS.ProcessEnv} */
+    const iosEnv = {
+      ...process.env,
+      POPS_BFM_BASE_URL: baseURL.origin,
+      POPS_E2E_CONTROL_URL: control.url,
+      POPS_E2E_PAIRING_ISSUER: pairingIssuer,
+    };
+    if (mcpBaseURL !== undefined) {
+      iosEnv.POPS_MCP_URL = new URL('/mcp', mcpBaseURL).toString();
+    }
+    await run('mise', ['-C', 'clients/ios', 'run', 'e2e'], { env: iosEnv });
   } finally {
     await tearDown();
   }

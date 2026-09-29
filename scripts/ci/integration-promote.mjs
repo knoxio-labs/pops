@@ -46,10 +46,10 @@ export function promoteIntegration(run) {
     'api',
     `repos/${repo}/rules/branches/main`,
     '--jq',
-    '[.[] | select(.type == "required_status_checks") | .parameters | select(.strict_required_status_checks_policy == true) | .required_status_checks[] | select(.context == "Promotion validation")] | length',
+    '[.[] | select(.type == "required_status_checks") | .parameters | .required_status_checks[] | select(.context == "Promotion validation")] | length',
   ]).trim();
   if (!/^\d+$/u.test(protectedAdmission) || Number(protectedAdmission) === 0) {
-    throw new Error('Main must require up-to-date Promotion validation before promoting.');
+    throw new Error('Main must require Promotion validation before promoting.');
   }
   run('git', ['fetch', 'origin', source, 'main']);
   const remoteSha = run('git', ['rev-parse', `origin/${source}`]).trim();
@@ -68,8 +68,7 @@ export function promoteIntegration(run) {
     '-m',
     `chore: freeze ${source.slice('integration/'.length)} promotion`,
   ]);
-  run('mise', ['lint']);
-  run('mise', ['typecheck']);
+  run('mise', ['check']);
   run('git', ['push', '-u', 'origin', candidate]);
   const url = run('gh', [
     'pr',
@@ -81,7 +80,7 @@ export function promoteIntegration(run) {
     '--title',
     `feat: integrate ${source.slice('integration/'.length)}`,
     '--body',
-    `Frozen integration revision: ${sha}.\n\nSource: ${source}.\n\nValidation: mise lint and mise typecheck passed before push. Promotion validation runs the full suite on the candidate combined with current main. Main must remain up to date before merge.`,
+    `Frozen integration revision: ${sha}.\n\nSource: ${source}.\n\nValidation: mise check passed before push. Promotion validation runs the full suite on the candidate combined with current main. Merge after required checks and review gates pass and GitHub permits it; base movement alone does not require a refresh.`,
   ]).trim();
   run('git', ['switch', source]);
   return url;

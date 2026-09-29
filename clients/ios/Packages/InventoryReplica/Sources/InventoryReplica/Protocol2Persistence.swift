@@ -84,13 +84,14 @@ internal enum Protocol2CatalogueRows {
             sql: """
                 INSERT INTO catalogue_type
                     (revision, id, key, label, description, sort_order, capabilities,
-                     legacy_labels, presentation, archived_at, replaced_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     legacy_labels, presentation, archived_at, replaced_by, parent_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: [
                 revision, type.id, type.key, type.label, type.description, type.sortOrder,
                 try StoredJSON.encode(type.capabilities), try StoredJSON.encode(type.legacyLabels),
                 try StoredJSON.encode(type.presentation), type.archivedAt, type.replacedBy,
+                type.parentTypeId,
             ])
         for field in type.fields {
             try store(field, revision: revision, in: db)
@@ -199,6 +200,25 @@ extension InventoryReplica {
             }
             try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
                 try ReplicaApply.changes(page, now: now(), in: db)
+            }
+        }
+    }
+
+    /// Stores one targeted item retry with the catalogue revision named by
+    /// the response, without advancing the feed cursor.
+    public func apply(
+        _ result: InventorySyncItemResult, catalogue: InventoryCatalogueSnapshot,
+        referencedCatalogues: [InventoryCatalogueSnapshot] = []
+    ) throws {
+        guard result.catalogueRevision == catalogue.revision.revision else {
+            throw InventoryReplicaError.corruptValue("item catalogue revision does not match")
+        }
+        try write { db in
+            for referenced in referencedCatalogues {
+                try Protocol2CatalogueRows.store(referenced, in: db)
+            }
+            try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
+                try ReplicaApply.item(result, now: now(), in: db)
             }
         }
     }

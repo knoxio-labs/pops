@@ -65,7 +65,7 @@ extension AccountsListView {
             }
             .padding(PopsSpacing.lg)
         }
-        .scrollBounceBehavior(.always)
+        .scrollBounceBehavior(.always, axes: .vertical)
         .refreshable { await model.refresh() }
         .accessibilityIdentifier(AccountsAccessibility.list)
     }

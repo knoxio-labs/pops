@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MAX_MUTATION_BATCH } from '@pops/inventory';
 
+import {
+  RELOAD_REQUIRED_REASON,
+  reloadRequired,
+  resetInterruption,
+} from '../foundation/interruptions/interruption-store.js';
 import { InventoryApiError } from '../inventory-api-helpers.js';
 import { optimisticItemsFor } from './optimistic-items.js';
 
@@ -15,7 +20,6 @@ vi.mock('../inventory-api/index.js', () => ({
 import {
   buildMutationEnvelope,
   createUndo,
-  INVENTORY_SYNC_PROTOCOL,
   sendInventoryMutations,
   sendInventoryMutation,
   UndoRefusedError,
@@ -24,6 +28,7 @@ import {
 import type { InventoryCommand, InventoryPlacementTarget } from './commands';
 
 beforeEach(() => {
+  resetInterruption();
   vi.clearAllMocks();
 });
 
@@ -137,7 +142,11 @@ describe('buildMutationEnvelope', () => {
 
 describe('sendInventoryMutation', () => {
   function ok(outcomes: unknown[]) {
-    return { data: { outcomes, highWaterSeq: 42 }, error: undefined, response: { status: 200 } };
+    return {
+      data: { outcomes, highWaterSeq: 42 },
+      error: undefined,
+      response: { status: 200, url: '/inventory-api/sync/mutations' },
+    };
   }
 
   it('sends a one-mutation batch with the protocol header and returns its outcome', async () => {
@@ -159,7 +168,7 @@ describe('sendInventoryMutation', () => {
     });
     expect(mocks.syncMutations).toHaveBeenCalledTimes(1);
     const call = mocks.syncMutations.mock.calls[0]?.[0];
-    expect(call?.headers).toEqual({ 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL });
+    expect(call?.headers).toEqual({ 'pops-inventory-protocol': '3' });
     expect(call?.body.mutations).toHaveLength(1);
     expect(call?.body.mutations[0]).toMatchObject({ op: 'item.setFull', entityId: 'item-1' });
   });
@@ -192,11 +201,71 @@ describe('sendInventoryMutation', () => {
     mocks.syncMutations.mockResolvedValue({
       data: undefined,
       error: { message: 'client too old' },
-      response: { status: 426 },
+      response: { status: 426, url: '/inventory-api/sync/mutations' },
     });
     await expect(
       sendInventoryMutation({ command: { op: 'item.delete', args: {} }, entityId: 'item-1' })
-    ).rejects.toMatchObject({ status: 426 });
+    ).rejects.toBeInstanceOf(InventoryApiError);
+    expect(reloadRequired()).toBe(true);
+  });
+
+  it('a 426 from sendInventoryMutations reports reload-required and still throws InventoryApiError', async () => {
+    mocks.syncMutations.mockResolvedValue({
+      data: undefined,
+      error: { message: 'client too old' },
+      response: { status: 426, url: '/inventory-api/sync/mutations' },
+    });
+
+    await expect(
+      sendInventoryMutations([{ command: { op: 'item.delete', args: {} }, entityId: 'item-1' }])
+    ).rejects.toBeInstanceOf(InventoryApiError);
+    expect(reloadRequired()).toBe(true);
+  });
+
+  it('after a 426 both senders throw RELOAD_REQUIRED_REASON without calling syncMutations', async () => {
+    mocks.syncMutations.mockResolvedValue({
+      data: undefined,
+      error: { message: 'client too old' },
+      response: { status: 426, url: '/inventory-api/sync/mutations' },
+    });
+    const input = { command: { op: 'item.delete', args: {} }, entityId: 'item-1' } as const;
+
+    await expect(sendInventoryMutation(input)).rejects.toBeInstanceOf(InventoryApiError);
+    expect(reloadRequired()).toBe(true);
+    mocks.syncMutations.mockClear();
+
+    await expect(sendInventoryMutation(input)).rejects.toMatchObject({
+      message: RELOAD_REQUIRED_REASON,
+      status: 426,
+    });
+    await expect(sendInventoryMutations([input])).rejects.toMatchObject({
+      message: RELOAD_REQUIRED_REASON,
+      status: 426,
+    });
+    expect(mocks.syncMutations).not.toHaveBeenCalled();
+  });
+
+  it.each([403, 500])('a %s leaves the next send going out', async (status) => {
+    mocks.syncMutations
+      .mockResolvedValueOnce({
+        data: undefined,
+        error: { message: 'request failed' },
+        response: { status, url: '/inventory-api/sync/mutations' },
+      })
+      .mockResolvedValueOnce(
+        ok([{ mutationId: 'm1', status: 'applied', revision: 2, seq: 1, converged: false }])
+      );
+    const input = {
+      command: { op: 'item.delete', args: {} },
+      entityId: 'item-1',
+      mutationId: 'm1',
+    } as const;
+
+    await expect(sendInventoryMutation(input)).rejects.toMatchObject({ status });
+    await expect(sendInventoryMutation(input)).resolves.toMatchObject({ status: 'applied' });
+
+    expect(mocks.syncMutations).toHaveBeenCalledTimes(2);
+    expect(reloadRequired()).toBe(false);
   });
 
   it('throws ApiError when the response carries no outcome at all', async () => {
@@ -271,7 +340,7 @@ describe('sendInventoryMutation', () => {
     mocks.syncMutations.mockResolvedValue({
       data: undefined,
       error: { message: 'client too old' },
-      response: { status: 426 },
+      response: { status: 426, url: '/inventory-api/sync/mutations' },
     });
     const queryClient = new QueryClient();
     const undo = createUndo(queryClient, optimisticItemsFor(queryClient), 'item-1', 41);

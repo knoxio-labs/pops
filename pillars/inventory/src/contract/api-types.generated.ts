@@ -767,6 +767,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/sync/items/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read one item and any compatibility issues recorded while projecting it */
+    get: operations['sync.item'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/sync/items/{id}/events': {
     parameters: {
       query?: never;
@@ -4567,6 +4584,9 @@ export interface operations {
       header?: never;
       path: {
         key:
+          | 'inventory.labelSheet'
+          | 'inventory.labelShows'
+          | 'inventory.density'
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
@@ -4626,6 +4646,9 @@ export interface operations {
       header?: never;
       path: {
         key:
+          | 'inventory.labelSheet'
+          | 'inventory.labelShows'
+          | 'inventory.density'
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
@@ -4693,6 +4716,9 @@ export interface operations {
       header?: never;
       path: {
         key:
+          | 'inventory.labelSheet'
+          | 'inventory.labelShows'
+          | 'inventory.density'
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
@@ -4759,6 +4785,9 @@ export interface operations {
       header?: never;
       path: {
         key:
+          | 'inventory.labelSheet'
+          | 'inventory.labelShows'
+          | 'inventory.density'
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
@@ -4927,6 +4956,17 @@ export interface operations {
               undoable: boolean;
             }[];
             hasMore: boolean;
+            issues?: {
+              code: string;
+              fieldId: string | null;
+              fieldKey: string | null;
+              itemApplied: boolean;
+              itemId: string;
+              itemName: string;
+              message: string;
+              retryable: boolean;
+              seq: number;
+            }[];
             items: {
               /** @enum {string|null} */
               access: 'open' | 'closed' | null;
@@ -5115,6 +5155,216 @@ export interface operations {
       };
     };
   };
+  'sync.item': {
+    parameters: {
+      query?: never;
+      header?: {
+        'pops-inventory-protocol'?: string;
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            catalogueRevision: number | null;
+            catalogueVersion: string;
+            issues?: {
+              code: string;
+              fieldId: string | null;
+              fieldKey: string | null;
+              itemApplied: boolean;
+              itemId: string;
+              itemName: string;
+              message: string;
+              retryable: boolean;
+              seq: number;
+            }[];
+            item: {
+              /** @enum {string|null} */
+              access: 'open' | 'closed' | null;
+              catalogueRevision: number | null;
+              code: string | null;
+              computedValues: (
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'ok';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    override: {
+                      catalogueRevision: number;
+                    };
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'overridden';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    failedFieldId: string;
+                    /** Format: uuid */
+                    fieldId: string;
+                    missingInputs: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      reason: string;
+                    }[];
+                    reason: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'unavailable';
+                    traversedItemIds: string[];
+                  }
+              )[];
+              createdAt: string;
+              deletedAt: string | null;
+              documentTitles: string[];
+              /** @enum {string} */
+              documentsStatus: 'linked' | 'none' | 'unavailable';
+              externalIds: {
+                kind: string;
+                value: string;
+              }[];
+              fieldValues: {
+                catalogueRevision: number;
+                /** Format: uuid */
+                fieldId: string;
+                /** @enum {string} */
+                source: 'stored' | 'override';
+                values: unknown[];
+              }[];
+              fields: {
+                [key: string]: unknown;
+              };
+              id: string;
+              isContainer: boolean;
+              isFull: boolean | null;
+              legacyType: string | null;
+              lifecycle: string;
+              lifecycleChangedAt: string | null;
+              name: string;
+              note: string | null;
+              photos: {
+                caption: string | null;
+                sha256: string;
+              }[];
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              previousPlacement:
+                | (
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                  )
+                | null;
+              provenance: {
+                merchant: string | null;
+                price: number | null;
+                purchasedOn: string | null;
+                transactionUri: string | null;
+                warrantyExpires: string | null;
+              } | null;
+              quantity: number;
+              revision: number;
+              seq: number;
+              /** Format: uuid */
+              typeId: string | null;
+              typeKey: string | null;
+              updatedAt: string;
+            } | null;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 426 */
+      426: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
   'sync.itemEvents': {
     parameters: {
       query: {
@@ -5278,9 +5528,14 @@ export interface operations {
               title: string;
               values: {
                 field: string;
+                fieldId?: string;
                 fit: string;
+                recordId?: string;
+                recordKind?: string;
                 replacement?: string;
+                replacementTypeId?: string;
                 value: string;
+                values?: unknown[];
               }[];
             };
             id: string;
@@ -5291,6 +5546,15 @@ export interface operations {
               /** Format: date-time */
               at: string;
               source: string;
+              target?: {
+                containerId?: string;
+                fieldId?: string;
+                kind: string;
+                locationId?: string;
+                name?: string;
+                note?: string | null;
+                values?: unknown[] | null;
+              };
               value: string;
             };
             /** Format: date-time */
@@ -5309,8 +5573,18 @@ export interface operations {
               /** Format: date-time */
               at: string;
               source: string;
+              target?: {
+                containerId?: string;
+                fieldId?: string;
+                kind: string;
+                locationId?: string;
+                name?: string;
+                note?: string | null;
+                values?: unknown[] | null;
+              };
               value: string;
             };
+            typeId?: string;
           }[];
           /** Format: date-time */
           lastSyncAt: string | null;
@@ -5321,11 +5595,17 @@ export interface operations {
             at: string;
             dropped?: {
               field: string;
+              fieldId?: string;
               fit: string;
+              recordId?: string;
+              recordKind?: string;
               replacement?: string;
+              replacementTypeId?: string;
               value: string;
+              values?: unknown[];
             }[];
             id: string;
+            itemId?: string;
             itemName: string;
             outcome: string;
           }[];
@@ -5552,6 +5832,17 @@ export interface operations {
             catalogueVersion: string;
             epoch: string;
             highWaterSeq: number;
+            issues?: {
+              code: string;
+              fieldId: string | null;
+              fieldKey: string | null;
+              itemApplied: boolean;
+              itemId: string;
+              itemName: string;
+              message: string;
+              retryable: boolean;
+              seq: number;
+            }[];
             items: {
               /** @enum {string|null} */
               access: 'open' | 'closed' | null;
@@ -5872,6 +6163,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6099,6 +6392,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6266,6 +6561,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6324,6 +6621,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -6572,6 +6871,8 @@ export interface operations {
                 key: string;
                 label: string;
                 legacyLabels: string[];
+                /** Format: uuid */
+                parentTypeId: string | null;
                 presentation: {
                   [key: string]: unknown;
                 };
@@ -6759,6 +7060,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -6836,6 +7139,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -7077,6 +7382,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -7456,6 +7763,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -7699,6 +8008,8 @@ export interface operations {
                 kind: 'put_type';
                 label?: string;
                 legacyLabels?: string[];
+                /** Format: uuid */
+                parentTypeId?: string | null;
                 presentation?: {
                   [key: string]: unknown;
                 };
@@ -8046,6 +8357,8 @@ export interface operations {
               key: string;
               label: string;
               legacyLabels: string[];
+              /** Format: uuid */
+              parentTypeId: string | null;
               presentation: {
                 [key: string]: unknown;
               };
@@ -9745,9 +10058,14 @@ export interface operations {
                 title: string;
                 values: {
                   field: string;
+                  fieldId?: string;
                   fit: string;
+                  recordId?: string;
+                  recordKind?: string;
                   replacement?: string;
+                  replacementTypeId?: string;
                   value: string;
+                  values?: unknown[];
                 }[];
               };
               id: string;
@@ -9758,6 +10076,15 @@ export interface operations {
                 /** Format: date-time */
                 at: string;
                 source: string;
+                target?: {
+                  containerId?: string;
+                  fieldId?: string;
+                  kind: string;
+                  locationId?: string;
+                  name?: string;
+                  note?: string | null;
+                  values?: unknown[] | null;
+                };
                 value: string;
               };
               /** Format: date-time */
@@ -9776,8 +10103,18 @@ export interface operations {
                 /** Format: date-time */
                 at: string;
                 source: string;
+                target?: {
+                  containerId?: string;
+                  fieldId?: string;
+                  kind: string;
+                  locationId?: string;
+                  name?: string;
+                  note?: string | null;
+                  values?: unknown[] | null;
+                };
                 value: string;
               };
+              typeId?: string;
             }[];
             attentionCount: number;
             devices: {
@@ -9795,11 +10132,17 @@ export interface operations {
               deviceId: string;
               dropped?: {
                 field: string;
+                fieldId?: string;
                 fit: string;
+                recordId?: string;
+                recordKind?: string;
                 replacement?: string;
+                replacementTypeId?: string;
                 value: string;
+                values?: unknown[];
               }[];
               id: string;
+              itemId?: string;
               itemName: string;
               outcome: string;
             }[];

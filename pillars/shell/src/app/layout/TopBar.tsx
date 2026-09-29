@@ -3,6 +3,14 @@ import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useCurrentApp, useSearchDropdown } from '@pops/navigation';
+import { Button } from '@pops/ui';
+
+import { BuildVersion } from './BuildVersion';
+import { MobileSearchOverlay } from './MobileSearchOverlay';
+import { SearchInput } from './SearchInput';
+import { TopBarActions } from './top-bar/TopBarActions';
+
 /**
  * Top bar - user info, theme toggle, menu button, search
  *
@@ -11,17 +19,11 @@ import { useTranslation } from 'react-i18next';
  * Desktop: always-visible search input.
  * All interactive elements meet 44x44px minimum touch targets.
  */
-import { Button } from '@pops/ui';
-
-import { BuildVersion } from './BuildVersion';
-import { MobileSearchOverlay } from './MobileSearchOverlay';
-import { SearchInput } from './SearchInput';
-import { TopBarActions } from './top-bar/TopBarActions';
-
 export function TopBar() {
   const { t } = useTranslation('shell');
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const compactSearch = useSearchDropdown(useCurrentApp())?.openCompact;
 
   return (
     <>
@@ -50,7 +52,10 @@ export function TopBar() {
         </div>
 
         <div className="flex flex-1 justify-end items-center min-w-0">
-          <TopBarActions onOpenMobileSearch={() => setMobileSearchOpen(true)} />
+          <TopBarActions
+            onOpenMobileSearch={() => setMobileSearchOpen(true)}
+            onOpenCompactSearch={compactSearch}
+          />
         </div>
       </header>
 

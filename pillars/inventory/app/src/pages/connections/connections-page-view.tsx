@@ -1,8 +1,16 @@
-import { Cable } from 'lucide-react';
+import { Cable, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router';
 
-import { StateBanner } from '../../foundation/feedback/state-banner.js';
+import { Button } from '@pops/ui';
+
+import { OFFLINE_REASON, StateBanner } from '../../foundation/feedback/state-banner.js';
 import { InventoryPage } from '../../foundation/frame/page-frame.js';
-import { OfflineBanner } from '../../foundation/list-page/list-states.js';
+import { ListError, ListSkeleton, OfflineBanner } from '../../foundation/list-page/list-states.js';
+import { ConnectionsTabs } from '../../foundation/secondary-page/connections-tabs.js';
+import { HintTooltip } from '../../foundation/shortcuts/hint-tooltip.js';
+import { useConnectionsTabCounts } from '../../inventory-web/useConnectionsTabCounts.js';
+import { ConnectEndsDialog } from './connect-ends-dialog.js';
 import { ConnectionsList } from './connections-list.js';
 import { ConnectionsSelectionActions } from './connections-selection-actions.js';
 import { ConnectionsToolbar } from './connections-toolbar.js';
@@ -18,7 +26,25 @@ interface ConnectionsPageViewProps {
   readonly actions: ConnectionsPageActions;
 }
 
+function ConnectButton({ online, onOpen }: { online: boolean; onOpen: () => void }): ReactElement {
+  return (
+    <HintTooltip label="Connect two things" disabledReason={!online ? OFFLINE_REASON : undefined}>
+      <Button
+        aria-disabled={!online || undefined}
+        disabled={!online}
+        onClick={online ? onOpen : undefined}
+        prefix={<Plus className="size-4" aria-hidden />}
+      >
+        Connect
+      </Button>
+    </HintTooltip>
+  );
+}
+
 function RegistryBody({ model, actions }: ConnectionsPageViewProps): ReactElement {
+  if (model.initialLoading) return <ListSkeleton label="Loading connections" />;
+  if (model.readError) return <ListError noun="connections" onRetry={model.retry} />;
+
   return (
     <>
       <ConnectionsToolbar
@@ -26,6 +52,8 @@ function RegistryBody({ model, actions }: ConnectionsPageViewProps): ReactElemen
         kind={model.kindDraft}
         view={model.url.view}
         summary={model.registry.summary}
+        total={model.total}
+        narrowed={model.narrowed}
         onQueryChange={model.setQueryDraft}
         onKindChange={model.setKindDraft}
         onViewChange={model.setView}
@@ -36,8 +64,8 @@ function RegistryBody({ model, actions }: ConnectionsPageViewProps): ReactElemen
             <GraphBody model={model} focusItemId={model.url.trace} />
           ) : (
             <ConnectionsList
-              rows={model.registry.rows}
-              world={model.placement.world}
+              rows={model.resolvedRows}
+              world={model.world}
               selection={model.selection}
               traceItemId={model.url.trace}
               online={model.online}
@@ -48,8 +76,8 @@ function RegistryBody({ model, actions }: ConnectionsPageViewProps): ReactElemen
               onDisconnect={(row) => actions.disconnectRows([row])}
               onClearFilters={model.clearFilters}
               onRetry={model.retry}
-              loading={model.registry.status === 'pending'}
-              error={model.registry.status === 'error'}
+              loading={model.registryFiltering}
+              error={false}
               narrowed={model.narrowed}
               disconnectingIds={actions.disconnectingIds}
             />
@@ -67,6 +95,9 @@ function RegistryBody({ model, actions }: ConnectionsPageViewProps): ReactElemen
 
 /** Renders the Connections page shell and its current presentation. */
 export function ConnectionsPageView({ model, actions }: ConnectionsPageViewProps): ReactElement {
+  const navigate = useNavigate();
+  const counts = useConnectionsTabCounts();
+  const [connectOpen, setConnectOpen] = useState(false);
   const staleBanner = model.changed.stale ? (
     <StateBanner
       kind="stale"
@@ -81,7 +112,17 @@ export function ConnectionsPageView({ model, actions }: ConnectionsPageViewProps
     <InventoryPage
       title="Connections"
       icon={Cable}
-      description="What plugs into, feeds or pairs with what."
+      description="What plugs into, feeds or pairs with what, across the house."
+      actions={<ConnectButton online={model.online} onOpen={() => setConnectOpen(true)} />}
+      tabs={
+        <ConnectionsTabs
+          value="connections"
+          counts={counts}
+          onChange={(value) => {
+            if (value === 'fixtures') void navigate('/inventory/connections/fixtures');
+          }}
+        />
+      }
       banner={!model.online ? <OfflineBanner /> : staleBanner}
       bodyClassName="gap-3"
       dock={
@@ -95,6 +136,7 @@ export function ConnectionsPageView({ model, actions }: ConnectionsPageViewProps
       }
     >
       <RegistryBody model={model} actions={actions} />
+      {connectOpen ? <ConnectEndsDialog open onOpenChange={setConnectOpen} /> : null}
     </InventoryPage>
   );
 }

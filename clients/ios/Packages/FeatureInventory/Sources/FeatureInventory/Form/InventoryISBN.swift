@@ -1,5 +1,3 @@
-import Foundation
-
 internal enum InventoryISBN {
     internal static func normalised(_ raw: String) -> String? {
         let compact = raw.filter { !$0.isWhitespace && $0 != "-" }

@@ -124,14 +124,6 @@ export const ALLOWLIST = [
       "A ~28px plan slot row. The kit TextInput's smallest container is h-9 (36px) and " +
       'would grow the row.',
   },
-  {
-    path: 'pillars/inventory/app/src/pages/location-tree-page/sections/location-node/InlineInput.tsx',
-    controls: 1,
-    ticket: 'POPS-3201',
-    reason:
-      'A compact tree row (px-0.5 py-0, ~20px line height). Same h-9 constraint as ' +
-      'SlotRow, measured rather than assumed.',
-  },
 ];
 
 /** Only `pillars/**` — never `libs/**`, so the kit itself is structurally out of scope. */

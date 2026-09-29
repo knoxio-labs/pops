@@ -50,7 +50,8 @@ internal struct InventoryPlacementPickerSheet: View {
             case .loading:
                 InventoryDestinationPickerSheet(
                     title: request.title, commitTitle: request.commitTitle,
-                    tree: InventoryLocationTree(nodes: []),
+                    tree: InventoryDestinationTree(
+                        locations: InventoryLocationTree(nodes: [])),
                     state: InventoryDestinationPickerState(isLoading: true))
             case .unavailable:
                 NavigationStack {
@@ -67,8 +68,8 @@ internal struct InventoryPlacementPickerSheet: View {
 
     private func chooser(_ loaded: InventoryPlacementChoices) -> some View {
         InventoryDestinationPickerSheet(
-            title: request.title, commitTitle: request.commitTitle, tree: loaded.tree,
-            putBack: loaded.putBack, recent: loaded.recent, containers: loaded.containers,
+            title: request.title, commitTitle: request.commitTitle, tree: loaded.destinations,
+            putBack: loaded.putBack, recent: loaded.recent,
             offered: loaded.offered,
             effect: { destination in
                 guard case .location(let id) = request.subject else { return nil }

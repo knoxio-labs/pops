@@ -42,14 +42,6 @@ internal struct InventoryDestination: Identifiable, Hashable {
             detail: path.isEmpty ? nil : path, count: items == 0 ? nil : items)
     }
 
-    internal init(container: InventoryPlacedContainer, at place: InventoryLocationNode) {
-        self.init(
-            id: container.id, name: container.name,
-            kind: container.isOpen ? .container : .closedContainer,
-            detail: place.name,
-            count: container.contents.isEmpty ? nil : container.contents.count)
-    }
-
     internal var isContainer: Bool { kind == .container || kind == .closedContainer }
 
     /// Where choosing this puts an item, once any new place exists. Nil only
@@ -89,18 +81,6 @@ internal struct InventoryDestinationPickerState {
     internal var selection: InventoryDestination?
     internal var drafting: String?
     internal var isLoading = false
-
-    internal static func initialPath(
-        for tree: InventoryLocationTree, offered: Set<String>?
-    ) -> [String] {
-        guard
-            tree.roots.count == 1,
-            let root = tree.roots.first,
-            !tree.children(of: root.id).isEmpty,
-            offered?.contains(root.id) ?? true
-        else { return [] }
-        return [root.id]
-    }
 }
 
 /// What the picker's filter circle narrows the top level to.
@@ -129,6 +109,4 @@ internal enum InventoryDestinationFilter: String, CaseIterable, Identifiable {
         case .openContainers: InventorySymbol.openContainer.system
         }
     }
-
-    internal var showsPlaces: Bool { self == .everywhere || self == .places }
 }

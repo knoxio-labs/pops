@@ -5,8 +5,8 @@ import SwiftUI
 /// open it.
 ///
 /// Put back first when there is somewhere to go back to, then recent places,
-/// the open containers in the dashboard's amber panel, then the places,
-/// drilled into one level at a time with New place at the end of each level.
+/// then one destination tree containing places and open containers, drilled
+/// into one level at a time with New place at the end of each place level.
 /// A row selects; its chevron goes a level deeper; the bar commits.
 ///
 /// This view only chooses. What choosing does is the caller's: the placement
@@ -15,10 +15,9 @@ import SwiftUI
 internal struct InventoryDestinationPickerSheet: View {
     internal let title: String
     internal let commitTitle: String
-    internal let tree: InventoryLocationTree
+    internal let tree: InventoryDestinationTree
     internal let putBack: InventoryDestination?
     internal let recent: [InventoryDestination]
-    internal let containers: [InventoryDestination]
     internal let offered: Set<String>?
     internal let effect: (InventoryDestination) -> String?
     internal let isLoading: Bool
@@ -34,10 +33,9 @@ internal struct InventoryDestinationPickerSheet: View {
     internal init(
         title: String,
         commitTitle: String = "Move",
-        tree: InventoryLocationTree,
+        tree: InventoryDestinationTree,
         putBack: InventoryDestination? = nil,
         recent: [InventoryDestination] = [],
-        containers: [InventoryDestination] = [],
         offered: Set<String>? = nil,
         effect: @escaping (InventoryDestination) -> String? = { _ in nil },
         state: InventoryDestinationPickerState = InventoryDestinationPickerState(),
@@ -48,23 +46,19 @@ internal struct InventoryDestinationPickerSheet: View {
         self.tree = tree
         self.putBack = putBack
         self.recent = recent
-        self.containers = containers
         self.offered = offered
         self.effect = effect
         self.isLoading = state.isLoading
         self.onChoose = onChoose
-        _path = State(
-            initialValue: state.path.isEmpty
-                ? InventoryDestinationPickerState.initialPath(for: tree, offered: offered)
-                : state.path)
+        _path = State(initialValue: state.path)
         _query = State(initialValue: state.query)
         _filter = State(initialValue: state.filter)
         _selection = State(initialValue: state.selection)
         _drafting = State(initialValue: state.drafting)
     }
 
-    private var working: InventoryLocationTree {
-        InventoryLocationTree(nodes: tree.nodes + created)
+    private var working: InventoryDestinationTree {
+        tree.adding(created)
     }
 
     private var pending: [String: InventoryDestination] {
@@ -74,7 +68,7 @@ internal struct InventoryDestinationPickerSheet: View {
                     node.id,
                     InventoryDestination(
                         id: node.id, name: node.name, kind: .newLocation(parentID: node.parentID),
-                        detail: working.parentPath(of: node.id))
+                        detail: working.locations.parentPath(of: node.id))
                 )
             })
     }
@@ -91,11 +85,11 @@ internal struct InventoryDestinationPickerSheet: View {
         InventoryDestinationLevel(
             tree: working, levelID: id, offered: offered,
             effect: selection.flatMap(effect), isLoading: isLoading,
-            putBack: putBack, recent: recent, containers: containers, pending: pending,
+            putBack: putBack, recent: recent, pending: pending,
             query: $query, filter: $filter, selection: $selection, drafting: $drafting,
             onCreate: create
         )
-        .navigationTitle(id.flatMap { working.node($0)?.name } ?? title)
+        .navigationTitle(id.flatMap { working.node($0)?.destination.name } ?? title)
         .popsTitleDisplay(large: false)
         .toolbar { toolbar(isRoot: id == nil) }
     }

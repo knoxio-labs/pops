@@ -96,7 +96,7 @@ internal final class InventoryItemsBrowserViewModel {
                 title: "In hand", count: active.filter { $0.placement == .hand }.count,
                 symbol: InventorySymbol.inHand.system),
             InventoryCountTile(
-                title: "Untyped", count: active.filter { $0.typeKey == nil }.count,
+                title: "Untyped", count: active.filter { $0.typeKeys.isEmpty }.count,
                 symbol: InventorySymbol.waiting.system),
             InventoryCountTile(
                 title: "Recent", count: active.filter { $0.isRecent(now: today) }.count,

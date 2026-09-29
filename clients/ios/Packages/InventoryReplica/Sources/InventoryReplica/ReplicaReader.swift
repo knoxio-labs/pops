@@ -119,7 +119,8 @@ internal final class ReplicaReader: InventoryQuerySource {
                     $0.repair(currentRevision: revision)
                 },
                 resolved: try RepairRows.resolvedEntries(in: db),
-                sendingStall: activity.sendingStall)
+                sendingStall: activity.sendingStall,
+                issues: try SyncIssueRows.read(in: db))
         }
     }
 

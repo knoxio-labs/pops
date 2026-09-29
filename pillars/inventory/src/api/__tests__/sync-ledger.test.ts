@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WebSyncLedgerResponseSchema } from '../../contract/rest-sync-ledger.js';
 import { granting, openSyncHarness, PROTOCOL, SYNC_KEY, type SyncHarness } from './sync-harness.js';
@@ -11,16 +11,22 @@ import type { Test } from './test-http.js';
 
 const transport = createTestTransport();
 const DAY_MS = 24 * 60 * 60 * 1000;
+const FROZEN_NOW = new Date('2026-09-21T12:00:00.000Z');
 type LedgerReport = z.infer<typeof SyncLedgerReportBodySchema>;
 type WebSyncLedger = z.infer<typeof WebSyncLedgerResponseSchema>;
 
 let h: SyncHarness;
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-26T12:00:00.000Z'));
   h = openSyncHarness(transport, { verify: granting(['inventory.sync']) });
 });
 
-afterEach(() => h.close());
+afterEach(() => {
+  h.close();
+  vi.useRealTimers();
+});
 
 function report(overrides: Partial<LedgerReport> = {}): LedgerReport {
   return {
@@ -58,6 +64,9 @@ async function readLedger(): Promise<WebSyncLedger> {
 
 describe('device sync ledger', () => {
   it('stores a device report and reads attention oldest first with every evidence field', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(FROZEN_NOW);
+
     const body = report({
       reportedAt: '2026-09-20T10:00:00.000Z',
       lastSyncAt: '2026-09-20T09:59:00.000Z',
@@ -130,6 +139,91 @@ describe('device sync ledger', () => {
     expect(actual.attentionCount).toBe(2);
   });
 
+  it('round-trips optional repair targets, ids and resolved item ids', async () => {
+    const body = report({
+      attention: [
+        {
+          id: 'identified-case',
+          kind: 'placement',
+          itemId: 'item-1',
+          itemName: 'Lamp',
+          openedAt: '2026-09-20T10:00:00.000Z',
+          problem: 'The placement changed in two places.',
+          typeId: 'type-1',
+          mine: {
+            value: 'Office 04',
+            source: 'phone',
+            at: '2026-09-20T09:00:00.000Z',
+            target: { kind: 'location', locationId: 'location-1' },
+          },
+          held: {
+            title: 'Held fields',
+            values: [
+              {
+                field: 'Colour',
+                value: 'blue',
+                fit: 'fits',
+                fieldId: 'field-1',
+                values: ['blue'],
+              },
+            ],
+          },
+        },
+      ],
+      resolved: [
+        {
+          id: 'resolved-case',
+          itemName: 'Cable',
+          outcome: 'settled',
+          at: '2026-09-20T08:00:00.000Z',
+          itemId: 'item-2',
+        },
+      ],
+    });
+
+    expect((await postLedger(body)).body).toEqual({ stored: true });
+    const actual = await readLedger();
+    expect(actual.attention[0]).toMatchObject({ ...body.attention[0], deviceId: 'phone-1' });
+    expect(actual.resolved).toEqual([{ ...body.resolved[0], deviceId: 'phone-1' }]);
+  });
+
+  it('round-trips replacement and stale-reference ids, including unknown kinds', async () => {
+    const body = report({
+      attention: [
+        {
+          id: 'catalogue-case',
+          kind: 'type-replaced',
+          itemId: 'item-1',
+          itemName: 'Router',
+          openedAt: '2026-09-20T10:00:00.000Z',
+          problem: 'The type was replaced.',
+          held: {
+            title: 'Held fields',
+            values: [
+              {
+                field: 'Type',
+                value: 'Network',
+                fit: 'replaced',
+                replacementTypeId: 'type-router',
+              },
+              {
+                field: 'Reference',
+                value: 'Desk lamp',
+                fit: 'record-gone',
+                recordId: 'item-lamp',
+                recordKind: 'future-record-kind',
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect((await postLedger(body)).body).toEqual({ stored: true });
+    const actual = await readLedger();
+    expect(actual.attention[0]?.held?.values).toEqual(body.attention[0]?.held?.values);
+  });
+
   it('replaces the latest report and ignores an older report', async () => {
     const first = report({
       reportedAt: '2026-09-20T10:00:00.000Z',
@@ -160,6 +254,7 @@ describe('device sync ledger', () => {
 
     expect((await postLedger(first)).body).toEqual({ stored: true });
     const afterFirst = await readLedger();
+    vi.setSystemTime(new Date('2026-09-26T12:01:00.000Z'));
     expect((await postLedger(second)).body).toEqual({ stored: true });
     const afterSecond = await readLedger();
     expect(afterSecond.attention.map((entry) => entry.id)).toEqual(['second']);
@@ -247,6 +342,9 @@ describe('device sync ledger', () => {
   });
 
   it('keeps recent resolved entries and removes entries older than seven days', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(FROZEN_NOW);
+
     const now = Date.now();
     const body = report({
       reportedAt: new Date(now).toISOString(),

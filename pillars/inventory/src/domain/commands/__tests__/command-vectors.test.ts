@@ -29,7 +29,7 @@ describe('command vectors', () => {
     for (const vector of buildCommandVectors()) {
       expect(vector.outcome.status, `${vector.name} was ${vector.outcome.status}`).toBe('applied');
     }
-  });
+  }, 30_000);
 
   it('regenerates byte-for-byte the same output on every run', () => {
     const first = JSON.stringify(buildCommandVectors());

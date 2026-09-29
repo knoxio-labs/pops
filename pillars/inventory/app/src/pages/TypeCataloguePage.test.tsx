@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PAGE_HEIGHT } from '../foundation/frame/page-frame';
 import { InventoryApiError } from '../inventory-api-helpers';
-
-import type { ReactNode } from 'react';
 
 import type { TypesReadCatalogueResponses } from '../inventory-api/types.gen';
 
@@ -41,6 +41,13 @@ type Catalogue = TypesReadCatalogueResponses[200];
 
 const TYPE_ID = '11111111-1111-4111-8111-111111111111';
 const FIELD_ID = '22222222-2222-4222-8222-222222222222';
+const ROUTER_TYPE_ID = '33333333-3333-4333-8333-333333333333';
+const ROUTER_DEFAULT_TYPE_ID = '44444444-4444-4444-8444-444444444444';
+const TYPE_A_ID = '55555555-5555-4555-8555-555555555555';
+const TYPE_B_ID = '66666666-6666-4666-8666-666666666666';
+const TYPE_C_ID = '77777777-7777-4777-8777-777777777777';
+const TYPE_A_FIELD_ID = '88888888-8888-4888-8888-888888888888';
+const TYPE_B_FIELD_ID = '99999999-9999-4999-8999-999999999999';
 
 const published: Catalogue = {
   revision: {
@@ -94,6 +101,7 @@ const published: Catalogue = {
       key: 'electronics',
       label: 'Electronics',
       legacyLabels: [],
+      parentTypeId: null,
       presentation: {},
       replacedBy: null,
       revision: 1,
@@ -116,15 +124,83 @@ function draft(types: Catalogue['types'] = published.types, draftVersion = 1): C
   };
 }
 
-function Wrapper({ children }: { children: ReactNode }) {
+function routeType(
+  id: string,
+  key: string,
+  label: string,
+  sortOrder: number,
+  fields: Catalogue['types'][number]['fields'] = []
+): Catalogue['types'][number] {
+  return { ...published.types[0]!, fields, id, key, label, sortOrder };
+}
+
+function routeField(
+  typeId: string,
+  id: string,
+  label: string
+): Catalogue['types'][number]['fields'][number] {
+  return { ...published.types[0]!.fields[0]!, id, label, typeId };
+}
+
+const routerCatalogue: Catalogue = {
+  ...published,
+  types: [
+    routeType(ROUTER_TYPE_ID, 'router', 'Router', 0),
+    routeType(ROUTER_DEFAULT_TYPE_ID, 'default', 'Default', 1),
+  ],
+};
+
+const navigationCatalogue: Catalogue = {
+  ...published,
+  types: [
+    routeType(TYPE_A_ID, 'type_a', 'Type A', 0, [
+      routeField(TYPE_A_ID, TYPE_A_FIELD_ID, 'A field'),
+    ]),
+    routeType(TYPE_B_ID, 'type_b', 'Type B', 1, [
+      routeField(TYPE_B_ID, TYPE_B_FIELD_ID, 'B field'),
+    ]),
+    routeType(TYPE_C_ID, 'type_c', 'Type C', 2),
+  ],
+};
+
+function CatalogueRoute({ navigateTo }: { readonly navigateTo?: string }) {
+  return (
+    <>
+      <TypeCataloguePage />
+      <CurrentPath />
+      {navigateTo === undefined ? null : <NavigationButton to={navigateTo} />}
+    </>
+  );
+}
+
+function CurrentPath() {
+  const location = useLocation();
+  return <output data-testid="current-path">{location.pathname}</output>;
+}
+
+function NavigationButton({ to }: { readonly to: string }) {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(to)}>
+      Navigate to requested type
+    </button>
+  );
+}
+
+function renderPage(initialEntry = '/inventory/types', navigateTo?: string) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-}
-
-function renderPage() {
-  return render(<TypeCataloguePage />, { wrapper: Wrapper });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <Routes>
+          <Route path="/inventory/types" element={<CatalogueRoute navigateTo={navigateTo} />} />
+          <Route path="/inventory/types/:id" element={<CatalogueRoute navigateTo={navigateTo} />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 const compatibleResult = {
@@ -165,6 +241,68 @@ beforeEach(() => {
 });
 
 describe('TypeCataloguePage', () => {
+  it('bounds the loading state to the shared page frame', async () => {
+    const catalogueResponse: { data: Catalogue; error: undefined } = {
+      data: published,
+      error: undefined,
+    };
+    let resolveCatalogue = (_value: typeof catalogueResponse): void => undefined;
+    const pendingCatalogue = new Promise<typeof catalogueResponse>((resolve) => {
+      resolveCatalogue = resolve;
+    });
+    api.readCatalogue.mockReturnValue(pendingCatalogue);
+    renderPage();
+
+    expect(screen.getByText('Loading type catalogue…')).toHaveClass(
+      'min-h-0',
+      'overflow-hidden',
+      PAGE_HEIGHT
+    );
+
+    await act(async () => {
+      resolveCatalogue(catalogueResponse);
+    });
+  });
+
+  it('contains desktop editor scrolling within its fixed frame', async () => {
+    renderPage();
+
+    await screen.findAllByText('Electronics');
+
+    const card = document.querySelector<HTMLElement>('[data-slot="card"]');
+    if (card === null) throw new Error('Expected the catalogue editor card');
+    const page = card.parentElement?.parentElement;
+    if (page === null || page === undefined) throw new Error('Expected the catalogue page frame');
+    expect(page).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
+    expect(card).toHaveClass('lg:col-span-3', 'lg:flex', 'lg:flex-col');
+    expect(card).toHaveClass('min-h-0', 'min-w-0');
+
+    const cardContent = card.querySelector<HTMLElement>('[data-slot="card-content"]');
+    if (cardContent === null) throw new Error('Expected the catalogue editor content');
+    expect(cardContent).toHaveClass(
+      'lg:flex',
+      'lg:min-h-0',
+      'lg:flex-1',
+      'lg:flex-col',
+      'lg:overflow-hidden'
+    );
+    expect(cardContent.children[1]).toHaveClass('lg:min-h-0', 'lg:flex-1', 'lg:overflow-y-auto');
+    expect(card.parentElement).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-y-auto',
+      'lg:grid-rows-1',
+      'lg:overflow-hidden'
+    );
+
+    const typeColumn = screen
+      .getByRole('heading', { name: 'Item types' })
+      .closest('section')?.parentElement;
+    if (typeColumn === null || typeColumn === undefined)
+      throw new Error('Expected the type navigation column');
+    expect(typeColumn).toHaveClass('lg:h-full', 'lg:min-h-0', 'lg:overflow-y-auto');
+  });
+
   it('renders the persisted catalogue and its fields', async () => {
     renderPage();
 
@@ -172,6 +310,79 @@ describe('TypeCataloguePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue to fields' }));
     expect(screen.getByText('Manufacturer')).toBeInTheDocument();
     expect(screen.getByDisplayValue('manufacturer')).toBeDisabled();
+  });
+
+  it('opens on the type named in the URL', async () => {
+    api.readCatalogue.mockResolvedValue({ data: routerCatalogue, error: undefined });
+    renderPage(`/inventory/types/${ROUTER_TYPE_ID}`);
+
+    expect(await screen.findByRole('button', { name: /Router/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  it('an unknown type id falls back to the default type', async () => {
+    api.readCatalogue.mockResolvedValue({ data: routerCatalogue, error: undefined });
+    renderPage('/inventory/types/unknown');
+
+    expect(await screen.findByRole('button', { name: /Router/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  it('navigating from /inventory/types/A to /inventory/types/B selects B', async () => {
+    api.readCatalogue.mockResolvedValue({ data: navigationCatalogue, error: undefined });
+    renderPage(`/inventory/types/${TYPE_A_ID}`, `/inventory/types/${TYPE_B_ID}`);
+
+    expect(await screen.findByRole('button', { name: /Type A/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Type C/ }));
+    expect(screen.getByRole('button', { name: /Type C/ })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to requested type' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Type B/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    );
+    expect(screen.getByRole('button', { name: /Type A/ })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: /Type C/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('updates the type route when selecting a type from the catalogue', async () => {
+    api.readCatalogue.mockResolvedValue({ data: navigationCatalogue, error: undefined });
+    renderPage('/inventory/types');
+
+    await screen.findByRole('button', { name: /Type A/ });
+    fireEvent.click(screen.getByRole('button', { name: /Type B/ }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('current-path')).toHaveTextContent(`/inventory/types/${TYPE_B_ID}`)
+    );
+  });
+
+  it('resets the editor state when navigating from type A to type B', async () => {
+    api.readCatalogue.mockResolvedValue({ data: navigationCatalogue, error: undefined });
+    renderPage(`/inventory/types/${TYPE_A_ID}`, `/inventory/types/${TYPE_B_ID}`);
+
+    expect(await screen.findByRole('button', { name: /Type A/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to fields' }));
+    expect(await screen.findByDisplayValue('A field')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to requested type' }));
+
+    await waitFor(() => expect(screen.getByDisplayValue('Type B')).toBeInTheDocument());
+    expect(screen.queryByText('Choose a field')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Type B/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('creates the draft before applying the first edit', async () => {
@@ -222,6 +433,67 @@ describe('TypeCataloguePage', () => {
     );
     expect((await screen.findAllByText('musical_instruments')).length).toBeGreaterThan(0);
     expect(screen.getByRole('region', { name: 'Dry-run validation' })).toBeInTheDocument();
+  });
+
+  it('uses the minted parent id for a child in the next draft patch', async () => {
+    const parentType: Catalogue['types'][number] = {
+      ...published.types[0]!,
+      fields: [],
+      id: '33333333-3333-4333-8333-333333333333',
+      key: 'bedding',
+      label: 'Bedding',
+      parentTypeId: null,
+      revision: 2,
+      sortOrder: 1,
+    };
+    const childType: Catalogue['types'][number] = {
+      ...parentType,
+      id: '44444444-4444-4444-8444-444444444444',
+      key: 'sheets',
+      label: 'Sheets',
+      parentTypeId: parentType.id,
+      revision: 2,
+      sortOrder: 2,
+    };
+    api.patchDraft
+      .mockResolvedValueOnce({
+        data: {
+          compatibility: compatibleResult,
+          draft: draft([...published.types, parentType], 2),
+        },
+        error: undefined,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          compatibility: compatibleResult,
+          draft: draft([...published.types, parentType, childType], 3),
+        },
+        error: undefined,
+      });
+    renderPage();
+
+    await screen.findAllByText('Electronics');
+    fireEvent.click(screen.getByRole('button', { name: 'New type' }));
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Bedding' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create type' }));
+    await waitFor(() => expect(api.patchDraft).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'New type' }));
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Sheets' } });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Parent' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Bedding' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create type' }));
+
+    await waitFor(() => expect(api.patchDraft).toHaveBeenCalledTimes(2));
+    expect(api.patchDraft).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        body: expect.objectContaining({
+          operations: [expect.objectContaining({ kind: 'put_type', parentTypeId: parentType.id })],
+        }),
+        path: { revision: 2 },
+      })
+    );
   });
 
   it('resumes an existing draft without creating another one', async () => {
@@ -321,6 +593,11 @@ describe('TypeCataloguePage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reload' }));
 
     expect(await screen.findByText('Failed to load the type catalogue.')).toBeInTheDocument();
+    const errorHeader = screen.getByRole('heading', { name: 'Type catalogue' });
+    const errorPage = errorHeader.closest('header')?.parentElement;
+    if (errorPage === null || errorPage === undefined)
+      throw new Error('Expected the catalogue error frame');
+    expect(errorPage).toHaveClass('min-h-0', 'overflow-hidden', PAGE_HEIGHT);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByDisplayValue('Recovered after retry')).toBeInTheDocument();

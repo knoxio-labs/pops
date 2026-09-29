@@ -50,6 +50,8 @@ interface UseSearchKeyboardNavOptions {
   containerRef: RefObject<HTMLElement | null>;
   /** Data attribute used to identify result items for scroll-into-view. Default: "data-result-index". */
   itemAttribute?: string;
+  /** Default true. When false, no key handler is attached and selection stays at -1. */
+  enabled?: boolean;
 }
 
 export function useSearchKeyboardNav({
@@ -58,6 +60,7 @@ export function useSearchKeyboardNav({
   onClose,
   containerRef,
   itemAttribute = 'data-result-index',
+  enabled = true,
 }: UseSearchKeyboardNavOptions) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
@@ -68,6 +71,8 @@ export function useSearchKeyboardNav({
     setPrevResultCount(resultCount);
     setSelectedIndex(-1);
   }
+
+  if (!enabled && selectedIndex !== -1) setSelectedIndex(-1);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -98,6 +103,7 @@ export function useSearchKeyboardNav({
 
   // Attach keyboard listener to container
   useEffect(() => {
+    if (!enabled) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -105,7 +111,7 @@ export function useSearchKeyboardNav({
     return () => {
       container.removeEventListener('keydown', handleKeyDown);
     };
-  }, [containerRef, handleKeyDown]);
+  }, [containerRef, enabled, handleKeyDown]);
 
-  return { selectedIndex, setSelectedIndex } as const;
+  return { selectedIndex: enabled ? selectedIndex : -1, setSelectedIndex } as const;
 }

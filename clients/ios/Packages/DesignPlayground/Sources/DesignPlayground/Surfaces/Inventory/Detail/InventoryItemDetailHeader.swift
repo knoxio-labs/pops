@@ -11,10 +11,9 @@ internal enum InventoryItemDetailPrimaryAction {
     /// then the placement verbs, in the order a person would reach for them.
     private static let priority = ["restore", "put-back", "pick-up", "move"]
 
-    /// The ids a capability contributes to the action row, in ADR-001's
-    /// order. Everything else an item can do is in the More menu: the row is
-    /// what the thing in front of you is for, not a list of its verbs.
-    private static let capabilityRow = ["reopen", "close", "put-in"]
+    /// The ids that stay in the action row after placement, in ADR-001's
+    /// order. Everything else an item can do is in the More menu.
+    private static let capabilityRow = ["reopen", "close", "put-in", "edit"]
 
     internal static func choose(
         for item: InventoryFoundationItem,
@@ -37,6 +36,25 @@ internal enum InventoryItemDetailPrimaryAction {
         let placement = actions.filter { priority.contains($0.id) && $0.id != first.id }
         let capability = capabilityRow.compactMap { id in actions.first { $0.id == id } }
         return [first] + placement + capability
+    }
+}
+
+/// Builds the visible action row for item detail, adding Edit to specialized
+/// rows such as a container's without changing their domain-specific order.
+internal enum InventoryItemDetailActionRowModel {
+    internal static func row(
+        for item: InventoryFoundationItem,
+        style: InventoryFoundationStyle,
+        actions: [InventoryAction]?
+    ) -> [InventoryAction] {
+        let row = actions ?? InventoryItemDetailPrimaryAction.row(for: item, style: style)
+        guard actions != nil,
+            !row.contains(where: { $0.id == "edit" }),
+            let edit = InventoryAction.available(for: item, style: style).first(where: {
+                $0.id == "edit"
+            })
+        else { return row }
+        return row + [edit]
     }
 }
 
@@ -78,11 +96,14 @@ internal struct InventoryItemDetailHeader: View {
                 .strikethrough(detail.item.lifecycle == .destroyed)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            Text(
+                InventoryFormType.detailSubtitle(
+                    typeName: detail.item.typeName, quantity: detail.item.quantity.count)
+            )
+            .font(.popsSubheadline)
+            .foregroundStyle(Color.popsMutedForeground)
+            .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: PopsSpacing.sm) {
-                Text(detail.subtitle)
-                    .font(.popsSubheadline)
-                    .foregroundStyle(Color.popsMutedForeground)
-                    .lineLimit(1)
                 if let code = detail.item.code {
                     InventoryCodeBadge(code: code)
                 }

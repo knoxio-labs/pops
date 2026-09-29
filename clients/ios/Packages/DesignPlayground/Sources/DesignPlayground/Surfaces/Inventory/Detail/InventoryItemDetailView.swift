@@ -10,11 +10,12 @@ import SwiftUI
 /// compact grouped rows that follow it up the screen.
 ///
 /// A capability's own section arrives through `capability`, and its verbs
-/// through `actions` and `onAction`; without them the page is exactly the
-/// plain item page.
+/// through `actions`, `moreActions` and `onAction`; without them the page is
+/// exactly the plain item page.
 internal struct InventoryItemDetailView<Capability: View>: View {
     internal let detail: InventoryItemDetail
     private let actions: [InventoryAction]?
+    private let moreActions: [InventoryAction]
     private let onAction: (InventoryAction) -> Void
     private let capability: Capability
     private let lingers: Bool
@@ -23,16 +24,19 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     @State private var offer: InventoryUndoOffer?
     @State private var destroying: Bool
     @State private var quantitySheet: InventoryLifecycleSheet?
+    @Environment(\.inventoryStyle) private var style
 
     internal init(
         detail: InventoryItemDetail,
         actions: [InventoryAction]? = nil,
+        moreActions: [InventoryAction] = [],
         onAction: @escaping (InventoryAction) -> Void = { _ in },
         stage: InventoryItemDetailStage = InventoryItemDetailStage(),
         @ViewBuilder capability: () -> Capability
     ) {
         self.detail = detail
         self.actions = actions
+        self.moreActions = moreActions
         self.onAction = onAction
         self.capability = capability()
         var record = InventoryLifecycleRecord(item: detail.item, change: detail.lifecycleChange)
@@ -59,7 +63,10 @@ internal struct InventoryItemDetailView<Capability: View>: View {
                 InventoryItemDetailFacts(detail: shown)
                 InventoryItemDetailLifecycleNotice(detail: shown)
                 InventoryItemDetailActionRow(
-                    detail: shown, actions: actions, onAction: act)
+                    detail: shown,
+                    actions: InventoryItemDetailActionRowModel.row(
+                        for: shown.item, style: style, actions: actions),
+                    onAction: handleAction)
                 sections(shown)
             }
             .inventoryMotion(value: record)
@@ -72,7 +79,8 @@ internal struct InventoryItemDetailView<Capability: View>: View {
         .playgroundTitleDisplay(large: false)
         .toolbar {
             InventoryItemDetailToolbar(
-                detail: shown, editing: $editing, destroying: $destroying, perform: perform
+                detail: shown, destroying: $destroying,
+                moreActions: moreActions, onAction: handleAction, perform: perform
             ) {
                 record.destroy()
                 offer = nil
@@ -99,6 +107,14 @@ internal struct InventoryItemDetailView<Capability: View>: View {
         .inventoryUndoCapsule($offer, lingers: lingers) { record.undo($0) }
     }
 
+    private func handleAction(_ action: InventoryAction) {
+        if action.id == "edit" {
+            editing = true
+        } else {
+            act(action)
+        }
+    }
+
     private func act(_ action: InventoryAction) {
         if action.id == "restore" {
             perform(.restore)
@@ -118,7 +134,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     }
 
     private func sections(_ shown: InventoryItemDetail) -> some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+        VStack(alignment: .leading, spacing: PopsSpacing.xl) {
             InventoryItemDetailSyncBanner(detail: shown)
             InventoryItemDetailConnectionsSection(connections: shown.connections)
             InventoryItemDetailContentsSection(summary: shown.containerSummary)

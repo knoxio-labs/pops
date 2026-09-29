@@ -22,6 +22,7 @@ import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
 import { createPillarErrorHandlers } from '@pops/pillar-express';
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import {
   MOBILE_INVENTORY_MEDIA_MAX_BYTES,
@@ -36,7 +37,9 @@ import { createReceiptRateLimit, type ReceiptRateLimitOptions } from './auth/rec
 import { createRefreshRateLimit, type RefreshRateLimitOptions } from './auth/refresh-rate-limit.js';
 import { createRequireCapability } from './auth/require-capability.js';
 import { createRequireDevice } from './auth/require-device.js';
+import { createMobileBarcodeAttemptLogger } from './barcode/request-log.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
+import { createPairingServiceAccountMiddleware } from './middleware/service-account-pairing.js';
 import { createMobileNoStore } from './mobile-no-store.js';
 import {
   CHALLENGE_PATH,
@@ -53,6 +56,8 @@ import { createInventoryProtocolErrorHandler } from './rest/inventory-protocol-e
 import { createJsonBodyErrorHandler } from './rest/json-body-error.js';
 import { createPayloadTooLargeErrorHandler } from './rest/payload-too-large.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
+
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 /**
  * The committed OpenAPI projection, served verbatim at `GET /openapi` so the
@@ -103,6 +108,8 @@ export interface CreateBfmApiAppOptions {
    * refused" cases could not be written at all.
    */
   env?: NodeJS.ProcessEnv;
+  /** Registry-backed verifier for the pairing route's service-account gate. */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOptions = {}): Express {
@@ -110,6 +117,10 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   const errors = createPillarErrorHandlers({ pillar: 'bfm' });
   app.disable('x-powered-by');
   app.use(errors.requestId);
+  app.use(
+    bfmContract.mobileBarcode.lookup.path,
+    createMobileBarcodeAttemptLogger(deps.barcodeLogger)
+  );
 
   // FIRST, ahead of everything, including the guard.
   //
@@ -217,6 +228,15 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  // Only the pairing-code route is in this gate's contract. It runs before the
+  // human identity resolver so a verified machine principal can reach the
+  // pairing handler without becoming an operator for any other route.
+  app.use(
+    createPairingServiceAccountMiddleware(
+      options.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
 
   // The OPERATOR principal, a different axis from the `/mobile` guard above:
   // that one authenticates a phone, this one authenticates a human through

@@ -114,7 +114,7 @@ public struct InventorySearchFilter: Equatable, Sendable {
         (includesInactive || record.isActive)
             && matchesPlacement(record.placement)
             && matchesContainer(record.access)
-            && (type == nil || record.typeKey == type?.key)
+            && (type.map { record.typeKeys.contains($0.key) } ?? true)
             && (quantity == .any || record.quantity.count > 1)
             && matchesMissing(record)
             && matchesSync(record.sync)
@@ -138,7 +138,7 @@ public struct InventorySearchFilter: Equatable, Sendable {
     private func matchesMissing(_ record: InventoryRecord) -> Bool {
         switch missing {
         case .nothing: true
-        case .type: record.typeKey == nil
+        case .type: record.typeKeys.isEmpty
         case .code: record.code == nil
         case .photo: record.photo == nil
         }

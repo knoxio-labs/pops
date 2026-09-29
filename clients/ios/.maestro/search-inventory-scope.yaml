@@ -30,15 +30,14 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-# Download, from the Inventory tab itself — the universal search screen never
-# offers its own download step ahead of this, only the Download action inside
-# its Inventory section once a query is asked. `inventory-smoke.yaml` covers
-# that empty-replica screen; this flow does not repeat it.
+# Pairing starts the first download on its own. Wait for the normal dashboard
+# before creating the records that Search will query; `inventory-smoke.yaml`
+# covers the same automatic initial-sync boundary.
 - tapOn: 'Inventory'
-- assertVisible: 'Set up inventory on this phone'
-- tapOn: 'Start synchronization'
-- tapOn: 'Download'
-- assertVisible: 'Synced'
+- extendedWaitUntil:
+    visible: 'Items, \d+'
+    timeout: 60000
+- assertVisible: 'Locations, \d+'
 
 # Two items and a place, all named from this run's own suffix. One item's
 # name STARTS with the suffix, so typing it later is a name-prefix match; the
@@ -147,6 +146,12 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - tapOn:
     text: 'Move'
     index: 0
+- scrollUntilVisible:
+    element: 'History'
+    direction: DOWN
+- assertVisible: 'Show'
+- tapOn: 'History'
+- assertVisible: 'Hide'
 - assertVisible: 'Moved, Today'
 - tapOn:
     id: 'BackButton'

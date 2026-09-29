@@ -118,6 +118,43 @@ internal struct InventoryRepairListRow: View {
     }
 }
 
+/// A server-side item issue: what failed, why it matters, and whether retry
+/// is still an available action.
+internal struct InventorySyncIssueRow: View {
+    internal let issue: InventorySyncIssue
+
+    internal var body: some View {
+        InventorySyncRowLabel(
+            recordID: issue.recordID, symbol: .item, title: issue.title
+        ) {
+            Label {
+                Text(issue.problem)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                InventorySymbol.attention.image
+                    .foregroundStyle(Color.popsDestructive)
+            }
+            .font(.popsCaption)
+            .labelStyle(InventorySyncCaptionLabelStyle())
+        } trailing: {
+            if issue.retryable {
+                Button("Retry") {}
+                    .font(.popsCaption.weight(.semibold))
+                    .foregroundStyle(Color.popsInventory)
+                    .frame(minHeight: PopsSize.touchTarget)
+            } else {
+                InventorySymbol.attention.image
+                    .font(.popsHeadline)
+                    .foregroundStyle(Color.popsDestructive)
+                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+                    .accessibilityLabel("Needs attention")
+            }
+        }
+        .accessibilityHint(issue.retryable ? "Retries this item" : "Contact support")
+    }
+}
+
 /// A repair that was settled, and what it settled on.
 internal struct InventoryResolvedRow: View {
     internal let entry: InventoryResolvedEntry

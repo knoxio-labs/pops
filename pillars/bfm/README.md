@@ -24,25 +24,38 @@ It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface                                | What it does                                                                                      |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.                |
-| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.                    |
-| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.                       |
-| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.                     |
-| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.                        |
-| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.                  |
-| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.                           |
-| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.                |
-| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.                         |
-| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).               |
-| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                          |
-| `GET /mobile/barcode/lookup/:code`     | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes. |
-| `GET /mobile/purchases`                | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape).      |
-| `GET /mobile/purchases/search`         | Purchase and line matches, including the owning order context for each line.                      |
-| `GET /mobile/purchases/:id`            | One order with its lines and Inventory-link flags, for the detail screen.                         |
-| `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).              |
-| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.                |
+| Surface                                | What it does                                                                                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.                                                               |
+| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.                                                                   |
+| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.                                                                      |
+| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.                                                                    |
+| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.                                                                       |
+| `POST /operator/pairing/codes`         | Mints a single-use pairing code for a human operator or the exact registry-backed MCP scope. The plaintext is returned once and never again.     |
+| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.                                                                          |
+| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.                                                               |
+| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.                                                                        |
+| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
+| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                                                                         |
+| `GET /mobile/barcode/lookup/:code`     | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes, with optional ADR-054 detail on `unavailable`. |
+| `GET /mobile/purchases`                | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape).                                                     |
+| `GET /mobile/purchases/search`         | Purchase and line matches, including the owning order context for each line.                                                                     |
+| `GET /mobile/purchases/:id`            | One order with its lines and Inventory-link flags, for the detail screen.                                                                        |
+| `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).                                                             |
+| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.                                                               |
+
+The barcode relay preserves an ADR-054 envelope supplied by the barcode
+pillar. The mobile caller opts into additive diagnostic fields with
+`X-Pops-Barcode-Diagnostics: 1`; without that header BFM returns the exact
+legacy `not_found` and `unavailable` objects for installed clients whose
+generated decoders reject unknown properties. For older barcode deployments
+that return a bare `unavailable`, BFM adds a retryable gateway envelope before
+applying that compatibility projection. Downstream 401 and 403 responses mean
+BFM's service account is absent or under-scoped, so they become
+`bfm.upstream.misconfigured`; they do not describe the phone's authentication.
+Structured relay events carry the BFM request ID, duration, outcome, safe
+failure class, retryability, and the upstream request ID when it differs. The
+scanned code and all credentials are excluded.
 
 Inventory mutations retain the phone's `catalogueRevision` while BFM relays
 them to the inventory pillar. The revision is the immutable schema against
@@ -207,15 +220,20 @@ refuse `/operator/*` wholesale at the edge (POPS-1389), which it could not do if
 the operator device list and the public `POST /devices/pair` both sat under
 `/devices`.
 
-`src/api/middleware/identity.ts` resolves the principal and deliberately drops
-two legs of the registry's otherwise-identical chain. Both omissions are
-load-bearing and the file states why at length; in short:
+`src/api/middleware/identity.ts` resolves the human principal and deliberately
+does not make it a global machine principal. The pairing route has a separate,
+route-specific registry-backed service-account gate; the file states why the
+split is load-bearing. In short:
 
-- **No service-account leg.** bfm holds no `service_accounts` table and the
-  registry exposes no endpoint to verify a presented key, so there is nothing an
-  `x-api-key` could be checked against. Machine callers have no business minting
-  pairing codes anyway — the account bfm holds is for its _outbound_ calls.
-  POPS-1473 tracks the registry-side verify endpoint if that changes.
+- **Pairing issuance has one service-account leg.** The route accepts a
+  registry-verified key only when its exact `bfm.operator.issuePairingCode`
+  scope is present. The MCP gateway uses that grant to obtain a code for an
+  iOS simulator; it cannot list devices or revoke them. The BFM account used
+  for outbound sibling calls is a different direction and a different
+  credential.
+- **The remaining operator routes stay human-only.** Device listing and
+  revocation continue to require the Cloudflare Access operator principal,
+  even when the caller presents a valid service-account key.
 - **No "trust the tunnel" fallback.** The registry reads a missing
   `CLOUDFLARE_ACCESS_TEAM_NAME` as "we are only reachable through a protected
   tunnel". On a hostname that bypasses Access, that would resolve every caller
@@ -531,8 +549,7 @@ while its predecessor still names it.
 `app/` is the `@pops/app-bfm` frontend module — the operator's device surface,
 mounted by the shell at `/bfm` and labelled **Devices** on the app rail. It
 lives in the shell rather than on the phone because the shell already sits
-behind Cloudflare Access, which is what makes "only the operator can mint a
-pairing code" true. See [`app/README.md`](./app/README.md).
+behind Cloudflare Access. See [`app/README.md`](./app/README.md).
 
 That app is why `src/contract/manifest.ts` now exports a runtime
 `ModuleManifest` alongside the contract type: `libs/module-registry` discovers
@@ -546,11 +563,13 @@ registration is a separate mechanism and still goes through the
 ## What deliberately does not live here
 
 - **Destructive and administrative operations.** Deleting a record, revoking a
-  device, minting a pairing code, editing a service account: those stay on the
-  operator surface behind Cloudflare Access, because the recovery from a
-  mis-tap there is a restore rather than another edit, and because the blast
-  radius is the fleet rather than one record. Everything else is admissible one
-  capability at a time —
+  device and editing a service account stay on the human operator surface
+  behind Cloudflare Access, because the recovery from a mis-tap there is a
+  restore rather than another edit, and because the blast radius is the fleet
+  rather than one record. Pairing-code issuance is the deliberate exception:
+  the same route also admits the exact registry-backed MCP scope and returns
+  only the one-time code metadata. Everything else is admissible one capability
+  at a time —
   [ADR-048](../../docs/architecture/adr-048-mobile-capability-scopes.md), with
   the vocabulary in `src/contract/capabilities.ts` and
   `src/contract/__tests__/mobile-capabilities.test.ts` enforcing that no mobile
@@ -599,7 +618,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","purchases.purchase","purchases.receipt","barcode.lookup"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types","inventory.codes","inventory.media","barcode.lookup"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on
@@ -617,9 +636,11 @@ never again. Write it into the secret file the deployment mounts —
 `pops_bfm_api_key`, shape and first-run steps in
 [`infra/secrets.example/bfm/`](../../infra/secrets.example/bfm/README.md) — and
 point `POPS_INTERNAL_API_KEY_FILE` at it. bfm gets its own account rather than
-sharing `pops_api_key` with moltbot and the MCP gateway, so revoking one
-consumer does not take the others down and `last_used_at` attributes traffic to
-a single process.
+sharing credentials with Moltbot or the MCP gateway, so revoking one consumer
+does not take the others down and `last_used_at` attributes traffic to a single
+process. The MCP gateway's separate key is provisioned with only
+`bfm.operator.issuePairingCode`; see
+[`infra/secrets.example/mcp/`](../../infra/secrets.example/mcp/README.md).
 
 Rotate by minting a replacement, swapping the file, restarting, verifying the
 replacement account has the complete scope list above and that bfm can reach
@@ -736,16 +757,21 @@ Both files pin something the iOS app and this pillar must agree on byte for
 byte, both exist twice, and both are guarded against drift. What differs is who
 authors them, because that follows who can say what the right answer is.
 
-| File                       | Pins                                            | Canonical copy                                                          | This copy |
-| -------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------- | --------- |
-| `device-signature-v1.json` | the ECDSA P-256 encodings the phone signs under | `clients/ios/Contracts/` — only CryptoKit can make a real signature     | vendored  |
-| `refresh-message-v1.json`  | the exact bytes a refresh is signed over        | here — the format is this pillar's, and this pillar rejects a wrong one | canonical |
-| `value-vectors-v1.json`    | every protocol-2 value, relayed unchanged       | `pillars/inventory/contracts/` — its command engine writes the values   | vendored  |
+| File                       | Pins                                                                            | Canonical copy                                                          | This copy |
+| -------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------- |
+| `device-signature-v1.json` | the ECDSA P-256 encodings the phone signs under                                 | `clients/ios/Contracts/` — only CryptoKit can make a real signature     | vendored  |
+| `refresh-message-v1.json`  | the exact bytes a refresh is signed over                                        | here — the format is this pillar's, and this pillar rejects a wrong one | canonical |
+| `value-vectors-v1.json`    | protocol-3 parent/child catalogue and every protocol-2 value, relayed unchanged | `pillars/inventory/contracts/` — its command engine writes the values   | vendored  |
 
 The vendoring in each direction is the shape ADR-033 established for a contract
 crossing a unit boundary, applied because ADR-043 forbids a unit depending on a
 client. Nothing in this pillar reads a path under `clients/`, and nothing in
 `clients/ios` reads a path under `pillars/`.
+
+The fixture's child inherits a required `short_text` field from its parent. Its
+`missing_required_field` vector is the real engine's `item.create` rejection,
+with `producerRejection: "invalid"`; iOS rejects it before sending and drains
+the positive child create unchanged.
 
 Each pair must stay byte-identical, and its guard fails the build if it does not
 — in either direction, and whether the difference is a value or only whitespace.

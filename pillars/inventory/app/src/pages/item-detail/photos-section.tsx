@@ -1,59 +1,71 @@
 import { Camera } from 'lucide-react';
 
-import { Skeleton } from '@pops/ui';
+import { EmptyState, ImageGallery } from '@pops/ui';
 
-import { PhotoGallery } from '../../components/PhotoGallery';
-import { SortablePhotoGrid } from '../../components/SortablePhotoGrid';
+import { PaneLabel } from '../../foundation/item-page/section-parts';
+import { PhotoAddDialog } from '../../foundation/photos/photo-add-dialog';
 
-import type { DetailPhoto } from '../../foundation/item-page';
+import type { ReactElement } from 'react';
 
-/** The photos block used at the top of the facts rail. */
+import type { DetailPhoto } from './detail-model';
+
+/** Props for the item-detail photo section. */
+export interface PhotosSectionProps {
+  readonly itemId: string;
+  readonly itemName: string;
+  readonly photos: readonly DetailPhoto[];
+  readonly disabledReason?: string;
+}
+
+/** Renders the item-detail gallery and its add-photo action. */
 export function PhotosSection({
+  itemId,
+  itemName,
   photos,
-  isLoading,
-  isReordering,
-  readOnly,
-  onReorder,
-}: {
-  photos: readonly DetailPhoto[];
-  isLoading: boolean;
-  isReordering: boolean;
-  readOnly: boolean;
-  onReorder: (orderedIds: number[]) => void;
-}) {
-  if (isLoading) {
-    return (
-      <section aria-label="Photos" className="flex shrink-0 flex-col gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
+  disabledReason,
+}: PhotosSectionProps): ReactElement {
+  const items = photos.map((photo, index) => ({
+    id: photo.id,
+    src: photo.url,
+    caption: photo.caption ?? undefined,
+    alt: photo.caption ?? `${itemName} photo ${index + 1}`,
+  }));
+  return (
+    <section
+      aria-label="Photos"
+      className="flex w-full shrink-0 flex-col gap-3"
+      data-item-id={itemId}
+      title={disabledReason}
+    >
+      <PaneLabel
+        trailing={
+          <PhotoAddDialog
+            itemId={itemId}
+            itemName={itemName}
+            existingPhotoCount={photos.length}
+            disabledReason={disabledReason}
+          />
+        }
+      >
+        <span className="inline-flex items-center gap-2">
           <Camera className="size-4" aria-hidden />
           Photos
-        </h2>
-        <Skeleton className="aspect-video w-full rounded-lg" />
-      </section>
-    );
-  }
-
-  return (
-    <section aria-label="Photos" className="flex shrink-0 flex-col gap-2">
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
-        <Camera className="size-4" aria-hidden />
-        Photos
-        {photos.length > 0 ? (
-          <span className="text-xs font-normal text-muted-foreground">{photos.length}</span>
-        ) : null}
-      </h2>
-      <PhotoGallery photos={[...photos]} baseUrl="/api/inventory/photos" />
-      {!readOnly && photos.length > 1 ? (
-        <SortablePhotoGrid
-          photos={[...photos]}
-          baseUrl="/api/inventory/photos"
-          isReordering={isReordering}
-          onReorder={onReorder}
+          {photos.length > 0 ? (
+            <span className="font-normal tabular-nums">{photos.length}</span>
+          ) : null}
+        </span>
+      </PaneLabel>
+      {items.length === 0 ? (
+        <EmptyState
+          icon={Camera}
+          title="No photos yet"
+          description="Add a photo to keep this item easy to identify."
+          size="sm"
+          className="rounded-lg border bg-muted/30"
         />
-      ) : null}
-      {readOnly ? (
-        <p className="text-xs text-muted-foreground">Photos are read-only for destroyed items.</p>
-      ) : null}
+      ) : (
+        <ImageGallery items={items} className="min-w-0" />
+      )}
     </section>
   );
 }

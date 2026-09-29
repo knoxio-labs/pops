@@ -87,4 +87,26 @@ internal struct InventorySyncStallTests {
         let page = try #require(await model.awaitPage { $0.ledger.sendingStall == nil })
         #expect(InventorySyncHeaderStatus.derive(page: page) == .online(lastRefreshAt: nil))
     }
+
+    @Test("an item-specific server issue is counted and named on the Sync page")
+    func itemIssueIsVisible() async throws {
+        let issue = InventorySyncIssue(
+            itemId: "box", itemName: "Moving box", seq: 21, code: "enum_option_unknown",
+            fieldId: "field", fieldKey: "format", message: "The format value is unavailable.",
+            itemApplied: true, retryable: true)
+        let store = InMemoryInventoryStore(
+            items: [Fixture.item("box", "Moving box", at: .location("kitchen"))],
+            locations: [Fixture.location("kitchen", "Kitchen")], issues: [issue])
+        let model = InventorySyncViewModel(store: store)
+        let (task, _) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+
+        let page = try #require(await model.awaitPage { !$0.issueRows.isEmpty })
+
+        #expect(page.issueRows.first?.display.name == "Moving box")
+        #expect(InventorySyncHeaderStatus.derive(page: page) == .partial(issues: 1))
+        #expect(
+            InventorySyncView.statusLine(.partial(issues: 1))
+                == "Synced with 1 item needing attention")
+    }
 }

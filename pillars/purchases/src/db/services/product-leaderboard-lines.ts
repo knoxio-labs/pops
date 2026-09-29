@@ -59,7 +59,7 @@ export function selectScopedLines(
   db: PurchasesDb,
   filter: PurchaseScopeFilter
 ): readonly ScopedLine[] {
-  const scope = purchaseFilterConditions(filter);
+  const scope = purchaseFilterConditions(db, filter);
   const query = db
     .select({
       itemId: purchaseItems.id,
@@ -101,7 +101,7 @@ export function selectMeasuredItemIds(
   db: PurchasesDb,
   filter: PurchaseScopeFilter
 ): ReadonlySet<string> {
-  const scope = purchaseFilterConditions(filter);
+  const scope = purchaseFilterConditions(db, filter);
   const query = db
     .select({ itemId: purchaseItemNotes.itemId, note: purchaseItemNotes.note })
     .from(purchaseItemNotes)

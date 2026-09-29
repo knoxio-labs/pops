@@ -18,9 +18,8 @@ extension InventoryItemDetail {
         guard let item = source.inventoryItem(id: id), !item.isDeleted else { return nil }
         let status = source.inventoryReplicaStatus()
         let ledger = source.inventorySyncLedger()
-        let protocol2Type = item.typeId.flatMap { typeId in
-            source.inventoryProtocol2Catalogue()?.types.first { $0.id == typeId }
-        }
+        let protocol2Catalogue = source.inventoryProtocol2Catalogue()
+        let protocol2Type = Self.protocol2Type(for: item, catalogue: protocol2Catalogue)
         let type = item.typeKey.flatMap { source.inventoryCatalogue().type(forKey: $0) }
         let events = source.inventoryItemHistory(itemId: id)
         let fields =
@@ -29,6 +28,8 @@ extension InventoryItemDetail {
             } ?? InventoryDetailFields(values: item.fields, type: type)
         record = InventoryDetailRecord(
             id: item.id, name: item.name, typeName: protocol2Type?.label ?? type?.name,
+            typePath: Self.typePath(
+                for: item, catalogue: protocol2Catalogue, legacyType: type),
             code: item.code,
             quantity: item.quantity,
             trail: InventoryDetailTrails(source: source).trail(of: item.placement),
@@ -53,6 +54,28 @@ extension InventoryItemDetail {
         }
         lastSynced = Self.lastSynced(status, now: now)
         lifecycleChange = Self.lifecycleChange(of: item, events: events)
+    }
+
+    private static func protocol2Type(
+        for item: InventoryItem, catalogue: InventoryCatalogueSnapshot?
+    ) -> InventoryCatalogueType? {
+        guard let typeId = item.typeId, let catalogue,
+            let rawType = catalogue.types.first(where: { $0.id == typeId })
+        else { return nil }
+        guard rawType.parentTypeId != nil else { return rawType }
+        return catalogue.effectiveType(id: typeId)
+    }
+
+    private static func typePath(
+        for item: InventoryItem, catalogue: InventoryCatalogueSnapshot?,
+        legacyType: InventoryType?
+    ) -> [String] {
+        if let typeId = item.typeId, let catalogue,
+            let type = catalogue.types.first(where: { $0.id == typeId })
+        {
+            return catalogue.ancestry(ofType: type.id).map(\.label)
+        }
+        return legacyType.map { [$0.name] } ?? []
     }
 
     private static func summary(

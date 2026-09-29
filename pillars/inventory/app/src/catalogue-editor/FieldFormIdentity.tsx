@@ -13,8 +13,11 @@ import {
 
 import { fieldKindHint } from './field-kind-hints';
 import { useFieldFormContext } from './FieldFormContext';
+import { issueBelongsToDefinition } from './validation-issues';
 
+import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type { FieldKind } from './FieldFormContext';
+import type { CatalogueIssueSources, CatalogueOperation } from './types';
 const fieldKinds = [
   ['short_text', 'Short text'],
   ['long_text', 'Long text'],
@@ -33,9 +36,15 @@ function fieldKind(value: string): FieldKind | undefined {
   return fieldKinds.find(([candidate]) => candidate === value)?.[0];
 }
 interface Props {
+  readonly issueSources?: CatalogueIssueSources;
+  readonly issues?: readonly InventoryApiIssue[];
+  readonly operation: CatalogueOperation | null;
   readonly onKeyChange: (value: string) => void;
   readonly onLabelChange: (value: string) => void;
 }
+
+const EMPTY_ISSUES: readonly InventoryApiIssue[] = [];
+const EMPTY_ISSUE_SOURCES: CatalogueIssueSources = [];
 /** Renders editable field identity and immutable-after-publication shape controls. */
 export function FieldFormIdentity(props: Props) {
   return (
@@ -51,8 +60,18 @@ export function FieldFormIdentity(props: Props) {
     </>
   );
 }
-function IdentityInputs({ onKeyChange, onLabelChange }: Props) {
-  const { help, keyValue, label, setHelp } = useFieldFormContext();
+function IdentityInputs({
+  issueSources = EMPTY_ISSUE_SOURCES,
+  issues = EMPTY_ISSUES,
+  onKeyChange,
+  onLabelChange,
+  operation,
+}: Props) {
+  const { field, help, keyValue, label, setHelp } = useFieldFormContext();
+  const keyIssues = issues.filter(
+    (issue) =>
+      issue.path === 'key' && issueBelongsToDefinition(issue, field?.id, operation, issueSources)
+  );
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2">
@@ -73,6 +92,15 @@ function IdentityInputs({ onKeyChange, onLabelChange }: Props) {
           disabled={useFieldFormContext().shapeLocked}
           onChange={(event) => onKeyChange(event.target.value)}
         />
+        {keyIssues.map((issue) => (
+          <p
+            key={`${issue.code}-${issue.definitionId ?? 'catalogue'}`}
+            role="alert"
+            className="text-sm text-destructive"
+          >
+            {issue.message}
+          </p>
+        ))}
       </div>
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="catalogue-field-help">Help text</Label>

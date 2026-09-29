@@ -1,4 +1,9 @@
 import { formTypesOf } from './field-model';
+import {
+  fieldDraftsFromProtocolFields,
+  fieldDraftsFromStableValues,
+  textValueForField,
+} from './field-opening';
 import { blankDraft } from './form-draft';
 
 import type { Placement, ItemRowModel } from '../../foundation/model/model';
@@ -23,6 +28,7 @@ export interface ItemFormOpening {
   readonly draft: ItemDraft;
   readonly initial: ItemDraft;
   readonly editing: { readonly id: string; readonly name: string } | null;
+  readonly revision: number | null;
   readonly computed: Readonly<Record<string, ComputedDisplay>>;
 }
 
@@ -33,54 +39,42 @@ function placementFromWeb(item: WebItem): Placement {
   return { kind: 'location', locationId: item.placement.locationId };
 }
 
-function fieldValueFor(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return JSON.stringify(value) ?? '';
+export { fieldDraftsFromProtocolFields, fieldDraftsFromStableValues } from './field-opening';
+
+function fieldValuesFromItem(
+  item: WebItem,
+  type: FormTypeDef | null,
+  world: PlacementWorld
+): ItemDraft['fields'] {
+  const stored = item.fieldValues.filter((value) => value.source === 'stored');
+  return stored.length > 0
+    ? fieldDraftsFromStableValues(stored, type, world)
+    : fieldDraftsFromProtocolFields(item.fields, type, world);
 }
 
-function rawValues(value: unknown): readonly unknown[] {
-  if (Array.isArray(value)) return value;
-  if (value === undefined || value === null) return [];
-  return [value];
-}
-
-function fieldValuesFromItem(item: WebItem, type: FormTypeDef | null): ItemDraft['fields'] {
-  const text: Record<string, readonly string[]> = {};
-  const refs: Record<string, readonly { id: string; kind: 'item' | 'location'; label: string }[]> =
-    {};
-  const booleans: Record<string, boolean> = {};
-  for (const field of type?.fields ?? []) {
-    const raw = item.fields[field.id];
-    const values = rawValues(raw);
-    if (field.kind === 'boolean') {
-      const value = values[0];
-      if (typeof value === 'boolean') booleans[field.id] = value;
-    } else if (field.kind === 'reference') {
-      refs[field.id] = values.flatMap((value) =>
-        typeof value === 'string'
-          ? [{ id: value, kind: field.referenceKinds[0] ?? 'item', label: value }]
-          : []
-      );
-    } else {
-      text[field.id] = values.map(fieldValueFor);
-    }
-  }
-  return { text, refs, booleans };
-}
-
-function overridesFromItem(item: WebItem): Readonly<Record<string, string>> {
+function overridesFromItem(
+  item: WebItem,
+  type: FormTypeDef | null
+): Readonly<Record<string, string>> {
   const overrides: Record<string, string> = {};
+  const fields = new Map((type?.fields ?? []).map((field) => [field.id, field] as const));
   for (const value of item.fieldValues) {
     if (value.source === 'override') {
       const first = value.values[0];
-      if (first !== undefined) overrides[value.fieldId] = fieldValueFor(first);
+      const field = fields.get(value.fieldId);
+      if (first !== undefined && field !== undefined) {
+        overrides[value.fieldId] = textValueForField(field, first);
+      }
     }
   }
   return overrides;
 }
 
-function draftFromItem(item: WebItem, types: readonly FormTypeDef[]): ItemDraft {
+function draftFromItem(
+  item: WebItem,
+  types: readonly FormTypeDef[],
+  world: PlacementWorld
+): ItemDraft {
   const type = types.find((candidate) => candidate.id === item.typeId) ?? null;
   return {
     mode: 'edit',
@@ -89,7 +83,7 @@ function draftFromItem(item: WebItem, types: readonly FormTypeDef[]): ItemDraft 
     quantity: String(item.quantity),
     placement: placementFromWeb(item),
     note: item.note ?? '',
-    fields: fieldValuesFromItem(item, type),
+    fields: fieldValuesFromItem(item, type, world),
     code: {
       value: item.code ?? '',
       status: item.code === null ? 'idle' : 'free',
@@ -97,7 +91,7 @@ function draftFromItem(item: WebItem, types: readonly FormTypeDef[]): ItemDraft 
       freeCode: item.code,
       takenBy: null,
     },
-    overrides: overridesFromItem(item),
+    overrides: overridesFromItem(item, type),
     submitted: false,
   };
 }
@@ -138,20 +132,22 @@ export function createOpening(
   else if (destination !== null && world.items.has(destination))
     placement = { kind: 'container', containerId: destination };
   const draft = blankDraft(placement, typeId);
-  return { draft, initial: draft, editing: null, computed: {} };
+  return { draft, initial: draft, editing: null, revision: null, computed: {} };
 }
 
-/** Opens an edit form from the current web item response. */
+/** Opens an edit form and resolves stored reference labels through the supplied placement world. */
 export function editOpening(
   item: WebItem,
-  catalogue: CatalogueDescriptor | undefined
+  catalogue: CatalogueDescriptor | undefined,
+  world: PlacementWorld
 ): ItemFormOpening {
   const types = formTypesOf(catalogue);
-  const draft = draftFromItem(item, types);
+  const draft = draftFromItem(item, types, world);
   return {
     draft,
     initial: draft,
     editing: { id: item.id, name: item.name },
+    revision: item.revision,
     computed: computedFromItem(item),
   };
 }

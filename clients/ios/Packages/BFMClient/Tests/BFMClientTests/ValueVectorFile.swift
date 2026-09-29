@@ -1,4 +1,3 @@
-import AppCore
 import Foundation
 
 /// `clients/ios/Contracts/value-vectors-v1.json`, vendored byte for byte from
@@ -78,6 +77,16 @@ internal struct ValueVectorFile {
     /// The negative cases of `category`, in file order.
     internal func negatives(_ category: String) -> [[String: Any]] {
         negatives.filter { $0["category"] as? String == category }
+    }
+
+    /// Returns a positive vector by its stable fixture name.
+    internal func vector(named name: String) throws -> [String: Any] {
+        try Self.require(vectors.first { ($0["name"] as? String) == name }, name)
+    }
+
+    /// Returns the negative child-create vector for an inherited required field.
+    internal func missingRequiredField() throws -> [String: Any] {
+        try Self.require(negatives("missing_required_field").first, "missing_required_field")
     }
 
     /// The kind the `unknown_kind` case names, outside the closed vocabulary.

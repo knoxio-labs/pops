@@ -93,13 +93,6 @@ internal struct InventoryLocationTree: Equatable {
         }
     }
 
-    internal var total: InventoryPlaceTally {
-        nodes.reduce(into: InventoryPlaceTally(places: nodes.count)) {
-            $0.containers += $1.directContainerCount
-            $0.items += $1.directItemCount + $1.containedItemCount
-        }
-    }
-
     internal func matching(_ query: String) -> [InventoryLocationNode] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return [] }

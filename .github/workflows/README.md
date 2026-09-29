@@ -2,6 +2,10 @@
 
 Every workflow YAML file in this directory is documented here exactly once: as a row in [The rest](#the-rest) below, or — where a row is not enough — under its own `##` section. The sectioned ones are `ci-gate.yml` and the two reusable `workflow_call`-only helpers no event triggers on its own, `_discover-units.yml` and `_extractability-sandbox-matrix.yml`. `scripts/ci/__tests__/workflow-readme-coverage.test.ts` asserts that split against disk, so a new workflow cannot land undocumented and a deleted one cannot leave a row behind. Every job runs on `ubuntu-latest` except the build job of `ios-quality.yml` and `ios-testflight.yml`, which need macOS to compile Swift at all.
 
+The iOS analyzer step streams its output and retains `analyze.log` plus its input `compiler.log` in the `ios-analyzer-debug` failure artifact, including partial output on its 75-minute timeout. Native PR jobs retain 100 minutes; full-validation and merge-group jobs allow 150 minutes, with the Maestro flow bounded to 45 minutes. The current 12-flow suite reached its eleventh flow at the former 30-minute bound on run `36495988966`, so the step bound now leaves room for the complete suite while still terminating a wedged simulator. The exit status and file-coverage floor remain enforced by `clients/ios/scripts/analyzer-lane.sh`.
+
+The analyzer floor measured on September 27 at candidate `7246154a5` counted 1,547 Swift files, compared with 649–699 in four successful September 18 runs lasting 17m02s–23m58s. Scaling those durations by the 2.21–2.38× file-count growth projected roughly 38–57 minutes. The next full-validation candidate, `ed5b41698` on September 28, reached 1,553 of 1,581 files before the 60-minute bound, projecting about 61 minutes for a complete pass. The analyzer allowance is therefore 75 minutes, leaving measured headroom while the simulator retains its separate 25-minute limit.
+
 ## `ci-gate.yml` — the one static aggregate context
 
 `ci-gate.yml` observes requested, in-progress and completed runs of nine quality
@@ -149,12 +153,14 @@ its PR forever.
 
 ### Main admission without a merge queue
 
-Main's merge queue stays **off**. Its required status checks use strict
-up-to-date protection: if main advances before a PR merges, merge current main
-into the PR branch and rerun validation. Do not bypass the rule or force-push.
-This avoids a serialized admission queue, but competing promotions can still
-need reruns. Check the effective branch rules through GitHub; workflow triggers
-alone do not prove a queue or a required check is enabled.
+Main's merge queue stays **off**. Base movement alone does not require updating
+a conflict-free PR or repeating passing validation. Merge when required checks
+and review gates pass and GitHub permits it. Update the branch to resolve
+conflicts, address an integration failure, or satisfy an effective GitHub
+protection requirement. Do not bypass protection or force-push. Check the
+effective branch rules through GitHub; workflow triggers alone do not prove
+a queue or a required check is enabled. Strict up-to-date protection, when
+enabled, still requires a branch update before GitHub permits merging.
 
 `Promotion validation` is a required terminal job in `promotion-quality.yml`.
 A PR from `promotion/**` or `integration/**` to main calls the existing Quality,
@@ -185,11 +191,11 @@ Keep batches small and coherent. From a clean, current integration checkout:
 mise exec -- node scripts/ci/integration-promote.mjs
 ```
 
-The helper checks the repository/account and strict required promotion gate,
+The helper checks the repository/account and required promotion gate,
 refuses a stale source or empty candidate, creates
 `promotion/<workstream>/<source-sha>`, merges current main and creates a unique
-snapshot commit so integration-head checks cannot be reused. It runs `mise lint`
-and `mise typecheck`, pushes through normal hooks and opens the main PR. On
+snapshot commit so integration-head checks cannot be reused. It runs `mise check`,
+pushes through normal hooks and opens the main PR. On
 success it returns to integration; on failure it leaves the candidate checkout
 for diagnosis. It never deletes or force-pushes a branch.
 
@@ -197,8 +203,8 @@ The candidate freezes **membership**, not its head: later integration commits
 do not restart its checks. Fixes and current-main merges use ordinary commits
 on the candidate and trigger validation again. A promotion gets its own review
 of the combined diff; earlier small-PR reviews do not waive open findings.
-Merge with `gh pr merge --squash` only after all required checks pass and the
-branch is up to date. Confirm the PR actually reports `MERGED`.
+Merge with `gh pr merge --squash` only after all required checks and review
+gates pass and GitHub permits it. Confirm the PR actually reports `MERGED`.
 
 After promotion, synchronize main back into integration through a PR using
 `gh pr merge --merge` before the next snapshot, preserving ancestry after the
@@ -219,7 +225,7 @@ Two consequences worth stating, because both look like bugs from the outside:
 - **`github.base_ref` is empty on a merge group.** Anything that needs the base
   reads `github.event.merge_group.base_ref` instead, which is a full
   `refs/heads/…` ref rather than a bare branch name (`agent-review.yml`'s
-  isolation litmus). Anything that needs a PR number — the advisory LLM review —
+  isolation litmus). Anything that needs a PR number — the compounding LLM review —
   is explicitly `github.event_name == 'pull_request'`, since
   `github.event.pull_request.draft == false` is *true* when the payload has no
   pull request at all: GitHub coerces both sides of `null == false` to `0`.
@@ -284,12 +290,12 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
 | `promotion-quality.yml` | every PR targeting main; full validation for `promotion/**` and `integration/**` targeting main | Calls existing validation workflows with full scope. Required `Promotion validation` rejects any full lane that is not successful; ordinary PRs retain affected checks. |
-| `ios-quality.yml`                | PR on `clients/ios/**`, `pillars/bfm/**`, inventory server inputs, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; reusable with `full-validation: true`; every merge group, **scoped by a `scope` job to that same filter** | `xcode-27`; selects the Xcode pinned in `clients/ios/mise.toml`, lints first, then runs host and simulator tests and a Release build that verifies no BFM host is embedded. The reusable full lane and merge-group lane add compiler-log analysis (`lint:analyze`, ~19.5 min of the job) and the Maestro UI flow against a real BFM and a real inventory pillar. A reusable promotion call does not suppress an iOS-relevant promotion's native quick PR run; both verdicts are retained. No push trigger (POPS-4152). A PR whose base is not `main` (a stacked PR) skips the macOS job. Caches host SwiftPM build products, but no iOS DerivedData; the header says why |
+| `ios-quality.yml`                | PR on `clients/ios/**`, `pillars/bfm/**`, inventory server inputs, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; reusable with `full-validation: true`; every merge group, **scoped by a `scope` job to that same filter** | `xcode-27`; selects the Xcode pinned in `clients/ios/mise.toml`, lints first, then runs host and simulator tests and a Release build that verifies no BFM host is embedded. The reusable full lane and merge-group lane add compiler-log analysis (`lint:analyze`) and the Maestro UI flow against a real BFM and a real inventory pillar. Analyzer observations range from about 19.5 minutes for 693 files in an older run through 50 minutes 3 seconds for 1,551 files and 43 minutes 9 seconds for 1,558 files, reaching 66 minutes 47 seconds for 1,584 files in the current promotion run; they are measurements, not a duration guarantee. A reusable promotion call does not suppress an iOS-relevant promotion's native quick PR run; both verdicts are retained. No push trigger (POPS-4152). A PR whose base is not `main` (a stacked PR) skips the macOS job. Restores host SwiftPM build products and saves them immediately after successful host tests, before simulator work; exact hits skip the save. It never caches iOS DerivedData; the header says why |
 | `ios-testflight.yml`             | push to `main`; dispatch with a `sha` on `main` | an `ubuntu-latest` `pick` job (`scripts/ci/testflight-ship-sha.mjs`) chooses the newest pushed commit whose iOS Quality job ran and passed — the merge-group run, or with the queue off (POPS-4439) the `pull_request` run on the head of the PR it landed from — then `xcode-27`, environment `main` (branch-restricted to `main`); archives `Pops` and `PopsPlayground` at that commit with CalVer from `clients/ios/scripts/release-version.sh` and uploads both to TestFlight through `mise run release:testflight`. Each export still fails by default; the exact duplicate-build response is accepted only when `scripts/ci/testflight-upload.mjs` proves the same scheme, bundle id, version, build number and source commit already completed in App Store Connect. Not gated: it runs after merge |
-| `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the advisory reviewer that used to be its last step is now `pr-review.yml` |
-| `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. Debounced for 15 seconds by default and `cancel-in-progress: true`, so a burst still collapses to the newest head without adding a minute to every ordinary review. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN` regardless, and a skip is safe here specifically because this job is neither required nor gated |
+| `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the compounding reviewer that used to be its last step is now `pr-review.yml` |
+| `pr-review.yml`                  | every non-draft, non-Dependabot PR; **no** merge group; its own job context is **not** required or listed in `ci-gate.yml` | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. HIGH and MEDIUM defects feed the required `review-findings-gate.yml`; LOW maintainability suggestions remain advisory. Debounced for 15 seconds by default and `cancel-in-progress: true`, so a burst still collapses to the newest head without adding a minute to every ordinary review. Skips, by design, a PR whose every changed path is on the design playground's design surface — `scripts/ci/design-surface-only.mjs` decides, fail-closed, and `review-findings-gate.yml` asks it the same question. Job-level skipped for a Dependabot-authored PR (POPS-3343): that run cannot read `CLAUDE_CODE_OAUTH_TOKEN`; `pr-review-dependabot.yml` supplies the current-head state the required gate expects |
 | `pr-review-dependabot.yml`       | every non-draft, Dependabot-authored PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the substitute for the row above, only for the PRs it cannot run on (POPS-3343): posts the identical sticky-comment contract with zero findings, via the same `pr-review.mjs publish` code path, but never calls a model or reads the diff — a prose line above the state marker says so |
-| `review-findings-gate.yml`       | every PR, drafts included; every merge group; **required**                                    | blocks a merge while `pr-review.yml`'s (or, on a Dependabot PR, `pr-review-dependabot.yml`'s) sticky comment carries an open finding for the head commit (POPS-2661); polls for the debounced review, passes through on a merge group, and passes without polling on a design-surface-only diff because no review will ever come |
+| `review-findings-gate.yml`       | every PR, drafts included; every merge group; **required**                                    | blocks a merge while `pr-review.yml`'s (or, on a Dependabot PR, `pr-review-dependabot.yml`'s) sticky comment carries an open HIGH or MEDIUM finding for the head commit (POPS-2661). LOW is advisory; missing, malformed and unknown severity values block. The gate polls for the debounced review, passes through on a merge group, and passes without polling on a design-surface-only diff because no review will ever come |
 | `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group, **scoped by a `scope` job to that same filter** | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |
 | `pillar-schema-coverage.yml`     | PR/push on `pillars/*/src/db/**`, migrations                  | per-pillar coverage, an injected-table self-test, and a static `Pillar schema coverage` aggregator job               |
@@ -302,7 +308,7 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `fe-test-e2e.yml`                | PR on the shell/app/nav/registry/sdk/types/ui paths, push to `main`, merge group, dispatch | Playwright over the shell and the app bundles it mounts; no pillar backend runs — each spec fulfils its own `/<pillar>-api` surface |
 | `live-seam.yml`                  | PR/push on `libs/sdk/**`, `pillars/registry/**`, the food/cerebrum/bfm live-seam module pairs + their `vitest.live-seam.config.ts`, `pillars/lists/**`, `pillars/finance/**`, `pillars/bfm/**`, `pillars/purchases/**`, and its own workflow file; no merge group | food's, cerebrum's and bfm's real-process `test:live-seam` suites, each in its own job. **Advisory, not gated** — neither job is in `ci-gate.yml`'s `gated` array or the ruleset, deliberately, for a bake-in period; see the file header |
 | `cross-pr-line-budget.yml`       | every PR (no path filter); no push, no merge group; **not** required, **not** in `ci-gate.yml`'s gated list | `scripts/ci/check-cross-pr-line-budget.mjs` — projects this PR's diff against the heads of the other open PRs on the same base and warns when the pair would tip a file over its oxlint `max-lines` cap. **Advisory, and in its own workflow so that is true rather than claimed**: it sat in `quality.yml` calling itself advisory while `CI Gate` aggregated that workflow, so an unreadable sibling head blocked unrelated PRs (POPS-3362). Still exits non-zero when it cannot look — "could not answer" must not read like "no collision" |
-| `inventory-acceptance.yml`       | `workflow_dispatch` only — **opt-in verification, not a guard** (ADR-045's 2026-09-24 amendment); not in `ci-gate.yml`, not in the ruleset | `scripts/inventory-acceptance/run.mjs` (POPS-4354) against real registry/inventory/bfm/mcp processes: vitest always, Playwright (S7) when `run_web` (default true), Maestro against a real iOS simulator (`xcode-27`) when `run_ios` (default false, tens of minutes). Writes evidence records, and packets when dispatched with `pull_request`/`pr_issue`, uploaded as artifacts |
+| `inventory-acceptance.yml`       | `workflow_dispatch` only — **opt-in verification, not a guard** (ADR-045's 2026-09-24 amendment); not in `ci-gate.yml`, not in the ruleset | `scripts/inventory-acceptance/run.mjs` (POPS-4354) against real registry/inventory/bfm/mcp processes: vitest always, Playwright (S7) when `run_web` (default true), Maestro against a real iOS simulator (`xcode-27`) when `run_ios` (default false, tens of minutes). The iOS dispatch defaults to direct BFM pairing; `ios_pairing_issuer: mcp` exercises the MCP-backed issuer. Writes evidence records, and packets when dispatched with `pull_request`/`pr_issue`, uploaded as artifacts |
 
 `publish-images.yml`'s `discover` job filters on `pillars/<x>/Dockerfile`
 existing. `shell`, `mcp`, `orchestrator` and `docs` all have one, so the four

@@ -5,27 +5,39 @@ internal struct InventoryProtocol2TypePicker: View {
     let model: InventoryItemFormModel
     let catalogue: InventoryCatalogueSnapshot
     let selected: InventoryProtocol2Draft?
+    @State private var pickerIsPresented = false
 
     internal var body: some View {
-        Picker(
-            "Type",
-            selection: Binding(
-                get: { selected?.typeId }, set: { model.selectProtocol2Type($0) })
-        ) {
-            if model.offersNoType {
-                Text("No type yet")
-                    .tag(String?.none)
-                    .accessibilityIdentifier(InventoryAccessibility.itemTypeNone)
-            }
-            let options = InventoryFormTypeOptions.protocol2(
-                catalogue, selectedId: selected?.typeId)
-            ForEach(options) { option in
-                Text(option.label)
-                    .tag(Optional(option.id))
-                    .accessibilityIdentifier(option.accessibilityIdentifier)
+        Button {
+            pickerIsPresented = true
+        } label: {
+            LabeledContent("Type") {
+                Text(selectedLabel)
+                    .foregroundStyle(Color.popsMutedForeground)
             }
         }
-        .pickerStyle(.menu)
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $pickerIsPresented) {
+            InventoryFormTypePicker(
+                selection: Binding(
+                    get: { selected?.typeId }, set: { model.selectProtocol2Type($0) }),
+                options: InventoryFormTypeOptions.protocol2All(
+                    catalogue, selectedId: selected?.typeId),
+                noneTitle: model.offersNoType ? "No type yet" : nil,
+                noneAccessibilityIdentifier: model.offersNoType
+                    ? InventoryAccessibility.itemTypeNone : nil,
+                onChoose: { id in
+                    model.selectProtocol2Type(id)
+                    pickerIsPresented = false
+                })
+        }
         .accessibilityIdentifier(InventoryAccessibility.itemTypePicker)
+    }
+
+    private var selectedLabel: String {
+        guard let typeId = selected?.typeId,
+            let type = catalogue.effectiveType(id: typeId)
+        else { return "No type yet" }
+        return type.label
     }
 }

@@ -39,6 +39,11 @@ export const QUALITY_JOB_NAME = 'build + test + lint + UI flow';
 /** The `name:` of `ios-quality.yml` itself. */
 export const QUALITY_WORKFLOW_NAME = 'iOS Quality';
 
+/** @param {string} name */
+function isQualityWorkflowRunName(name) {
+  return name === QUALITY_WORKFLOW_NAME || name.startsWith(`${QUALITY_WORKFLOW_NAME} for `);
+}
+
 /**
  * Picks the commit to ship from pushed commits and their merge-group verdicts.
  *
@@ -93,7 +98,7 @@ async function laneVerdict(sha, event, { repo, request }) {
     `/repos/${repo}/actions/runs?head_sha=${sha}&event=${event}&per_page=100`
   );
   const latest = runs
-    .filter((run) => run.name === QUALITY_WORKFLOW_NAME)
+    .filter((run) => isQualityWorkflowRunName(run.name))
     .toSorted((a, b) => b.run_number - a.run_number || b.run_attempt - a.run_attempt)[0];
   if (!latest) return 'absent';
   if (latest.status !== 'completed') return 'pending';

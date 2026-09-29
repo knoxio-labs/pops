@@ -10,7 +10,9 @@ import { describe, expect, it } from 'vitest';
 import {
   DEV_OPERATOR_EMAIL,
   readPrincipal,
+  readPairingServiceAccount,
   requireOperator,
+  requirePairingIssuer,
   resolveOperator,
 } from '../middleware/identity.js';
 import { UnauthorizedError } from '../shared/errors.js';
@@ -95,6 +97,40 @@ describe('readPrincipal', () => {
 
   it('reads an explicitly anonymous resolution as anonymous', () => {
     expect(readPrincipal(res({ operator: null }))).toBeNull();
+  });
+});
+
+describe('pairing issuer', () => {
+  it('prefers the human operator when both identities are present', () => {
+    expect(
+      requirePairingIssuer(
+        res({
+          operator: { email: 'operator@pops.local' },
+          pairingServiceAccount: { id: 'sa-pairing', name: 'mcp', scopes: [] },
+        })
+      )
+    ).toEqual({ kind: 'operator', email: 'operator@pops.local' });
+  });
+
+  it('accepts the verified pairing service account', () => {
+    const response = res({
+      pairingServiceAccount: { id: 'sa-pairing', name: 'mcp', scopes: [] },
+    });
+
+    expect(readPairingServiceAccount(response)).toEqual({
+      id: 'sa-pairing',
+      name: 'mcp',
+      scopes: [],
+    });
+    expect(requirePairingIssuer(response)).toEqual({
+      kind: 'service-account',
+      id: 'sa-pairing',
+      name: 'mcp',
+    });
+  });
+
+  it('fails closed when neither identity is present', () => {
+    expect(() => requirePairingIssuer(res())).toThrow(UnauthorizedError);
   });
 });
 

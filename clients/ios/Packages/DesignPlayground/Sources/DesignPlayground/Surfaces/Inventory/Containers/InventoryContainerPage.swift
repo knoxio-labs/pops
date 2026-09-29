@@ -32,6 +32,7 @@ internal struct InventoryContainerPage: View {
         InventoryItemDetailView(
             detail: profile.detail,
             actions: InventoryContainerActions.row(for: profile),
+            moreActions: InventoryContainerActions.overflow(for: profile),
             onAction: handle,
             capability: {
                 InventoryContainerContentsSection(

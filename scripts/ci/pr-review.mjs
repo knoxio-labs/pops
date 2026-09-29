@@ -1,17 +1,14 @@
 #!/usr/bin/env node
 /**
- * Driver for the compounding PR reviewer (advisory layer of the review gate).
+ * Driver for the compounding PR reviewer.
  *
- * The deterministic guards in `agent-review.yml` are the blocking checks; this
- * only comments, so an unreachable model can never gate a PR. What changed
- * relative to the reviewer it replaces is not the authority, it is the memory:
- * the old one posted a fresh verdict comment on every push with no idea what it
- * had already said, so a ten-push PR collected ten overlapping opinions and no
- * record of which concerns had been dealt with. This one edits ONE comment,
- * reviews only the commits pushed since the last run, carries open findings
- * forward, and marks a finding resolved when the code it pointed at is gone —
- * or, when the fix belongs in a different file than the one the finding is
- * anchored to, when that file has it.
+ * The deterministic guards in `agent-review.yml` are one blocking layer;
+ * `review-findings-gate.yml` also blocks on substantive findings this reviewer
+ * records. The reviewer edits ONE comment, reviews only the commits pushed
+ * since the last run, carries open findings forward, and marks a finding
+ * resolved when the code it pointed at is gone — or, when the fix belongs in a
+ * different file than the one the finding is anchored to, when that file has
+ * it.
  *
  * Two subcommands, either side of the model call:
  *
@@ -95,20 +92,25 @@ Beyond the invariants, review for, in priority order:
 Do NOT report: style the formatter owns, missing comments, speculative
 refactors, or anything you have not confirmed by reading the surrounding file.
 
-Severity is not a feeling about how much you dislike the code. \`high\` is the
-only severity that blocks a merge, so assign it only when one of these is true,
-and say which in the body:
+Severity is a merge policy, not a feeling about how much you dislike the code.
+Both \`high\` and \`medium\` block a merge. Every concrete correctness,
+security, data-loss, contract, test or repository-invariant defect MUST be
+\`high\` or \`medium\`; never classify a concrete defect as \`low\`.
+
+Use \`high\` when one of these is true, and say which in the body:
 
   - it violates one of the non-negotiable invariants listed above; or
   - it is a correctness or operational-risk defect for which you can state a
     concrete failure — the input, state or sequence that produces the wrong
     output, the data loss, or the unreachable service.
 
-If you cannot name that failure, it is not \`high\`. Use \`medium\` for a real
-defect whose consequence is contained, and \`low\` for anything a reasonable
-reviewer could wave through. Severity inflation is itself a defect: it trains
-the humans reading you to stop believing \`high\`, and a blocked merge has a
-cost you do not see.
+Use \`medium\` for every other concrete defect, including a contained failure or
+a missing test that leaves changed behavior unverified. Use \`low\` only for a
+non-defect maintainability suggestion that a reasonable reviewer could waive;
+\`low\` is advisory and does not block merge. Do not report formatter-owned
+style or speculative refactors even as \`low\`. If you cannot state a concrete
+failure and the observation is not a specific, useful maintainability
+suggestion, omit it.
 
 {carried}
 
@@ -552,7 +554,8 @@ function selfTest() {
   );
   check(
     'filled prompt defines what earns the blocking severity',
-    filled.includes('only severity that blocks a merge') && filled.includes('concrete failure')
+    filled.includes('Both `high` and `medium` block a merge') &&
+      filled.includes('never classify a concrete defect as `low`')
   );
   check(
     'filled prompt has no placeholders left',
