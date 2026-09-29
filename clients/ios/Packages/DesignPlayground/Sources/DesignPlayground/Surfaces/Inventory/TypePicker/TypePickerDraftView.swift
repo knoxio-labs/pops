@@ -85,7 +85,6 @@ internal struct TypePickerDraftView: View {
         }
         .task(id: session.photoRequestID) {
             guard let requestID = session.photoRequestID else { return }
-            await Task.yield()
             guard !Task.isCancelled else { return }
             session.completePhotoSuggestion(
                 requestID: requestID, available: opening != .noSuggestion)
