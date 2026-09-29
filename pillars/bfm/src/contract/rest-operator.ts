@@ -20,8 +20,10 @@
  * (POPS-1389), which it could not do if the operator device list and the
  * public pairing route both sat under `/devices`.
  *
- * Nothing here is a cross-pillar surface. It is consumed by the Devices page
- * (POPS-1387) and by nothing else.
+ * The surface is consumed by the Devices page (POPS-1387) and the MCP
+ * gateway's pairing-code tool. The latter is limited to
+ * `operator.issuePairingCode`; it does not expose the device list or
+ * revocation operation.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -31,6 +33,7 @@ import {
   ErrorBodySchema,
   IssuedPairingCodeSchema,
   OPERATOR_ERR_RESPONSES,
+  PAIRING_SERVICE_ACCOUNT_ERR_RESPONSES,
   RevokedDeviceSchema,
 } from './rest-operator-schemas.js';
 
@@ -44,6 +47,7 @@ export const bfmOperatorContract = c.router({
     responses: {
       201: IssuedPairingCodeSchema,
       ...OPERATOR_ERR_RESPONSES,
+      ...PAIRING_SERVICE_ACCOUNT_ERR_RESPONSES,
       429: ErrorBodySchema,
     },
     summary: 'Mint a single-use pairing code. The plaintext is returned once and never again',

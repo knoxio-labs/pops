@@ -9,6 +9,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { IssuedPairingCodeSchema } from '../../contract/rest-operator-schemas.js';
 import { hashPairingCode, normalizePairingCode, pairingCodes } from '../../db/index.js';
+import {
+  BFM_PAIRING_ISSUE_SCOPE,
+  bfmPairingScopeMap,
+} from '../middleware/service-account-pairing.js';
 import { createRateLimiter } from '../rate-limit.js';
 import {
   createTestApp,
@@ -18,6 +22,8 @@ import {
   type TestApp,
 } from './harness.js';
 import { requestOn } from './test-http.js';
+
+import type { ServiceAccountVerification } from '@pops/pillar-sdk/server';
 
 let harness: TestApp;
 
@@ -29,6 +35,34 @@ afterEach(() => {
 function issueCode(app: TestApp) {
   return requestOn(app.app, (r) => r.post('/operator/pairing/codes').send({}));
 }
+
+const PAIRING_CREDENTIAL = 'test-pairing-credential';
+const PAIRING_PRINCIPAL = {
+  id: 'sa-mcp-pairing',
+  name: 'mcp pairing',
+  scopes: [BFM_PAIRING_ISSUE_SCOPE],
+} as const;
+
+function verifyPairingCredential(verification: ServiceAccountVerification) {
+  return async (apiKey: string): Promise<ServiceAccountVerification> => {
+    expect(apiKey).toBe(PAIRING_CREDENTIAL);
+    return verification;
+  };
+}
+
+describe('pairing service-account scope projection', () => {
+  it('covers only pairing-code issuance', () => {
+    harness = createTestApp();
+
+    expect(bfmPairingScopeMap.routes).toEqual([
+      {
+        method: 'POST',
+        path: '/operator/pairing/codes',
+        scope: BFM_PAIRING_ISSUE_SCOPE,
+      },
+    ]);
+  });
+});
 
 describe('POST /operator/pairing/codes', () => {
   beforeEach(() => {
@@ -96,6 +130,90 @@ describe('POST /operator/pairing/codes', () => {
 });
 
 describe('POST /operator/pairing/codes — authentication', () => {
+  it('accepts a registry-verified service account with the exact scope', async () => {
+    harness = createTestApp({
+      env: PRODUCTION_ENV_WITHOUT_ACCESS,
+      serviceAccountVerifier: verifyPairingCredential({
+        outcome: 'authenticated',
+        principal: PAIRING_PRINCIPAL,
+      }),
+    });
+
+    const res = await requestOn(harness.app, (r) =>
+      r.post('/operator/pairing/codes').set('x-api-key', PAIRING_CREDENTIAL).send({})
+    );
+
+    expect(res.status).toBe(201);
+  });
+
+  it('rejects a revoked service account before writing a code', async () => {
+    harness = createTestApp({
+      env: PRODUCTION_ENV_WITHOUT_ACCESS,
+      serviceAccountVerifier: verifyPairingCredential({ outcome: 'rejected' }),
+    });
+
+    const res = await requestOn(harness.app, (r) =>
+      r.post('/operator/pairing/codes').set('x-api-key', PAIRING_CREDENTIAL).send({})
+    );
+
+    expect(res.status).toBe(401);
+    expect(harness.opened.db.select().from(pairingCodes).all()).toHaveLength(0);
+  });
+
+  it('rejects a service account that lacks the pairing scope', async () => {
+    harness = createTestApp({
+      env: PRODUCTION_ENV_WITHOUT_ACCESS,
+      serviceAccountVerifier: verifyPairingCredential({
+        outcome: 'authenticated',
+        principal: { ...PAIRING_PRINCIPAL, scopes: ['bfm.operator.listDevices'] },
+      }),
+    });
+
+    const res = await requestOn(harness.app, (r) =>
+      r.post('/operator/pairing/codes').set('x-api-key', PAIRING_CREDENTIAL).send({})
+    );
+
+    expect(res.status).toBe(403);
+    expect(harness.opened.db.select().from(pairingCodes).all()).toHaveLength(0);
+  });
+
+  it('reports a registry outage without issuing a code', async () => {
+    harness = createTestApp({
+      env: PRODUCTION_ENV_WITHOUT_ACCESS,
+      serviceAccountVerifier: verifyPairingCredential({
+        outcome: 'unavailable',
+        detail: 'registry unavailable',
+      }),
+    });
+
+    const res = await requestOn(harness.app, (r) =>
+      r.post('/operator/pairing/codes').set('x-api-key', PAIRING_CREDENTIAL).send({})
+    );
+
+    expect(res.status).toBe(503);
+    expect(harness.opened.db.select().from(pairingCodes).all()).toHaveLength(0);
+  });
+
+  it('keeps device listing and revocation human-only', async () => {
+    harness = createTestApp({
+      env: PRODUCTION_ENV_WITHOUT_ACCESS,
+      serviceAccountVerifier: verifyPairingCredential({
+        outcome: 'authenticated',
+        principal: { ...PAIRING_PRINCIPAL, scopes: ['bfm'] },
+      }),
+    });
+
+    const list = await requestOn(harness.app, (r) =>
+      r.get('/operator/devices').set('x-api-key', PAIRING_CREDENTIAL)
+    );
+    const revoke = await requestOn(harness.app, (r) =>
+      r.delete('/operator/devices/device-1').set('x-api-key', PAIRING_CREDENTIAL)
+    );
+
+    expect(list.status).toBe(401);
+    expect(revoke.status).toBe(401);
+  });
+
   it('refuses an anonymous caller, and writes nothing', async () => {
     harness = createTestApp({ env: PRODUCTION_ENV });
 

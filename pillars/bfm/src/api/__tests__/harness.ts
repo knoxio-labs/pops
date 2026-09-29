@@ -24,6 +24,8 @@ import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
 
 import type { Express } from 'express';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
+
 import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
 import type { BfmApiDeps } from '../app.js';
 import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
@@ -82,6 +84,8 @@ export interface TestAppOptions {
   version?: string;
   /** Drives the operator identity middleware. See {@link PRODUCTION_ENV}. */
   env?: NodeJS.ProcessEnv;
+  /** Verifier seam for the pairing route's inbound service-account gate. */
+  serviceAccountVerifier?: ServiceAccountVerifier;
   issuanceLimiter?: RateLimiter;
   pairingCodeTtlMs?: number;
   refreshTokenTtlMs?: number;
@@ -246,7 +250,12 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     ...passthroughDeps(options),
   };
 
-  const appOptions: CreateBfmApiAppOptions = options.env === undefined ? {} : { env: options.env };
+  const appOptions: CreateBfmApiAppOptions = {
+    ...(options.env === undefined ? {} : { env: options.env }),
+    ...(options.serviceAccountVerifier === undefined
+      ? {}
+      : { serviceAccountVerifier: options.serviceAccountVerifier }),
+  };
 
   return {
     app: createBfmApiApp(deps, appOptions),
