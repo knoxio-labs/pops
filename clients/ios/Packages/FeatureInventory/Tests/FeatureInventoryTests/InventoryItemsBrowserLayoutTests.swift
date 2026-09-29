@@ -3,9 +3,8 @@ import Foundation
 import Synchronization
 import Testing
 
-@testable import FeatureInventory
-
 #if os(macOS) && canImport(AppKit)
+    @testable import FeatureInventory
     import AppKit
     import SwiftUI
 
