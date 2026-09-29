@@ -5,6 +5,82 @@ import Testing
 @Suite("Type picker tree state")
 @MainActor
 internal struct TypePickerTreeStateTests {
+    @Test("initially expands sparse root branches breadth first")
+    func expandsSparseRoots() {
+        let types = [
+            fixture("item", parent: nil),
+            fixture("alpha", parent: "item"),
+            fixture("beta", parent: "item"),
+            fixture("alpha-one", parent: "alpha"),
+            fixture("alpha-two", parent: "alpha"),
+            fixture("beta-one", parent: "beta"),
+            fixture("beta-two", parent: "beta"),
+        ]
+
+        let state = TypePickerTreeState(mode: .manual, types: types)
+
+        #expect(state.expandedIDs == ["alpha", "beta"])
+        #expect(
+            state.rows.map(\.id) == [
+                "alpha", "alpha-one", "alpha-two", "beta", "beta-one", "beta-two",
+            ])
+    }
+
+    @Test("shows every available option when the tree contains fewer than five")
+    func expandsSmallTreeCompletely() {
+        let types = [
+            fixture("item", parent: nil),
+            fixture("alpha", parent: "item"),
+            fixture("beta", parent: "item"),
+            fixture("alpha-one", parent: "alpha"),
+        ]
+
+        let state = TypePickerTreeState(mode: .manual, types: types)
+
+        #expect(state.expandedIDs == ["alpha"])
+        #expect(state.rows.map(\.id) == ["alpha", "alpha-one", "beta"])
+    }
+
+    @Test("reveals a selected descendant without changing manual focus")
+    func revealsSelectedDescendant() {
+        let types = [
+            fixture("item", parent: nil),
+            fixture("alpha", parent: "item"),
+            fixture("alpha-child", parent: "alpha"),
+            fixture("selected", parent: "alpha-child"),
+            fixture("beta", parent: "item"),
+            fixture("gamma", parent: "item"),
+            fixture("delta", parent: "item"),
+        ]
+
+        let state = TypePickerTreeState(mode: .manual, selectedID: "selected", types: types)
+
+        #expect(state.focusID == "item")
+        #expect(state.expandedIDs.contains("alpha"))
+        #expect(state.expandedIDs.contains("alpha-child"))
+        #expect(state.rows.map(\.id).contains("selected"))
+    }
+
+    @Test("an initially expanded branch stays collapsed after the user closes it")
+    func initialExpansionRunsOnce() {
+        let types = [
+            fixture("item", parent: nil),
+            fixture("alpha", parent: "item"),
+            fixture("beta", parent: "item"),
+            fixture("alpha-one", parent: "alpha"),
+            fixture("alpha-two", parent: "alpha"),
+            fixture("beta-one", parent: "beta"),
+            fixture("beta-two", parent: "beta"),
+        ]
+        let state = TypePickerTreeState(mode: .manual, types: types)
+
+        state.toggle("alpha")
+
+        #expect(!state.expandedIDs.contains("alpha"))
+        #expect(!state.rows.map(\.id).contains("alpha-one"))
+        #expect(state.rows.count < 5)
+    }
+
     @Test("outline mode flattens expanded branches and preserves descendant expansion")
     func outlineExpansion() {
         let state = TypePickerTreeState(mode: .outline)
@@ -132,5 +208,9 @@ internal struct TypePickerTreeStateTests {
         #expect(state.focusID == "item")
         #expect(state.expandedIDs.isEmpty)
         #expect(state.breadcrumbs.map(\.id) == ["item"])
+    }
+
+    private func fixture(_ id: String, parent: String?) -> TypePickerType {
+        TypePickerType(id: id, name: id, parentID: parent, aliases: [])
     }
 }

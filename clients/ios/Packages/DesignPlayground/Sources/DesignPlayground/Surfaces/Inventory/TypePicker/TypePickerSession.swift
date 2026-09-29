@@ -54,7 +54,7 @@ internal final class TypePickerSession {
     }
 
     @discardableResult
-    internal func save() -> Bool {
+    internal func save(keepingType: Bool = false) -> Bool {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return false }
 
@@ -70,7 +70,9 @@ internal final class TypePickerSession {
             recentTypeIDs.removeAll { $0 == typeID }
             recentTypeIDs.insert(typeID, at: 0)
         }
+        let savedTypeID = typeID
         resetDraft()
+        if keepingType { typeID = savedTypeID }
         return true
     }
 

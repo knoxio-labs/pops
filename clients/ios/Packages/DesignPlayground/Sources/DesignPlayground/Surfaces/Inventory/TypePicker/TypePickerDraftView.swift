@@ -38,7 +38,7 @@ internal struct TypePickerDraftView: View {
                 Text("Only a name is required. Each item gets its own photos.")
             }
             Section {
-                Button("Create & add another") { _ = session.save() }
+                Button("Create & add another") { _ = session.save(keepingType: true) }
                     .frame(minHeight: PopsSize.touchTarget)
                     .disabled(session.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } footer: {
@@ -92,7 +92,7 @@ internal struct TypePickerDraftView: View {
                 requestID: requestID, available: opening != .noSuggestion)
         }
         .onAppear {
-            if [.tree, .expanded, .noMatch].contains(opening) && !openedPicker {
+            if [.tree, .expanded, .selected, .noMatch].contains(opening) && !openedPicker {
                 openedPicker = true
                 picking = true
             }

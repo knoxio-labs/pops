@@ -27,6 +27,11 @@ internal enum InventoryTypePickerExperiment {
         id: "inventory-type-picker",
         question: "How do you choose a type without learning the whole catalogue?",
         subject: InventoryTypePickerSurfaces.id,
+        status: .decided(
+            variant: "manual",
+            rationale:
+                "Joao chose explicit focus: expand the tree in place, and hide ancestors only when requested."
+        ),
         variants: TypePickerTreeMode.allCases.map { approach in
             DesignVariant(
                 id: approach.id, title: approach.title,

@@ -35,6 +35,21 @@ internal struct TypePickerSessionTests {
         #expect(session.saved.count == 1)
     }
 
+    @Test("add another retains the selected type and location but clears photos and name")
+    func addAnotherRetainsType() {
+        let session = TypePickerSession(
+            name: "Cover", typeID: "cushion-cover", photoCount: 2, location: "Sofa")
+        #expect(session.save(keepingType: true))
+        #expect(session.typeID == "cushion-cover")
+        #expect(session.location == "Sofa")
+        #expect(session.name.isEmpty)
+        #expect(session.photoCount == 0)
+        session.capturePhoto()
+        #expect(session.photoRequestID == nil)
+        #expect(!session.save(keepingType: true))
+        #expect(session.typeID == "cushion-cover")
+    }
+
     @Test("photos belong only to the draft that captured them")
     func photoIsolation() throws {
         let session = TypePickerSession(name: "Cable")

@@ -14,7 +14,7 @@ internal struct TypePickerChoicesView: View {
         self.session = session
         self.choose = choose
         _query = State(initialValue: initialQuery)
-        let state = TypePickerTreeState(mode: mode)
+        let state = TypePickerTreeState(mode: mode, selectedID: session.typeID)
         if expanded {
             ["home-textiles", "pillows-cushions", "cushions"].forEach(state.toggle)
         }
@@ -25,7 +25,7 @@ internal struct TypePickerChoicesView: View {
         VStack(spacing: PopsSpacing.zero) {
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 recents
-                TypePickerTreeView(tree: tree, choose: choose)
+                TypePickerTreeView(tree: tree, selectedID: session.typeID, choose: choose)
             } else {
                 results
             }
@@ -45,10 +45,21 @@ internal struct TypePickerChoicesView: View {
                 HStack(spacing: PopsSpacing.sm) {
                     Text("Recent").foregroundStyle(Color.popsMutedForeground)
                     ForEach(session.recentTypeIDs.compactMap(TypePickerTaxonomy.node)) { node in
-                        Button(node.name) { choose(node.id) }
-                            .padding(.horizontal, PopsSpacing.md)
-                            .frame(minHeight: PopsSize.touchTarget)
-                            .background(Color.popsSurface, in: .capsule)
+                        Button {
+                            choose(node.id)
+                        } label: {
+                            Label(
+                                node.name,
+                                systemImage: session.typeID == node.id
+                                    ? "checkmark.circle.fill" : node.symbol)
+                        }
+                        .accessibilityAddTraits(session.typeID == node.id ? .isSelected : [])
+                        .padding(.horizontal, PopsSpacing.md)
+                        .frame(minHeight: PopsSize.touchTarget)
+                        .background(
+                            session.typeID == node.id
+                                ? Color.popsInventory.opacity(0.12) : Color.popsSurface,
+                            in: .capsule)
                     }
                     Button("Clear", action: session.clearRecentTypes)
                         .frame(minHeight: PopsSize.touchTarget)
@@ -72,7 +83,9 @@ internal struct TypePickerChoicesView: View {
                         .frame(minHeight: PopsSize.touchTarget)
                 }
                 ForEach(matches) { node in
-                    TypePickerOption(node: node) { choose(node.id) }
+                    TypePickerOption(node: node, selected: session.typeID == node.id) {
+                        choose(node.id)
+                    }
                     Divider()
                 }
             }
@@ -83,20 +96,28 @@ internal struct TypePickerChoicesView: View {
 
 internal struct TypePickerOption: View {
     let node: TypePickerType
+    var selected = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                Text(node.name).font(.popsBody)
-                Text(TypePickerTaxonomy.breadcrumb(for: node.id))
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
+            HStack(spacing: PopsSpacing.md) {
+                Image(systemName: node.symbol).foregroundStyle(Color.popsInventory)
+                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                    Text(node.name).font(.popsBody)
+                    Text(TypePickerTaxonomy.breadcrumb(for: node.id))
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                }
+                if selected {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.popsInventory)
+                }
             }
             .padding(.vertical, PopsSpacing.xs)
             .frame(maxWidth: .infinity, minHeight: PopsSize.touchTarget, alignment: .leading)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

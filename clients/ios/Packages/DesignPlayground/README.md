@@ -127,11 +127,12 @@ catalogue somebody has broken.
 
 ## Running it
 
-### Inventory type picker experiment
+### Inventory type picker screen
 
-Open **Experiments → How do you choose a type without learning the whole
-catalogue?** All variants include global search, recent types, and optional
-photo suggestions. The experiment compares three behaviours of one compact
+Open **Screens → Inventory → Choose item type** for the screen design.
+Joao selected explicit focus on 2026-09-29: branches expand in place and
+ancestors hide only on request. The screen includes global search, recent
+types, and optional photo suggestions. The settled experiment retains three behaviours of one compact
 custom tree: Expanded outline retains every ancestor; Automatic focus hides
 older levels as a deeper branch opens; Focus when I ask exposes a scope
 control on each branch. All types returns to the root, and the focused heading
@@ -141,9 +142,14 @@ extra vertical padding, retain 44pt minimum touch targets, and grow with text.
 The default state opens the picker directly. Cushions branch expanded compares
 the same open branch in all variants. The complete rehearsal starts at
 Inventory: New item, sample photos, type, name, location, then Create or
-Create & add another. The second draft retains location but starts with its
+Create & add another. The second draft retains type and location but starts with its
 own name and photos. Search covers aliases and ancestor names globally even
-when the tree is focused. Parent types and No type yet remain selectable.
+when the tree is focused. Parent types and No type yet remain selectable. Reopening reveals the selected
+type, with a checkmark in the tree, recents and search results. Initial opening
+expands sparse branches until five options are visible or the catalogue is
+exhausted; subsequent collapse remains under user control. Compact rows use
+semantic selection tint, SF Symbols and shared motion tokens; Reduce Motion
+disables expansion and focus animations.
 
 The first photo starts a simulated suggestion request only while no type is
 chosen. Manual selection, dismissal, removing the last photo, and discarding

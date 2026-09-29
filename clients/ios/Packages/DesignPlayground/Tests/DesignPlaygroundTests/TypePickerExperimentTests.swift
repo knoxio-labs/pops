@@ -5,17 +5,20 @@ import Testing
 @Suite("Type picker experiment")
 @MainActor
 internal struct TypePickerExperimentTests {
-    @Test("Alternatives remain undecided and compare identical entry conditions")
+    @Test("Chosen direction retains alternatives and compare identical entry conditions")
     func comparableAlternatives() {
         let experiment = InventoryTypePickerExperiment.experiment
-        #expect(experiment.status == .open)
+        #expect(experiment.chosen?.id == "manual")
         #expect(Set(experiment.variants.map(\.id)) == ["outline", "automatic", "manual"])
         for variant in experiment.variants {
             #expect(variant.surface.id == experiment.subject)
             #expect(variant.surface.chrome == .bare)
             #expect(
                 variant.surface.states.map(\.id)
-                    == ["tree", "expanded", "start", "cover", "next", "noMatch", "noSuggestion"])
+                    == [
+                        "tree", "expanded", "selected", "start", "cover", "next", "noMatch",
+                        "noSuggestion",
+                    ])
         }
     }
 

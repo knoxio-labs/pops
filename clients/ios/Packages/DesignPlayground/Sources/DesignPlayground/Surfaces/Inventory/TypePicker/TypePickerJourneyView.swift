@@ -67,8 +67,9 @@ internal struct TypePickerJourneyView: View {
         prepared = true
         switch opening {
         case .start: break
-        case .tree, .expanded:
+        case .tree, .expanded, .selected:
             session = TypePickerSession(recentTypeIDs: ["cushion-cover", "book", "storage-box"])
+            if opening == .selected { session.typeID = "cushion-cover" }
             editing = true
         case .cover, .noMatch, .noSuggestion:
             session.name = "Linen cushion cover"
@@ -78,7 +79,7 @@ internal struct TypePickerJourneyView: View {
             session.name = "Linen cushion cover"
             session.typeID = "cushion-cover"
             session.capturePhoto()
-            _ = session.save()
+            _ = session.save(keepingType: true)
             editing = true
         }
     }
