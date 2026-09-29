@@ -31,7 +31,7 @@ internal struct TypePickerCaptureSection: View {
             }
             .scrollIndicators(.hidden)
             if session.photoCount > 0 {
-                Button("Remove last photo", role: .destructive) { session.photoCount -= 1 }
+                Button("Remove last photo", role: .destructive, action: session.removeLastPhoto)
                     .frame(minHeight: PopsSize.touchTarget)
             }
         } footer: {

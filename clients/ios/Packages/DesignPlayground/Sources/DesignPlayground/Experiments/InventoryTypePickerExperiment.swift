@@ -1,27 +1,22 @@
-internal enum TypePickerApproach: String, CaseIterable, Identifiable {
-    case search, browse, context, photo
-
+extension TypePickerTreeMode {
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .search: "Search & recents"
-        case .browse: "Walk the tree"
-        case .context: "Keep the context"
-        case .photo: "Ask the photo"
+        case .outline: "Expanded outline"
+        case .automatic: "Automatic focus"
+        case .manual: "Focus when I ask"
         }
     }
 
     var note: String {
         switch self {
-        case .search:
-            "Jump to a name or synonym; recent types shorten repeat entry. Browse is always available."
-        case .browse:
-            "Recognise a family, then narrow it. No keyboard required; deep branches cost more taps."
-        case .context:
-            "Choose near the last item and offer its counterpart after saving. Suggestions never copy photos."
-        case .photo:
-            "Confirm one of two staged photo suggestions. A cover and its insert can look identical."
+        case .outline:
+            "Expand branches in place. Every ancestor stays visible; several branches can stay open."
+        case .automatic:
+            "Expand in place; deeper branches bring their local tree into focus. Tap an ancestor to widen."
+        case .manual:
+            "Expand freely, then use Focus on a branch to hide its ancestors and unrelated branches."
         }
     }
 }
@@ -32,10 +27,11 @@ internal enum InventoryTypePickerExperiment {
         id: "inventory-type-picker",
         question: "How do you choose a type without learning the whole catalogue?",
         subject: InventoryTypePickerSurfaces.id,
-        variants: TypePickerApproach.allCases.map { approach in
+        variants: TypePickerTreeMode.allCases.map { approach in
             DesignVariant(
                 id: approach.id, title: approach.title,
-                note: approach.note + " Photo-first and final-action creation remain fixed.",
+                note: approach.note
+                    + " Search, recents and photo suggestions are shared by every variant.",
                 surface: InventoryTypePickerSurfaces.surface(approach))
         }
     )

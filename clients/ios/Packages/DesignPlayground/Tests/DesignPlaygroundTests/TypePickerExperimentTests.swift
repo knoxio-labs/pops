@@ -9,13 +9,13 @@ internal struct TypePickerExperimentTests {
     func comparableAlternatives() {
         let experiment = InventoryTypePickerExperiment.experiment
         #expect(experiment.status == .open)
-        #expect(Set(experiment.variants.map(\.id)) == ["search", "browse", "context", "photo"])
+        #expect(Set(experiment.variants.map(\.id)) == ["outline", "automatic", "manual"])
         for variant in experiment.variants {
             #expect(variant.surface.id == experiment.subject)
             #expect(variant.surface.chrome == .bare)
             #expect(
                 variant.surface.states.map(\.id)
-                    == ["start", "cover", "next", "noMatch", "noSuggestion"])
+                    == ["tree", "expanded", "start", "cover", "next", "noMatch", "noSuggestion"])
         }
     }
 

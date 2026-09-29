@@ -50,6 +50,109 @@ internal struct TypePickerSessionTests {
         #expect(session.photoCount == 0)
     }
 
+    @Test("the first untyped photo starts one suggestion request")
+    func firstPhotoStartsSuggestion() throws {
+        let session = TypePickerSession()
+
+        session.capturePhoto()
+        let requestID = try #require(session.photoRequestID)
+        session.capturePhoto()
+
+        #expect(session.photoSuggestion == .analysing)
+        #expect(session.photoRequestID == requestID)
+        #expect(session.photoCount == 2)
+    }
+
+    @Test("a selected type prevents photo suggestion requests")
+    func selectedTypePreventsSuggestion() {
+        let session = TypePickerSession(typeID: "book")
+
+        session.capturePhoto()
+
+        #expect(session.photoSuggestion == .idle)
+        #expect(session.photoRequestID == nil)
+    }
+
+    @Test("manual selection wins a race with suggestion completion")
+    func manualSelectionWinsSuggestionRace() throws {
+        let session = TypePickerSession()
+        session.capturePhoto()
+        let requestID = try #require(session.photoRequestID)
+
+        session.typeID = "book"
+        session.completePhotoSuggestion(requestID: requestID, available: true)
+        session.typeID = nil
+
+        #expect(session.photoSuggestion == .dismissed)
+        #expect(session.photoRequestID == nil)
+        #expect(session.typeID == nil)
+    }
+
+    @Test("an unavailable suggestion does not prevent saving")
+    func unavailableSuggestionDoesNotPreventSaving() throws {
+        let session = TypePickerSession(name: "Unknown object")
+        session.capturePhoto()
+        let requestID = try #require(session.photoRequestID)
+
+        session.completePhotoSuggestion(requestID: requestID, available: false)
+
+        #expect(session.photoSuggestion == .unavailable)
+        #expect(session.save())
+        #expect(session.saved.count == 1)
+    }
+
+    @Test("a stale completion cannot affect a new draft request")
+    func staleCompletionAfterReset() throws {
+        let session = TypePickerSession()
+        session.capturePhoto()
+        let staleRequestID = try #require(session.photoRequestID)
+        session.resetDraft()
+        session.capturePhoto()
+        let currentRequestID = try #require(session.photoRequestID)
+
+        session.completePhotoSuggestion(requestID: staleRequestID, available: true)
+
+        #expect(currentRequestID != staleRequestID)
+        #expect(session.photoSuggestion == .analysing)
+        #expect(session.photoRequestID == currentRequestID)
+    }
+
+    @Test("dismissing a suggestion cancels its request")
+    func dismissSuggestion() throws {
+        let session = TypePickerSession()
+        session.capturePhoto()
+        let requestID = try #require(session.photoRequestID)
+
+        session.dismissPhotoSuggestion()
+        session.completePhotoSuggestion(requestID: requestID, available: true)
+
+        #expect(session.photoSuggestion == .dismissed)
+        #expect(session.photoRequestID == nil)
+    }
+
+    @Test("removing photos is safe and a new first photo starts a fresh request")
+    func removePhotos() throws {
+        let session = TypePickerSession()
+        session.removeLastPhoto()
+        session.capturePhoto()
+        let firstRequestID = try #require(session.photoRequestID)
+        session.capturePhoto()
+
+        session.removeLastPhoto()
+        #expect(session.photoCount == 1)
+        #expect(session.photoRequestID == firstRequestID)
+        session.removeLastPhoto()
+        session.removeLastPhoto()
+
+        #expect(session.photoCount == 0)
+        #expect(session.photoSuggestion == .idle)
+        #expect(session.photoRequestID == nil)
+
+        session.capturePhoto()
+        #expect(session.photoRequestID != firstRequestID)
+        #expect(session.photoSuggestion == .analysing)
+    }
+
     @Test("recent types are unique and newest first")
     func recency() {
         let session = TypePickerSession()

@@ -9,15 +9,31 @@ internal struct TypePickerSavedItem: Identifiable, Hashable {
     internal let location: String
 }
 
+internal enum TypePickerPhotoSuggestion: Equatable {
+    case idle
+    case analysing
+    case suggested
+    case unavailable
+    case dismissed
+}
+
 @Observable
 @MainActor
 internal final class TypePickerSession {
     internal var name: String
-    internal var typeID: String?
+    internal var typeID: String? {
+        didSet {
+            guard typeID != nil, photoSuggestion != .idle else { return }
+            photoRequestID = nil
+            photoSuggestion = .dismissed
+        }
+    }
     internal var photoCount: Int
     internal private(set) var saved: [TypePickerSavedItem]
     internal private(set) var recentTypeIDs: [String]
     internal var location: String
+    internal private(set) var photoSuggestion: TypePickerPhotoSuggestion
+    internal private(set) var photoRequestID: UUID?
 
     internal init(
         name: String = "",
@@ -33,6 +49,8 @@ internal final class TypePickerSession {
         self.saved = saved
         self.recentTypeIDs = recentTypeIDs
         self.location = location
+        self.photoSuggestion = .idle
+        self.photoRequestID = nil
     }
 
     @discardableResult
@@ -57,7 +75,39 @@ internal final class TypePickerSession {
     }
 
     internal func capturePhoto() {
+        let isFirstPhoto = photoCount == 0
         photoCount += 1
+        guard isFirstPhoto, typeID == nil else { return }
+
+        photoRequestID = UUID()
+        photoSuggestion = .analysing
+    }
+
+    internal func completePhotoSuggestion(requestID: UUID, available: Bool) {
+        guard
+            photoRequestID == requestID,
+            photoCount > 0,
+            typeID == nil,
+            photoSuggestion == .analysing
+        else { return }
+
+        photoRequestID = nil
+        photoSuggestion = available ? .suggested : .unavailable
+    }
+
+    internal func dismissPhotoSuggestion() {
+        photoRequestID = nil
+        photoSuggestion = .dismissed
+    }
+
+    internal func removeLastPhoto() {
+        guard photoCount > 0 else { return }
+
+        photoCount -= 1
+        guard photoCount == 0 else { return }
+
+        photoRequestID = nil
+        photoSuggestion = .idle
     }
 
     internal func startRelated(_ id: String) {
@@ -72,5 +122,7 @@ internal final class TypePickerSession {
         name = ""
         typeID = nil
         photoCount = 0
+        photoRequestID = nil
+        photoSuggestion = .idle
     }
 }

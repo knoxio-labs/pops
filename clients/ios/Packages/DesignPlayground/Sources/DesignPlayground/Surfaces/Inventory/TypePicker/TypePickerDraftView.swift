@@ -3,7 +3,7 @@ import SwiftUI
 
 internal struct TypePickerDraftView: View {
     @Bindable var session: TypePickerSession
-    let approach: TypePickerApproach
+    let approach: TypePickerTreeMode
     let opening: TypePickerOpening
     let finish: () -> Void
     @State private var picking = false
@@ -29,10 +29,7 @@ internal struct TypePickerDraftView: View {
                 }
             }
             if session.typeID == nil {
-                TypePickerSuggestedSection(
-                    session: session, approach: approach,
-                    unavailable: opening == .noSuggestion,
-                    browse: { picking = true })
+                TypePickerAssistSection(session: session, browse: { picking = true })
             }
             Section {
                 TextField("Name", text: $session.name)
@@ -79,57 +76,25 @@ internal struct TypePickerDraftView: View {
         }
         .navigationDestination(isPresented: $picking) {
             TypePickerChoicesView(
-                recentIDs: session.recentTypeIDs, startsBrowsing: approach == .browse,
+                session: session, mode: approach,
                 initialQuery: opening == .noMatch ? "ceramic unicorn" : "",
-                clearRecents: session.clearRecentTypes
+                expanded: opening == .expanded
             ) { id in
                 session.typeID = id
                 picking = false
             }
         }
+        .task(id: session.photoRequestID) {
+            guard let requestID = session.photoRequestID else { return }
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+            session.completePhotoSuggestion(
+                requestID: requestID, available: opening != .noSuggestion)
+        }
         .onAppear {
-            if opening == .noMatch && !openedPicker {
+            if [.tree, .expanded, .noMatch].contains(opening) && !openedPicker {
                 openedPicker = true
                 picking = true
-            }
-        }
-    }
-}
-
-internal struct TypePickerSuggestedSection: View {
-    let session: TypePickerSession
-    let approach: TypePickerApproach
-    let unavailable: Bool
-    let browse: () -> Void
-
-    var body: some View {
-        let suggestions = TypePickerTaxonomy.suggested(after: session.saved.last?.typeID)
-        if approach == .context && !suggestions.isEmpty {
-            Section("Near your last item") {
-                ForEach(suggestions) { node in
-                    TypePickerOption(node: node) { session.typeID = node.id }
-                }
-            }
-        } else if approach == .photo && session.photoCount > 0 {
-            Section {
-                if unavailable {
-                    Text("No type suggestion for this photo.")
-                    Button("Search all types", action: browse)
-                        .frame(minHeight: PopsSize.touchTarget)
-                } else {
-                    let candidates = ["cushion-cover", "cushion"]
-                    ForEach(candidates.compactMap(TypePickerTaxonomy.node)) { node in
-                        TypePickerOption(node: node) { session.typeID = node.id }
-                    }
-                    Button("Neither · search all types", action: browse)
-                        .frame(minHeight: PopsSize.touchTarget)
-                }
-            } header: {
-                Text("What is in the photo?")
-            } footer: {
-                Text(
-                    "Staged suggestions, not image recognition. "
-                        + "Confirm the removable cover or the filled cushion.")
             }
         }
     }

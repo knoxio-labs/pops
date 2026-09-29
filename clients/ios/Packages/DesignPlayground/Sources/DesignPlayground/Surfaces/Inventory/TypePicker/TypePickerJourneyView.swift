@@ -2,7 +2,7 @@ import DesignSystem
 import SwiftUI
 
 internal struct TypePickerJourneyView: View {
-    let approach: TypePickerApproach
+    let approach: TypePickerTreeMode
     let opening: TypePickerOpening
     @State private var session = TypePickerSession()
     @State private var editing = false
@@ -22,7 +22,7 @@ internal struct TypePickerJourneyView: View {
                 } footer: {
                     Text("Try a cushion cover, then its cushion. Photos and saves are simulated.")
                 }
-                if approach == .context, let last = session.saved.last {
+                if let last = session.saved.last {
                     Section("After \(last.name)") {
                         ForEach(TypePickerTaxonomy.suggested(after: last.typeID)) { node in
                             Button("Add \(node.name.lowercased())") {
@@ -67,6 +67,9 @@ internal struct TypePickerJourneyView: View {
         prepared = true
         switch opening {
         case .start: break
+        case .tree, .expanded:
+            session = TypePickerSession(recentTypeIDs: ["cushion-cover", "book", "storage-box"])
+            editing = true
         case .cover, .noMatch, .noSuggestion:
             session.name = "Linen cushion cover"
             session.capturePhoto()

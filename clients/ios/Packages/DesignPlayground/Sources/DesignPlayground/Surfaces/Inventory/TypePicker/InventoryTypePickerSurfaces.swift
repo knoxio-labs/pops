@@ -1,8 +1,10 @@
 internal enum TypePickerOpening: String, CaseIterable {
-    case start, cover, next, noMatch, noSuggestion
+    case tree, expanded, start, cover, next, noMatch, noSuggestion
 
     var title: String {
         switch self {
+        case .tree: "Choose a type"
+        case .expanded: "Cushions branch expanded"
         case .start: "Start in Inventory"
         case .cover: "Cover photographed"
         case .next: "Cover saved · add the cushion"
@@ -15,9 +17,9 @@ internal enum TypePickerOpening: String, CaseIterable {
 @MainActor
 internal enum InventoryTypePickerSurfaces {
     static let id = SurfaceID(area: "inventory", slug: "type-picker-lab")
-    static let surfaces = [surface(.search)]
+    static let surfaces = [surface(.automatic)]
 
-    static func surface(_ approach: TypePickerApproach) -> DesignSurface {
+    static func surface(_ approach: TypePickerTreeMode) -> DesignSurface {
         DesignSurface(
             id: id, title: "Type picker · \(approach.title)",
             synopsis:

@@ -130,29 +130,37 @@ catalogue somebody has broken.
 ### Inventory type picker experiment
 
 Open **Experiments → How do you choose a type without learning the whole
-catalogue?** Four approaches share a fictional copy of the evolving Item
-hierarchy: search with recents, a tree browser, contextual related types, and
-photo suggestions that require confirmation. The companion Inventory surface
-is **Type picker · Search & recents**.
+catalogue?** All variants include global search, recent types, and optional
+photo suggestions. The experiment compares three behaviours of one compact
+custom tree: Expanded outline retains every ancestor; Automatic focus hides
+older levels as a deeper branch opens; Focus when I ask exposes a scope
+control on each branch. All types returns to the root, and the focused heading
+opens the ancestor menu. Chevrons expand; type labels select. Rows have no
+extra vertical padding, retain 44pt minimum touch targets, and grow with text.
 
-Each approach supports the same rehearsal: New item, sample photos, type,
-name, location, then Create or Create & add another. Add a cushion cover and
-then its cushion; the second draft retains location but starts with its own
-name and photos. The inspector can start at a photographed cover, the next
-draft, an unsuccessful search, or unavailable photo suggestions. Parents remain
-selectable, and No type yet is available. This is a focused picker rehearsal,
-not the production form's complete property editor. Camera, recognition,
-upload and persistence are simulated; reopening the surface resets the session.
+The default state opens the picker directly. Cushions branch expanded compares
+the same open branch in all variants. The complete rehearsal starts at
+Inventory: New item, sample photos, type, name, location, then Create or
+Create & add another. The second draft retains location but starts with its
+own name and photos. Search covers aliases and ancestor names globally even
+when the tree is focused. Parent types and No type yet remain selectable.
 
-The alternatives apply Apple's guidance on [search suggestions and
-recents](https://developer.apple.com/design/human-interface-guidelines/searching)
-and [reducing data entry](https://developer.apple.com/design/human-interface-guidelines/entering-data).
-The contextual approach tests NN/g's recommendation to [keep related
-destinations nearby](https://www.nngroup.com/articles/menu-design/).
-Photo candidates deliberately leave cover versus insert to the person;
-[Vision classification](https://developer.apple.com/documentation/vision/classifying-images-for-categorization-and-search)
-produces candidate labels, not inventory identities. These sources motivate
-the alternatives; they do not establish a winning design or measured time saving.
+The first photo starts a simulated suggestion request only while no type is
+chosen. Manual selection, dismissal, removing the last photo, and discarding
+or saving the draft invalidate the request; stale results never change the
+next draft. Suggested, unavailable and manual paths all leave Create usable.
+Camera, classification, upload and persistence remain explicit simulations;
+this is a picker rehearsal, not the production form's complete property editor.
+Reopening the surface resets the session.
+
+The shared search and recents follow Apple's [search guidance](https://developer.apple.com/design/human-interface-guidelines/searching).
+The compact tree explores [keeping related destinations nearby](https://www.nngroup.com/articles/menu-design/).
+For a real photo suggestion, iOS 27 [Foundation Models image prompting](https://developer.apple.com/documentation/FoundationModels/analyzing-images-with-multimodal-prompting)
+can evaluate an image against a supplied catalogue; [model availability](https://developer.apple.com/documentation/FoundationModels/generating-content-and-performing-tasks-with-foundation-models)
+must be checked at runtime. Apple's [Vision classifier](https://developer.apple.com/documentation/vision/classifyimagerequest)
+instead returns its supported label vocabulary. Neither establishes accuracy
+for cover versus insert: candidates need confirmation, an unknown outcome,
+and evaluation on representative photos before production use (POPS-5249).
 
 ### Build and test
 
