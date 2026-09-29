@@ -24,14 +24,16 @@ cp "$log" "$artifacts/compiler.log"
 output_log="$artifacts/analyze.log"
 printf 'lint:analyze: streaming analyzer output to %s\n' "$output_log"
 set +e
-swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml 2>&1 | tee "$output_log"
-statuses=("${PIPESTATUS[@]}")
+swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml \
+  <&0 >"$output_log" 2>&1 &
+analyzer_pid=$!
+tail -f "$output_log" &
+tail_pid=$!
+wait "$analyzer_pid"
+status=$?
+kill "$tail_pid" 2>/dev/null
+wait "$tail_pid" 2>/dev/null || true
 set -e
-status=${statuses[0]}
-if [ "${statuses[1]}" -ne 0 ]; then
-  echo "lint:analyze: could not retain analyzer output at $output_log" >&2
-  exit 1
-fi
 
 # Same reasoning as app-test-lane.sh's executed-test count: absence is a
 # failure, not a pass. A log with nothing usable in it reports zero
