@@ -65,7 +65,8 @@ function syncProjectionIssues(
   const canonicalFieldIds = new Set(fieldValues.map((field) => field.fieldId));
   return issues.filter(
     (issue) =>
-      issue.code !== 'field_definition_missing' ||
+      (issue.code !== 'field_definition_missing' &&
+        issue.code !== 'field_cardinality_unsupported') ||
       issue.fieldId === null ||
       !canonicalFieldIds.has(issue.fieldId)
   );

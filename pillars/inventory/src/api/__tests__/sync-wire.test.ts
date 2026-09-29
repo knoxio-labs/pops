@@ -267,21 +267,18 @@ describe('item rows on the wire', () => {
       catalogueRevision: 2,
       values: ['Ursula K. Le Guin', 'Second Author'],
     });
-    expect(SyncItemIssueSchema.array().parse(response.body.issues)).toContainEqual(
+    expect(SyncItemIssueSchema.array().parse(response.body.issues)).not.toContainEqual(
       expect.objectContaining({
         itemId: book,
         code: 'field_cardinality_unsupported',
         fieldId: AUTHOR_FIELD_ID,
-        fieldKey: null,
-        itemApplied: true,
-        retryable: true,
       })
     );
 
     const targeted = await target.api.get(`/sync/items/${book}`).set(PROTOCOL_2);
     expect(targeted.status).toBe(200);
     expect(targeted.body.item.id).toBe(book);
-    expect(targeted.body.issues).toContainEqual(
+    expect(targeted.body.issues).not.toContainEqual(
       expect.objectContaining({ itemId: book, code: 'field_cardinality_unsupported' })
     );
 
