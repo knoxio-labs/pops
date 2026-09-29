@@ -8,20 +8,31 @@ import Testing
 @MainActor
 @Suite("PopsZoomablePhoto")
 internal struct PopsZoomablePhotoTests {
-    @Test("pan keeps translation in screen space while zoomed")
-    func panTranslationStaysInScreenSpace() {
-        let offset = PopsZoomablePhotoPresentation.panOffset(
-            committedOffset: CGSize(width: 12, height: -8),
-            translation: CGSize(width: 40, height: -20)
+    @Test("double-tap zoom enters the inspection scale from the resting scale")
+    func doubleTapZoomsFromRestingScale() {
+        #expect(
+            PopsZoomablePhotoPresentation.scaleAfterDoubleTap(
+                currentScale: PopsZoomablePhotoPresentation.minimumScale
+            ) == PopsZoomablePhotoPresentation.doubleTapScale
         )
+    }
 
-        #expect(offset.width == 52)
-        #expect(offset.height == -28)
+    @Test(
+        "double-tap returns to the resting scale from every zoomed scale",
+        arguments: [
+            1.1, 2.5, 6,
+        ])
+    func doubleTapResetsZoom(currentScale: CGFloat) {
+        #expect(
+            PopsZoomablePhotoPresentation.scaleAfterDoubleTap(currentScale: currentScale)
+                == PopsZoomablePhotoPresentation.minimumScale
+        )
     }
 
     @Test(
         "image bytes draw a different zoomable page from the placeholder",
-        .comparisonSurvivesAnUncompiledCatalog)
+        .comparisonSurvivesAnUncompiledCatalog
+    )
     func dataAndPlaceholderRenderDifferently() throws {
         let png = try #require(PopsTestImage.pngData(), "the fixture image could not be encoded")
         let page = { (data: Data?) in
