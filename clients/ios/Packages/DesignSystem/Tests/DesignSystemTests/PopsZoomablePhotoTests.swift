@@ -8,28 +8,15 @@ import Testing
 @MainActor
 @Suite("PopsZoomablePhoto")
 internal struct PopsZoomablePhotoTests {
-    @Test("pan converts zoomed local translation to screen movement")
-    func panTranslationScalesWithZoom() {
-        let offset = PopsZoomablePhotoPresentation.offset(
+    @Test("pan keeps translation in screen space while zoomed")
+    func panTranslationStaysInScreenSpace() {
+        let offset = PopsZoomablePhotoPresentation.panOffset(
             committedOffset: CGSize(width: 12, height: -8),
-            translation: CGSize(width: 40, height: -20),
-            scale: 4
+            translation: CGSize(width: 40, height: -20)
         )
 
-        #expect(offset.width == 172)
-        #expect(offset.height == -88)
-    }
-
-    @Test("pan never amplifies translation below one-to-one scale")
-    func panTranslationHasBaseScaleFloor() {
-        let offset = PopsZoomablePhotoPresentation.offset(
-            committedOffset: .zero,
-            translation: CGSize(width: 40, height: -20),
-            scale: 0.5
-        )
-
-        #expect(offset.width == 40)
-        #expect(offset.height == -20)
+        #expect(offset.width == 52)
+        #expect(offset.height == -28)
     }
 
     @Test(

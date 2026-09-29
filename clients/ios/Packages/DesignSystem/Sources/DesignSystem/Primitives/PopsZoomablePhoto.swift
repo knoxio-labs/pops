@@ -36,9 +36,7 @@ public struct PopsZoomablePhoto: View {
     }
 
     public var body: some View {
-        picture
-            .scaleEffect(scale)
-            .offset(offset)
+        interactionSurface
             .animation(
                 PopsMotion.animation(PopsMotion.snappy, reduceMotion: reduceMotion),
                 value: scale
@@ -46,16 +44,27 @@ public struct PopsZoomablePhoto: View {
             .onTapGesture(count: 2) { toggleZoom() }
     }
 
+    @ViewBuilder private var interactionSurface: some View {
+        let surface = ZStack {
+            picture
+                .scaleEffect(scale)
+                .offset(offset)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+
+        if scale > 1 {
+            surface.gesture(pan.simultaneously(with: magnify))
+        } else {
+            surface.gesture(magnify)
+        }
+    }
+
     @ViewBuilder private var picture: some View {
-        let plate = PopsPhoto(
+        PopsPhoto(
             data: data, placeholderSymbol: placeholderSymbol, contentMode: contentMode
         )
         .padding(PopsSpacing.xl)
-        if scale > 1 {
-            plate.gesture(pan.simultaneously(with: magnify))
-        } else {
-            plate.gesture(magnify)
-        }
     }
 
     private var magnify: some Gesture {
@@ -72,10 +81,9 @@ public struct PopsZoomablePhoto: View {
     private var pan: some Gesture {
         DragGesture()
             .onChanged { value in
-                offset = PopsZoomablePhotoPresentation.offset(
+                offset = PopsZoomablePhotoPresentation.panOffset(
                     committedOffset: committedOffset,
-                    translation: value.translation,
-                    scale: scale
+                    translation: value.translation
                 )
             }
             .onEnded { _ in committedOffset = offset }
@@ -99,13 +107,12 @@ public struct PopsZoomablePhoto: View {
 }
 
 internal enum PopsZoomablePhotoPresentation {
-    internal static func offset(
-        committedOffset: CGSize, translation: CGSize, scale: CGFloat
+    internal static func panOffset(
+        committedOffset: CGSize, translation: CGSize
     ) -> CGSize {
-        let effectiveScale = max(scale, 1)
         return CGSize(
-            width: committedOffset.width + translation.width * effectiveScale,
-            height: committedOffset.height + translation.height * effectiveScale
+            width: committedOffset.width + translation.width,
+            height: committedOffset.height + translation.height
         )
     }
 }
