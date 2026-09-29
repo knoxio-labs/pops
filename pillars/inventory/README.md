@@ -103,6 +103,13 @@ Other views keep field names. The shared `FieldIcon` component in `@pops/ui`
 renders these names synchronously for reuse, including `PackageOpenUp` for unpacking.
 Icon changes are presentation edits and remain available after publication.
 
+Labels with a QR and contents use a top header for the QR, name, code and fields
+when the sheet has room, with contents listed underneath. The planner chooses the
+fewest columns needed (up to three), keeping each column at least 40 mm wide.
+Capacity follows the remaining height after the header; overflow reserves a row
+for `+N more`. Small labels retain the compact layout, and QR sizes never drop
+below the existing scan-size minimum.
+
 The primitive vocabulary is closed: short and long text, integer, exact decimal,
 boolean, enum, fixed-unit measurement, date, date-time, HTTPS URL and item or
 location reference. Cardinality is `one` or `many` rather than an array kind.

@@ -1,7 +1,8 @@
+import { fitCodePt } from './code-fit.js';
+import { estimateLines, fitList, fitNamePt, nameLineHeight } from './label-fitting.js';
 /**
- * How one label's parts share its die-cut. Three arrangements: the QR alone,
- * filling the label; the QR beside a text column (the approved box and item
- * labels); and text alone across the whole label. A part shown alone is set
+ * How one label's parts share its die-cut: QR alone, QR beside text,
+ * QR and metadata above contents, or text alone. A part shown alone is set
  * as large as the label allows; parts sharing it use the sheet's own scale,
  * and a list that runs out of room ends in "+N more" instead of overflowing.
  *
@@ -9,8 +10,7 @@
  * sizing in `@pops/inventory/labels` takes; the renderer clips as a last
  * guard, so an estimate that runs long loses a line, never the next label.
  */
-import { fitCodePt } from './code-fit.js';
-import { estimateLines, fitList, fitNamePt, nameLineHeight } from './label-fitting.js';
+import { headerPlan } from './label-header-layout.js';
 import { MIN_QR_MM, templateFits, textWidthMm } from './sheet-layouts.js';
 
 import type { LabelFieldValue, ResolvedLabel } from './label-content.js';
@@ -32,11 +32,20 @@ const TEXT_ONLY_BOOST = 1.25;
 const HERO_SHARE = 0.85;
 
 /** How the label is divided. */
-export type LabelArrangement = 'qr-fill' | 'qr-beside' | 'text';
+export type LabelArrangement = 'qr-fill' | 'qr-beside' | 'qr-header' | 'text';
 
 /** One label, measured: where the QR goes and how big each text part is set. */
 export interface LabelPlan {
   arrangement: LabelArrangement;
+  /** Geometry of a top header and the full-width contents below it, when they fit. */
+  header?: {
+    heightMm: number;
+    columns: 1 | 2 | 3;
+    columnGapMm: number;
+    bodyGapMm: number;
+    headingHeightMm: number;
+    rows: number;
+  };
   /** The QR's side in millimetres, or null when the label has no QR. */
   qrMm: number | null;
   /** The name's size and the most lines it may take before it ends in an ellipsis. */
@@ -193,5 +202,7 @@ export function planLabel(
       contents: null,
     };
   }
+  const header = headerPlan(label, subject, layout);
+  if (header) return header;
   return isSolo(label) ? soloPlan(label, subject, layout) : sharedPlan(label, subject, layout);
 }

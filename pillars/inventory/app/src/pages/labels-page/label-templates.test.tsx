@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { sheetLayout } from '@pops/inventory/labels';
 
+import { FieldList } from './label-template-parts';
 import { ContentLabel } from './label-templates';
 
 import type { LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
@@ -61,5 +62,30 @@ describe('printed field icons', () => {
     const list = renderField({ id: 'box.room', label: 'Room', value: 'Kitchen', icon: 'MapPin' });
     expect(list.querySelector('.lucide-map-pin')).not.toBeNull();
     expect(list).toHaveTextContent('Kitchen');
+  });
+
+  it('constrains icon field rows to the height reserved by the header plan', () => {
+    render(
+      <FieldList
+        list={{
+          pt: 12,
+          shown: [
+            { id: 'box.destination', label: 'Unpack in', value: 'Office', icon: 'PackageOpenUp' },
+          ],
+          more: 2,
+        }}
+        lineHeight={1.3}
+      />
+    );
+
+    const list = screen.getByRole('list', { name: 'Fields' });
+    expect(list).toHaveClass('min-w-0', 'max-w-full');
+    for (const row of within(list).getAllByRole('listitem')) {
+      expect(row.getAttribute('style')).toContain('line-height: 1.3');
+      expect(row.getAttribute('style')).toContain('height: 1.3em');
+      expect(row.getAttribute('style')).toContain('max-height: 1.3em');
+      expect(row).toHaveClass('overflow-hidden');
+    }
+    expect(list.querySelector('span[aria-hidden="true"]')).toHaveClass('align-text-bottom');
   });
 });
