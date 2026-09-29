@@ -121,10 +121,48 @@ function renderNewField(
 }
 
 describe('FieldForm configuration branches', () => {
+  it('sets an icon on a published field while preserving other presentation hints', () => {
+    const onOperation = renderField(
+      field({ presentation: { highlighted: true, futureHint: 'keep' } }),
+      [],
+      true
+    );
+    fireEvent.change(screen.getByRole('combobox', { name: 'Icon' }), {
+      target: { value: 'PackageOpenUp' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        presentation: { highlighted: true, futureHint: 'keep', icon: 'PackageOpenUp' },
+      })
+    );
+  });
+
+  it('loads and clears the saved icon', () => {
+    const onOperation = renderField(field({ presentation: { icon: 'PackageOpenUp' } }));
+    const selector = screen.getByRole('combobox', { name: 'Icon' });
+    expect(selector).toHaveValue('PackageOpenUp');
+    fireEvent.change(selector, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ presentation: { highlighted: false } })
+    );
+  });
+
+  it('preserves an unsupported icon when editing another setting', () => {
+    const onOperation = renderField(field({ presentation: { icon: 'FutureIcon' } }));
+    expect(screen.getByRole('combobox', { name: 'Icon' })).toHaveValue('FutureIcon');
+    fireEvent.change(screen.getByLabelText('Help text'), { target: { value: 'Updated help' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ presentation: { highlighted: false, icon: 'FutureIcon' } })
+    );
+  });
+
   it.each(KIND_LABELS)('selects the %s primitive as %s', (kind, label) => {
     renderField(field({ kind, fixedUnit: kind === 'measurement' ? 'cm' : null }));
 
-    expect(screen.getByRole('combobox')).toHaveTextContent(label);
+    expect(screen.getByRole('combobox', { name: '' })).toHaveTextContent(label);
   });
 
   it.each(KIND_LABELS)('submits the %s configuration in the put_field request', (kind) => {
@@ -320,7 +358,7 @@ describe('FieldForm configuration branches', () => {
 
     expect(screen.getByLabelText('Field label')).toBeEnabled();
     expect(screen.getByLabelText('Key')).toBeDisabled();
-    expect(screen.getByRole('combobox')).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: '' })).toBeDisabled();
     expect(screen.getByLabelText('One')).toBeDisabled();
     expect(screen.getByLabelText('Many')).toBeDisabled();
     expect(screen.getByLabelText('Fixed unit')).toBeDisabled();

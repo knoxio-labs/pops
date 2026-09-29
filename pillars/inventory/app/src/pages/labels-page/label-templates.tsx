@@ -1,5 +1,5 @@
 import { autoParts, itemUri, LABEL_GAP_MM, planLabel } from '@pops/inventory/labels';
-import { QrCode, cn } from '@pops/ui';
+import { FieldIcon, isFieldIconName, QrCode, cn } from '@pops/ui';
 
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -100,7 +100,17 @@ function FieldList({ list }: { list: FittedList<LabelFieldValue> }) {
     <ul style={{ fontSize: `${list.pt}pt` }} aria-label="Fields" data-label-fields>
       {list.shown.map((field) => (
         <ListLine key={field.id}>
-          <span className="font-semibold">{field.label}:</span> {field.value}
+          {isFieldIconName(field.icon) ? (
+            <>
+              <span className="sr-only">{field.label}:</span>
+              <span className="mr-1 inline-flex items-center align-middle" aria-hidden="true">
+                <FieldIcon name={field.icon} size="1.25em" />
+              </span>
+            </>
+          ) : (
+            <span className="font-semibold">{field.label}:</span>
+          )}{' '}
+          {field.value}
         </ListLine>
       ))}
       <More count={list.more} />

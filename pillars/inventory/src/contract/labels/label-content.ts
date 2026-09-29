@@ -27,6 +27,8 @@ export interface LabelFieldValue {
   id: string;
   label: string;
   value: string;
+  /** Optional presentation icon; renderers fall back to the field label when unsupported. */
+  icon?: string;
 }
 
 /** What the label page knows about an item beyond the print subject. */

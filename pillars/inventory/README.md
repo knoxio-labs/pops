@@ -96,6 +96,13 @@ audit events are append-only. Migration `0017_persisted_item_types` imported the
 seven built-ins as revision 1; the persisted catalogue is now the only runtime
 authority.
 
+Fields may store an optional `presentation.icon`, chosen in the field settings.
+Printed labels replace the field-name prefix with a supported icon while retaining
+the name for assistive technology; missing or unsupported icons fall back to text.
+Other views keep field names. The shared `FieldIcon` component in `@pops/ui`
+renders these names synchronously for reuse, including `PackageOpenUp` for unpacking.
+Icon changes are presentation edits and remain available after publication.
+
 The primitive vocabulary is closed: short and long text, integer, exact decimal,
 boolean, enum, fixed-unit measurement, date, date-time, HTTPS URL and item or
 location reference. Cardinality is `one` or `many` rather than an array kind.
