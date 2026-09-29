@@ -118,8 +118,7 @@ jobs:
           if [ -n "${{ inputs.pull_request }}" ]; then
             args+=(--pull-request "${{ inputs.pull_request }}" --pr-issue "${{ inputs.pr_issue }}")
           fi
-          POPS_E2E_PAIRING_ISSUER="${{ inputs.ios_pairing_issuer }}" \
-            node scripts/inventory-acceptance/run.mjs "${args[@]}"
+          node scripts/inventory-acceptance/run.mjs "${args[@]}"
 
       - name: Upload evidence
         if: always()
@@ -172,7 +171,8 @@ jobs:
           if [ -n "${{ inputs.pull_request }}" ]; then
             args+=(--pull-request "${{ inputs.pull_request }}" --pr-issue "${{ inputs.pr_issue }}")
           fi
-          node scripts/inventory-acceptance/run.mjs "${args[@]}"
+          POPS_E2E_PAIRING_ISSUER="${{ inputs.ios_pairing_issuer }}" \
+            node scripts/inventory-acceptance/run.mjs "${args[@]}"
 
       - name: Upload evidence
         if: always()
