@@ -54,6 +54,7 @@ internal struct InventoryRecordRowLabel: View {
                     .fixedSize(horizontal: false, vertical: true)
                 badges
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: PopsSpacing.sm)
             if let sync = syncMark {
                 sync.symbol.image
@@ -65,6 +66,7 @@ internal struct InventoryRecordRowLabel: View {
             if showsChevron { InventoryRowChevron() }
         }
         .padding(.vertical, PopsSpacing.xs)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
     }
@@ -79,6 +81,7 @@ internal struct InventoryRecordRowLabel: View {
                     chips(lifecycle: lifecycle, code: code)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -126,7 +129,8 @@ private struct InventoryLifecycleChip: View {
 
 /// An item's inventory code: monospaced because it is read character by
 /// character against a sticker, and never truncated, because a code with
-/// characters missing matches nothing.
+/// characters missing matches nothing. Long codes wrap at invisible
+/// character boundaries so they do not widen the list row.
 private struct InventoryRecordCodeBadge: View {
     let code: String
 
@@ -134,10 +138,9 @@ private struct InventoryRecordCodeBadge: View {
         HStack(spacing: PopsSpacing.xs) {
             InventorySymbol.code.image
                 .font(.popsCaption)
-            Text(code)
+            Text(breakableCode)
                 .font(.popsMonospacedCaption)
-                .lineLimit(1)
-                .fixedSize()
+                .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(Color.popsMutedForeground)
         .padding(.horizontal, PopsSpacing.sm)
@@ -145,6 +148,10 @@ private struct InventoryRecordCodeBadge: View {
         .background(Color.popsMutedForeground.opacity(0.12), in: .capsule)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Inventory code \(code)")
+    }
+
+    private var breakableCode: String {
+        code.map(String.init).joined(separator: "\u{200B}")
     }
 }
 
