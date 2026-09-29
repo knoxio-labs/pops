@@ -81,9 +81,10 @@ internal struct PurchaseDetailHeader: View {
             .accessibilityRepresentation {
                 Button(
                     PurchaseDetailCopy.receiptLabel(pages: detail.receiptURIs.count),
-                    action: { open(first.pageIndex) })
-                    .accessibilityHint("Opens the receipt")
-                    .accessibilityIdentifier(PurchaseDetailAccessibility.receiptPlate)
+                    action: { open(first.pageIndex) }
+                )
+                .accessibilityHint("Opens the receipt")
+                .accessibilityIdentifier(PurchaseDetailAccessibility.receiptPlate)
             }
         }
     }
