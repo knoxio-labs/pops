@@ -175,6 +175,17 @@ const PAIRING_CODE_TTL_MS = 30 * 60 * 1000;
 const DISCOVERY_FETCH_TIMEOUT_MS = 20_000;
 
 /**
+ * Raises the registry-backed service-account verification deadline past the
+ * SDK's production default of 3s. The pairing request crosses the MCP, BFM
+ * and registry processes while xcodebuild, the simulator and Maestro share
+ * the same loaded CI runner; without a bounded harness override, scheduling
+ * delay is reported as registry unavailability. `resolveServiceAccountVerifyTimeoutMs`
+ * in `pillars/bfm/src/api/pillars/env.ts` is the one place BFM reads this
+ * variable; every real deployment leaves it unset.
+ */
+const SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS = 30_000;
+
+/**
  * Raises the reachability probe's per-pillar `GET /openapi` deadline past
  * `reachability.ts`'s own default of 2s (`DEFAULT_PROBE_TIMEOUT_MS`), for the
  * same reason `DISCOVERY_FETCH_TIMEOUT_MS` above raises the discovery
@@ -574,6 +585,7 @@ async function main() {
         POPS_INTERNAL_API_KEY: SERVICE_ACCOUNT_KEY,
         POPS_REGISTRY_URL: upstream.url,
         POPS_DISCOVERY_FETCH_TIMEOUT_MS: String(DISCOVERY_FETCH_TIMEOUT_MS),
+        POPS_SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS: String(SERVICE_ACCOUNT_VERIFY_TIMEOUT_MS),
         POPS_PROBE_TIMEOUT_MS: String(PROBE_TIMEOUT_MS),
         // Emptied on purpose: with it, the pillar would try to register itself
         // with a registry that is a fixture and has no such route.
