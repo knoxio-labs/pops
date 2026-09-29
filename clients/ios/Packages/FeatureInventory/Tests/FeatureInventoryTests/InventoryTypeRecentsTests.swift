@@ -27,7 +27,7 @@ internal struct InventoryTypeRecentsTests {
         defer { defaults.removePersistentDomain(forName: "inventory-type-recents-clear-tests") }
 
         InventoryTypeRecents.record("book", in: defaults)
-        InventoryTypeRecents.clear(from: defaults)
+        InventoryTypeRecents.removeAll(from: defaults)
 
         #expect(InventoryTypeRecents.load(from: defaults, validIDs: ["book"]).isEmpty)
     }

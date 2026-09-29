@@ -147,7 +147,7 @@ internal struct TypePickerTreeRowView: View {
         .padding(.leading, CGFloat(max(0, row.depth - 1)) * indent)
         .padding(.trailing, PopsSpacing.sm)
         .background(
-            selected ? Color.popsInventory.opacity(0.12) : Color.clear,
+            selected ? Color.popsInventory.opacity(0.12) : Color.popsBackground.opacity(0),
             in: .rect(cornerRadius: PopsRadius.control)
         )
         .popsMotion(value: row.isExpanded)

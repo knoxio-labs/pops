@@ -20,7 +20,7 @@ internal enum InventoryTypeRecents {
         defaults.set(next.joined(separator: "\n"), forKey: key)
     }
 
-    internal static func clear(from defaults: UserDefaults = .standard) {
+    internal static func removeAll(from defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: key)
     }
 

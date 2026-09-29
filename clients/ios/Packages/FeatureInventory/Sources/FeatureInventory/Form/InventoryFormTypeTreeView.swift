@@ -94,7 +94,9 @@ internal struct InventoryFormTypeTreeView: View {
         .padding(.leading, CGFloat(row.depth) * PopsSpacing.md)
         .padding(.trailing, PopsSpacing.sm)
         .background(
-            selection == row.id ? Color.popsInventory.opacity(0.12) : Color.clear,
+            selection == row.id
+                ? Color.popsInventory.opacity(0.12)
+                : Color.popsBackground.opacity(0),
             in: .rect(cornerRadius: PopsRadius.control)
         )
         .popsMotion(value: row.isExpanded)
@@ -115,7 +117,7 @@ internal struct InventoryFormTypeTreeView: View {
             .accessibilityLabel("\(row.isExpanded ? "Collapse" : "Expand") (\(row.option.label))")
             .accessibilityValue(row.isExpanded ? "Expanded" : "Collapsed")
         } else {
-            Color.clear
+            Color.popsBackground.opacity(0)
                 .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
                 .accessibilityHidden(true)
         }

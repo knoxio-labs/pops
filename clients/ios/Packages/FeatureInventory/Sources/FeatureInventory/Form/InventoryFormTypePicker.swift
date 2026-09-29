@@ -79,7 +79,7 @@ internal struct InventoryFormTypePicker: View {
                         .foregroundStyle(Color.popsMutedForeground)
                     Spacer()
                     Button("Clear") {
-                        InventoryTypeRecents.clear()
+                        InventoryTypeRecents.removeAll()
                         recentIDs.removeAll()
                     }
                     .font(.popsCaption)
