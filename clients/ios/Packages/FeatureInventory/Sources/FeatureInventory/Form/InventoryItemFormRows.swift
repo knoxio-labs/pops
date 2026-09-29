@@ -5,7 +5,6 @@ import SwiftUI
 /// The type, from the catalogue this phone last downloaded.
 internal struct InventoryFormTypeRow: View {
     internal let types: [InventoryType]
-    internal let offersNone: Bool
     @Binding internal var typeKey: String?
     @State private var pickerIsPresented = false
 
@@ -14,8 +13,12 @@ internal struct InventoryFormTypeRow: View {
             pickerIsPresented = true
         } label: {
             LabeledContent("Type") {
-                Text(selectedLabel)
-                    .foregroundStyle(Color.popsMutedForeground)
+                HStack(spacing: PopsSpacing.sm) {
+                    selectedSymbol.image
+                        .foregroundStyle(Color.popsInventory)
+                    Text(selectedLabel)
+                }
+                .foregroundStyle(Color.popsMutedForeground)
             }
         }
         .buttonStyle(.plain)
@@ -23,9 +26,7 @@ internal struct InventoryFormTypeRow: View {
             InventoryFormTypePicker(
                 selection: $typeKey,
                 options: InventoryFormTypeOptions.legacy(types),
-                noneTitle: offersNone ? "No type yet" : nil,
-                noneAccessibilityIdentifier: offersNone
-                    ? InventoryAccessibility.itemTypeNone : nil,
+                showsRecents: true,
                 onChoose: { id in
                     typeKey = id
                     pickerIsPresented = false
@@ -39,6 +40,13 @@ internal struct InventoryFormTypeRow: View {
             return "No type yet"
         }
         return type.name
+    }
+
+    private var selectedSymbol: InventorySymbol {
+        guard let typeKey,
+            let type = types.first(where: { $0.key == typeKey })
+        else { return .item }
+        return .catalogue(InventoryCatalogueIconToken(rawValue: type.key) ?? .item)
     }
 }
 

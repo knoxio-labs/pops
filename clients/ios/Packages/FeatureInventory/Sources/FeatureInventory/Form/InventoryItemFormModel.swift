@@ -157,7 +157,7 @@ internal final class InventoryItemFormModel {
             : !commands.isEmpty
     }
 
-    /// "No type yet" is offered to a new item and to one stored untyped;
+    /// Whether a new or already untyped item may remain without a type;
     /// nothing takes a type away once an item has one.
     internal var offersNoType: Bool {
         mode == .create || original?.typeKey == nil
@@ -195,6 +195,7 @@ extension InventoryItemFormModel {
         guard issues.isEmpty, protocol2Issues.isEmpty, phase == .ready, !isSubmitting else {
             return false
         }
+        let savedTypeID = protocol2Draft?.typeId ?? draft.typeKey
         isSubmitting = true
         defer { isSubmitting = false }
         if case .repair(let repairId) = request {
@@ -214,6 +215,7 @@ extension InventoryItemFormModel {
                 return false
             }
         }
+        if let savedTypeID { InventoryTypeRecents.record(savedTypeID) }
         return true
     }
 

@@ -128,7 +128,8 @@ internal struct InventoryRecordReader {
                     let ancestry = protocol2Catalogue.ancestry(ofType: type.id)
                     return InventoryTypeName(
                         key: type.key, name: type.label,
-                        parentKey: ancestry.dropLast().last?.key)
+                        parentKey: ancestry.dropLast().last?.key,
+                        iconToken: protocol2Catalogue.iconToken(for: type.id))
                 }
                 .sorted(by: Self.typeNameOrder)
         }
@@ -165,13 +166,19 @@ public struct InventoryTypeName: Identifiable, Hashable, Sendable {
     public let name: String
     /// The stable key of this type's protocol-2 parent, or nil for a root.
     public let parentKey: String?
+    /// The semantic icon token resolved from this type's catalogue metadata.
+    public let iconToken: InventoryCatalogueIconToken
 
     public var id: String { key }
 
     /// Creates a type option from its catalogue key and display name.
-    public init(key: String, name: String, parentKey: String? = nil) {
+    public init(
+        key: String, name: String, parentKey: String? = nil,
+        iconToken: InventoryCatalogueIconToken = .item
+    ) {
         self.key = key
         self.name = name
         self.parentKey = parentKey
+        self.iconToken = iconToken
     }
 }
