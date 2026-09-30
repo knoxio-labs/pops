@@ -87,11 +87,15 @@ async function parseJson<T>(response: Response, schema: z.ZodType<T>): Promise<T
   return schema.parse(body);
 }
 
-async function mintServiceAccount(registryBaseUrl: string): Promise<string> {
+async function mintServiceAccount(
+  registryBaseUrl: string,
+  name: string,
+  scopes: readonly string[]
+): Promise<string> {
   const response = await fetch(`${registryBaseUrl}/service-accounts`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name: 'bfm-inventory-live-seam', scopes: BFM_SERVICE_ACCOUNT_SCOPES }),
+    body: JSON.stringify({ name, scopes }),
   });
   return (await parseJson(response, serviceAccountSchema)).plaintextKey;
 }
@@ -305,6 +309,7 @@ describe('phone -> BFM -> Inventory offline catalogue replay', () => {
   let inventoryProxy: RecordingProxy | undefined;
   let bfmProcess: SpawnedPillarProcess | undefined;
   let deviceToken = '';
+  let bfmApiKey = '';
   let fixture: PublishedFixture;
 
   beforeAll(async () => {
@@ -319,7 +324,16 @@ describe('phone -> BFM -> Inventory offline catalogue replay', () => {
       port: await getFreePort(),
       env: { POPS_REGISTRY_ENABLED: 'true', REGISTRY_SQLITE_PATH: join(tempDir, 'registry.db') },
     });
-    const bfmApiKey = await mintServiceAccount(registryProcess.baseUrl);
+    const catalogueAdminApiKey = await mintServiceAccount(
+      registryProcess.baseUrl,
+      'bfm-inventory-live-seam-catalogue-admin',
+      ['inventory.types.manage']
+    );
+    bfmApiKey = await mintServiceAccount(
+      registryProcess.baseUrl,
+      'bfm-inventory-live-seam',
+      BFM_SERVICE_ACCOUNT_SCOPES
+    );
 
     const inventoryPort = await getFreePort();
     inventoryProcess = await spawnPillarProcess({
@@ -334,7 +348,7 @@ describe('phone -> BFM -> Inventory offline catalogue replay', () => {
       },
     });
     await waitForRegistration(registryProcess.baseUrl, INVENTORY_PILLAR_ID);
-    fixture = await publishFixture(inventoryProcess.baseUrl, bfmApiKey);
+    fixture = await publishFixture(inventoryProcess.baseUrl, catalogueAdminApiKey);
     const inventoryPreflight = await fetch(`${inventoryProcess.baseUrl}/sync/snapshot`, {
       headers: {
         'pops-inventory-protocol': '1',
@@ -381,6 +395,19 @@ describe('phone -> BFM -> Inventory offline catalogue replay', () => {
     await inventoryProcess?.stop();
     await registryProcess?.stop();
     if (tempDir !== '') rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('can read the type catalogue without managing drafts', async () => {
+    if (inventoryProcess === undefined) throw new Error('Inventory did not start');
+    const types = await fetch(`${inventoryProcess.baseUrl}/types`, {
+      headers: { 'pops-inventory-protocol': '1', 'x-api-key': bfmApiKey },
+    });
+    const draft = await fetch(`${inventoryProcess.baseUrl}/type-catalogue/drafts/current`, {
+      headers: { 'pops-inventory-protocol': '1', 'x-api-key': bfmApiKey },
+    });
+
+    expect(types.status).toBe(200);
+    expect(draft.status).toBe(403);
   });
 
   it('rebases a rename-compatible write and replays its command idempotently', async () => {

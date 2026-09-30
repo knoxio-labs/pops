@@ -183,16 +183,20 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    */
   'purchases.edit': ['purchases.purchase'],
   /**
-   * Three prefixes: the sync contract's own scope gate derives two grants
-   * from its two other sub-routers (`inventory.sync` for the
-   * snapshot/changes/history routes, `inventory.types` for the catalogue) —
-   * see `pillars/inventory/src/contract/rest-sync.ts` — and `inventory.media`
-   * is the raw media store's own scope (A13, inventory's service-account gate
-   * declares it on the `media.upload`/`media.read` raw routes its own media
-   * store registers), which `getMedia` reaches. `inventory.codes` is not
-   * here: nothing this capability reaches calls it.
+   * The sync contract's gate derives `inventory.types.catalogue` for `GET
+   * /types`, and that handler separately checks `inventory.types.read`; the
+   * immutable catalogue reads use the read scope too. `inventory.sync` covers
+   * the snapshot/changes/history routes. See
+   * `pillars/inventory/src/contract/rest-sync.ts`. `inventory.media` is the raw
+   * media store's own scope (A13), which `getMedia` reaches. `inventory.codes`
+   * is not here: nothing this capability calls suggests a code.
    */
-  'inventory.read': ['inventory.sync', 'inventory.types', 'inventory.media'],
+  'inventory.read': [
+    'inventory.sync',
+    'inventory.types.catalogue',
+    'inventory.types.read',
+    'inventory.media',
+  ],
   /**
    * Three prefixes for the same reason `inventory.read`'s are widened: the
    * sync contract's own scope gate derives one grant per sub-router, and

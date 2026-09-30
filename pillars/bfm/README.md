@@ -638,7 +638,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types","inventory.codes","inventory.media","barcode.lookup"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","barcode.lookup"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on
@@ -668,19 +668,18 @@ each sibling operation it uses, and only then revoking the old id
 (`POST /service-accounts/:id/revoke`) — in that order, since revocation takes
 effect on the next request.
 
-**Widening the grant is a rotation, not an edit.** The registry's admin surface
+**Changing the grant is a rotation, not an edit.** The registry's admin surface
 has exactly three operations — list, create, revoke — so there is no way to add
-a scope to a live account. An account provisioned before a scope was added to
-`BFM_SERVICE_ACCOUNT_SCOPES` keeps the grant it was minted with, and the new
-leg answers `403` naming the missing scope on a producer that enforces (POPS-1990).
-The operator step is the rotation above, with the fuller scope list in the
-create call. Until it runs, the receipt upload still works against today's
-`purchases`, whose `requireCredential` is `false` in production — which is
-precisely the failure mode worth knowing about, because it means a missing
-grant is invisible in production until that flag flips. Prove the grant
-rather than the flag: `src/api/purchases/__tests__/receipt-upload.live-seam.test.ts`
-does exactly that, running against a real purchases process with its gate
-flipped to mandatory. Run it with `pnpm --filter @pops/bfm test:live-seam`.
+or remove a scope on a live account. An account provisioned with an older list
+keeps it until the operator replaces it. Use the rotation above with the scope
+list from `BFM_SERVICE_ACCOUNT_SCOPES`, verify the replacement can reach every
+required operation, and only then revoke the old account. This matters when
+narrowing too: an existing `inventory.types` grant still authorises catalogue
+management until that account is replaced and revoked.
+The receipt-upload live seam proves the grant is checked rather than relying on
+the flag: `src/api/purchases/__tests__/receipt-upload.live-seam.test.ts` runs
+against a real purchases process with its gate flipped to mandatory. Run it with
+`pnpm --filter @pops/bfm test:live-seam`.
 
 ## Deployment
 
