@@ -19,7 +19,7 @@ const MAX_GRAPH_DEPTH = 10;
 
 function useConnectionGraphQuery(itemId: string) {
   return useQuery({
-    queryKey: ['inventory', 'connections', 'graph', itemId],
+    queryKey: ['inventory', 'connections', 'graph', itemId, MAX_GRAPH_DEPTH],
     queryFn: async () =>
       unwrap(await connectionsGraph({ path: { itemId }, query: { maxDepth: MAX_GRAPH_DEPTH } })),
     enabled: !!itemId,

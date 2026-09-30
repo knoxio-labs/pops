@@ -225,6 +225,22 @@ beforeEach(() => {
 });
 
 describe('useItemDetailModel', () => {
+  it('includes the requested graph depth in its query key', () => {
+    const queryClient = createTestQueryClient();
+    renderHook(() => useItemDetailModel('item-1'), {
+      wrapper: withQueryClient(queryClient),
+    });
+
+    expect(
+      queryClient.getQueryCache().find({
+        queryKey: ['inventory', 'connections', 'graph', { itemId: 'item-1', maxDepth: 10 }],
+      })
+    ).toBeDefined();
+    expect(mocks.connectionsGraph).toHaveBeenCalledWith(
+      expect.objectContaining({ query: { maxDepth: 10 } })
+    );
+  });
+
   it('resolves inherited facts and the computed type hierarchy path', async () => {
     const inherited = testField('field-material', 'type-bedding', 'material', {
       label: 'Material',

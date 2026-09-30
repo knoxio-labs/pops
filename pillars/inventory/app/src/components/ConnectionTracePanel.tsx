@@ -153,7 +153,7 @@ export interface ConnectionTracePanelProps {
 
 export function ConnectionTracePanel({ itemId }: ConnectionTracePanelProps) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['inventory', 'connections', 'trace', itemId],
+    queryKey: ['inventory', 'connections', 'trace', itemId, MAX_TRACE_DEPTH],
     queryFn: async () =>
       unwrap(await connectionsTrace({ path: { itemId }, query: { maxDepth: MAX_TRACE_DEPTH } })),
     enabled: !!itemId,

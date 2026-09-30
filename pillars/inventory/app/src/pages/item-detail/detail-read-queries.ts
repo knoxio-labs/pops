@@ -25,10 +25,11 @@ function relatedSubject(ids: readonly string[]): PickerSubject {
 }
 
 function useGraphQuery(id: string) {
+  const maxDepth = 10;
   return useQuery({
-    queryKey: ['inventory', 'connections', 'graph', { itemId: id }],
+    queryKey: ['inventory', 'connections', 'graph', { itemId: id, maxDepth }],
     queryFn: async () =>
-      unwrap(await connectionsGraph({ path: { itemId: id }, query: { maxDepth: 10 } })),
+      unwrap(await connectionsGraph({ path: { itemId: id }, query: { maxDepth } })),
     enabled: id.length > 0,
   });
 }

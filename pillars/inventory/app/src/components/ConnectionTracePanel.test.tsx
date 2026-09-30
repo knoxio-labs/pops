@@ -77,13 +77,14 @@ function mockTraceNeverResolves(): void {
 
 function renderPanel(itemId = 'item-1') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <ConnectionTracePanel itemId={itemId} />
       </MemoryRouter>
     </QueryClientProvider>
   );
+  return { ...view, qc };
 }
 
 beforeEach(() => {
@@ -92,6 +93,18 @@ beforeEach(() => {
 });
 
 describe('ConnectionTracePanel — loading', () => {
+  it('includes the requested depth in the query key', () => {
+    mockTraceNeverResolves();
+    const { qc } = renderPanel();
+
+    expect(
+      qc.getQueryCache().find({ queryKey: ['inventory', 'connections', 'trace', 'item-1', 10] })
+    ).toBeDefined();
+    expect(connectionsTraceMock).toHaveBeenCalledWith(
+      expect.objectContaining({ query: { maxDepth: 10 } })
+    );
+  });
+
   it('renders skeleton rows while loading', () => {
     mockTraceNeverResolves();
     renderPanel();
