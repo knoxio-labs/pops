@@ -7,25 +7,15 @@ import Testing
 
 /// Every approved scan state (POPS-4078), and which of the two lookups
 /// (`EntityRouter` for a `pops://` reference, `item(withCode:)` for a plain
-/// code) resolves each kind of decode (POPS-4108).
+/// code) resolves each kind of decode (POPS-4108). A code no item holds as its
+/// own falls through to external identifiers: `InventoryScanBarcodeTests`.
 @MainActor
 @Suite("Inventory scan view model")
 internal struct InventoryScanViewModelTests {
-    private func model(
-        items: [InventoryItem] = [],
-        camera: StubCameraAuthorization = StubCameraAuthorization(
-            standing: .authorized),
-        router: EntityRouterRegistry = EntityRouterRegistry(),
-        recents: UserDefaults? = nil
-    ) -> InventoryScanViewModel {
-        InventoryScanViewModel(
-            store: InMemoryInventoryStore(items: items), router: router, camera: camera,
-            recents: recents ?? freshDefaults())
-    }
-
     @Test("starting with camera access opens the scanner")
     func startedAuthorizedScans() async {
-        let model = model(camera: StubCameraAuthorization(standing: .authorized))
+        let model = InventoryScanTestSupport.model(
+            camera: StubCameraAuthorization(standing: .authorized))
 
         await model.start()
 
@@ -36,7 +26,7 @@ internal struct InventoryScanViewModelTests {
         "a refusal shows the denied screen instead of a camera preview",
         arguments: [CameraAccess.denied, .restricted, .unavailable])
     func startedRefusedIsDenied(refusal: CameraAccess) async {
-        let model = model(
+        let model = InventoryScanTestSupport.model(
             camera: StubCameraAuthorization(standing: .notDetermined, afterPrompt: refusal))
 
         await model.start()
@@ -48,7 +38,7 @@ internal struct InventoryScanViewModelTests {
     @Test("a decision granted in Settings is picked up without relaunching")
     func refreshPicksUpAGrantMadeElsewhere() async {
         let camera = StubCameraAuthorization(standing: .denied)
-        let model = model(camera: camera)
+        let model = InventoryScanTestSupport.model(camera: camera)
         await model.start()
         #expect(model.phase == .denied)
 
@@ -63,7 +53,7 @@ internal struct InventoryScanViewModelTests {
         let router = EntityRouterRegistry()
         var routed: PopsURI?
         router.register(pillar: "inventory", type: "item") { routed = $0 }
-        let model = model(router: router)
+        let model = InventoryScanTestSupport.model(router: router)
         await model.start()
 
         let consumed = model.didScan("pops://inventory/item/item-42")
@@ -79,7 +69,7 @@ internal struct InventoryScanViewModelTests {
         let router = EntityRouterRegistry()
         var routed: PopsURI?
         router.register(pillar: "inventory", type: "location") { routed = $0 }
-        let model = model(router: router)
+        let model = InventoryScanTestSupport.model(router: router)
         await model.start()
 
         model.didScan("pops://inventory/location/loc-1")
@@ -90,7 +80,7 @@ internal struct InventoryScanViewModelTests {
 
     @Test("a reference to a pillar with nothing registered is a hand-off, not a routed destination")
     func foreignPillarIsUnsupported() async {
-        let model = model()
+        let model = InventoryScanTestSupport.model()
         await model.start()
 
         let consumed = model.didScan("pops://finance/transaction/tx-1")
@@ -102,7 +92,7 @@ internal struct InventoryScanViewModelTests {
 
     @Test("a string that looks like a broken pops link is not treated as a code")
     func brokenPopsLinkIsNotACode() async {
-        let model = model()
+        let model = InventoryScanTestSupport.model()
         await model.start()
 
         let consumed = model.didScan("pops://inventory/item")
@@ -113,8 +103,8 @@ internal struct InventoryScanViewModelTests {
 
     @Test("a plain code that matches an item is found")
     func plainCodeFound() async {
-        let recents = freshDefaults()
-        let model = model(
+        let recents = InventoryScanTestSupport.freshDefaults()
+        let model = InventoryScanTestSupport.model(
             items: [
                 InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
             ], recents: recents)
@@ -128,12 +118,12 @@ internal struct InventoryScanViewModelTests {
             return
         }
         #expect(record.id == "item-1")
-        #expect(scanned(in: recents) == ["item-1"])
+        #expect(InventoryScanTestSupport.scanned(in: recents) == ["item-1"])
     }
 
     @Test("the code lookup is case-insensitive, as the pillar's own index is")
     func plainCodeIsCaseInsensitive() async {
-        let model = model(items: [
+        let model = InventoryScanTestSupport.model(items: [
             InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
         ])
         await model.start()
@@ -148,8 +138,8 @@ internal struct InventoryScanViewModelTests {
 
     @Test("a code nothing carries is target missing")
     func unknownCodeIsTargetMissing() async {
-        let recents = freshDefaults()
-        let model = model(
+        let recents = InventoryScanTestSupport.freshDefaults()
+        let model = InventoryScanTestSupport.model(
             items: [
                 InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
             ], recents: recents)
@@ -159,14 +149,14 @@ internal struct InventoryScanViewModelTests {
         await awaitObservedCondition { model.phase != .loading }
 
         #expect(model.phase == .targetMissing)
-        #expect(scanned(in: recents).isEmpty)
+        #expect(InventoryScanTestSupport.scanned(in: recents).isEmpty)
     }
 
     /// POPS-4108's deleted-item rule: the code stays reserved, but scanning it
     /// answers the same as an id this replica has never held.
     @Test("a tombstoned holder's code is target missing, not found")
     func tombstonedCodeIsTargetMissing() async {
-        let model = model(
+        let model = InventoryScanTestSupport.model(
             items: [
                 InventoryFixture.item(
                     "item-1", "Drill", at: .hand, code: "ABC-123", deleted: true)
@@ -184,7 +174,7 @@ internal struct InventoryScanViewModelTests {
         let router = EntityRouterRegistry()
         var invocationCount = 0
         router.register(pillar: "inventory", type: "item") { _ in invocationCount += 1 }
-        let model = model(router: router)
+        let model = InventoryScanTestSupport.model(router: router)
         await model.start()
         model.didScan("pops://finance/transaction/tx-1")
         #expect(model.phase == .unsupported(pillar: "finance"))
@@ -194,18 +184,6 @@ internal struct InventoryScanViewModelTests {
         #expect(!consumed)
         #expect(invocationCount == 0)
         #expect(model.phase == .unsupported(pillar: "finance"))
-    }
-
-    private func freshDefaults() -> UserDefaults {
-        guard let defaults = UserDefaults(suiteName: "InventoryScanViewModelTests.\(UUID())") else {
-            preconditionFailure("Unable to create isolated defaults")
-        }
-        return defaults
-    }
-
-    private func scanned(in defaults: UserDefaults) -> [String] {
-        InventorySearchRecents.decode(
-            defaults.string(forKey: InventorySearchRecents.scannedKey) ?? "")
     }
 }
 

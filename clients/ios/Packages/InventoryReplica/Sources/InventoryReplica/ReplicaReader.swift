@@ -35,6 +35,10 @@ internal final class ReplicaReader: InventoryQuerySource {
         attempt(nil) { try ReplicaQueries.item(withCode: code, in: $0) }
     }
 
+    func inventoryItems(withExternalIdentifier payload: String) -> [InventoryItem] {
+        attempt([]) { try ReplicaQueries.items(withExternalIdentifier: payload, in: $0) }
+    }
+
     func inventoryLocation(id: String) -> InventoryLocation? {
         attempt(nil) { try ReplicaQueries.location(id: id, in: $0) }
     }

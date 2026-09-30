@@ -31,6 +31,27 @@ internal enum ReplicaQueries {
         .map { try ItemRow.decode($0, in: db) }
     }
 
+    /// Reduces each stored value the way `InventoryExternalIdentifierMatch.matchKey`
+    /// does, so a hyphenated ISBN a person typed matches the digits a scan reads.
+    static func items(withExternalIdentifier payload: String, in db: Database) throws
+        -> [InventoryItem]
+    {
+        let keys = InventoryExternalIdentifierMatch.candidateKeys(for: payload)
+        guard !keys.isEmpty else { return [] }
+        return try Row.fetchAll(
+            db,
+            sql: """
+                SELECT * FROM item WHERE deleted_at IS NULL AND EXISTS (
+                    SELECT 1 FROM json_each(item.external_ids) AS identifier
+                    WHERE UPPER(REPLACE(REPLACE(TRIM(json_extract(identifier.value, '$.value')),
+                        '-', ''), ' ', '')) IN (SELECT value FROM json_each(?1))
+                )
+                ORDER BY name COLLATE NOCASE, id
+                """,
+            arguments: [try StoredJSON.encode(keys.sorted())]
+        ).map { try ItemRow.decode($0, in: db) }
+    }
+
     /// The optimistic row, tombstone or not, for the rebase to re-index.
     static func storedItem(id: String, in db: Database) throws -> InventoryItem? {
         try Row.fetchOne(db, sql: "SELECT * FROM item WHERE id = ?", arguments: [id])

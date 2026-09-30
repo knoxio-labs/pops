@@ -6,7 +6,9 @@ import SwiftUI
 /// (POPS-4078): the camera full-bleed, glass controls over it, a reticle,
 /// and a card that rises with whatever the code resolved to. Every state is
 /// the design playground's `InventoryScanView`, drawn against a real camera
-/// and a real lookup instead of fixtures.
+/// and a real lookup instead of fixtures, except the barcode ones the
+/// playground has no case for: a product barcode one item carries opens that
+/// item straight away, and one several items carry lists them to choose from.
 internal struct InventoryScanScreen: View {
     internal let store: any InventoryStore
     internal let entityRouter: any EntityRouter
@@ -47,6 +49,9 @@ internal struct InventoryScanScreen: View {
         .popsMotion(PopsMotion.smooth, value: model.phase)
         .task { await model.start() }
         .onAppear { shown = true }
+        .navigationDestination(item: $model.opened) { route in
+            InventoryDestinationView(route: route, store: store, entityRouter: entityRouter)
+        }
         .onChange(of: model.didRouteElsewhere) { _, routed in
             if routed { dismiss() }
         }
@@ -133,6 +138,8 @@ internal struct InventoryScanScreen: View {
             InventoryScanLoadingCard()
         case .found(let record):
             InventoryScanFoundCard(record: record, loadPhoto: { await model.thumbnail($0) })
+        case .matches(let records):
+            InventoryScanMatchesCard(records: records, loadPhoto: { await model.thumbnail($0) })
         case .unsupported(let pillar):
             InventoryScanLineCard(
                 symbol: InventorySymbol.appUpdate.system,
@@ -142,7 +149,7 @@ internal struct InventoryScanScreen: View {
                 symbol: InventorySymbol.unavailable.system, text: InventoryCopy.notAPopsCode)
         case .targetMissing:
             InventoryScanLineCard(
-                symbol: InventorySymbol.lost.system, text: InventoryCopy.noLongerInInventory)
+                symbol: InventorySymbol.lost.system, text: InventoryCopy.noItemHasThisCode)
         }
     }
 }
@@ -199,6 +206,46 @@ private struct InventoryScanFoundCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
         .popsGlass(in: InventoryScanCard.shape)
+    }
+}
+
+/// Every item carrying a scanned barcode, each opening its own page. The
+/// rows scroll only once there are more than fit under the reticle.
+private struct InventoryScanMatchesCard: View {
+    let records: [InventoryRecord]
+    let loadPhoto: @MainActor (String) async -> Data?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            Text(InventoryCopy.itemsHaveThisCode(records.count))
+                .font(.popsHeadline)
+                .foregroundStyle(Color.popsForeground)
+            ViewThatFits(in: .vertical) {
+                rows
+                ScrollView { rows }.scrollBounceBehavior(.basedOnSize, axes: .vertical)
+            }
+            .frame(maxHeight: PopsSize.touchTarget * 5)
+        }
+        .padding(PopsSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
+        .popsGlass(in: InventoryScanCard.shape)
+    }
+
+    private var rows: some View {
+        VStack(spacing: PopsSpacing.zero) {
+            ForEach(records) { record in
+                NavigationLink(
+                    value: InventoryRoute.record(id: record.id, isContainer: record.isContainer)
+                ) {
+                    InventorySearchHitRow(hit: .record(record), loadPhoto: loadPhoto)
+                }
+                .buttonStyle(.plain)
+                if record.id != records.last?.id {
+                    PopsDivider().padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                }
+            }
+        }
     }
 }
 

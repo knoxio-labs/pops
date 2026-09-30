@@ -21,6 +21,9 @@
     public final class QRScannerCoordinator: NSObject {
         public var onScan: (String) -> Bool
 
+        /// What the camera decodes: QR alone for pairing, product barcodes
+        /// too where a printed EAN or UPC means something.
+        private let symbologies: [AVMetadataObject.ObjectType]
         private let capture = CaptureSessionHolder()
         /// Stops the second and later reads of the same code being acted on
         /// while the sheet is still dismissing — a QR in view produces frames
@@ -33,7 +36,11 @@
         /// phones and freezes others.
         private var device: AVCaptureDevice?
 
-        public init(onScan: @escaping (String) -> Bool) {
+        public init(
+            symbologies: [AVMetadataObject.ObjectType] = [.qr],
+            onScan: @escaping (String) -> Bool
+        ) {
+            self.symbologies = symbologies
             self.onScan = onScan
         }
 
@@ -71,7 +78,7 @@
             device.torchMode = on ? .on : .off
         }
 
-        /// Configures for QR and nothing else, then tunes the lens for it.
+        /// Configures for ``symbologies`` and nothing else, then tunes the lens for it.
         ///
         /// The tuning runs after the session commits, not inside the
         /// configuration block: committing applies the session preset, and a
@@ -105,11 +112,11 @@
 
             // Set after `addOutput`: the available metadata types are empty
             // until the output belongs to a session, so assigning `[.qr]` first
-            // raises an "unsupported type" exception.
+            // raises an "unsupported type" exception — as does any type the
+            // device does not offer, hence the filter.
             output.setMetadataObjectsDelegate(self, queue: .main)
-            if output.availableMetadataObjectTypes.contains(.qr) {
-                output.metadataObjectTypes = [.qr]
-            }
+            let available = Set(output.availableMetadataObjectTypes)
+            output.metadataObjectTypes = symbologies.filter(available.contains)
             return device
         }
 
