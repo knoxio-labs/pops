@@ -18,33 +18,17 @@
  * MCP account or they return 403.
  */
 import { getPillar } from '../pillar-client.js';
+import { PURCHASE_SCOPE_PROPERTIES, purchaseScopeDateError } from './purchase-scope.js';
 import { searchFiltersFrom } from './purchase-search-filters.js';
 import { mapCallResult, optNum, optStr, reqStr, toolError } from './utils.js';
+
+/** The order lifecycle vocabulary advertised by the purchases tools. */
+export { PURCHASE_STATUSES } from './purchase-scope.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
 import type { PurchaseSearchFilter } from './purchase-search-filters.js';
 import type { ToolDef } from './tool-def.js';
-
-/**
- * The order lifecycle vocabulary, copied from
- * `pillars/purchases/src/contract/constants.ts`.
- *
- * Copied rather than imported: every tool module here restates its pillar's
- * shapes, because a `@pops/<pillar>` dependency on this package would have to
- * be COPYed into the MCP image and only the Docker build would say so.
- *
- * It advertises the vocabulary to the model and gates nothing. A status this
- * list has not caught up with is still forwarded, and the pillar's own
- * contract answers with a 400 — see {@link scopeFrom}.
- */
-export const PURCHASE_STATUSES = [
-  'awaiting_settlement',
-  'linked',
-  'partial',
-  'settled_cash',
-  'ignored',
-] as const;
 
 type ListPurchasesInput = {
   sources?: string[];
@@ -98,21 +82,6 @@ function stringList(args: Record<string, unknown>, key: string): string[] | unde
   return values.length > 0 ? values : undefined;
 }
 
-const SCOPE_PROPERTIES = {
-  sources: {
-    type: 'array',
-    items: { type: 'string' },
-    description: 'Filter by ingest source id (e.g. "amazon", "woolworths")',
-  },
-  statuses: {
-    type: 'array',
-    items: { type: 'string', enum: PURCHASE_STATUSES },
-    description: 'Filter by settlement status',
-  },
-  from: { type: 'string', description: 'Earliest order date, inclusive (ISO 8601)' },
-  to: { type: 'string', description: 'Latest order date, inclusive (ISO 8601)' },
-} as const;
-
 function scopeFrom(args: Record<string, unknown>): MerchantSpendInput {
   const scope: MerchantSpendInput = {};
   const sources = stringList(args, 'sources');
@@ -137,12 +106,15 @@ const ordersList: ToolDef = {
   inputSchema: {
     type: 'object',
     properties: {
-      ...SCOPE_PROPERTIES,
+      ...PURCHASE_SCOPE_PROPERTIES,
       limit: { type: 'number', description: 'Max results, 1-500 (default 50)' },
       offset: { type: 'number', description: 'Pagination offset (default 0)' },
     },
   },
   handler: async (args) => {
+    const dateError = purchaseScopeDateError(args);
+    if (dateError !== undefined) return toolError(dateError);
+
     const input: ListPurchasesInput = scopeFrom(args);
     const limit = optNum(args, 'limit');
     if (limit !== undefined) input.limit = limit;
@@ -176,13 +148,16 @@ const search: ToolDef = {
     type: 'object',
     properties: {
       text: { type: 'string', description: 'Search query text' },
-      ...SCOPE_PROPERTIES,
+      ...PURCHASE_SCOPE_PROPERTIES,
     },
     required: ['text'],
   },
   handler: async (args) => {
     const text = reqStr(args, 'text');
     if (!text) return toolError('Missing required field: text');
+    const dateError = purchaseScopeDateError(args);
+    if (dateError !== undefined) return toolError(dateError);
+
     const query: SearchInput['query'] = { text };
     const filters = searchFiltersFrom(scopeFrom(args));
     if (filters !== undefined) query.filters = filters;
@@ -221,10 +196,14 @@ const merchantSpend: ToolDef = {
     'Spend per merchant and currency over a period, with the explained/unexplained split. Groups are keyed on merchant AND currency and there is no cross-currency total, because no such number exists. `residualCents` is spend nothing accounts for — report it rather than dropping it. Takes no limit: the period is the only bound.',
   inputSchema: {
     type: 'object',
-    properties: { ...SCOPE_PROPERTIES },
+    properties: { ...PURCHASE_SCOPE_PROPERTIES },
   },
-  handler: async (args) =>
-    mapCallResult(await purchases().analytics.merchantSpend(scopeFrom(args))),
+  handler: async (args) => {
+    const dateError = purchaseScopeDateError(args);
+    if (dateError !== undefined) return toolError(dateError);
+
+    return mapCallResult(await purchases().analytics.merchantSpend(scopeFrom(args)));
+  },
 };
 
 export const purchasesTools: readonly ToolDef[] = [
