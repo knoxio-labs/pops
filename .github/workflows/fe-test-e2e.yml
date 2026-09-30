@@ -61,6 +61,9 @@ jobs:
     name: Playwright E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
 
     steps:
       - name: Checkout code
@@ -85,35 +88,6 @@ jobs:
         # dev server has no bundle to serve, the pillar's rail button mounts
         # nothing, and the spec that clicks it times out (POPS-3217).
         run: pnpm --filter "./pillars/*" --filter "./pillars/*/app" --filter "@pops/shell^..." build
-
-      - name: Let apt wait for the dpkg lock
-        run: |
-          echo 'DPkg::Lock::Timeout "300";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 15
-        run: |
-          cd pillars/shell
-          node ../../scripts/ci/playwright-install-retry.mjs \
-            --label "playwright install --with-deps" \
-            -- npx playwright install --with-deps
-
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 15
-        run: |
-          cd pillars/shell
-          node ../../scripts/ci/playwright-install-retry.mjs \
-            --label "playwright install-deps" \
-            -- npx playwright install-deps
 
       - name: Run Playwright tests
         run: |
