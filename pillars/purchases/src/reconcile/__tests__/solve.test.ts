@@ -196,7 +196,7 @@ describe('refunds', () => {
   it('matches a refund against a negative transaction', () => {
     const { links } = run({
       charges: [charge({ amountCents: -1179, role: 'refund' })],
-      transactions: [txn({ amountCents: -1179 })],
+      transactions: [txn({ amountCents: -1179, type: 'refund' })],
     });
     expect(links[0]?.linkType).toBe('exact');
     expect(links[0]?.amountCents).toBe(-1179);

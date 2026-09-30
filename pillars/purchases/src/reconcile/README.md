@@ -14,14 +14,14 @@ Links are **re-derived from scratch on every sweep, never patched**, so identica
 
 Deterministic first, AI never. Matching is arithmetic, and a model asked to partition a set of amounts produces a plausible partition that is wrong.
 
-| stage | what                                                                                                      | link type |
-| ----- | --------------------------------------------------------------------------------------------------------- | --------- |
-| 0     | block: unclaimed, not rejected, in window, descriptor match, same sign, comparable currency, card account | —         |
-| 1     | exactly one transaction for the charge amount                                                             | `exact`   |
-| 2     | subset-sum over the remaining candidates                                                                  | `split`   |
-| 4     | a learned merchant descriptor, at exactly the charge amount                                               | `rule`    |
-| 3     | one candidate smaller than the charge — a part-payment                                                    | `partial` |
-| 5     | anything ambiguous or unmatched                                                                           | review    |
+| stage | what                                                                                                                                 | link type |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| 0     | block: unclaimed, not rejected, in window, descriptor match, compatible transaction type and sign, comparable currency, card account | —         |
+| 1     | exactly one transaction for the charge amount                                                                                        | `exact`   |
+| 2     | subset-sum over the remaining candidates                                                                                             | `split`   |
+| 4     | a learned merchant descriptor, at exactly the charge amount                                                                          | `rule`    |
+| 3     | one candidate smaller than the charge — a part-payment                                                                               | `partial` |
+| 5     | anything ambiguous or unmatched                                                                                                      | review    |
 
 Stage 4 runs between combined and partial, which is why the table is out of numerical order.
 
@@ -109,7 +109,7 @@ Every boundary carries a reason, and every one has a test that fails if the phas
 
 A phase-ordering test is only a test if BOTH phases can settle the charge it contests. One built on a world where the later phase has nothing to say is green with the phases swapped and green with the phase deleted — so each of the stage-4 boundary tests is paired with the run that shows the rule firing on the same charge when nothing competes for it.
 
-A charge only joins a combination if the transaction is eligible for it on its own terms — inside _its_ window, matching _its_ source descriptor, same sign. Amounts adding up is not a reason to link across merchants or across years.
+A charge only joins a combination if the transaction is eligible for it on its own terms — inside _its_ window, matching _its_ source descriptor, and typed for its settlement role with the matching sign. Amounts adding up is not a reason to link across merchants or across years.
 
 ## Ambiguity is a signal, not a coin flip
 

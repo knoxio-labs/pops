@@ -20,6 +20,8 @@ import {
 } from './types.js';
 import { isWithinWindow, settlementWindowFor } from './window.js';
 
+import type { SettlementRole } from '../contract/constants.js';
+
 /**
  * What blocking needs beyond the charge itself.
  *
@@ -48,6 +50,13 @@ export interface BlockingContext {
 /** Leaves the descriptor to stage 4's rules, which decide it per candidate. */
 const ANY_DESCRIPTOR: DescriptorMatcher = () => true;
 
+const SETTLEMENT_TRANSACTION_TYPES: Readonly<Record<SettlementRole, ReadonlySet<string>>> = {
+  capture: new Set(['purchase']),
+  authorization: new Set(['purchase']),
+  refund: new Set(['refund', 'reversal']),
+  adjustment: new Set(['purchase']),
+};
+
 export type MatchOutcome =
   | { kind: 'linked'; links: readonly ProposedLink[] }
   | { kind: 'review'; reason: ChargeForReview['reason'] };
@@ -71,9 +80,9 @@ export function orderedTransactions(
  * Stage 0 — blocking, compiled once per charge.
  *
  * Narrows the field to transactions that could plausibly settle this
- * charge: inside its window, matching its source descriptor, same sign,
- * non-zero on both sides, and stating an amount that can honestly be
- * compared with the charge's.
+ * charge: inside its window, matching its source descriptor, compatible
+ * with the charge's semantic role and sign, non-zero on both sides, and
+ * stating an amount that can honestly be compared with the charge's.
  *
  * That last test is where a cross-currency pairing is refused. A charge in
  * one currency and a transaction that says nothing about that currency have
@@ -147,6 +156,7 @@ function eligibilityWith(
 
   return (transaction) => {
     if (rejected?.has(transaction.uri) === true) return false;
+    if (!SETTLEMENT_TRANSACTION_TYPES[charge.role].has(transaction.type)) return false;
     if (cardAccount !== undefined && transaction.accountId !== cardAccount) return false;
     if (!isWithinWindow(transaction.date, window)) return false;
     if (transaction.amountCents === 0) return false;
