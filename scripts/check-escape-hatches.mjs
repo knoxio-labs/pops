@@ -249,9 +249,10 @@ function blankRange(chars, start, end) {
   }
 }
 
-/** @param {string} text */
-function maskQuotedText(text) {
+/** @param {string} text @param {string} fileName */
+function maskQuotedText(text, fileName) {
   const chars = text.split('');
+  const jsxText = maskJsxText(text, fileName);
 
   /** @param {number} start @param {number} end */
   function blank(start, end) {
@@ -282,7 +283,7 @@ function maskQuotedText(text) {
     let index = start;
     let braceDepth = 0;
     while (index < chars.length) {
-      if (chars[index] === "'" || chars[index] === '"') {
+      if ((chars[index] === "'" || chars[index] === '"') && jsxText[index] !== ' ') {
         index = scanQuoted(index, chars[index] ?? '');
       } else if (chars[index] === '`') {
         index = scanTemplate(index);
@@ -296,6 +297,8 @@ function maskQuotedText(text) {
         const end = close === -1 ? chars.length : close + 2;
         blank(index, end);
         index = end;
+      } else if (chars[index] === '/' && jsxText[index] !== ' ' && isRegexStart(text, index)) {
+        index = scanRegex(index);
       } else if (stopAtTemplateBrace && chars[index] === '}') {
         if (braceDepth === 0) return index + 1;
         braceDepth -= 1;
@@ -304,6 +307,39 @@ function maskQuotedText(text) {
         braceDepth += 1;
         index += 1;
       } else {
+        index += 1;
+      }
+    }
+    return index;
+  }
+
+  /** @param {number} start */
+  function scanRegex(start) {
+    blank(start, start + 1);
+    let index = start + 1;
+    let inCharacterClass = false;
+    while (index < chars.length && chars[index] !== '\n' && chars[index] !== '\r') {
+      if (chars[index] === '\\') {
+        blank(index, index + 2);
+        index += 2;
+      } else if (chars[index] === '[') {
+        inCharacterClass = true;
+        blank(index, index + 1);
+        index += 1;
+      } else if (chars[index] === ']') {
+        inCharacterClass = false;
+        blank(index, index + 1);
+        index += 1;
+      } else if (chars[index] === '/' && !inCharacterClass) {
+        blank(index, index + 1);
+        index += 1;
+        while (/[a-z]/i.test(chars[index] ?? '')) {
+          blank(index, index + 1);
+          index += 1;
+        }
+        return index;
+      } else {
+        blank(index, index + 1);
         index += 1;
       }
     }
@@ -447,7 +483,35 @@ function maskJsxText(code, fileName) {
  * @param {string} fileName
  */
 function maskNonCodeText(text, fileName) {
-  return maskJsxText(maskQuotedText(text), fileName);
+  return maskJsxText(maskQuotedText(text, fileName), fileName);
+}
+
+/**
+ * @param {string} text
+ * @param {number} index
+ */
+function isRegexStart(text, index) {
+  if (
+    text[index - 1] === '<' &&
+    (/[A-Za-z_$]/.test(text[index + 1] ?? '') || text[index + 1] === '>')
+  ) {
+    return false;
+  }
+
+  let previous = index - 1;
+  while (previous >= 0 && /\s/.test(text[previous] ?? '')) previous -= 1;
+  if (previous < 0) return true;
+
+  const character = text[previous] ?? '';
+  if (/[([{=,:;!?&|*%^~<>-]/.test(character)) return true;
+  if (character === '+') return text[previous - 1] !== '+';
+  if (character === '/') return false;
+
+  const word = text.slice(0, previous + 1).match(/[\w$]+$/)?.[0];
+  return Boolean(
+    word &&
+    /^(?:return|case|throw|delete|void|typeof|instanceof|in|of|yield|await|else|do)$/.test(word)
+  );
 }
 
 /**
