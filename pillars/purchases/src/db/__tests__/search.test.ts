@@ -81,6 +81,15 @@ function orderWithItems(
 }
 
 describe('the order adapter', () => {
+  it('matches accented uppercase merchant text in legacy and paged search', () => {
+    const id = orderWithItems('unicode-case', 'CAFÉ ZÜRI', []);
+    const uri = `pops:purchases/purchase/${id}`;
+
+    expect(searchPurchases(opened.db, 'café züri').map((hit) => hit.uri)).toContain(uri);
+    const page = searchPurchasesPage(opened.db, 'café züri', {}, { kind: 'purchases', limit: 5 });
+    expect((page?.hits ?? []).map((hit) => hit.uri)).toContain(uri);
+  });
+
   it('finds an order by the merchant label it was ingested with', () => {
     const id = orderWithItems('a', 'Bunnings Warehouse', []);
 
@@ -129,6 +138,16 @@ describe('the order adapter', () => {
 });
 
 describe('the line-item adapter', () => {
+  it('matches accented uppercase item text in legacy and paged search', () => {
+    orderWithItems('unicode-item', 'Amazon', [{ name: 'CAFÉ ZÜRI beans' }]);
+
+    const legacyHits = searchPurchases(opened.db, 'café züri');
+    const page = searchPurchasesPage(opened.db, 'café züri', {}, { kind: 'lines', limit: 5 });
+
+    expect(legacyHits.some((hit) => hit.data['name'] === 'CAFÉ ZÜRI beans')).toBe(true);
+    expect((page?.hits ?? []).some((hit) => hit.data['name'] === 'CAFÉ ZÜRI beans')).toBe(true);
+  });
+
   it('answers the question only this pillar can — which order had the thing in it', () => {
     const id = orderWithItems('a', 'Amazon', [{ name: 'Dosing funnel 58mm' }]);
 

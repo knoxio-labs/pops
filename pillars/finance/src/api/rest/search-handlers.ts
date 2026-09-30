@@ -64,7 +64,9 @@ function searchTransactions(
   text: string,
   scope: TransactionsSearchScope
 ): SearchHit[] {
-  const conditions = [like(sql`lower(${transactions.description})`, `%${text.toLowerCase()}%`)];
+  const conditions = [
+    like(sql`pops_unicode_lower(${transactions.description})`, `%${text.toLowerCase()}%`),
+  ];
   if (scope.type !== undefined) conditions.push(eq(transactions.type, scope.type));
   if (scope.entityId !== undefined) conditions.push(eq(transactions.entityId, scope.entityId));
   if (scope.startDate !== undefined) conditions.push(gte(transactions.date, scope.startDate));
@@ -110,7 +112,9 @@ function searchTransactions(
 }
 
 function searchBudgets(db: FinanceDb, text: string, scope: BudgetsSearchScope): SearchHit[] {
-  const conditions = [like(budgets.category, `%${text}%`)];
+  const conditions = [
+    like(sql`pops_unicode_lower(${budgets.category})`, `%${text.toLowerCase()}%`),
+  ];
   if (scope.period !== undefined) conditions.push(eq(budgets.period, scope.period));
   if (scope.active !== undefined) conditions.push(eq(budgets.active, scope.active ? 1 : 0));
 
@@ -152,7 +156,7 @@ function searchWishlist(db: FinanceDb, text: string, scope: WishlistSearchScope)
   // compare against. NULL `saved` is treated as 0 via COALESCE so a row with
   // a target but no recorded savings still counts as not-yet-purchased.
   const conditions = [
-    like(sql`lower(${wishList.item})`, `%${lowerText}%`),
+    like(sql`pops_unicode_lower(${wishList.item})`, `%${lowerText}%`),
     sql`(${wishList.targetAmountCents} IS NULL OR coalesce(${wishList.savedCents}, 0) < ${wishList.targetAmountCents})`,
   ];
   if (scope.priority !== undefined) conditions.push(eq(wishList.priority, scope.priority));

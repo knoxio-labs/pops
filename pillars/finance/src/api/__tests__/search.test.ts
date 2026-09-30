@@ -57,6 +57,28 @@ function firstHit(hits: SearchHit[]): SearchHit {
 }
 
 describe('search — transactions adapter', () => {
+  it('matches accented uppercase text across all finance search adapters', async () => {
+    const transaction = await client().transactions.create({
+      description: 'CAFÉ ZÜRI',
+      accountId: amexAccountId,
+      amount: -5,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    const budget = await client().budgets.create({ category: 'CAFÉ ZÜRI', period: 'Monthly' });
+    await client().wishlist.create({ item: 'CAFÉ ZÜRI' });
+
+    const { hits } = await client().search.run({ query: { text: 'café züri' } });
+
+    expect(withScheme(hits, 'pops:finance/transaction/').map((hit) => hit.uri)).toContain(
+      `pops:finance/transaction/${transaction.data.id}`
+    );
+    expect(hits.some((hit) => hit.uri === `/budgets/${budget.data.id}`)).toBe(true);
+    expect(
+      hits.some((hit) => hit.uri === '/finance/wishlist' && hit.data['item'] === 'CAFÉ ZÜRI')
+    ).toBe(true);
+  });
+
   it('returns a transaction hit carrying the canonical type and the legacy uri shape', async () => {
     const created = await client().transactions.create({
       description: 'Coffee',
