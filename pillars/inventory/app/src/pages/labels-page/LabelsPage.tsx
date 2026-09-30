@@ -173,6 +173,7 @@ function LabelsContent({
       <div className={GRID}>
         <LabelsSelection
           data={data}
+          needsCode={new Set(job.uncoded.map((subject) => subject.id))}
           saveCode={save}
           addControl={addControl}
           onOpenAdd={() => setAddOpen(true)}

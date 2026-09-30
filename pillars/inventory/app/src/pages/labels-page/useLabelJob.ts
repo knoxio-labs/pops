@@ -13,14 +13,11 @@ import {
   customLayout,
   DEFAULT_COPIES,
   DEFAULT_SHEET_ID,
-  expandCopies,
   fieldChoices,
   findPreset,
-  fitToSheet,
   nextStartAt,
   NO_DETAILS,
   planSheets,
-  resolveLabel,
   sheetLayout,
 } from '@pops/inventory/labels';
 
@@ -32,6 +29,7 @@ import {
   storeSheetId,
   storeStartAt,
 } from './label-storage';
+import { planLabels } from './plan-labels';
 
 import type {
   CopiesByKind,
@@ -39,11 +37,12 @@ import type {
   LabelDetails,
   LabelFieldChoice,
   PrintSubject,
-  ResolvedLabel,
   SheetGeometry,
   SheetLayout,
   SheetPage,
 } from '@pops/inventory/labels';
+
+import type { PrintLabelEntry } from './plan-labels';
 
 /**
  * What happened after the browser's print dialog closed. Browsers do not
@@ -53,12 +52,6 @@ export type PrintOutcome = 'none' | 'asking' | 'printed' | 'cancelled';
 
 /** Why Print is off: nothing to print, an item still without a code, or labels too small for a QR. */
 export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | null;
-
-/** One label of the job: what it is for and the content it prints with. */
-export interface PrintLabelEntry {
-  subject: PrintSubject;
-  label: ResolvedLabel;
-}
 
 /** The job's starting choices, from the page's address and inventory settings. */
 export interface LabelJobSeed {
@@ -132,49 +125,6 @@ function printBlock(labels: number, uncoded: number, tooSmall: boolean): PrintBl
   return uncoded > 0 ? 'uncoded' : null;
 }
 
-function previewLabel(
-  subject: PrintSubject,
-  content: LabelContent,
-  details: LabelDetails
-): ResolvedLabel {
-  const label = resolveLabel(content, subject, details);
-  if (subject.code !== null || label.parts.includes('code')) return label;
-  return { ...label, parts: [...label.parts, 'code'] };
-}
-
-interface LabelPlanInput {
-  subjects: readonly PrintSubject[];
-  copies: CopiesByKind;
-  content: LabelContent;
-  details: ReadonlyMap<string, LabelDetails>;
-  layout: SheetLayout;
-}
-
-function planLabels({ subjects, copies, content, details, layout }: LabelPlanInput): {
-  entries: PrintLabelEntry[];
-  adjustments: { trimmed: number; fallback: number };
-  tooSmall: boolean;
-} {
-  let trimmed = 0;
-  let fallback = 0;
-  let tooSmall = false;
-  const entries: PrintLabelEntry[] = [];
-  for (const subject of expandCopies(subjects, (entry) => copies[entry.kind])) {
-    const wanted = previewLabel(subject, content, details.get(subject.id) ?? NO_DETAILS);
-    const label = fitToSheet(wanted, layout);
-    if (label === null) {
-      tooSmall = true;
-      continue;
-    }
-    if (label.parts.length < wanted.parts.length || label.fields.length < wanted.fields.length) {
-      trimmed += 1;
-    }
-    if (label.fallback) fallback += 1;
-    entries.push({ subject, label });
-  }
-  return { entries, adjustments: { trimmed, fallback }, tooSmall };
-}
-
 /** The label page's job over `subjects`. */
 export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): PrintJob {
   const sheet = useSheet(seed);
@@ -191,7 +141,11 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
     layout,
   });
   const labels = plan.entries;
-  const uncoded = subjects.filter((subject) => subject.code === null);
+  const uncoded = subjects.filter(
+    (subject) =>
+      subject.code === null &&
+      labels.some((entry) => entry.subject.id === subject.id && entry.label.parts.includes('code'))
+  );
   const nextStart = nextStartAt(labels.length, startAt, layout);
   const block = printBlock(labels.length, uncoded.length, plan.tooSmall);
 

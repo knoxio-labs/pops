@@ -19,6 +19,8 @@ import type { CodeSaveResult } from './useSaveCode';
 /** Props for {@link SelectionPanel}. */
 export interface SelectionPanelProps {
   subjects: LabelSubject[];
+  /** Ids of items whose labels print a code they do not have yet. */
+  needsCode: ReadonlySet<string>;
   contents: ReadonlyMap<string, LabelSubject[]>;
   /** Ids the page was opened with that are not live items. */
   missing: string[];
@@ -30,7 +32,9 @@ export interface SelectionPanelProps {
 }
 
 function MissingCodes({ props }: { props: SelectionPanelProps }) {
-  const uncoded = props.subjects.filter((subject) => subject.code === null);
+  const uncoded = props.subjects.filter(
+    (subject) => subject.code === null && props.needsCode.has(subject.id)
+  );
   const suggested = uncoded.filter((subject) => subject.suggestedCode !== null);
   const [saving, setSaving] = useState(false);
   if (uncoded.length === 0) return null;
