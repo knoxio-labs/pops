@@ -10,6 +10,7 @@ import { comparableAmountCents, comparableCandidates } from './currency.js';
 import { descriptorMatcherFor, type DescriptorMatcher } from './descriptor.js';
 import { ruleMatcherFor } from './rules.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
+import { isTransactionTypeAllowedForRole } from './transaction-types.js';
 import {
   STAGE_CONFIDENCE,
   type ChargeForReview,
@@ -19,8 +20,6 @@ import {
   type SolvableTransaction,
 } from './types.js';
 import { isWithinWindow, settlementWindowFor } from './window.js';
-
-import type { SettlementRole } from '../contract/constants.js';
 
 /**
  * What blocking needs beyond the charge itself.
@@ -49,13 +48,6 @@ export interface BlockingContext {
 
 /** Leaves the descriptor to stage 4's rules, which decide it per candidate. */
 const ANY_DESCRIPTOR: DescriptorMatcher = () => true;
-
-const SETTLEMENT_TRANSACTION_TYPES: Readonly<Record<SettlementRole, ReadonlySet<string>>> = {
-  capture: new Set(['purchase']),
-  authorization: new Set(['purchase']),
-  refund: new Set(['refund', 'reversal']),
-  adjustment: new Set(['purchase']),
-};
 
 export type MatchOutcome =
   | { kind: 'linked'; links: readonly ProposedLink[] }
@@ -156,7 +148,7 @@ function eligibilityWith(
 
   return (transaction) => {
     if (rejected?.has(transaction.uri) === true) return false;
-    if (!SETTLEMENT_TRANSACTION_TYPES[charge.role].has(transaction.type)) return false;
+    if (!isTransactionTypeAllowedForRole(charge.role, transaction.type)) return false;
     if (cardAccount !== undefined && transaction.accountId !== cardAccount) return false;
     if (!isWithinWindow(transaction.date, window)) return false;
     if (transaction.amountCents === 0) return false;
