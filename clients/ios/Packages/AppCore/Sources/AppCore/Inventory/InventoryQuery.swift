@@ -14,6 +14,11 @@ public protocol InventoryQuerySource: Sendable {
     /// stays reserved so it is never reissued, but the label no longer
     /// resolves to anything the phone shows.
     func inventoryItem(withCode code: String) -> InventoryItem?
+    /// Every item, inactive ones included and tombstones excluded, carrying
+    /// an external identifier that matches a scanned `payload` under
+    /// `InventoryExternalIdentifierMatch`, ordered by name. Unlike `code`,
+    /// nothing makes these unique: one product barcode can sit on many items.
+    func inventoryItems(withExternalIdentifier payload: String) -> [InventoryItem]
     func inventoryLocation(id: String) -> InventoryLocation?
     func inventoryLocationTree() -> [InventoryLocation]
     /// Items resolving directly to this location or contained within
@@ -93,6 +98,12 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static func item(withCode code: String) -> InventoryQuery<InventoryItem?> {
         .init { $0.inventoryItem(withCode: code) }
+    }
+
+    public static func items(
+        withExternalIdentifier payload: String
+    ) -> InventoryQuery<[InventoryItem]> {
+        .init { $0.inventoryItems(withExternalIdentifier: payload) }
     }
 
     public static func location(id: String) -> InventoryQuery<InventoryLocation?> {

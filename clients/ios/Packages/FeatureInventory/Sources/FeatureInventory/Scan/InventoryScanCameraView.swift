@@ -5,8 +5,9 @@
     import UIKit
 
     /// The camera, full-bleed behind the reticle. `AppCore.QRScannerCoordinator`
-    /// is the same one `FeaturePairing`'s scanner drives; nothing about reading
-    /// a QR code is Inventory-specific, only what a decoded payload means.
+    /// is the same one `FeaturePairing`'s scanner drives, told to read product
+    /// barcodes as well as QR; only what a decoded payload means is
+    /// Inventory-specific.
     internal struct InventoryScanCameraView: UIViewRepresentable {
         internal let onScan: (String) -> Bool
         internal let torchOn: Bool
@@ -15,7 +16,7 @@
         internal let onTorchAvailabilityChange: (Bool) -> Void
 
         internal func makeCoordinator() -> QRScannerCoordinator {
-            QRScannerCoordinator(onScan: onScan)
+            QRScannerCoordinator(symbologies: InventoryScanSymbologies.camera, onScan: onScan)
         }
 
         internal func makeUIView(context: Context) -> QRScannerPreviewView {

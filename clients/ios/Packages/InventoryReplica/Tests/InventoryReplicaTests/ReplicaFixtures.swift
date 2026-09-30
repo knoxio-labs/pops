@@ -10,11 +10,12 @@ internal enum Fixture {
     static func item(
         _ id: String, name: String? = nil, revision: Int = 1, placement: InventoryPlacement = .hand,
         containment: InventoryContainment? = nil, code: String? = nil, deletedAt: Date? = nil,
-        quantity: Int = 1
+        quantity: Int = 1, externalIds: [InventoryExternalIdentifier] = []
     ) -> InventoryItem {
         InventoryItem(
             id: id, revision: revision, seq: revision, name: name ?? id, typeKey: nil,
-            code: code, quantity: InventoryQuantity(count: quantity), placement: placement,
+            code: code, externalIds: externalIds, quantity: InventoryQuantity(count: quantity),
+            placement: placement,
             containment: containment, createdAt: created,
             updatedAt: created.addingTimeInterval(Double(revision)), deletedAt: deletedAt)
     }

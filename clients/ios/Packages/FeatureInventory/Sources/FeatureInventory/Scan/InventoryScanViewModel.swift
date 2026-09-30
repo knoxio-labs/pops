@@ -2,7 +2,9 @@ import AppCore
 import Foundation
 import Observation
 
-/// The scan screen's whole decision surface (POPS-4078, POPS-4108).
+/// The scan screen's whole decision surface (POPS-4078, POPS-4108): a
+/// `pops://` reference, the item's own printed code, or an external
+/// identifier such as a product barcode or ISBN.
 ///
 /// Camera permission, decoding and resolution are all read through seams —
 /// ``CameraAuthorizing`` and ``InventoryStore`` — so a test drives every
@@ -21,6 +23,11 @@ internal final class InventoryScanViewModel {
     /// this and dismisses itself, the same way it would have nothing left to
     /// show had the code been opened as a link instead of scanned.
     internal private(set) var didRouteElsewhere = false
+    /// Set when a product barcode resolved to exactly one item: the screen
+    /// pushes it straight away rather than waiting on the found card's Open.
+    /// The phase is ``InventoryScanPhase/found(_:)`` for the same record, so
+    /// coming back lands on the card.
+    internal var opened: InventoryRoute?
 
     /// The in-flight code lookup, exposed so a test can await it instead of
     /// polling ``phase``.
@@ -99,14 +106,31 @@ internal final class InventoryScanViewModel {
 
     private func lookUp(code: String) {
         phase = .loading
-        pendingLookup = Task { [weak self, store, recents] in
-            for await record in store.observe(Self.query(code: code)) {
-                if let record {
-                    InventorySearchRecents.recordingScan(record.id, in: recents)
-                }
-                self?.phase = record.map(InventoryScanPhase.found) ?? .targetMissing
+        pendingLookup = Task { [weak self, store] in
+            for await resolution in store.observe(Self.query(code: code)) {
+                self?.settle(resolution)
                 return
             }
+        }
+    }
+
+    private func settle(_ resolution: InventoryScanResolution) {
+        switch resolution {
+        case .code(let record):
+            InventorySearchRecents.recordingScan(record.id, in: recents)
+            phase = .found(record)
+        case .identifier(let records):
+            guard let first = records.first else {
+                phase = .targetMissing
+                return
+            }
+            guard records.count == 1 else {
+                phase = .matches(records)
+                return
+            }
+            InventorySearchRecents.recordingScan(first.id, in: recents)
+            phase = .found(first)
+            opened = .record(id: first.id, isContainer: first.isContainer)
         }
     }
 
@@ -116,10 +140,23 @@ internal final class InventoryScanViewModel {
         try? await store.photo(sha256, variant: .thumb)
     }
 
-    private static func query(code: String) -> InventoryQuery<InventoryRecord?> {
+    /// The item's own code wins: it is unique, and a label printed for one
+    /// item names that item even if its text also appears as someone else's
+    /// barcode. Only a code no item holds falls through to external
+    /// identifiers, which nothing makes unique.
+    private static func query(code: String) -> InventoryQuery<InventoryScanResolution> {
         InventoryQuery { source in
-            guard let item = source.inventoryItem(withCode: code) else { return nil }
-            return InventoryRecordReader(source: source).record(item)
+            let reader = InventoryRecordReader(source: source)
+            if let item = source.inventoryItem(withCode: code) {
+                return .code(reader.record(item))
+            }
+            return .identifier(
+                source.inventoryItems(withExternalIdentifier: code).map(reader.record))
         }
     }
+}
+
+private enum InventoryScanResolution: Sendable {
+    case code(InventoryRecord)
+    case identifier([InventoryRecord])
 }

@@ -47,10 +47,14 @@ internal enum InventoryCopy {
     /// parse as one.
     internal static let notAPopsCode = "Not a POPS code"
 
-    /// A well-formed reference, or a real code, that no longer resolves to
-    /// anything in this replica — including a tombstoned holder's code
-    /// (POPS-4108), which stays reserved but is never found again.
-    internal static let noLongerInInventory = "No longer in Inventory"
+    /// A scanned code no item carries, as its own code or as a barcode or
+    /// other identifier — including a tombstoned holder's code (POPS-4108),
+    /// which stays reserved but is never found again.
+    internal static let noItemHasThisCode = "No item has this code"
+
+    internal static func itemsHaveThisCode(_ count: Int) -> String {
+        "\(count) items have this code"
+    }
 
     internal static let cameraAccessOff = "Camera access is off"
 
