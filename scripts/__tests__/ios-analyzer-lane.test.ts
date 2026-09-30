@@ -36,6 +36,12 @@ function fixture(summary = 'Found 0 violations, 0 serious in 5 files.', status =
   const bin = join(cwd, 'bin');
   mkdirSync(bin);
   writeFileSync(
+    join(bin, 'xcodebuild'),
+    `#!/usr/bin/env bash
+printf 'Xcode 27.0\\nBuild version 27A266a\\n'
+`
+  );
+  writeFileSync(
     join(bin, 'swiftlint'),
     `#!/usr/bin/env bash
 set -eu
@@ -47,6 +53,7 @@ printf '%s\\n' "$POPS_TEST_SUMMARY"
 exit "$POPS_TEST_STATUS"
 `
   );
+  chmodSync(join(bin, 'xcodebuild'), 0o755);
   chmodSync(join(bin, 'swiftlint'), 0o755);
   const compilerLog = join(cwd, 'compiler.log');
   writeFileSync(compilerLog, 'compile evidence\n');
@@ -60,6 +67,8 @@ exit "$POPS_TEST_STATUS"
       PATH: `${bin}:${process.env.PATH ?? ''}`,
       POPS_IOS_COMPILER_LOG: compilerLog,
       POPS_IOS_ANALYZER_ARTIFACTS: artifacts,
+      POPS_XCODE_VERSION: '27.0',
+      POPS_XCODE_BUILD: '27A266a',
       POPS_TEST_ARGUMENTS: join(cwd, 'arguments'),
       POPS_TEST_SUMMARY: summary,
       POPS_TEST_STATUS: status,

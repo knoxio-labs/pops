@@ -2,9 +2,10 @@
 set -euo pipefail
 
 log="$POPS_IOS_COMPILER_LOG"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 xcode_authoritative=1
-if ! scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" "$POPS_XCODE_BUILD" analyzer; then
+if ! "$script_dir/check-xcode-version.sh" check "$POPS_XCODE_VERSION" "$POPS_XCODE_BUILD" analyzer; then
   xcode_authoritative=0
 fi
 
