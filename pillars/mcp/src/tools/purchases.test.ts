@@ -185,6 +185,18 @@ describe('purchases.search', () => {
     });
   });
 
+  it('rejects a plain date with a field-specific timestamp hint', async () => {
+    const result = await tool('purchases.search').handler({
+      text: 'coffee',
+      from: '2026-01-01',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(extractText(result)).toContain("Invalid field 'from'");
+    expect(extractText(result)).toContain('ISO-8601 timestamp with a timezone');
+    expect(search.search).not.toHaveBeenCalled();
+  });
+
   it('refuses an empty query rather than asking the pillar for everything', async () => {
     const result = await tool('purchases.search').handler({ text: '' });
     expect(result.isError).toBe(true);
