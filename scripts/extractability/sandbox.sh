@@ -2,7 +2,7 @@
 #
 # EX-2 — true sandbox extraction (the real litmus; nightly / on-demand).
 #
-# Copies a unit OUT of the monorepo into a temp dir, replaces its `@pops/*`
+# Copies a unit into an isolated temp dir, replaces its `@pops/*`
 # workspace edges with packed tarballs (the only mutation: "where shared deps
 # come from"), installs ONLY its declared deps with no workspace path resolution,
 # and builds. If it builds with no monorepo around it, it is extraction-ready.
@@ -112,10 +112,22 @@ if [[ -z "$has_build" ]]; then
   echo "sandbox: $unit has no build script — shell-bundled app unit (ADR-002); proving extraction via isolated typecheck/test, not a standalone bundle." >&2
 fi
 
-work="$(mktemp -d "${TMPDIR:-/tmp}/ex2-sandbox.XXXXXX")"
+mkdir -p "$repo_root/tmp"
+work="$(mktemp -d "$repo_root/tmp/ex2-sandbox.XXXXXX")"
 cleanup() { [[ "$keep" == "--keep" ]] || rm -rf "$work"; }
 trap cleanup EXIT
 echo "sandbox: $unit -> $work" >&2
+printf '%s\n' 'packages: []' > "$work/pnpm-workspace.yaml"
+tool_bin="$work/tool-bin"
+node "$repo_root/scripts/extractability/provision-tools.mjs" "$repo_root/node_modules/oxfmt/bin" "$tool_bin"
+export PATH="$tool_bin:$PATH"
+
+if [[ "$abs_unit" != "$repo_root/"* ]]; then
+  echo "sandbox: unit directory must be inside the repository: $unit" >&2
+  exit 2
+fi
+unit_relative_path="${abs_unit#"$repo_root"/}"
+sandbox_unit="$work/$unit_relative_path"
 
 cd "$repo_root"
 
@@ -123,22 +135,28 @@ cd "$repo_root"
 node "$repo_root/scripts/extractability/pack-deps.mjs" "$unit" "$work/.deps" >"$work/deps-manifest.json"
 
 # 2) Copy the unit verbatim (no node_modules / dist / build / lockfiles).
-mkdir -p "$work/u"
+mkdir -p "$(dirname "$sandbox_unit")"
 rsync -a \
   --exclude 'node_modules' \
   --exclude 'dist' \
   --exclude 'build' \
   --exclude '.turbo' \
   --exclude 'pnpm-lock.yaml' \
-  "$abs_unit/" "$work/u/"
+  "$abs_unit/" "$sandbox_unit/"
+
+# Build scripts use this guard through paths relative to their original unit
+# location. Keep that path resolvable in the extracted workspace.
+mkdir -p "$work/scripts/ci"
+cp "$repo_root/scripts/require-built-graph.mjs" "$work/scripts/"
+cp "$repo_root/scripts/ci/cold-graph-deps.mjs" "$work/scripts/ci/"
 
 # 3) Rewrite workspace edges -> file: tarballs (the only mutation).
-node "$repo_root/scripts/extractability/rewrite-deps.mjs" "$work/u/package.json" "$work/deps-manifest.json"
+node "$repo_root/scripts/extractability/rewrite-deps.mjs" "$sandbox_unit/package.json" "$work/deps-manifest.json"
 
 # 3b) Make the unit's tsconfig self-contained: inline any repo-root `extends`
 #     base that won't exist outside the monorepo (no setting is changed, the
 #     resolved values are just frozen — exactly what an extracted repo carries).
-node "$repo_root/scripts/extractability/materialize-tsconfig.mjs" "$work/u" "$abs_unit"
+node "$repo_root/scripts/extractability/materialize-tsconfig.mjs" "$sandbox_unit" "$abs_unit"
 
 # 4) Install + prove with NO workspace resolution — the litmus.
 #
@@ -150,13 +168,13 @@ node "$repo_root/scripts/extractability/materialize-tsconfig.mjs" "$work/u" "$ab
 # is a monorepo-wide gate (`pnpm lint`), not part of the extraction proof; the
 # sandbox proves only what an extracted repo could genuinely run on its own:
 # install + build (or typecheck/test for shell-bundled app units).
-cd "$work/u"
-# Isolation comes from the sandbox-local `pnpm-workspace.yaml` that
+cd "$sandbox_unit"
+# Isolation comes from the sandbox-local `pnpm-workspace.yaml` files that
 # rewrite-deps.mjs writes (`packages: []` plus the @pops/* -> file: overrides),
 # not from `--ignore-workspace` any more: pnpm 11 stopped reading
 # `pkg.pnpm.overrides`, so the pins had to move into that file — and
-# `--ignore-workspace` would ignore it. The sandbox is a mktemp dir outside the
-# repo, so there is no ancestor workspace for pnpm to walk up to either way.
+# `--ignore-workspace` would ignore it. The outer file prevents pnpm from
+# walking up from the repo's ignored `tmp/` directory into the real workspace.
 echo "sandbox: installing (isolated, sandbox-local workspace root) …" >&2
 pnpm install --no-frozen-lockfile
 

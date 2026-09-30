@@ -1,17 +1,22 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { KNOWN_TSCONFIG_NAMES, buildFixtures, main } from '../materialize-tsconfig.mjs';
+import { buildFixtures, main } from '../materialize-tsconfig.mjs';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(here, '..', '..', '..');
 
 let root: string;
 let stdout: string[];
 let stderr: string[];
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'materialize-tsconfig-test-'));
+  const tempRoot = join(repoRoot, 'tmp');
+  mkdirSync(tempRoot, { recursive: true });
+  root = mkdtempSync(join(tempRoot, 'materialize-tsconfig-test-'));
   stdout = [];
   stderr = [];
   vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
@@ -27,12 +32,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   rmSync(root, { recursive: true, force: true });
-});
-
-describe('KNOWN_TSCONFIG_NAMES', () => {
-  it('recognises exactly tsconfig.json and tsconfig.build.json', () => {
-    expect(KNOWN_TSCONFIG_NAMES).toEqual(['tsconfig.json', 'tsconfig.build.json']);
-  });
 });
 
 describe('main — a genuine out-of-unit extends', () => {
@@ -67,9 +66,91 @@ describe('main — a unit that genuinely has no tsconfig', () => {
 
     expect(exitCode).toBe(0);
     const message = stdout.join('');
-    expect(message).toContain('has none of');
+    expect(message).toContain('has no tsconfig*.json');
     expect(message).toContain('nothing to materialise');
     expect(message).not.toContain('materialised 0 tsconfig file(s)');
+  });
+});
+
+describe('main — nested tsconfig files', () => {
+  it('materialises nested external extends', () => {
+    const originalDir = join(root, 'nested-original');
+    const sandboxDir = join(root, 'nested-sandbox');
+    const baseConfig = join(root, 'tsconfig.base.json');
+    const originalScripts = join(originalDir, 'scripts');
+    const sandboxScripts = join(sandboxDir, 'scripts');
+    mkdirSync(originalScripts, { recursive: true });
+    mkdirSync(sandboxScripts, { recursive: true });
+    writeFileSync(
+      baseConfig,
+      JSON.stringify({ compilerOptions: { strict: true, skipLibCheck: true } })
+    );
+    writeFileSync(
+      join(originalDir, 'tsconfig.json'),
+      JSON.stringify({ extends: '../tsconfig.base.json' })
+    );
+    writeFileSync(
+      join(sandboxDir, 'tsconfig.json'),
+      JSON.stringify({ extends: '../tsconfig.base.json' })
+    );
+    writeFileSync(
+      join(originalScripts, 'tsconfig.json'),
+      JSON.stringify({ extends: '../../tsconfig.base.json' })
+    );
+    writeFileSync(
+      join(sandboxScripts, 'tsconfig.json'),
+      JSON.stringify({ extends: '../../tsconfig.base.json' })
+    );
+
+    const exitCode = main([sandboxDir, originalDir]);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('')).toContain('materialised 2 of 2 tsconfig file(s)');
+    const nested = JSON.parse(readFileSync(join(sandboxScripts, 'tsconfig.json'), 'utf8'));
+    expect(nested.extends).toBeUndefined();
+    expect(nested.compilerOptions.skipLibCheck).toBe(true);
+  });
+
+  it('preserves a nested config that extends another config inside the unit', () => {
+    const originalDir = join(root, 'nested-original');
+    const sandboxDir = join(root, 'nested-sandbox');
+    const originalScripts = join(originalDir, 'scripts');
+    const sandboxScripts = join(sandboxDir, 'scripts');
+    mkdirSync(originalScripts, { recursive: true });
+    mkdirSync(sandboxScripts, { recursive: true });
+    const base = JSON.stringify({ compilerOptions: { strict: true } });
+    writeFileSync(join(originalDir, 'tsconfig.json'), base);
+    writeFileSync(join(sandboxDir, 'tsconfig.json'), base);
+    writeFileSync(
+      join(originalScripts, 'tsconfig.json'),
+      JSON.stringify({ extends: '../tsconfig.json' })
+    );
+    writeFileSync(
+      join(sandboxScripts, 'tsconfig.json'),
+      JSON.stringify({ extends: '../tsconfig.json' })
+    );
+
+    const exitCode = main([sandboxDir, originalDir]);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('')).toContain('materialised 0 of 2 tsconfig file(s)');
+    const nested = JSON.parse(readFileSync(join(sandboxScripts, 'tsconfig.json'), 'utf8'));
+    expect(nested.extends).toBe('../tsconfig.json');
+  });
+
+  it('fails when the copy loses a nested tsconfig', () => {
+    const originalDir = join(root, 'nested-original');
+    const sandboxDir = join(root, 'nested-sandbox');
+    const originalScripts = join(originalDir, 'scripts');
+    mkdirSync(originalScripts, { recursive: true });
+    mkdirSync(sandboxDir, { recursive: true });
+    writeFileSync(join(originalScripts, 'tsconfig.json'), JSON.stringify({ compilerOptions: {} }));
+
+    const exitCode = main([sandboxDir, originalDir]);
+
+    expect(exitCode).toBe(1);
+    expect(stderr.join('')).toContain('scripts/tsconfig.json');
+    expect(stderr.join('')).toContain('missing from the sandbox copy');
   });
 });
 

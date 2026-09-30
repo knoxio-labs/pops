@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -127,7 +126,9 @@ describe(
     let multilineReasonUnit: string;
 
     beforeAll(() => {
-      root = mkdtempSync(join(tmpdir(), 'ex2-proof-surface-'));
+      const tempRoot = join(repoRoot, 'tmp');
+      mkdirSync(tempRoot, { recursive: true });
+      root = mkdtempSync(join(tempRoot, 'ex2-proof-surface-'));
 
       renamedUnit = join(root, 'renamed-fixture');
       mkdirSync(renamedUnit, { recursive: true });
