@@ -18,6 +18,8 @@ export const TransactionSchema = z.object({
   id: z.string(),
   description: z.string(),
   accountId: z.string(),
+  /** Currency code configured on the account that denominates `amount`. */
+  currency: z.string(),
   amount: z.number(),
   date: z.string(),
   type: TransactionTypeSchema,

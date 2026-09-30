@@ -214,6 +214,7 @@ describe('the leg resolves against finance real contract', () => {
           id: 'txn-1',
           description: 'AMAZON MKTPLACE AU',
           accountId: 'everyday',
+          currency: 'AUD',
           foreignAmountMinor: null,
           foreignCurrency: null,
           // Finance signs spend negative; the boundary flips it to the
@@ -251,6 +252,7 @@ describe('the leg resolves against finance real contract', () => {
                 id: `txn-${String(page)}`,
                 description: 'AMAZON MKTPLACE AU',
                 accountId: 'everyday',
+                currency: 'AUD',
                 foreignAmountMinor: null,
                 foreignCurrency: null,
                 amount: 10,

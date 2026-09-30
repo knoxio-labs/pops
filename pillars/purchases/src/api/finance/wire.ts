@@ -16,18 +16,6 @@ import { z } from 'zod';
 const CENTS_PER_DOLLAR = 100;
 
 /**
- * The currency every `amount` finance publishes is denominated in.
- *
- * Finance states no settlement currency on the wire — its ledger is
- * single-currency and its own importers hardcode the same constant (the ANZ
- * statement parser calls it `SETTLEMENT_CURRENCY`). Naming it once here is
- * what lets the solver COMPARE currencies instead of assuming two integers
- * are the same kind of thing. When finance begins publishing the field,
- * this constant is the one place that has to change.
- */
-export const FINANCE_SETTLEMENT_CURRENCY = 'AUD';
-
-/**
  * Convert a decimal-dollar amount to integer cents.
  *
  * Rounds rather than truncates, matching finance's own `dollarsToCents` and
@@ -70,6 +58,8 @@ export const FinanceTransactionWireSchema = z.object({
    * wrong answer.
    */
   accountId: z.string(),
+  /** Currency code configured on the account, which denominates `amount`. */
+  currency: z.string(),
   /** DECIMAL DOLLARS, not cents. Converted at the boundary; never propagated. */
   amount: z.number(),
   /**
@@ -133,7 +123,7 @@ export interface CandidateTransaction {
   readonly description: string;
   readonly accountId: string;
   readonly amountCents: number;
-  /** {@link FINANCE_SETTLEMENT_CURRENCY} — what `amountCents` is stated in. */
+  /** What `amountCents` is stated in. */
   readonly settlementCurrency: string;
   /** The issuer's foreign amount in its own minor units, or null when none was captured. */
   readonly foreignAmountMinor: number | null;
@@ -171,6 +161,7 @@ function toPurchasesAmountCents(financeDollars: number): number {
   return -dollarsToCents(financeDollars);
 }
 
+/** Convert a Finance wire transaction to the purchases reconciliation shape. */
 export function toCandidateTransaction(
   wire: z.infer<typeof FinanceTransactionWireSchema>
 ): CandidateTransaction {
@@ -180,7 +171,7 @@ export function toCandidateTransaction(
     description: wire.description,
     accountId: wire.accountId,
     amountCents: toPurchasesAmountCents(wire.amount),
-    settlementCurrency: FINANCE_SETTLEMENT_CURRENCY,
+    settlementCurrency: wire.currency,
     foreignAmountMinor: wire.foreignAmountMinor ?? null,
     foreignCurrency: wire.foreignCurrency ?? null,
     date: wire.date,

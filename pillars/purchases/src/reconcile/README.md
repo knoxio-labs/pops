@@ -45,8 +45,6 @@ The third row is the one that matters. A refusal is not a weak match: the pair n
 
 **A combination is partitioned by currency before anything is summed.** `combined.ts` groups the eligible charges by currency and runs its subset-sum once per group against the figure the transaction states in that group's currency. A sum across currencies is not a quantity, so a BRL charge and an AUD one cannot be members of one combination however neatly their integers add up — and two currencies each closing exactly is treated as no answer, the same way two partitions within one currency are.
 
-**Finance publishes no settlement currency.** Its ledger is single-currency and its own importers hardcode AUD; `api/finance/wire.ts` names that constant once, at the boundary, which is what lets the solver compare currencies rather than assume. When finance starts publishing the field, that constant is the only thing that changes.
-
 ## Stage 4 widens blocking and nothing else
 
 A rule is a **descriptor pattern** mirroring finance's `transaction_corrections` (`descriptionPattern`, `matchType`, `source`, `priority`), not a purchase-to-transaction pointer. It says which transactions look like a merchant; it cannot say which transaction settled an order. So the only thing it is allowed to change is **which descriptors count as that source's** — the candidate it admits then has to pass stage 1's amount test unchanged.

@@ -26,6 +26,7 @@ const BASE_WIRE = {
   id: 'txn-1',
   description: 'AMAZON MKTPLACE AU',
   accountId: 'everyday',
+  currency: 'AUD',
   foreignAmountMinor: null,
   foreignCurrency: null,
   date: '2026-03-06',

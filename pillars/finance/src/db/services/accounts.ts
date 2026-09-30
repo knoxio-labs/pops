@@ -130,6 +130,8 @@ export function getAccount(db: FinanceDb, id: string): AccountRow {
   return row;
 }
 
+export { currenciesForAccountIds } from './accounts-currency.js';
+
 function insertAccountRow(db: FinanceDb, id: string, input: CreateAccountInput): void {
   db.insert(accounts)
     .values({

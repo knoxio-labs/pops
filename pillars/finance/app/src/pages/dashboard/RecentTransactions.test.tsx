@@ -21,6 +21,7 @@ function makeTransaction(tags: string[]): Transaction {
     accountId: 'account-1',
     amount: -12.5,
     country: null,
+    currency: 'AUD',
     date: '2026-08-01',
     description: 'Coffee',
     entityId: null,

@@ -8,6 +8,7 @@ interface WireRow {
   id: string;
   description: string;
   accountId: string;
+  currency: string;
   foreignAmountMinor: number | null;
   foreignCurrency: string | null;
   amount: number;
@@ -22,6 +23,7 @@ function row(overrides: Partial<WireRow> = {}): WireRow {
     id: 'txn-1',
     description: 'AMAZON MKTPLACE AU',
     accountId: 'everyday',
+    currency: 'AUD',
     foreignAmountMinor: null,
     foreignCurrency: null,
     // Finance signs spend negative; this row settles a card charge.

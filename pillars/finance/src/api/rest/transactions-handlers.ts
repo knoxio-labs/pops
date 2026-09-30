@@ -20,9 +20,12 @@ import {
 import { type ContactsClient } from '../contacts/client.js';
 import { suggestTags as computeSuggestedTags } from '../modules/tag-suggester/index.js';
 import {
+  toTransactionWithAccountCurrency,
+  toTransactions,
+} from '../modules/transactions-response.js';
+import {
   fromTransactionSnapshot,
   toCreateTransactionInput,
-  toTransaction,
   toTransactionSnapshot,
   toUpdateTransactionInput,
 } from '../modules/transactions-types.js';
@@ -96,10 +99,12 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
           limit,
           offset
         );
-
         return {
           status: 200 as const,
-          body: { data: rows.map(toTransaction), pagination: paginationMeta(total, limit, offset) },
+          body: {
+            data: toTransactions(db, rows),
+            pagination: paginationMeta(total, limit, offset),
+          },
         };
       }),
 
@@ -131,7 +136,10 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
       runHttp(() => {
         try {
           const row = transactionsService.getTransaction(db, params.id);
-          return { status: 200 as const, body: { data: toTransaction(row) } };
+          return {
+            status: 200 as const,
+            body: { data: toTransactionWithAccountCurrency(db, row) },
+          };
         } catch (err) {
           translateTransactionError(err, params.id);
         }
@@ -143,7 +151,10 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
           const row = transactionsService.createTransaction(db, toCreateTransactionInput(body));
           return {
             status: 201 as const,
-            body: { data: toTransaction(row), message: 'Transaction created' },
+            body: {
+              data: toTransactionWithAccountCurrency(db, row),
+              message: 'Transaction created',
+            },
           };
         } catch (err) {
           translateTransactionError(err);
@@ -160,7 +171,10 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
           );
           return {
             status: 200 as const,
-            body: { data: toTransaction(row), message: 'Transaction updated' },
+            body: {
+              data: toTransactionWithAccountCurrency(db, row),
+              message: 'Transaction updated',
+            },
           };
         } catch (err) {
           translateTransactionError(err, params.id);
@@ -173,7 +187,10 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
           const row = transferPairsService.unlinkTransferPair(db, params.id);
           return {
             status: 200 as const,
-            body: { data: toTransaction(row), message: 'Transfer unlinked' },
+            body: {
+              data: toTransactionWithAccountCurrency(db, row),
+              message: 'Transfer unlinked',
+            },
           };
         } catch (err) {
           translateTransactionError(err, params.id);
@@ -199,7 +216,10 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
           const row = transactionsService.restoreTransaction(db, fromTransactionSnapshot(body));
           return {
             status: 201 as const,
-            body: { data: toTransaction(row), message: 'Transaction restored' },
+            body: {
+              data: toTransactionWithAccountCurrency(db, row),
+              message: 'Transaction restored',
+            },
           };
         } catch (err) {
           translateTransactionError(err, body.id);

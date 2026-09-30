@@ -40,6 +40,7 @@ const TRANSACTION = {
   id: 'txn-smoke-1',
   description: 'AMAZON MKTPLACE AU SMOKE',
   accountId: 'smoke',
+  currency: 'AUD',
   foreignAmountMinor: null,
   foreignCurrency: null,
   // Finance signs spend negative — money leaving the account. The order

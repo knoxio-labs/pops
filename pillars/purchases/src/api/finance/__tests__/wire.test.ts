@@ -47,6 +47,7 @@ describe('FinanceListResponseSchema', () => {
     id: 'txn-1',
     description: 'AMAZON MKTPLACE AU',
     accountId: 'everyday',
+    currency: 'AUD',
     foreignAmountMinor: null,
     foreignCurrency: null,
     // Finance signs spend negative; this row settles a card charge.
@@ -63,6 +64,16 @@ describe('FinanceListResponseSchema', () => {
       pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it('requires the currency that denominates the transaction amount', () => {
+    const { currency: _currency, ...withoutCurrency } = validRow;
+    expect(
+      FinanceListResponseSchema.safeParse({
+        data: [withoutCurrency],
+        pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+      }).success
+    ).toBe(false);
   });
 
   it('rejects a row whose amount became a string', () => {
@@ -109,6 +120,7 @@ describe('toCandidateTransaction', () => {
     id: 'txn-9',
     description: 'AMAZON MKTPLACE AU',
     accountId: 'everyday',
+    currency: 'AUD',
     foreignAmountMinor: null,
     foreignCurrency: null,
     // Finance signs spend negative; the boundary flips it to the positive
@@ -156,6 +168,10 @@ describe('toCandidateTransaction', () => {
     expect(foreign.foreignCurrency).toBe('BRL');
     expect(foreign.settlementCurrency).toBe('AUD');
   });
+
+  it('uses the currency finance publishes for the amount', () => {
+    expect(toCandidateTransaction({ ...wire, currency: 'USD' }).settlementCurrency).toBe('USD');
+  });
 });
 
 /**
@@ -175,6 +191,7 @@ describe('the shape finance actually publishes', () => {
     id: 'txn-1',
     description: 'PADARIA SAO JOAO SAO PAULO BR',
     accountId: 'acc-anz-plat',
+    currency: 'AUD',
     amount: 34.71,
     date: '2026-11-14',
     type: 'expense',

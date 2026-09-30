@@ -68,12 +68,13 @@ function account(overrides: Partial<Account>): Account {
 const AUD: Currency = { code: 'AUD', name: 'Australian Dollar', symbol: '$', decimals: 2, kind: 'fiat', createdAt: '' }; // prettier-ignore
 const POINTS: Currency = { code: 'QFF', name: 'Qantas points', symbol: null, decimals: 0, kind: 'points', createdAt: '' }; // prettier-ignore
 
-function transaction(overrides: Partial<Transaction>): Transaction {
+function transaction(overrides: Partial<Omit<Transaction, 'currency'>>): Transaction {
   return {
     id: 't1',
     accountId: 'a1',
     amount: -12.5,
     country: null,
+    currency: 'AUD',
     date: '2026-08-01',
     description: 'Coffee',
     entityId: null,

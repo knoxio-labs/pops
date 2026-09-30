@@ -26,6 +26,8 @@ export interface Transaction extends ForeignChargeFields {
   id: string;
   description: string;
   accountId: string;
+  /** Currency code configured on the account that denominates `amount`. */
+  currency: string;
   amount: number;
   date: string;
   type: TransactionType;
@@ -104,12 +106,13 @@ export interface UpdateTransactionBody {
   notes?: string | null;
 }
 
-/** Map a SQLite row to the API response shape. */
-export function toTransaction(row: TransactionRow): Transaction {
+/** Map a SQLite row and its account currency to the API response shape. */
+export function toTransaction(row: TransactionRow, currency: string): Transaction {
   return {
     id: row.id,
     description: row.description,
     accountId: row.accountId,
+    currency,
     amount: centsToDollars(row.amountCents),
     date: row.date,
     type: row.type,

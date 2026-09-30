@@ -16053,6 +16053,7 @@ export interface operations {
               accountId: string;
               amount: number;
               country: string | null;
+              currency: string;
               date: string;
               description: string;
               entityId: string | null;
@@ -16214,6 +16215,7 @@ export interface operations {
               accountId: string;
               amount: number;
               country: string | null;
+              currency: string;
               date: string;
               description: string;
               entityId: string | null;
@@ -16421,6 +16423,7 @@ export interface operations {
               accountId: string;
               amount: number;
               country: string | null;
+              currency: string;
               date: string;
               description: string;
               entityId: string | null;
@@ -16583,6 +16586,7 @@ export interface operations {
               accountId: string;
               amount: number;
               country: string | null;
+              currency: string;
               date: string;
               description: string;
               entityId: string | null;
@@ -16887,6 +16891,7 @@ export interface operations {
               accountId: string;
               amount: number;
               country: string | null;
+              currency: string;
               date: string;
               description: string;
               entityId: string | null;
@@ -17019,6 +17024,7 @@ export interface operations {
               accountId: string;
               amount: number;
               country: string | null;
+              currency: string;
               date: string;
               description: string;
               entityId: string | null;

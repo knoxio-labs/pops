@@ -20,9 +20,10 @@ const EDITED = '2026-09-04T10:00:00.000Z';
 
 function transaction(
   fields: Pick<FixtureTransaction, 'id' | 'accountId' | 'amount' | 'date' | 'description'> &
-    Partial<FixtureTransaction>
+    Partial<Omit<FixtureTransaction, 'currency'>>
 ): FixtureTransaction {
   return {
+    currency: 'AUD',
     type: 'purchase',
     entityId: null,
     entityName: null,

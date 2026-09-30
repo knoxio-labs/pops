@@ -10470,6 +10470,7 @@ export type TransactionsListResponses = {
       accountId: string;
       amount: number;
       country: string | null;
+      currency: string;
       date: string;
       description: string;
       entityId: string | null;
@@ -10586,6 +10587,7 @@ export type TransactionsCreateResponses = {
       accountId: string;
       amount: number;
       country: string | null;
+      currency: string;
       date: string;
       description: string;
       entityId: string | null;
@@ -10745,6 +10747,7 @@ export type TransactionsRestoreResponses = {
       accountId: string;
       amount: number;
       country: string | null;
+      currency: string;
       date: string;
       description: string;
       entityId: string | null;
@@ -10972,6 +10975,7 @@ export type TransactionsGetResponses = {
       accountId: string;
       amount: number;
       country: string | null;
+      currency: string;
       date: string;
       description: string;
       entityId: string | null;
@@ -11082,6 +11086,7 @@ export type TransactionsUpdateResponses = {
       accountId: string;
       amount: number;
       country: string | null;
+      currency: string;
       date: string;
       description: string;
       entityId: string | null;
@@ -11175,6 +11180,7 @@ export type TransactionsUnlinkTransferResponses = {
       accountId: string;
       amount: number;
       country: string | null;
+      currency: string;
       date: string;
       description: string;
       entityId: string | null;

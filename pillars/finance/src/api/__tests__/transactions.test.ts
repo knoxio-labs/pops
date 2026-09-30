@@ -91,6 +91,38 @@ describe('transactions — happy paths', () => {
     expect(listed.data[0]?.tags).toEqual(['food', 'coffee']);
   });
 
+  it('publishes the transaction account currency as the amount currency', async () => {
+    const usdAccount = await client().accounts.create({
+      name: 'US spending',
+      kind: 'cash',
+      currency: 'USD',
+    });
+    const audAccount = await client().accounts.create({
+      name: 'AU spending',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+    const created = await client().transactions.create({
+      ...base(),
+      accountId: usdAccount.data.id,
+    });
+    const other = await client().transactions.create({
+      ...base(),
+      description: 'AUD transaction',
+      accountId: audAccount.data.id,
+    });
+
+    expect(created.data.currency).toBe('USD');
+    expect((await client().transactions.get(created.data.id)).data.currency).toBe('USD');
+    const listed = await client().transactions.list({});
+    expect(listed.data.find((transaction) => transaction.id === created.data.id)?.currency).toBe(
+      'USD'
+    );
+    expect(listed.data.find((transaction) => transaction.id === other.data.id)?.currency).toBe(
+      'AUD'
+    );
+  });
+
   it('updates fields', async () => {
     const created = await client().transactions.create(base());
     const updated = await client().transactions.update(created.data.id, {

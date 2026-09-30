@@ -29358,6 +29358,9 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "currency": {
+                            "type": "string"
+                          },
                           "date": {
                             "type": "string"
                           },
@@ -29442,6 +29445,7 @@
                           "id",
                           "description",
                           "accountId",
+                          "currency",
                           "amount",
                           "date",
                           "type",
@@ -29676,6 +29680,9 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "currency": {
+                          "type": "string"
+                        },
                         "date": {
                           "type": "string"
                         },
@@ -29754,6 +29761,7 @@
                         "id",
                         "description",
                         "accountId",
+                        "currency",
                         "amount",
                         "date",
                         "type",
@@ -30114,6 +30122,9 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "currency": {
+                          "type": "string"
+                        },
                         "date": {
                           "type": "string"
                         },
@@ -30192,6 +30203,7 @@
                         "id",
                         "description",
                         "accountId",
+                        "currency",
                         "amount",
                         "date",
                         "type",
@@ -30699,6 +30711,9 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "currency": {
+                          "type": "string"
+                        },
                         "date": {
                           "type": "string"
                         },
@@ -30777,6 +30792,7 @@
                         "id",
                         "description",
                         "accountId",
+                        "currency",
                         "amount",
                         "date",
                         "type",
@@ -30991,6 +31007,9 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "currency": {
+                          "type": "string"
+                        },
                         "date": {
                           "type": "string"
                         },
@@ -31069,6 +31088,7 @@
                         "id",
                         "description",
                         "accountId",
+                        "currency",
                         "amount",
                         "date",
                         "type",
@@ -31228,6 +31248,9 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "currency": {
+                          "type": "string"
+                        },
                         "date": {
                           "type": "string"
                         },
@@ -31306,6 +31329,7 @@
                         "id",
                         "description",
                         "accountId",
+                        "currency",
                         "amount",
                         "date",
                         "type",
