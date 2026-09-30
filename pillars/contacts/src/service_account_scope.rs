@@ -2,7 +2,7 @@
 
 use std::collections::hash_map::RandomState;
 use std::collections::{HashMap, HashSet};
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::hash::BuildHasher;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -102,9 +102,7 @@ impl ServiceAccountScopeVerifier {
     }
 
     fn key_digest(&self, api_key: &str) -> u64 {
-        let mut hasher = self.key_hasher.build_hasher();
-        api_key.hash(&mut hasher);
-        hasher.finish()
+        self.key_hasher.hash_one(api_key)
     }
 
     fn cache_read(&self, digest: u64) -> Option<CachedVerification> {
