@@ -40,6 +40,7 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
 import { markerFacetTags } from '../../../db/services/tag-rule-write-guards.js';
 import { parseTagFacet, tagFacetKind } from '../../../db/tag-facets.js';
 import { MarkerFacetTagRuleError } from '../../../db/tag-rule-errors.js';
+import { assertKnownClosedTagValues } from '../../shared/closed-tag-validation.js';
 import { ValidationError } from '../../shared/errors.js';
 import { collectTagsFromTagRuleChangeSet, isTagBearingTagRuleOp } from './commit-temp-resolver.js';
 
@@ -153,14 +154,6 @@ function filterAcceptedTagRuleChangeSets(
   return filtered;
 }
 
-function rejectUnknownClosedValue(tag: string, facet: string): never {
-  throw new ValidationError(
-    `'${tag}' is not a value of the closed '${facet}' namespace. ` +
-      `Pick an existing ${facet} value, or use an open namespace for a value you are creating.`,
-    { tag, facet }
-  );
-}
-
 /**
  * Decide what a commit is allowed to write to `tag_vocabulary`, rejecting the
  * whole commit if any tag names a value a closed namespace does not hold.
@@ -186,12 +179,12 @@ export function planCommitTagVocabulary(db: FinanceDb, payload: CommitPayload): 
     ...payload.transactions.flatMap((txn) => trimmedTags(txn.tags)),
     ...ruleTags,
   ];
+  assertKnownClosedTagValues(committedTags, known);
 
   for (const tag of committedTags) {
     if (known.has(tag)) continue;
     const { facet } = parseTagFacet(tag);
     const kind = tagFacetKind(facet);
-    if (kind === 'closed') rejectUnknownClosedValue(tag, facet ?? '');
     if (kind === 'marker') continue;
     const key = tagVocabularyService.normalizeTagForComparison(tag);
     if (!toUpsert.has(key)) toUpsert.set(key, tag);
