@@ -4,10 +4,27 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+interface OpenApiSchema {
+  $ref?: string;
+  type?: string;
+  properties?: Record<string, OpenApiSchema>;
+}
+
+interface OpenApiResponse {
+  content?: Record<string, { schema?: OpenApiSchema }>;
+}
+
+interface OpenApiOperation {
+  summary?: string;
+  operationId?: string;
+  responses?: Record<string, OpenApiResponse>;
+}
+
 interface OpenApiDocument {
   openapi: string;
   info: { title: string; version: string };
-  paths: Record<string, Record<string, { summary?: string; operationId?: string }>>;
+  paths: Record<string, Record<string, OpenApiOperation>>;
+  components: { schemas: Record<string, OpenApiSchema> };
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -50,5 +67,16 @@ describe('@pops/inventory openapi projection', () => {
 
   it('exposes the connection graph traversal route', () => {
     expect(openapi.paths['/items/{itemId}/connections/graph']?.['get']).toBeDefined();
+  });
+
+  it('describes the draft conflict version under the ADR-054 details field', () => {
+    const responseSchema =
+      openapi.paths['/type-catalogue/drafts/{revision}']?.['patch']?.responses?.['409']?.content?.[
+        'application/json'
+      ]?.schema;
+    const detailsSchema = openapi.components.schemas.CatalogueErrorBody?.properties?.details;
+
+    expect(responseSchema?.$ref).toBe('#/components/schemas/CatalogueErrorBody');
+    expect(detailsSchema?.properties?.currentDraftVersion).toMatchObject({ type: 'integer' });
   });
 });
