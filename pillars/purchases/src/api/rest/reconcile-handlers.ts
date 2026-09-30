@@ -1,6 +1,7 @@
 /**
  * Handlers for the `reconcile.*` ts-rest sub-router.
  */
+import { FINANCE_TRANSACTION_URI } from '../../contract/schemas/scalars.js';
 import {
   confirmLink,
   listPurchasesForTransaction,
@@ -22,6 +23,8 @@ import type {
 } from '../../contract/rest-reconcile.js';
 import type { LinkedPurchase, PurchasesDb, QueueEntry } from '../../db/index.js';
 import type { SweepOutcome } from '../../reconcile/sweep.js';
+import type { FinanceTransactionLookup } from '../finance/client.js';
+import type { CandidateTransaction } from '../finance/wire.js';
 
 type QueueQuery = z.infer<typeof ReconcileQueueQuerySchema>;
 type TransactionLinksQuery = z.infer<typeof TransactionLinksQuerySchema>;
@@ -42,10 +45,47 @@ function missingLink(decision: Decision) {
   };
 }
 
-function toWireEntries(entries: readonly QueueEntry[]) {
+function financeTransactionIds(entries: readonly QueueEntry[]): string[] {
+  const ids = new Set<string>();
+  for (const entry of entries) {
+    for (const link of entry.proposed) {
+      const id = link.transactionUri.match(FINANCE_TRANSACTION_URI)?.[1];
+      if (id !== undefined) ids.add(id);
+    }
+  }
+  return [...ids];
+}
+
+async function queueTransactionDetails(
+  financeTransactionLookup: FinanceTransactionLookup | undefined,
+  ids: readonly string[]
+): Promise<ReadonlyMap<string, CandidateTransaction>> {
+  if (financeTransactionLookup === undefined || ids.length === 0) return new Map();
+
+  try {
+    const result = await financeTransactionLookup.fetchTransactionsByIds(ids);
+    if (result.kind !== 'ok') return new Map();
+    return new Map(result.transactions.map((transaction) => [transaction.id, transaction]));
+  } catch {
+    return new Map();
+  }
+}
+
+function toWireEntries(
+  entries: readonly QueueEntry[],
+  transactionsById: ReadonlyMap<string, CandidateTransaction>
+) {
   return entries.map((entry) => ({
     ...entry,
-    proposed: entry.proposed.map((link) => ({ ...link })),
+    proposed: entry.proposed.map((link) => {
+      const id = link.transactionUri.match(FINANCE_TRANSACTION_URI)?.[1];
+      const transaction = id === undefined ? undefined : transactionsById.get(id);
+      return {
+        ...link,
+        transactionDate: transaction?.date ?? null,
+        transactionPayee: transaction?.entityName ?? null,
+      };
+    }),
   }));
 }
 
@@ -60,24 +100,32 @@ function toWireLinkedPurchases(entries: readonly LinkedPurchase[]) {
   }));
 }
 
-export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
+/** Builds reconciliation routes and optionally decorates queue proposals with Finance details. */
+export function makeReconcileHandlers(
+  db: PurchasesDb,
+  sweep?: SweepTrigger,
+  financeTransactionLookup?: FinanceTransactionLookup
+) {
   return {
-    queue: async ({ query }: { query: QueueQuery }) => ({
-      status: 200 as const,
-      body: {
-        // Copied out of the readonly service shape into the mutable one the
-        // wire schema describes.
-        items: toWireEntries(
-          listReconcileQueue(db, {
-            ...(query.source === undefined ? {} : { source: query.source }),
-            ...(query.kind === undefined ? {} : { kind: query.kind }),
-            ...(query.includeAuto === undefined ? {} : { includeAuto: query.includeAuto }),
-            ...(query.limit === undefined ? {} : { limit: query.limit }),
-            ...(query.offset === undefined ? {} : { offset: query.offset }),
-          })
-        ),
-      },
-    }),
+    queue: async ({ query }: { query: QueueQuery }) => {
+      const entries = listReconcileQueue(db, {
+        ...(query.source === undefined ? {} : { source: query.source }),
+        ...(query.kind === undefined ? {} : { kind: query.kind }),
+        ...(query.includeAuto === undefined ? {} : { includeAuto: query.includeAuto }),
+        ...(query.limit === undefined ? {} : { limit: query.limit }),
+        ...(query.offset === undefined ? {} : { offset: query.offset }),
+      });
+      const ids = financeTransactionIds(entries);
+      const transactionsById = await queueTransactionDetails(financeTransactionLookup, ids);
+      return {
+        status: 200 as const,
+        body: {
+          // Copied out of the readonly service shape into the mutable one the
+          // wire schema describes.
+          items: toWireEntries(entries, transactionsById),
+        },
+      };
+    },
 
     links: async ({ query }: { query: TransactionLinksQuery }) => ({
       status: 200 as const,

@@ -57,7 +57,7 @@ const FINANCE_OPENAPI = {
     '/transactions': {
       get: {
         operationId: 'transactions.list',
-        parameters: ['search', 'startDate', 'endDate', 'limit', 'offset'].map((name) => ({
+        parameters: ['search', 'startDate', 'endDate', 'ids', 'limit', 'offset'].map((name) => ({
           name,
           in: 'query',
           required: false,
@@ -191,6 +191,16 @@ describe('the leg resolves against finance real contract', () => {
     expect(call?.searchParams.get('startDate')).toBe('2026-03-01');
     expect(call?.searchParams.get('endDate')).toBe('2026-03-22');
     expect(call?.searchParams.get('search')).toBe('AMAZON');
+    expect(call?.searchParams.get('limit')).toBe('500');
+    expect(call?.searchParams.get('offset')).toBe('0');
+  });
+
+  it('sends repeated transaction ids as the finance list filter', async () => {
+    const result = await liveClient().fetchTransactionsByIds(['txn-1', 'txn-2']);
+
+    expect(result.kind).toBe('ok');
+    const [call] = received;
+    expect(call?.searchParams.getAll('ids')).toEqual(['txn-1', 'txn-2']);
     expect(call?.searchParams.get('limit')).toBe('500');
     expect(call?.searchParams.get('offset')).toBe('0');
   });

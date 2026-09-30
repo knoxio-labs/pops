@@ -166,7 +166,7 @@ export const EXPECTATIONS = [
     operationId: 'transactions.list',
     path: '/transactions',
     method: 'get',
-    query: ['startDate', 'endDate', 'search', 'limit', 'offset'],
+    query: ['startDate', 'endDate', 'search', 'ids', 'limit', 'offset'],
     usedBy: 'pillars/purchases/src/api/finance/client.ts',
   },
   {

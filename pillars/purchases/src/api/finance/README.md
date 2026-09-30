@@ -41,9 +41,9 @@ The same reasoning makes truncation a failure rather than a short read: a partia
 
 ## What finance can and cannot filter
 
-`GET /transactions` accepts `search`, `accountId`, `startDate`, `endDate`, `tag`, `entityId`, `type`, `limit` (**capped at 500**) and `offset`, returning `{ data, pagination }`.
+`GET /transactions` accepts `search`, `accountId`, `startDate`, `endDate`, `tag`, `entityId`, `type`, `ids`, `limit` (**capped at 500**) and `offset`, returning `{ data, pagination }`.
 
-**This leg uses four of them** — `startDate`, `endDate`, `search` and the paging pair. The rest are available and deliberately unused: `entityId` and `tag` describe finance's own classification of a transaction, and a charge should match on date and amount regardless of how finance happens to have categorised it. Narrowing by them would hide exactly the mis-categorised transactions reconciliation most needs to find.
+**The sweep uses four of them** — `startDate`, `endDate`, `search` and the paging pair. The reconcile queue also uses `ids` to hydrate the date and payee of proposals already stored in purchases, in batches of at most 500. The remaining filters are deliberately unused: `entityId` and `tag` describe finance's own classification of a transaction, and a charge should match on date and amount regardless of how finance happens to have categorised it. Narrowing by them would hide exactly the mis-categorised transactions reconciliation most needs to find.
 
 There is **no amount filter** in that set, so amount narrowing happens in the solver after the window pull. `search` is a substring filter used for stage-0 descriptor blocking from `purchase_sources.descriptorPattern`; it narrows the pull and never decides a match.
 

@@ -11710,7 +11710,16 @@
                                   ],
                                   "type": "string"
                                 },
+                                "transactionDate": {
+                                  "nullable": true,
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                  "type": "string"
+                                },
                                 "transactionDescription": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "transactionPayee": {
                                   "nullable": true,
                                   "type": "string"
                                 },
@@ -11722,6 +11731,8 @@
                               "required": [
                                 "transactionUri",
                                 "transactionDescription",
+                                "transactionDate",
+                                "transactionPayee",
                                 "amountCents",
                                 "linkType",
                                 "confidence"

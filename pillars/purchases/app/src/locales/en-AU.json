@@ -27,6 +27,8 @@
   "reconcile.entry.unknownMerchant": "Unnamed merchant ({{source}})",
   "reconcile.entry.noOrderRef": "No order reference",
   "reconcile.entry.confidence": "{{percent}}% confident",
+  "reconcile.entry.transactionDateUnavailable": "Posting date unavailable",
+  "reconcile.entry.transactionDescriptionUnavailable": "Description unavailable",
   "reconcile.delta.balanced": "Balanced",
   "reconcile.delta.short": "Short of the charge",
   "reconcile.delta.over": "Over-linked",

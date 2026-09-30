@@ -117,12 +117,13 @@ everything reconciles renders a page that looks right and demonstrates nothing.
 
 ### Cross-pillar calls
 
-There are none to degrade. Every request this app issues goes to its own
-contract; the finance transactions, inventory units and documents it shows are
-rendered as the `pops://` references they are and deliberately not resolved
-(see "One order" below). The closest thing to a missing sibling is an operation
-the harness has no handler for, which reaches the page as an unusable response
-the same way — and is covered by `standalone.test.tsx`.
+Every request this app issues goes to its own contract. The purchases API
+batches a Finance lookup for the transaction date and payee shown in the
+reconcile queue; that decoration can be missing while the saved transaction
+description still renders. Inventory units and documents remain unresolved
+`pops://` references (see "One order" below). The closest thing to a missing
+sibling is an operation the harness has no handler for, which reaches the page
+as an unusable response the same way — and is covered by `standalone.test.tsx`.
 
 ## The reconcile queue
 
@@ -134,6 +135,11 @@ and `Σ proposed − charge` between them.
 returns one entry per charge carrying 0..n proposed transactions, so the charge
 is the stable side and the transactions are the plural one. Laying it out the
 other way would make every row a different height for no gain.
+
+The API batches those proposals through Finance's transaction-id filter to add
+the posting date and payee. It keeps the description stored with the proposal,
+so the row remains useful when Finance is unavailable; missing live details
+show as unavailable rather than failing the queue.
 
 **It is keyboard-driven, and that is the feature.** The queue arrives focused,
 so `j`/`k` move the cursor, `enter` accepts and `x` rejects without a click

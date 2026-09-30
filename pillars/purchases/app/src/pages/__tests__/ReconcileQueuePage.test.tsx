@@ -28,6 +28,8 @@ function buildLink(overrides: Partial<ProposedLink> = {}): ProposedLink {
   return {
     transactionUri: 'pops://finance/transaction/tx-1',
     transactionDescription: 'WOOLWORTHS 1234 SYDNEY',
+    transactionDate: null,
+    transactionPayee: null,
     amountCents: 4599,
     linkType: 'exact',
     confidence: 0.95,
@@ -182,6 +184,65 @@ describe('ReconcileQueuePage — copy', () => {
       const label = enAUPurchases[`reconcile.linkType.${linkType}` as const];
       expect(screen.getByText(new RegExp(`^${label} ·`))).toBeVisible();
     }
+  });
+});
+
+describe('ReconcileQueuePage — transaction details', () => {
+  it('distinguishes equal-amount proposals by date, description and payee', async () => {
+    queueReturns([
+      buildEntry({
+        amountCents: 10_000,
+        proposed: [
+          buildLink({
+            transactionUri: 'pops://finance/transaction/tx-a',
+            transactionDescription: 'BOOKSHOP CENTRAL',
+            transactionDate: '2026-03-05',
+            transactionPayee: 'Bookshop Central',
+            amountCents: 5000,
+            linkType: 'split',
+          }),
+          buildLink({
+            transactionUri: 'pops://finance/transaction/tx-b',
+            transactionDescription: 'BOOKSHOP EAST',
+            transactionDate: '2026-03-06',
+            transactionPayee: 'Bookshop East',
+            amountCents: 5000,
+            linkType: 'split',
+          }),
+        ],
+      }),
+    ]);
+    renderQueue();
+
+    expect(await screen.findByText('BOOKSHOP CENTRAL')).toBeVisible();
+    expect(screen.getByText('BOOKSHOP EAST')).toBeVisible();
+    expect(screen.getByText('5 Mar 2026')).toBeVisible();
+    expect(screen.getByText('6 Mar 2026')).toBeVisible();
+    expect(screen.getByText('Bookshop Central')).toBeVisible();
+    expect(screen.getByText('Bookshop East')).toBeVisible();
+  });
+
+  it('shows a description fallback when a proposal has no stored or live details', async () => {
+    queueReturns([
+      buildEntry({
+        proposed: [
+          buildLink({
+            transactionDescription: null,
+            transactionDate: null,
+            transactionPayee: null,
+          }),
+        ],
+      }),
+    ]);
+    renderQueue();
+
+    expect(
+      await screen.findByText(enAUPurchases['reconcile.entry.transactionDescriptionUnavailable'])
+    ).toBeVisible();
+    expect(
+      screen.getByText(enAUPurchases['reconcile.entry.transactionDateUnavailable'])
+    ).toBeVisible();
+    expect(screen.queryByText(/pops:\/\/finance\/transaction/u)).not.toBeInTheDocument();
   });
 });
 

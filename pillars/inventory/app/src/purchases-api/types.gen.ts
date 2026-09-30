@@ -3150,7 +3150,9 @@ export type ReconcileQueueResponses = {
         amountCents: number;
         confidence: number;
         linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+        transactionDate: string | null;
         transactionDescription: string | null;
+        transactionPayee: string | null;
         transactionUri: string;
       }>;
       purchaseId: string;

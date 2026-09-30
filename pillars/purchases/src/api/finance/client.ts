@@ -53,6 +53,7 @@ export type FinanceRouter = {
       search?: string;
       startDate?: string;
       endDate?: string;
+      ids?: string[];
       limit?: number;
       offset?: number;
     }) => Promise<unknown>;
@@ -102,8 +103,19 @@ export interface CandidateQuery {
  * impl is backed by `pillar('finance')`; tests pass a fake so the solver
  * and the degradation paths are exercised without the network.
  */
+/** Supplies transaction candidates for reconciliation sweeps. */
 export interface FinanceClient {
   fetchCandidates(query: CandidateQuery): Promise<CandidateFetch>;
+}
+
+/** Reads finance transactions already referenced by proposals in the queue. */
+export interface FinanceTransactionLookup {
+  /**
+   * Reads transaction details in finance's 500-id batches. A missing finance
+   * response is distinct from an empty response so callers can omit decoration
+   * without failing their own read.
+   */
+  fetchTransactionsByIds(ids: readonly string[]): Promise<CandidateFetch>;
 }
 
 /**
@@ -119,11 +131,12 @@ export interface FinanceClientOptions {
   readonly maxPages?: number;
 }
 
+/** Creates the read-only Finance ports used by reconciliation and its queue. */
 export function createFinanceClient(
   handleFactory: FinanceHandleFactory = () =>
     credentialled(FINANCE_PILLAR_ID, () => pillar<FinanceRouter>(FINANCE_PILLAR_ID)),
   options: FinanceClientOptions = {}
-): FinanceClient {
+): FinanceClient & FinanceTransactionLookup {
   const maxPages = options.maxPages ?? MAX_PAGES;
   return {
     fetchCandidates(query: CandidateQuery): Promise<CandidateFetch> {
@@ -133,7 +146,43 @@ export function createFinanceClient(
       }
       return pageThroughTransactions(handle, query, maxPages);
     },
+    fetchTransactionsByIds(ids: readonly string[]): Promise<CandidateFetch> {
+      const uniqueIds = [...new Set(ids)];
+      if (uniqueIds.length === 0) {
+        return Promise.resolve({ kind: 'ok', transactions: [] });
+      }
+
+      const handle = handleFactory();
+      if (handle === null) {
+        return Promise.resolve({ kind: 'unavailable', reason: NO_CREDENTIAL_REASON });
+      }
+      return readTransactionsByIds(handle, uniqueIds);
+    },
   };
+}
+
+async function readTransactionsByIds(
+  handle: PillarHandle<FinanceRouter>,
+  ids: readonly string[]
+): Promise<CandidateFetch> {
+  const transactions: CandidateTransaction[] = [];
+
+  for (let offset = 0; offset < ids.length; offset += PAGE_SIZE) {
+    const requestedIds = ids.slice(offset, offset + PAGE_SIZE);
+    const parsed = readPage(
+      await handle.transactions.list({ ids: requestedIds, limit: PAGE_SIZE, offset: 0 })
+    );
+    if (parsed.kind !== 'ok') return parsed;
+    if (parsed.page.pagination.hasMore) {
+      return {
+        kind: 'unavailable',
+        reason: 'transactions.list returned a partial id lookup',
+      };
+    }
+    transactions.push(...parsed.page.data.map(toCandidateTransaction));
+  }
+
+  return { kind: 'ok', transactions };
 }
 
 async function pageThroughTransactions(
@@ -195,7 +244,7 @@ function readPage(result: CallResult<unknown>): ReadPageResult {
   if (!parsed.success) {
     console.warn(
       `[finance] transactions.list returned a shape this pillar cannot read — ` +
-        `treating the window as unreadable rather than empty: ${parsed.error.message}`
+        `treating the response as unreadable rather than empty: ${parsed.error.message}`
     );
     return { kind: 'unavailable', reason: 'contract-mismatch' };
   }

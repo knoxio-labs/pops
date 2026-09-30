@@ -125,7 +125,17 @@ function ProposalLine({ link, currency }: ProposalLineProps): ReactElement {
           {t('reconcile.entry.confidence', { percent: Math.round(link.confidence * 100) })}
         </span>
       </p>
-      <p className="text-muted-foreground truncate font-mono text-xs">{link.transactionUri}</p>
+      <p className="truncate font-medium">
+        {link.transactionDescription ?? t('reconcile.entry.transactionDescriptionUnavailable')}
+      </p>
+      <div className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
+        {link.transactionDate === null ? (
+          <span>{t('reconcile.entry.transactionDateUnavailable')}</span>
+        ) : (
+          <time dateTime={link.transactionDate}>{formatDate(link.transactionDate)}</time>
+        )}
+        {link.transactionPayee !== null && <span>{link.transactionPayee}</span>}
+      </div>
     </div>
   );
 }

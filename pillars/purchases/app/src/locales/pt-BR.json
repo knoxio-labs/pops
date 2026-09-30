@@ -27,6 +27,8 @@
   "reconcile.entry.unknownMerchant": "Comerciante sem nome ({{source}})",
   "reconcile.entry.noOrderRef": "Sem referência de pedido",
   "reconcile.entry.confidence": "{{percent}}% de confiança",
+  "reconcile.entry.transactionDateUnavailable": "Data de lançamento indisponível",
+  "reconcile.entry.transactionDescriptionUnavailable": "Descrição indisponível",
   "reconcile.delta.balanced": "Equilibrado",
   "reconcile.delta.short": "Abaixo da cobrança",
   "reconcile.delta.over": "Vinculado além da cobrança",
