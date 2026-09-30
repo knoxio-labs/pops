@@ -210,6 +210,13 @@ bearing rather than stylistic:
   says what each costs. A label total presented as an entity total is the
   same class of error as a dropped residual, one dimension over.
 
+The period is shareable URL state: `?period=YYYY` selects one of the five
+latest UTC years offered by the picker, and omitting `period` means all time.
+Malformed or unavailable years fall back to all time. Choosing all time removes
+only `period`, preserving other query parameters. The reconcile queue's `kind`
+and `includeAuto` filters stay local because they control a transient triage
+view rather than the merchant totals named by this URL.
+
 ### Opening a row
 
 A row discloses the orders it was totalled from, each linking to

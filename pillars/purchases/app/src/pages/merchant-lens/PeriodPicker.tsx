@@ -27,7 +27,7 @@ export function PeriodPicker({ value, onChange, now }: Props): ReactElement {
         label={label}
         options={options}
         value={value}
-        onChange={(event) => onChange(parsePeriodSelection(event.target.value))}
+        onChange={(event) => onChange(parsePeriodSelection(event.target.value, now))}
       />
     </div>
   );
