@@ -92,8 +92,10 @@ describe('purchases standalone, on mocks alone', () => {
     withMocks();
     renderStandaloneAt('/purchases');
 
-    expect(await screen.findByText('Hardware Barn', undefined, { timeout: 3000 })).toBeVisible();
-    expect(await screen.findByText(/Grocer & Co/)).toBeVisible();
+    expect(await screen.findAllByText('Hardware Barn', undefined, { timeout: 3000 })).toHaveLength(
+      2
+    );
+    expect(await screen.findAllByText('Grocer & Co')).toHaveLength(3);
   });
 
   it('renders merchant spend from fixture roll-ups', async () => {

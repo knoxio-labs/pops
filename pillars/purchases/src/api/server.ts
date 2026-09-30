@@ -77,9 +77,11 @@ configurePurchasesServerSdk();
  * an env var would instead mean a silently un-reconciled deployment, which
  * looks identical to one where nothing has settled yet.
  */
+const financeClient = createFinanceClient();
+
 const sweepRunner = createSweepRunner({
   db: purchasesDb.db,
-  finance: createFinanceClient(),
+  finance: financeClient,
   defaultWindowDays: DEFAULT_SETTLEMENT_WINDOW_DAYS,
   // Overridable so a smoke test does not wait a quarter of an hour for the
   // first tick. Absent in production, where the module defaults apply.
@@ -145,6 +147,7 @@ const app = createPurchasesApiApp({
   purchasesDb,
   version,
   selfBaseUrl,
+  financeTransactionLookup: financeClient,
   // Null when no API key is configured, which the drop-zone reports as a
   // 503 at the edge rather than accepting uploads it cannot read.
   vision: createAnthropicVision(),

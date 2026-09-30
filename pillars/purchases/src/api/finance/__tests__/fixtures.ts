@@ -13,7 +13,7 @@ import {
   type CandidateTransaction,
 } from '../wire.js';
 
-import type { CandidateFetch, FinanceClient } from '../client.js';
+import type { CandidateFetch, FinanceClient, FinanceTransactionLookup } from '../client.js';
 
 /**
  * Everything a test may vary about a candidate.
@@ -43,10 +43,17 @@ function aCandidateTransaction(overrides: CandidateOverrides): CandidateTransact
 }
 
 /** A finance client whose window holds exactly the given candidates. */
-export function financeReturning(...candidates: readonly CandidateOverrides[]): FinanceClient {
+export function financeReturning(
+  ...candidates: readonly CandidateOverrides[]
+): FinanceClient & FinanceTransactionLookup {
   const transactions = candidates.map((candidate) => aCandidateTransaction(candidate));
   return {
     fetchCandidates: () => Promise.resolve<CandidateFetch>({ kind: 'ok', transactions }),
+    fetchTransactionsByIds: (ids) =>
+      Promise.resolve<CandidateFetch>({
+        kind: 'ok',
+        transactions: transactions.filter((transaction) => ids.includes(transaction.id)),
+      }),
   };
 }
 
@@ -54,7 +61,9 @@ export function financeReturning(...candidates: readonly CandidateOverrides[]): 
  * A finance client that cannot be read at all — the case a sweep must
  * distinguish from an empty window, or it unlinks correctly matched orders.
  */
-export const FINANCE_UNAVAILABLE: FinanceClient = {
+export const FINANCE_UNAVAILABLE: FinanceClient & FinanceTransactionLookup = {
   fetchCandidates: () =>
+    Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' }),
+  fetchTransactionsByIds: () =>
     Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' }),
 };

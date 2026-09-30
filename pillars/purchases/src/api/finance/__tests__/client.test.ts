@@ -109,6 +109,68 @@ describe('fetchCandidates', () => {
   });
 });
 
+describe('fetchTransactionsByIds', () => {
+  it('requests the referenced ids and maps their transaction details', async () => {
+    const { handle, calls } = stubHandle([
+      page([
+        row({ id: 'txn-1', date: '2026-03-04', entityName: 'Amazon' }),
+        row({ id: 'txn-2', date: '2026-03-05', entityName: 'Bookshop' }),
+      ]),
+    ]);
+    const result = await createFinanceClient(() => handle).fetchTransactionsByIds([
+      'txn-1',
+      'txn-2',
+      'txn-1',
+    ]);
+
+    expect(calls).toEqual([{ ids: ['txn-1', 'txn-2'], limit: 500, offset: 0 }]);
+    expect(result.kind).toBe('ok');
+    if (result.kind !== 'ok') return;
+    expect(
+      result.transactions.map(({ id, date, entityName }) => ({ id, date, entityName }))
+    ).toEqual([
+      { id: 'txn-1', date: '2026-03-04', entityName: 'Amazon' },
+      { id: 'txn-2', date: '2026-03-05', entityName: 'Bookshop' },
+    ]);
+  });
+
+  it('splits lookups at the finance id limit', async () => {
+    const ids = Array.from({ length: 501 }, (_, index) => `txn-${String(index)}`);
+    const { handle, calls } = stubHandle([
+      page([row({ id: 'first' })]),
+      page([row({ id: 'last' })]),
+    ]);
+    const result = await createFinanceClient(() => handle).fetchTransactionsByIds(ids);
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.['ids']).toHaveLength(500);
+    expect(calls[1]?.['ids']).toEqual(['txn-500']);
+    expect(result.kind).toBe('ok');
+    if (result.kind !== 'ok') return;
+    expect(result.transactions.map((transaction) => transaction.id)).toEqual(['first', 'last']);
+  });
+
+  it('does not call finance for an empty lookup', async () => {
+    const handleFactory = vi.fn(() => {
+      throw new Error('empty detail lookups do not need a Finance handle');
+    });
+    const result = await createFinanceClient(handleFactory).fetchTransactionsByIds([]);
+
+    expect(result).toEqual({ kind: 'ok', transactions: [] });
+    expect(handleFactory).not.toHaveBeenCalled();
+  });
+
+  it('reports unavailable when a batch is incomplete', async () => {
+    const { handle } = stubHandle([page([row({ id: 'txn-1' })], true)]);
+    const result = await createFinanceClient(() => handle).fetchTransactionsByIds(['txn-1']);
+
+    expect(result).toEqual({
+      kind: 'unavailable',
+      reason: 'transactions.list returned a partial id lookup',
+    });
+  });
+});
+
 describe('an outage is not an empty window', () => {
   // The single most important behaviour in this file. Auto-links are
   // re-derived by tearing down unconfirmed links and re-solving against

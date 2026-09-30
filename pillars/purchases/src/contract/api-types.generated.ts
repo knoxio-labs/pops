@@ -4138,7 +4138,9 @@ export interface operations {
                 confidence: number;
                 /** @enum {string} */
                 linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                transactionDate: string | null;
                 transactionDescription: string | null;
+                transactionPayee: string | null;
                 transactionUri: string;
               }[];
               purchaseId: string;

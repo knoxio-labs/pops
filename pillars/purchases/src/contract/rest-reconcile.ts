@@ -44,6 +44,13 @@ export const QueuedLinkSchema = z.object({
    * the pillar recorded descriptors.
    */
   transactionDescription: z.string().nullable(),
+  /** Finance's posting date, omitted as null when the live lookup is unavailable. */
+  transactionDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/u)
+    .nullable(),
+  /** Finance's resolved payee, omitted as null when the live lookup is unavailable. */
+  transactionPayee: z.string().nullable(),
   amountCents: CentsSchema,
   linkType: LinkTypeSchema,
   confidence: z.number().min(0).max(1),

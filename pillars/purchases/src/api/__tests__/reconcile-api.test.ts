@@ -18,7 +18,7 @@ import { createTestTransport } from './test-http.js';
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
-import type { FinanceClient } from '../finance/client.js';
+import type { FinanceClient, FinanceTransactionLookup } from '../finance/client.js';
 
 const { requestOn } = createTestTransport();
 
@@ -40,12 +40,13 @@ function order(totalCents: number, checksum: string) {
   });
 }
 
-function build(finance: FinanceClient = financeReturning()): Express {
+function build(finance: FinanceClient & FinanceTransactionLookup = financeReturning()): Express {
   return createPurchasesApiApp({
     vision: null,
     purchasesDb: opened,
     version: '1.2.3',
     selfBaseUrl: 'http://localhost:3013',
+    financeTransactionLookup: finance,
     sweep: () => runSweep({ db: opened.db, finance, defaultWindowDays: 21 }),
   });
 }
@@ -93,6 +94,48 @@ describe('the queue', () => {
     expect(res.body.items[0].proposed).toHaveLength(1);
     expect(res.body.items[0].proposed[0].linkType).toBe('exact');
     expect(res.body.items[0].deltaCents).toBe(0);
+  });
+
+  it('decorates a proposal with its posting date, description and payee', async () => {
+    order(4128, 'proposal-details');
+    const finance = financeReturning({
+      id: 't1',
+      amountCents: 4128,
+      date: '2026-03-05',
+      description: 'AMAZON MARKETPLACE',
+      entityName: 'Bookshop Central',
+    });
+    await runSweep({ db: opened.db, finance, defaultWindowDays: 21 });
+    app = build(finance);
+
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
+
+    expect(res.body.items[0].proposed).toEqual([
+      expect.objectContaining({
+        amountCents: 4128,
+        transactionDate: '2026-03-05',
+        transactionDescription: 'AMAZON MARKETPLACE',
+        transactionPayee: 'Bookshop Central',
+      }),
+    ]);
+  });
+
+  it('returns saved proposal descriptions when Finance cannot decorate the queue', async () => {
+    order(4128, 'stored-description');
+    await runSweep({
+      db: opened.db,
+      finance: financeReturning({ id: 't1', amountCents: 4128, description: 'AMAZON MARKETPLACE' }),
+      defaultWindowDays: 21,
+    });
+    app = build(FINANCE_UNAVAILABLE);
+
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
+
+    expect(res.body.items[0].proposed[0]).toMatchObject({
+      transactionDate: null,
+      transactionDescription: 'AMAZON MARKETPLACE',
+      transactionPayee: null,
+    });
   });
 
   it('reports a partial payment as a negative delta rather than hiding it', async () => {
