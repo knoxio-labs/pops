@@ -81,17 +81,16 @@ const GENERATED_RE =
 const TEST_RE =
   /\.test\.|\.spec\.|\.stories\.|[/\\]__tests__[/\\]|[/\\]e2e[/\\]|test-utils|test-setup|\.test-d\./;
 
-/**
- * The hatch kinds we ratchet, each a matcher over a single source line.
- * `as` casts are skipped on pure-comment lines (a docstring mentioning
- * "`as never`" is not a cast); `eslint-disable` lives in comments by nature.
- * @type {Array<{ kind: string, match: (line: string, isComment: boolean) => boolean }>}
- */
-const HATCH_KINDS = [
-  { kind: 'as any', match: (l, isComment) => !isComment && /\bas any\b/.test(l) },
-  { kind: 'as unknown as', match: (l, isComment) => !isComment && /\bas unknown as\b/.test(l) },
-  { kind: 'as never', match: (l, isComment) => !isComment && /\bas never\b/.test(l) },
-  { kind: 'eslint-disable', match: (l) => /eslint-disable/.test(l) },
+/** @type {Array<{ kind: string, match: (line: string) => boolean }>} */
+const TYPE_ASSERTION_HATCH_KINDS = [
+  { kind: 'as any', match: (line) => /\bas any\b/.test(line) },
+  { kind: 'as unknown as', match: (line) => /\bas unknown as\b/.test(line) },
+  { kind: 'as never', match: (line) => /\bas never\b/.test(line) },
+];
+
+/** @type {Array<{ kind: string, match: (line: string) => boolean }>} */
+const COMMENT_HATCH_KINDS = [
+  { kind: 'eslint-disable', match: (line) => /eslint-disable/.test(line) },
 ];
 
 /**
@@ -240,24 +239,242 @@ function countLaunderedCasts(text) {
 }
 
 /**
- * Count escape hatches per kind in a single file's text.
+ * @param {string[]} chars
+ * @param {number} start
+ * @param {number} end
+ */
+function blankRange(chars, start, end) {
+  for (let index = start; index < end; index += 1) {
+    if (chars[index] !== '\n' && chars[index] !== '\r') chars[index] = ' ';
+  }
+}
+
+/** @param {string} text */
+function maskQuotedText(text) {
+  const chars = text.split('');
+
+  /** @param {number} start @param {number} end */
+  function blank(start, end) {
+    blankRange(chars, start, end);
+  }
+
+  /** @param {number} start @param {string} quote */
+  function scanQuoted(start, quote) {
+    blank(start, start + 1);
+    let index = start + 1;
+    while (index < chars.length) {
+      if (chars[index] === '\\') {
+        blank(index, index + 2);
+        index += 2;
+      } else if (chars[index] === quote) {
+        blank(index, index + 1);
+        return index + 1;
+      } else {
+        blank(index, index + 1);
+        index += 1;
+      }
+    }
+    return index;
+  }
+
+  /** @param {number} start @param {boolean} [stopAtTemplateBrace=false] */
+  function scanCode(start, stopAtTemplateBrace = false) {
+    let index = start;
+    let braceDepth = 0;
+    while (index < chars.length) {
+      if (chars[index] === "'" || chars[index] === '"') {
+        index = scanQuoted(index, chars[index] ?? '');
+      } else if (chars[index] === '`') {
+        index = scanTemplate(index);
+      } else if (chars[index] === '/' && chars[index + 1] === '/') {
+        let end = index + 2;
+        while (end < chars.length && chars[end] !== '\n' && chars[end] !== '\r') end += 1;
+        blank(index, end);
+        index = end;
+      } else if (chars[index] === '/' && chars[index + 1] === '*') {
+        const close = text.indexOf('*/', index + 2);
+        const end = close === -1 ? chars.length : close + 2;
+        blank(index, end);
+        index = end;
+      } else if (stopAtTemplateBrace && chars[index] === '}') {
+        if (braceDepth === 0) return index + 1;
+        braceDepth -= 1;
+        index += 1;
+      } else if (stopAtTemplateBrace && chars[index] === '{') {
+        braceDepth += 1;
+        index += 1;
+      } else {
+        index += 1;
+      }
+    }
+    return index;
+  }
+
+  /** @param {number} start */
+  function scanTemplate(start) {
+    blank(start, start + 1);
+    let index = start + 1;
+    while (index < chars.length) {
+      if (chars[index] === '\\') {
+        blank(index, index + 2);
+        index += 2;
+      } else if (chars[index] === '`') {
+        blank(index, index + 1);
+        return index + 1;
+      } else if (chars[index] === '$' && chars[index + 1] === '{') {
+        index = scanCode(index + 2, true);
+      } else {
+        blank(index, index + 1);
+        index += 1;
+      }
+    }
+    return index;
+  }
+
+  scanCode(0);
+  return chars.join('');
+}
+
+/**
+ * @param {string} code
+ * @param {number} start
+ * @returns {{ closing: boolean, end: number, name: string, selfClosing: boolean } | undefined}
+ */
+function readJsxTag(code, start) {
+  if (code[start] !== '<') return undefined;
+  let cursor = start + 1;
+  const closing = code[cursor] === '/';
+  if (closing) cursor += 1;
+
+  if (closing && code[cursor] === '>') {
+    return { closing, end: cursor + 1, name: '', selfClosing: false };
+  }
+
+  const fragment = code[cursor] === '>' && !closing;
+  let name = '';
+  if (!fragment) {
+    if (!/[A-Za-z_$]/.test(code[cursor] ?? '')) return undefined;
+    const nameStart = cursor;
+    cursor += 1;
+    while (/[\w$.:-]/.test(code[cursor] ?? '')) cursor += 1;
+    name = code.slice(nameStart, cursor);
+  }
+
+  let braceDepth = 0;
+  while (cursor < code.length) {
+    if (code[cursor] === '{') braceDepth += 1;
+    else if (code[cursor] === '}' && braceDepth > 0) braceDepth -= 1;
+    else if (code[cursor] === '>' && braceDepth === 0) {
+      const selfClosing = !closing && /\/\s*$/.test(code.slice(start + 1, cursor));
+      return { closing, end: cursor + 1, name, selfClosing };
+    } else if (code[cursor] === '<' && braceDepth === 0) return undefined;
+    cursor += 1;
+  }
+  return undefined;
+}
+
+/**
+ * @param {string} code
+ * @param {string} fileName
+ */
+function maskJsxText(code, fileName) {
+  if (!/\.(?:jsx|tsx)$/.test(fileName)) return code;
+
+  /** @type {Array<{ name: string, contentStart: number, ranges: Array<[number, number]> }>} */
+  const stack = [];
+  /** @type {Array<[number, number]>} */
+  const ranges = [];
+  let index = 0;
+
+  while (index < code.length) {
+    const current = stack.at(-1);
+    if (current && code[index] === '{') {
+      if (current.contentStart < index) current.ranges.push([current.contentStart, index]);
+      let depth = 0;
+      let end = index + 1;
+      while (end < code.length) {
+        if (code[end] === '{') depth += 1;
+        else if (code[end] === '}') {
+          if (depth === 0) break;
+          depth -= 1;
+        }
+        end += 1;
+      }
+      current.contentStart = Math.min(end + 1, code.length);
+      index = current.contentStart;
+      continue;
+    }
+
+    if (code[index] === '<') {
+      const tag = readJsxTag(code, index);
+      if (tag) {
+        const parent = stack.at(-1);
+        if (parent && parent.contentStart < index) parent.ranges.push([parent.contentStart, index]);
+
+        if (tag.closing) {
+          if (parent?.name === tag.name) {
+            const frame = stack.pop();
+            if (frame) {
+              if (frame.contentStart < index) frame.ranges.push([frame.contentStart, index]);
+              ranges.push(...frame.ranges);
+            }
+            const containing = stack.at(-1);
+            if (containing) containing.contentStart = tag.end;
+          } else if (parent) {
+            parent.contentStart = tag.end;
+          }
+        } else if (tag.selfClosing) {
+          if (parent) parent.contentStart = tag.end;
+        } else {
+          stack.push({ name: tag.name, contentStart: tag.end, ranges: [] });
+        }
+
+        index = tag.end;
+        continue;
+      }
+    }
+
+    index += 1;
+  }
+
+  const chars = code.split('');
+  for (const [start, end] of ranges) blankRange(chars, start, end);
+  return chars.join('');
+}
+
+/**
  * @param {string} text
+ * @param {string} fileName
+ */
+function maskNonCodeText(text, fileName) {
+  return maskJsxText(maskQuotedText(text), fileName);
+}
+
+/**
+ * Count TypeScript cast hatches and comment directives in one source file.
+ * Cast matching skips comments, literal text and JSX text while preserving
+ * code inside template and JSX expressions.
+ * @param {string} text
+ * @param {string} [fileName='source.tsx'] Selects JSX handling for `.jsx` and `.tsx` files.
  * @returns {Record<string, number>}
  */
-export function countHatchesInText(text) {
+export function countHatchesInText(text, fileName = 'source.tsx') {
   /** @type {Record<string, number>} */
   const counts = {};
-  for (const rawLine of text.split('\n')) {
-    const trimmed = rawLine.trim();
-    const isComment =
-      trimmed.startsWith('*') || trimmed.startsWith('//') || trimmed.startsWith('/*');
-    for (const { kind, match } of HATCH_KINDS) {
-      if (match(rawLine, isComment)) counts[kind] = (counts[kind] ?? 0) + 1;
+  const code = maskNonCodeText(text, fileName);
+  const codeLines = code.split('\n');
+  const sourceLines = text.split('\n');
+  for (let index = 0; index < sourceLines.length; index += 1) {
+    const codeLine = codeLines[index] ?? '';
+    const sourceLine = sourceLines[index] ?? '';
+    for (const { kind, match } of TYPE_ASSERTION_HATCH_KINDS) {
+      if (match(codeLine)) counts[kind] = (counts[kind] ?? 0) + 1;
+    }
+    for (const { kind, match } of COMMENT_HATCH_KINDS) {
+      if (match(sourceLine)) counts[kind] = (counts[kind] ?? 0) + 1;
     }
   }
-  for (const [kind, n] of Object.entries(countLaunderedCasts(text))) {
-    if (n > 0) counts[kind] = n;
-  }
+  for (const [kind, n] of Object.entries(countLaunderedCasts(code))) if (n > 0) counts[kind] = n;
   return counts;
 }
 
@@ -296,7 +513,7 @@ export function scanHatches() {
       const rel = relative(repoRoot, abs).split('\\').join('/');
       if (!isScannable(rel)) return;
       scanned += 1;
-      const counts = countHatchesInText(readFileSync(abs, 'utf8'));
+      const counts = countHatchesInText(readFileSync(abs, 'utf8'), abs);
       if (Object.keys(counts).length > 0) result[rel] = counts;
     });
   }
@@ -441,6 +658,21 @@ function runSelfTest() {
   if (matched['as any'] !== 1 || matched['eslint-disable'] !== 1) {
     console.error(
       `✗ self-test: the hatch matchers no longer recognise a plain cast (${JSON.stringify(matched)}).`
+    );
+    process.exit(1);
+  }
+
+  const castPrecision = countHatchesInText(
+    [
+      'const string = "treat this as any other field";',
+      'const template = `treat this as any other field`;',
+      'const jsx = <span>treat this as any other field</span>;',
+      'const message = "as any"; const value = input as any;',
+    ].join('\n')
+  );
+  if (castPrecision['as any'] !== 1) {
+    console.error(
+      `✗ self-test: cast precision reported ${castPrecision['as any'] ?? 0} "as any" hatch(es), expected 1 (${JSON.stringify(castPrecision)}).`
     );
     process.exit(1);
   }
