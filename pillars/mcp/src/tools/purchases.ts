@@ -18,6 +18,7 @@
  * MCP account or they return 403.
  */
 import { getPillar } from '../pillar-client.js';
+import { purchaseScopeDateError } from './purchase-scope-validation.js';
 import { searchFiltersFrom } from './purchase-search-filters.js';
 import { mapCallResult, optNum, optStr, reqStr, toolError } from './utils.js';
 
@@ -109,8 +110,18 @@ const SCOPE_PROPERTIES = {
     items: { type: 'string', enum: PURCHASE_STATUSES },
     description: 'Filter by settlement status',
   },
-  from: { type: 'string', description: 'Earliest order date, inclusive (ISO 8601)' },
-  to: { type: 'string', description: 'Latest order date, inclusive (ISO 8601)' },
+  from: {
+    type: 'string',
+    format: 'date-time',
+    description:
+      'Earliest order date, inclusive (ISO-8601 timestamp with a timezone, e.g. 2026-02-02T01:41:21Z)',
+  },
+  to: {
+    type: 'string',
+    format: 'date-time',
+    description:
+      'Latest order date, inclusive (ISO-8601 timestamp with a timezone, e.g. 2026-02-02T01:41:21Z)',
+  },
 } as const;
 
 function scopeFrom(args: Record<string, unknown>): MerchantSpendInput {
@@ -143,6 +154,9 @@ const ordersList: ToolDef = {
     },
   },
   handler: async (args) => {
+    const dateError = purchaseScopeDateError(args);
+    if (dateError !== undefined) return toolError(dateError);
+
     const input: ListPurchasesInput = scopeFrom(args);
     const limit = optNum(args, 'limit');
     if (limit !== undefined) input.limit = limit;
@@ -183,6 +197,9 @@ const search: ToolDef = {
   handler: async (args) => {
     const text = reqStr(args, 'text');
     if (!text) return toolError('Missing required field: text');
+    const dateError = purchaseScopeDateError(args);
+    if (dateError !== undefined) return toolError(dateError);
+
     const query: SearchInput['query'] = { text };
     const filters = searchFiltersFrom(scopeFrom(args));
     if (filters !== undefined) query.filters = filters;
@@ -223,8 +240,12 @@ const merchantSpend: ToolDef = {
     type: 'object',
     properties: { ...SCOPE_PROPERTIES },
   },
-  handler: async (args) =>
-    mapCallResult(await purchases().analytics.merchantSpend(scopeFrom(args))),
+  handler: async (args) => {
+    const dateError = purchaseScopeDateError(args);
+    if (dateError !== undefined) return toolError(dateError);
+
+    return mapCallResult(await purchases().analytics.merchantSpend(scopeFrom(args)));
+  },
 };
 
 export const purchasesTools: readonly ToolDef[] = [

@@ -70,6 +70,25 @@ describe('purchases.orders.list', () => {
     });
   });
 
+  it('rejects a plain date with a field-specific timestamp hint', async () => {
+    const result = await tool('purchases.orders.list').handler({ from: '2026-01-01' });
+
+    expect(result.isError).toBe(true);
+    expect(extractText(result)).toContain("Invalid field 'from'");
+    expect(extractText(result)).toContain('ISO-8601 timestamp with a timezone');
+    expect(purchase.list).not.toHaveBeenCalled();
+  });
+
+  it('names the field when a timestamp does not name a real date', async () => {
+    const result = await tool('purchases.orders.list').handler({
+      to: '2026-02-30T00:00:00Z',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(extractText(result)).toContain("Invalid field 'to'");
+    expect(purchase.list).not.toHaveBeenCalled();
+  });
+
   it('lifts a single source string into the repeated-parameter array', async () => {
     await tool('purchases.orders.list').handler({ sources: 'amazon' });
     expect(purchase.list).toHaveBeenCalledWith({ sources: ['amazon'] });
@@ -91,6 +110,18 @@ describe('purchases.orders.list', () => {
     const schema = tool('purchases.orders.list').inputSchema;
     const properties = schema['properties'] as Record<string, { items?: { enum?: string[] } }>;
     expect(properties['statuses']?.items?.enum).toEqual([...PURCHASE_STATUSES]);
+  });
+
+  it('advertises timezone-bearing timestamps for the order date filters', () => {
+    const properties = tool('purchases.orders.list').inputSchema['properties'] as Record<
+      string,
+      { description?: string; format?: string }
+    >;
+
+    expect(properties['from']?.format).toBe('date-time');
+    expect(properties['from']?.description).toContain('2026-02-02T01:41:21Z');
+    expect(properties['to']?.format).toBe('date-time');
+    expect(properties['to']?.description).toContain('2026-02-02T01:41:21Z');
   });
 
   it('surfaces an unavailable pillar as a tool error', async () => {
@@ -205,6 +236,15 @@ describe('purchases.analytics.merchantSpend', () => {
       sources: ['amazon'],
       from: '2026-01-01T00:00:00Z',
     });
+  });
+
+  it('rejects a plain date with a field-specific timestamp hint', async () => {
+    const result = await tool('purchases.analytics.merchantSpend').handler({ to: '2026-01-01' });
+
+    expect(result.isError).toBe(true);
+    expect(extractText(result)).toContain("Invalid field 'to'");
+    expect(extractText(result)).toContain('ISO-8601 timestamp with a timezone');
+    expect(analytics.merchantSpend).not.toHaveBeenCalled();
   });
 
   it('exposes no limit, because a truncated roll-up is a wrong one', () => {
