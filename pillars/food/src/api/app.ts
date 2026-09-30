@@ -6,9 +6,9 @@
  * factory so the test suite can spin up an in-process `supertest` instance
  * without binding a real port.
  *
- * The pillar trusts the docker network — the dispatcher/gateway in front
- * authenticates; there is no per-request auth here (parity with
- * lists/inventory).
+ * Contract routes validate presented service-account keys. The worker
+ * callback retains its separate per-caller internal credential gate, while
+ * uncredentialed user traffic still relies on the perimeter.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -23,10 +23,12 @@ import {
   type InternalCallerSpec,
   authenticateInternal,
   parseInternalCallers,
+  createRegistryServiceAccountVerifier,
 } from '@pops/pillar-sdk/server';
 
 import { foodContract } from '../contract/rest.js';
 import { type FoodApiDeps, makeRequestHandler } from './handlers.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { serveHeroImage } from './modules/hero-image/serve.js';
 import { makeServeIngestScreenshot, makeServeIngestVideo } from './modules/ingest/serve.js';
 import { makeFoodRestHandlers } from './rest/handlers.js';
@@ -111,6 +113,10 @@ function requireInternalToken(req: Request, res: Response, next: NextFunction): 
   next();
 }
 
+/**
+ * Build the food API app with contract-derived scopes for presented service-account keys.
+ * The worker callback keeps its independent internal-call credential guard.
+ */
 export function createFoodApiApp(deps: FoodApiDeps): Express {
   const app = express();
   const errors = createPillarErrorHandlers({ pillar: 'food' });
@@ -148,6 +154,12 @@ export function createFoodApiApp(deps: FoodApiDeps): Express {
   // and on a distinct subpath, so no collision with the POST `ingest.*` API.
   app.get('/ingest/source/:sourceId/screenshot', makeServeIngestScreenshot(deps.foodDb.db));
   app.get('/ingest/source/:sourceId/video', makeServeIngestVideo(deps.foodDb.db));
+
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
 
   createExpressEndpoints(foodContract, makeFoodRestHandlers(deps), app, {
     requestValidationErrorHandler: (error, req, res, next) => {
