@@ -203,5 +203,4 @@ internal enum InventorySearchRanking {
         if name.range(of: trimmed, options: [.caseInsensitive, .anchored]) != nil { return 0 }
         return name.localizedCaseInsensitiveContains(trimmed) ? 1 : 2
     }
-
 }

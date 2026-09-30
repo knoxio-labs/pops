@@ -40,7 +40,9 @@ public protocol InventoryQuerySource: Sendable {
     func inventoryItems(includeInactive: Bool) -> [InventoryItem]
     func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem]
     /// Reads one bounded item-and-place search page with filtering and ordering applied before the limit.
-    func inventorySearchPage(_ query: InventorySearchPageQuery) -> InventoryPage<InventorySearchPageRow>
+    func inventorySearchPage(_ query: InventorySearchPageQuery) -> InventoryPage<
+        InventorySearchPageRow
+    >
     func inventoryItemHistory(itemId: String) -> [InventoryEvent]
     func inventoryLocationHistory(locationId: String) -> [InventoryEvent]
     /// Reads one filtered, ordered item page. Replica-backed stores apply every predicate before limiting.

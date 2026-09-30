@@ -70,5 +70,4 @@ public struct PurchasesSearchFilter: Equatable, Sendable {
     public func carries(_ lineTags: Set<String>) -> Bool {
         tags.isEmpty || !tags.isDisjoint(with: lineTags)
     }
-
 }

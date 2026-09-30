@@ -43,7 +43,8 @@ internal struct PurchasesSearchProviderTests {
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
             .answers(
                 to: "bunnings", filter: PurchasesSearchFilter(kind: .purchases), after: nil,
-                limit: 20)
+                limit: 20
+            )
             .makeAsyncIterator()
 
         let results = try #require(Self.results(await events.next()))
@@ -59,7 +60,8 @@ internal struct PurchasesSearchProviderTests {
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
             .answers(
                 to: "bunnings", filter: PurchasesSearchFilter(kind: .lines), after: nil,
-                limit: 20)
+                limit: 20
+            )
             .makeAsyncIterator()
 
         let results = try #require(Self.results(await events.next()))
@@ -75,7 +77,8 @@ internal struct PurchasesSearchProviderTests {
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
             .answers(
                 to: "bunnings", filter: PurchasesSearchFilter(status: .matched), after: nil,
-                limit: 20)
+                limit: 20
+            )
             .makeAsyncIterator()
 
         _ = await events.next()
@@ -90,7 +93,8 @@ internal struct PurchasesSearchProviderTests {
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
             .answers(
                 to: "bunnings", filter: PurchasesSearchFilter(tags: ["garden", "camping"]),
-                after: nil, limit: 20)
+                after: nil, limit: 20
+            )
             .makeAsyncIterator()
 
         _ = await events.next()

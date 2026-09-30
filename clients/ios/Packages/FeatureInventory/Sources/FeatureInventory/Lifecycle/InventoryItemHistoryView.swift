@@ -133,7 +133,9 @@ internal struct InventoryItemHistoryView: View {
         } label: {
             Image(systemName: "line.3.horizontal.decrease")
                 .font(.popsBody.weight(.semibold))
-                .foregroundStyle(selection.wrappedValue == nil ? Color.popsInventory : Color.popsBackground)
+                .foregroundStyle(
+                    selection.wrappedValue == nil ? Color.popsInventory : Color.popsBackground
+                )
                 .frame(width: circleSize, height: circleSize)
                 .background {
                     if selection.wrappedValue != nil { Circle().fill(Color.popsInventory) }

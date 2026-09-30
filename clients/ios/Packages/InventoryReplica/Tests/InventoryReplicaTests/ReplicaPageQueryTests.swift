@@ -43,10 +43,11 @@ internal struct ReplicaPageQueryTests {
                 id: "place-d", revision: 1, seq: 1, name: "Garden delta", parentId: nil,
                 sortOrder: 2),
         ]
-        let replica = try Fixture.downloaded(items: [
-            Fixture.item("item-a", name: "Garden alpha"),
-            Fixture.item("item-c", name: "Garden charlie"),
-        ], locations: locations)
+        let replica = try Fixture.downloaded(
+            items: [
+                Fixture.item("item-a", name: "Garden alpha"),
+                Fixture.item("item-c", name: "Garden charlie"),
+            ], locations: locations)
         let query = InventorySearchPageQuery(text: "garden", page: InventoryPageRequest(limit: 2))
 
         let first = try replica.read(.searchPage(query))

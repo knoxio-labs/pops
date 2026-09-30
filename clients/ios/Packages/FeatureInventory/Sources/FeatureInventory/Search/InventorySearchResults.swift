@@ -60,29 +60,33 @@ internal struct InventorySearchPageResults: Sendable {
         text: String, filter: InventorySearchFilter, page: InventoryPageRequest
     ) -> InventoryQuery<InventorySearchPageResults> {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let placement: InventoryItemPagePlacement = switch filter.placement {
-        case .any: .any
-        case .inHand: .hand
-        case .direct: .location
-        case .contained: .container
-        }
-        let access: InventoryItemPageAccess = switch filter.containerState {
-        case .any: .any
-        case .open: .open
-        case .closed: .closed
-        }
-        let missing: InventoryItemPageMissing = switch filter.missing {
-        case .nothing: .none
-        case .type: .type
-        case .code: .code
-        case .photo: .photo
-        }
-        let sync: InventoryItemPageSync = switch filter.sync {
-        case .any: .any
-        case .waiting: .waiting
-        case .stale: .stale
-        case .needsAttention: .needsAttention
-        }
+        let placement: InventoryItemPagePlacement =
+            switch filter.placement {
+            case .any: .any
+            case .inHand: .hand
+            case .direct: .location
+            case .contained: .container
+            }
+        let access: InventoryItemPageAccess =
+            switch filter.containerState {
+            case .any: .any
+            case .open: .open
+            case .closed: .closed
+            }
+        let missing: InventoryItemPageMissing =
+            switch filter.missing {
+            case .nothing: .none
+            case .type: .type
+            case .code: .code
+            case .photo: .photo
+            }
+        let sync: InventoryItemPageSync =
+            switch filter.sync {
+            case .any: .any
+            case .waiting: .waiting
+            case .stale: .stale
+            case .needsAttention: .needsAttention
+            }
         let itemFilter = InventoryItemPageFilter(
             includeInactive: filter.includesInactive,
             placement: placement,
@@ -118,7 +122,8 @@ internal struct InventorySearchPageResults: Sendable {
                         parentId = parent.parentId
                     }
                     return .place(
-                        InventorySearchPlace(id: location.id, name: location.name, parents: parents))
+                        InventorySearchPlace(id: location.id, name: location.name, parents: parents)
+                    )
                 }
             }
             return InventorySearchPageResults(

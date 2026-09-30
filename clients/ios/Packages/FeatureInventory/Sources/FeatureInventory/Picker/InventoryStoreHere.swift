@@ -146,7 +146,8 @@ internal final class InventoryStoreHereModel {
 
     /// Loads another eligible candidate page while preserving the cursor after a failed read.
     internal func loadNextPage() async {
-        guard !isLoadingNextPage, let text = activeQuery, text == query.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard !isLoadingNextPage, let text = activeQuery,
+            text == query.trimmingCharacters(in: .whitespacesAndNewlines),
             let cursor = nextCursor
         else { return }
         let epoch = pageEpoch

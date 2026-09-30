@@ -11,7 +11,8 @@ internal struct InventoryRecentActivityView: View {
 
     internal var body: some View {
         InventoryItemHistoryView(
-            title: "Recent activity", name: "Everything, newest first", model: model)
+            title: "Recent activity", name: "Everything, newest first", model: model
+        )
         .inventoryRunnerChrome(model.runner)
     }
 }

@@ -7,10 +7,12 @@ extension InventoryQuerySource {
         _ query: InventorySearchPageQuery
     ) -> InventoryPage<InventorySearchPageRow> {
         let items = inventorySearch(
-            text: query.text, includeInactive: query.filter.includeInactive)
-            .filter { InventoryItemPageDefaults.matches($0, filter: query.filter, source: self) }
-            .map(InventorySearchPageRow.item)
-        let locations: [InventorySearchPageRow] = query.includeLocations
+            text: query.text, includeInactive: query.filter.includeInactive
+        )
+        .filter { InventoryItemPageDefaults.matches($0, filter: query.filter, source: self) }
+        .map(InventorySearchPageRow.item)
+        let locations: [InventorySearchPageRow] =
+            query.includeLocations
             ? inventoryLocationTree()
                 .filter {
                     !$0.isDeleted && $0.name.localizedCaseInsensitiveContains(query.text)
@@ -28,10 +30,13 @@ extension InventoryQuerySource {
     public func inventoryItemPage(
         _ query: InventoryItemPageQuery
     ) -> InventoryPage<InventoryItem> {
-        let items = query.text.map {
-            inventorySearch(text: $0, includeInactive: query.filter.includeInactive)
-        } ?? inventoryItems(includeInactive: query.filter.includeInactive)
-        let rows = items.filter { InventoryItemPageDefaults.matches($0, filter: query.filter, source: self) }
+        let items =
+            query.text.map {
+                inventorySearch(text: $0, includeInactive: query.filter.includeInactive)
+            } ?? inventoryItems(includeInactive: query.filter.includeInactive)
+        let rows = items.filter {
+            InventoryItemPageDefaults.matches($0, filter: query.filter, source: self)
+        }
         let ordered = InventoryItemPageDefaults.ordered(rows, by: query.order, text: query.text)
         return InventoryItemPageDefaults.page(
             ordered, request: query.page, order: query.order, text: query.text)
@@ -42,11 +47,12 @@ extension InventoryQuerySource {
     public func inventoryEventPage(
         _ query: InventoryEventPageQuery
     ) -> InventoryPage<InventoryEvent> {
-        let events: [InventoryEvent] = switch query.scope {
-        case .all: inventoryRecentEvents(limit: Int.max)
-        case .item(let id): inventoryItemHistory(itemId: id)
-        case .location(let id): inventoryLocationHistory(locationId: id)
-        }
+        let events: [InventoryEvent] =
+            switch query.scope {
+            case .all: inventoryRecentEvents(limit: Int.max)
+            case .item(let id): inventoryItemHistory(itemId: id)
+            case .location(let id): inventoryLocationHistory(locationId: id)
+            }
         let matching = events.filter { InventoryItemPageDefaults.matches($0, filter: query.filter) }
             .sorted { $0.seq > $1.seq }
         return InventoryItemPageDefaults.page(matching, request: query.page)
@@ -54,13 +60,17 @@ extension InventoryQuerySource {
 
     /// Computes the Items browser summary from the source's existing catalogue read.
     public func inventoryItemPageSummary(createdSince: Date) -> InventoryItemPageSummary {
-        let items = inventoryItems(includeInactive: true).filter { !$0.isDeleted && !$0.isContainer }
+        let items = inventoryItems(includeInactive: true).filter {
+            !$0.isDeleted && !$0.isContainer
+        }
         let active = items.filter { $0.lifecycle == .active }
         return InventoryItemPageSummary(
             activeItems: active.count,
             inHand: active.filter { $0.placement == .hand }.count,
-            untyped: active.filter { InventoryItemPageDefaults.typeKeys(for: $0, source: self).isEmpty }
-                .count,
+            untyped: active.filter {
+                InventoryItemPageDefaults.typeKeys(for: $0, source: self).isEmpty
+            }
+            .count,
             createdRecently: active.filter { $0.createdAt >= createdSince }.count)
     }
 }
@@ -76,32 +86,35 @@ private enum InventoryItemPageDefaults {
             filter.excludingPlacement.map({ item.placement != $0 }) ?? true
         else { return false }
 
-        let placementMatches = switch filter.placement {
-        case .any: true
-        case .hand: item.placement == .hand
-        case .location:
-            if case .location = item.placement { true } else { false }
-        case .container:
-            if case .container = item.placement { true } else { false }
-        }
+        let placementMatches =
+            switch filter.placement {
+            case .any: true
+            case .hand: item.placement == .hand
+            case .location:
+                if case .location = item.placement { true } else { false }
+            case .container:
+                if case .container = item.placement { true } else { false }
+            }
         guard placementMatches else { return false }
 
-        let accessMatches = switch filter.access {
-        case .any: true
-        case .open: item.containment?.access == .open
-        case .closed: item.containment?.access == .closed
-        }
+        let accessMatches =
+            switch filter.access {
+            case .any: true
+            case .open: item.containment?.access == .open
+            case .closed: item.containment?.access == .closed
+            }
         guard accessMatches,
             filter.typeKey.map({ typeKeys(for: item, source: source).contains($0) }) ?? true,
             !filter.quantityGreaterThanOne || item.quantity.count > 1
         else { return false }
 
-        let missingMatches = switch filter.missing {
-        case .none: true
-        case .type: typeKeys(for: item, source: source).isEmpty
-        case .code: item.code == nil
-        case .photo: item.photos.isEmpty
-        }
+        let missingMatches =
+            switch filter.missing {
+            case .none: true
+            case .type: typeKeys(for: item, source: source).isEmpty
+            case .code: item.code == nil
+            case .photo: item.photos.isEmpty
+            }
         guard missingMatches else { return false }
 
         let rowSync = syncState(of: item.id, source: source)
@@ -130,13 +143,15 @@ private enum InventoryItemPageDefaults {
         guard let catalogue = source.inventoryProtocol2Catalogue() else {
             return item.typeKey.map { [$0] } ?? []
         }
-        let found = item.typeId.flatMap { id in catalogue.types.first { $0.id == id } }
+        let found =
+            item.typeId.flatMap { id in catalogue.types.first { $0.id == id } }
             ?? item.typeKey.flatMap { key in catalogue.types.first { $0.key == key } }
         guard let found else { return item.typeKey.map { [$0] } ?? [] }
         return Set(catalogue.ancestry(ofType: found.id).map(\.key))
     }
 
-    private static func syncState(of id: String, source: any InventoryQuerySource) -> InventorySync {
+    private static func syncState(of id: String, source: any InventoryQuerySource) -> InventorySync
+    {
         let ledger = source.inventorySyncLedger()
         let repaired = ledger.repairs.contains { $0.entityId == id }
         let waiting = ledger.waiting.filter { $0.receipt.entityId == id }
@@ -184,11 +199,13 @@ private enum InventoryItemPageDefaults {
         let slice = Array(rows.filter(afterCursor).prefix(request.limit + 1))
         let hasMore = slice.count > request.limit
         let pageRows = Array(slice.prefix(request.limit))
-        let nextCursor = hasMore ? pageRows.last.map {
-            InventoryPageCursor.searchHitRank(
-                rank: searchRank($0.name, text), isLocation: $0.isLocation, name: $0.name,
-                id: $0.id)
-        } : nil
+        let nextCursor =
+            hasMore
+            ? pageRows.last.map {
+                InventoryPageCursor.searchHitRank(
+                    rank: searchRank($0.name, text), isLocation: $0.isLocation, name: $0.name,
+                    id: $0.id)
+            } : nil
         return InventoryPage(rows: pageRows, nextCursor: nextCursor)
     }
 
@@ -238,7 +255,8 @@ private enum InventoryItemPageDefaults {
         let slice = Array(remaining.prefix(request.limit + 1))
         let hasMore = slice.count > request.limit
         let pageRows = Array(slice.prefix(request.limit))
-        let nextCursor = hasMore ? pageRows.last.map { cursor(for: $0, order: order, text: text) } : nil
+        let nextCursor =
+            hasMore ? pageRows.last.map { cursor(for: $0, order: order, text: text) } : nil
         return InventoryPage(rows: pageRows, nextCursor: nextCursor)
     }
 
@@ -286,7 +304,9 @@ private enum InventoryItemPageDefaults {
         }
     }
 
-    private static func dateOrder(_ lhsDate: Date, _ lhsID: String, _ rhsDate: Date, _ rhsID: String)
+    private static func dateOrder(
+        _ lhsDate: Date, _ lhsID: String, _ rhsDate: Date, _ rhsID: String
+    )
         -> Bool
     {
         lhsDate == rhsDate ? lhsID < rhsID : lhsDate > rhsDate
@@ -296,7 +316,9 @@ private enum InventoryItemPageDefaults {
         nameAfter(item.name, item.id, name, id)
     }
 
-    private static func nameAfter(_ itemName: String, _ itemID: String, _ name: String, _ id: String)
+    private static func nameAfter(
+        _ itemName: String, _ itemID: String, _ name: String, _ id: String
+    )
         -> Bool
     {
         switch itemName.localizedCaseInsensitiveCompare(name) {

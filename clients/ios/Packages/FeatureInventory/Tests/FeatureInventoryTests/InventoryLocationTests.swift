@@ -38,9 +38,10 @@ internal struct InventoryLocationTests {
 
     @Test("Store here pages eligible items and ignores concurrent duplicate loads")
     func storeHerePages() async {
-        let items = (0..<45).map { index in
-            Fixture.item("candidate-\(index)", "Candidate \(index)", at: .hand)
-        } + [Fixture.item("target-item", "Already here", at: .location("garage"))]
+        let items =
+            (0..<45).map { index in
+                Fixture.item("candidate-\(index)", "Candidate \(index)", at: .hand)
+            } + [Fixture.item("target-item", "Already here", at: .location("garage"))]
         let base = InMemoryInventoryStore(items: items)
         let model = InventoryStoreHereModel(
             target: .location(id: "garage", name: "Garage"),

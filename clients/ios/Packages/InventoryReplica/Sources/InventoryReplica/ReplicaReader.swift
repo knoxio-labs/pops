@@ -126,7 +126,8 @@ internal final class ReplicaReader: InventoryQuerySource {
     }
 
     func inventoryItemPageSummary(createdSince: Date) -> InventoryItemPageSummary {
-        attempt(InventoryItemPageSummary(activeItems: 0, inHand: 0, untyped: 0, createdRecently: 0)) {
+        attempt(InventoryItemPageSummary(activeItems: 0, inHand: 0, untyped: 0, createdRecently: 0))
+        {
             try ReplicaQueries.itemPageSummary(createdSince: createdSince, in: $0)
         }
     }

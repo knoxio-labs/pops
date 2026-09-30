@@ -254,7 +254,9 @@ internal enum ReplicaQueries {
                     + "(name COLLATE NOCASE > ? COLLATE NOCASE OR "
                     + "(name COLLATE NOCASE = ? COLLATE NOCASE AND id > ?))))"
                 cursorArguments += [rank, rank, name, name, id]
-            } else if case .searchHitRank(let rank, let isLocation, let name, let id) = query.page.cursor {
+            } else if case .searchHitRank(let rank, let isLocation, let name, let id) = query.page
+                .cursor
+            {
                 if isLocation {
                     cursorPredicate = "search_rank > ?"
                     cursorArguments.append(rank)
@@ -292,11 +294,14 @@ internal enum ReplicaQueries {
         let rows = try Row.fetchAll(
             db, sql: sql,
             arguments: StatementArguments(
-                selectedArguments + whereArguments + cursorArguments + [query.page.limit + 1]))
-            .map { try ItemRow.decode($0, in: db) }
+                selectedArguments + whereArguments + cursorArguments + [query.page.limit + 1])
+        )
+        .map { try ItemRow.decode($0, in: db) }
         let hasMore = rows.count > query.page.limit
         let pageRows = Array(rows.prefix(query.page.limit))
-        let nextCursor = hasMore ? pageRows.last.map { itemCursor($0, order: query.order, text: query.text) } : nil
+        let nextCursor =
+            hasMore
+            ? pageRows.last.map { itemCursor($0, order: query.order, text: query.text) } : nil
         return InventoryPage(rows: pageRows, nextCursor: nextCursor)
     }
 
@@ -310,10 +315,12 @@ internal enum ReplicaQueries {
                 page: query.page),
             isStale: isStale,
             in: db)
-        let locationPage = query.includeLocations
+        let locationPage =
+            query.includeLocations
             ? try locationPage(query.text, request: query.page, in: db)
             : InventoryPage<InventoryLocation>(rows: [], nextCursor: nil)
-        let rows = (itemPage.rows.map(InventorySearchPageRow.item)
+        let rows =
+            (itemPage.rows.map(InventorySearchPageRow.item)
             + locationPage.rows.map(InventorySearchPageRow.location))
             .sorted {
                 let lhsRank = InventorySearchRanking.rank($0.name, for: query.text)
@@ -326,14 +333,17 @@ internal enum ReplicaQueries {
                 case .orderedSame: return $0.id < $1.id
                 }
             }
-        let hasMore = rows.count > query.page.limit
+        let hasMore =
+            rows.count > query.page.limit
             || itemPage.nextCursor != nil || locationPage.nextCursor != nil
         let pageRows = Array(rows.prefix(query.page.limit))
-        let nextCursor = hasMore ? pageRows.last.map {
-            InventoryPageCursor.searchHitRank(
-                rank: InventorySearchRanking.rank($0.name, for: query.text),
-                isLocation: $0.isLocation, name: $0.name, id: $0.id)
-        } : nil
+        let nextCursor =
+            hasMore
+            ? pageRows.last.map {
+                InventoryPageCursor.searchHitRank(
+                    rank: InventorySearchRanking.rank($0.name, for: query.text),
+                    isLocation: $0.isLocation, name: $0.name, id: $0.id)
+            } : nil
         return InventoryPage(rows: pageRows, nextCursor: nextCursor)
     }
 
@@ -378,15 +388,18 @@ internal enum ReplicaQueries {
                 LIMIT ?
                 """,
             arguments: StatementArguments(
-                selectedArguments + ["%\(escaped)%"] + cursorArguments + [request.limit + 1]))
-            .map(LocationRow.decode)
+                selectedArguments + ["%\(escaped)%"] + cursorArguments + [request.limit + 1])
+        )
+        .map(LocationRow.decode)
         let hasMore = rows.count > request.limit
         let pageRows = Array(rows.prefix(request.limit))
-        let nextCursor = hasMore ? pageRows.last.map {
-            InventoryPageCursor.searchHitRank(
-                rank: InventorySearchRanking.rank($0.name, for: text), isLocation: true,
-                name: $0.name, id: $0.id)
-        } : nil
+        let nextCursor =
+            hasMore
+            ? pageRows.last.map {
+                InventoryPageCursor.searchHitRank(
+                    rank: InventorySearchRanking.rank($0.name, for: text), isLocation: true,
+                    name: $0.name, id: $0.id)
+            } : nil
         return InventoryPage(rows: pageRows, nextCursor: nextCursor)
     }
 
@@ -424,8 +437,9 @@ internal enum ReplicaQueries {
         let rows = try Row.fetchAll(
             db,
             sql: "SELECT * FROM event \(whereClause) ORDER BY seq DESC LIMIT ?",
-            arguments: StatementArguments(arguments))
-            .map(EventRow.decode)
+            arguments: StatementArguments(arguments)
+        )
+        .map(EventRow.decode)
         let hasMore = rows.count > query.page.limit
         let pageRows = Array(rows.prefix(query.page.limit))
         let nextCursor: InventoryPageCursor? =
@@ -433,7 +447,9 @@ internal enum ReplicaQueries {
         return InventoryPage(rows: pageRows, nextCursor: nextCursor)
     }
 
-    static func itemPageSummary(createdSince: Date, in db: Database) throws -> InventoryItemPageSummary {
+    static func itemPageSummary(createdSince: Date, in db: Database) throws
+        -> InventoryItemPageSummary
+    {
         let row = try Row.fetchOne(
             db,
             sql: """

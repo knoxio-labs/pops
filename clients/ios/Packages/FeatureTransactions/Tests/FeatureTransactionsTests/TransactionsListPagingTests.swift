@@ -33,7 +33,7 @@ internal struct TransactionsListPagingTests {
     func firstPageRowsAreUnique() async {
         let duplicate = Transaction.fake(id: "txn-1", description: "First")
         let repository = ScriptedTransactionsRepository(script: [
-            .page([duplicate, Transaction.fake(id: "txn-2"), duplicate], next: nil),
+            .page([duplicate, Transaction.fake(id: "txn-2"), duplicate], next: nil)
         ])
         let model = model(repository)
 
@@ -201,10 +201,12 @@ internal struct TransactionsListPagingTests {
         await model.loadNextPageIfNeeded()
         await model.loadNextPageIfNeeded()
 
-        #expect(model.state == .loaded([
-            Transaction.fake(id: "txn-1"),
-            Transaction.fake(id: "txn-2"),
-        ]))
+        #expect(
+            model.state
+                == .loaded([
+                    Transaction.fake(id: "txn-1"),
+                    Transaction.fake(id: "txn-2"),
+                ]))
         #expect(model.paging == .failed(.contractMismatch))
         #expect(await repository.callCount == 2)
     }

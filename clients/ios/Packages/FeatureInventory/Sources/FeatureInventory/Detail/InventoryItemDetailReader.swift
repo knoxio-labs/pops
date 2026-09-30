@@ -28,7 +28,8 @@ extension InventoryItemDetail {
         let latestLifecycleChange = source.inventoryEventPage(
             InventoryEventPageQuery(
                 scope: historyScope, filter: .lifecycleChanges,
-                page: InventoryPageRequest(limit: 1))).rows.first
+                page: InventoryPageRequest(limit: 1))
+        ).rows.first
         let fields =
             protocol2Type.map {
                 InventoryDetailFields(item: item, type: $0, source: source)

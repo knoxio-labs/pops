@@ -48,12 +48,12 @@ internal struct PurchasesArchiveView: View {
 
     internal var body: some View {
         ScrollView(.vertical, showsIndicators: true) { archiveRows }
-        .background(Color.popsBackground)
-        .navigationTitle(scope == .all ? "All purchases" : "Unmatched")
-        .playgroundTitleDisplay(large: false)
-        .toolbar {
-            ToolbarItem(placement: .principal) { scopePicker }
-        }
+            .background(Color.popsBackground)
+            .navigationTitle(scope == .all ? "All purchases" : "Unmatched")
+            .playgroundTitleDisplay(large: false)
+            .toolbar {
+                ToolbarItem(placement: .principal) { scopePicker }
+            }
     }
 
     private var archiveRows: some View {

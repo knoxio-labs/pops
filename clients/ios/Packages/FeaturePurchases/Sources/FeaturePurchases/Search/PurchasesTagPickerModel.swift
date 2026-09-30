@@ -113,7 +113,7 @@ internal final class PurchasesTagPickerModel {
         cursor = page.nextCursor
         pageRevision += 1
         if let nextCursor = page.nextCursor,
-           nextCursor == requestedCursor || acceptedCursors.contains(nextCursor)
+            nextCursor == requestedCursor || acceptedCursors.contains(nextCursor)
         {
             paging = .failed
             return

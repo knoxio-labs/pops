@@ -83,8 +83,9 @@ internal final class InventoryRecentActivityModel {
         isLoadingNextPage = true
         nextPageFailed = false
         var answered = false
-        for await page in store.observe(Self.pageQuery(
-            key: key, cursor: cursor, now: now(), calendar: calendar))
+        for await page in store.observe(
+            Self.pageQuery(
+                key: key, cursor: cursor, now: now(), calendar: calendar))
         {
             guard !Task.isCancelled, activeKey == key, activePageRequestID == requestID else {
                 break
@@ -143,7 +144,8 @@ internal final class InventoryRecentActivityModel {
         }
         firstPage = activities
         loadedIDs = Set(activities.map(\.id))
-        nextCursor = activities.count == Self.limit
+        nextCursor =
+            activities.count == Self.limit
             ? activities.last.map { .eventSequence($0.entry.seq) } : nil
     }
 
@@ -211,10 +213,11 @@ internal final class InventoryRecentActivityModel {
     private nonisolated static func recordName(
         _ event: InventoryEvent, source: any InventoryQuerySource
     ) -> String {
-        let name = switch event.entityKind {
-        case .item: source.inventoryItem(id: event.entityId)?.name
-        case .location: source.inventoryLocation(id: event.entityId)?.name
-        }
+        let name =
+            switch event.entityKind {
+            case .item: source.inventoryItem(id: event.entityId)?.name
+            case .location: source.inventoryLocation(id: event.entityId)?.name
+            }
         return name ?? InventorySyncEntityDisplay.unknown.name
     }
 }

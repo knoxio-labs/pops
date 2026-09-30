@@ -166,12 +166,13 @@ internal struct InventoryStoreExistingPicker: View {
                 toggle: { model.toggle(candidate.id) },
                 subtitle: {
                     InventoryPlacementPath(crumbs: candidate.crumbs, isInHand: candidate.isInHand)
-                })
-                .onAppear {
-                    if candidate.id == model.shownCandidates.last?.id {
-                        Task { await model.loadNextPage() }
-                    }
                 }
+            )
+            .onAppear {
+                if candidate.id == model.shownCandidates.last?.id {
+                    Task { await model.loadNextPage() }
+                }
+            }
         }
         if model.canLoadMore {
             if model.nextPageFailed {

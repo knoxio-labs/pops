@@ -13,7 +13,8 @@ internal struct UniversalSearchModelTests {
     }
 
     private func results(_ section: SearchSection?) -> Shown? {
-        guard case .results(let rows, let total, let query, let refining, _) = section?.content else {
+        guard case .results(let rows, let total, let query, let refining, _) = section?.content
+        else {
             return nil
         }
         return Shown(rows: rows.count, total: total, query: query, refining: refining)

@@ -36,7 +36,7 @@ public struct PurchasesTagPicker: View {
                 }
             }
             if case .loaded = model.state,
-               !model.tags.isEmpty || model.paging != .exhausted
+                !model.tags.isEmpty || model.paging != .exhausted
             {
                 Section {
                     ForEach(model.tags, id: \.tag) { entry in
