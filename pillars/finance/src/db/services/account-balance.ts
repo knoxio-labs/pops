@@ -123,24 +123,34 @@ function assemble(
   throughCheckpoint: Map<string, number>
 ): AccountBalance {
   const { anchor, latest, previous } = plan;
-  const inconsistent =
-    latest !== undefined &&
-    previous !== undefined &&
-    measureAgainst(
+  let reconciliation: AccountBalance['reconciliation'] = 'unmeasured';
+  if (latest !== undefined && previous !== undefined) {
+    const delta = measureAgainst(
       latest,
       previous,
       throughCheckpoint.get(latest.id) ?? 0,
       throughCheckpoint.get(previous.id) ?? 0
-    ).deltaCents !== 0;
+    ).deltaCents;
+    reconciliation = delta === 0 ? 'agreed' : 'disagrees';
+  }
+  const inconsistent = reconciliation === 'disagrees';
 
   if (anchor === undefined) {
-    return { balanceCents: through, asOf: date, basis: 'transactions', anchor: null, inconsistent };
+    return {
+      balanceCents: through,
+      asOf: date,
+      basis: 'transactions',
+      anchor: null,
+      reconciliation,
+      inconsistent,
+    };
   }
   return {
     balanceCents: anchor.balanceCents + through - (throughCheckpoint.get(anchor.id) ?? 0),
     asOf: date,
     basis: 'checkpoint',
     anchor: toAnchor(anchor),
+    reconciliation,
     inconsistent,
   };
 }

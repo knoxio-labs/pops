@@ -2,8 +2,9 @@ import { z } from 'zod';
 
 /**
  * What the account holds today, as the phone reads it — finance's own
- * `AccountBalance` (POPS-2880) minus `anchor`: the phone shows a date and an
- * `inconsistent` flag, not a checkpoint id to link to. Ledger-signed like
+ * `AccountBalance` (POPS-2880) minus `anchor`: the phone shows a date, the
+ * three-state reconciliation result and its derived `inconsistent` flag, not
+ * a checkpoint id to link to. Ledger-signed like
  * everywhere else in this contract — positive is money held, negative is
  * money owed, for assets and liabilities alike; nothing here negates it.
  *
@@ -17,6 +18,8 @@ export const MobileAccountBalanceSchema = z.object({
   balanceCents: z.number().int(),
   asOf: z.string(),
   basis: z.enum(['checkpoint', 'transactions']),
+  /** Whether finance could compare the latest checkpoint with an earlier one. */
+  reconciliation: z.enum(['unmeasured', 'agreed', 'disagrees']),
   inconsistent: z.boolean(),
 });
 

@@ -31,6 +31,7 @@ const AMEX_BALANCE = {
   asOf: '2026-09-05',
   basis: 'checkpoint' as const,
   anchor: { checkpointId: 'chk_1', asOf: '2026-09-01', source: 'manual' as const },
+  reconciliation: 'unmeasured' as const,
   inconsistent: false,
 };
 
@@ -194,7 +195,14 @@ describe('finance.accounts.* wire shapes against the real finance OpenAPI spec',
     expect(Object.keys(props)).toContain('balance');
     const balanceProps = drill(props, 'balance', 'properties') as Record<string, unknown>;
     expect(Object.keys(balanceProps)).toEqual(
-      expect.arrayContaining(['balanceCents', 'asOf', 'basis', 'anchor', 'inconsistent'])
+      expect.arrayContaining([
+        'balanceCents',
+        'asOf',
+        'basis',
+        'anchor',
+        'reconciliation',
+        'inconsistent',
+      ])
     );
   });
 

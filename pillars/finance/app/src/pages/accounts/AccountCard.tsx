@@ -28,7 +28,8 @@ function asOfLabel(account: Account): string {
 }
 
 function subline(account: Account): string {
-  return [ledgerNote(account), asOfLabel(account)].filter(Boolean).join(' · ');
+  const reconciliation = account.balance.reconciliation === 'unmeasured' ? 'not reconciled' : '';
+  return [ledgerNote(account), reconciliation, asOfLabel(account)].filter(Boolean).join(' · ');
 }
 
 function Balance({ account, currencies }: { account: Account; currencies: Currency[] }) {

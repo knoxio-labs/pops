@@ -10,6 +10,7 @@ import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
 
+import type { FinanceAccountBalance } from '../finance/wire.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 
 /** A full finance account row, as finance's REST layer serves one. */
@@ -23,13 +24,7 @@ export interface AccountFakeRow {
   entityId: string | null;
   entityDisplayName: string | null;
   transactionCount: number;
-  balance: {
-    balanceCents: number;
-    asOf: string;
-    basis: 'checkpoint' | 'transactions';
-    anchor: unknown;
-    inconsistent: boolean;
-  };
+  balance: FinanceAccountBalance & { anchor: unknown };
 }
 
 /**
@@ -66,6 +61,7 @@ export function accountRow(overrides: Partial<AccountFakeRow> & { id: string }):
       asOf: '2026-09-05',
       basis: 'transactions',
       anchor: null,
+      reconciliation: 'unmeasured',
       inconsistent: false,
     },
     ...overrides,

@@ -126,12 +126,15 @@ export function toMobileTransactionDetail(
  * except `anchor`, which names a checkpoint the phone has no use for
  * (POPS-2884). `basis` is pinned, unlike `kind` below: finance adding a third
  * basis would mean bfm is silently mislabelling a balance it does not
- * understand, which is worse than the row failing to decode.
+ * understand, which is worse than the row failing to decode. `reconciliation`
+ * is also pinned so an unknown comparison state cannot be mistaken for a
+ * known result.
  */
 export const FinanceAccountBalanceSchema = z.object({
   balanceCents: z.number().int(),
   asOf: z.string(),
   basis: z.enum(['checkpoint', 'transactions']),
+  reconciliation: z.enum(['unmeasured', 'agreed', 'disagrees']),
   inconsistent: z.boolean(),
 });
 
@@ -211,6 +214,7 @@ export function toMobileAccount(row: FinanceAccountRow): MobileAccount {
       balanceCents: row.balance.balanceCents,
       asOf: row.balance.asOf,
       basis: row.balance.basis,
+      reconciliation: row.balance.reconciliation,
       inconsistent: row.balance.inconsistent,
     },
   };

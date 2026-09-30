@@ -2683,9 +2683,19 @@
                               },
                               "inconsistent": {
                                 "type": "boolean"
+                              },
+                              "reconciliation": {
+                                "enum": ["unmeasured", "agreed", "disagrees"],
+                                "type": "string"
                               }
                             },
-                            "required": ["balanceCents", "asOf", "basis", "inconsistent"],
+                            "required": [
+                              "balanceCents",
+                              "asOf",
+                              "basis",
+                              "reconciliation",
+                              "inconsistent"
+                            ],
                             "type": "object"
                           },
                           "contact": {
@@ -3034,9 +3044,19 @@
                             },
                             "inconsistent": {
                               "type": "boolean"
+                            },
+                            "reconciliation": {
+                              "enum": ["unmeasured", "agreed", "disagrees"],
+                              "type": "string"
                             }
                           },
-                          "required": ["balanceCents", "asOf", "basis", "inconsistent"],
+                          "required": [
+                            "balanceCents",
+                            "asOf",
+                            "basis",
+                            "reconciliation",
+                            "inconsistent"
+                          ],
                           "type": "object"
                         },
                         "contact": {

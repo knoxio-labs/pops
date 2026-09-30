@@ -21,6 +21,7 @@ internal enum AccountsWire {
         balanceCents: Int = 125_000,
         asOf: String = "2026-09-05",
         basis: String = "checkpoint",
+        reconciliation: String = "unmeasured",
         inconsistent: String = "false",
         transactionCount: Int = 412
     ) -> String {
@@ -29,7 +30,8 @@ internal enum AccountsWire {
         "archived":\(archived),"institutionId":\(institutionId),\
         "institutionName":\(institutionName),"contact":\(contact),\
         "balance":{"balanceCents":\(balanceCents),"asOf":"\(asOf)",\
-        "basis":"\(basis)","inconsistent":\(inconsistent)},\
+        "basis":"\(basis)","reconciliation":"\(reconciliation)",\
+        "inconsistent":\(inconsistent)},\
         "transactionCount":\(transactionCount)}
         """
     }

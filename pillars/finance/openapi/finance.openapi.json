@@ -141,9 +141,20 @@
                               },
                               "inconsistent": {
                                 "type": "boolean"
+                              },
+                              "reconciliation": {
+                                "enum": ["unmeasured", "agreed", "disagrees"],
+                                "type": "string"
                               }
                             },
-                            "required": ["balanceCents", "asOf", "basis", "anchor", "inconsistent"],
+                            "required": [
+                              "balanceCents",
+                              "asOf",
+                              "basis",
+                              "anchor",
+                              "reconciliation",
+                              "inconsistent"
+                            ],
                             "type": "object"
                           },
                           "createdAt": {
@@ -443,9 +454,20 @@
                             },
                             "inconsistent": {
                               "type": "boolean"
+                            },
+                            "reconciliation": {
+                              "enum": ["unmeasured", "agreed", "disagrees"],
+                              "type": "string"
                             }
                           },
-                          "required": ["balanceCents", "asOf", "basis", "anchor", "inconsistent"],
+                          "required": [
+                            "balanceCents",
+                            "asOf",
+                            "basis",
+                            "anchor",
+                            "reconciliation",
+                            "inconsistent"
+                          ],
                           "type": "object"
                         },
                         "createdAt": {
@@ -806,9 +828,20 @@
                               },
                               "inconsistent": {
                                 "type": "boolean"
+                              },
+                              "reconciliation": {
+                                "enum": ["unmeasured", "agreed", "disagrees"],
+                                "type": "string"
                               }
                             },
-                            "required": ["balanceCents", "asOf", "basis", "anchor", "inconsistent"],
+                            "required": [
+                              "balanceCents",
+                              "asOf",
+                              "basis",
+                              "anchor",
+                              "reconciliation",
+                              "inconsistent"
+                            ],
                             "type": "object"
                           },
                           "createdAt": {
@@ -1148,9 +1181,20 @@
                             },
                             "inconsistent": {
                               "type": "boolean"
+                            },
+                            "reconciliation": {
+                              "enum": ["unmeasured", "agreed", "disagrees"],
+                              "type": "string"
                             }
                           },
-                          "required": ["balanceCents", "asOf", "basis", "anchor", "inconsistent"],
+                          "required": [
+                            "balanceCents",
+                            "asOf",
+                            "basis",
+                            "anchor",
+                            "reconciliation",
+                            "inconsistent"
+                          ],
                           "type": "object"
                         },
                         "createdAt": {
@@ -1474,9 +1518,20 @@
                             },
                             "inconsistent": {
                               "type": "boolean"
+                            },
+                            "reconciliation": {
+                              "enum": ["unmeasured", "agreed", "disagrees"],
+                              "type": "string"
                             }
                           },
-                          "required": ["balanceCents", "asOf", "basis", "anchor", "inconsistent"],
+                          "required": [
+                            "balanceCents",
+                            "asOf",
+                            "basis",
+                            "anchor",
+                            "reconciliation",
+                            "inconsistent"
+                          ],
                           "type": "object"
                         },
                         "createdAt": {
@@ -1847,9 +1902,20 @@
                             },
                             "inconsistent": {
                               "type": "boolean"
+                            },
+                            "reconciliation": {
+                              "enum": ["unmeasured", "agreed", "disagrees"],
+                              "type": "string"
                             }
                           },
-                          "required": ["balanceCents", "asOf", "basis", "anchor", "inconsistent"],
+                          "required": [
+                            "balanceCents",
+                            "asOf",
+                            "basis",
+                            "anchor",
+                            "reconciliation",
+                            "inconsistent"
+                          ],
                           "type": "object"
                         },
                         "createdAt": {
@@ -2186,9 +2252,20 @@
                         },
                         "inconsistent": {
                           "type": "boolean"
+                        },
+                        "reconciliation": {
+                          "enum": ["unmeasured", "agreed", "disagrees"],
+                          "type": "string"
                         }
                       },
-                      "required": ["balanceCents", "asOf", "basis", "anchor", "inconsistent"],
+                      "required": [
+                        "balanceCents",
+                        "asOf",
+                        "basis",
+                        "anchor",
+                        "reconciliation",
+                        "inconsistent"
+                      ],
                       "type": "object"
                     }
                   },
@@ -5364,9 +5441,20 @@
                             },
                             "inconsistent": {
                               "type": "boolean"
+                            },
+                            "reconciliation": {
+                              "enum": ["unmeasured", "agreed", "disagrees"],
+                              "type": "string"
                             }
                           },
-                          "required": ["balanceCents", "asOf", "basis", "anchor", "inconsistent"],
+                          "required": [
+                            "balanceCents",
+                            "asOf",
+                            "basis",
+                            "anchor",
+                            "reconciliation",
+                            "inconsistent"
+                          ],
                           "type": "object"
                         },
                         "createdAt": {
@@ -5736,6 +5824,10 @@
                                 },
                                 "inconsistent": {
                                   "type": "boolean"
+                                },
+                                "reconciliation": {
+                                  "enum": ["unmeasured", "agreed", "disagrees"],
+                                  "type": "string"
                                 }
                               },
                               "required": [
@@ -5743,6 +5835,7 @@
                                 "asOf",
                                 "basis",
                                 "anchor",
+                                "reconciliation",
                                 "inconsistent"
                               ],
                               "type": "object"
@@ -5954,6 +6047,10 @@
                                 },
                                 "inconsistent": {
                                   "type": "boolean"
+                                },
+                                "reconciliation": {
+                                  "enum": ["unmeasured", "agreed", "disagrees"],
+                                  "type": "string"
                                 }
                               },
                               "required": [
@@ -5961,6 +6058,7 @@
                                 "asOf",
                                 "basis",
                                 "anchor",
+                                "reconciliation",
                                 "inconsistent"
                               ],
                               "type": "object"
@@ -13888,6 +13986,30 @@
                               "currency",
                               "href"
                             ],
+                            "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "accountName": {
+                                "type": "string"
+                              },
+                              "href": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "enum": ["unmeasured-account"],
+                                "type": "string"
+                              },
+                              "reason": {
+                                "enum": ["no-checkpoint", "anchor-only"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["kind", "accountId", "accountName", "reason", "href"],
                             "type": "object"
                           },
                           {

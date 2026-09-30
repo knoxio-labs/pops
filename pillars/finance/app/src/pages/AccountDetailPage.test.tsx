@@ -185,6 +185,7 @@ describe('AccountDetailPage', () => {
             asOf: '2026-09-02',
             basis: 'checkpoint',
             anchor: { checkpointId: 'c1', asOf: '2026-09-02', source: 'statement' },
+            reconciliation: 'agreed',
             inconsistent: false,
           },
         }),
