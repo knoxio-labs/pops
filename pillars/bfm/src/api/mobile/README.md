@@ -9,7 +9,7 @@ GET /mobile/bootstrap        (behind requireDevice)
   └─ buildMobileBootstrap()                    bootstrap.ts
        ├─ touchDevice(db, id, now)             ../../db  ← written first, always
        ├─ pillarRegistry()                     @pops/pillar-sdk/discovery (TTL'd)
-       ├─ probeFederation(pillars)             reachability.ts   ← one live GET each
+       ├─ probeFederation(pillars)             reachability.ts   ← one GET, one network retry
        └─ deriveFeatures(probed)               features.ts
 ```
 
@@ -24,13 +24,13 @@ past the veto could report `healthy` for a pillar every subsequent call then
 fails on — a bootstrap that promises a feature the next request cannot deliver
 is worse than one that admits the feature is off.
 
-Everything the registry has not vetoed gets one live `GET ${baseUrl}/openapi`.
+Everything the registry has not vetoed gets a live `GET ${baseUrl}/openapi`.
 That endpoint rather than `/health` because it is what a cross-pillar call
 actually needs: the SDK builds its route map from that document, and a pillar
-serving none is uncallable however alive it is. One request separates the two
-answers that matter — a request that never completed means nobody answered, and
-a request that completed with anything but 2xx JSON means somebody answered
-without a contract.
+serving none is uncallable however alive it is. A network failure or timeout
+gets one retry after 250ms; two failed requests mean nobody answered. A
+completed request with anything but 2xx JSON means somebody answered without
+a contract and is not retried.
 
 The body is never read. Pillar OpenAPI documents run to hundreds of kilobytes
 and app launch is not the moment to move megabytes to learn something the
@@ -70,12 +70,12 @@ federation's topology.
 
 ## A registry outage is not a failed launch
 
-If the discovery cache cannot answer at all, `/mobile/bootstrap` still returns
-`200`, with no pillars, no reachable features, and `registry.source:
-'unavailable'`. A `500` would be a phone stuck on its splash screen because a
-sibling container blinked. The SDK does the rest: while the cache holds
-anything, a failed refresh serves last-known-good and says so through
-`stale-fallback`.
+If two registry reads fail, `/mobile/bootstrap` still returns `200`, with no
+pillars, no reachable features, and `registry.source: 'unavailable'`. BFM retries
+once after 250ms before returning that fallback. A `500` would be a phone stuck
+on its splash screen because a sibling container blinked. The SDK does the rest:
+while the cache holds anything, a failed refresh serves last-known-good and says
+so through `stale-fallback`.
 
 An error that is _not_ a registry outage propagates. The SDK folds every
 reachability failure into a value, so an exception arriving here is a fault in
