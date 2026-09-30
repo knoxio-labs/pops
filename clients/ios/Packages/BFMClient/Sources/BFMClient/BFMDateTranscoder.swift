@@ -25,15 +25,13 @@ internal enum ISO8601Instant {
     }
 }
 
-/// A date-only wire value — `YYYY-MM-DD` and nothing else — as the instant
-/// that day begins in a given zone.
+/// A date-only wire value as the instant that day begins in a given zone.
 ///
-/// The BFM types these as bare strings with no `format`, so the generator emits
-/// a `String` and something has to decide what one means. This is the strictest
-/// reading that matches what the BFM already enforces on the way in, and being
-/// strict is the point: a producer that started sending a full timestamp
-/// arrives as a contract mismatch, loudly, rather than as dates that are
-/// silently a few hours out.
+/// The BFM OpenAPI contract declares mobile transaction `date` with the
+/// `^\d{4}-\d{2}-\d{2}$` pattern in `Contracts/bfm.openapi.json`. Swift
+/// generation keeps that field as a `String`, so this parser enforces the
+/// published date-only meaning rather than accepting a timestamp that shifts
+/// the day when read in a local zone.
 ///
 /// The round trip is what makes it strict. `ISO8601FormatStyle` restricted to
 /// date components parses a leading `2026-03-05` happily and ignores whatever
