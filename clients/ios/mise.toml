@@ -350,6 +350,9 @@ for name in $names; do
   set -- "$@" --require-testable "$name"
 done
 
+POPS_IOS_SIMULATOR_RUN_LABEL='test'
+. scripts/with-simulator-lock.sh
+
 # `--without-building` against the products `build:for-testing` just wrote.
 # Rebuilding here would be the second full compile this arrangement exists to
 # remove, and would also mean the log `lint:analyze` reads described a build
@@ -450,6 +453,9 @@ set -eu
 set -o pipefail
 
 mise run verify:app-test-target
+
+POPS_IOS_SIMULATOR_RUN_LABEL='test:app'
+. scripts/with-simulator-lock.sh
 
 scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
   --only PopsTests --require-testable PopsTests --forbid-skips
@@ -683,6 +689,11 @@ node scripts/check-feature-repository-try.mjs --self-test
 node scripts/check-feature-repository-try.mjs
 '''
 
+[tasks."verify:simulator-lock"]
+description = "Concurrent local simulator runs cannot enter together"
+hide = true
+run = "bash scripts/with-simulator-lock.sh --self-test"
+
 # The one entry point. `.github/workflows/ios-quality.yml` invokes this task
 # rather than restating the commands, because the moment the two are written
 # out separately they drift and a green local run means nothing.
@@ -730,6 +741,7 @@ mise run verify:install-on-phone || status=1
 mise run verify:camera-purpose || status=1
 mise run verify:app-package-pin || status=1
 mise run verify:app-test-linkage || status=1
+mise run verify:simulator-lock || status=1
 
 if mise run verify:xcode-version; then
   mise run swift-format lint || status=1
@@ -901,6 +913,9 @@ case "$pairing_issuer" in
     exit 1
     ;;
 esac
+
+POPS_IOS_SIMULATOR_RUN_LABEL='e2e'
+. scripts/with-simulator-lock.sh
 
 app="$POPS_IOS_DERIVED_DATA/Build/Products/Debug-iphonesimulator/Pops.app"
 
