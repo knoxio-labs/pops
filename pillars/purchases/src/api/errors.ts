@@ -1,7 +1,6 @@
 import { defineErrors } from '@pops/pillar-express';
-import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 
-import type { ErrorBody } from '@pops/types';
+import { createErrorBodyBuilder } from './error-body-builder.js';
 
 const ERROR_DEFINITIONS = {
   not_found: {
@@ -195,16 +194,4 @@ export const purchaseErrors = defineErrors('purchases', ERROR_DEFINITIONS);
  * Build an ADR-054 response for contract handlers that return declared error statuses.
  * Request middleware establishes the id; the fallback only supports isolated unit calls.
  */
-export function purchaseErrorBody(
-  reason: PurchaseErrorReason,
-  options: { readonly message?: string; readonly details?: unknown } = {}
-): ErrorBody {
-  const definition = ERROR_DEFINITIONS[reason];
-  return {
-    code: `purchases.${definition.area}.${reason}`,
-    message: options.message ?? definition.message,
-    requestId: getRequestId() ?? mintRequestId(),
-    retryable: definition.retryable,
-    ...(options.details === undefined ? {} : { details: options.details }),
-  };
-}
+export const purchaseErrorBody = createErrorBodyBuilder('purchases', ERROR_DEFINITIONS);
