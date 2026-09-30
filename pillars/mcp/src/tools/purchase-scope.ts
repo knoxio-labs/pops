@@ -1,3 +1,38 @@
+/** The purchase order statuses accepted by the purchases pillar contract. */
+export const PURCHASE_STATUSES = [
+  'awaiting_settlement',
+  'linked',
+  'partial',
+  'settled_cash',
+  'ignored',
+] as const;
+
+/** JSON Schema fields shared by tools that filter purchase orders by scope. */
+export const PURCHASE_SCOPE_PROPERTIES = {
+  sources: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Filter by ingest source id (e.g. "amazon", "woolworths")',
+  },
+  statuses: {
+    type: 'array',
+    items: { type: 'string', enum: PURCHASE_STATUSES },
+    description: 'Filter by settlement status',
+  },
+  from: {
+    type: 'string',
+    format: 'date-time',
+    description:
+      'Earliest order date, inclusive (ISO-8601 timestamp with a timezone, e.g. 2026-02-02T01:41:21Z)',
+  },
+  to: {
+    type: 'string',
+    format: 'date-time',
+    description:
+      'Latest order date, inclusive (ISO-8601 timestamp with a timezone, e.g. 2026-02-02T01:41:21Z)',
+  },
+} as const;
+
 const ISO_TIMESTAMP_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u;
 
