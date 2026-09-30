@@ -723,6 +723,7 @@ authoritative=1
 # selected. On a mismatched machine this is the only real verdict available,
 # so it is the one that must not be behind a guard.
 swiftlint lint --strict --quiet || status=1
+mise run verify:analyzer-lane || status=1
 mise run generated-boundary || status=1
 mise run verify:feature-repository-errors || status=1
 mise run verify:release-version || status=1
@@ -805,13 +806,11 @@ mise run swift-format format
 # result. Before that, this task did its own `clean build-for-testing` and the
 # job paid for the same compile twice.
 #
-# NO Xcode PIN HERE, unlike `lint` and `format`. These two rules are
-# SwiftLint's, and SwiftLint is pinned in `[tools]` — a declaration nothing
-# references is unreferenced whichever compiler noticed. What the toolchain
-# decides is whether a usable log comes out at all, and a log that does not
-# cover the tree fails the floor below rather than passing quietly. So a
-# machine carrying only a newer Xcode gets the same answer CI gets, which is
-# the entire point: an unused import used to be discoverable only by pushing.
+# The analyzer reads compiler data from the selected Xcode, so its findings
+# can differ from CI even though SwiftLint itself is pinned in `[tools]`. The
+# lane checks the Xcode pin, reports off-pin findings as advisory, and still
+# preserves every analyzer failure. A clean off-pin run also exits non-zero
+# because only CI's pinned result is authoritative.
 #
 # One `xcodebuild` covers the whole tree because the `Pops` scheme's test
 # action names every package's test target as well as `PopsTests` — the same
@@ -829,9 +828,13 @@ mise run swift-format format
 # naming a test target fails here rather than quietly narrowing what these
 # two rules see.
 [tasks."lint:analyze"]
-description = "SwiftLint's analyzer rules against the shared compiler log (unused_import; unused_declaration off until POPS-4533)"
+description = "SwiftLint analyzer against the shared compiler log (off-pin findings are advisory; unused_declaration off until POPS-4533)"
 depends = ["build:for-testing"]
 run = "bash scripts/analyzer-lane.sh"
+
+[tasks."verify:analyzer-lane"]
+description = "An off-pin analyzer finding remains visible and failing"
+run = "bash scripts/test-analyzer-lane.sh"
 
 # Generates this client's canonical copy and stops there. The BFM vendors its
 # own copy and a repo-root guard fails on drift, so regenerating without

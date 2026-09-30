@@ -3,6 +3,11 @@ set -euo pipefail
 
 log="$POPS_IOS_COMPILER_LOG"
 
+xcode_authoritative=1
+if ! scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" "$POPS_XCODE_BUILD" analyzer; then
+  xcode_authoritative=0
+fi
+
 # Absence is a failure, not a pass — the same rule as everything else here. A
 # missing log would otherwise reach `swiftlint analyze` as an empty one and
 # report zero violations over zero files.
@@ -92,6 +97,14 @@ if [ -z "$analyzed" ] || [ "$analyzed" -lt "$total" ]; then
   echo "              App, AppTests and Packages (excluding Package.swift) —" >&2
   echo "              the compiler log did not cover the whole tree." >&2
   exit 1
+fi
+
+if [ "$xcode_authoritative" -eq 0 ]; then
+  printf '\n'
+  printf 'lint:analyze: NOT A CLEAN RUN — the Xcode pin was not verified.\n' >&2
+  printf '              The analyzer ran, and its findings are advisory; CI\47s result\n' >&2
+  printf '              on the pinned Xcode is authoritative.\n' >&2
+  [ "$status" -ne 0 ] || status=2
 fi
 
 exit "$status"
