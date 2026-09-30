@@ -4,12 +4,9 @@
  * what dates" has exactly one definition.
  *
  * Spend is `SUM(-amount_cents)` over {@link SPEND_TRANSACTION_TYPES} — net, so
- * a refund subtracts. That is what the type set already promises: a positive
- * `refund` is documented as "an expense offset, not income"
- * (`corrections-constants.ts`), and a refund that offsets nothing is a refund
- * that may as well not be in the set. Budget spend clamps the same expression
- * at zero per row, which makes refunds inert there; the divergence is
- * deliberate and tracked, not an accident of this file.
+ * a refund subtracts. A positive `refund` is an "expense offset, not income"
+ * (`corrections-constants.ts`), and both summary and budget aggregations use
+ * this expression so they agree on net spend.
  *
  * Income is `SUM(amount_cents)` over {@link INCOME_TRANSACTION_TYPES}, signed
  * the same way for the mirror reason: a negative income row is a clawback and

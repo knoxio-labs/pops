@@ -14,9 +14,9 @@
  */
 import { and, sql } from 'drizzle-orm';
 
-import { SPEND_TRANSACTION_TYPES } from '../../contract/corrections-constants.js';
 import { transactions } from '../schema.js';
 import { periodWindowEnd, periodWindowStart } from './period-window.js';
+import { SPEND } from './summary-sql.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -72,7 +72,7 @@ export function bulkComputeSpend(
 
     const conditions = [
       sql`${transactions.type} IN (${sql.join(
-        SPEND_TRANSACTION_TYPES.map((t) => sql`${t}`),
+        SPEND.types.map((type) => sql`${type}`),
         sql`, `
       )})`,
       sql`je.value IN (${sql.join(
@@ -90,7 +90,7 @@ export function bulkComputeSpend(
 
     const rows = db.all<SpendRow>(sql`
       SELECT je.value AS category,
-             SUM(CASE WHEN ${transactions.amountCents} < 0 THEN -${transactions.amountCents} ELSE 0 END) AS spentCents
+             ${SPEND.cents} AS spentCents
       FROM ${transactions}, json_each(${transactions.tags}) AS je
       WHERE ${and(...conditions)}
       GROUP BY je.value

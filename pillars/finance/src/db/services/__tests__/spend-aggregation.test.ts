@@ -132,7 +132,7 @@ describe('bulkComputeSpend — which types are spend', () => {
     expect(spendOn(db)).toBe(0);
   });
 
-  it('offsets nothing for a positive refund but still counts its negative sibling', () => {
+  it('nets a positive refund against its purchase', () => {
     seed(db, { description: 'WOOLWORTHS', amountCents: -5000, type: 'purchase', tags: [CATEGORY] });
     seed(db, {
       description: 'WOOLWORTHS REFUND',
@@ -141,7 +141,31 @@ describe('bulkComputeSpend — which types are spend', () => {
       tags: [CATEGORY],
     });
 
-    expect(spendOn(db)).toBe(5000);
+    expect(spendOn(db)).toBe(3000);
+  });
+
+  it('returns zero spend when a purchase is fully refunded', () => {
+    seed(db, { description: 'WOOLWORTHS', amountCents: -5000, type: 'purchase', tags: [CATEGORY] });
+    seed(db, {
+      description: 'WOOLWORTHS REFUND',
+      amountCents: 5000,
+      type: 'refund',
+      tags: [CATEGORY],
+    });
+
+    expect(spendOn(db)).toBe(0);
+  });
+
+  it('nets a positive reversal against purchase spend', () => {
+    seed(db, { description: 'WOOLWORTHS', amountCents: -5000, type: 'purchase', tags: [CATEGORY] });
+    seed(db, {
+      description: 'WOOLWORTHS REVERSAL',
+      amountCents: 5000,
+      type: 'reversal',
+      tags: [CATEGORY],
+    });
+
+    expect(spendOn(db)).toBe(0);
   });
 });
 
