@@ -53,7 +53,7 @@ interface SearchCursorBoundary {
 }
 
 function fieldMatches(value: SQLWrapper, text: string): FieldMatches {
-  const normalized = sql`lower(${value})`;
+  const normalized = sql`pops_unicode_lower(${value})`;
   const needle = text.toLowerCase();
   return {
     exact: sql`${normalized} = ${needle}`,

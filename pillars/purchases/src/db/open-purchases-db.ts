@@ -13,7 +13,7 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
-import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
+import { registerUnicodeLowerSqliteFunction, withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
 import type { PurchasesDb } from './services/internal.js';
 
@@ -88,6 +88,7 @@ export interface OpenedPurchasesDb {
 export function openPurchasesDb(path: string): OpenedPurchasesDb {
   mkdirSync(dirname(path), { recursive: true });
   const raw = new Database(path);
+  registerUnicodeLowerSqliteFunction(raw);
   raw.pragma('journal_mode = WAL');
   raw.pragma('busy_timeout = 5000');
   raw.pragma('foreign_keys = OFF');

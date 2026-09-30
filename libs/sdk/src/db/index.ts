@@ -38,3 +38,7 @@ export {
   type DestructiveCommandOptions,
 } from './destructive-guard.js';
 export { stageMigrationsThrough, type StageMigrationsOptions } from './stage-migrations.js';
+export {
+  registerUnicodeLowerSqliteFunction,
+  type SqliteFunctionRegistrar,
+} from './sql-functions.js';

@@ -10,10 +10,10 @@ export function normalizeSearchText(text: string): string {
 }
 
 export function containsInsensitive(column: AnySQLiteColumn, text: string): SQL {
-  return like(sql`lower(${column})`, `%${text.toLowerCase()}%`);
+  return like(sql`pops_unicode_lower(${column})`, `%${text.toLowerCase()}%`);
 }
 
 /** Match literal search text without treating SQL wildcard characters specially. */
 export function containsLiteralInsensitive(value: SQLWrapper, text: string): SQL {
-  return sql`instr(lower(${value}), ${text.toLowerCase()}) > 0`;
+  return sql`instr(pops_unicode_lower(${value}), ${text.toLowerCase()}) > 0`;
 }

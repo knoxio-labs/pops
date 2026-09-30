@@ -18,7 +18,7 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
-import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
+import { registerUnicodeLowerSqliteFunction, withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
 import {
   buildImportDedupKeyFromStoredRow,
@@ -91,6 +91,10 @@ export interface OpenedFinanceDb {
 /**
  * Register the finance pillar's custom SQLite functions on a raw connection.
  *
+ * `pops_unicode_lower(value)` uses JavaScript's Unicode-aware lowercase mapping
+ * for search predicates, matching the finance search scorer's text folding.
+ * SQLite's built-in `lower()` only folds ASCII.
+ *
  * `finance_canonical_checksum(date, amount, description, raw_row)` recomputes a
  * transaction's pre-account dedup checksum (see
  * {@link buildLegacyDedupKeyFromStoredRow}). It exists ONLY so migration
@@ -142,6 +146,7 @@ export interface OpenedFinanceDb {
  * those two must be registered together too.
  */
 export function registerFinanceSqlFunctions(raw: Database.Database): void {
+  registerUnicodeLowerSqliteFunction(raw);
   raw.function(
     'finance_canonical_checksum',
     { deterministic: true },
