@@ -116,16 +116,11 @@
 
         @MainActor
         private final class RowWorkCounter {
-            private let appearances: AsyncStream<Int>
-            private let appearanceContinuation: AsyncStream<Int>.Continuation
+            private var appearanceContinuations: [UUID: AsyncStream<Int>.Continuation] = [:]
             private(set) var bodyRows: Set<Int> = []
             private(set) var assetRows: Set<Int> = []
             private(set) var activeRows: Set<Int> = []
             private(set) var activeAssetRows: Set<Int> = []
-
-            init() {
-                (appearances, appearanceContinuation) = AsyncStream.makeStream(of: Int.self)
-            }
 
             var snapshot: WorkSnapshot {
                 WorkSnapshot(
@@ -140,7 +135,9 @@
                 activeRows.insert(id)
                 assetRows.insert(id)
                 activeAssetRows.insert(id)
-                _ = appearanceContinuation.yield(id)
+                for continuation in appearanceContinuations.values {
+                    _ = continuation.yield(id)
+                }
             }
 
             func disappear(_ id: Int) {
@@ -150,7 +147,13 @@
 
             func waitForAppearance(_ id: Int) async throws {
                 guard !activeRows.contains(id) else { return }
-                let appearances = self.appearances
+                let waiterID = UUID()
+                let (appearances, continuation) = AsyncStream.makeStream(of: Int.self)
+                appearanceContinuations[waiterID] = continuation
+                defer {
+                    appearanceContinuations[waiterID] = nil
+                    continuation.finish()
+                }
                 let appeared = await withTaskGroup(of: Bool.self) { group in
                     group.addTask {
                         for await appearedID in appearances where appearedID == id {
