@@ -25,15 +25,11 @@
  * descheduled past vitest's 5s default, and — rarer, and the more telling —
  * a response carrying a status no code path in the app under test can
  * produce, when a connection outlives the ephemeral server it belonged to and
- * lands on whatever bound the same port next. Lists' sighting is of the
- * second kind: `lists-router.test.ts > uncheckAll > is scoped to the target
- * list` came back `HTTP 403: {}` under a full-workspace run whose diff
- * touched nothing in this pillar, and the immediately following run was
- * green. That status is diagnostic rather than merely suspicious here — the
- * strings `403` and `Forbidden` appear nowhere in `pillars/lists/src`, and
- * the pillar does not depend on `@pops/pillar-express` at all, so it mounts
- * no service-account scope gate. A 403 cannot have come from the app the
- * test built.
+ * lands on whatever bound the same port next. Lists' historical stray 403
+ * came from a request without a service-account key. The current gate
+ * bypasses those requests, so that status cannot come from the gate. The
+ * app-id header keeps each request bound to the intended app when a test
+ * fails with an unexpected response.
  *
  * One server per test file instead: pre-listened, bound explicitly to
  * `127.0.0.1` (a `::`-bound server does not own the IPv4 loopback tuple
