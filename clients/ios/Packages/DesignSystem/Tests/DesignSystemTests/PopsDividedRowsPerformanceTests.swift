@@ -70,11 +70,7 @@
                 }
                 .frame(width: 320, height: 440)
 
-                let scenes = UIApplication.shared.connectedScenes.compactMap {
-                    $0 as? UIWindowScene
-                }
-                let scene = try #require(scenes.first, "a simulator window scene is required")
-                let window = UIWindow(windowScene: scene)
+                let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 440))
                 let host = UIHostingController(rootView: AnyView(list))
                 self.counter = counter
                 self.window = window
