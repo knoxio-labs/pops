@@ -70,6 +70,12 @@ const ERROR_DEFINITIONS = {
     message: 'The request contains a value purchases cannot accept.',
     retryable: false,
   },
+  database_busy: {
+    area: 'storage',
+    status: 503,
+    message: 'Purchase storage is busy. Retry this request shortly.',
+    retryable: true,
+  },
   keyset_anchor_incomplete: {
     area: 'request',
     status: 400,

@@ -98,6 +98,7 @@ export const purchasesPurchaseContract = c.router({
       // A checksum that already exists. Adapters treat this as a skip, not
       // a failure — re-ingesting the same export bundle is expected.
       409: ErrorBodySchema,
+      503: ErrorBodySchema,
     },
     summary: 'Create an order with its deliveries, lines, charges and documents',
   },

@@ -854,6 +854,10 @@ export type PurchaseCreateErrors = {
    * 409
    */
   409: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type PurchaseCreateError = PurchaseCreateErrors[keyof PurchaseCreateErrors];

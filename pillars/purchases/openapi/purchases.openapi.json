@@ -3671,6 +3671,16 @@
               }
             },
             "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "Create an order with its deliveries, lines, charges and documents",
