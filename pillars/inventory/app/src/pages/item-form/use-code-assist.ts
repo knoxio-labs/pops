@@ -101,7 +101,9 @@ function useCodeSuggestion({
 /** Provides suggestion, typed-code checking and offline behaviour for a form. */
 export function useCodeAssist(options: UseCodeAssistOptions): CodeAssistApi {
   const { dispatch, editingId, entry, name, online, typeKey } = options;
-  const [typedCode, setTypedCode] = useState('');
+  const [typedCode, setTypedCode] = useState(() =>
+    entry.status === 'checking' ? entry.value : ''
+  );
   const search = useWebSearch({ q: typedCode, typeKey: typeKey ?? undefined, limit: 20 });
   const { exact, items } = search.results;
   const searchItems = useMemo(

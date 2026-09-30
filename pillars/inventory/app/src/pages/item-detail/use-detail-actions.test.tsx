@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { coreItem, coreWorld } from '../../foundation/test-fixtures/core';
@@ -182,5 +182,24 @@ describe('useDetailActions', () => {
     if (primary === null) throw new Error('expected a primary verb');
     act(() => result.current.onVerb(primary));
     expect(mocks.itemVerbs.pickUp).not.toHaveBeenCalled();
+  });
+
+  it('opens the new-item form seeded from this item for Duplicate', () => {
+    const { result } = renderHook(
+      () => ({
+        actions: useDetailActions({ item: coreItem('itm-drill'), world: coreWorld }, null, false),
+        location: useLocation(),
+      }),
+      { wrapper }
+    );
+
+    const duplicate = result.current.actions.verbs.menu
+      .flat()
+      .find((entry) => entry.id === 'duplicate');
+    if (duplicate === undefined) throw new Error('expected a Duplicate entry');
+    act(() => result.current.actions.onMenu(duplicate));
+
+    expect(result.current.location.pathname).toBe('/inventory/items/new');
+    expect(result.current.location.search).toBe('?from=itm-drill');
   });
 });

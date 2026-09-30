@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { buildWorld } from '../../foundation/model/placement-model';
 import {
   createOpening,
+  duplicateOpening,
   fieldDraftsFromProtocolFields,
   fieldDraftsFromStableValues,
 } from './form-opening';
 
+import type { WebGetResponses } from '../../inventory-api/types.gen.js';
 import type { FormTypeDef } from './field-model';
 
 const cable: FormTypeDef = {
@@ -211,5 +213,110 @@ describe('item form opening', () => {
       },
       booleans: {},
     });
+  });
+});
+
+function webItem(
+  overrides: Partial<WebGetResponses[200]['item']> = {}
+): WebGetResponses[200]['item'] {
+  return {
+    access: null,
+    catalogueRevision: 3,
+    code: 'CAB-009',
+    computedValues: [],
+    createdAt: '2026-09-01T00:00:00.000Z',
+    deletedAt: null,
+    documentTitles: [],
+    documentsStatus: 'none',
+    externalIds: [],
+    fieldValues: [],
+    fields: {},
+    id: 'item-source',
+    isContainer: false,
+    isFull: null,
+    legacyType: null,
+    lifecycle: 'active',
+    lifecycleChangedAt: null,
+    name: 'HDMI cable',
+    note: 'Braided',
+    photos: [
+      { caption: null, sha256: 'a'.repeat(64) },
+      { caption: 'Plug', sha256: 'b'.repeat(64) },
+    ],
+    placement: { kind: 'location', locationId: 'loc-desk' },
+    previousPlacement: null,
+    provenance: null,
+    quantity: 3,
+    revision: 8,
+    seq: 12,
+    typeId: null,
+    typeKey: null,
+    updatedAt: '2026-09-02T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+describe('duplicateOpening', () => {
+  const world = buildWorld([], []);
+
+  it('opens a create draft carrying everything but the code, which is bumped and checked', () => {
+    const opening = duplicateOpening(webItem(), undefined, world);
+
+    expect(opening.editing).toBeNull();
+    expect(opening.revision).toBeNull();
+    expect(opening.initial).toBe(opening.draft);
+    expect(opening.draft).toMatchObject({
+      mode: 'create',
+      name: 'HDMI cable',
+      quantity: '3',
+      note: 'Braided',
+      placement: { kind: 'location', locationId: 'loc-desk' },
+      submitted: false,
+      code: { value: 'CAB-010', status: 'checking', freeCode: null, takenBy: null },
+    });
+    expect(opening.copiedPhotos).toEqual(['a'.repeat(64), 'b'.repeat(64)]);
+  });
+
+  it('leaves the code empty when the source code has no number to bump', () => {
+    expect(duplicateOpening(webItem({ code: 'DESK' }), undefined, world).draft.code).toMatchObject({
+      value: '',
+      status: 'idle',
+    });
+    expect(duplicateOpening(webItem({ code: null }), undefined, world).draft.code.value).toBe('');
+  });
+
+  it('carries the source computed values so overrides are shown against them', () => {
+    const opening = duplicateOpening(
+      webItem({
+        computedValues: [
+          {
+            catalogueRevision: 3,
+            dependencies: [],
+            fieldId: 'replacement-value',
+            source: 'computed',
+            state: 'ok',
+            traversedItemIds: [],
+            values: [19.99],
+          },
+        ],
+      }),
+      undefined,
+      world
+    );
+
+    expect(opening.computed['replacement-value']).toEqual({
+      state: 'ok',
+      values: [19.99],
+      reason: null,
+      missingInputs: [],
+    });
+  });
+});
+
+describe('createOpening', () => {
+  it('copies no photos into a blank form', () => {
+    expect(
+      createOpening(new URLSearchParams(), buildWorld([], []), undefined).copiedPhotos
+    ).toEqual([]);
   });
 });

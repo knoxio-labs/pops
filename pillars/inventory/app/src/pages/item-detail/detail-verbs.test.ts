@@ -115,6 +115,16 @@ describe('detailVerbs lifecycle', () => {
     expect(verbsOf('itm-umbrella').primary?.label).toBe('Found it');
   });
 
+  it('offers Duplicate beside the record entries of a live item', () => {
+    expect(verbsOf('itm-drill').menu[0]?.map((entry) => entry.id)).toEqual([
+      'copy-code',
+      'copy-link',
+      'duplicate',
+      'label',
+      'history',
+    ]);
+  });
+
   it('leaves a destroyed item nothing but copying and history', () => {
     const verbs = verbsOf('itm-phone');
 
@@ -134,6 +144,7 @@ describe('detailVerbs offline', () => {
     expect(verbs.secondary.every((verb) => verb.disabledReason === OFFLINE_REASON)).toBe(true);
     expect(menu.find((entry) => entry.id === 'copy-link')?.disabledReason).toBeUndefined();
     expect(menu.find((entry) => entry.id === 'retire')?.disabledReason).toBe(OFFLINE_REASON);
+    expect(menu.find((entry) => entry.id === 'duplicate')?.disabledReason).toBe(OFFLINE_REASON);
   });
 
   it('keeps a more specific refusal rather than overwriting it', () => {
