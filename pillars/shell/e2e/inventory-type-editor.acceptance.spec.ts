@@ -38,6 +38,8 @@ const descriptorSchema = z.object({
           kind: z.string(),
           required: z.boolean(),
           expressionVersion: z.number().nullable(),
+          archivedAt: z.string().nullable(),
+          replacedBy: z.string().nullable(),
         })
       ),
     })
@@ -80,14 +82,14 @@ test.describe('S7 web type editor against a real Inventory', () => {
   }
 
   /**
-   * Publishes a type with one optional short-text `finish` field through the
-   * owner API, plus, when `computed`, an integer `count` and a version-1
-   * computed `Double` reading it.
+   * Publishes a type with a short-text `finish` field through the owner API,
+   * optionally with a same-shape replacement and a computed `Double` field
+   * reading an integer `count` field.
    */
   async function publishTypeOutOfBand(
     key: string,
     label: string,
-    { computed = false } = {}
+    { computed = false, replacementField = false } = {}
   ): Promise<void> {
     const base = (await published()).revision.revision;
     const created = descriptorSchema.parse(
@@ -111,6 +113,9 @@ test.describe('S7 web type editor against a real Inventory', () => {
     });
     let draft = await patchDraft(revision, base, withType.revision.draftVersion, [
       stored('finish', 'Finish', 'short_text'),
+      ...(replacementField
+        ? [stored('finish_replacement', 'Finish replacement', 'short_text')]
+        : []),
       ...(computed ? [stored('count', 'Count', 'integer')] : []),
     ]);
     if (computed) {
@@ -151,6 +156,7 @@ test.describe('S7 web type editor against a real Inventory', () => {
   async function openFieldsOf(page: Page, typeLabel: string): Promise<void> {
     await page.getByText(typeLabel, { exact: true }).first().click();
     await page.getByRole('button', { name: 'Continue to fields' }).click();
+    await expect(page.getByRole('button', { name: 'Type details' })).toBeVisible();
   }
 
   /** Makes the `finish` field required: a change that needs a value migration. */
@@ -205,7 +211,7 @@ test.describe('S7 web type editor against a real Inventory', () => {
     await page.getByRole('button', { name: 'Continue to fields' }).click();
     await page.getByRole('button', { name: 'Field', exact: true }).click();
     await page.getByLabel('Field label').fill('Watts');
-    await page.getByRole('combobox').click();
+    await page.getByRole('combobox', { name: 'Primitive kind' }).click();
     await page.getByRole('option', { name: 'Integer', exact: true }).click();
     await page.getByRole('button', { name: 'Create field' }).click();
 
@@ -277,7 +283,12 @@ test.describe('S7 web type editor against a real Inventory', () => {
       (await mcpNotice.count()) === 0,
       'the MCP publish notice is not on this build (designed in inventory-types/design-computed-editor, not yet implemented in the web editor)'
     );
-    await expect(page.getByText('inventory.catalogue.publishDraft')).toBeVisible();
+    await expect(
+      page
+        .getByRole('alert')
+        .filter({ hasText: 'Migration required: publish through MCP' })
+        .getByText('inventory.catalogue.publishDraft')
+    ).toBeVisible();
   });
 
   test('S7.5 the computed expression builder edits a computed field and names the MCP publish route', async ({
@@ -294,12 +305,47 @@ test.describe('S7 web type editor against a real Inventory', () => {
     await page.getByRole('button', { name: 'Save field' }).click();
 
     await expect(page.getByText('Publishes through MCP, not here.')).toBeVisible();
-    await expect(page.getByText('inventory.catalogue.publishDraft')).toBeVisible();
+    await expect(
+      page
+        .getByRole('alert')
+        .filter({ hasText: 'Migration required: publish through MCP' })
+        .getByText('inventory.catalogue.publishDraft')
+    ).toBeVisible();
     const current = await stack.call('/type-catalogue/drafts/current');
     const saved = draftSchema
       .parse(current.body)
       .types.find((type) => type.key === 'acc_web_crate')
       ?.fields.find((field) => field.key === 'double');
     expect(saved).toMatchObject({ required: true, expressionVersion: 1 });
+  });
+
+  test('S7.6 archives a field with its replacement and reads lineage back through REST', async ({
+    page,
+  }) => {
+    await publishTypeOutOfBand('acc_web_replaced_field', 'Acceptance replaced field', {
+      replacementField: true,
+    });
+    const before = await published();
+    const type = before.types.find((candidate) => candidate.key === 'acc_web_replaced_field');
+    const source = type?.fields.find((field) => field.key === 'finish');
+    const replacement = type?.fields.find((field) => field.key === 'finish_replacement');
+    if (type === undefined || source === undefined || replacement === undefined)
+      throw new Error('replacement field fixture was not published');
+
+    await openEditor(page);
+    await page.goto(`/inventory/types/${encodeURIComponent(type.id)}`);
+    await page.getByRole('button', { name: 'Continue to fields' }).click();
+    await expect(page.getByRole('button', { name: 'Archive field' })).toBeVisible();
+    await page.getByText('Finish', { exact: true }).first().click();
+    await page.getByRole('button', { name: 'Archive field' }).click();
+    await page.getByRole('combobox', { name: 'Record replacement' }).selectOption(replacement.id);
+    await page.getByRole('button', { name: 'Archive', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Restore field' })).toBeVisible();
+
+    const current = draftSchema.parse((await stack.call('/type-catalogue/drafts/current')).body);
+    const archived = current.types
+      .find((candidate) => candidate.id === type.id)
+      ?.fields.find((field) => field.id === source.id);
+    expect(archived).toMatchObject({ archivedAt: expect.any(String), replacedBy: replacement.id });
   });
 });

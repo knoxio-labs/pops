@@ -50,12 +50,10 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
           <CardHeader className="lg:shrink-0">
             <EditorTitle page={page} />
           </CardHeader>
-          <CardContent className="space-y-6 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden">
+          <CardContent className="space-y-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
             <EditorSteps mode={page.mode} />
-            <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-              <CatalogueEditorContent page={page} onOperation={onOperation} />
-            </div>
-            <div className="lg:shrink-0">
+            <CatalogueEditorContent page={page} onOperation={onOperation} />
+            <div>
               <PublishPanel
                 catalogue={page.catalogue}
                 readiness={page.readiness}
@@ -111,7 +109,10 @@ function EditorTitle({ page }: { readonly page: ReadyPage }) {
           </p>
         )}
       </div>
-      {page.mode !== 'new-type' && page.selectedType !== null && (
+      {page.mode === 'type' && page.selectedType !== null && (
+        <Button onClick={page.continueToFields}>Continue to fields</Button>
+      )}
+      {page.mode !== 'type' && page.mode !== 'new-type' && page.selectedType !== null && (
         <Button variant="outline" onClick={() => page.setMode('type')}>
           Type details
         </Button>

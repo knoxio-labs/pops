@@ -122,7 +122,7 @@ function FieldShape() {
   return (
     <>
       <div className="space-y-2">
-        <Label>Primitive kind</Label>
+        <Label htmlFor="catalogue-field-kind">Primitive kind</Label>
         <SelectPrimitive
           value={kind}
           onValueChange={(value) => {
@@ -131,7 +131,7 @@ function FieldShape() {
           }}
           disabled={shapeLocked}
         >
-          <SelectTrigger className="min-h-11">
+          <SelectTrigger id="catalogue-field-kind" className="min-h-11">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

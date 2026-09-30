@@ -12,6 +12,7 @@ import {
 } from '@pops/ui';
 
 import { descendantIds } from '../lib/type-tree';
+import { ArchiveReplacementControl } from './ArchiveReplacementControl';
 
 import type {
   CatalogueIssueSources,
@@ -34,6 +35,7 @@ interface Props {
 const EMPTY_ISSUES: readonly InventoryApiIssue[] = [];
 const EMPTY_ISSUE_SOURCES: CatalogueIssueSources = [];
 const EMPTY_TYPES: readonly CatalogueType[] = [];
+const NO_REPLACEMENT = '';
 
 function blockingChildren(
   target: ArchiveTarget | null,
@@ -70,7 +72,7 @@ function blockingChildren(
   ];
 }
 
-/** Confirms an archive operation without deleting the immutable definition identity. */
+/** Confirms an archive and can record lineage to an eligible live replacement. */
 export function ArchiveCatalogueDialog({
   issueSources = EMPTY_ISSUE_SOURCES,
   issues = EMPTY_ISSUES,
@@ -82,12 +84,20 @@ export function ArchiveCatalogueDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const blocking = blockingChildren(target, issues, types, issueSources);
   const hasBlockingChildren = target?.kind === 'type' && blocking.length > 0;
-  async function archive(): Promise<void> {
+  async function archive(replacementId: string): Promise<void> {
     if (target === null || hasBlockingChildren || isSubmitting) return;
     const operation: CatalogueOperation =
       target.kind === 'type'
-        ? { kind: 'archive_type', id: target.id }
-        : { kind: 'archive_field', id: target.id };
+        ? {
+            kind: 'archive_type',
+            id: target.id,
+            ...(replacementId === NO_REPLACEMENT ? {} : { replacedBy: replacementId }),
+          }
+        : {
+            kind: 'archive_field',
+            id: target.id,
+            ...(replacementId === NO_REPLACEMENT ? {} : { replacedBy: replacementId }),
+          };
     setIsSubmitting(true);
     try {
       const result = await onOperation(operation);
@@ -101,9 +111,12 @@ export function ArchiveCatalogueDialog({
       <ArchiveDialogContent
         blocking={blocking}
         hasBlockingChildren={hasBlockingChildren}
+        issueSources={issueSources}
         isSubmitting={isSubmitting}
         onArchive={archive}
         target={target}
+        types={types}
+        key={target === null ? 'closed' : `${target.kind}:${target.id}`}
       />
     </AlertDialog>
   );
@@ -112,53 +125,86 @@ export function ArchiveCatalogueDialog({
 function ArchiveDialogContent({
   blocking,
   hasBlockingChildren,
+  issueSources,
   isSubmitting,
   onArchive,
   target,
+  types,
 }: {
   readonly blocking: readonly CatalogueType[];
   readonly hasBlockingChildren: boolean;
+  readonly issueSources: CatalogueIssueSources;
   readonly isSubmitting: boolean;
-  readonly onArchive: () => Promise<void>;
+  readonly onArchive: (replacementId: string) => Promise<void>;
   readonly target: ArchiveTarget | null;
+  readonly types: readonly CatalogueType[];
 }) {
+  const [replacementId, setReplacementId] = useState(NO_REPLACEMENT);
   return (
     <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Archive {target?.label}?</AlertDialogTitle>
-        {hasBlockingChildren ? (
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <AlertDialogDescription>
-              Move or archive the live children first. The archived descendants do not block this
-              action.
-            </AlertDialogDescription>
-            <div>
-              <span className="font-medium text-foreground">Live children</span>
-              <ul className="mt-1 list-disc space-y-1 pl-5">
-                {blocking.map((child) => (
-                  <li key={child.id}>{child.label}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ) : (
-          <AlertDialogDescription>
-            The definition remains readable by existing items and its key cannot be reused.
-          </AlertDialogDescription>
-        )}
-      </AlertDialogHeader>
+      <ArchiveDialogMessage
+        blocking={blocking}
+        hasBlockingChildren={hasBlockingChildren}
+        target={target}
+      />
+      {target !== null && !hasBlockingChildren && (
+        <ArchiveReplacementControl
+          issueSources={issueSources}
+          onChange={setReplacementId}
+          target={target}
+          types={types}
+          value={replacementId}
+          disabled={isSubmitting}
+        />
+      )}
       <AlertDialogFooter>
         <AlertDialogCancel>Cancel</AlertDialogCancel>
         <AlertDialogAction
           disabled={hasBlockingChildren || isSubmitting}
           onClick={(event) => {
             event.preventDefault();
-            void onArchive();
+            void onArchive(replacementId);
           }}
         >
           Archive
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
+  );
+}
+
+function ArchiveDialogMessage({
+  blocking,
+  hasBlockingChildren,
+  target,
+}: {
+  readonly blocking: readonly CatalogueType[];
+  readonly hasBlockingChildren: boolean;
+  readonly target: ArchiveTarget | null;
+}) {
+  return (
+    <AlertDialogHeader>
+      <AlertDialogTitle>Archive {target?.label}?</AlertDialogTitle>
+      {hasBlockingChildren ? (
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <AlertDialogDescription>
+            Move or archive the live children first. The archived descendants do not block this
+            action.
+          </AlertDialogDescription>
+          <div>
+            <span className="font-medium text-foreground">Live children</span>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              {blocking.map((child) => (
+                <li key={child.id}>{child.label}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : (
+        <AlertDialogDescription>
+          The definition remains readable by existing items and its key cannot be reused.
+        </AlertDialogDescription>
+      )}
+    </AlertDialogHeader>
   );
 }

@@ -162,7 +162,7 @@ describe('FieldForm configuration branches', () => {
   it.each(KIND_LABELS)('selects the %s primitive as %s', (kind, label) => {
     renderField(field({ kind, fixedUnit: kind === 'measurement' ? 'cm' : null }));
 
-    expect(screen.getByRole('combobox', { name: '' })).toHaveTextContent(label);
+    expect(screen.getByRole('combobox', { name: 'Primitive kind' })).toHaveTextContent(label);
   });
 
   it.each(KIND_LABELS)('submits the %s configuration in the put_field request', (kind) => {
@@ -358,7 +358,7 @@ describe('FieldForm configuration branches', () => {
 
     expect(screen.getByLabelText('Field label')).toBeEnabled();
     expect(screen.getByLabelText('Key')).toBeDisabled();
-    expect(screen.getByRole('combobox', { name: '' })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Primitive kind' })).toBeDisabled();
     expect(screen.getByLabelText('One')).toBeDisabled();
     expect(screen.getByLabelText('Many')).toBeDisabled();
     expect(screen.getByLabelText('Fixed unit')).toBeDisabled();
