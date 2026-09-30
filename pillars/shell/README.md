@@ -188,6 +188,25 @@ Use the watched remote build before merging: source mode proves fast component
 feedback, while the compiled build is the check that proves the published
 external-runtime boundary.
 
+To iterate on a local pillar UI against the live API, point the Vite proxies at
+the live shell origin. `cloudflared` keeps the Access token in its local session;
+the shell process receives it through its environment and sends it only to that
+origin:
+
+```sh
+cloudflared access login --quiet https://pops.jmiranda.dev >/dev/null 2>&1
+POPS_DEV_API_ORIGIN=https://pops.jmiranda.dev \
+POPS_DEV_ACCESS_TOKEN="$(cloudflared access token -app=https://pops.jmiranda.dev)" \
+POPS_PILLAR_UI_SOURCE=inventory \
+  pnpm --filter @pops/shell dev
+```
+
+With `POPS_DEV_API_ORIGIN` unset, the existing local pillar ports and prefix
+rewrites remain in use. Remote proxy requests keep their `/<pillar>-api` path so
+the live shell routes them normally. Remote mode routes all shell API proxy
+paths to the live shell; mutations made by the local UI therefore affect live
+data.
+
 ### The floor when the registry is unreachable
 
 Boot tries two sources, in order, and reports which one it used as
