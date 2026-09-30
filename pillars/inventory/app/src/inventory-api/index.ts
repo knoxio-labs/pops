@@ -99,6 +99,7 @@ export {
   webSyncLedgerGet,
 } from './sdk.gen';
 export type {
+  CatalogueErrorBody,
   ClientOptions,
   CodesSuggestData,
   CodesSuggestError,

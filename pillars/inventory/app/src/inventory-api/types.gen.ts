@@ -4,6 +4,41 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type CatalogueErrorBody = {
+  code: string;
+  details?: {
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
+      };
+      draftRevision: number;
+    };
+    [key: string]: unknown;
+  };
+  message: string;
+  requestId: string;
+  retryable: boolean;
+};
+
 export type ErrorBody = {
   code: string;
   details?: unknown;
@@ -3813,11 +3848,11 @@ export type TypesReadCatalogueErrors = {
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
 };
 
 export type TypesReadCatalogueError = TypesReadCatalogueErrors[keyof TypesReadCatalogueErrors];
@@ -3952,7 +3987,7 @@ export type TypesReadAuditErrors = {
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
 };
 
 export type TypesReadAuditError = TypesReadAuditErrors[keyof TypesReadAuditErrors];
@@ -4003,15 +4038,15 @@ export type TypesManageCreateDraftErrors = {
   /**
    * 400
    */
-  400: ErrorBody;
+  400: CatalogueErrorBody;
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 409
    */
-  409: ErrorBody;
+  409: CatalogueErrorBody;
 };
 
 export type TypesManageCreateDraftError =
@@ -4144,11 +4179,11 @@ export type TypesManageReadDraftErrors = {
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
 };
 
 export type TypesManageReadDraftError =
@@ -4386,19 +4421,19 @@ export type TypesManagePatchDraftErrors = {
   /**
    * 400
    */
-  400: ErrorBody;
+  400: CatalogueErrorBody;
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
   /**
    * 409
    */
-  409: ErrorBody;
+  409: CatalogueErrorBody;
 };
 
 export type TypesManagePatchDraftError =
@@ -4555,15 +4590,15 @@ export type TypesManageAbandonDraftErrors = {
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
   /**
    * 409
    */
-  409: ErrorBody;
+  409: CatalogueErrorBody;
 };
 
 export type TypesManageAbandonDraftError =
@@ -4810,19 +4845,19 @@ export type TypesManagePreviewComputedFieldErrors = {
   /**
    * 400
    */
-  400: ErrorBody;
+  400: CatalogueErrorBody;
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
   /**
    * 409
    */
-  409: ErrorBody;
+  409: CatalogueErrorBody;
 };
 
 export type TypesManagePreviewComputedFieldError =
@@ -5002,19 +5037,19 @@ export type TypesManagePreviewDraftErrors = {
   /**
    * 400
    */
-  400: ErrorBody;
+  400: CatalogueErrorBody;
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
   /**
    * 409
    */
-  409: ErrorBody;
+  409: CatalogueErrorBody;
 };
 
 export type TypesManagePreviewDraftError =
@@ -5117,19 +5152,19 @@ export type TypesManagePublishDraftErrors = {
   /**
    * 400
    */
-  400: ErrorBody;
+  400: CatalogueErrorBody;
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
   /**
    * 409
    */
-  409: ErrorBody;
+  409: CatalogueErrorBody;
 };
 
 export type TypesManagePublishDraftError =
@@ -5274,11 +5309,11 @@ export type TypesReadValidateItemErrors = {
   /**
    * 400
    */
-  400: ErrorBody;
+  400: CatalogueErrorBody;
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
 };
 
 export type TypesReadValidateItemError =
@@ -5314,7 +5349,7 @@ export type TypesManageReadProtocolRolloutErrors = {
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
 };
 
 export type TypesManageReadProtocolRolloutError =
@@ -5351,15 +5386,15 @@ export type TypesManageActivateProtocolRolloutErrors = {
   /**
    * 400
    */
-  400: ErrorBody;
+  400: CatalogueErrorBody;
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 409
    */
-  409: ErrorBody;
+  409: CatalogueErrorBody;
 };
 
 export type TypesManageActivateProtocolRolloutError =
@@ -5501,19 +5536,19 @@ export type TypesManagePreviewComputedFieldOnPublishedErrors = {
   /**
    * 400
    */
-  400: ErrorBody;
+  400: CatalogueErrorBody;
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
   /**
    * 409
    */
-  409: ErrorBody;
+  409: CatalogueErrorBody;
 };
 
 export type TypesManagePreviewComputedFieldOnPublishedError =
@@ -5595,11 +5630,11 @@ export type TypesReadTypeErrors = {
   /**
    * 401
    */
-  401: ErrorBody;
+  401: CatalogueErrorBody;
   /**
    * 404
    */
-  404: ErrorBody;
+  404: CatalogueErrorBody;
 };
 
 export type TypesReadTypeError = TypesReadTypeErrors[keyof TypesReadTypeErrors];
