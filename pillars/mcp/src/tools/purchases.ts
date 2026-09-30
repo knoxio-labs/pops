@@ -61,8 +61,12 @@ type MerchantSpendInput = {
 };
 
 type SearchInput = {
-  query: { text: string };
+  query: { text: string; filters?: PurchaseSearchFilter[] };
 };
+
+type PurchaseSearchFilter =
+  | { field: 'source' | 'status'; operator: 'eq'; value: string }
+  | { field: 'orderedAt'; operator: 'gte' | 'lte'; value: string };
 
 type PurchasesShape = {
   purchase: {
@@ -128,6 +132,23 @@ function scopeFrom(args: Record<string, unknown>): MerchantSpendInput {
   return scope;
 }
 
+function searchFiltersFrom(scope: MerchantSpendInput): PurchaseSearchFilter[] | undefined {
+  const filters: PurchaseSearchFilter[] = [];
+  for (const source of scope.sources ?? []) {
+    filters.push({ field: 'source', operator: 'eq', value: source });
+  }
+  for (const status of scope.statuses ?? []) {
+    filters.push({ field: 'status', operator: 'eq', value: status });
+  }
+  if (scope.from !== undefined) {
+    filters.push({ field: 'orderedAt', operator: 'gte', value: scope.from });
+  }
+  if (scope.to !== undefined) {
+    filters.push({ field: 'orderedAt', operator: 'lte', value: scope.to });
+  }
+  return filters.length > 0 ? filters : undefined;
+}
+
 const ordersList: ToolDef = {
   name: 'purchases.orders.list',
   description:
@@ -169,16 +190,22 @@ const ordersGet: ToolDef = {
 const search: ToolDef = {
   name: 'purchases.search',
   description:
-    'Search orders and line items by free text. Matches a merchant name or order id on the order side, and a product name or SKU on the line side — this is how to answer "which order had X in it". Every line-item hit carries the id of the order it belongs to.',
+    'Search orders and line items by free text, with optional source, settlement status and inclusive order-date filters. Matches a merchant name or order id on the order side, and a product name or SKU on the line side — this is how to answer "which order had X in it". Every line-item hit carries the id of the order it belongs to.',
   inputSchema: {
     type: 'object',
-    properties: { text: { type: 'string', description: 'Search query text' } },
+    properties: {
+      text: { type: 'string', description: 'Search query text' },
+      ...SCOPE_PROPERTIES,
+    },
     required: ['text'],
   },
   handler: async (args) => {
     const text = reqStr(args, 'text');
     if (!text) return toolError('Missing required field: text');
-    return mapCallResult(await purchases().search.search({ query: { text } }));
+    const query: SearchInput['query'] = { text };
+    const filters = searchFiltersFrom(scopeFrom(args));
+    if (filters !== undefined) query.filters = filters;
+    return mapCallResult(await purchases().search.search({ query }));
   },
 };
 
