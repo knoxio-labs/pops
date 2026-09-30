@@ -5,7 +5,8 @@
  * pillar db (drizzle + raw + vec availability), the injected peer/embedding
  * retrieval clients, and the injected {@link GenerationLlm} port, then
  * delegates. The service is stateless — all scope/audience filtering rides in
- * the request body — so there is no per-request auth.
+ * the request body — while the API boundary checks any presented service-account
+ * key against the route's scope.
  *
  * Mode-specific guards (report needs a query, summary needs a date range,
  * `from <= to`) map to 400 via the pillar {@link ValidationError} + `runHttp`.

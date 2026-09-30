@@ -22,8 +22,8 @@
  * EngramService; `configure` mutates the in-process thresholds (see the
  * write-service JSDoc for the non-persistence deviation).
  *
- * Non-identity domain — served on the docker-network trust boundary with no
- * per-request auth (parity with templates / engrams). `list` /
+ * Non-identity domain — served on the docker-network trust boundary, with
+ * presented keys checked by the API scope gate (parity with templates / engrams). `list` /
  * `contradictions` are POST-with-body rather than GET because their typed
  * enum filters don't round-trip cleanly through a query string (mirrors the
  * reflex `history` + engrams `search` precedent).

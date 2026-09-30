@@ -5,9 +5,8 @@
  * The shared `makeSettingsHandlers` owns the RU+reset logic, the declared-key
  * assertion, and read-side sensitive redaction. Cerebrum injects its
  * `CerebrumDb` settings store, the `cerebrum.settings` scope prefix, and a
- * NO-OP gate: the cerebrum pillar trusts the docker network and runs no
- * per-request auth (parity with every other cerebrum route), so there is no
- * principal to enforce a scope against.
+ * NO-OP gate. The Express API validates a presented service-account key before
+ * the ts-rest handler runs; this shared handler receives no caller principal.
  *
  * `UnknownSettingKeyError` (a free-form `setMany`/`set` addressing an undeclared
  * key) is remapped to the pillar's `ValidationError` so `runHttp` returns a 400
@@ -32,7 +31,7 @@ type Req = ServerInferRequest<typeof cerebrumSettingsContract>;
 
 const SCOPE_PREFIX = 'cerebrum.settings';
 
-/** Cerebrum runs no per-request auth, so the gate is a no-op. */
+/** The API boundary handles scope checks before this principal-free handler. */
 const gate: SettingsGate<unknown> = () => {};
 
 /**

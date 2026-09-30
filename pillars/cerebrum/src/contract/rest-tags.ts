@@ -3,7 +3,8 @@
  *
  * A single `list` query powering the ingest form's tag autocomplete. The
  * optional `prefix` + `limit` ride in the query string. Non-identity domain —
- * docker-net trust, no per-request auth.
+ * docker-network trust when no key is presented; keyed requests are scope-checked
+ * at the API boundary.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';

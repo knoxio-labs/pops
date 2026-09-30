@@ -21,7 +21,8 @@
  *
  * `dimensionsQueued` stays at `0`: the status fan-out needs the media pillar's
  * `comparison_dimensions`, which the cerebrum container has no handle to.
- * Non-identity domain — docker-network trust, no per-request auth.
+ * Non-identity domain — docker-network trust when no key is presented; keyed
+ * requests are scope-checked at the API boundary.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';

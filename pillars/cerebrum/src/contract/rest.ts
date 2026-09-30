@@ -8,6 +8,10 @@
  *
  * Lego principle: this is the ONLY description of the cerebrum wire format.
  * Don't hand-author OpenAPI or hand-author paths anywhere else.
+ *
+ * The API checks a presented `X-API-Key` against the scope derived from each
+ * contract route. Requests without a key continue to rely on the docker-network
+ * perimeter. Raw probes and streaming routes are outside this contract map.
  */
 import { initContract } from '@ts-rest/core';
 

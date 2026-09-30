@@ -2,8 +2,8 @@
  * ts-rest contract for `ego.*` — the conversational interface.
  *
  * Conversations are single-tenant at the row level (no per-user scoping today),
- * so the surface is served on the docker-network trust boundary with no
- * per-request auth (parity with the other domains). The chat + context
+ * so the surface is served on the docker-network trust boundary. The API
+ * checks a presented service-account key against each route's scope. The chat + context
  * procedures carry their inputs as typed bodies; reads that take only an id use
  * a path param.
  *

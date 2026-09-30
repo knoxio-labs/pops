@@ -11,8 +11,9 @@
  * embedding worker, not cross-pillar callers.
  *
  * Both procedures are POST-with-body rather than GET: the typed inputs avoid
- * query-string round-tripping. Non-identity domain — docker-network trust, no
- * per-request auth (parity with templates / nudges). The wire schemas are
+ * query-string round-tripping. Non-identity domain — docker-network trust when
+ * no key is presented; keyed requests are scope-checked at the API boundary
+ * (parity with templates / nudges). The wire schemas are
  * defined locally so the pillar contract stays self-contained.
  */
 import { initContract } from '@ts-rest/core';

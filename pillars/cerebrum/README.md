@@ -64,7 +64,10 @@ On boot, when `POPS_REGISTRY_ENABLED=true`, the server registers via
 `registry` pillar) and deregisters on `SIGTERM`. The heartbeat reports the live
 `cerebrum.vectorSearch` capability (whether sqlite-vec loaded on this
 connection) and advertises the pillar's federated `/settings/*` surface. There
-is no per-request auth.
+is an inbound service-account scope gate on the REST contract routes. Presented
+`X-API-Key` credentials must have the scope derived for that route; callers
+without a key remain governed by the docker-network perimeter. Raw health,
+pillar, OpenAPI, and streaming routes are outside the contract scope map.
 
 ## Vector storage invariants
 

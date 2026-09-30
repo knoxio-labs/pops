@@ -14,9 +14,11 @@ import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
 import { createPillarErrorHandlers } from '@pops/pillar-express';
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { cerebrumContract } from '../contract/rest.js';
 import { type CerebrumApiDeps, makeRequestHandler } from './handlers.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { AnthropicEgoLlm } from './modules/ego/llm.js';
 import { AnthropicQueryLlm, AnthropicQueryStreamLlm } from './modules/query/llm.js';
 import { makeEgoStreamRouter } from './rest/ego-stream.js';
@@ -50,6 +52,11 @@ const openapiDocument: unknown = JSON.parse(
   )
 );
 
+/**
+ * Build the Cerebrum HTTP app. Contract routes validate any presented
+ * service-account key against the route's scope; callers without a key remain
+ * governed by the existing network perimeter.
+ */
 export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
   const app = express();
   const errors = createPillarErrorHandlers({ pillar: 'cerebrum' });
@@ -104,6 +111,12 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
       llm: deps.queryLlm ?? new AnthropicQueryLlm(),
       streamLlm: deps.queryStreamLlm ?? new AnthropicQueryStreamLlm(),
     })
+  );
+
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
   );
 
   createExpressEndpoints(cerebrumContract, makeCerebrumRestHandlers(deps), app, {

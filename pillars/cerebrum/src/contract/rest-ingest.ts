@@ -3,7 +3,8 @@
  *
  * The ingestion pipeline: normalise → classify → extract entities → infer
  * scopes → write. Non-identity domain — served on the docker-network trust
- * boundary with no per-request auth (parity with engrams / templates). The
+ * boundary, with presented service-account keys checked at the API boundary
+ * (parity with engrams / templates). The
  * pipeline is LLM- and queue-heavy; the container injects a real Anthropic
  * client + curation queue in `server.ts` and fakes/no-Redis in tests.
  *
