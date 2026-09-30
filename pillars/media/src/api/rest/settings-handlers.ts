@@ -15,8 +15,7 @@
  * (`UnknownSettingKeyError` → 400 `ValidationError`) so a batch write can never
  * become a backdoor create.
  *
- * Media trusts the docker network and runs no per-request auth (parity with
- * every other media route), so there is no principal to gate against.
+ * The app-level service-account scope gate authorizes these contract routes.
  */
 import {
   redactSensitive,

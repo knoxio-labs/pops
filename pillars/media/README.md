@@ -61,8 +61,12 @@ The Express app mounts:
 - `/media/images/*` — a non-contract byte route over `MEDIA_IMAGES_DIR`, mounted
   after the contract endpoints so it contributes no OpenAPI paths.
 
-There is no per-request auth: the pillar trusts the docker network and the
-gateway in front authenticates.
+Contract routes derive service-account scopes from `mediaContract`. Requests
+that present an `X-API-Key` must resolve to a live account with the required
+grant; invalid or revoked keys are rejected, and the registry must be reachable
+to verify them. Requests without a key continue to rely on the gateway
+perimeter for browser traffic. The `/health`, `/pillars`, `/openapi` and
+`/media/images/*` raw routes stay outside the contract scope gate.
 
 All REST failures use the ADR-054 envelope from `@pops/types`:
 `{ code, message, requestId, retryable, details? }`. Codes are dotted lowercase
