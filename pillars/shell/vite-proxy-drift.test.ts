@@ -18,7 +18,7 @@ function extractNginxApiPrefixes(nginxConf: string): string[] {
 }
 
 function extractViteProxyPrefixes(viteConfig: string): string[] {
-  const matches = [...viteConfig.matchAll(/'\/([\w-]+-api)':\s*\{/g)];
+  const matches = [...viteConfig.matchAll(/'\/([\w-]+-api)':\s*(?:\{|createDevApiProxy\()/g)];
   return [...new Set(matches.map((m) => m[1]).filter(isDefined))];
 }
 

@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react';
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 
+import { createDevApiProxy } from './dev-api-proxy.ts';
 import { pillarUiDevPlugin } from './vite-plugin-pillar-ui-dev';
 import { sharedRuntimePlugin } from './vite-plugin-shared-runtime';
 
@@ -75,119 +76,45 @@ export default defineConfig({
       // contract. The shell's generated registry Hey API client and the boot
       // install-set resolver both target the shell's `/registry-api` path (see
       // `src/registry-api-runtime-config.ts`); the boot fetch hits
-      // `GET /registry-api/registry/pillars` before first render. Strip the
-      // prefix so the registry router sees its natural paths. Without this
-      // proxy the dev boot fetch 404s and the shell silently falls through to
-      // the static floor — masking the registry-driven branch in dev.
+      // `GET /registry-api/registry/pillars` before first render. Local targets
+      // strip the prefix; a remote target keeps it for the live shell proxy.
+      // Without this proxy the dev boot fetch 404s and the shell silently falls
+      // through to the static floor — masking the registry-driven branch.
       // Mirrors `/media-api`.
-      '/registry-api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/registry-api/, ''),
-      },
-      '/lists-api': {
-        target: 'http://localhost:3006',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/lists-api/, ''),
-      },
-      '/inventory-api': {
-        target: 'http://localhost:3002',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/inventory-api/, ''),
-      },
-      '/finance-api': {
-        target: 'http://localhost:3004',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/finance-api/, ''),
-      },
-      '/food-api': {
-        target: 'http://localhost:3005',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/food-api/, ''),
-      },
-      '/media-api': {
-        target: 'http://localhost:3003',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/media-api/, ''),
-      },
-      '/cerebrum-api': {
-        target: 'http://localhost:3007',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/cerebrum-api/, ''),
-      },
-      '/ai-api': {
-        target: 'http://localhost:3008',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/ai-api/, ''),
-      },
-      '/contacts-api': {
-        target: 'http://localhost:3010',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/contacts-api/, ''),
-      },
-      '/purchases-api': {
-        target: 'http://localhost:3013',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/purchases-api/, ''),
-      },
-      '/bfm-api': {
-        target: 'http://localhost:3014',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/bfm-api/, ''),
-      },
-      '/barcode-api': {
-        target: 'http://localhost:3016',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/barcode-api/, ''),
-      },
+      '/registry-api': createDevApiProxy('http://localhost:3001', '/registry-api'),
+      '/lists-api': createDevApiProxy('http://localhost:3006', '/lists-api'),
+      '/inventory-api': createDevApiProxy('http://localhost:3002', '/inventory-api'),
+      '/finance-api': createDevApiProxy('http://localhost:3004', '/finance-api'),
+      '/food-api': createDevApiProxy('http://localhost:3005', '/food-api'),
+      '/media-api': createDevApiProxy('http://localhost:3003', '/media-api'),
+      '/cerebrum-api': createDevApiProxy('http://localhost:3007', '/cerebrum-api'),
+      '/ai-api': createDevApiProxy('http://localhost:3008', '/ai-api'),
+      '/contacts-api': createDevApiProxy('http://localhost:3010', '/contacts-api'),
+      '/purchases-api': createDevApiProxy('http://localhost:3013', '/purchases-api'),
+      '/bfm-api': createDevApiProxy('http://localhost:3014', '/bfm-api'),
+      '/barcode-api': createDevApiProxy('http://localhost:3016', '/barcode-api'),
       // The design playground's comment API. The shell itself never calls it —
       // the playground does — but nginx routes the prefix, and the drift test
       // holds this file to routing every prefix nginx does.
-      '/design-api': {
-        target: 'http://localhost:3015',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/design-api/, ''),
-      },
+      '/design-api': createDevApiProxy('http://localhost:3015', '/design-api'),
       // The orchestrator (ADR-029, epic 06) federates search over the pillars
       // and serves `POST /search` at root. The shell's global search panel
       // (`@pops/navigation` useSearchInputData) posts to `/orchestrator-api/search`;
       // strip the prefix so the orchestrator router sees its natural `/search`.
       // Mirrors the `/<pillar>-api` proxies above.
-      '/orchestrator-api': {
-        target: 'http://localhost:3009',
-        changeOrigin: true,
-        rewrite: (urlPath: string) => urlPath.replace(/^\/orchestrator-api/, ''),
-      },
+      '/orchestrator-api': createDevApiProxy('http://localhost:3009', '/orchestrator-api'),
       // SSE streaming endpoints (ego chat + cerebrum query) live on the
       // cerebrum pillar. These MUST precede the bare `/api` rule below,
       // which otherwise sends every `/api/*` request to the legacy
       // monolith upstream (3000).
-      '/api/ego': {
-        target: 'http://localhost:3007',
-        changeOrigin: true,
-      },
-      '/api/cerebrum': {
-        target: 'http://localhost:3007',
-        changeOrigin: true,
-      },
-      '/media/images': {
-        target: 'http://localhost:3003',
-        changeOrigin: true,
-      },
-      '/inventory/documents': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/pillars': {
-        // ADR-026 P3: shell-side pillar boot calls GET /pillars and
-        // GET /pillars/health on the legacy monolith upstream.
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
+      '/api/ego': createDevApiProxy('http://localhost:3007', undefined),
+      '/api/cerebrum': createDevApiProxy('http://localhost:3007', undefined),
+      '/media/images': createDevApiProxy('http://localhost:3003', undefined),
+      '/inventory/documents': createDevApiProxy('http://localhost:3000', undefined),
+      // ADR-026 P3: shell-side pillar boot calls GET /pillars and
+      // GET /pillars/health on the legacy monolith upstream.
+      '/pillars': createDevApiProxy('http://localhost:3000', undefined),
+      '/api': createDevApiProxy('http://localhost:3000', undefined),
     },
   },
 });

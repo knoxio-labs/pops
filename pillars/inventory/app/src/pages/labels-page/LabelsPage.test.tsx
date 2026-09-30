@@ -298,12 +298,20 @@ describe('LabelsPage', () => {
     );
   });
 
-  it('prints on A4 with no page margin', async () => {
-    renderPage(`?ids=${GRINDER}`);
+  it('keeps the printed sheet at A4 size and stops at the last label row', async () => {
+    renderPage(`?ids=${GRINDER}&sheet=L7159`);
     await screen.findByRole('button', { name: 'Print 1 label' });
     const css = [...document.querySelectorAll('style')].map((node) => node.textContent).join('');
     expect(css).toContain('@page { size: A4 portrait; margin: 0; }');
-    expect(document.querySelector('.pops-print-root .pops-print-sheet')).not.toBeNull();
+    expect(css).toContain('height: var(--print-sheet-content-height) !important;');
+    const sheet = document.querySelector<HTMLElement>('.pops-print-root .pops-print-sheet');
+    const firstLabel = document.querySelector<HTMLElement>('[data-slot-kind="label"]');
+    if (sheet === null || firstLabel === null) throw new Error('Label sheet was not rendered');
+    expect(sheet.style.height).toBe('297mm');
+    expect(
+      Number.parseFloat(sheet.style.getPropertyValue('--print-sheet-content-height'))
+    ).toBeCloseTo(284.1, 2);
+    expect(firstLabel.style.top).toBe('12.9mm');
   });
 
   it('prints a box with its contents when asked, writing them into the address', async () => {

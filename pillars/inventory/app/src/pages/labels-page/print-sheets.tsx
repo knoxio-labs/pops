@@ -11,6 +11,8 @@ import { cn } from '@pops/ui';
 import { PrintLabel } from './label-templates';
 import { PRINT_ROOT_CLASS, PRINT_SHEET_CLASS } from './print-styles';
 
+import type { CSSProperties } from 'react';
+
 import type { SheetLayout, SheetPage, SheetSlot } from '@pops/inventory/labels';
 
 import type { PrintLabelEntry } from './useLabelJob';
@@ -84,6 +86,15 @@ function Sheet({
   total: number;
   props: PrintSheetsProps;
 }) {
+  const lastSlot = page.slots.at(-1);
+  const contentHeightMm = lastSlot
+    ? slotOrigin(props.layout, lastSlot.slot).yMm + props.layout.labelHeightMm
+    : A4_HEIGHT_MM;
+  const style = {
+    width: `${A4_WIDTH_MM}mm`,
+    height: `${A4_HEIGHT_MM}mm`,
+    '--print-sheet-content-height': `${contentHeightMm}mm`,
+  } satisfies CSSProperties & { '--print-sheet-content-height': string };
   return (
     <section
       aria-label={`Sheet ${page.page + 1} of ${total}`}
@@ -91,7 +102,7 @@ function Sheet({
         PRINT_SHEET_CLASS,
         'relative shrink-0 overflow-hidden bg-qr-quiet-zone text-print-ink shadow-md ring-1 ring-border'
       )}
-      style={{ width: `${A4_WIDTH_MM}mm`, height: `${A4_HEIGHT_MM}mm` }}
+      style={style}
     >
       {page.slots.map((slot) => (
         <Slot key={slot.slot} slot={slot} props={props} firstPage={page.page === 0} />

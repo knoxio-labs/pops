@@ -29,7 +29,10 @@ const PRINT_CSS = `
   .${PRINT_ROOT_CLASS} {
     display: block !important; zoom: 1 !important; gap: 0 !important; padding: 0 !important;
   }
-  .${PRINT_SHEET_CLASS} { break-after: page; box-shadow: none !important; outline: 0 !important; }
+  .${PRINT_SHEET_CLASS} {
+    height: var(--print-sheet-content-height) !important;
+    break-after: page; box-shadow: none !important; outline: 0 !important;
+  }
   .${PRINT_SHEET_CLASS}:last-child { break-after: auto; }
 }
 `;
