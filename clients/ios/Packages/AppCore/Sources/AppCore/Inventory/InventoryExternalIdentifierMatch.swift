@@ -9,10 +9,15 @@ import Foundation
 /// ``matchKey(_:)``, and a scan also tries its other UPC-A/EAN-13 spelling, so
 /// one printed code finds the same items however it was entered.
 public enum InventoryExternalIdentifierMatch {
-    /// `value` trimmed, without spaces or hyphens, uppercased. A replica
-    /// that compares in SQL must reduce stored values the same way.
+    /// Space, tab, line feed and carriage return: the set SQLite's
+    /// `TRIM(x, y)` can be handed exactly, so both sides agree.
+    public static let trimmed = " \t\n\r"
+
+    /// `value` with ``trimmed`` cut from both ends, without spaces or
+    /// hyphens, uppercased. A replica that compares in SQL must reduce stored
+    /// values the same way.
     public static func matchKey(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines)
+        value.trimmingCharacters(in: CharacterSet(charactersIn: trimmed))
             .filter { $0 != " " && $0 != "-" }
             .uppercased()
     }

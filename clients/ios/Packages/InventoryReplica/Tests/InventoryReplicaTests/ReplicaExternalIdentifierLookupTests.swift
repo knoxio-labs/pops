@@ -69,6 +69,18 @@ internal struct ReplicaExternalIdentifierLookupTests {
         #expect(try replica.read(.items(withExternalIdentifier: "4000000000000")).isEmpty)
     }
 
+    @Test("a stored value with a trailing tab or newline matches its scan, as in the fake")
+    func trailingControlWhitespaceMatches() throws {
+        let replica = try Fixture.downloaded(items: [
+            Fixture.item("tab", externalIds: Self.barcode("\t5012345678900\t")),
+            Fixture.item("line", externalIds: Self.barcode("5012345678900\r\n")),
+        ])
+
+        let found = try replica.read(.items(withExternalIdentifier: "5012345678900"))
+
+        #expect(found.map(\.id) == ["line", "tab"])
+    }
+
     @Test("a prefix of a stored barcode is not a match")
     func prefixIsNotAMatch() throws {
         let replica = try Fixture.downloaded(items: [

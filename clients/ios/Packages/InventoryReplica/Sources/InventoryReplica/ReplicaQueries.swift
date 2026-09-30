@@ -43,8 +43,9 @@ internal enum ReplicaQueries {
             sql: """
                 SELECT * FROM item WHERE deleted_at IS NULL AND EXISTS (
                     SELECT 1 FROM json_each(item.external_ids) AS identifier
-                    WHERE UPPER(REPLACE(REPLACE(TRIM(json_extract(identifier.value, '$.value')),
-                        '-', ''), ' ', '')) IN (SELECT value FROM json_each(?1))
+                    WHERE UPPER(REPLACE(REPLACE(TRIM(json_extract(identifier.value, '$.value'),
+                        ' ' || char(9) || char(10) || char(13)), '-', ''), ' ', ''))
+                        IN (SELECT value FROM json_each(?1))
                 )
                 ORDER BY name COLLATE NOCASE, id
                 """,

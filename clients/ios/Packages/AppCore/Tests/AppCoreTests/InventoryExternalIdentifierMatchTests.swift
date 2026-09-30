@@ -22,6 +22,7 @@ internal struct InventoryExternalIdentifierMatchTests {
     func matchKey() {
         #expect(InventoryExternalIdentifierMatch.matchKey(" 978-0 14\n") == "978014")
         #expect(InventoryExternalIdentifierMatch.matchKey("sn-ab12") == "SNAB12")
+        #expect(InventoryExternalIdentifierMatch.matchKey("\t501\r\n") == "501")
     }
 
     @Test("an EAN-13 with a leading zero also tries its UPC-A spelling, and back")
