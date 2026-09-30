@@ -17,6 +17,42 @@ describe('countHatchesInText', () => {
     });
   });
 
+  it.each([
+    ['a string literal', `const guidance = 'treat this as any other field';`],
+    ['a template literal', 'const guidance = `treat this as any other field`;'],
+    ['JSX text', "const guidance = <span>Don't treat this as any other field</span>;"],
+  ])('does not count cast-like text inside %s', (_kind, text) => {
+    expect(countHatchesInText(text)).toEqual({});
+  });
+
+  it('counts a real cast on the same line as a string literal', () => {
+    expect(countHatchesInText('const guidance = "as any"; const value = input as any;')).toEqual({
+      'as any': 1,
+    });
+  });
+
+  it('counts a real cast after JSX prose with an apostrophe', () => {
+    expect(
+      countHatchesInText(
+        "const guidance = <span>Don't write as any</span>; const value = input as any;"
+      )
+    ).toEqual({ 'as any': 1 });
+  });
+
+  it('does not count cast-like prose inside a regex literal', () => {
+    expect(
+      countHatchesInText("const pattern = /Don't use as any/; const value = input as any;")
+    ).toEqual({ 'as any': 1 });
+  });
+
+  it('counts casts inside template substitutions and JSX expressions', () => {
+    const text = [
+      'const template = `literal as any ${input as any}`;',
+      'const jsx = <span>literal as any {input as any}</span>;',
+    ].join('\n');
+    expect(countHatchesInText(text)).toEqual({ 'as any': 2 });
+  });
+
   it('does NOT count casts that only appear in comments or docstrings', () => {
     const text = [
       '// avoid `as any` here',
