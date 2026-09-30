@@ -170,7 +170,7 @@ internal struct PurchaseMark: View {
                     .foregroundStyle(Color.popsBackground)
                     .frame(width: size, height: size)
                     .background(
-                        Self.tint(for: PurchasesPresentation.merchant(purchase)),
+                        NameMarkPalette.color(for: PurchasesPresentation.merchant(purchase)),
                         in: .rect(cornerRadius: PopsRadius.control)
                     )
             }
@@ -184,15 +184,6 @@ internal struct PurchaseMark: View {
             .filter { $0.first?.isLetter == true }
             .prefix(2)
         return words.compactMap { $0.first.map(String.init) }.joined().uppercased()
-    }
-
-    /// Derived from the name's scalars rather than from `hashValue`, which
-    /// Swift seeds per process — a mark whose colour changes when the app is
-    /// relaunched is not an identity.
-    private static func tint(for name: String) -> Color {
-        let palette: [Color] = [.popsAccent, .popsWarning, .popsSuccess, .popsDestructive]
-        let seed = name.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) % 100_003 }
-        return palette[seed % palette.count]
     }
 }
 

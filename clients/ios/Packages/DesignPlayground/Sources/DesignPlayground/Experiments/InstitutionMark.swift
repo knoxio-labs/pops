@@ -35,11 +35,10 @@ internal struct InstitutionMark: View {
     /// rather than a computed hue — the real design (`account-chip-identity`,
     /// decided on the web 2026-09-03) draws a brand colour this app has
     /// nowhere to read from, and a token catalogue with one entry per
-    /// institution is not a catalogue. Stable because it is derived from the
-    /// name: two accounts at the same bank still mark the same.
+    /// institution is not a catalogue. The palette index is derived from the
+    /// name's Unicode scalars, so accounts at the same bank keep the same mark.
     private static func tint(for name: String) -> Color {
-        let palette: [Color] = [.popsAccent, .popsWarning, .popsSuccess, .popsDestructive]
-        return palette[abs(name.hashValue) % palette.count]
+        NameMarkPalette.color(for: name)
     }
 }
 
