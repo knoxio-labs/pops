@@ -18,10 +18,12 @@
  * MCP account or they return 403.
  */
 import { getPillar } from '../pillar-client.js';
+import { searchFiltersFrom } from './purchase-search-filters.js';
 import { mapCallResult, optNum, optStr, reqStr, toolError } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
+import type { PurchaseSearchFilter } from './purchase-search-filters.js';
 import type { ToolDef } from './tool-def.js';
 
 /**
@@ -63,10 +65,6 @@ type MerchantSpendInput = {
 type SearchInput = {
   query: { text: string; filters?: PurchaseSearchFilter[] };
 };
-
-type PurchaseSearchFilter =
-  | { field: 'source' | 'status'; operator: 'eq'; value: string }
-  | { field: 'orderedAt'; operator: 'gte' | 'lte'; value: string };
 
 type PurchasesShape = {
   purchase: {
@@ -130,23 +128,6 @@ function scopeFrom(args: Record<string, unknown>): MerchantSpendInput {
   const to = optStr(args, 'to');
   if (to !== undefined) scope.to = to;
   return scope;
-}
-
-function searchFiltersFrom(scope: MerchantSpendInput): PurchaseSearchFilter[] | undefined {
-  const filters: PurchaseSearchFilter[] = [];
-  for (const source of scope.sources ?? []) {
-    filters.push({ field: 'source', operator: 'eq', value: source });
-  }
-  for (const status of scope.statuses ?? []) {
-    filters.push({ field: 'status', operator: 'eq', value: status });
-  }
-  if (scope.from !== undefined) {
-    filters.push({ field: 'orderedAt', operator: 'gte', value: scope.from });
-  }
-  if (scope.to !== undefined) {
-    filters.push({ field: 'orderedAt', operator: 'lte', value: scope.to });
-  }
-  return filters.length > 0 ? filters : undefined;
 }
 
 const ordersList: ToolDef = {
