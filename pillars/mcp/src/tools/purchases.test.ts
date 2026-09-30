@@ -275,3 +275,61 @@ describe('purchases.analytics.merchantSpend', () => {
     expect(extractText(result)).toContain('Amazon');
   });
 });
+
+describe('purchases.analytics.productLeaderboard', () => {
+  it('passes every contract scope field to the purchases pillar', async () => {
+    await tool('purchases.analytics.productLeaderboard').handler({
+      sources: 'amazon',
+      statuses: ['settled_cash'],
+      from: '2026-01-01T00:00:00Z',
+      to: '2026-12-31T23:59:59Z',
+      minOrderCount: 3,
+    });
+
+    expect(analytics.productLeaderboard).toHaveBeenCalledWith({
+      sources: ['amazon'],
+      statuses: ['settled_cash'],
+      from: '2026-01-01T00:00:00Z',
+      to: '2026-12-31T23:59:59Z',
+      minOrderCount: 3,
+    });
+  });
+
+  it('rejects a date without a timezone before calling the purchases pillar', async () => {
+    const result = await tool('purchases.analytics.productLeaderboard').handler({
+      from: '2026-01-01',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(extractText(result)).toContain("Invalid field 'from'");
+    expect(analytics.productLeaderboard).not.toHaveBeenCalled();
+  });
+
+  it('advertises the minimum order count and does not paginate a complete roll-up', () => {
+    const properties = tool('purchases.analytics.productLeaderboard').inputSchema['properties'];
+    if (!properties) throw new Error('product leaderboard input schema has no properties');
+    expect(properties).toHaveProperty('sources');
+    expect(properties).toHaveProperty('statuses');
+    expect(properties).toHaveProperty('from');
+    expect(properties).toHaveProperty('to');
+    expect(properties['minOrderCount']).toMatchObject({
+      type: 'number',
+      minimum: 1,
+      multipleOf: 1,
+    });
+    expect(Object.keys(properties)).not.toContain('limit');
+  });
+
+  it('returns the product roll-up body and reports an unavailable pillar', async () => {
+    analytics.productLeaderboard.mockResolvedValueOnce(
+      callOk({ minOrderCount: 2, products: [{ identity: { basis: 'name', name: 'Coffee' } }] })
+    );
+    const result = await tool('purchases.analytics.productLeaderboard').handler({
+      minOrderCount: 2,
+    });
+    expect(extractText(result)).toContain('Coffee');
+
+    analytics.productLeaderboard.mockResolvedValueOnce(callUnavailable('purchases'));
+    expect((await tool('purchases.analytics.productLeaderboard').handler({})).isError).toBe(true);
+  });
+});

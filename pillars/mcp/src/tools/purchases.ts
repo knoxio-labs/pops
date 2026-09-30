@@ -20,7 +20,8 @@
 import { getPillar } from '../pillar-client.js';
 import { PURCHASE_SCOPE_PROPERTIES, purchaseScopeDateError } from './purchase-scope.js';
 import { searchFiltersFrom } from './purchase-search-filters.js';
-import { mapCallResult, optNum, optStr, reqStr, toolError } from './utils.js';
+import { merchantSpend, productLeaderboard, scopeFrom } from './purchases-analytics.js';
+import { mapCallResult, optNum, reqStr, toolError } from './utils.js';
 
 /** The order lifecycle vocabulary advertised by the purchases tools. */
 export { PURCHASE_STATUSES } from './purchase-scope.js';
@@ -28,6 +29,7 @@ export { PURCHASE_STATUSES } from './purchase-scope.js';
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
 import type { PurchaseSearchFilter } from './purchase-search-filters.js';
+import type { MerchantSpendInput, ProductLeaderboardInput } from './purchases-analytics.js';
 import type { ToolDef } from './tool-def.js';
 
 type ListPurchasesInput = {
@@ -37,13 +39,6 @@ type ListPurchasesInput = {
   to?: string;
   limit?: number;
   offset?: number;
-};
-
-type MerchantSpendInput = {
-  sources?: string[];
-  statuses?: string[];
-  from?: string;
-  to?: string;
 };
 
 type SearchInput = {
@@ -58,6 +53,7 @@ type PurchasesShape = {
   };
   analytics: {
     merchantSpend: (input: MerchantSpendInput) => unknown;
+    productLeaderboard: (input: ProductLeaderboardInput) => unknown;
   };
   search: {
     search: (input: SearchInput) => unknown;
@@ -66,37 +62,6 @@ type PurchasesShape = {
 
 function purchases(): PillarHandle<PurchasesShape> {
   return getPillar<PurchasesShape>('purchases');
-}
-
-/**
- * Repeated query parameters arrive as an array or not at all. A single
- * string is lifted so `{ sources: 'amazon' }` behaves the way a model will
- * assume it does, and anything that is not a string is dropped rather than
- * stringified into a filter nothing matches.
- */
-function stringList(args: Record<string, unknown>, key: string): string[] | undefined {
-  const raw = args[key];
-  if (typeof raw === 'string') return [raw];
-  if (!Array.isArray(raw)) return undefined;
-  const values = raw.filter((v): v is string => typeof v === 'string');
-  return values.length > 0 ? values : undefined;
-}
-
-function scopeFrom(args: Record<string, unknown>): MerchantSpendInput {
-  const scope: MerchantSpendInput = {};
-  const sources = stringList(args, 'sources');
-  if (sources !== undefined) scope.sources = sources;
-  // Passed through unfiltered on purpose. Dropping a status this list does
-  // not know about would widen the scope silently — a caller asking for one
-  // status would get every order and nothing would say so. The pillar's
-  // contract rejects an unknown value with a 400, which is legible.
-  const statuses = stringList(args, 'statuses');
-  if (statuses !== undefined) scope.statuses = statuses;
-  const from = optStr(args, 'from');
-  if (from !== undefined) scope.from = from;
-  const to = optStr(args, 'to');
-  if (to !== undefined) scope.to = to;
-  return scope;
 }
 
 const ordersList: ToolDef = {
@@ -190,26 +155,11 @@ const itemsByTag: ToolDef = {
   },
 };
 
-const merchantSpend: ToolDef = {
-  name: 'purchases.analytics.merchantSpend',
-  description:
-    'Spend per merchant and currency over a period, with the explained/unexplained split. Groups are keyed on merchant AND currency and there is no cross-currency total, because no such number exists. `residualCents` is spend nothing accounts for — report it rather than dropping it. Takes no limit: the period is the only bound.',
-  inputSchema: {
-    type: 'object',
-    properties: { ...PURCHASE_SCOPE_PROPERTIES },
-  },
-  handler: async (args) => {
-    const dateError = purchaseScopeDateError(args);
-    if (dateError !== undefined) return toolError(dateError);
-
-    return mapCallResult(await purchases().analytics.merchantSpend(scopeFrom(args)));
-  },
-};
-
 export const purchasesTools: readonly ToolDef[] = [
   ordersList,
   ordersGet,
   search,
   itemsByTag,
   merchantSpend,
+  productLeaderboard,
 ];

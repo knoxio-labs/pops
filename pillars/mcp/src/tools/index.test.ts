@@ -3,8 +3,14 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 70 tools', () => {
-    expect(allTools).toHaveLength(70);
+  it('exports exactly 71 tools', () => {
+    expect(allTools).toHaveLength(71);
+  });
+
+  it('registers the purchases product leaderboard', () => {
+    expect(allTools.some((tool) => tool.name === 'purchases.analytics.productLeaderboard')).toBe(
+      true
+    );
   });
 
   it('includes all inventory write tools', () => {
