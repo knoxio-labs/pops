@@ -120,6 +120,46 @@ describe('tagRules — vocabulary & apply', () => {
     expect(after.length).toBe(initial.length + 1);
   });
 
+  it('rejects accepted values that are unknown in a closed namespace', async () => {
+    const unknownTag = 'channel:not-a-real-value';
+
+    await expect(
+      client().tagRules.apply({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains', tags: [unknownTag] },
+            },
+          ],
+        },
+        acceptedNewTags: [unknownTag],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    expect((await client().tagRules.vocabulary()).tags).not.toContain(unknownTag);
+    expect((await client().tagRules.list()).data).toHaveLength(0);
+  });
+
+  it('allows an existing value in a closed namespace', async () => {
+    const knownTag = 'fee:account-keeping';
+    expect((await client().tagRules.vocabulary()).tags).toContain(knownTag);
+
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains', tags: [knownTag] },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+
+    expect(applied.rules[0]?.tags).toEqual([knownTag]);
+  });
+
   it('edits and removes a persisted rule via ChangeSet ops', async () => {
     const created = await client().tagRules.apply({
       changeSet: addOp,

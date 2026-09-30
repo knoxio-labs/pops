@@ -32,6 +32,7 @@ import {
   recordTagRuleRejection,
   toTagRule,
 } from '../modules/tag-rules/service.js';
+import { assertKnownClosedTagValues } from '../shared/closed-tag-validation.js';
 import { paginationMeta } from '../shared/pagination.js';
 import {
   CHANGESET_FULL_HISTORY_DEFAULT_LIMIT,
@@ -201,6 +202,7 @@ export function makeTagRulesHandlers(db: FinanceDb) {
       runHttp(() => {
         try {
           const known = tagVocabularyService.loadKnownTagSet(db);
+          assertKnownClosedTagValues(body.acceptedNewTags, known);
           const filtered = filterTagRuleChangeSetEntry(known, {
             changeSet: body.changeSet,
             acceptedNewTags: body.acceptedNewTags,
