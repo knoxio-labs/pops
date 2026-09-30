@@ -1,3 +1,4 @@
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,16 +9,34 @@ import { checkOutOfUnitScriptTools, sandboxToolDependencies } from '../sandbox-t
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const aiUnit = join(repoRoot, 'pillars', 'ai');
 
+function createEmptyUnit() {
+  const tempRoot = join(repoRoot, 'tmp');
+  mkdirSync(tempRoot, { recursive: true });
+  const fixtureRoot = mkdtempSync(join(tempRoot, 'sandbox-tools-'));
+  const unitDir = join(fixtureRoot, 'unit');
+  mkdirSync(unitDir);
+
+  return {
+    unitDir,
+    cleanup: () => rmSync(fixtureRoot, { force: true, recursive: true }),
+  };
+}
+
 describe('sandboxToolDependencies', () => {
   it('uses the root formatter version for units that generate OpenAPI snapshots', () => {
-    const packageManifest = {
-      devDependencies: { '@pops/contract-openapi': 'workspace:*' },
-    };
-    const rootPackageManifest = { devDependencies: { oxfmt: '^0.67.0' } };
+    const fixture = createEmptyUnit();
 
-    expect(sandboxToolDependencies(aiUnit, packageManifest, rootPackageManifest)).toEqual({
-      oxfmt: '^0.67.0',
-    });
+    try {
+      expect(
+        sandboxToolDependencies(
+          fixture.unitDir,
+          { devDependencies: { '@pops/contract-openapi': 'workspace:*' } },
+          { devDependencies: { oxfmt: '^0.67.0' } }
+        )
+      ).toEqual({ oxfmt: '^0.67.0' });
+    } finally {
+      fixture.cleanup();
+    }
   });
 
   it('detects formatter commands in unit source files', () => {
@@ -27,9 +46,19 @@ describe('sandboxToolDependencies', () => {
   });
 
   it('names the formatter when the root no longer declares a required provider', () => {
-    expect(() =>
-      sandboxToolDependencies(aiUnit, { dependencies: { '@pops/contract-openapi': '*' } }, {})
-    ).toThrow('requires tool "oxfmt"');
+    const fixture = createEmptyUnit();
+
+    try {
+      expect(() =>
+        sandboxToolDependencies(
+          fixture.unitDir,
+          { dependencies: { '@pops/contract-openapi': '*' } },
+          {}
+        )
+      ).toThrow('requires tool "oxfmt"');
+    } finally {
+      fixture.cleanup();
+    }
   });
 });
 
