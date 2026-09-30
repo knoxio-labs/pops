@@ -283,6 +283,11 @@ description = "Regenerate the iOS app icon layers into both Icon Composer bundle
 dir = "{{config_root}}"
 run = "node scripts/ios-app-icon.mjs"
 
+[tasks."icon:pwa"]
+description = "Render the iOS app icon into the shell's PWA sizes"
+dir = "{{config_root}}"
+run = "node scripts/pwa-app-icon.mjs"
+
 # ============================================================================
 # Development Servers
 # ============================================================================

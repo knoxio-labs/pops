@@ -1,0 +1,28 @@
+{
+  "generated_by": "scripts/pwa-app-icon.mjs",
+  "source": "clients/ios/App/AppIcon.icon",
+  "source_files": [
+    "clients/ios/App/AppIcon.icon/Assets/layer-warp.svg",
+    "clients/ios/App/AppIcon.icon/Assets/layer-weft.svg",
+    "clients/ios/App/AppIcon.icon/icon.json"
+  ],
+  "source_sha256": "3596c696f023344db891eff70f92b66eca38011a6f6bcd90ff6c7c0c3610f529",
+  "generator_sha256": "e896ff8d3ede6eac01781f6242bd265a8344ad7afa41abc3d0779c6333d472df",
+  "renderer": {
+    "tool": "Icon Composer ictool",
+    "platform": "iOS",
+    "rendition": "Default",
+    "design_generation": 27,
+    "source_size": 1024
+  },
+  "outputs": [
+    {
+      "name": "icon-192.png",
+      "size": 192
+    },
+    {
+      "name": "icon-512.png",
+      "size": 512
+    }
+  ]
+}
