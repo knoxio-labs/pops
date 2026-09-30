@@ -126,6 +126,9 @@ export type ErrorCode =
   | 'contacts.request.invalid'
   | 'contacts.resource.not_found'
   | 'contacts.entity.name_conflict'
+  | 'contacts.auth.unauthorized'
+  | 'contacts.auth.forbidden'
+  | 'contacts.auth.unavailable'
   | 'contacts.internal';
 
 /**
@@ -746,6 +749,20 @@ export type HealthGetResponses = {
 };
 
 export type HealthGetResponse = HealthGetResponses[keyof HealthGetResponses];
+
+export type OpenapiGetData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/openapi';
+};
+
+export type OpenapiGetResponses = {
+  /**
+   * The contacts OpenAPI document
+   */
+  200: unknown;
+};
 
 export type SearchSearchData = {
   body: SearchRequest;

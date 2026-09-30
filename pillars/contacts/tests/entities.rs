@@ -5,6 +5,8 @@
 //! status codes and the JSON wire shape, not just the repo functions in
 //! isolation.
 
+mod common;
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
@@ -25,6 +27,7 @@ async fn app_with_pool() -> (axum::Router, sqlx::SqlitePool) {
     let router = build_router(AppState {
         pool: pool.clone(),
         version: "1.2.3-test".to_string(),
+        service_account_scope_verifier: common::service_account_scope_verifier(),
     });
     (router, pool)
 }

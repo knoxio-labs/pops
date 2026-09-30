@@ -271,6 +271,9 @@
           "contacts.request.invalid",
           "contacts.resource.not_found",
           "contacts.entity.name_conflict",
+          "contacts.auth.unauthorized",
+          "contacts.auth.forbidden",
+          "contacts.auth.unavailable",
           "contacts.internal"
         ],
         "type": "string"
@@ -1294,6 +1297,25 @@
         "summary": "Liveness probe.",
         "tags": [
           "crate::health"
+        ]
+      }
+    },
+    "/openapi": {
+      "get": {
+        "operationId": "openapi.get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "The contacts OpenAPI document"
+          }
+        },
+        "summary": "`GET /openapi` — serve the pinned 3.0.3 OpenAPI document.",
+        "tags": [
+          "crate::app"
         ]
       }
     },

@@ -25,6 +25,15 @@ pub enum ErrorCode {
     NotFound,
     #[serde(rename = "contacts.entity.name_conflict")]
     NameConflict,
+    /// Missing, unknown, or revoked service-account credentials.
+    #[serde(rename = "contacts.auth.unauthorized")]
+    ServiceAccountUnauthorized,
+    /// A live service account does not have the required operation scope.
+    #[serde(rename = "contacts.auth.forbidden")]
+    ServiceAccountForbidden,
+    /// The registry could not verify presented service-account credentials.
+    #[serde(rename = "contacts.auth.unavailable")]
+    ServiceAccountUnavailable,
     #[serde(rename = "contacts.internal")]
     Internal,
 }
@@ -81,6 +90,39 @@ impl ApiError {
             message: message.into(),
             code: ErrorCode::InvalidRequest,
             retryable: false,
+            details: None,
+        }
+    }
+
+    /// Build a 401 response for a missing, unknown, or revoked service account.
+    pub fn service_account_unauthorized() -> Self {
+        Self {
+            status: StatusCode::UNAUTHORIZED,
+            message: "Missing or invalid service-account credentials.".to_string(),
+            code: ErrorCode::ServiceAccountUnauthorized,
+            retryable: false,
+            details: None,
+        }
+    }
+
+    /// Build a 403 response for a service account without the required scope.
+    pub fn service_account_forbidden() -> Self {
+        Self {
+            status: StatusCode::FORBIDDEN,
+            message: "This service account is not authorised for this operation.".to_string(),
+            code: ErrorCode::ServiceAccountForbidden,
+            retryable: false,
+            details: None,
+        }
+    }
+
+    /// Build a retryable 503 response when the registry cannot verify a key.
+    pub fn service_account_unavailable() -> Self {
+        Self {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            message: "Service-account credentials could not be verified.".to_string(),
+            code: ErrorCode::ServiceAccountUnavailable,
+            retryable: true,
             details: None,
         }
     }
