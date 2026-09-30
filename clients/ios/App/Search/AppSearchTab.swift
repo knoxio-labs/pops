@@ -1,4 +1,5 @@
 import AppCore
+import DesignSystem
 import FeatureInventory
 import FeaturePurchases
 import FeatureSearch
