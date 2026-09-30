@@ -38,8 +38,10 @@ interface SpendRow {
 }
 
 /**
- * Aggregate per-category spend (in integer cents) for a set of budget
- * targets in bulk.
+ * Aggregate per-category net spend (in integer cents) for a set of budget
+ * targets in bulk. Positive refunds and reversals offset purchases, so a
+ * result can be negative when offsets exceed purchases in a category and
+ * period.
  *
  * Returns a `Map` keyed by `spendMapKey(period, category)`. Missing
  * entries mean zero spend.

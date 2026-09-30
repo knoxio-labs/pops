@@ -156,6 +156,18 @@ describe('bulkComputeSpend — which types are spend', () => {
     expect(spendOn(db)).toBe(0);
   });
 
+  it('returns negative net spend when refunds exceed purchases', () => {
+    seed(db, { description: 'WOOLWORTHS', amountCents: -5000, type: 'purchase', tags: [CATEGORY] });
+    seed(db, {
+      description: 'WOOLWORTHS REFUND',
+      amountCents: 6000,
+      type: 'refund',
+      tags: [CATEGORY],
+    });
+
+    expect(spendOn(db)).toBe(-1000);
+  });
+
   it('nets a positive reversal against purchase spend', () => {
     seed(db, { description: 'WOOLWORTHS', amountCents: -5000, type: 'purchase', tags: [CATEGORY] });
     seed(db, {
