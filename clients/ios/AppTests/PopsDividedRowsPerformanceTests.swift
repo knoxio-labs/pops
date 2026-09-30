@@ -29,7 +29,7 @@ internal struct PopsDividedRowsPerformanceTests {
         #expect(top.activeRows.count <= 40)
         #expect(top.activeAssetRows.count <= 40)
 
-        fixture.scrollToBottom()
+        try await fixture.scrollToBottom(scrollView)
         try await fixture.waitForRow(9_999)
         let bottom = fixture.work
         #expect(bottom.bodyRows.contains(9_999))
@@ -54,27 +54,18 @@ internal struct PopsDividedRowsPerformanceTests {
     @MainActor
     private final class ListFixture {
         private let counter: RowWorkCounter
-        private let scrollControl: ScrollControl
         private let window: UIWindow
         private let host: UIHostingController<AnyView>
 
         init() throws {
             let counter = RowWorkCounter()
-            let scrollControl = ScrollControl()
             let rows = (0..<10_000).map(Row.init(id:))
-            let list = ScrollViewReader { proxy in
-                ScrollView {
-                    PopsDividedRows(rows: rows, leadingInset: 0) { row in
-                        CountedRow(row: row, counter: counter)
-                    }
-                }
-                .frame(width: 320, height: 440)
-                .onAppear {
-                    scrollControl.scrollToBottom = {
-                        proxy.scrollTo(9_999, anchor: .bottom)
-                    }
+            let list = ScrollView {
+                PopsDividedRows(rows: rows, leadingInset: 0) { row in
+                    CountedRow(row: row, counter: counter)
                 }
             }
+            .frame(width: 320, height: 440)
 
             let scene = try #require(
                 UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
@@ -82,7 +73,6 @@ internal struct PopsDividedRowsPerformanceTests {
             let window = UIWindow(windowScene: scene)
             let host = UIHostingController(rootView: AnyView(list))
             self.counter = counter
-            self.scrollControl = scrollControl
             self.window = window
             self.host = host
             window.frame = CGRect(x: 0, y: 0, width: 320, height: 440)
@@ -103,8 +93,13 @@ internal struct PopsDividedRowsPerformanceTests {
             try await counter.waitForAppearance(id)
         }
 
-        func scrollToBottom() {
-            scrollControl.scrollToBottom?()
+        func scrollToBottom(_ scrollView: UIScrollView) async throws {
+            scrollView.setContentOffset(
+                CGPoint(x: 0, y: scrollView.contentSize.height - scrollView.bounds.height),
+                animated: false)
+            try await Task.sleep(for: .milliseconds(100))
+            window.layoutIfNeeded()
+            scrollView.layoutIfNeeded()
         }
 
         func dismiss() {
@@ -117,11 +112,6 @@ internal struct PopsDividedRowsPerformanceTests {
             }
             return view.subviews.lazy.compactMap { Self.scrollView(in: $0) }.first
         }
-    }
-
-    @MainActor
-    private final class ScrollControl {
-        var scrollToBottom: (() -> Void)?
     }
 
     @MainActor
