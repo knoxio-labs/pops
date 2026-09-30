@@ -36,6 +36,7 @@ internal struct PurchasesHomeScreen: View {
         }
         .navigationTitle(FeaturePurchases.displayName)
         .task { await model.load() }
+        .popsMotion(value: phaseTransition)
         .onChange(of: refreshFailure) { _, failure in
             guard failure != nil else { return }
             errorPresenter.present(
@@ -54,6 +55,14 @@ internal struct PurchasesHomeScreen: View {
     private var refreshFailure: String? {
         guard case .loaded(_, .failed(let updated)) = model.phase else { return nil }
         return updated
+    }
+
+    private var phaseTransition: HomePhaseTransition {
+        switch model.phase {
+        case .loading: .loading
+        case .loaded: .loaded
+        case .failed: .failed
+        }
     }
 
     private func loaded(_ digest: PurchasesHomeDigest, refresh: PurchasesHomeRefresh) -> some View {
@@ -162,6 +171,12 @@ internal struct PurchasesHomeScreen: View {
             startRePairing()
         }
     }
+}
+
+private enum HomePhaseTransition: Equatable {
+    case loading
+    case loaded
+    case failed
 }
 
 internal enum PurchasesHomeList: String, CaseIterable, Identifiable {

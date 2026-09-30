@@ -11,7 +11,6 @@ internal struct InventoryContainerPageSkeleton: View {
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
             blocks
-                .popsShimmer()
             Spacer(minLength: PopsSpacing.zero)
         }
         .background(Color.popsBackground)
@@ -26,6 +25,7 @@ internal struct InventoryContainerPageSkeleton: View {
             Color.popsSurface
                 .frame(height: heroHeight)
                 .frame(maxWidth: .infinity)
+                .popsShimmer()
             VStack(alignment: .leading, spacing: PopsSpacing.sm) {
                 bar(width: 0.7, height: line)
                 bar(width: 0.4, height: line)
@@ -40,10 +40,8 @@ internal struct InventoryContainerPageSkeleton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, PopsSpacing.sm)
-            VStack(spacing: PopsSpacing.sm) {
-                ForEach(0..<4, id: \.self) { _ in bar(width: 1, height: control) }
-            }
-            .padding(.horizontal, PopsSpacing.lg)
+            InventoryLocationListSkeleton(rows: 4)
+                .padding(.horizontal, PopsSpacing.lg)
         }
     }
 

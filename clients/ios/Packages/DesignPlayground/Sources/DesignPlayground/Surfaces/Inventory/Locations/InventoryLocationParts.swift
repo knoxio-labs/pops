@@ -41,14 +41,40 @@ internal struct InventoryLocationEmptyLine: View {
 /// Rows before their places arrive.
 internal struct InventoryLocationListSkeleton: View {
     internal let rows: Int
-    @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
+    @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget
+    @ScaledMetric(relativeTo: .caption) private var lineHeight = PopsSpacing.sm
 
     internal var body: some View {
-        VStack(spacing: PopsSpacing.sm) {
-            ForEach(0..<rows, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
-                    .fill(Color.popsSurface)
-                    .frame(height: rowHeight)
+        LazyVStack(spacing: PopsSpacing.zero) {
+            ForEach(0..<max(rows, 0), id: \.self) { index in
+                let primaryWidth: CGFloat = index.isMultiple(of: 2) ? 0.72 : 0.56
+                HStack(spacing: PopsSpacing.md) {
+                    RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
+                        .fill(Color.popsSeparator)
+                        .frame(width: markSize, height: markSize)
+                    GeometryReader { geometry in
+                        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                            Capsule()
+                                .fill(Color.popsSeparator)
+                                .frame(
+                                    width: geometry.size.width * primaryWidth, height: lineHeight)
+                            Capsule()
+                                .fill(Color.popsSeparator)
+                                .frame(width: geometry.size.width * 0.38, height: lineHeight)
+                        }
+                        .frame(maxHeight: .infinity, alignment: .center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    Capsule()
+                        .fill(Color.popsSeparator)
+                        .frame(width: markSize * 0.55, height: lineHeight)
+                }
+                .frame(minHeight: markSize)
+                .padding(.vertical, PopsSpacing.xs)
+                if index < rows - 1 {
+                    PopsDivider()
+                        .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                }
             }
         }
         .popsShimmer()
@@ -111,6 +137,7 @@ internal struct InventoryLocationPanel<Row: Identifiable, Content: View>: View {
                     }
                 }
             }
+            .inventoryMotion(value: rows.map(\.id))
         }
     }
 }

@@ -35,11 +35,12 @@ public struct PopsListPanel<Content: View>: View {
     }
 }
 
-/// Identifiable rows separated by inset rules, without adding a panel surface.
+/// Identifiable rows lazily realized and separated by inset rules, without adding a panel surface.
 public struct PopsDividedRows<Row: Identifiable, Content: View>: View {
     private let rows: [Row]
     private let leadingInset: CGFloat
     private let content: (Row) -> Content
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Creates rows with stable, unique identifiers and an optional divider inset.
     public init(
@@ -55,14 +56,15 @@ public struct PopsDividedRows<Row: Identifiable, Content: View>: View {
     public static func dividerCount(rows: Int) -> Int { rows > 0 ? rows - 1 : 0 }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+        LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
             ForEach(rows) { row in
                 content(row)
-                    .transition(PopsMotion.row)
+                    .transition(reduceMotion ? .identity : PopsMotion.row)
                 if row.id != rows.last?.id {
                     PopsDivider().padding(.leading, leadingInset)
                 }
             }
         }
+        .popsMotion(value: rows.map(\.id))
     }
 }

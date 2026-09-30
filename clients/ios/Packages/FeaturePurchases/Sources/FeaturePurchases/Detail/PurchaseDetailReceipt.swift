@@ -87,7 +87,7 @@ private struct PurchaseDetailTotalsFoot: View {
     let rows: [PurchaseDetailTotals.Row]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+        LazyVStack(alignment: .leading, spacing: PopsSpacing.xs) {
             ForEach(rows, id: \.label) { row in
                 HStack(alignment: .firstTextBaseline) {
                     Text(row.label)

@@ -43,7 +43,7 @@ internal struct PurchaseStagingGrid: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 ForEach(model.groups) { group in
                     groupPlatter(group)
                         .transition(.scale(scale: 0.96).combined(with: .opacity))
@@ -116,7 +116,7 @@ internal struct PurchaseStagingGrid: View {
 extension PurchaseStagingGrid {
     private func groupPlatter(_ group: StagedReceipt) -> some View {
         ScrollView(.horizontal) {
-            HStack(spacing: PopsSpacing.md) {
+            LazyHStack(spacing: PopsSpacing.md) {
                 ForEach(group.pages) { page in
                     tile(page, width: groupTileWidth, caption: nil)
                 }

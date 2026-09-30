@@ -1,4 +1,5 @@
 import DesignSystemTestSupport
+import Foundation
 import SwiftUI
 import Testing
 
@@ -10,6 +11,15 @@ internal struct PopsListPanelTests {
     private struct Row: Identifiable {
         let id: Int
     }
+
+    private static let source: String = {
+        let path = URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Sources/DesignSystem/Primitives/PopsListPanel.swift")
+        return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
+    }()
 
     @Test(
         "a list panel is the shared insets over the shared ground",
@@ -51,6 +61,42 @@ internal struct PopsListPanelTests {
         arguments: [(rows: 0, dividers: 0), (rows: 1, dividers: 0), (rows: 4, dividers: 3)])
     func dividerCount(sample: (rows: Int, dividers: Int)) {
         #expect(PopsDividedRows<Row, Text>.dividerCount(rows: sample.rows) == sample.dividers)
+    }
+
+    @Test("divided rows draw the same inset separators as a regular stack")
+    func dividedRowsPreserveSeparators() throws {
+        let rows = [Row(id: 1), Row(id: 2), Row(id: 3)]
+        let divided = PopsDividedRows(rows: rows, leadingInset: 24) { row in
+            Text("Row \(row.id)").frame(height: 36)
+        }
+        let regular = VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+            ForEach(rows) { row in
+                Text("Row \(row.id)").frame(height: 36)
+                if row.id != rows.last?.id {
+                    PopsDivider().padding(.leading, 24)
+                }
+            }
+        }
+
+        let dividedPixels = try #require(
+            PrimitiveRenderingTests.render(divided, in: .light))
+        let regularPixels = try #require(
+            PrimitiveRenderingTests.render(regular, in: .light))
+
+        #expect(RenderedPixels.drawTheSame(dividedPixels, regularPixels))
+    }
+
+    @Test("row changes animate unless Reduce Motion is enabled")
+    func rowMotionFollowsReduceMotionSetting() {
+        #expect(!Self.source.isEmpty)
+        #expect(
+            Self.source.contains(".transition(reduceMotion ? .identity : PopsMotion.row)"),
+            "PopsDividedRows must not scale or fade rows when Reduce Motion is enabled"
+        )
+        #expect(
+            Self.source.contains(".popsMotion(value: rows.map(\\.id))"),
+            "row insertion and removal must animate when the row IDs change"
+        )
     }
 
     @Test("a notice action changes the rendered notice", .requiresCompiledColorCatalog)

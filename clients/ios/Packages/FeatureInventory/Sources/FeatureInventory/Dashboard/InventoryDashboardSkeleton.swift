@@ -7,7 +7,6 @@ import SwiftUI
 /// approved dashboard states draw no loading state of their own.
 internal struct InventoryDashboardSkeleton: View {
     @ScaledMetric(relativeTo: .body) private var tileHeight = PopsSize.touchTarget * 1.6
-    @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
 
     internal var body: some View {
         ScrollView {
@@ -19,13 +18,9 @@ internal struct InventoryDashboardSkeleton: View {
                         block(height: tileHeight, radius: PopsRadius.card)
                     }
                 }
-                VStack(spacing: PopsSpacing.md) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        block(height: rowHeight, radius: PopsRadius.control)
-                    }
-                }
+                .popsShimmer()
+                InventoryRowsSkeleton(rows: 3)
             }
-            .popsShimmer()
             .padding(.horizontal, PopsSpacing.lg)
         }
         .scrollDisabled(true)

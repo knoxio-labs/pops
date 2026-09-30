@@ -21,14 +21,16 @@ internal struct InventoryItemsBrowserView: View {
         Group {
             switch model.phase {
             case .loading:
-                InventoryItemsBrowserSkeleton()
+                InventoryItemsBrowserSkeleton().transition(.opacity)
             case .unavailable:
                 ErrorStateView(message: InventoryCopy.unavailable) { generation += 1 }
                     .navigationTitle("Items")
+                    .transition(.opacity)
             case .loaded:
-                if let catalogue = model.catalogue { content(catalogue) }
+                if let catalogue = model.catalogue { content(catalogue).transition(.opacity) }
             }
         }
+        .popsMotion(value: model.phase)
         .task(id: TaskKey(key: model.observationKey, generation: generation)) {
             await model.observe()
         }
@@ -42,7 +44,7 @@ internal struct InventoryItemsBrowserView: View {
     private func content(_ catalogue: InventoryItemsCatalogue) -> some View {
         ScrollView(.vertical) {
             InventoryBrowserScrollContent {
-                VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                     PopsPageTitle(title: "Items")
                     if let offline = model.offlineLine {
                         InventoryLocationNoticeLine(
@@ -101,30 +103,33 @@ internal struct InventoryItemsBrowserView: View {
                     ? "No items with these filters"
                     : "No items match \u{201C}\(model.query)\u{201D}")
         } else {
-            ForEach(sections) { section in
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    PopsSectionHeader(
-                        title: section.title, trailing: "\(section.records.count)")
-                    InventorySelectionPanel(rows: section.records) { record in
-                        NavigationLink(
-                            value: InventoryRoute.record(
-                                id: record.id, isContainer: record.isContainer)
-                        ) {
-                            InventoryRecordRowLabel(
-                                record: record, query: model.query, showsCode: true,
-                                loadPhoto: { await model.thumbnail($0) })
-                        }
-                        .buttonStyle(.plain)
-                        .inventorySelectable(record.id, in: $selection)
-                        .onAppear {
-                            if record.id == model.shown.last?.id {
-                                Task { await model.loadNextPage() }
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                ForEach(sections) { section in
+                    VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                        PopsSectionHeader(
+                            title: section.title, trailing: "\(section.records.count)")
+                        InventorySelectionPanel(rows: section.records) { record in
+                            NavigationLink(
+                                value: InventoryRoute.record(
+                                    id: record.id, isContainer: record.isContainer)
+                            ) {
+                                InventoryRecordRowLabel(
+                                    record: record, query: model.query, showsCode: true,
+                                    loadPhoto: { await model.thumbnail($0) })
+                            }
+                            .buttonStyle(.plain)
+                            .inventorySelectable(record.id, in: $selection)
+                            .onAppear {
+                                if record.id == model.shown.last?.id {
+                                    Task { await model.loadNextPage() }
+                                }
                             }
                         }
                     }
+                    .transition(PopsMotion.row)
                 }
-                .transition(.opacity)
             }
+            .popsMotion(value: sections.map(\.id))
         }
         if model.canLoadMore {
             if model.nextPageFailed {
@@ -132,9 +137,10 @@ internal struct InventoryItemsBrowserView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, PopsSpacing.md)
             } else if model.isLoadingNextPage {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, PopsSpacing.md)
+                InventoryGroundedListPanel {
+                    InventoryRowsSkeleton(rows: 1)
+                }
+                .transition(.opacity)
             }
         }
     }
@@ -167,7 +173,7 @@ internal struct InventoryItemsBrowserSkeleton: View {
                         Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
                     }
                     .popsShimmer()
-                    PopsListSkeleton(rows: 8)
+                    InventoryRowsSkeleton(rows: 8)
                 }
                 .padding(.horizontal, PopsSpacing.lg)
             }

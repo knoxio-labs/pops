@@ -14,6 +14,7 @@ internal struct InventoryRecordMark: View {
     internal var showsKindBadge = false
     internal let load: @MainActor (String) async -> Data?
     @State private var image: Image?
+    @State private var isLoadingPhoto = false
     @ScaledMetric(relativeTo: .body) private var size = PopsSize.touchTarget
 
     private var shape: RoundedRectangle {
@@ -58,6 +59,9 @@ internal struct InventoryRecordMark: View {
                     .overlay(alignment: .bottomTrailing) {
                         if showsKindBadge { kindBadge }
                     }
+            } else if isLoadingPhoto {
+                InventoryPhotoPlaceholder(symbol: symbol.system)
+                    .clipShape(shape)
             } else {
                 symbol.image
                     .font(.popsHeadline)
@@ -68,8 +72,12 @@ internal struct InventoryRecordMark: View {
         .accessibilityHidden(true)
         .task(id: photo) {
             image = nil
-            guard let photo, let data = await load(photo) else { return }
-            image = Self.decode(data)
+            isLoadingPhoto = photo != nil
+            guard let photo else { return }
+            let data = await load(photo)
+            guard !Task.isCancelled else { return }
+            image = data.flatMap(Self.decode)
+            isLoadingPhoto = false
         }
     }
 

@@ -5,7 +5,7 @@ import SwiftUI
 extension InventoryDashboardView {
     internal func openContainers(_ dashboard: InventoryDashboard) -> some View {
         InventoryGroundedOpenPanel {
-            VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
                 NavigationLink(value: InventoryRoute.openContainers) {
                     openContainerSummary(dashboard)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -24,6 +24,7 @@ extension InventoryDashboardView {
                     }
                 }
             }
+            .popsMotion(value: dashboard.openContainers.map(\.id))
         }
     }
 
@@ -77,7 +78,7 @@ extension InventoryDashboardView {
             InventoryGroundedSectionHeader(
                 title: "Recent work", status: "See all", destination: .activity)
             InventoryGroundedListPanel {
-                VStack(spacing: PopsSpacing.zero) {
+                LazyVStack(spacing: PopsSpacing.zero) {
                     ForEach(activities) { activity in
                         activityRow(activity)
                             .transition(PopsMotion.row)
@@ -87,6 +88,7 @@ extension InventoryDashboardView {
                         }
                     }
                 }
+                .popsMotion(value: activities.map(\.id))
             }
         }
     }

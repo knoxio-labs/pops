@@ -31,6 +31,7 @@ public struct InventorySearchRows: View {
                         loadPhoto: { await session.thumbnail($0) }
                     )
                     .inventorySelectable(result.recordID, in: $session.selection)
+                    .transition(PopsMotion.row)
                     .onAppear {
                         if index == results.count - 1 { onReachEnd?() }
                     }
@@ -39,6 +40,7 @@ public struct InventorySearchRows: View {
                     }
                 }
             }
+            .popsMotion(value: results.map(\.id))
         }
     }
 }

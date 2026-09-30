@@ -15,7 +15,7 @@ internal struct InventoryInHandRows: View {
 
     internal var body: some View {
         InventoryGroundedListPanel {
-            VStack(spacing: PopsSpacing.zero) {
+            LazyVStack(spacing: PopsSpacing.zero) {
                 ForEach(items) { item in
                     row(item)
                         .transition(PopsMotion.row)
@@ -25,6 +25,7 @@ internal struct InventoryInHandRows: View {
                     }
                 }
             }
+            .popsMotion(value: items.map(\.id))
         }
     }
 

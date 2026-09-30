@@ -68,7 +68,7 @@ internal struct UniversalSearchScreen: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryPageTitle(title: "Search")
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
                     searchBar
@@ -79,6 +79,8 @@ internal struct UniversalSearchScreen: View {
             .inventoryMotion(value: query)
             .inventoryMotion(value: scope)
             .inventoryMotion(value: answers)
+            .inventoryMotion(value: loadedPageCounts)
+            .inventoryMotion(value: pagingStates)
             .inventoryMotion(value: inventoryFilter)
             .inventoryMotion(value: purchasesFilter)
             .padding(.horizontal, PopsSpacing.lg)

@@ -12,7 +12,7 @@ internal struct InventoryCatalogueRepairDetails: View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             InventoryGroundedSectionHeader(title: title)
             InventoryGroundedListPanel {
-                VStack(spacing: PopsSpacing.zero) {
+                LazyVStack(spacing: PopsSpacing.zero) {
                     ForEach(values) { value in
                         InventoryQueuedValueRow(value: value)
                         if value.id != values.last?.id { PopsDivider() }

@@ -50,11 +50,13 @@ internal struct TransactionDetailCard: View {
     @ViewBuilder private var fields: some View {
         if !content.fields.isEmpty {
             PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                LazyVStack(alignment: .leading, spacing: PopsSpacing.md) {
                     ForEach(content.fields) { field in
                         line(field)
+                            .transition(PopsMotion.row)
                     }
                 }
+                .popsMotion(PopsMotion.smooth, value: content.fields)
             }
         }
     }

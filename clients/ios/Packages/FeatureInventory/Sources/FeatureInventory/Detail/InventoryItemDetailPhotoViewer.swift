@@ -176,8 +176,7 @@ private struct InventoryItemDetailPhotoPage: View {
             Color.popsBackground
             switch state {
             case .waiting:
-                ProgressView("Loading photo")
-                    .tint(Color.popsInventory)
+                InventoryPhotoPlaceholder(symbol: InventorySymbol.photo.system)
             case .shown(let data):
                 PopsZoomablePhoto(
                     data: data,
@@ -212,6 +211,7 @@ private struct InventoryItemDetailPhotoPage: View {
                 state = .unavailable
                 return
             }
+            guard !Task.isCancelled else { return }
             state = .shown(data)
             onLoaded(data)
         }

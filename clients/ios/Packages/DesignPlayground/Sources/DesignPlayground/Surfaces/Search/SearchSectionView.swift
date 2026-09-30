@@ -32,6 +32,7 @@ internal struct SearchSectionView: View {
         .environment(\.inventoryAccent, section.pillar.tint)
         .tint(section.pillar.tint)
         .transition(.opacity)
+        .inventoryMotion(value: section.content)
     }
 
     @ViewBuilder private var header: some View {
@@ -63,7 +64,9 @@ internal struct SearchSectionView: View {
                 pagingFooter(paging)
             }
         case .loading:
-            InventoryLocationListSkeleton(rows: isScoped ? 6 : 3)
+            InventoryGroundedListPanel {
+                SearchRowsSkeleton(rows: isScoped ? 6 : 3)
+            }
         case .failed:
             SearchStatusRow(
                 symbol: "exclamationmark.triangle.fill", tone: .popsWarning,
@@ -90,15 +93,11 @@ internal struct SearchSectionView: View {
         case .idle, .exhausted:
             EmptyView()
         case .loading:
-            HStack(spacing: PopsSpacing.sm) {
-                ProgressView()
-                Text("Loading more results")
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
+            InventoryGroundedListPanel {
+                SearchRowsSkeleton(rows: 2)
             }
-            .frame(minHeight: PopsSize.touchTarget)
-            .padding(.horizontal, PopsSpacing.md)
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Loading more results")
         case .failed:
             HStack(spacing: PopsSpacing.sm) {
                 Text("Couldn't load more results")
@@ -120,6 +119,48 @@ internal struct SearchSectionView: View {
         case .purchases(let hit):
             PurchaseSearchRow(hit: hit, query: query)
         }
+    }
+}
+
+private struct SearchRowsSkeleton: View {
+    let rows: Int
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
+            ForEach(0..<max(rows, 0), id: \.self) { index in
+                SearchResultRowSkeleton()
+                if index < rows - 1 {
+                    PopsDivider()
+                        .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                }
+            }
+        }
+        .popsShimmer()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading results")
+    }
+}
+
+private struct SearchResultRowSkeleton: View {
+    @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget
+
+    var body: some View {
+        HStack(spacing: PopsSpacing.md) {
+            RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
+                .fill(Color.popsSurface)
+                .frame(width: markSize, height: markSize)
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                Capsule().fill(Color.popsSurface).frame(width: markSize * 2, height: PopsSpacing.md)
+                Capsule().fill(Color.popsSurface).frame(
+                    width: markSize * 1.5, height: PopsSpacing.sm)
+                Capsule().fill(Color.popsSurface).frame(
+                    width: markSize * 1.1, height: PopsSpacing.sm)
+            }
+            Spacer(minLength: PopsSpacing.sm)
+            Capsule().fill(Color.popsSurface).frame(width: markSize, height: PopsSpacing.md)
+        }
+        .frame(minHeight: PopsSize.touchTarget)
+        .accessibilityHidden(true)
     }
 }
 

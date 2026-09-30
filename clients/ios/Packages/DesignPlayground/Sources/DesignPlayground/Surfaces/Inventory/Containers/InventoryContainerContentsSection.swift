@@ -72,10 +72,13 @@ internal struct InventoryContainerContentsSection: View {
                             .font(.popsBody)
                             .foregroundStyle(Color.popsMutedForeground)
                     } else {
-                        ForEach(visible) { entry in
-                            row(entry)
-                                .transition(InventoryMotion.row)
+                        LazyVStack(spacing: PopsSpacing.zero) {
+                            ForEach(visible) { entry in
+                                row(entry)
+                                    .transition(InventoryMotion.row)
+                            }
                         }
+                        .inventoryMotion(value: visible.map(\.id))
                     }
                 }
             }

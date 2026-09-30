@@ -27,6 +27,7 @@ public struct SearchSectionChrome<Rows: View>: View {
     private let retryNextPage: () -> Void
     private let download: () -> Void
     private let rows: Rows
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Creates section chrome around caller-provided result rows.
     ///
@@ -61,7 +62,9 @@ public struct SearchSectionChrome<Rows: View>: View {
             content
         }
         .tint(pillar.tint)
-        .transition(.opacity)
+        .transition(reduceMotion ? .identity : .opacity)
+        .popsMotion(value: summary)
+        .popsMotion(value: pagingState)
     }
 
     @ViewBuilder private var header: some View {
@@ -87,7 +90,9 @@ public struct SearchSectionChrome<Rows: View>: View {
                 pagingFooter
             }
         case .loading:
-            PopsListSkeleton(rows: isScoped ? 6 : 3)
+            PopsListPanel {
+                SearchRowsSkeleton(rows: isScoped ? 6 : 3)
+            }
         case .failed:
             if pagingState == .failed || pagingState == .loading {
                 pagingFooter
@@ -116,15 +121,11 @@ public struct SearchSectionChrome<Rows: View>: View {
         case .idle, .exhausted:
             EmptyView()
         case .loading:
-            HStack(spacing: PopsSpacing.sm) {
-                ProgressView()
-                Text("Loading more results")
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
+            PopsListPanel {
+                SearchRowsSkeleton(rows: 2)
             }
-            .frame(minHeight: PopsSize.touchTarget)
-            .padding(.horizontal, PopsSpacing.md)
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Loading more results")
         case .failed:
             HStack(spacing: PopsSpacing.sm) {
                 Text("Couldn't load more results")
@@ -136,6 +137,48 @@ public struct SearchSectionChrome<Rows: View>: View {
             }
             .padding(.horizontal, PopsSpacing.md)
         }
+    }
+}
+
+private struct SearchRowsSkeleton: View {
+    let rows: Int
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
+            ForEach(0..<max(rows, 0), id: \.self) { index in
+                SearchResultRowSkeleton()
+                if index < rows - 1 {
+                    PopsDivider()
+                        .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                }
+            }
+        }
+        .popsShimmer()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading results")
+    }
+}
+
+private struct SearchResultRowSkeleton: View {
+    @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget
+
+    var body: some View {
+        HStack(spacing: PopsSpacing.md) {
+            RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
+                .fill(Color.popsSurface)
+                .frame(width: markSize, height: markSize)
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                Capsule().fill(Color.popsSurface).frame(width: markSize * 2, height: PopsSpacing.md)
+                Capsule().fill(Color.popsSurface).frame(
+                    width: markSize * 1.5, height: PopsSpacing.sm)
+                Capsule().fill(Color.popsSurface).frame(
+                    width: markSize * 1.1, height: PopsSpacing.sm)
+            }
+            Spacer(minLength: PopsSpacing.sm)
+            Capsule().fill(Color.popsSurface).frame(width: markSize, height: PopsSpacing.md)
+        }
+        .frame(minHeight: PopsSize.touchTarget)
+        .accessibilityHidden(true)
     }
 }
 

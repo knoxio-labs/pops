@@ -19,14 +19,16 @@ internal struct InventoryInHandView: View {
         Group {
             switch model.phase {
             case .loading:
-                InventoryInHandSkeleton()
+                InventoryInHandSkeleton().transition(.opacity)
             case .unavailable:
                 ErrorStateView(message: InventoryCopy.unavailable) { generation += 1 }
                     .navigationTitle("In hand")
+                    .transition(.opacity)
             case .loaded(let page):
-                content(page)
+                content(page).transition(.opacity)
             }
         }
+        .popsMotion(value: model.phase)
         .task(id: generation) { await model.observe() }
     }
 
@@ -94,7 +96,7 @@ internal struct InventoryInHandSkeleton: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 PopsPageTitle(title: "In hand")
-                PopsListSkeleton(rows: 5)
+                InventoryRowsSkeleton(rows: 5)
             }
             .padding(.horizontal, PopsSpacing.lg)
         }

@@ -21,11 +21,13 @@ internal struct InventoryContainerBrowserView: View {
     internal var body: some View {
         Group {
             switch model.containers.phase {
-            case .loading: InventoryContainerBrowserSkeleton()
-            case .unavailable: InventoryUnavailableView { generation += 1 }
-            case .loaded(let profiles): content(profiles)
+            case .loading: InventoryContainerBrowserSkeleton().transition(.opacity)
+            case .unavailable:
+                InventoryUnavailableView { generation += 1 }.transition(.opacity)
+            case .loaded(let profiles): content(profiles).transition(.opacity)
             }
         }
+        .popsMotion(value: model.containers.phase)
         .task(id: generation) { await model.containers.observe() }
         .inventoryRunnerChrome(model.runner)
     }
@@ -34,7 +36,7 @@ internal struct InventoryContainerBrowserView: View {
         let filterMatched = model.filterMatched(profiles)
         let shown = model.shown(profiles)
         return ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 PopsPageTitle(title: "Containers")
                 if profiles.isEmpty {
                     ContentUnavailableView("No containers", systemImage: "shippingbox")
@@ -106,7 +108,7 @@ internal struct InventoryContainerBrowserView: View {
 
     private func restList(_ rest: [InventoryContainerProfile]) -> some View {
         InventoryGroundedListPanel {
-            VStack(spacing: PopsSpacing.zero) {
+            LazyVStack(spacing: PopsSpacing.zero) {
                 ForEach(rest) { profile in
                     NavigationLink(value: InventoryRoute.container(profile.id)) {
                         InventoryContainerRowLabel(profile: profile)
@@ -120,6 +122,7 @@ internal struct InventoryContainerBrowserView: View {
                     }
                 }
             }
+            .popsMotion(value: rest.map(\.id))
         }
     }
 
@@ -150,22 +153,18 @@ private struct InventoryContainerCentredLine: View {
 
 /// The browser before its records arrive.
 internal struct InventoryContainerBrowserSkeleton: View {
-    @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
+    @ScaledMetric(relativeTo: .body) private var fieldHeight = PopsSize.touchTarget
 
     internal var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                PopsPageTitle(title: "Containers")
                 InventoryCountTilesSkeleton(count: 4)
-                Capsule().fill(Color.popsSurface).frame(height: rowHeight)
-                VStack(spacing: PopsSpacing.sm) {
-                    ForEach(0..<8, id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
-                            .fill(Color.popsSurface)
-                            .frame(height: rowHeight)
-                    }
-                }
+                    .popsShimmer()
+                Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
+                    .popsShimmer()
+                InventoryRowsSkeleton(rows: 8)
             }
-            .popsShimmer()
             .padding(.horizontal, PopsSpacing.lg)
         }
         .scrollDisabled(true)

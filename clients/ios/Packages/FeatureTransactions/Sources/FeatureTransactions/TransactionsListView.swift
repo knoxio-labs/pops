@@ -28,6 +28,9 @@ public struct TransactionsListView: View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.popsBackground)
+            .popsMotion(PopsMotion.smooth, value: model.state)
+            .popsMotion(PopsMotion.smooth, value: model.paging)
+            .popsMotion(PopsMotion.smooth, value: model.isRefreshing)
             .task { await model.loadFirstPage() }
             // Spoken, not merely drawn. VoiceOver does not move focus to a
             // banner that appears above the content or to a footer below it, so
@@ -58,7 +61,8 @@ public struct TransactionsListView: View {
     @ViewBuilder private var content: some View {
         switch model.state {
         case .loading:
-            LoadingStateView(message: TransactionsCopy.loading)
+            TransactionsListSkeleton()
+                .transition(PopsMotion.row)
         case .failed(let error):
             ErrorStateView(
                 message: TransactionsCopy.message(for: error),
@@ -66,8 +70,9 @@ public struct TransactionsListView: View {
             ) {
                 Task { await model.loadFirstPage() }
             }
+            .transition(PopsMotion.row)
         case .empty, .loaded:
-            scrollingContent
+            scrollingContent.transition(PopsMotion.row)
         }
     }
 
@@ -87,6 +92,10 @@ extension TransactionsListView {
     private var scrollingContent: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
+                if model.isRefreshing {
+                    TransactionRowSkeleton(accessibilityLabel: TransactionsCopy.refreshing)
+                        .transition(PopsMotion.row)
+                }
                 rows
                 pagingFooter
             }
@@ -117,10 +126,12 @@ extension TransactionsListView {
                     TransactionRowView(transaction: transaction, presentation: presentation)
                 }
                 .buttonStyle(.plain)
+                .transition(PopsMotion.row)
                 .accessibilityIdentifier(TransactionsAccessibility.row(transaction.id))
             }
         } else {
             EmptyStateView(message: TransactionsCopy.empty)
+                .transition(PopsMotion.row)
         }
     }
 }
@@ -128,21 +139,15 @@ extension TransactionsListView {
 extension TransactionsListView {
     /// The tail of the list, and the only thing that asks for another page.
     ///
-    /// `idle` and `loading` draw the same line on purpose: appearing is what
-    /// starts the fetch, so by the time anybody reads it the sentence is true.
-    /// A spinner would be a second loading treatment for `DesignSystem` to keep
-    /// in step with the first, and it would say less at the accessibility text
-    /// sizes than the words do.
+    /// `idle` and `loading` draw the same row placeholders: appearing is what
+    /// starts the fetch, so the rows remain in place until their data arrives.
     @ViewBuilder private var pagingFooter: some View {
         switch model.paging {
         case .exhausted:
             EmptyView()
         case .idle, .loading:
-            Text(TransactionsCopy.loadingMore)
-                .font(.popsBody)
-                .foregroundStyle(Color.popsMutedForeground)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, PopsSpacing.lg)
+            TransactionPageSkeleton()
+                .transition(PopsMotion.row)
                 // `.task` rather than `.onAppear` with a `Task` inside it: an
                 // unstructured task is not tied to this view's lifetime, so
                 // scrolling away or navigating out leaves the fetch running and

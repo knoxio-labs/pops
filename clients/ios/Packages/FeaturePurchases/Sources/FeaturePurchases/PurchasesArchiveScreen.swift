@@ -15,7 +15,7 @@ internal struct PurchasesArchiveScreen: View {
         Group {
             switch model.topLevelState {
             case .loading:
-                PopsListSkeleton(rows: 6)
+                PurchasesArchiveSkeleton(rows: 6, showsMonth: true)
                     .padding(.horizontal, PopsSpacing.lg)
             case .failed(let error):
                 firstPageFailure(error)
@@ -29,6 +29,7 @@ internal struct PurchasesArchiveScreen: View {
         .popsTitleDisplay(large: false)
         .toolbar { ToolbarItem(placement: .principal) { scopePicker } }
         .task { await model.loadFirstPageIfNeeded() }
+        .popsMotion(value: model.topLevelState)
     }
 
     private var archive: some View {
@@ -63,6 +64,7 @@ internal struct PurchasesArchiveScreen: View {
             }
             .popsMotion(value: model.scope)
             .popsMotion(value: model.paging)
+            .popsMotion(value: model.purchases.map(\.id))
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xl)
         }
@@ -141,7 +143,7 @@ internal struct PurchasesArchiveScreen: View {
         case .idle:
             EmptyView()
         case .loading:
-            PopsListSkeleton(rows: 2)
+            PurchasesArchiveSkeleton(rows: 2, showsMonth: false)
                 .accessibilityLabel("Loading earlier purchases")
         case .failed:
             VStack(spacing: PopsSpacing.sm) {
@@ -170,6 +172,32 @@ internal struct PurchasesArchiveScreen: View {
                     .padding(.vertical, PopsSpacing.md)
             }
         }
+    }
+}
+
+private struct PurchasesArchiveSkeleton: View {
+    let rows: Int
+    let showsMonth: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            if showsMonth {
+                Capsule()
+                    .fill(Color.popsSurface)
+                    .frame(width: PopsSize.touchTarget * 2, height: PopsSpacing.md)
+                    .padding(.horizontal, PopsSpacing.md)
+            }
+            ForEach(0..<max(rows, 0), id: \.self) { _ in
+                PurchaseRowSkeleton()
+            }
+        }
+        .padding(.horizontal, PopsSpacing.md)
+        .padding(.vertical, PopsSpacing.sm)
+        .popsShimmer()
+        .popsPanelGround()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading purchases")
+        .transition(.opacity)
     }
 }
 

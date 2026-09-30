@@ -9,6 +9,7 @@ import SwiftUI
 public struct PurchaseBankMatchSection: View {
     private let status: PurchaseSettlement
     private let presentation: PurchaseBankMatchPresentation
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Creates the section from a purchase detail's settlement and bank match.
     public init(
@@ -22,7 +23,7 @@ public struct PurchaseBankMatchSection: View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             PopsSectionHeader(title: PurchaseDetailCopy.bankMatchTitle)
             PopsListPanel {
-                VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+                LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
                     PurchaseDetailMatchRow(
                         status: status,
                         matchedOf: presentation.matchedOf,
@@ -30,10 +31,12 @@ public struct PurchaseBankMatchSection: View {
                     ForEach(presentation.rows) { row in
                         PopsDivider()
                         PurchaseBankMatchRow(row: row)
+                            .transition(reduceMotion ? .identity : PopsMotion.row)
                     }
                 }
             }
         }
+        .popsMotion(value: presentation.rows)
     }
 }
 

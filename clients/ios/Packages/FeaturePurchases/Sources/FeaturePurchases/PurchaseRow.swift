@@ -110,6 +110,33 @@ internal struct PurchaseRowsPanel<Row: Identifiable, Content: View>: View {
     }
 }
 
+internal struct PurchaseRowSkeleton: View {
+    @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget - PopsSpacing.xs
+    @ScaledMetric(relativeTo: .body) private var lineHeight = PopsSpacing.md
+
+    internal var body: some View {
+        HStack(spacing: PopsSpacing.md) {
+            RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
+                .fill(Color.popsSurface)
+                .frame(width: markSize, height: markSize)
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                bar(width: markSize * 2.2)
+                bar(width: markSize * 1.4, height: PopsSpacing.sm)
+            }
+            Spacer(minLength: PopsSpacing.sm)
+            bar(width: PopsSize.touchTarget, height: lineHeight)
+        }
+        .frame(minHeight: PopsSize.touchTarget)
+        .accessibilityHidden(true)
+    }
+
+    private func bar(width: CGFloat, height: CGFloat? = nil) -> some View {
+        Capsule()
+            .fill(Color.popsSurface)
+            .frame(width: width, height: height ?? lineHeight)
+    }
+}
+
 internal struct PurchaseMarkStack: View {
     internal let purchases: [Purchase]
     @ScaledMetric(relativeTo: .body) private var size = PopsSize.touchTarget - PopsSpacing.md

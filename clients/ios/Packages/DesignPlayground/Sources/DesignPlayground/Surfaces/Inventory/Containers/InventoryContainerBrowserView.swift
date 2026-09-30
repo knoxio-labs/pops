@@ -39,7 +39,7 @@ internal struct InventoryContainerBrowserView: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryPageTitle(title: "Containers")
                 if profiles.isEmpty {
                     ContentUnavailableView("No containers", systemImage: "shippingbox")
@@ -109,7 +109,7 @@ internal struct InventoryContainerBrowserView: View {
 
     private var restList: some View {
         InventoryGroundedListPanel {
-            VStack(spacing: PopsSpacing.zero) {
+            LazyVStack(spacing: PopsSpacing.zero) {
                 ForEach(rest) { profile in
                     NavigationLink {
                         InventoryContainerPage(profile: profile)
@@ -125,6 +125,7 @@ internal struct InventoryContainerBrowserView: View {
                     }
                 }
             }
+            .inventoryMotion(value: rest.map(\.id))
         }
     }
 
@@ -157,14 +158,11 @@ internal struct InventoryContainerBrowserSkeleton: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryCountTilesSkeleton(count: 4)
                 Capsule().fill(Color.popsSurface).frame(height: rowHeight)
-                VStack(spacing: PopsSpacing.sm) {
-                    ForEach(0..<8, id: \.self) { _ in block(height: rowHeight) }
-                }
+                InventoryLocationListSkeleton(rows: 8)
             }
-            .popsShimmer()
             .padding(.horizontal, PopsSpacing.lg)
         }
         .scrollDisabled(true)
@@ -172,11 +170,5 @@ internal struct InventoryContainerBrowserSkeleton: View {
         .navigationTitle("Containers")
         .playgroundTitleDisplay(large: true)
         .accessibilityLabel("Loading")
-    }
-
-    private func block(height: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
-            .fill(Color.popsSurface)
-            .frame(height: height)
     }
 }

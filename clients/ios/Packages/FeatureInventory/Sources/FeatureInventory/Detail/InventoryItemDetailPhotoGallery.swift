@@ -59,7 +59,7 @@ internal struct InventoryItemDetailHeroPhotos: View {
 
     private var strip: some View {
         ScrollView(.horizontal) {
-            HStack(spacing: PopsSpacing.xs) {
+            LazyHStack(spacing: PopsSpacing.xs) {
                 ForEach(photos.dropFirst()) { photo in
                     Button {
                         viewing = photo

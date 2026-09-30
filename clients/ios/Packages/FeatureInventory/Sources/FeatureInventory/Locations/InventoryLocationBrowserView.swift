@@ -35,11 +35,12 @@ internal struct InventoryLocationBrowserView: View {
     internal var body: some View {
         Group {
             switch model.tree.phase {
-            case .loading: InventoryLocationBrowserSkeleton()
-            case .unavailable: InventoryUnavailableView { generation += 1 }
-            case .loaded(let tree): content(tree)
+            case .loading: InventoryLocationBrowserSkeleton().transition(.opacity)
+            case .unavailable: InventoryUnavailableView { generation += 1 }.transition(.opacity)
+            case .loaded(let tree): content(tree).transition(.opacity)
             }
         }
+        .popsMotion(value: model.tree.phase)
         .task(id: generation) { await model.observe() }
         .inventoryRunnerChrome(model.runner)
     }
@@ -56,7 +57,7 @@ internal struct InventoryLocationBrowserView: View {
     private func content(_ tree: InventoryLocationTree) -> some View {
         @Bindable var model = model
         return ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 PopsPageTitle(title: "Locations")
                 if let offline = model.offlineLine {
                     InventoryLocationNoticeLine(

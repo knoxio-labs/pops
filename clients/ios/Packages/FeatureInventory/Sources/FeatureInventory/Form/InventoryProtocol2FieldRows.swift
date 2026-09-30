@@ -48,8 +48,10 @@ internal struct InventoryProtocol2FieldRow: View {
             Text(field.label)
                 .font(.popsHeadline)
                 .accessibilityAddTraits(.isHeader)
-            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                manyEntryRow(entry, index: index, count: entries.count)
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                    manyEntryRow(entry, index: index, count: entries.count)
+                }
             }
             Button("Add \(field.label)", systemImage: "plus", action: add)
                 .buttonStyle(.borderless)

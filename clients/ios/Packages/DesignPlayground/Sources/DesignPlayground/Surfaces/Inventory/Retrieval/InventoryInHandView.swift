@@ -35,7 +35,7 @@ internal struct InventoryInHandView: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryPageTitle(title: "In hand")
                 if let offline {
                     InventoryLocationNoticeLine(
@@ -88,7 +88,7 @@ internal struct InventoryInHandView: View {
 internal struct InventoryInHandSkeleton: View {
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryPageTitle(title: "In hand")
                 InventoryLocationListSkeleton(rows: 5)
             }

@@ -127,19 +127,23 @@ internal struct InventoryStoreExistingPicker: View {
         List {
             switch model.candidates {
             case .loading:
-                PopsListSkeleton(rows: 6)
+                InventoryRowsSkeleton(rows: 6, showsTrailingValue: false)
+                    .transition(.opacity)
             case .unavailable:
                 VStack(alignment: .leading, spacing: PopsSpacing.sm) {
                     Text(InventoryCopy.unavailable)
                         .foregroundStyle(Color.popsMutedForeground)
                     Button("Retry") { Task { await model.observe() } }
                 }
+                .transition(.opacity)
             case .loaded:
                 rows(model.shownCandidates)
+                    .transition(.opacity)
             }
         }
         .inventoryInsetGroupedList()
         .popsMotion(value: model.selected)
+        .popsMotion(value: model.candidates)
         .inventorySearchable(text: $model.query, isPresented: $searching, prompt: "Search items")
         .task(id: model.query) { await model.observe() }
         .navigationTitle("Store in \(model.target.name)")
@@ -178,8 +182,7 @@ internal struct InventoryStoreExistingPicker: View {
             if model.nextPageFailed {
                 Button("Retry loading more") { Task { await model.retryNextPage() } }
             } else if model.isLoadingNextPage {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
+                InventoryRowsSkeleton(rows: 1, showsTrailingValue: false)
             }
         }
     }

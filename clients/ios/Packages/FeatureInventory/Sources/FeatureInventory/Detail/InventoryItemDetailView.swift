@@ -44,7 +44,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.md) {
                 InventoryItemDetailHeader(
                     detail: detail, load: { await model.photo($0, variant: $1) },
                     manage: photoManagement)

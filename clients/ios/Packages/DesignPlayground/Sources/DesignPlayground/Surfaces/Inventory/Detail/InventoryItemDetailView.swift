@@ -58,7 +58,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     internal var body: some View {
         let shown = shown
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.md) {
                 InventoryItemDetailHeader(detail: shown)
                 InventoryItemDetailFacts(detail: shown)
                 InventoryItemDetailLifecycleNotice(detail: shown)

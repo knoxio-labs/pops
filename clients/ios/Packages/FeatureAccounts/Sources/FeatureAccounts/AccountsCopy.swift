@@ -12,6 +12,7 @@ internal enum AccountsCopy {
     internal static let noMatches = "No accounts match this search."
     internal static let retry = "Retry"
     internal static let searchPlaceholder = "Search accounts"
+    internal static let refreshing = "Refreshing accounts"
     internal static let loadingMore = "Loading more accounts…"
     internal static let loadMoreFailed = "Could not load more accounts."
 

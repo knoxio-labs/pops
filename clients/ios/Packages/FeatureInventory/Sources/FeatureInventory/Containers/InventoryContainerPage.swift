@@ -23,26 +23,33 @@ internal struct InventoryContainerPage: View {
 
     internal var body: some View {
         Group {
-            switch InventoryContainerPagePhase(detail: detail.phase, container: model.content.phase)
-            {
+            switch phase {
             case .loading:
-                InventoryContainerPageSkeleton()
+                InventoryContainerPageSkeleton().transition(.opacity)
             case .unavailable:
-                InventoryUnavailableView { generation += 1 }
+                InventoryUnavailableView { generation += 1 }.transition(.opacity)
             case .missing:
                 ContentUnavailableView(
-                    "Container not found", systemImage: InventorySymbol.openContainer.system)
+                    "Container not found", systemImage: InventorySymbol.openContainer.system
+                )
+                .transition(.opacity)
             case .loaded(let item, let profile):
                 page(item, profile)
                     .onChange(of: profile, initial: true) { _, latest in model.note(latest) }
+                    .transition(.opacity)
             }
         }
+        .popsMotion(value: phase)
         .task(id: generation) {
             async let container: Void = model.observe()
             async let item: Void = detail.observe()
             _ = await (container, item)
         }
         .inventoryDetailFailureAlert(detail)
+    }
+
+    private var phase: InventoryContainerPagePhase {
+        InventoryContainerPagePhase(detail: detail.phase, container: model.content.phase)
     }
 
     private func page(_ item: InventoryItemDetail, _ profile: InventoryContainerProfile)
@@ -132,7 +139,6 @@ internal struct InventoryContainerPageSkeleton: View {
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
             blocks
-                .popsShimmer()
             Spacer(minLength: PopsSpacing.zero)
         }
         .background(Color.popsBackground)
@@ -144,27 +150,28 @@ internal struct InventoryContainerPageSkeleton: View {
 
     private var blocks: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
-            Color.popsSurface
-                .frame(height: heroHeight)
-                .frame(maxWidth: .infinity)
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                bar(width: 0.7, height: line)
-                bar(width: 0.4, height: line)
-                bar(width: 0.55, height: line)
-            }
-            .padding(.horizontal, PopsSpacing.lg)
-            HStack(spacing: PopsSpacing.lg) {
-                ForEach(0..<4, id: \.self) { _ in
-                    Circle().fill(Color.popsSurface)
-                        .frame(width: control, height: control)
+            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                Color.popsSurface
+                    .frame(height: heroHeight)
+                    .frame(maxWidth: .infinity)
+                VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                    bar(width: 0.7, height: line)
+                    bar(width: 0.4, height: line)
+                    bar(width: 0.55, height: line)
                 }
+                .padding(.horizontal, PopsSpacing.lg)
+                HStack(spacing: PopsSpacing.lg) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        Circle().fill(Color.popsSurface)
+                            .frame(width: control, height: control)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, PopsSpacing.sm)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, PopsSpacing.sm)
-            VStack(spacing: PopsSpacing.sm) {
-                ForEach(0..<4, id: \.self) { _ in bar(width: 1, height: control) }
-            }
-            .padding(.horizontal, PopsSpacing.lg)
+            .popsShimmer()
+            InventoryRowsSkeleton(rows: 4)
+                .padding(.horizontal, PopsSpacing.lg)
         }
     }
 

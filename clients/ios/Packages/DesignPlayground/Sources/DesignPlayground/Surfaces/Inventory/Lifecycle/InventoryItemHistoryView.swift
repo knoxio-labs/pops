@@ -42,12 +42,13 @@ internal struct InventoryItemHistoryView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if isLoading {
-                    InventoryLocationListSkeleton(rows: 8)
+                    InventoryLocationListSkeleton(rows: 8).transition(.opacity)
                 } else {
-                    months
+                    months.transition(.opacity)
                 }
             }
             .inventoryMotion(value: kind)
+            .inventoryMotion(value: isLoading)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
@@ -69,21 +70,24 @@ internal struct InventoryItemHistoryView: View {
         if groups.isEmpty {
             InventoryCentredLine(text: kind.map { "No \($0.title.lowercased())" } ?? "No history")
         } else {
-            ForEach(groups) { month in
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    InventoryLocationSectionHeader(
-                        title: month.title, trailing: "\(month.entries.count)")
-                    InventoryLocationPanel(rows: month.entries) { entry in
-                        Button {
-                            viewing = entry
-                        } label: {
-                            InventoryHistoryLine(entry: entry)
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                ForEach(groups) { month in
+                    VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                        InventoryLocationSectionHeader(
+                            title: month.title, trailing: "\(month.entries.count)")
+                        InventoryLocationPanel(rows: month.entries) { entry in
+                            Button {
+                                viewing = entry
+                            } label: {
+                                InventoryHistoryLine(entry: entry)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .transition(InventoryMotion.row)
                 }
-                .transition(.opacity)
             }
+            .inventoryMotion(value: groups.map(\.id))
         }
     }
 

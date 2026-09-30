@@ -11,7 +11,7 @@ internal struct InventoryOpenContainersView: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 if containers.isEmpty {
                     ContentUnavailableView("No open containers", systemImage: "shippingbox")
                 } else {
@@ -35,18 +35,11 @@ internal struct InventoryOpenContainersView: View {
 
 /// The open-containers screen before its records arrive.
 internal struct InventoryOpenContainersSkeleton: View {
-    @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
-
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                ForEach(0..<4, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
-                        .fill(Color.popsSurface)
-                        .frame(height: rowHeight)
-                }
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.md) {
+                InventoryLocationListSkeleton(rows: 4)
             }
-            .popsShimmer()
             .padding(PopsSpacing.lg)
             .background {
                 RoundedRectangle(cornerRadius: PopsRadius.card)
