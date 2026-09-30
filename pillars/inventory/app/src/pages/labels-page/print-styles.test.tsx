@@ -11,4 +11,12 @@ describe('LabelPrintStyles', () => {
       /:has\(\.pops-print-root\)\s*\{[^}]*display: block !important;/s
     );
   });
+
+  it('uses block flow for sheet pagination instead of fragmenting a flex child', () => {
+    const { container } = render(<LabelPrintStyles />);
+
+    expect(container.querySelector('style')?.textContent).toMatch(
+      /\.pops-print-root\s*\{[^}]*display: block !important;/s
+    );
+  });
 });

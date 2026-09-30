@@ -293,6 +293,9 @@ describe('LabelsPage', () => {
     const qr = document.querySelector('[data-slot-kind="label"] svg');
     if (!(qr instanceof SVGElement)) throw new Error('no QR on the label');
     expect(decodeQrSvg(qr)).toBe(`pops://inventory/item/${GRINDER}`);
+    expect(document.querySelector<HTMLElement>('[data-slot-kind="label"]')?.style.top).toBe(
+      '15.15mm'
+    );
   });
 
   it('prints on A4 with no page margin', async () => {

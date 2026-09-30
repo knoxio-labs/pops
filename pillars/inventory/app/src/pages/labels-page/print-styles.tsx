@@ -26,7 +26,9 @@ const PRINT_CSS = `
     position: static !important; overflow: visible !important; zoom: 1 !important;
     transform: none !important; box-shadow: none !important;
   }
-  .${PRINT_ROOT_CLASS} { zoom: 1 !important; gap: 0 !important; padding: 0 !important; }
+  .${PRINT_ROOT_CLASS} {
+    display: block !important; zoom: 1 !important; gap: 0 !important; padding: 0 !important;
+  }
   .${PRINT_SHEET_CLASS} { break-after: page; box-shadow: none !important; outline: 0 !important; }
   .${PRINT_SHEET_CLASS}:last-child { break-after: auto; }
 }
