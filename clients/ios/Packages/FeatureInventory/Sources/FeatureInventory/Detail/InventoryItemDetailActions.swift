@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -72,8 +73,8 @@ internal struct InventoryItemDetailToolbar: ToolbarContent {
     }
 }
 
-/// Label, share, and the lifecycle verbs. Printing a label is done on the
-/// web (POPS-3992); this menu has nothing to reprint.
+/// Label, duplicate, share, and the lifecycle verbs. Printing a label is
+/// done on the web (POPS-3992); this menu has nothing to reprint.
 internal struct InventoryItemDetailMenu: View {
     internal let record: InventoryDetailRecord
     internal let open: (InventoryItemDetailPending) -> Void
@@ -118,12 +119,33 @@ internal struct InventoryItemDetailMenu: View {
                     }
                 }
             }
+            if Self.offersDuplicate(record.lifecycle) {
+                Button {
+                    open(.duplicate)
+                } label: {
+                    Label {
+                        Text("Duplicate")
+                    } icon: {
+                        InventorySymbol.duplicate.image
+                    }
+                }
+            }
             ShareLink(item: shareText) {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
             InventoryLifecycleMenuItems(record: record, perform: perform)
         } label: {
             Label("More", systemImage: "ellipsis")
+        }
+    }
+
+    /// Whether the menu offers Duplicate: hidden where the lifecycle menu
+    /// offers nothing, a destroyed item or a lifecycle this build does not
+    /// know, like the rest of the menu's writes.
+    internal static func offersDuplicate(_ lifecycle: InventoryLifecycle) -> Bool {
+        switch lifecycle {
+        case .active, .retired, .discarded, .lost: true
+        case .destroyed, .unrecognised: false
         }
     }
 

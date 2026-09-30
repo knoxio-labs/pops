@@ -265,4 +265,88 @@ describe('item form save operations', () => {
       },
     ]);
   });
+
+  it('applies create-time overrides and attaches copied photos to the new item in order', async () => {
+    const sent: { command: InventoryCommand; entityId: string; baseRevision?: number }[] = [];
+    let revision = 1;
+    const send: SendCommand = async (command, entityId, options) => {
+      sent.push({ command, entityId, baseRevision: options?.baseRevision });
+      return savedResult(entityId, revision++);
+    };
+    const draft = { ...blankDraft(), typeId: 'cable', overrides: { 'replacement-value': '19.99' } };
+
+    const result = await createItem({
+      draft,
+      type: computedCable,
+      catalogueRevision: 12,
+      copiedPhotos: ['a'.repeat(64), 'b'.repeat(64)],
+      queryClient: new QueryClient(),
+      send,
+    });
+
+    const createdId = sent[0]?.entityId;
+    expect(sent.map((entry) => entry.command.op)).toEqual([
+      'item.create',
+      'item.setOverride',
+      'item.attachPhoto',
+      'item.attachPhoto',
+    ]);
+    expect(sent.every((entry) => entry.entityId === createdId)).toBe(true);
+    expect(sent[1]).toMatchObject({
+      command: { args: { fieldId: 'replacement-value', values: ['19.99'] } },
+      baseRevision: 1,
+    });
+    expect(sent.slice(2).map((entry) => entry.command.args)).toEqual([
+      { sha256: 'a'.repeat(64), position: 0 },
+      { sha256: 'b'.repeat(64), position: 1 },
+    ]);
+    expect(result).toEqual({
+      status: 'saved',
+      result: { itemId: createdId, revision: 1, photos: 2 },
+    });
+  });
+
+  it('keeps a created item saved when copying its photos or overrides is refused', async () => {
+    const send: SendCommand = async (command, entityId) => {
+      if (command.op === 'item.create') return savedResult(entityId, 1);
+      if (command.op === 'item.attachPhoto' && command.args.sha256.startsWith('b'))
+        return { status: 'refused', refusal: { kind: 'message', message: 'media missing' } };
+      if (command.op === 'item.setOverride')
+        return { status: 'refused', refusal: { kind: 'message', message: 'no' } };
+      return savedResult(entityId, 2);
+    };
+
+    const result = await createItem({
+      draft: { ...blankDraft(), typeId: 'cable', overrides: { 'replacement-value': '5' } },
+      type: computedCable,
+      catalogueRevision: 12,
+      copiedPhotos: ['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)],
+      queryClient: new QueryClient(),
+      send,
+    });
+
+    expect(result.status).toBe('saved');
+    if (result.status !== 'saved') throw new Error('expected a saved create');
+    expect(result.result.photos).toBe(2);
+    expect(result.result.incomplete).toBe('Created, but 1 override and 1 photo did not copy.');
+  });
+
+  it('sends nothing after a refused create', async () => {
+    const ops: string[] = [];
+    const send: SendCommand = async (command) => {
+      ops.push(command.op);
+      return { status: 'refused', refusal: { kind: 'message', message: 'no' } };
+    };
+
+    await createItem({
+      draft: { ...blankDraft(), typeId: 'cable', overrides: { 'replacement-value': '5' } },
+      type: computedCable,
+      catalogueRevision: 12,
+      copiedPhotos: ['a'.repeat(64)],
+      queryClient: new QueryClient(),
+      send,
+    });
+
+    expect(ops).toEqual(['item.create']);
+  });
 });

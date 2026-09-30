@@ -108,3 +108,12 @@ export function codeBlocksSave(entry: CodeEntry): string | null {
   if (entry.status === 'suggesting') return 'Finding a code…';
   return null;
 }
+
+/** Bumps a code's trailing number, keeping its zero padding; codes without one duplicate to empty. */
+export function nextCode(code: string | null): string {
+  const match = /^(.*?)(\d+)$/u.exec(code ?? '');
+  if (match === null) return '';
+  const [, prefix = '', digits = ''] = match;
+  const bumped = (BigInt(digits) + 1n).toString();
+  return `${prefix}${bumped.padStart(digits.length, '0')}`;
+}

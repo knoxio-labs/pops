@@ -141,6 +141,9 @@ export function createMenuHandler(context: DetailVerbHandlerContext): (entry: Me
           (error: unknown) => context.setRefusal(errorReason(error))
         );
         return;
+      case 'duplicate':
+        void context.navigate(`/inventory/items/new?from=${encodeURIComponent(context.item.id)}`);
+        return;
       case 'label':
         void context.navigate(labelsHref([context.item.id]));
         return;

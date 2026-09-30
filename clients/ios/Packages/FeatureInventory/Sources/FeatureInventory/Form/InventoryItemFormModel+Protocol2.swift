@@ -42,7 +42,10 @@ extension InventoryItemFormModel {
             selected.overrides = Dictionary(
                 uniqueKeysWithValues: current.overrides.filter { fieldIds.contains($0.key) })
         }
-        if case .create = request { selected.prefillDefaults(for: type) }
+        switch request {
+        case .create, .duplicate: selected.prefillDefaults(for: type)
+        case .edit, .labelling, .repair: break
+        }
         selected.typeSelectionChanged = true
         protocol2Draft = selected
         if type.isContainer { self.draft.quantity = 1 }

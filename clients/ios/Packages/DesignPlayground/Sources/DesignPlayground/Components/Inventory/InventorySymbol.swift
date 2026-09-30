@@ -109,7 +109,8 @@ internal struct InventorySymbol: Hashable {
     internal static let externalIdentifier = InventorySymbol(
         system: "barcode", lucide: "Barcode")
     internal static let provenance = InventorySymbol(system: "doc.text", lucide: "FileText")
-    internal static let duplicate = InventorySymbol(system: "doc.on.doc", lucide: "Copy")
+    internal static let duplicate = InventorySymbol(
+        system: "plus.square.on.square", lucide: "CopyPlus")
     internal static let group = InventorySymbol(system: "square.stack", lucide: "Layers")
     internal static let reorder = InventorySymbol(
         system: "line.3.horizontal", lucide: "GripVertical")

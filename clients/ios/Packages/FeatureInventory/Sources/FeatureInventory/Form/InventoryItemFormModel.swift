@@ -132,6 +132,8 @@ internal final class InventoryItemFormModel {
         switch request {
         case .create(let placement):
             draft = InventoryItemDraft(id: mintId(), placement: placement ?? .hand)
+        case .duplicate:
+            draft = InventoryItemDraft(id: mintId())
         case .edit(let id), .labelling(let id):
             draft = InventoryItemDraft(id: id)
         case .repair:
@@ -290,6 +292,8 @@ extension InventoryItemFormModel {
             }
             clampContainerQuantity()
             phase = .ready
+        case .duplicate:
+            phase = seedDuplicate(context)
         case .repair:
             phase = seedRepair(context)
         }

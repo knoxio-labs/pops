@@ -1,3 +1,4 @@
+import { codeEntry, codeReducer, nextCode } from './code-assist';
 import { formTypesOf } from './field-model';
 import {
   fieldDraftsFromProtocolFields,
@@ -30,6 +31,8 @@ export interface ItemFormOpening {
   readonly editing: { readonly id: string; readonly name: string } | null;
   readonly revision: number | null;
   readonly computed: Readonly<Record<string, ComputedDisplay>>;
+  /** Stored photo hashes attached to the item once it is created; empty unless duplicating. */
+  readonly copiedPhotos: readonly string[];
 }
 
 function placementFromWeb(item: WebItem): Placement {
@@ -132,7 +135,7 @@ export function createOpening(
   else if (destination !== null && world.items.has(destination))
     placement = { kind: 'container', containerId: destination };
   const draft = blankDraft(placement, typeId);
-  return { draft, initial: draft, editing: null, revision: null, computed: {} };
+  return { draft, initial: draft, editing: null, revision: null, computed: {}, copiedPhotos: [] };
 }
 
 /** Opens an edit form and resolves stored reference labels through the supplied placement world. */
@@ -149,6 +152,32 @@ export function editOpening(
     editing: { id: item.id, name: item.name },
     revision: item.revision,
     computed: computedFromItem(item),
+    copiedPhotos: [],
+  };
+}
+
+/**
+ * Opens a create form as a copy of an existing item. Everything is carried over except the
+ * code, which must be unique: its trailing number is bumped and checked, or it is left empty.
+ */
+export function duplicateOpening(
+  item: WebItem,
+  catalogue: CatalogueDescriptor | undefined,
+  world: PlacementWorld
+): ItemFormOpening {
+  const source = draftFromItem(item, formTypesOf(catalogue), world);
+  const draft: ItemDraft = {
+    ...source,
+    mode: 'create',
+    code: codeReducer(codeEntry(), { type: 'typed', value: nextCode(item.code) }),
+  };
+  return {
+    draft,
+    initial: draft,
+    editing: null,
+    revision: null,
+    computed: computedFromItem(item),
+    copiedPhotos: item.photos.map((photo) => photo.sha256),
   };
 }
 

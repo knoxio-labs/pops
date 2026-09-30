@@ -1,7 +1,10 @@
 # Item create / edit form
 
 `/inventory/items/new` and `/inventory/items/:id/edit` use the same form
-surface. `useItemForm` owns the draft reducer, catalogue and placement sources,
+surface. `/inventory/items/new?from=<id>` opens the create form as a copy of
+that item: every value, override and photo is carried, and only the code
+changes, since codes are unique. Its trailing number is bumped (padding kept)
+and checked like a typed code; a code without one is left empty. `useItemForm` owns the draft reducer, catalogue and placement sources,
 online code assistance, mutation commands, navigation guard, and Save and start
 another state.
 
@@ -21,6 +24,12 @@ protocol-2 value contract; edit patches include explicit clears so an emptied
 field is removed from the item. Edit mutations carry the published catalogue
 revision, start at the opening item revision, and advance their base revision
 after each applied command.
+
+`item.create` carries neither computed overrides nor photos, so a create
+applies them afterwards against the new item: overrides through the override
+commands, a copy's photos by re-attaching their stored hashes. The item already
+exists by then, so a refused follow-up is reported as not copied instead of
+refusing the save, which would let a retry create the item twice.
 
 Photos selected while creating are staged until the item save succeeds. Photos
 selected while editing upload immediately through the content-addressed media

@@ -2,7 +2,7 @@
 
 The item detail page keeps placement and lifecycle changes on the current route. Header verbs are
 derived from the item state: `Pick up`, `Put back`, `Move`, `Store here`, container access, `Edit`,
-and the grouped More menu. Successful reversible mutations use the shared inventory Undo toast;
+and the grouped More menu, whose Duplicate opens the create form as a copy of the item. Successful reversible mutations use the shared inventory Undo toast;
 refusals stay below the header as `Not saved` feedback.
 
 Stored catalogue facts use the field's stable catalogue key for lookup and edit in place. The

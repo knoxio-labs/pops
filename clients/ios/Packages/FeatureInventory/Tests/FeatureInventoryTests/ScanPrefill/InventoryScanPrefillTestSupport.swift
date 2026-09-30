@@ -176,7 +176,7 @@ internal enum ScanPrefillFixture {
     private static func item(for request: InventoryItemFormRequest) -> InventoryItem? {
         let id: String
         switch request {
-        case .edit(let itemId), .labelling(let itemId): id = itemId
+        case .edit(let itemId), .labelling(let itemId), .duplicate(let itemId): id = itemId
         case .create, .repair: return nil
         }
         return InventoryItem(

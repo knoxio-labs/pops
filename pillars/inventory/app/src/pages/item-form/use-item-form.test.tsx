@@ -55,6 +55,7 @@ function opening(): ItemFormOpening {
     editing: { id: 'item-1', name: 'Desk lamp' },
     revision: 1,
     computed: {},
+    copiedPhotos: [],
   };
 }
 

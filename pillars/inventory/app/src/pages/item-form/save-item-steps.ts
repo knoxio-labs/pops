@@ -128,7 +128,8 @@ async function applyCoreEdit(
   });
 }
 
-function overrideCommand(
+/** Maps one override change to its typed set or clear command. */
+export function overrideCommand(
   change: ReturnType<typeof draftOverrideChanges>[number]
 ): InventoryCommand {
   return change.kind === 'set'

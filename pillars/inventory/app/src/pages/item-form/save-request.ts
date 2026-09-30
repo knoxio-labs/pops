@@ -21,6 +21,8 @@ export interface SaveRequestOptions {
   readonly submitted: ItemDraft;
   readonly baseRevision: number | null;
   readonly photos: PhotoUploads;
+  /** Photos carried from a duplicated item; only the first create of a session attaches them. */
+  readonly copiedPhotos: readonly string[];
 }
 
 /** Saves an item, then waits for its photo queue without undoing the item save. */
@@ -30,6 +32,7 @@ export async function saveRequest({
   submitted,
   baseRevision,
   photos,
+  copiedPhotos,
 }: SaveRequestOptions): Promise<SaveResult> {
   const type = typeFor(options, submitted);
   const catalogueRevision = options.sources.revision;
@@ -44,7 +47,7 @@ export async function saveRequest({
   }
   let result: SaveResult;
   if (options.opening.editing === null) {
-    result = await saveApi.create(submitted, type, catalogueRevision);
+    result = await saveApi.create(submitted, type, catalogueRevision, copiedPhotos);
   } else if (baseRevision === null) {
     result = {
       status: 'refused',
@@ -64,6 +67,7 @@ export async function saveRequest({
     });
   }
   if (result.status !== 'saved') return result;
+  if (result.result.incomplete !== undefined) toast.error(result.result.incomplete);
   const uploaded = await photos.flush(result.result.itemId);
   const failed = uploaded.queue.some((photo) => photo.status.kind === 'failed');
   if (failed) {
@@ -72,6 +76,6 @@ export async function saveRequest({
   }
   return {
     status: 'saved',
-    result: { ...result.result, photos: uploaded.attached },
+    result: { ...result.result, photos: (result.result.photos ?? 0) + uploaded.attached },
   };
 }

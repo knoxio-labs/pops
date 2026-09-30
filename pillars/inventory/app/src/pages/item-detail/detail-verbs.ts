@@ -1,4 +1,4 @@
-import { Link2, Pencil } from 'lucide-react';
+import { CopyPlus, Link2, Pencil } from 'lucide-react';
 
 import { OFFLINE_REASON } from '../../foundation/feedback/state-banner';
 import { actCopy, lifecycleActs, restoreLabel } from '../../foundation/lifecycle/lifecycle-model';
@@ -98,6 +98,7 @@ function recordEntries(item: ItemRowModel): MenuEntry[] {
       ...(item.code === null ? { disabledReason: 'No code yet. Edit the item to add one.' } : {}),
     },
     { id: 'copy-link', label: 'Copy link', icon: Link2 },
+    { id: 'duplicate', label: 'Duplicate', icon: CopyPlus },
     { id: 'label', label: 'Print label', icon: I.label },
     { id: 'history', label: 'History', icon: I.history, shortcutId: 'detail-history' },
   ];

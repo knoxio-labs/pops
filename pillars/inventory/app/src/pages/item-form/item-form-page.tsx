@@ -8,7 +8,7 @@ import { CancelDialog } from './cancel-dialog';
 import { FieldsCard } from './fields-card';
 import { FormBanners } from './form-banners';
 import { FormHeader } from './form-header';
-import { createOpening, editOpening } from './form-opening';
+import { loadErrorCopy, openingFor } from './form-page-opening';
 import { FormLoadError, FormSkeleton } from './form-skeleton';
 import { IdentityCard } from './identity-card';
 import { useFormSources } from './use-form-sources';
@@ -80,25 +80,6 @@ function justCreatedFor(
     ...created,
     onOpen: () => void navigate(`/inventory/items/${created.itemId}`),
   };
-}
-
-function openingFor(
-  id: string | undefined,
-  search: string,
-  sources: ReturnType<typeof useFormSources>
-): ItemFormOpening {
-  if (id !== undefined && sources.item !== null && sources.catalogue !== undefined)
-    return editOpening(sources.item, sources.catalogue, sources.world);
-  return createOpening(new URLSearchParams(search), sources.world, sources.catalogue);
-}
-
-function loadErrorCopy(
-  id: string | undefined,
-  sources: ReturnType<typeof useFormSources>
-): { readonly title: string; readonly subject: string } {
-  if (id === undefined) return { title: 'New item', subject: 'the item types' };
-  if (sources.item === null) return { title: 'Edit item', subject: 'the item' };
-  return { title: `Edit ${sources.item.name}`, subject: sources.item.name };
 }
 
 function FormCards({
@@ -192,7 +173,8 @@ function FormContent({
 export function ItemFormPage(): ReactElement {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const sources = useFormSources(id);
+  const sourceId = new URLSearchParams(location.search).get('from') ?? undefined;
+  const sources = useFormSources(id ?? sourceId);
   const opening = useMemo(
     () => openingFor(id, location.search, sources),
     [id, location.search, sources]
@@ -200,14 +182,14 @@ export function ItemFormPage(): ReactElement {
 
   if (sources.status === 'pending') return <FormSkeleton />;
   if (sources.status === 'error') {
-    const errorCopy = loadErrorCopy(id, sources);
+    const errorCopy = loadErrorCopy(id, sourceId, sources);
     return <FormLoadError {...errorCopy} onRetry={sources.retry} />;
   }
-  if (id !== undefined && sources.item === null)
+  if ((id ?? sourceId) !== undefined && sources.item === null)
     return <FormLoadError title="Item not found" subject="this item" onRetry={sources.retry} />;
   return (
     <FormContent
-      key={`${id ?? 'new'}:${sources.item?.updatedAt ?? 'blank'}`}
+      key={`${id ?? `new:${sourceId ?? ''}`}:${sources.item?.updatedAt ?? 'blank'}`}
       opening={opening}
       sources={sources}
       itemId={id}

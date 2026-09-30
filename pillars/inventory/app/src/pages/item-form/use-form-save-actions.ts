@@ -48,6 +48,7 @@ function applySaveResult({
   setSaveError,
   setJustCreated,
   setBaseRevision,
+  clearCopiedPhotos,
   photos,
   navigate,
 }: {
@@ -58,6 +59,7 @@ function applySaveResult({
   readonly setSaveError: SetSaveError;
   readonly setJustCreated: (created: JustCreated | null) => void;
   readonly setBaseRevision: (revision: number | null) => void;
+  readonly clearCopiedPhotos: () => void;
   readonly photos: PhotoUploads;
   readonly navigate: ReturnType<typeof useNavigate>;
 }): void {
@@ -82,6 +84,7 @@ function applySaveResult({
   setSaveError(null);
   if (result.result.revision !== null) setBaseRevision(result.result.revision);
   if (saveAndNew) {
+    clearCopiedPhotos();
     const next = draftAfterSaveAndNew(savedDraft);
     options.setInitial(next);
     options.dispatch({ type: 'replace', draft: next });
@@ -109,6 +112,7 @@ export function useFormSaveActions(options: FormSaveActionsOptions): FormSaveAct
   const [justCreated, setJustCreated] = useState<JustCreated | null>(null);
   const [settlingPhotos, setSettlingPhotos] = useState(false);
   const [baseRevision, setBaseRevision] = useState<number | null>(options.opening.revision);
+  const [copiedPhotos, setCopiedPhotos] = useState(options.opening.copiedPhotos);
   const runResult = useCallback(
     (result: SaveResult, savedDraft: ItemDraft, saveAndNew: boolean): void => {
       applySaveResult({
@@ -119,6 +123,7 @@ export function useFormSaveActions(options: FormSaveActionsOptions): FormSaveAct
         setSaveError,
         setJustCreated,
         setBaseRevision,
+        clearCopiedPhotos: () => setCopiedPhotos([]),
         photos: options.photos,
         navigate,
       });
@@ -138,11 +143,12 @@ export function useFormSaveActions(options: FormSaveActionsOptions): FormSaveAct
         submitted,
         baseRevision,
         photos: options.photos,
+        copiedPhotos,
       })
         .then((result) => runResult(result, submitted, saveAndNew))
         .finally(() => setSettlingPhotos(false));
     },
-    [baseRevision, options, runResult, saveApi]
+    [baseRevision, copiedPhotos, options, runResult, saveApi]
   );
   const save = useCallback((): void => {
     submit(false);

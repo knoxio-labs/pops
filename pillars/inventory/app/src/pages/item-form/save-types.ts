@@ -53,6 +53,8 @@ export interface SaveSuccess {
   readonly itemId: string;
   readonly revision: number | null;
   readonly photos?: number;
+  /** What an otherwise successful save could not apply, for the user to finish by hand. */
+  readonly incomplete?: string;
 }
 
 /** The result returned by one item-form save operation. */
