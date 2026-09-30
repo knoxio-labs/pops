@@ -88,6 +88,7 @@ export const mockPillarPurchases = {
       merchantSpend: vi
         .fn()
         .mockResolvedValue(callOk({ period: { from: null, to: null }, merchants: [], totals: [] })),
+      productLeaderboard: vi.fn().mockResolvedValue(callOk({ minOrderCount: 1, products: [] })),
     },
     search: { search: vi.fn().mockResolvedValue(callOk({ hits: [] })) },
   },
