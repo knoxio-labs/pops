@@ -66,6 +66,9 @@ import type {
   MobileInventoryItemHistoryErrors,
   MobileInventoryItemHistoryResponses,
   MobileInventoryItemResponses,
+  MobileInventoryListItemsData,
+  MobileInventoryListItemsErrors,
+  MobileInventoryListItemsResponses,
   MobileInventoryMutationsData,
   MobileInventoryMutationsErrors,
   MobileInventoryMutationsResponses,
@@ -317,16 +320,16 @@ export const mobileContactsCreateMerchantAddress = <ThrowOnError extends boolean
   });
 
 /**
- * Every account this device can read, active and archived alike
+ * One cursor-paginated account page after search and filters
  */
 export const mobileFinanceListAccounts = <ThrowOnError extends boolean = false>(
-  options?: Options<MobileFinanceListAccountsData, ThrowOnError>
+  options: Options<MobileFinanceListAccountsData, ThrowOnError>
 ): RequestResult<
   MobileFinanceListAccountsResponses,
   MobileFinanceListAccountsErrors,
   ThrowOnError
 > =>
-  (options?.client ?? client).get<
+  (options.client ?? client).get<
     MobileFinanceListAccountsResponses,
     MobileFinanceListAccountsErrors,
     ThrowOnError
@@ -398,6 +401,18 @@ export const mobileInventorySuggestCodes = <ThrowOnError extends boolean = false
       ...options?.headers,
     },
   });
+
+/**
+ * One bounded, filtered page of live inventory items
+ */
+export const mobileInventoryListItems = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryListItemsData, ThrowOnError>
+): RequestResult<MobileInventoryListItemsResponses, MobileInventoryListItemsErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileInventoryListItemsResponses,
+    MobileInventoryListItemsErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/items', ...options });
 
 /**
  * One item's history, newest first
@@ -705,13 +720,13 @@ export const mobilePurchasesGetMonthSummary = <ThrowOnError extends boolean = fa
  * The item tag vocabulary in use, most-used first, for the search filter sheet
  */
 export const mobilePurchasesPurchaseTags = <ThrowOnError extends boolean = false>(
-  options?: Options<MobilePurchasesPurchaseTagsData, ThrowOnError>
+  options: Options<MobilePurchasesPurchaseTagsData, ThrowOnError>
 ): RequestResult<
   MobilePurchasesPurchaseTagsResponses,
   MobilePurchasesPurchaseTagsErrors,
   ThrowOnError
 > =>
-  (options?.client ?? client).get<
+  (options.client ?? client).get<
     MobilePurchasesPurchaseTagsResponses,
     MobilePurchasesPurchaseTagsErrors,
     ThrowOnError
