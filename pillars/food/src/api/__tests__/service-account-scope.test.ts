@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openFoodDb, type OpenedFoodDb } from '../../db/index.js';
 import { createFoodApiApp } from '../app.js';
-import { foodScopeMap } from '../middleware/service-account-scope.js';
+import { foodRawScopeMap, foodScopeMap } from '../middleware/service-account-scope.js';
 import { createTestTransport } from './test-http.js';
 
 import type { ServiceAccountVerification, ServiceAccountVerifier } from '@pops/pillar-sdk/server';
@@ -62,6 +62,28 @@ describe('food scope map', () => {
     expect(foodScopeMap.routes.length).toBeGreaterThan(0);
     expect(foodScopeMap.routes.every((route) => route.scope.startsWith('food.'))).toBe(true);
     expect(ingredientListScope()).toMatch(/^food\./);
+  });
+
+  it('covers the raw hero-image and ingest-media routes', () => {
+    expect(foodRawScopeMap.routes).toEqual(
+      expect.arrayContaining([
+        {
+          method: 'GET',
+          path: '/recipes/:recipeId/:filename',
+          scope: 'food.heroImage.file',
+        },
+        {
+          method: 'GET',
+          path: '/ingest/source/:sourceId/screenshot',
+          scope: 'food.ingest.media.screenshot',
+        },
+        {
+          method: 'GET',
+          path: '/ingest/source/:sourceId/video',
+          scope: 'food.ingest.media.video',
+        },
+      ])
+    );
   });
 });
 
@@ -147,6 +169,32 @@ describe('routes outside the contract', () => {
     }
 
     expect(verify).not.toHaveBeenCalled();
+  });
+});
+
+describe('raw media routes', () => {
+  it('rejects an unknown key before serving hero images and ingest media', async () => {
+    const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
+    const api = requestOn(app(verify));
+
+    for (const path of [
+      '/recipes/1/hero.jpg',
+      '/ingest/source/abc/screenshot',
+      '/ingest/source/abc/video',
+    ]) {
+      const response = await api.get(path).set('x-api-key', TEST_API_KEY);
+      expect(response.status).toBe(401);
+    }
+
+    expect(verify).toHaveBeenCalledTimes(3);
+  });
+
+  it('requires a matching domain grant before returning a media not-found response', async () => {
+    const response = await requestOn(app(verifierReturning(grantedScopes(['food.heroImage']))))
+      .get('/recipes/1/hero.jpg')
+      .set('x-api-key', TEST_API_KEY);
+
+    expect(response.status).toBe(404);
   });
 });
 

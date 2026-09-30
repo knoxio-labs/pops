@@ -6,9 +6,9 @@
  * factory so the test suite can spin up an in-process `supertest` instance
  * without binding a real port.
  *
- * Contract routes validate presented service-account keys. The worker
- * callback retains its separate per-caller internal credential gate, while
- * uncredentialed user traffic still relies on the perimeter.
+ * Contract and raw media routes validate presented service-account keys. The
+ * worker callback retains its separate per-caller internal credential gate,
+ * while uncredentialed user traffic still relies on the perimeter.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -146,6 +146,12 @@ export function createFoodApiApp(deps: FoodApiDeps): Express {
     res.json(openapiDocument);
   });
 
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
+
   // Binary hero-image serving — registered before the ts-rest endpoints so
   // `…/hero.jpg` resolves to a file; falls through to ts-rest otherwise.
   app.get('/recipes/:recipeId/:filename', serveHeroImage);
@@ -154,12 +160,6 @@ export function createFoodApiApp(deps: FoodApiDeps): Express {
   // and on a distinct subpath, so no collision with the POST `ingest.*` API.
   app.get('/ingest/source/:sourceId/screenshot', makeServeIngestScreenshot(deps.foodDb.db));
   app.get('/ingest/source/:sourceId/video', makeServeIngestVideo(deps.foodDb.db));
-
-  app.use(
-    createServiceAccountScopeMiddleware(
-      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
-    )
-  );
 
   createExpressEndpoints(foodContract, makeFoodRestHandlers(deps), app, {
     requestValidationErrorHandler: (error, req, res, next) => {
