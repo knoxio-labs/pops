@@ -1,7 +1,7 @@
 extension InventoryItemFormModel {
     internal var mode: InventoryItemFormMode {
         switch request {
-        case .create: .create
+        case .create, .duplicate: .create
         case .edit, .labelling: .edit
         case .repair: repairMode
         }

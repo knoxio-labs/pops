@@ -12,6 +12,9 @@ internal struct InventoryItemFormContext: Sendable {
     /// The item being edited; nil for a create, and for an edit whose item
     /// has gone.
     internal let item: InventoryItem?
+    /// The item a `.duplicate` request copies; nil for every other request,
+    /// and when that item has gone. Never the item being saved.
+    internal let duplicating: InventoryItem?
     /// Each computed field's evaluation reconciled with this phone's own
     /// changes (``InventoryComputedValue/display(in:activeCatalogueRevision:revisionOf:)``), by field
     /// ID. Empty for a create: nothing has been evaluated for an item that
@@ -41,10 +44,15 @@ internal struct InventoryItemFormContext: Sendable {
             let item: InventoryItem?
             let placement: InventoryPlacement?
             var repair: InventoryRepair?
+            var duplicating: InventoryItem?
             switch request {
             case .create(let origin):
                 item = nil
                 placement = origin
+            case .duplicate(let id):
+                item = nil
+                duplicating = liveItem(id, in: source)
+                placement = duplicating?.placement
             case .edit(let id), .labelling(let id):
                 item = liveItem(id, in: source)
                 placement = item?.placement
@@ -64,7 +72,7 @@ internal struct InventoryItemFormContext: Sendable {
                 catalogue: source.inventoryCatalogue(),
                 protocol2Catalogue: source.inventoryProtocol2Catalogue(),
                 protocol2ReferenceTargets: targets, isOffline: isOffline,
-                item: item, computedDisplays: displays,
+                item: item, duplicating: duplicating, computedDisplays: displays,
                 computedMissingInputs: missingInputs(of: item, displays: displays, in: source),
                 source: source,
                 placementName: placement.flatMap { name(of: $0, in: source) },

@@ -161,13 +161,15 @@ internal enum InventoryItemDetailPlacement {
 }
 
 /// A screen an Item detail control opens that belongs to the item form: an
-/// edit, or labelling an item that has none yet. Move and Store here open
+/// edit, labelling an item that has none yet, or a new item copied from this
+/// one. Move and Store here open
 /// through the shared placement picker and `InventoryStoreHereSheet`
 /// directly, so they resolve to no pending screen. Printing a label is a web
 /// job (POPS-3992): this phone has nothing to open for it.
 internal enum InventoryItemDetailPending: String, Identifiable {
     case edit
     case label
+    case duplicate
 
     internal init?(actionId: String) {
         switch actionId {
@@ -181,8 +183,8 @@ internal enum InventoryItemDetailPending: String, Identifiable {
 }
 
 /// Where a pending screen from Item detail's action row or More menu goes: the
-/// real item form, editing the item for `.edit`, or opened focused on the
-/// code field for `.label`.
+/// real item form, editing the item for `.edit`, opened focused on the code
+/// field for `.label`, or creating a copy of the item for `.duplicate`.
 ///
 /// A free function rather than inline logic at each call site, because Item
 /// detail keeps this routing in one place so the action row and More menu
@@ -197,6 +199,7 @@ internal enum InventoryItemDetailRouting {
         switch screen {
         case .edit: itemForm?(.edit(itemId))
         case .label: itemForm?(.labelling(itemId))
+        case .duplicate: itemForm?(.duplicate(itemId))
         }
     }
 }

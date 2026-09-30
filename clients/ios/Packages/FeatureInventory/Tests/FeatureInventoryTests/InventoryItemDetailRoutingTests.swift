@@ -1,3 +1,4 @@
+import AppCore
 import Testing
 
 @testable import FeatureInventory
@@ -25,9 +26,37 @@ internal struct InventoryItemDetailRoutingTests {
         #expect(opened == .labelling("item-1"))
     }
 
+    @Test("Duplicate opens a new-item form copying this item, not an edit of it")
+    func duplicateOpensACopy() {
+        var opened: InventoryItemFormRequest?
+        let itemForm = InventoryItemFormPresenter { opened = $0 }
+
+        InventoryItemDetailRouting.present(.duplicate, itemId: "item-1", itemForm: itemForm)
+
+        #expect(opened == .duplicate("item-1"))
+    }
+
     @Test(
-        "With no item form installed, nothing opens for either screen",
-        arguments: [InventoryItemDetailPending.edit, .label]
+        "the More menu offers Duplicate wherever it offers the item's other writes",
+        arguments: [InventoryLifecycle.active, .retired, .discarded, .lost])
+    func menuOffersDuplicate(lifecycle: InventoryLifecycle) {
+        #expect(InventoryItemDetailMenu.offersDuplicate(lifecycle))
+    }
+
+    @Test(
+        "a destroyed item, or one in a lifecycle this build does not know, is not offered Duplicate",
+        arguments: [InventoryLifecycle.destroyed, .unrecognised("melted")])
+    func menuHidesDuplicate(lifecycle: InventoryLifecycle) {
+        #expect(!InventoryItemDetailMenu.offersDuplicate(lifecycle))
+        #expect(
+            InventoryLifecycleMenuEntry.entries(
+                lifecycle: lifecycle, quantity: InventoryQuantity(count: 1)
+            ).isEmpty)
+    }
+
+    @Test(
+        "With no item form installed, nothing opens for any screen",
+        arguments: [InventoryItemDetailPending.edit, .label, .duplicate]
     )
     func withNoInstalledFormOpensNothing(screen: InventoryItemDetailPending) {
         // No itemForm handed in at all: `present` must not crash reaching for

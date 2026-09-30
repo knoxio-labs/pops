@@ -7,6 +7,7 @@ extension InventorySymbol {
     internal static let photo = InventorySymbol(system: "photo")
     internal static let inHand = InventorySymbol(system: "hand.raised")
     internal static let edit = InventorySymbol(system: "pencil")
+    internal static let duplicate = InventorySymbol(system: "plus.square.on.square")
     internal static let addNew = InventorySymbol(system: "plus")
     internal static let split = InventorySymbol(system: "scissors")
     internal static let reduceQuantity = InventorySymbol(system: "minus.circle")

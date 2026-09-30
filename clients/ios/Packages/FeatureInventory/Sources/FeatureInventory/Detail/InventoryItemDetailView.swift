@@ -158,8 +158,9 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     }
 
     /// Routes a pending screen to the real item form: editing for `.edit`,
-    /// focused on the code field for `.label`. Shared by the action row and
-    /// More menu so they cannot disagree about what Edit does.
+    /// focused on the code field for `.label`, a copy for `.duplicate`.
+    /// Shared by the action row and More menu so they cannot disagree about
+    /// what Edit does.
     private func openPending(_ screen: InventoryItemDetailPending) {
         InventoryItemDetailRouting.present(screen, itemId: detail.record.id, itemForm: itemForm)
     }

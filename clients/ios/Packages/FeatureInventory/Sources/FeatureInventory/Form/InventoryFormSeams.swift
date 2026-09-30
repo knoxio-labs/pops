@@ -92,8 +92,8 @@ internal struct InventoryPlacementPicker: Sendable {
     }
 }
 
-/// Which form to open: a new item, optionally somewhere already, or an
-/// existing item to edit.
+/// Which form to open: a new item, optionally somewhere already or copied
+/// from another, or an existing item to edit.
 internal enum InventoryItemFormRequest: Identifiable, Hashable, Sendable {
     /// `placement` pre-fills where the item goes: the container or location
     /// the form was opened from. Nil opens it in hand.
@@ -103,6 +103,10 @@ internal enum InventoryItemFormRequest: Identifiable, Hashable, Sendable {
     /// field that assigns one: what "Label it" means now that there is no
     /// separate label screen to send it to.
     case labelling(InventoryItem.ID)
+    /// New item, opened as a copy of an existing one: its values, overrides
+    /// and photos carried over, its code bumped. Saving creates a separate
+    /// item and never touches the one it was copied from.
+    case duplicate(InventoryItem.ID)
     /// Edit item on a `catalogueChanged` repair: the held change reopened
     /// against the current fields, its values filled in where they still
     /// fit. Saving settles the repair with the edited change.
@@ -113,6 +117,7 @@ internal enum InventoryItemFormRequest: Identifiable, Hashable, Sendable {
         case .create(let placement): "create-\(String(describing: placement))"
         case .edit(let itemId): "edit-\(itemId)"
         case .labelling(let itemId): "labelling-\(itemId)"
+        case .duplicate(let itemId): "duplicate-\(itemId)"
         case .repair(let repairId): "repair-\(repairId)"
         }
     }

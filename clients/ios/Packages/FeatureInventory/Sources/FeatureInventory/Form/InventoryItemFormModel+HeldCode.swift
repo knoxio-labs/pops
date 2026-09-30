@@ -74,6 +74,26 @@ internal enum InventoryCodeSequence {
                 + number
         }
     }
+
+    /// The code a copy of an item wearing `code` starts with: the trailing
+    /// run of digits incremented, keeping its zero padding and growing when
+    /// it overflows (`BOX-007` → `BOX-008`, `A-99` → `A-100`). Empty for no
+    /// code, or one that does not end in a digit, since codes are unique and
+    /// there is nothing to count on from.
+    internal static func bumped(_ code: String?) -> String {
+        guard let code else { return "" }
+        var digits = Array(code.reversed().prefix(while: \.isASCIIDigit).reversed())
+        guard !digits.isEmpty else { return "" }
+        let stem = String(code.dropLast(digits.count))
+        for index in digits.indices.reversed() {
+            guard digits[index] == "9" else {
+                digits[index] = Character(String((digits[index].wholeNumberValue ?? 0) + 1))
+                return stem + String(digits)
+            }
+            digits[index] = "0"
+        }
+        return stem + "1" + String(digits)
+    }
 }
 
 extension Character {
