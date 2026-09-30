@@ -110,6 +110,14 @@ export const PurchaseSchema = z.object({
   updatedAt: IsoTimestampSchema,
 });
 
+/** A learned rule used by a charge link on the purchase. */
+export const PurchaseRuleLinkSchema = z.object({
+  id: z.string(),
+  descriptionPattern: z.string(),
+  source: z.string().nullable(),
+  isActive: z.boolean(),
+});
+
 /**
  * An order as a list renders it: every field of {@link PurchaseSchema}, plus
  * the two things a row needs that are not columns.
@@ -134,6 +142,8 @@ export const PurchaseListRowSchema = PurchaseSchema.extend({
    * it back into pixels. See `src/ingest/receipt/README.md`.
    */
   receiptUri: PopsUriSchema.nullable(),
+  /** Learned rules responsible for stage-4 links on this purchase. */
+  ruleLinks: z.array(PurchaseRuleLinkSchema),
 });
 
 export const PurchaseShipmentSchema = z.object({

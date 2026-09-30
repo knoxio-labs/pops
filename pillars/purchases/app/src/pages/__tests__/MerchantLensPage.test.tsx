@@ -9,10 +9,12 @@ import { leakedAriaLabels, rawCatalogKeyPattern } from './aria-label-guard.js';
 
 const merchantSpendMock = vi.hoisted(() => vi.fn());
 const purchaseListMock = vi.hoisted(() => vi.fn());
+const reconcileDeactivateRuleMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../purchases-api/index.js', () => ({
   analyticsMerchantSpend: (...args: unknown[]) => merchantSpendMock(...args),
   purchaseList: (...args: unknown[]) => purchaseListMock(...args),
+  reconcileDeactivateRule: (...args: unknown[]) => reconcileDeactivateRuleMock(...args),
 }));
 
 import { MerchantLensPage } from '../MerchantLensPage';
@@ -106,6 +108,7 @@ function purchaseOrder(overrides: Partial<MerchantOrder> = {}): MerchantOrder {
     createdAt: '2026-02-03T00:00:00Z',
     itemCount: 2,
     receiptUri: null,
+    ruleLinks: [],
     currency: 'AUD',
     discountCents: 0,
     discountIncluded: null,
@@ -172,6 +175,7 @@ async function settled(): Promise<void> {
 beforeEach(() => {
   merchantSpendMock.mockReset();
   purchaseListMock.mockReset();
+  reconcileDeactivateRuleMock.mockReset();
   ordersReturn([]);
 });
 
@@ -297,6 +301,38 @@ describe('MerchantLensPage — attribution', () => {
     await settled();
 
     expect(screen.getByText('Unnamed merchant (ent-77)')).toBeVisible();
+  });
+});
+
+describe('MerchantLensPage — learned rules', () => {
+  it('shows the rule pattern and lets an operator deactivate it', async () => {
+    const user = userEvent.setup();
+    reconcileDeactivateRuleMock.mockResolvedValue({ data: { ok: true }, error: undefined });
+    rollupReturns([namedMerchant('Amazon')]);
+    ordersReturn([
+      purchaseOrder({
+        ruleLinks: [
+          {
+            id: 'rule-1',
+            descriptionPattern: 'WOOLWORTHS SYDNEY',
+            source: 'amazon',
+            isActive: true,
+          },
+        ],
+      }),
+    ]);
+    renderPage();
+    await settled();
+    await openTheOrdersOf(user, 'Amazon');
+
+    expect(await screen.findByText('WOOLWORTHS SYDNEY')).toBeVisible();
+    expect(screen.getByText('for amazon')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Deactivate WOOLWORTHS SYDNEY' }));
+
+    expect(reconcileDeactivateRuleMock).toHaveBeenCalledWith({
+      path: { ruleId: 'rule-1' },
+    });
+    expect(await screen.findByText(enAUPurchases['reconcile.rule.inactive'])).toBeVisible();
   });
 });
 

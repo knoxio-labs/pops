@@ -70,7 +70,12 @@ const linksFor: MockHandler = ({ query }) => {
  * creates a purchase and has no richer fixture to hand back.
  */
 function orderOf(row: PurchaseListResponses[200]['items'][number]): PurchaseGetResponses[200] {
-  const { itemCount: _itemCount, receiptUri: _receiptUri, ...purchase } = row;
+  const {
+    itemCount: _itemCount,
+    receiptUri: _receiptUri,
+    ruleLinks: _ruleLinks,
+    ...purchase
+  } = row;
   return {
     accounting: {
       awaitingImportCents: 0,
@@ -147,6 +152,7 @@ export const purchasesHandlers: MockHandlers = {
   'GET /reconcile/links': linksFor,
   'POST /reconcile/links/batch': linkSummaries,
   'POST /reconcile/confirm': ok({ ok: true, matchRuleId: null }),
+  'POST /reconcile/rules/{ruleId}/deactivate': acknowledged,
   'POST /reconcile/unlink': acknowledged,
   'POST /reconcile/reject': acknowledged,
   'POST /reconcile/sweep': ok<ReconcileSweepResponses[200]>({

@@ -4,6 +4,7 @@
 import { FINANCE_TRANSACTION_URI } from '../../contract/schemas/scalars.js';
 import {
   confirmLink,
+  deactivateMatchRule,
   listPurchasesForTransaction,
   listReconcileQueue,
   rejectLink,
@@ -166,6 +167,19 @@ export function makeReconcileHandlers(
     reject: async ({ body }: { body: Decision }) => {
       const rejected = rejectLink(db, body.chargeId, body.transactionUri, nowIso());
       if (!rejected) return missingLink(body);
+      return { status: 200 as const, body: { ok: true as const } };
+    },
+
+    deactivateRule: async ({ params }: { params: { ruleId: string } }) => {
+      const deactivated = deactivateMatchRule(db, params.ruleId);
+      if (!deactivated) {
+        return {
+          status: 404 as const,
+          body: purchaseErrorBody('not_found', {
+            message: `Match rule ${params.ruleId} not found`,
+          }),
+        };
+      }
       return { status: 200 as const, body: { ok: true as const } };
     },
 

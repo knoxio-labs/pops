@@ -41,6 +41,7 @@ export const ENTITY_PURCHASES: PurchaseListResponses[200]['items'] = [
     paymentHint: null,
     rawRef: null,
     receiptUri: null,
+    ruleLinks: [],
     checksum: 'sha256:receipt-hg-118',
     createdAt: '2026-09-04T09:30:00.000Z',
     updatedAt: '2026-09-04T09:30:00.000Z',

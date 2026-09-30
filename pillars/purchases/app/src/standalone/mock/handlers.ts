@@ -66,6 +66,7 @@ export const handlers: MockHandlers = {
   'POST /reconcile/confirm': ok<ReconcileConfirmResponses[200]>({ ok: true, matchRuleId: null }),
   'POST /reconcile/unlink': acknowledged,
   'POST /reconcile/reject': acknowledged,
+  'POST /reconcile/rules/{ruleId}/deactivate': acknowledged,
   'POST /reconcile/sweep': ok<ReconcileSweepResponses[200]>({
     kind: 'swept',
     chargesConsidered: RECONCILE_QUEUE.items.length,

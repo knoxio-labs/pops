@@ -87,6 +87,9 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileDeactivateRuleData,
+  ReconcileDeactivateRuleErrors,
+  ReconcileDeactivateRuleResponses,
   ReconcileLinksBatchData,
   ReconcileLinksBatchResponses,
   ReconcileLinksData,
@@ -632,6 +635,25 @@ export const reconcileReject = <ThrowOnError extends boolean = false>(
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
+    },
+  });
+
+/**
+ * Deactivate a learned match rule without removing its attribution history
+ */
+export const reconcileDeactivateRule = <ThrowOnError extends boolean = false>(
+  options: Options<ReconcileDeactivateRuleData, ThrowOnError>
+): RequestResult<ReconcileDeactivateRuleResponses, ReconcileDeactivateRuleErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    ReconcileDeactivateRuleResponses,
+    ReconcileDeactivateRuleErrors,
+    ThrowOnError
+  >({
+    url: '/reconcile/rules/{ruleId}/deactivate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
     },
   });
 

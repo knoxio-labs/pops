@@ -17,11 +17,13 @@ const RAW_CATALOG_KEY = rawCatalogKeyPattern('reconcile', 'merchants');
 const reconcileQueueMock = vi.fn();
 const reconcileConfirmMock = vi.fn();
 const reconcileUnlinkMock = vi.fn();
+const reconcileDeactivateRuleMock = vi.fn();
 
 vi.mock('../../purchases-api/index.js', () => ({
   reconcileQueue: (...args: unknown[]) => reconcileQueueMock(...args),
   reconcileConfirm: (...args: unknown[]) => reconcileConfirmMock(...args),
   reconcileUnlink: (...args: unknown[]) => reconcileUnlinkMock(...args),
+  reconcileDeactivateRule: (...args: unknown[]) => reconcileDeactivateRuleMock(...args),
 }));
 
 function buildLink(overrides: Partial<ProposedLink> = {}): ProposedLink {
@@ -33,6 +35,10 @@ function buildLink(overrides: Partial<ProposedLink> = {}): ProposedLink {
     amountCents: 4599,
     linkType: 'exact',
     confidence: 0.95,
+    matchRuleId: null,
+    matchRulePattern: null,
+    matchRuleSource: null,
+    matchRuleIsActive: null,
     ...overrides,
   };
 }
@@ -114,6 +120,7 @@ beforeEach(() => {
   reconcileQueueMock.mockReset();
   reconcileConfirmMock.mockReset();
   reconcileUnlinkMock.mockReset();
+  reconcileDeactivateRuleMock.mockReset();
 });
 
 describe('ReconcileQueuePage — copy', () => {
@@ -243,6 +250,36 @@ describe('ReconcileQueuePage — transaction details', () => {
       screen.getByText(enAUPurchases['reconcile.entry.transactionDateUnavailable'])
     ).toBeVisible();
     expect(screen.queryByText(/pops:\/\/finance\/transaction/u)).not.toBeInTheDocument();
+  });
+});
+
+describe('ReconcileQueuePage — learned rule attribution', () => {
+  it('shows the readable pattern and offers deactivation for a rule proposal', async () => {
+    const user = userEvent.setup();
+    reconcileDeactivateRuleMock.mockResolvedValue({ data: { ok: true }, error: undefined });
+    queueReturns([
+      buildEntry({
+        proposed: [
+          buildLink({
+            linkType: 'rule',
+            matchRuleId: 'rule-1',
+            matchRulePattern: 'WOOLWORTHS SYDNEY',
+            matchRuleSource: 'amazon',
+            matchRuleIsActive: true,
+          }),
+        ],
+      }),
+    ]);
+    renderQueue();
+
+    expect(await screen.findAllByText('WOOLWORTHS SYDNEY')).toHaveLength(2);
+    expect(screen.getByText('for amazon')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Deactivate WOOLWORTHS SYDNEY' }));
+
+    expect(reconcileDeactivateRuleMock).toHaveBeenCalledWith({
+      path: { ruleId: 'rule-1' },
+    });
+    expect(await screen.findByText(enAUPurchases['reconcile.rule.inactive'])).toBeVisible();
   });
 });
 
