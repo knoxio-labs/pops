@@ -1,5 +1,3 @@
-import { Button } from '@pops/ui';
-
 import { TypeForm } from '../catalogue-editor/TypeForm';
 import { CatalogueFieldEditor } from './CatalogueFieldEditor';
 import { type useTypeCataloguePage } from './useTypeCataloguePage';
@@ -65,9 +63,6 @@ function TypeEditor({
         }
         onRestore={() => onOperation({ kind: 'put_type', id: type.id, archivedAt: null })}
       />
-      <div className="flex justify-end">
-        <Button onClick={page.continueToFields}>Continue to fields</Button>
-      </div>
     </>
   );
 }

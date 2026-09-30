@@ -279,14 +279,8 @@ describe('TypeCataloguePage', () => {
 
     const cardContent = card.querySelector<HTMLElement>('[data-slot="card-content"]');
     if (cardContent === null) throw new Error('Expected the catalogue editor content');
-    expect(cardContent).toHaveClass(
-      'lg:flex',
-      'lg:min-h-0',
-      'lg:flex-1',
-      'lg:flex-col',
-      'lg:overflow-hidden'
-    );
-    expect(cardContent.children[1]).toHaveClass('lg:min-h-0', 'lg:flex-1', 'lg:overflow-y-auto');
+    expect(cardContent).toHaveClass('lg:min-h-0', 'lg:flex-1', 'lg:overflow-y-auto');
+    expect(cardContent.children[0]).toHaveClass('lg:shrink-0');
     expect(card.parentElement).toHaveClass(
       'min-h-0',
       'flex-1',
