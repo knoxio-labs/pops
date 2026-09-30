@@ -8,17 +8,13 @@ import Testing
 @Suite("App composition search model")
 @MainActor
 internal struct AppCompositionSearchTests {
-    @Test("the composed search model reads the tag vocabulary from the Purchases repository")
-    func composedModelLoadsTags() async {
-        let tags = [PurchaseTagCount(tag: "garden", count: 4)]
-        let dependencies = AppDependencies.fake(
-            purchases: InMemoryPurchasesRepository(tagsInUse: tags))
+    @Test("the composed model only exposes features enabled by the mobile surface")
+    func composedModelFiltersAvailablePillars() {
+        let dependencies = AppDependencies.fake()
         let model = Self.composition().searchModel(
             for: dependencies, available: [FeaturePurchases.feature])
 
-        await model.loadTags()
-
-        #expect(model.tags == tags)
+        #expect(model.available == [.purchases])
     }
 
     private static func composition() -> AppComposition {

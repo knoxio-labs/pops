@@ -95,6 +95,42 @@ internal final class ReplicaReader: InventoryQuerySource {
         attempt([]) { try ReplicaQueries.history(of: .location, id: locationId, in: $0) }
     }
 
+    func inventoryItemPage(_ query: InventoryItemPageQuery) -> InventoryPage<InventoryItem> {
+        attempt(InventoryPage(rows: [], nextCursor: nil)) { db in
+            let meta = try SyncMeta.read(db)
+            let stored = meta.status(now: now, staleAfter: staleAfter)
+            let status = activity.overlay(on: stored, lastRefreshAt: meta.lastRefreshAt)
+            let isStale: Bool
+            if case .stale = status { isStale = true } else { isStale = false }
+            return try ReplicaQueries.itemPage(query, isStale: isStale, in: db)
+        }
+    }
+
+    func inventorySearchPage(
+        _ query: InventorySearchPageQuery
+    ) -> InventoryPage<InventorySearchPageRow> {
+        attempt(InventoryPage(rows: [], nextCursor: nil)) { db in
+            let meta = try SyncMeta.read(db)
+            let stored = meta.status(now: now, staleAfter: staleAfter)
+            let status = activity.overlay(on: stored, lastRefreshAt: meta.lastRefreshAt)
+            let isStale: Bool
+            if case .stale = status { isStale = true } else { isStale = false }
+            return try ReplicaQueries.searchPage(query, isStale: isStale, in: db)
+        }
+    }
+
+    func inventoryEventPage(_ query: InventoryEventPageQuery) -> InventoryPage<InventoryEvent> {
+        attempt(InventoryPage(rows: [], nextCursor: nil)) {
+            try ReplicaQueries.eventPage(query, in: $0)
+        }
+    }
+
+    func inventoryItemPageSummary(createdSince: Date) -> InventoryItemPageSummary {
+        attempt(InventoryItemPageSummary(activeItems: 0, inHand: 0, untyped: 0, createdRecently: 0)) {
+            try ReplicaQueries.itemPageSummary(createdSince: createdSince, in: $0)
+        }
+    }
+
     func inventoryCatalogue() -> InventoryCatalogue {
         attempt(InventoryReplica.emptyCatalogue) {
             try SyncMeta.read($0).searchCatalogue(in: $0) ?? InventoryReplica.emptyCatalogue

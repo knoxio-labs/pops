@@ -12,6 +12,7 @@ import {
   confirmItemClassification,
   createPurchase,
   getPurchase,
+  listTagVocabularyPage,
   listTagVocabulary,
   TAG_VOCABULARY_LIMIT,
 } from '../index.js';
@@ -92,5 +93,51 @@ describe('listTagVocabulary', () => {
     seedTaggedLine('b', ['drink']);
 
     expect(listTagVocabulary(opened.db, 1)).toEqual([{ tag: 'drink', count: 1 }]);
+  });
+
+  it('finds a search match beyond the legacy 100-tag vocabulary cap', () => {
+    const tags = Array.from(
+      { length: TAG_VOCABULARY_LIMIT + 5 },
+      (_, index) => `tag-${String(index).padStart(3, '0')}`
+    );
+    seedTaggedLine('page-match', [...tags, 'zz-match']);
+
+    expect(listTagVocabulary(opened.db)).not.toContainEqual({ tag: 'zz-match', count: 1 });
+    expect(listTagVocabularyPage(opened.db, { search: 'match', limit: 1 })).toEqual({
+      tags: [{ tag: 'zz-match', count: 1 }],
+      nextCursor: null,
+    });
+  });
+
+  it('does not treat underscores in a search as SQL wildcards', () => {
+    seedTaggedLine('hyphen', ['fifty-off']);
+    seedTaggedLine('other', ['fifty-x-off']);
+
+    const page = listTagVocabularyPage(opened.db, { search: '_', limit: 10 });
+
+    expect(page?.tags).toEqual([]);
+  });
+
+  it('binds a tag cursor to its search and continues in count/tag order', () => {
+    seedTaggedLine('page-a', ['coffee-alpha']);
+    seedTaggedLine('page-b', ['coffee-beta']);
+    seedTaggedLine('page-c', ['tea']);
+    const first = listTagVocabularyPage(opened.db, { search: 'coffee', limit: 1 });
+
+    const next = listTagVocabularyPage(opened.db, {
+      search: 'coffee',
+      cursor: first?.nextCursor ?? undefined,
+      limit: 1,
+    });
+    const wrongSearch = listTagVocabularyPage(opened.db, {
+      search: 'tea',
+      cursor: first?.nextCursor ?? undefined,
+      limit: 1,
+    });
+
+    expect(first?.tags).toEqual([{ tag: 'coffee-alpha', count: 1 }]);
+    expect(next?.tags).toEqual([{ tag: 'coffee-beta', count: 1 }]);
+    expect(next?.nextCursor).toBeNull();
+    expect(wrongSearch).toBeNull();
   });
 });

@@ -1,3 +1,5 @@
+import Foundation
+
 /// What any store's current state must be able to answer, in the shapes
 /// ADR-002's iOS replica design lists: effective location, direct and
 /// contained contents, in hand, open containers, recents, and FTS search. The
@@ -37,8 +39,16 @@ public protocol InventoryQuerySource: Sendable {
     /// Inactive items are included only when asked for, per D3.
     func inventoryItems(includeInactive: Bool) -> [InventoryItem]
     func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem]
+    /// Reads one bounded item-and-place search page with filtering and ordering applied before the limit.
+    func inventorySearchPage(_ query: InventorySearchPageQuery) -> InventoryPage<InventorySearchPageRow>
     func inventoryItemHistory(itemId: String) -> [InventoryEvent]
     func inventoryLocationHistory(locationId: String) -> [InventoryEvent]
+    /// Reads one filtered, ordered item page. Replica-backed stores apply every predicate before limiting.
+    func inventoryItemPage(_ query: InventoryItemPageQuery) -> InventoryPage<InventoryItem>
+    /// Reads one filtered event page for recent activity or an entity history.
+    func inventoryEventPage(_ query: InventoryEventPageQuery) -> InventoryPage<InventoryEvent>
+    /// Counts the Items browser's summary rows without materializing the catalogue.
+    func inventoryItemPageSummary(createdSince: Date) -> InventoryItemPageSummary
     func inventoryCatalogue() -> InventoryCatalogue
     /// The immutable protocol-2 catalogue that matches the replica's active
     /// stable-ID item values, when the replica has downloaded one.
@@ -140,6 +150,34 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static func history(locationId: String) -> InventoryQuery<[InventoryEvent]> {
         .init { $0.inventoryLocationHistory(locationId: locationId) }
+    }
+
+    /// A filtered Inventory item page, with stable ordering and a bounded result size.
+    public static func itemsPage(
+        _ query: InventoryItemPageQuery
+    ) -> InventoryQuery<InventoryPage<InventoryItem>> {
+        .init { $0.inventoryItemPage(query) }
+    }
+
+    /// A filtered, stable page of Inventory records and matching places for universal search.
+    public static func searchPage(
+        _ query: InventorySearchPageQuery
+    ) -> InventoryQuery<InventoryPage<InventorySearchPageRow>> {
+        .init { $0.inventorySearchPage(query) }
+    }
+
+    /// A filtered Inventory history page, ordered newest first.
+    public static func eventsPage(
+        _ query: InventoryEventPageQuery
+    ) -> InventoryQuery<InventoryPage<InventoryEvent>> {
+        .init { $0.inventoryEventPage(query) }
+    }
+
+    /// The item counts shown above the Items browser.
+    public static func itemPageSummary(
+        createdSince: Date
+    ) -> InventoryQuery<InventoryItemPageSummary> {
+        .init { $0.inventoryItemPageSummary(createdSince: createdSince) }
     }
 
     public static var catalogue: InventoryQuery<InventoryCatalogue> {

@@ -94,6 +94,12 @@ const ERROR_DEFINITIONS = {
     message: 'The search filter is not supported.',
     retryable: false,
   },
+  invalid_cursor: {
+    area: 'request',
+    status: 400,
+    message: 'The continuation cursor is invalid for this query. Start the list again.',
+    retryable: false,
+  },
   already_imported: {
     area: 'receipt',
     status: 409,

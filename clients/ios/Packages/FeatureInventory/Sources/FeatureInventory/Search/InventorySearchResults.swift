@@ -50,3 +50,80 @@ internal struct InventorySearchResults: Equatable, Sendable {
             places: placeFilter.isActive ? [] : places)
     }
 }
+
+internal struct InventorySearchPageResults: Sendable {
+    internal let isFirstRun: Bool
+    internal let hits: [InventorySearchHit]
+    internal let nextCursor: InventoryPageCursor?
+
+    internal static func query(
+        text: String, filter: InventorySearchFilter, page: InventoryPageRequest
+    ) -> InventoryQuery<InventorySearchPageResults> {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let placement: InventoryItemPagePlacement = switch filter.placement {
+        case .any: .any
+        case .inHand: .hand
+        case .direct: .location
+        case .contained: .container
+        }
+        let access: InventoryItemPageAccess = switch filter.containerState {
+        case .any: .any
+        case .open: .open
+        case .closed: .closed
+        }
+        let missing: InventoryItemPageMissing = switch filter.missing {
+        case .nothing: .none
+        case .type: .type
+        case .code: .code
+        case .photo: .photo
+        }
+        let sync: InventoryItemPageSync = switch filter.sync {
+        case .any: .any
+        case .waiting: .waiting
+        case .stale: .stale
+        case .needsAttention: .needsAttention
+        }
+        let itemFilter = InventoryItemPageFilter(
+            includeInactive: filter.includesInactive,
+            placement: placement,
+            access: access,
+            typeKey: filter.type?.key,
+            quantityGreaterThanOne: filter.quantity == .several,
+            missing: missing,
+            sync: sync)
+        var locationFilter = filter
+        locationFilter.includesInactive = false
+        let includeLocations = !locationFilter.isActive
+        return InventoryQuery { source in
+            let reader = InventoryRecordReader(source: source)
+            guard !trimmed.isEmpty else {
+                return InventorySearchPageResults(
+                    isFirstRun: source.inventoryReplicaStatus() == .empty, hits: [],
+                    nextCursor: nil)
+            }
+            let resultPage = source.inventorySearchPage(
+                InventorySearchPageQuery(
+                    text: trimmed, filter: itemFilter, includeLocations: includeLocations,
+                    page: page))
+            let hits = resultPage.rows.compactMap { row -> InventorySearchHit? in
+                switch row {
+                case .item(let item): return .record(reader.record(item))
+                case .location(let location):
+                    var parents: [String] = []
+                    var parentId = location.parentId
+                    while let currentId = parentId,
+                        let parent = source.inventoryLocation(id: currentId)
+                    {
+                        parents.insert(parent.name, at: 0)
+                        parentId = parent.parentId
+                    }
+                    return .place(
+                        InventorySearchPlace(id: location.id, name: location.name, parents: parents))
+                }
+            }
+            return InventorySearchPageResults(
+                isFirstRun: source.inventoryReplicaStatus() == .empty, hits: hits,
+                nextCursor: resultPage.nextCursor)
+        }
+    }
+}

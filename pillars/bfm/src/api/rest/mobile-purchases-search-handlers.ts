@@ -7,6 +7,7 @@
  * `requireCapability` stack mounted in `app.ts`.
  */
 import { isGatewayOk } from '../pillars/gateway.js';
+import { invalidMobileCursorResponse } from './mobile-request-error.js';
 import { toCollectionUpstreamErrorResponse } from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -21,21 +22,42 @@ export function makeMobilePurchasesSearchHandlers(purchases: MobilePurchasesClie
     searchPurchases: async ({ query }: Req['searchPurchases']) => {
       const outcome = await purchases.search({
         q: query.q,
-        status: query.status,
-        tags: query.tags,
+        ...(query.kind === undefined ? {} : { kind: query.kind }),
+        ...(query.cursor === undefined ? {} : { cursor: query.cursor }),
+        limit: query.limit,
+        ...(query.status === undefined ? {} : { status: query.status }),
+        ...(query.tags === undefined ? {} : { tags: query.tags }),
       });
 
       // The collection variant, matching `listPurchases`: an empty result is
       // "nothing matched", which a genuine 404 from purchases must never be
       // read as, and this route declares no single-resource 404 of its own.
-      if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
+      if (!isGatewayOk(outcome)) {
+        if (query.cursor !== undefined && outcome.kind === 'invalid-request') {
+          return invalidMobileCursorResponse(
+            'The cursor is not valid for this query. Start the list again.'
+          );
+        }
+        return toCollectionUpstreamErrorResponse(outcome);
+      }
 
       return { status: 200 as const, body: outcome.value };
     },
 
-    purchaseTags: async () => {
-      const outcome = await purchases.tagVocabulary();
-      if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
+    purchaseTags: async ({ query }: Req['purchaseTags']) => {
+      const outcome = await purchases.tagVocabulary({
+        ...(query.search === undefined || query.search === '' ? {} : { search: query.search }),
+        ...(query.cursor === undefined ? {} : { cursor: query.cursor }),
+        limit: query.limit,
+      });
+      if (!isGatewayOk(outcome)) {
+        if (query.cursor !== undefined && outcome.kind === 'invalid-request') {
+          return invalidMobileCursorResponse(
+            'The cursor is not valid for this query. Start the list again.'
+          );
+        }
+        return toCollectionUpstreamErrorResponse(outcome);
+      }
 
       return { status: 200 as const, body: outcome.value };
     },

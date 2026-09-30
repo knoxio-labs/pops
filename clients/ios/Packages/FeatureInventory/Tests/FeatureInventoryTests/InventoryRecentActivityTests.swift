@@ -66,6 +66,29 @@ internal struct InventoryRecentActivityTests {
         #expect(activity.map(\.id) == [6, 5])
     }
 
+    @Test("history pages append once in sequence order")
+    func pages() async throws {
+        let events = (1...45).map { sequence in
+            Fixture.event(sequence, .created, on: "kettle")
+        }
+        let store = InMemoryInventoryStore(
+            items: [Fixture.item("kettle", "Kettle", at: .location("kitchen"))],
+            events: events)
+        let model = InventoryRecentActivityModel(store: store)
+        let task = Task { await model.observe() }
+        defer { task.cancel() }
+
+        #expect(await eventually { model.entries.count == 40 && model.canLoadMore })
+        async let firstLoad: Void = model.loadNextPage()
+        async let duplicateLoad: Void = model.loadNextPage()
+        await firstLoad
+        await duplicateLoad
+
+        #expect(model.entries.map(\.seq) == Array((1...45).reversed()))
+        #expect(Set(model.entries.map(\.seq)).count == 45)
+        #expect(!model.canLoadMore)
+    }
+
     @Test("Undo reverts the event against the record it is about")
     func undoRevertsTheRightRecord() async throws {
         let store = RecordingInventoryStore(Self.store())

@@ -54,7 +54,6 @@ internal struct AppSearchTab: View {
             .errorDiagnosticsMenu()
         }
         .task {
-            await model.loadTags()
             await model.loadInventoryTypes()
         }
         .onChange(of: model.inventoryDownloadFailed) { _, failed in
@@ -82,7 +81,7 @@ internal struct AppSearchTab: View {
     /// `inventorySearchChrome` installs — empty while Inventory is
     /// unavailable or answering with anything but results.
     private var inventoryResults: [InventorySearchResult] {
-        guard let state = model.inventory?.section(scope: model.scope, cap: Model.allCap) else {
+        guard let state = model.inventory?.section(scope: model.scope) else {
             return []
         }
         return Self.rows(state)
@@ -97,31 +96,47 @@ internal struct AppSearchTab: View {
     @ViewBuilder private func section(for pillar: SearchPillar) -> some View {
         switch pillar {
         case .inventory:
-            if let state = model.inventory?.section(scope: model.scope, cap: Model.allCap) {
+            if let state = model.inventory?.section(scope: model.scope) {
                 SearchSectionChrome(
                     pillar: .inventory,
                     summary: Self.summary(state),
+                    pagingState: model.inventory?.pagingState ?? .idle,
                     isScoped: model.scope != .all,
                     showAll: { model.scope = .pillar(.inventory) },
                     retry: { model.inventory?.retry() },
+                    retryNextPage: { Task { await model.inventory?.retryNextPage() } },
                     download: { Task { await model.downloadInventory() } },
                     rows: {
-                        InventorySearchRows(Self.rows(state), query: model.query, session: session)
+                        InventorySearchRows(
+                            Self.rows(state), query: model.query, session: session,
+                            onReachEnd: {
+                                Task { await model.inventory?.loadNextPageIfNeeded() }
+                            })
                     }
                 )
             }
         case .purchases:
-            if let state = model.purchases?.section(scope: model.scope, cap: Model.allCap) {
+            if let state = model.purchases?.section(scope: model.scope) {
+                let rows = Self.rows(state)
                 SearchSectionChrome(
                     pillar: .purchases,
                     summary: Self.summary(state),
+                    pagingState: model.purchases?.pagingState ?? .idle,
                     isScoped: model.scope != .all,
                     showAll: { model.scope = .pillar(.purchases) },
                     retry: { model.purchases?.retry() },
+                    retryNextPage: { Task { await model.purchases?.retryNextPage() } },
                     download: {},
                     rows: {
-                        ForEach(Self.rows(state)) { hit in
-                            PurchaseSearchRow(hit: hit, query: model.query)
+                        LazyVStack(spacing: PopsSpacing.zero) {
+                            ForEach(Array(rows.enumerated()), id: \.element.id) {
+                                index, hit in
+                                PurchaseSearchRow(hit: hit, query: model.query)
+                                    .onAppear {
+                                        guard index == rows.count - 1 else { return }
+                                        Task { await model.purchases?.loadNextPageIfNeeded() }
+                                    }
+                            }
                         }
                     }
                 )
@@ -139,7 +154,9 @@ internal struct AppSearchTab: View {
                     header(.inventory)
                 }
             case .purchases:
-                PurchasesSearchFilterFields(filter: $model.purchasesFilter, tags: model.tags) {
+                PurchasesSearchFilterFields(
+                    filter: $model.purchasesFilter, repository: dependencies.purchases
+                ) {
                     header(.purchases)
                 }
             }
@@ -154,8 +171,6 @@ internal struct AppSearchTab: View {
         if model.available.contains(.inventory) { model.inventoryFilter = InventorySearchFilter() }
         if model.available.contains(.purchases) { model.purchasesFilter = PurchasesSearchFilter() }
     }
-
-    private typealias Model = AppSearchModel<InventorySearchProvider, PurchasesSearchProvider>
 
     /// Shapes one pillar's answer for `SearchSectionChrome`, which knows
     /// nothing of `SearchPillarModel`'s own row-carrying state.

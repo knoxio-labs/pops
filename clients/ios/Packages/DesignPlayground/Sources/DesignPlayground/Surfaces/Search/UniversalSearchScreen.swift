@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -25,6 +26,8 @@ internal struct UniversalSearchScreen: View {
     @State internal var query: String
     @State internal var scope: SearchScope
     @State internal var answers: [SearchPillar: SearchAnswer]
+    @State internal var loadedPageCounts: [SearchPillar: Int]
+    @State internal var pagingStates: [SearchPillar: SearchPagingState]
     @State internal var inventoryFilter: InventorySearchFilter
     @State internal var purchasesFilter: PurchasesSearchFilter
     @State internal var recents: [SearchRecent]
@@ -46,6 +49,8 @@ internal struct UniversalSearchScreen: View {
         _query = State(initialValue: stage.query)
         _scope = State(initialValue: stage.scope)
         _answers = State(initialValue: stage.answers)
+        _loadedPageCounts = State(initialValue: stage.loadedPageCounts)
+        _pagingStates = State(initialValue: stage.pagingStates)
         _inventoryFilter = State(initialValue: stage.inventoryFilter)
         _purchasesFilter = State(initialValue: stage.purchasesFilter)
         _recents = State(initialValue: stage.recents)
@@ -54,8 +59,11 @@ internal struct UniversalSearchScreen: View {
 
     internal var model: UniversalSearchModel {
         UniversalSearchModel(
-            query: query, scope: scope, answers: answers, inventoryRecords: edits.records,
-            inventoryFilter: inventoryFilter, purchasesFilter: purchasesFilter)
+            query: query, scope: scope, answers: answers,
+            loadedPageCounts: loadedPageCounts, pagingStates: pagingStates,
+            inventoryRecords: edits.records, inventoryFilter: inventoryFilter,
+            purchasesFilter: purchasesFilter, places: InventorySearchFixtures.places,
+            purchases: PurchasesSearchFixtures.purchases, lines: PurchasesSearchFixtures.items)
     }
 
     internal var body: some View {
@@ -83,12 +91,19 @@ internal struct UniversalSearchScreen: View {
         .searchDestinations(inventory: registersDestinations)
         .sheet(isPresented: $showingFilters) {
             UniversalSearchFilterSheet(
-                inventory: $inventoryFilter, purchases: $purchasesFilter, scope: scope)
+                inventory: $inventoryFilter, purchases: $purchasesFilter, scope: scope,
+                purchasesRepository: playgroundPurchasesDependencies().purchases)
         }
         .playgroundStage(item: $scanning) { _ in
             InventoryScanView()
         }
-        .onChange(of: query) { previous, _ in requery(after: previous) }
+        .onChange(of: query) { previous, _ in
+            resetPaging()
+            requery(after: previous)
+        }
+        .onChange(of: scope) { _, _ in resetPaging() }
+        .onChange(of: inventoryFilter) { _, _ in resetPaging() }
+        .onChange(of: purchasesFilter) { _, _ in resetPaging() }
         .environment(\.inventoryAccent, scope.tint)
         .tint(scope.tint)
         .inventoryRecordSelectionBar(
@@ -99,7 +114,7 @@ internal struct UniversalSearchScreen: View {
 
     private var selectableIDs: [String] {
         model.sections.flatMap { section -> [String] in
-            guard case .results(let rows, _, _, _) = section.content else { return [] }
+            guard case .results(let rows, _, _, _, _) = section.content else { return [] }
             return rows.compactMap(\.inventoryRecordID)
         }
     }
@@ -167,6 +182,27 @@ internal struct UniversalSearchScreen: View {
         SearchSectionActions(
             showAll: { scope = .pillar($0) },
             retry: retry,
+            loadNextPage: loadNextPage,
+            retryNextPage: retryNextPage,
             download: download)
+    }
+
+    private func loadNextPage(_ pillar: SearchPillar) {
+        guard (pagingStates[pillar] ?? .idle) == .idle else { return }
+        pagingStates[pillar] = .loading
+        loadedPageCounts[pillar, default: 1] += 1
+        pagingStates[pillar] = .idle
+    }
+
+    private func retryNextPage(_ pillar: SearchPillar) {
+        guard pagingStates[pillar] == .failed else { return }
+        pagingStates[pillar] = .loading
+        loadedPageCounts[pillar, default: 1] += 1
+        pagingStates[pillar] = .idle
+    }
+
+    private func resetPaging() {
+        loadedPageCounts = [:]
+        pagingStates = [:]
     }
 }

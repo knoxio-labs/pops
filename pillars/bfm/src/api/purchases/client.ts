@@ -31,14 +31,13 @@ import {
   toMobilePurchaseDetail,
 } from './list-wire.js';
 import { PurchasesMonthSummaryResponseSchema, toMobileMonthSummary } from './month-summary-wire.js';
+import { fetchPurchaseReceiptBytes } from './receipt-bytes-client.js';
 import { search, tagVocabulary, type SearchPurchasesRequest } from './search-client.js';
 import { updatePurchase } from './update-client.js';
-import { PurchasesReceiptBytesSchema } from './wire.js';
-
-import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
 
 import type { MobileCaptureMetadata } from '../../contract/capture.js';
 import type {
+  MobilePurchaseTagsQuery,
   MobilePurchaseSearchResponse,
   MobilePurchaseTagsResponse,
 } from '../../contract/mobile-purchases-schemas.js';
@@ -90,20 +89,6 @@ export type PurchasesReceiptRouter = {
   };
 };
 
-/**
- * The receipt-bytes half of purchases' `receipt.*` router.
- *
- * Separate from {@link PurchasesReceiptRouter} only because the upload half
- * predates it; both name routes on the same producer sub-router and both are
- * assertions about a peer rather than a compile-time link to one.
- */
-export type PurchasesReceiptBytesRouter = {
-  receipt: {
-    read: (input: { sha256: string }) => Promise<unknown>;
-    thumbnail: (input: { sha256: string }) => Promise<unknown>;
-  };
-};
-
 /** The `analytics.*` sub-router bfm reads the month summary through. */
 export type PurchasesAnalyticsRouter = {
   analytics: {
@@ -139,7 +124,9 @@ export interface MobilePurchasesClient {
   getReceiptThumbnail(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
   getMonthSummary(month: string): Promise<GatewayOutcome<MobileMonthSummary>>;
   search(request: SearchPurchasesRequest): Promise<GatewayOutcome<MobilePurchaseSearchResponse>>;
-  tagVocabulary(): Promise<GatewayOutcome<MobilePurchaseTagsResponse>>;
+  tagVocabulary(
+    request: MobilePurchaseTagsQuery
+  ): Promise<GatewayOutcome<MobilePurchaseTagsResponse>>;
 }
 
 export function createMobilePurchasesClient(
@@ -156,13 +143,13 @@ export function createMobilePurchasesClient(
     updatePurchase: (id, body) => updatePurchase(gateway, id, body),
 
     async getReceipt(sha256: string) {
-      return fetchReceiptBytes(gateway, 'receipt.read', (handle) =>
+      return fetchPurchaseReceiptBytes(gateway, 'receipt.read', (handle) =>
         handle.receipt.read({ sha256 })
       );
     },
 
     async getReceiptThumbnail(sha256: string) {
-      return fetchReceiptBytes(gateway, 'receipt.thumbnail', (handle) =>
+      return fetchPurchaseReceiptBytes(gateway, 'receipt.thumbnail', (handle) =>
         handle.receipt.thumbnail({ sha256 })
       );
     },
@@ -185,37 +172,8 @@ export function createMobilePurchasesClient(
     },
 
     search: (request) => search(gateway, request),
-    tagVocabulary: () => tagVocabulary(gateway),
+    tagVocabulary: (request) => tagVocabulary(gateway, request),
   };
-}
-
-/**
- * The two byte routes differ only in which one they call.
- *
- * The bytes are passed through unchanged rather than re-encoded: `purchases`
- * named the file for the SHA-256 of what it holds, and a round trip through
- * decode-and-re-encode would put a representation bfm chose in front of a
- * client that may well be checking the hash.
- */
-async function fetchReceiptBytes(
-  gateway: PillarGateway,
-  operation: string,
-  invoke: (handle: PillarHandle<PurchasesReceiptBytesRouter>) => Promise<CallResult<unknown>>
-): Promise<GatewayOutcome<MobileReceiptBytes>> {
-  const outcome = await gateway.call<PurchasesReceiptBytesRouter, unknown>(
-    PURCHASES_PILLAR_ID,
-    invoke
-  );
-
-  const answered = parseOrMismatch(
-    PURCHASES_PILLAR_ID,
-    outcome,
-    PurchasesReceiptBytesSchema,
-    operation
-  );
-  if (!isGatewayOk(answered)) return answered;
-
-  return { kind: 'ok', value: answered.value };
 }
 
 /** The wire input one `purchase.list` call sends for a page request. */

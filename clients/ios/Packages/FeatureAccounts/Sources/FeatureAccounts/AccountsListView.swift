@@ -3,35 +3,41 @@ import DesignSystem
 import SwiftUI
 
 /// The accounts list.
-///
-/// It renders and it forwards gestures; every decision is
-/// ``AccountsListViewModel``'s. No creation, edit or archive action appears
-/// anywhere on this screen — those are desktop-scale jobs POPS-2811
-/// deliberately leaves there.
 public struct AccountsListView: View {
     @State private var model: AccountsListViewModel
     @Environment(\.errorPresenter) private var errorPresenter
 
+    /// Creates the account list view backed by its feature model.
     public init(model: AccountsListViewModel) {
         _model = State(wrappedValue: model)
     }
 
     public var body: some View {
-        @Bindable var bindable = model
-
         return
             content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.popsBackground)
-            .task { await model.loadAccounts() }
+            .task(id: model.requestFilter) { await model.loadAccounts() }
             .onChange(of: model.refreshFailure) { _, failure in
                 guard let failure else { return }
                 errorPresenter.present(
                     PopsError(
                         repositoryError: failure,
-                        fallbackMessage: AccountsCopy.message(for: failure)),
+                        fallbackMessage: AccountsCopy.refreshFailure(failure)),
                     operation: "Refresh accounts",
                     context: .foreground)
+            }
+            .onChange(of: model.pageFailure) { _, failure in
+                guard let failure else { return }
+                errorPresenter.present(
+                    PopsError(
+                        repositoryError: failure,
+                        fallbackMessage: AccountsCopy.loadMoreFailure(failure)),
+                    operation: "Load more accounts",
+                    context: .background)
+                AccessibilityNotification.Announcement(
+                    AccountsCopy.loadMoreFailure(failure)
+                ).post()
             }
             .errorDiagnosticsMenu()
     }
@@ -47,9 +53,7 @@ public struct AccountsListView: View {
             ) {
                 Task { await model.loadAccounts() }
             }
-        case .empty:
-            EmptyStateView(message: AccountsCopy.empty)
-        case .loaded:
+        case .empty, .loaded:
             scrollingContent
         }
     }
@@ -58,10 +62,11 @@ public struct AccountsListView: View {
 extension AccountsListView {
     private var scrollingContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 header
                 searchField
                 sections
+                pagingFooter
             }
             .padding(PopsSpacing.lg)
         }
@@ -83,8 +88,7 @@ extension AccountsListView {
 
     private var countLine: String {
         guard case .loaded(let accounts) = model.state else { return "" }
-        let archived = accounts.filter(\.archived).count
-        return AccountsCopy.countLine(active: accounts.count - archived, archived: archived)
+        return AccountsCopy.countLine(active: model.totalCount ?? accounts.count, archived: 0)
     }
 
     private var searchField: some View {
@@ -102,12 +106,23 @@ extension AccountsListView {
             if model.showArchived {
                 section(title: AccountsCopy.sectionArchived, accounts: sections.archived)
             }
+            if sections.isEmpty {
+                Text(emptyMessage)
+                    .font(.popsBody)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, PopsSpacing.lg)
+            }
         }
     }
 
-    /// A section with nothing in it renders nothing at all — no empty header
-    /// left standing over a section a search or an archived-off toggle emptied
-    /// out, the same call `accounts.tsx`'s `Section` makes.
+    private var emptyMessage: String {
+        guard model.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return AccountsCopy.noMatches
+        }
+        return model.showArchived ? AccountsCopy.empty : AccountsCopy.noActiveAccounts
+    }
+
     @ViewBuilder
     private func section(title: String, accounts: [Account]) -> some View {
         if !accounts.isEmpty {
@@ -133,16 +148,31 @@ extension AccountsListView {
         }
     }
 
-    @ViewBuilder private var archivedToggle: some View {
-        if hasArchivedAccounts {
-            PopsButton(model.showArchived ? "Hide archived" : "Show archived") {
-                model.showArchived.toggle()
-            }
+    private var archivedToggle: some View {
+        PopsButton(model.showArchived ? "Hide archived" : "Show archived") {
+            model.showArchived.toggle()
         }
     }
 
-    private var hasArchivedAccounts: Bool {
-        guard case .loaded(let accounts) = model.state else { return false }
-        return accounts.contains { $0.archived }
+    @ViewBuilder private var pagingFooter: some View {
+        switch model.paging {
+        case .exhausted:
+            EmptyView()
+        case .idle, .loading:
+            Text(AccountsCopy.loadingMore)
+                .font(.popsBody)
+                .foregroundStyle(Color.popsMutedForeground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, PopsSpacing.lg)
+                .task(id: model.pageRevision) { await model.loadNextPageIfNeeded() }
+        case .failed(let error):
+            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                Text(AccountsCopy.loadMoreFailure(error))
+                    .font(.popsBody)
+                    .foregroundStyle(Color.popsDestructive)
+                PopsButton(AccountsCopy.retry) { Task { await model.retryNextPage() } }
+            }
+            .padding(.vertical, PopsSpacing.lg)
+        }
     }
 }

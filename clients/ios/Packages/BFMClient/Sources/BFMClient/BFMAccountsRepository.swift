@@ -41,32 +41,61 @@ public struct BFMAccountsRepository: AccountsRepository {
     }
 
     public func accounts() async throws -> [Account] {
-        let output: ListAccounts.Output
-        do {
-            output = try await client.generated.mobileFinance_listAccounts()
-        } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: ListAccounts.id)
-        }
+        var cursor: String? = nil
+        var consumedCursors: Set<String> = []
+        var accounts: [Account] = []
+        var seenIDs: Set<Account.ID> = []
 
-        switch output {
-        case .ok(let ok):
-            return try ok.body.json.data.map(account(fromList:))
-        // This route takes no query at all, so a `400` cannot be something the
-        // app asked for wrongly and there is nothing for it to correct.
-        case .badRequest:
-            throw RepositoryError.transport("\(ListAccounts.id): invalid request")
-        case .unauthorized, .forbidden:
-            throw RepositoryError.unauthorized
-        case .tooManyRequests:
-            throw RepositoryError.transport("\(ListAccounts.id): rate limited")
-        case .badGateway(let upstream):
-            throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code, operation: ListAccounts.id)
-        case .serviceUnavailable(let upstream):
-            throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code, operation: ListAccounts.id)
-        case .undocumented(let statusCode, _):
-            throw RepositoryError.transport("\(ListAccounts.id): undocumented status \(statusCode)")
+        repeat {
+            let page = try await accountPage(
+                search: nil,
+                archived: nil,
+                cursor: cursor,
+                limit: 100
+            )
+            accounts.append(contentsOf: page.accounts.filter { seenIDs.insert($0.id).inserted })
+            guard let nextCursor = page.nextCursor else { break }
+            guard consumedCursors.insert(nextCursor).inserted else {
+                throw RepositoryError.contractMismatch
+            }
+            cursor = nextCursor
+        } while true
+
+        return accounts
+    }
+
+    /// Reads one bounded account page after applying search and archive scope.
+    ///
+    /// A server-rejected cursor restarts the same filtered query at its first
+    /// page. The list merges by id, so this lets paging continue without
+    /// discarding rows it already rendered.
+    public func accountPage(
+        search: String?,
+        archived: Bool?,
+        cursor: String?,
+        limit: Int
+    ) async throws -> AccountsPage {
+        switch try await fetchAccountPage(
+            search: search,
+            archived: archived,
+            cursor: cursor,
+            limit: limit
+        ) {
+        case .page(let page):
+            return page
+        case .cursorRejected:
+            guard cursor != nil else { throw RepositoryError.contractMismatch }
+            guard
+                case .page(let page) = try await fetchAccountPage(
+                    search: search,
+                    archived: archived,
+                    cursor: nil,
+                    limit: limit
+                )
+            else {
+                throw RepositoryError.contractMismatch
+            }
+            return page
         }
     }
 
@@ -222,6 +251,67 @@ extension BFMAccountsRepository {
 /// ``BFMTransactionsRepository``.
 private typealias ListAccounts = Operations.MobileFinance_listAccounts
 private typealias GetAccount = Operations.MobileFinance_getAccount
-private typealias ListAccountRow = ListAccounts.Output.Ok.Body.JsonPayload.DataPayloadPayload
+private typealias ListAccountRow = ListAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload
 private typealias DetailPayload = GetAccount.Output.Ok.Body.JsonPayload
 private typealias DetailAccountPayload = DetailPayload.AccountPayload
+
+private enum AccountsPageOutcome {
+    case page(AccountsPage)
+    case cursorRejected
+}
+
+extension BFMAccountsRepository {
+    private func fetchAccountPage(
+        search: String?,
+        archived: Bool?,
+        cursor: String?,
+        limit: Int
+    ) async throws -> AccountsPageOutcome {
+        let output: ListAccounts.Output
+        do {
+            output = try await client.generated.mobileFinance_listAccounts(
+                query: .init(
+                    search: search,
+                    archived: archived.map { $0 ? ._true : ._false },
+                    cursor: cursor,
+                    limit: limit
+                ))
+        } catch let error as ClientError {
+            if BFMRepositoryFailure.code(in: error) == "invalid_cursor" {
+                return .cursorRejected
+            }
+            throw BFMRepositoryFailure.failure(error, operation: ListAccounts.id)
+        }
+
+        switch output {
+        case .ok(let ok):
+            return .page(try page(from: ok.body.json))
+        case .badRequest(let refused):
+            guard try refused.body.json.code == .invalidCursor else {
+                throw RepositoryError.transport("\(ListAccounts.id): invalid request")
+            }
+            return .cursorRejected
+        case .unauthorized, .forbidden:
+            throw RepositoryError.unauthorized
+        case .tooManyRequests:
+            throw RepositoryError.transport("\(ListAccounts.id): rate limited")
+        case .badGateway(let upstream):
+            throw BFMRepositoryFailure.upstreamFailure(
+                try upstream.body.json.code, operation: ListAccounts.id)
+        case .serviceUnavailable(let upstream):
+            throw BFMRepositoryFailure.upstreamFailure(
+                try upstream.body.json.code, operation: ListAccounts.id)
+        case .undocumented(let statusCode, _):
+            throw RepositoryError.transport("\(ListAccounts.id): undocumented status \(statusCode)")
+        }
+    }
+
+    private func page(from payload: ListAccounts.Output.Ok.Body.JsonPayload) throws -> AccountsPage
+    {
+        AccountsPage(
+            accounts: try payload.accounts.map(account(fromList:)),
+            nextCursor: payload.nextCursor,
+            totalCount: payload.totalCount
+        )
+    }
+}

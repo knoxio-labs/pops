@@ -17,7 +17,7 @@ internal struct InventorySearchProviderTests {
         ).makeAsyncIterator()
         let expected = try #require(await direct.next()).hits(query: "gar", filter: filter)
         var provided = InventorySearchProvider(store: store).answers(
-            to: "gar", filter: filter
+            to: "gar", filter: filter, after: nil, limit: 20
         ).makeAsyncIterator()
 
         let actual = try #require(Self.results(await provided.next()))
@@ -30,7 +30,7 @@ internal struct InventorySearchProviderTests {
         let store = Self.store()
         store.setReplicaStatus(.empty)
         var events = InventorySearchProvider(store: store).answers(
-            to: "gar", filter: InventorySearchFilter()
+            to: "gar", filter: InventorySearchFilter(), after: nil, limit: 20
         ).makeAsyncIterator()
 
         #expect(Self.isNotOnPhone(await events.next()))
@@ -45,7 +45,7 @@ internal struct InventorySearchProviderTests {
     @Test("a store ending without an answer becomes failed")
     internal func endedStore() async {
         var events = InventorySearchProvider(store: EndedInventoryStore()).answers(
-            to: "gar", filter: InventorySearchFilter()
+            to: "gar", filter: InventorySearchFilter(), after: nil, limit: 20
         ).makeAsyncIterator()
 
         #expect(Self.isFailed(await events.next()))
@@ -58,14 +58,14 @@ internal struct InventorySearchProviderTests {
         var inclusive = InventorySearchFilter()
         inclusive.includesInactive = true
         var inclusiveEvents = InventorySearchProvider(store: store).answers(
-            to: "gar", filter: inclusive
+            to: "gar", filter: inclusive, after: nil, limit: 20
         ).makeAsyncIterator()
         let inclusiveResults = try #require(Self.results(await inclusiveEvents.next()))
 
         var inHand = InventorySearchFilter()
         inHand.placement = .inHand
         var handEvents = InventorySearchProvider(store: store).answers(
-            to: "gar", filter: inHand
+            to: "gar", filter: inHand, after: nil, limit: 20
         ).makeAsyncIterator()
         let handResults = try #require(Self.results(await handEvents.next()))
 
@@ -73,11 +73,34 @@ internal struct InventorySearchProviderTests {
         #expect(handResults.map(\.hit.name) == ["Garden gloves"])
     }
 
+    @Test("search pages preserve their boundary without duplicate hits")
+    internal func pages() async throws {
+        let items = (0..<25).map { index in
+            Fixture.item("garden-\(index)", "Garden item \(index)")
+        }
+        let store = InMemoryInventoryStore(
+            items: items, locations: [], catalogue: Fixture.catalogue)
+        var firstEvents = InventorySearchProvider(store: store).answers(
+            to: "garden", filter: InventorySearchFilter(), after: nil, limit: 20
+        ).makeAsyncIterator()
+        let first = try #require(Self.page(await firstEvents.next()))
+        let cursor = try #require(first.nextCursor)
+        var nextEvents = InventorySearchProvider(store: store).answers(
+            to: "garden", filter: InventorySearchFilter(), after: cursor, limit: 20
+        ).makeAsyncIterator()
+        let next = try #require(Self.page(await nextEvents.next()))
+
+        #expect(first.hits.count == 20)
+        #expect(next.hits.count == 5)
+        #expect(Set((first.hits + next.hits).map(\.id)).count == 25)
+        #expect(next.nextCursor == nil)
+    }
+
     @Test("replica writes yield a second result without another provider call")
     internal func observesWrites() async throws {
         let store = Self.store()
         var events = InventorySearchProvider(store: store).answers(
-            to: "garden", filter: InventorySearchFilter()
+            to: "garden", filter: InventorySearchFilter(), after: nil, limit: 20
         ).makeAsyncIterator()
         let first = try #require(Self.results(await events.next()))
 
@@ -102,7 +125,7 @@ internal struct InventorySearchProviderTests {
         let store = Self.store()
         store.setReplicaStatus(.empty)
         var events = InventorySearchProvider(store: store).answers(
-            to: "gar", filter: InventorySearchFilter()
+            to: "gar", filter: InventorySearchFilter(), after: nil, limit: 20
         ).makeAsyncIterator()
         #expect(Self.isNotOnPhone(await events.next()))
 
@@ -154,8 +177,15 @@ internal struct InventorySearchProviderTests {
     private static func results(
         _ event: SearchProviderEvent<InventorySearchResult>?
     ) -> [InventorySearchResult]? {
-        guard case .results(let results) = event else { return nil }
-        return results
+        guard case .results(let page) = event else { return nil }
+        return page.hits
+    }
+
+    private static func page(
+        _ event: SearchProviderEvent<InventorySearchResult>?
+    ) -> SearchProviderPage<InventorySearchResult>? {
+        guard case .results(let page) = event else { return nil }
+        return page
     }
 
     private static func isNotOnPhone(

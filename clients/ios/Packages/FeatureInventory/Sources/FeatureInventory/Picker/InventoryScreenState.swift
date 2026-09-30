@@ -21,10 +21,15 @@ internal final class InventoryObservation<Value: Sendable & Equatable> {
     internal private(set) var phase: InventoryLoadPhase<Value> = .loading
     private let store: any InventoryStore
     private let query: InventoryQuery<Value>
+    private let onValue: ((Value) -> Void)?
 
-    internal init(store: any InventoryStore, query: InventoryQuery<Value>) {
+    internal init(
+        store: any InventoryStore, query: InventoryQuery<Value>,
+        onValue: ((Value) -> Void)? = nil
+    ) {
         self.store = store
         self.query = query
+        self.onValue = onValue
     }
 
     /// Follows the store until the calling task is cancelled.
@@ -32,6 +37,7 @@ internal final class InventoryObservation<Value: Sendable & Equatable> {
         phase = .loading
         for await value in store.observe(query) {
             phase = .loaded(value)
+            onValue?(value)
         }
         if phase == .loading && !Task.isCancelled { phase = .unavailable }
     }

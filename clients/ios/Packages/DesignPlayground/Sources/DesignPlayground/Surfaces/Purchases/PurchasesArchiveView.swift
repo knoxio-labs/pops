@@ -25,15 +25,19 @@ import SwiftUI
 /// the month's total. The rows and their panels are the home's, which are
 /// Inventory's, so a purchase reads the same wherever it is found.
 internal struct PurchasesArchiveView: View {
-    internal let loaded: [Purchase]
+    @State private var loaded: [Purchase]
+    @State private var nextPage: [Purchase]?
+    @State private var requestedNextPage = false
 
     @State private var paging: ArchivePaging
     @State private var scope: ArchiveScope
 
     internal init(
-        loaded: [Purchase], paging: ArchivePaging = .loading, scope: ArchiveScope = .all
+        loaded: [Purchase], nextPage: [Purchase]? = nil,
+        paging: ArchivePaging = .loading, scope: ArchiveScope = .all
     ) {
-        self.loaded = loaded
+        _loaded = State(initialValue: loaded)
+        _nextPage = State(initialValue: nextPage)
         _paging = State(initialValue: paging)
         _scope = State(initialValue: scope)
     }
@@ -43,45 +47,55 @@ internal struct PurchasesArchiveView: View {
     }
 
     internal var body: some View {
-        ScrollView {
-            LazyVStack(
-                alignment: .leading, spacing: PopsSpacing.lg, pinnedViews: [.sectionHeaders]
-            ) {
-                if loaded.isEmpty && paging == .loading {
-                    PurchasesArchiveSkeleton(rows: 6)
-                } else if months.isEmpty && paging == .end {
-                    nothingInScope
-                }
-                ForEach(months) { month in
-                    Section {
-                        PurchaseRowsPanel(rows: month.purchases) { purchase in
-                            NavigationLink {
-                                PurchaseDetailSurface(
-                                    detail: PurchaseDetailSurfaces.sample(for: purchase))
-                            } label: {
-                                PurchaseRowLabel(
-                                    purchase: purchase,
-                                    badge: PurchasesArchive.showsBadge(purchase, in: scope))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    } header: {
-                        header(month)
-                    }
-                }
-                if !loaded.isEmpty && !(months.isEmpty && paging == .end) { footer }
-            }
-            .inventoryMotion(value: scope)
-            .inventoryMotion(value: paging)
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.bottom, PopsSpacing.xl)
-        }
+        ScrollView(.vertical, showsIndicators: true) { archiveRows }
         .background(Color.popsBackground)
         .navigationTitle(scope == .all ? "All purchases" : "Unmatched")
         .playgroundTitleDisplay(large: false)
         .toolbar {
             ToolbarItem(placement: .principal) { scopePicker }
         }
+    }
+
+    private var archiveRows: some View {
+        LazyVStack(
+            alignment: .leading, spacing: PopsSpacing.lg, pinnedViews: [.sectionHeaders]
+        ) {
+            if loaded.isEmpty && paging == .loading {
+                PurchasesArchiveSkeleton(rows: 6)
+            } else if months.isEmpty && paging == .end {
+                nothingInScope
+            }
+            ForEach(months) { month in
+                Section {
+                    PurchaseRowsPanel(
+                        rows: month.purchases,
+                        onReachEnd: onReachEnd(for: month)
+                    ) { purchase in
+                        NavigationLink {
+                            PurchaseDetailSurface(
+                                detail: PurchaseDetailSurfaces.sample(for: purchase))
+                        } label: {
+                            PurchaseRowLabel(
+                                purchase: purchase,
+                                badge: PurchasesArchive.showsBadge(purchase, in: scope))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    header(month)
+                }
+            }
+            if !loaded.isEmpty && !(months.isEmpty && paging == .end) { footer }
+        }
+        .inventoryMotion(value: scope)
+        .inventoryMotion(value: paging)
+        .padding(.horizontal, PopsSpacing.lg)
+        .padding(.bottom, PopsSpacing.xl)
+    }
+
+    private func onReachEnd(for month: ArchiveMonth) -> (() -> Void)? {
+        guard month.purchases.last?.id == months.last?.purchases.last?.id else { return nil }
+        return loadNextPage
     }
 
     /// In the bar rather than above the list, so it does not scroll away from
@@ -151,7 +165,7 @@ internal struct PurchasesArchiveView: View {
                 )
                 .font(.popsSubheadline)
                 .foregroundStyle(Color.popsDestructive)
-                Button("Try again") { paging = .loading }
+                Button("Try again", action: loadNextPage)
                     .font(.popsHeadline)
                     .playgroundGlassButton()
                     .tint(.popsPurchases)
@@ -168,6 +182,14 @@ internal struct PurchasesArchiveView: View {
                     .padding(.vertical, PopsSpacing.md)
             }
         }
+    }
+
+    private func loadNextPage() {
+        guard !requestedNextPage, let nextPage else { return }
+        requestedNextPage = true
+        loaded = PurchasesArchive.merging(nextPage, into: loaded)
+        self.nextPage = nil
+        paging = .end
     }
 }
 

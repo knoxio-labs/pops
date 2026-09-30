@@ -21,6 +21,22 @@ internal struct AccountsMappingTests {
         #expect(account.archived == false)
     }
 
+    @Test("maps a page continuation and server count")
+    func mapsPageMetadata() async throws {
+        let repository = try BFMAccountsRepository.stubbed(
+            StubTransport(
+                status: .ok,
+                json: AccountsWire.page(
+                    AccountsWire.account(), nextCursor: "next-page", totalCount: 31)))
+
+        let page = try await repository.accountPage(
+            search: nil, archived: false, cursor: nil, limit: 25)
+
+        #expect(page.accounts.map(\.id) == ["acc-1"])
+        #expect(page.nextCursor == "next-page")
+        #expect(page.totalCount == 31)
+    }
+
     /// The wire now carries a real count (POPS-2924) — finance's own literal
     /// row count for the account, not a value this mapper invents.
     @Test("carries the wire's transaction count through, zero included")

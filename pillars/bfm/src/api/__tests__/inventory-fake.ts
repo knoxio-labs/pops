@@ -6,16 +6,26 @@
  */
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
+import { makeInventoryCatalogueFake } from './inventory-catalogue-fake.js';
 import { emptyInventoryChanges, emptyInventorySnapshot } from './inventory-fake-pages.js';
 import { makeItemProcedure, readItemId } from './inventory-item-fake.js';
 import { makeLedgerProcedure, type InventoryLedgerCall } from './inventory-ledger-fake.js';
+import { makeInventoryWebItemsFake } from './inventory-web-fake.js';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
 
 import type { PillarHandleFactory } from '../pillars/gateway.js';
-import type { InventoryFakeOptions, InventoryItemCall } from './inventory-fake-types.js';
+import type {
+  InventoryFakeOptions,
+  InventoryItemCall,
+  InventoryWebItemsCall,
+} from './inventory-fake-types.js';
 
-export type { InventoryFakeOptions, InventoryItemCall } from './inventory-fake-types.js';
+export type {
+  InventoryFakeOptions,
+  InventoryItemCall,
+  InventoryWebItemsCall,
+} from './inventory-fake-types.js';
 
 export interface InventorySyncCall {
   cursor?: string;
@@ -40,6 +50,7 @@ export interface InventorySuggestCall {
 
 export interface InventoryFake {
   factory: PillarHandleFactory;
+  webItemsCalls: InventoryWebItemsCall[];
   snapshotCalls: InventorySyncCall[];
   changesCalls: InventoryChangesCall[];
   itemEventsCalls: (InventorySyncCall & { id?: string })[];
@@ -104,6 +115,16 @@ function defaultMutationsResult(input: unknown): CallResult<unknown> {
   return { kind: 'ok', value: { outcomes, highWaterSeq: outcomes.length } };
 }
 
+function makeMutationsProcedure(
+  options: InventoryFakeOptions,
+  calls: InventoryMutationsCall[]
+): (rawInput: unknown) => Promise<CallResult<unknown>> {
+  return (rawInput) => {
+    calls.push(readMutationsCall(rawInput));
+    return Promise.resolve((options.mutationsResult ?? defaultMutationsResult)(rawInput));
+  };
+}
+
 function readSuggestCall(input: unknown): InventorySuggestCall {
   if (input === null || typeof input !== 'object') return {};
   return {
@@ -127,6 +148,7 @@ function makeSuggestProcedure(
 
 /** @param options What each procedure answers; see {@link InventoryFakeOptions}. */
 export function createInventoryFake(options: InventoryFakeOptions = {}): InventoryFake {
+  const webItemsCalls: InventoryWebItemsCall[] = [];
   const snapshotCalls: InventorySyncCall[] = [];
   const changesCalls: InventoryChangesCall[] = [];
   const itemEventsCalls: (InventorySyncCall & { id?: string })[] = [];
@@ -134,36 +156,16 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
   const mutationsCalls: InventoryMutationsCall[] = [];
   const ledgerCalls: InventoryLedgerCall[] = [];
   const suggestCalls: InventorySuggestCall[] = [];
-  let catalogueCalls = 0;
-
-  const catalogue = (): Promise<CallResult<unknown>> => {
-    catalogueCalls += 1;
-    return Promise.resolve(
-      options.catalogueResult ?? { kind: 'ok', value: { version: 'cat-1', units: [], types: [] } }
-    );
-  };
-
-  const catalogueRevision = (rawInput: unknown): Promise<CallResult<unknown>> => {
-    const revision = readRevision(rawInput);
-    return Promise.resolve(
-      options.catalogueRevisionResult?.(revision) ?? {
-        kind: 'not-found',
-        pillar: 'inventory',
-        message: `Catalogue revision ${String(revision)} was not found`,
-      }
-    );
-  };
-
-  const mutations = (rawInput: unknown): Promise<CallResult<unknown>> => {
-    mutationsCalls.push(readMutationsCall(rawInput));
-    return Promise.resolve((options.mutationsResult ?? defaultMutationsResult)(rawInput));
-  };
+  const catalogue = makeInventoryCatalogueFake(options);
+  const mutations = makeMutationsProcedure(options, mutationsCalls);
 
   const suggest = makeSuggestProcedure(options, suggestCalls);
+  const listWebItems = makeInventoryWebItemsFake(options, webItemsCalls);
 
   return {
     factory: <TRouter>() =>
       fakePillarHandle<TRouter>('inventory', {
+        web: { list: listWebItems },
         sync: {
           snapshot: makeSnapshotProcedure(options, snapshotCalls),
           changes: makeChangesProcedure(options, changesCalls),
@@ -172,9 +174,13 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
           mutations,
           reportLedger: makeLedgerProcedure(options.ledgerResult, ledgerCalls),
         },
-        types: { catalogue, read: { catalogue: catalogueRevision } },
+        types: {
+          catalogue: catalogue.catalogue,
+          read: { catalogue: catalogue.catalogueRevision },
+        },
         codes: { suggest },
       }),
+    webItemsCalls,
     snapshotCalls,
     changesCalls,
     itemEventsCalls,
@@ -183,7 +189,7 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
     ledgerCalls,
     suggestCalls,
     get catalogueCalls() {
-      return catalogueCalls;
+      return catalogue.calls;
     },
   };
 }
@@ -194,11 +200,6 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
  * a `{ query: { revision } }` wrapper is not read by the SDK and reaches
  * inventory as no revision at all, which answers the current catalogue.
  */
-function readRevision(input: unknown): number {
-  if (input === null || typeof input !== 'object' || !('revision' in input)) return Number.NaN;
-  return typeof input.revision === 'number' ? input.revision : Number.NaN;
-}
-
 function readSyncCall(input: unknown): InventorySyncCall {
   if (input === null || typeof input !== 'object') return {};
   return {

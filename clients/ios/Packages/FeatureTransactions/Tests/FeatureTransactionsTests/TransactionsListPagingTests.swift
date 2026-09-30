@@ -29,6 +29,19 @@ internal struct TransactionsListPagingTests {
         #expect(await repository.callCount == 1)
     }
 
+    @Test("duplicate ids within the first page are shown once")
+    func firstPageRowsAreUnique() async {
+        let duplicate = Transaction.fake(id: "txn-1", description: "First")
+        let repository = ScriptedTransactionsRepository(script: [
+            .page([duplicate, Transaction.fake(id: "txn-2"), duplicate], next: nil),
+        ])
+        let model = model(repository)
+
+        await model.loadFirstPage()
+
+        #expect(model.state == .loaded([duplicate, Transaction.fake(id: "txn-2")]))
+    }
+
     /// The `.task` that loads the screen runs again on every reappearance. It
     /// must not re-fetch what is already there.
     @Test("a second load of the first page is not a second request")
@@ -96,8 +109,8 @@ internal struct TransactionsListPagingTests {
         #expect(model.paging == .exhausted)
     }
 
-    /// The trigger is a row's appearance, and that row is still on screen after
-    /// the failure. Left retryable, one refused request becomes a loop.
+    /// The footer can remain visible after failure. Keeping it retryable but
+    /// inert means a refused request does not become a loop.
     @Test("reaching the end again does not retry a failed page")
     func aFailedPageIsNotRetriedByScrolling() async {
         let repository = ScriptedTransactionsRepository(script: [
@@ -116,10 +129,8 @@ internal struct TransactionsListPagingTests {
         #expect(model.paging == .failed(.unavailable))
     }
 
-    /// A well-behaved cursor never re-sends a row. This is the belt: a repeated
-    /// id renders as a repeated row rather than as an error, which is the class
-    /// of defect that reaches production because nobody can tell it from a real
-    /// second purchase at the same shop.
+    /// A well-behaved cursor never re-sends a row. Keep the first copy when a
+    /// page overlaps so SwiftUI sees one stable identity per transaction.
     @Test("a row that arrives on two pages is shown once")
     func duplicateRowsAreNotAppendedTwice() async {
         let overlapping = Transaction.fake(id: "txn-1", description: "Twice")
@@ -158,6 +169,44 @@ internal struct TransactionsListPagingTests {
 
         #expect(model.state == .loaded([Transaction.fake(id: "txn-1")]))
         #expect(model.paging == .exhausted)
+    }
+
+    @Test("each short page advances the scroll boundary trigger")
+    func shortPagesAdvanceBoundaryTrigger() async {
+        let repository = ScriptedTransactionsRepository(script: [
+            .page([Transaction.fake(id: "txn-1")], next: "cursor-1"),
+            .page([Transaction.fake(id: "txn-2")], next: "cursor-2"),
+            .page([Transaction.fake(id: "txn-3")], next: nil),
+        ])
+        let model = model(repository)
+
+        await model.loadFirstPage()
+        #expect(model.pageRevision == 1)
+        await model.loadNextPageIfNeeded()
+        #expect(model.pageRevision == 2)
+        await model.loadNextPageIfNeeded()
+        #expect(model.pageRevision == 3)
+        #expect(model.paging == .exhausted)
+    }
+
+    @Test("a repeated cursor stops automatic paging and preserves loaded rows")
+    func repeatedCursorStopsPaging() async {
+        let repository = ScriptedTransactionsRepository(script: [
+            .page([Transaction.fake(id: "txn-1")], next: "cursor-1"),
+            .page([Transaction.fake(id: "txn-2")], next: "cursor-1"),
+        ])
+        let model = model(repository)
+
+        await model.loadFirstPage()
+        await model.loadNextPageIfNeeded()
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.state == .loaded([
+            Transaction.fake(id: "txn-1"),
+            Transaction.fake(id: "txn-2"),
+        ]))
+        #expect(model.paging == .failed(.contractMismatch))
+        #expect(await repository.callCount == 2)
     }
 
     @Test("nothing pages before a first page has landed")

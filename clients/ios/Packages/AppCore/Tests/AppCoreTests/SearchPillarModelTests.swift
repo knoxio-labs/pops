@@ -3,7 +3,7 @@ import Testing
 
 @testable import AppCore
 
-@Suite("Search pillar phase machine")
+@Suite("Search pillar paging")
 @MainActor
 internal struct SearchPillarModelTests {
     @Test("an empty query clears rows without asking the provider")
@@ -23,13 +23,13 @@ internal struct SearchPillarModelTests {
     func zeroDebounce() async {
         let provider = Provider(
             pillar: .inventory,
-            scripts: ["cable": [[Self.step(.results([1]))]]])
+            scripts: ["cable": [[Self.step(.results(Self.page([1])))]]])
         let model = SearchPillarModel(provider: provider)
 
         model.ask(" cable ", filter: "all")
 
         #expect(await eventually { await provider.askedQueries() == ["cable"] })
-        #expect(await eventually { model.hits == [1] })
+        #expect(await eventually { model.hits == [Hit(1)] })
     }
 
     @Test("debounce sends only the last query in a burst")
@@ -37,7 +37,7 @@ internal struct SearchPillarModelTests {
         let provider = Provider(
             pillar: .purchases,
             debounce: .milliseconds(40),
-            scripts: ["tool": [[Self.step(.results([3]))]]])
+            scripts: ["tool": [[Self.step(.results(Self.page([3])))]]])
         let model = SearchPillarModel(provider: provider)
 
         model.ask("t", filter: "all")
@@ -45,7 +45,7 @@ internal struct SearchPillarModelTests {
         model.ask("tool", filter: "all")
 
         #expect(await eventually { await provider.askedQueries() == ["tool"] })
-        #expect(await eventually { model.hits == [3] })
+        #expect(await eventually { model.hits == [Hit(3)] })
     }
 
     @Test("a superseded stream terminates and cannot overwrite the latest answer")
@@ -53,101 +53,249 @@ internal struct SearchPillarModelTests {
         let provider = Provider(
             pillar: .purchases,
             scripts: [
-                "old": [[Self.step(.results([1]), after: .milliseconds(80))]],
-                "new": [[Self.step(.results([2]))]],
+                "old": [[Self.step(.results(Self.page([1])), after: .milliseconds(80))]],
+                "new": [[Self.step(.results(Self.page([2])))]],
             ])
         let model = SearchPillarModel(provider: provider)
         model.ask("old", filter: "all")
         #expect(await eventually { await provider.askedQueries().contains("old") })
 
         model.ask("new", filter: "all")
-        #expect(await eventually { model.hits == [2] })
+        #expect(model.hits.isEmpty)
+        #expect(await eventually { model.hits == [Hit(2)] })
         try await Task.sleep(for: .milliseconds(100))
 
-        #expect(model.hits == [2])
+        #expect(model.hits == [Hit(2)])
         #expect(model.answeredQuery == "new")
         #expect(await eventually { await provider.terminatedQueries().contains("old") })
     }
 
-    @Test("refining retains the previous rows and query")
-    func refiningPreviousRows() async {
+    @Test("changing a filter clears old rows and rejects its delayed page")
+    func filterRace() async {
         let provider = Provider(
             pillar: .inventory,
             scripts: [
-                "cab": [[Self.step(.results([1, 2]))]],
-                "cable": [[Self.step(.results([3]), after: .milliseconds(80))]],
+                "cable": [
+                    [Self.step(.results(Self.page([1])), after: .milliseconds(80))],
+                    [Self.step(.results(Self.page([2])))],
+                ]
             ])
         let model = SearchPillarModel(provider: provider)
-        model.ask("cab", filter: "all")
-        #expect(await eventually { model.hits == [1, 2] })
+        model.ask("cable", filter: "old")
+        #expect(await eventually { await provider.askedQueries() == ["cable"] })
 
-        model.ask("cable", filter: "all")
+        model.ask("cable", filter: "new")
 
-        #expect(model.answer == SearchAnswer.pending(previous: "cab"))
-        #expect(
-            model.section(scope: SearchScope.all, cap: 3)
-                == .results(rows: [1, 2], total: 2, query: "cab", isRefining: true))
+        #expect(model.hits.isEmpty)
+        #expect(await eventually { model.hits == [Hit(2)] })
+        #expect(await provider.askedFilters() == ["old", "new"])
     }
 
-    @Test("retry repeats the same query and filter after failure")
+    @Test("a delayed page from a superseded query cannot append to its replacement")
+    func supersededPageIsCancelled() async {
+        let provider = Provider(
+            pillar: .inventory,
+            scripts: [
+                "old": [
+                    [Self.step(.results(Self.page([1], nextCursor: "next")))],
+                    [Self.step(.results(Self.page([2])), after: .milliseconds(80))],
+                ],
+                "new": [[Self.step(.results(Self.page([3])))]],
+            ])
+        let model = SearchPillarModel(provider: provider)
+        model.ask("old", filter: "all")
+        #expect(await eventually { model.hits == [Hit(1)] })
+
+        let pageTask = Task { await model.loadNextPageIfNeeded() }
+        #expect(await eventually { await provider.askedCursors() == [nil, "next"] })
+
+        model.ask("new", filter: "all")
+
+        #expect(model.hits.isEmpty)
+        #expect(await eventually { model.hits == [Hit(3)] })
+        await pageTask.value
+        #expect(model.hits == [Hit(3)])
+    }
+
+    @Test("retry repeats the same query and filter after a first-page failure")
     func retryFailure() async {
         let provider = Provider(
             pillar: .purchases,
-            scripts: [
-                "tool": [
-                    [Self.step(.failed)],
-                    [Self.step(.results([7]))],
-                ]
-            ])
+            scripts: ["tool": [[Self.step(.failed)], [Self.step(.results(Self.page([7])))]]])
         let model = SearchPillarModel(provider: provider)
         model.ask("tool", filter: "unsettled")
         #expect(await eventually { model.answer == SearchAnswer.failed })
 
         model.retry()
 
-        #expect(await eventually { model.hits == [7] })
+        #expect(await eventually { model.hits == [Hit(7)] })
         #expect(await provider.askedQueries() == ["tool", "tool"])
         #expect(await provider.askedFilters() == ["unsettled", "unsettled"])
     }
 
-    @Test("one on-device stream can update its rows without another ask")
-    func streamingUpdates() async {
+    @Test("a refreshed first page replaces its prior ordered matches")
+    func firstPageRefreshReplacesRows() async {
         let provider = Provider(
             pillar: .inventory,
             scripts: [
-                "cable": [
+                "tool": [
                     [
-                        Self.step(.results([1])),
-                        Self.step(.results([1, 2]), after: .milliseconds(20)),
+                        Self.step(.results(Self.page([1], nextCursor: "next"))),
+                        Self.step(
+                            .results(Self.page([2], nextCursor: "next")), after: .milliseconds(20)),
                     ]
                 ]
             ])
         let model = SearchPillarModel(provider: provider)
+        model.ask("tool", filter: "all")
 
-        model.ask("cable", filter: "all")
-
-        #expect(await eventually { model.hits == [1, 2] })
-        #expect(await provider.askedQueries() == ["cable"])
+        #expect(await eventually { model.hits == [Hit(2)] })
+        #expect(await provider.askedCursors() == [nil])
     }
 
-    @Test("All caps rows while a scoped section keeps the complete answer")
+    @Test("only the first page is requested until the visible end boundary arrives")
+    func waitsForBoundaryBeforeRequestingNextPage() async {
+        let provider = Provider(
+            pillar: .inventory,
+            scripts: [
+                "tool": [
+                    [Self.step(.results(Self.page([1], nextCursor: "next")))],
+                    [Self.step(.results(Self.page([2])))],
+                ]
+            ])
+        let model = SearchPillarModel(provider: provider)
+        model.ask("tool", filter: "all")
+        #expect(await eventually { model.hits == [Hit(1)] })
+        #expect(await provider.askedCursors() == [nil])
+
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.hits == [Hit(1), Hit(2)])
+        #expect(await provider.askedCursors() == [nil, "next"])
+        #expect(await provider.askedLimits() == [20, 20])
+    }
+
+    @Test("a later page makes results beyond the first page reachable")
+    func laterPageResultsAreReachable() async {
+        let provider = Provider(
+            pillar: .inventory,
+            scripts: [
+                "tool": [
+                    [Self.step(.results(Self.page([1], nextCursor: "next", totalCount: 2)))],
+                    [Self.step(.results(Self.page([2], totalCount: 2)))],
+                ]
+            ])
+        let model = SearchPillarModel(provider: provider)
+        model.ask("tool", filter: "all")
+        #expect(await eventually { model.hits == [Hit(1)] })
+
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.hits == [Hit(1), Hit(2)])
+        #expect(model.totalCount == 2)
+        #expect(model.pagingState == .exhausted)
+    }
+
+    @Test("a next-page failure preserves rows and retries its cursor")
+    func nextPageFailureRetriesSameCursor() async {
+        let provider = Provider(
+            pillar: .inventory,
+            scripts: [
+                "tool": [
+                    [Self.step(.results(Self.page([1], nextCursor: "next")))],
+                    [Self.step(.failed)],
+                    [Self.step(.results(Self.page([2])))],
+                ]
+            ])
+        let model = SearchPillarModel(provider: provider)
+        model.ask("tool", filter: "all")
+        #expect(await eventually { model.hits == [Hit(1)] })
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.hits == [Hit(1)])
+        #expect(model.pagingState == .failed)
+
+        await model.retryNextPage()
+
+        #expect(model.hits == [Hit(1), Hit(2)])
+        #expect(await provider.askedCursors() == [nil, "next", "next"])
+    }
+
+    @Test("short duplicate-only pages advance until a new row or the end")
+    func duplicateOnlyPagesAdvanceAutomatically() async {
+        let provider = Provider(
+            pillar: .inventory,
+            scripts: [
+                "tool": [
+                    [Self.step(.results(Self.page([1, 1], nextCursor: "a")))],
+                    [Self.step(.results(Self.page([1, 1], nextCursor: "b")))],
+                    [Self.step(.results(Self.page([2, 2])))],
+                ]
+            ])
+        let model = SearchPillarModel(provider: provider)
+        model.ask("tool", filter: "all")
+        #expect(await eventually { model.hits == [Hit(1)] })
+
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.hits == [Hit(1), Hit(2)])
+        #expect(await provider.askedCursors() == [nil, "a", "b"])
+    }
+
+    @Test("an empty first page automatically follows cursors until rows arrive")
+    func emptyFirstPageAdvancesAutomatically() async {
+        let provider = Provider(
+            pillar: .inventory,
+            scripts: [
+                "tool": [
+                    [Self.step(.results(Self.page([], nextCursor: "a")))],
+                    [Self.step(.results(Self.page([], nextCursor: "b")))],
+                    [Self.step(.results(Self.page([3])))],
+                ]
+            ])
+        let model = SearchPillarModel(provider: provider)
+        model.ask("tool", filter: "all")
+
+        #expect(await eventually { model.hits == [Hit(3)] })
+        #expect(await provider.askedCursors() == [nil, "a", "b"])
+    }
+
+    @Test("a repeated cursor stops paging with a retryable error")
+    func repeatedCursorStops() async {
+        let provider = Provider(
+            pillar: .inventory,
+            scripts: [
+                "tool": [
+                    [Self.step(.results(Self.page([1], nextCursor: "a")))],
+                    [Self.step(.results(Self.page([2], nextCursor: "a")))],
+                ]
+            ])
+        let model = SearchPillarModel(provider: provider)
+        model.ask("tool", filter: "all")
+        #expect(await eventually { model.hits == [Hit(1)] })
+
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.hits == [Hit(1)])
+        #expect(model.pagingState == .failed)
+        #expect(await provider.askedCursors() == [nil, "a"])
+    }
+
+    @Test("All displays every loaded match and scoped sections stay complete")
     func sectionShaping() async {
         let provider = Provider(
             pillar: .inventory,
-            scripts: ["item": [[Self.step(.results([1, 2, 3, 4, 5]))]]])
+            scripts: ["item": [[Self.step(.results(Self.page([1, 2, 3, 4, 5])))]]])
         let model = SearchPillarModel(provider: provider)
         model.ask("item", filter: "all")
         #expect(await eventually { model.hits.count == 5 })
 
         #expect(
-            model.section(scope: SearchScope.all, cap: 3)
+            model.section(scope: .all)
                 == .results(
-                    rows: [1, 2, 3], total: 5, query: "item", isRefining: false))
-        #expect(
-            model.section(scope: SearchScope.pillar(.inventory), cap: 3)
-                == .results(
-                    rows: [1, 2, 3, 4, 5], total: 5, query: "item", isRefining: false))
-        #expect(model.section(scope: SearchScope.pillar(.purchases), cap: 3) == nil)
+                    rows: [Hit(1), Hit(2), Hit(3), Hit(4), Hit(5)], total: 5,
+                    query: "item", isRefining: false))
+        #expect(model.section(scope: .pillar(.purchases)) == nil)
     }
 
     @Test("availability statuses survive an empty query while transient statuses do not")
@@ -166,11 +314,24 @@ internal struct SearchPillarModelTests {
                 answer: .pending(previous: nil), hitCount: 0, query: "") == .none)
     }
 
-    private typealias Provider = ScriptedSearchProvider<Int, String>
+    private struct Hit: Identifiable, Sendable, Equatable {
+        let id: Int
+
+        init(_ id: Int) { self.id = id }
+    }
+
+    private typealias Provider = ScriptedSearchProvider<Hit, String>
+
+    private static func page(
+        _ ids: [Int], nextCursor: String? = nil, totalCount: Int? = nil
+    ) -> SearchProviderPage<Hit> {
+        SearchProviderPage(
+            hits: ids.map(Hit.init), nextCursor: nextCursor, totalCount: totalCount)
+    }
 
     private static func step(
-        _ event: SearchProviderEvent<Int>, after delay: Duration = .zero
-    ) -> ScriptedSearchStep<Int> {
+        _ event: SearchProviderEvent<Hit>, after delay: Duration = .zero
+    ) -> ScriptedSearchStep<Hit> {
         ScriptedSearchStep(event: event, delay: delay)
     }
 

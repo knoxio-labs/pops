@@ -21,7 +21,14 @@ extension InventoryItemDetail {
         let protocol2Catalogue = source.inventoryProtocol2Catalogue()
         let protocol2Type = Self.protocol2Type(for: item, catalogue: protocol2Catalogue)
         let type = item.typeKey.flatMap { source.inventoryCatalogue().type(forKey: $0) }
-        let events = source.inventoryItemHistory(itemId: id)
+        let historyScope = InventoryEventPageScope.item(id)
+        let preview = source.inventoryEventPage(
+            InventoryEventPageQuery(
+                scope: historyScope, page: InventoryPageRequest(limit: 4)))
+        let latestLifecycleChange = source.inventoryEventPage(
+            InventoryEventPageQuery(
+                scope: historyScope, filter: .lifecycleChanges,
+                page: InventoryPageRequest(limit: 1))).rows.first
         let fields =
             protocol2Type.map {
                 InventoryDetailFields(item: item, type: $0, source: source)
@@ -47,13 +54,13 @@ extension InventoryItemDetail {
         provenance = item.provenance.map(Self.provenance)
         documents = Self.documents(of: item)
         activity = InventoryActivityEntries(source: source, now: now, calendar: calendar)
-            .entries(for: events)
+            .entries(for: preview.rows)
         conflict = ledger.repairs.first { $0.entityId == id }.map {
             InventoryDetailConflicts.conflict(
                 $0, catalogue: InventorySyncPage.catalogueReading(source, for: [$0]).detail($0))
         }
         lastSynced = Self.lastSynced(status, now: now)
-        lifecycleChange = Self.lifecycleChange(of: item, events: events)
+        lifecycleChange = Self.lifecycleChange(of: item, latest: latestLifecycleChange)
     }
 
     private static func protocol2Type(
@@ -117,10 +124,9 @@ extension InventoryItemDetail {
     /// lifecycle-changed event recorded. The item itself carries no reason
     /// field, so that detail only ever comes from the event history.
     private static func lifecycleChange(
-        of item: InventoryItem, events: [InventoryEvent]
+        of item: InventoryItem, latest: InventoryEvent?
     ) -> InventoryLifecycleChange? {
         guard item.lifecycle != .active else { return nil }
-        let latest = events.filter { $0.kind == .lifecycleChanged }.max { $0.seq < $1.seq }
         guard let changedAt = item.lifecycleChangedAt ?? latest?.serverTime else { return nil }
         return InventoryLifecycleChange(
             lifecycle: item.lifecycle, changedAt: changedAt, reason: latest?.reason)

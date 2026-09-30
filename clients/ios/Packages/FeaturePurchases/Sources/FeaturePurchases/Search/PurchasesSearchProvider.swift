@@ -17,7 +17,9 @@ public struct PurchasesSearchProvider: SearchProvider {
 
     public func answers(
         to query: String,
-        filter: PurchasesSearchFilter
+        filter: PurchasesSearchFilter,
+        after cursor: String?,
+        limit: Int
     ) -> AsyncStream<SearchProviderEvent<PurchaseSearchHit>> {
         AsyncStream { continuation in
             let task = Task {
@@ -29,9 +31,19 @@ public struct PurchasesSearchProvider: SearchProvider {
                             return
                         }
                     }
-                    let hits = try await repository.search(
-                        text: query, status: filter.status, tags: filter.tags)
-                    continuation.yield(.results(hits.filter(filter.includes)))
+                    let page = try await repository.search(
+                        text: query,
+                        kind: Self.kind(filter.kind),
+                        status: filter.status,
+                        tags: filter.tags,
+                        after: cursor,
+                        limit: limit
+                    )
+                    continuation.yield(
+                        .results(
+                            SearchProviderPage(
+                                hits: page.hits, nextCursor: page.nextCursor,
+                                totalCount: page.totalCount)))
                 } catch is CancellationError {
                 } catch {
                     continuation.yield(.failed)
@@ -39,6 +51,14 @@ public struct PurchasesSearchProvider: SearchProvider {
                 continuation.finish()
             }
             continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private static func kind(_ kind: PurchasesSearchKind) -> PurchaseSearchKind {
+        switch kind {
+        case .any: .all
+        case .purchases: .purchases
+        case .lines: .lines
         }
     }
 

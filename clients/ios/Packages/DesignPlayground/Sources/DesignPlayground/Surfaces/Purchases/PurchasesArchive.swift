@@ -39,6 +39,11 @@ internal struct ArchiveMonth: Identifiable, Hashable {
 
 @MainActor
 internal enum PurchasesArchive {
+    internal static func merging(_ incoming: [Purchase], into loaded: [Purchase]) -> [Purchase] {
+        var seen = Set(loaded.map(\.id))
+        return loaded + incoming.filter { seen.insert($0.id).inserted }
+    }
+
     /// The loaded rows in scope, cut into months, newest first.
     ///
     /// Everything here is derived from what has loaded, because

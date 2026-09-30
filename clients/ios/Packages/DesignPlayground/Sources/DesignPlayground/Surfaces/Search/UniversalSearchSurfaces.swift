@@ -1,3 +1,4 @@
+import FeaturePurchases
 import SwiftUI
 
 /// The one search tab, staged in the shell that carries every migrated
@@ -62,7 +63,8 @@ internal enum UniversalSearchSurfaces {
             DesignState("tags-searching", "Tags, searching") {
                 NavigationStack {
                     PurchasesTagPicker(
-                        selection: .constant(["grocery"]), tags: PurchasesSearchFixtures.tagsInUse,
+                        selection: .constant(["grocery"]),
+                        repository: playgroundPurchasesDependencies().purchases,
                         query: "r")
                 }
                 .tint(SearchPillar.purchases.tint)
@@ -70,7 +72,8 @@ internal enum UniversalSearchSurfaces {
             DesignState("tags-no-match", "Tags, nothing matches") {
                 NavigationStack {
                     PurchasesTagPicker(
-                        selection: .constant([]), tags: PurchasesSearchFixtures.tagsInUse,
+                        selection: .constant([]),
+                        repository: playgroundPurchasesDependencies().purchases,
                         query: "garden")
                 }
                 .tint(SearchPillar.purchases.tint)

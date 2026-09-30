@@ -94,6 +94,9 @@ export const SearchFilterSchema = z.object({
 export const SearchQuerySchema = z.object({
   text: z.string(),
   filters: z.array(SearchFilterSchema).optional(),
+  kind: z.enum(['purchases', 'lines']).optional(),
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
 });
 
 /** Context about where search is invoked from. Mirrors `SearchContext` in `@pops/types`. */
@@ -132,7 +135,11 @@ export const purchasesSearchContract = c.router({
     path: '/search',
     body: SearchBodySchema,
     responses: {
-      200: z.object({ hits: z.array(SearchHitSchema) }),
+      200: z.object({
+        hits: z.array(SearchHitSchema),
+        nextCursor: z.string().nullable().optional(),
+        totalCount: z.number().int().nonnegative().optional(),
+      }),
       // A filter this pillar cannot apply. Declared, because the alternative
       // a caller cannot detect is a 200 computed as though it were never sent.
       400: ErrorBodySchema,

@@ -1,4 +1,6 @@
-import { MobilePurchaseTagsResponseSchema } from '../../contract/mobile-purchases-schemas.js';
+import { z } from 'zod';
+
+import { MobileTagCountSchema } from '../../contract/mobile-purchases-schemas.js';
 /**
  * bfm's calls into purchases' `search.*` sub-router and its `tagVocabulary`
  * read — split from `client.ts` purely to keep that file under the
@@ -9,6 +11,7 @@ import { parseOrMismatch } from '../pillars/parse-response.js';
 import { PurchasesSearchResponseSchema, toMobileSearchHit } from './search-wire.js';
 
 import type {
+  MobilePurchaseTagsQuery,
   MobilePurchaseSearchResponse,
   MobilePurchaseTagsResponse,
 } from '../../contract/mobile-purchases-schemas.js';
@@ -23,7 +26,11 @@ export const PURCHASES_PILLAR_ID = 'purchases';
  */
 export type PurchasesTagVocabularyRouter = {
   purchase: {
-    tagVocabulary: (input: Record<string, never>) => Promise<unknown>;
+    tagVocabulary: (input: {
+      search?: string;
+      cursor?: string;
+      limit?: number;
+    }) => Promise<unknown>;
   };
 };
 
@@ -34,7 +41,7 @@ export type PurchasesTagVocabularyRouter = {
  * registration). Its own type rather than folded into
  * {@link PurchasesTagVocabularyRouter}: it is a disjoint sub-router on the
  * same producer, exactly the reason `client.ts`'s
- * `PurchasesReceiptBytesRouter` is separate from its `PurchasesReceiptRouter`.
+ * Receipt bytes use their own router assertion in `receipt-bytes-client.ts`.
  */
 export type PurchasesSearchRouter = {
   search: {
@@ -43,6 +50,9 @@ export type PurchasesSearchRouter = {
         query: {
           text: string;
           filters?: readonly { field: string; operator: string; value: string }[];
+          kind?: 'purchases' | 'lines';
+          cursor?: string;
+          limit?: number;
         };
       };
     }) => Promise<unknown>;
@@ -51,11 +61,20 @@ export type PurchasesSearchRouter = {
 
 export interface SearchPurchasesRequest {
   readonly q: string;
+  readonly kind?: 'any' | 'purchases' | 'lines';
+  readonly cursor?: string;
+  readonly limit?: number;
   /** A single raw purchases-pillar status, forwarded as its `status eq` filter. */
   readonly status?: string;
   /** Chosen item tags, forwarded as purchases' own `tags eq` filter, any-of. */
   readonly tags?: readonly string[];
 }
+
+const PurchasesTagVocabularyResponseSchema = z.object({
+  tags: z.array(MobileTagCountSchema),
+  nextCursor: z.string().nullable().optional(),
+  totalCount: z.number().int().nonnegative().optional(),
+});
 
 /**
  * The pillar's own structured filters a search request denotes, or
@@ -75,6 +94,7 @@ function searchFilters(
   return filters.length > 0 ? filters : undefined;
 }
 
+/** Search and page purchases while preserving the producer's ranked hit data. */
 export async function search(
   gateway: PillarGateway,
   request: SearchPurchasesRequest
@@ -83,7 +103,15 @@ export async function search(
     PURCHASES_PILLAR_ID,
     (handle) =>
       handle.search.search({
-        body: { query: { text: request.q, filters: searchFilters(request) } },
+        body: {
+          query: {
+            text: request.q,
+            filters: searchFilters(request),
+            ...(request.kind === undefined || request.kind === 'any' ? {} : { kind: request.kind }),
+            ...(request.cursor === undefined ? {} : { cursor: request.cursor }),
+            ...(request.limit === undefined ? {} : { limit: request.limit }),
+          },
+        },
       })
   );
 
@@ -96,7 +124,14 @@ export async function search(
   if (!isGatewayOk(parsed)) return parsed;
 
   try {
-    return { kind: 'ok', value: { hits: parsed.value.hits.map(toMobileSearchHit) } };
+    return {
+      kind: 'ok',
+      value: {
+        hits: parsed.value.hits.map(toMobileSearchHit),
+        nextCursor: parsed.value.nextCursor ?? null,
+        ...(parsed.value.totalCount === undefined ? {} : { totalCount: parsed.value.totalCount }),
+      },
+    };
   } catch (error) {
     console.warn(
       `[bfm-api] ${PURCHASES_PILLAR_ID}.search.search returned a hit this pillar cannot read: ${String(error)}`
@@ -105,18 +140,35 @@ export async function search(
   }
 }
 
+/** Fetch one filtered page of purchase item tags. */
 export async function tagVocabulary(
-  gateway: PillarGateway
+  gateway: PillarGateway,
+  request: MobilePurchaseTagsQuery
 ): Promise<GatewayOutcome<MobilePurchaseTagsResponse>> {
   const outcome = await gateway.call<PurchasesTagVocabularyRouter, unknown>(
     PURCHASES_PILLAR_ID,
-    (handle) => handle.purchase.tagVocabulary({})
+    (handle) =>
+      handle.purchase.tagVocabulary({
+        ...(request.search === undefined ? {} : { search: request.search }),
+        ...(request.cursor === undefined ? {} : { cursor: request.cursor }),
+        limit: request.limit,
+      })
   );
 
-  return parseOrMismatch(
+  const parsed = parseOrMismatch(
     PURCHASES_PILLAR_ID,
     outcome,
-    MobilePurchaseTagsResponseSchema,
+    PurchasesTagVocabularyResponseSchema,
     'purchase.tagVocabulary'
   );
+  if (!isGatewayOk(parsed)) return parsed;
+
+  return {
+    kind: 'ok',
+    value: {
+      tags: parsed.value.tags,
+      nextCursor: parsed.value.nextCursor ?? null,
+      ...(parsed.value.totalCount === undefined ? {} : { totalCount: parsed.value.totalCount }),
+    },
+  };
 }

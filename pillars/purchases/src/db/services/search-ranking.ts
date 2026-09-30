@@ -94,8 +94,12 @@ function byRank(a: ScoredCandidate, b: ScoredCandidate): number {
 }
 
 export function rank(candidates: readonly ScoredCandidate[]): PurchaseSearchHit[] {
-  return candidates
-    .toSorted(byRank)
+  return rankAll(candidates)
     .slice(0, HITS_PER_ADAPTER)
     .map((candidate) => candidate.hit);
+}
+
+/** Return every candidate in the deterministic adapter ranking. */
+export function rankAll(candidates: readonly ScoredCandidate[]): ScoredCandidate[] {
+  return candidates.toSorted(byRank);
 }

@@ -225,10 +225,17 @@ private actor EditRepositoryDouble: PurchasesRepository {
     }
 
     func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] { [] }
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
+        after cursor: String?, limit: Int
+    ) async throws -> PurchaseSearchPage {
+        PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
+    }
 
-    func purchaseTags() async throws -> [PurchaseTagCount] { [] }
+    func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
+        -> PurchaseTagPage
+    {
+        PurchaseTagPage(tags: [], nextCursor: nil, totalCount: 0)
+    }
 
     func monthSummary(for month: Date) async throws -> PurchasesMonthSummary { .empty }
 

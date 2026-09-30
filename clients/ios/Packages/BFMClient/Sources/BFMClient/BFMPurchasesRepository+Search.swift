@@ -4,14 +4,18 @@ import OpenAPIRuntime
 
 extension BFMPurchasesRepository {
     public func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
+        after cursor: String?, limit: Int
+    ) async throws -> PurchaseSearchPage {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
+        }
         let output: SearchPurchases.Output
         do {
             output = try await client.generated.mobilePurchases_searchPurchases(
                 query: .init(
-                    q: text, status: Self.wireStatus(status),
+                    q: text, kind: Self.wireKind(kind), cursor: cursor, limit: limit,
+                    status: Self.wireStatus(status),
                     tags: tags.isEmpty ? nil : tags.sorted())
             )
         } catch let error as ClientError {
@@ -20,7 +24,11 @@ extension BFMPurchasesRepository {
 
         switch output {
         case .ok(let ok):
-            return try ok.body.json.hits.map { try hit(from: $0) }
+            let body = try ok.body.json
+            return PurchaseSearchPage(
+                hits: try body.hits.map { try hit(from: $0) },
+                nextCursor: body.nextCursor,
+                totalCount: body.totalCount)
         case .badRequest:
             throw RepositoryError.transport("\(SearchPurchases.id): invalid request")
         case .unauthorized, .forbidden:
@@ -40,17 +48,26 @@ extension BFMPurchasesRepository {
         }
     }
 
-    public func purchaseTags() async throws -> [PurchaseTagCount] {
+    public func purchaseTags(
+        search: String, after cursor: String?, limit: Int
+    ) async throws -> PurchaseTagPage {
         let output: PurchaseTags.Output
         do {
-            output = try await client.generated.mobilePurchases_purchaseTags(.init())
+            output = try await client.generated.mobilePurchases_purchaseTags(
+                query: .init(search: search, cursor: cursor, limit: limit))
         } catch let error as ClientError {
             throw BFMRepositoryFailure.failure(error, operation: PurchaseTags.id)
         }
 
         switch output {
         case .ok(let ok):
-            return try ok.body.json.tags.map { PurchaseTagCount(tag: $0.tag, count: $0.count) }
+            let body = try ok.body.json
+            return PurchaseTagPage(
+                tags: body.tags.map {
+                    PurchaseTagCount(tag: $0.tag, count: $0.count)
+                },
+                nextCursor: body.nextCursor,
+                totalCount: body.totalCount)
         case .badRequest:
             throw RepositoryError.transport("\(PurchaseTags.id): invalid request")
         case .unauthorized, .forbidden:
@@ -80,6 +97,16 @@ extension BFMPurchasesRepository {
         case .partial: .partial
         case .cash: .settledCash
         case .ignored: .ignored
+        }
+    }
+
+    private static func wireKind(
+        _ kind: PurchaseSearchKind
+    ) -> SearchPurchases.Input.Query.KindPayload? {
+        switch kind {
+        case .all: nil
+        case .purchases: .purchases
+        case .lines: .lines
         }
     }
 

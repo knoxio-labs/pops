@@ -3,9 +3,8 @@
  * {@link PillarGateway} — see `finance-fake.ts` for why this fakes the HANDLE
  * rather than the gateway.
  *
- * Unlike `transactions.list`, `accounts.list` is not paged here: bfm always
- * asks for one page at the contract's cap (`ACCOUNT_LIST_LIMIT`), mirroring
- * `AccountsRepository.accounts()`'s own "small enough to fetch whole" premise.
+ * Finance account rows are served in bounded pages so the BFM can search
+ * resolved institution and contact labels before returning its mobile page.
  */
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
@@ -20,6 +19,7 @@ export interface AccountFakeRow {
   kind: string;
   currency: string;
   archivedAt: string | null;
+  displayOrder: number;
   entityId: string | null;
   entityDisplayName: string | null;
   transactionCount: number;
@@ -57,6 +57,7 @@ export function accountRow(overrides: Partial<AccountFakeRow> & { id: string }):
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
+    displayOrder: 0,
     entityId: null,
     entityDisplayName: null,
     transactionCount: 0,
@@ -68,6 +69,102 @@ export function accountRow(overrides: Partial<AccountFakeRow> & { id: string }):
       inconsistent: false,
     },
     ...overrides,
+  };
+}
+
+interface AccountListInput {
+  readonly limit: number;
+  readonly offset: number;
+  readonly kind: string | undefined;
+  readonly archived: 'true' | 'false' | undefined;
+}
+
+interface AccountListPage {
+  readonly data: readonly AccountFakeRow[];
+  readonly pagination: {
+    readonly total: number;
+    readonly limit: number;
+    readonly offset: number;
+    readonly hasMore: boolean;
+  };
+}
+
+function readAccountListInput(rawInput: unknown): AccountListInput {
+  const input = typeof rawInput === 'object' && rawInput !== null ? rawInput : {};
+  return {
+    limit: 'limit' in input && typeof input.limit === 'number' ? input.limit : 50,
+    offset: 'offset' in input && typeof input.offset === 'number' ? input.offset : 0,
+    kind: 'kind' in input && typeof input.kind === 'string' ? input.kind : undefined,
+    archived:
+      'archived' in input && (input.archived === 'true' || input.archived === 'false')
+        ? input.archived
+        : undefined,
+  };
+}
+
+function matchesAccountListInput(row: AccountFakeRow, input: AccountListInput): boolean {
+  const matchesKind = input.kind === undefined || row.kind === input.kind;
+  const matchesArchive =
+    input.archived === undefined || (row.archivedAt !== null) === (input.archived === 'true');
+  return matchesKind && matchesArchive;
+}
+
+function accountListPage(rows: readonly AccountFakeRow[], rawInput: unknown): AccountListPage {
+  const input = readAccountListInput(rawInput);
+  const filtered = rows
+    .filter((row) => matchesAccountListInput(row, input))
+    .toSorted(
+      (left, right) =>
+        left.displayOrder - right.displayOrder ||
+        left.name.localeCompare(right.name) ||
+        left.id.localeCompare(right.id)
+    );
+  return {
+    data: filtered.slice(input.offset, input.offset + input.limit),
+    pagination: {
+      total: filtered.length,
+      limit: input.limit,
+      offset: input.offset,
+      hasMore: input.offset + input.limit < filtered.length,
+    },
+  };
+}
+
+function makeAccountsListProcedure(
+  rows: readonly AccountFakeRow[],
+  failWith: Exclude<CallResult<unknown>, { kind: 'ok' }> | undefined,
+  listCalls: unknown[]
+): (rawInput: unknown) => Promise<CallResult<unknown>> {
+  return (rawInput) => {
+    listCalls.push(rawInput);
+    if (failWith !== undefined) return Promise.resolve(failWith);
+    return Promise.resolve({ kind: 'ok', value: accountListPage(rows, rawInput) });
+  };
+}
+
+function makeAccountGetProcedure(
+  rows: readonly AccountFakeRow[],
+  failWith: Exclude<CallResult<unknown>, { kind: 'ok' }> | undefined
+): (input: unknown) => Promise<CallResult<unknown>> {
+  return (input) => {
+    if (failWith !== undefined) return Promise.resolve(failWith);
+    const id = input !== null && typeof input === 'object' && 'id' in input ? input.id : undefined;
+    const found = rows.find((row) => row.id === id);
+    if (found === undefined) return Promise.resolve({ kind: 'not-found', pillar: 'finance' });
+    return Promise.resolve({ kind: 'ok', value: { data: found } });
+  };
+}
+
+function makeAccountHistoryProcedure(
+  extras: AccountsFakeExtras,
+  historyCalls: unknown[]
+): (input: unknown) => Promise<CallResult<unknown>> {
+  return (input) => {
+    historyCalls.push(input);
+    if (extras.historyFailWith !== undefined) return Promise.resolve(extras.historyFailWith);
+    const id = input !== null && typeof input === 'object' && 'id' in input ? input.id : undefined;
+    const series = typeof id === 'string' ? (extras.history?.[id] ?? []) : [];
+    return Promise.resolve({ kind: 'ok', value: { data: series } });
   };
 }
 
@@ -84,30 +181,9 @@ export function createAccountsFake(
 ): AccountsFake {
   const listCalls: unknown[] = [];
   const historyCalls: unknown[] = [];
-
-  const list = (rawInput: unknown): Promise<CallResult<unknown>> => {
-    listCalls.push(rawInput);
-    if (failWith !== undefined) return Promise.resolve(failWith);
-    return Promise.resolve({ kind: 'ok', value: { data: rows } });
-  };
-
-  const get = (input: unknown): Promise<CallResult<unknown>> => {
-    if (failWith !== undefined) return Promise.resolve(failWith);
-    const id = input !== null && typeof input === 'object' && 'id' in input ? input.id : undefined;
-    const found = rows.find((row) => row.id === id);
-    if (found === undefined) {
-      return Promise.resolve({ kind: 'not-found', pillar: 'finance' });
-    }
-    return Promise.resolve({ kind: 'ok', value: { data: found } });
-  };
-
-  const history = (input: unknown): Promise<CallResult<unknown>> => {
-    historyCalls.push(input);
-    if (extras.historyFailWith !== undefined) return Promise.resolve(extras.historyFailWith);
-    const id = input !== null && typeof input === 'object' && 'id' in input ? input.id : undefined;
-    const series = typeof id === 'string' ? (extras.history?.[id] ?? []) : [];
-    return Promise.resolve({ kind: 'ok', value: { data: series } });
-  };
+  const list = makeAccountsListProcedure(rows, failWith, listCalls);
+  const get = makeAccountGetProcedure(rows, failWith);
+  const history = makeAccountHistoryProcedure(extras, historyCalls);
 
   return {
     factory: <TRouter>() =>

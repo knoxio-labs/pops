@@ -30,10 +30,13 @@ internal struct FailingHomeRepository: PurchasesRepository {
     }
 
     func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] { throw error }
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
+        after cursor: String?, limit: Int
+    ) async throws -> PurchaseSearchPage { throw error }
 
-    func purchaseTags() async throws -> [PurchaseTagCount] { throw error }
+    func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
+        -> PurchaseTagPage
+    { throw error }
 
     func monthSummary(for: Date) async throws -> PurchasesMonthSummary { throw error }
     func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? { throw error }
@@ -51,10 +54,13 @@ internal struct CancellingHomeRepository: PurchasesRepository {
     }
 
     func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] { throw CancellationError() }
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
+        after cursor: String?, limit: Int
+    ) async throws -> PurchaseSearchPage { throw CancellationError() }
 
-    func purchaseTags() async throws -> [PurchaseTagCount] { throw CancellationError() }
+    func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
+        -> PurchaseTagPage
+    { throw CancellationError() }
 
     func monthSummary(for: Date) async throws -> PurchasesMonthSummary {
         throw CancellationError()
@@ -95,10 +101,17 @@ internal actor MutableHomeRepository: PurchasesRepository {
     }
 
     func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] { [] }
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
+        after cursor: String?, limit: Int
+    ) async throws -> PurchaseSearchPage {
+        PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
+    }
 
-    func purchaseTags() async throws -> [PurchaseTagCount] { [] }
+    func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
+        -> PurchaseTagPage
+    {
+        PurchaseTagPage(tags: [], nextCursor: nil, totalCount: 0)
+    }
 
     func monthSummary(for: Date) async throws -> PurchasesMonthSummary {
         callCount += 1
@@ -185,10 +198,17 @@ internal actor SequencedHomeRepository: PurchasesRepository {
     }
 
     func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] { [] }
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
+        after cursor: String?, limit: Int
+    ) async throws -> PurchaseSearchPage {
+        PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
+    }
 
-    func purchaseTags() async throws -> [PurchaseTagCount] { [] }
+    func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
+        -> PurchaseTagPage
+    {
+        PurchaseTagPage(tags: [], nextCursor: nil, totalCount: 0)
+    }
 
     func monthSummary(for: Date) async throws -> PurchasesMonthSummary {
         let response = summaries[summaryIndex]

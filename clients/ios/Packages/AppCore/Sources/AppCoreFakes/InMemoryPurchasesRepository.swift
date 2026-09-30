@@ -3,15 +3,26 @@ import Foundation
 
 /// A ``PurchasesRepository`` backed by an array, with server-shaped paging and failures.
 public actor InMemoryPurchasesRepository: PurchasesRepository {
-    /// One call recorded by ``InMemoryPurchasesRepository/search(text:status:tags:)``.
+    /// One call recorded by ``InMemoryPurchasesRepository/search(text:kind:status:tags:after:limit:)``.
     public struct SearchCall: Equatable, Sendable {
         public let text: String
+        public let kind: PurchaseSearchKind
         public let status: PurchaseSearchStatus
         public let tags: Set<String>
+        public let cursor: String?
+        public let limit: Int
+    }
+
+    /// One call recorded by ``InMemoryPurchasesRepository/purchaseTags(search:after:limit:)``.
+    public struct TagsCall: Equatable, Sendable {
+        public let search: String
+        public let cursor: String?
+        public let limit: Int
     }
 
     public private(set) var callCount = 0
     public private(set) var searchCalls: [SearchCall] = []
+    public private(set) var tagsCalls: [TagsCall] = []
 
     private var rows: [Purchase]
     private let hits: [PurchaseSearchHit]
@@ -24,10 +35,25 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private var details: [Purchase.ID: PurchaseDetail]
     private let receipts: [String: ReceiptImage]
     private let tagsInUse: [PurchaseTagCount]
+    private var mintedSearchCursors: [String: SearchCursorRecord] = [:]
+    private var mintedTagCursors: [String: TagsCursorRecord] = [:]
 
     private struct CursorRecord {
         let offset: Int
         let statusFilter: PurchaseStatusFilter
+    }
+
+    private struct SearchCursorRecord {
+        let offset: Int
+        let text: String
+        let kind: PurchaseSearchKind
+        let status: PurchaseSearchStatus
+        let tags: Set<String>
+    }
+
+    private struct TagsCursorRecord {
+        let offset: Int
+        let search: String
     }
 
     /// Creates a repository whose pages contain at most `pageSize` purchases.
@@ -52,20 +78,55 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     }
 
     public func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
-        searchCalls.append(SearchCall(text: text, status: status, tags: tags))
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
+        after cursor: String?, limit: Int
+    ) async throws -> PurchaseSearchPage {
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            return PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
+        }
+        searchCalls.append(
+            SearchCall(
+                text: text, kind: kind, status: status, tags: tags, cursor: cursor, limit: limit))
         try beginCall()
         try await Task.sleep(for: searchDelay)
-        return hits.filter { hit in
-            searchHit(hit, matches: status) && searchHit(hit, matches: text)
+        let matchingHits = hits.filter { hit in
+            searchHit(hit, matches: kind) && searchHit(hit, matches: status)
+                && searchHit(hit, matches: query)
+                && searchHit(hit, matches: tags)
         }
+        let start = try offset(
+            for: cursor, text: query, kind: kind, status: status, tags: tags,
+            count: matchingHits.count)
+        let end = min(start + effectiveLimit(limit), matchingHits.count)
+        let nextCursor =
+            end < matchingHits.count
+            ? mintSearchCursor(offset: end, text: query, kind: kind, status: status, tags: tags)
+            : nil
+        return PurchaseSearchPage(
+            hits: Array(matchingHits[start..<end]), nextCursor: nextCursor,
+            totalCount: cursor == nil ? matchingHits.count : nil)
     }
 
-    public func purchaseTags() async throws -> [PurchaseTagCount] {
+    public func purchaseTags(
+        search: String, after cursor: String?, limit: Int
+    ) async throws -> PurchaseTagPage {
+        tagsCalls.append(TagsCall(search: search, cursor: cursor, limit: limit))
         try beginCall()
-        return tagsInUse
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matchingTags =
+            query.isEmpty
+            ? tagsInUse
+            : tagsInUse.filter { $0.tag.localizedCaseInsensitiveContains(query) }
+        let start = try offset(for: cursor, search: query, count: matchingTags.count)
+        let end = min(start + effectiveLimit(limit), matchingTags.count)
+        let nextCursor =
+            end < matchingTags.count
+            ? mintTagsCursor(offset: end, search: query)
+            : nil
+        return PurchaseTagPage(
+            tags: Array(matchingTags[start..<end]), nextCursor: nextCursor,
+            totalCount: cursor == nil ? matchingTags.count : nil)
     }
 
     /// Replaces the rows and invalidates cursors minted for the previous list.
@@ -99,8 +160,7 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
                 totalCount: totalCount)
         }
 
-        nextCursorID += 1
-        let nextCursor = "purchase-cursor-\(nextCursorID)"
+        let nextCursor = mintCursor(prefix: "purchase-cursor")
         mintedCursors[nextCursor] = CursorRecord(offset: end, statusFilter: statusFilter)
         return PurchasePage(
             purchases: Array(filteredRows[start..<end]), nextCursor: nextCursor,
@@ -173,6 +233,31 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         if let failure = failures[callCount] { throw failure }
     }
 
+    private func effectiveLimit(_ limit: Int) -> Int {
+        min(max(1, limit), pageSize)
+    }
+
+    private func mintCursor(prefix: String) -> String {
+        nextCursorID += 1
+        return "\(prefix)-\(nextCursorID)"
+    }
+
+    private func mintSearchCursor(
+        offset: Int, text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus,
+        tags: Set<String>
+    ) -> String {
+        let cursor = mintCursor(prefix: "purchase-search-cursor")
+        mintedSearchCursors[cursor] = SearchCursorRecord(
+            offset: offset, text: text, kind: kind, status: status, tags: tags)
+        return cursor
+    }
+
+    private func mintTagsCursor(offset: Int, search: String) -> String {
+        let cursor = mintCursor(prefix: "purchase-tags-cursor")
+        mintedTagCursors[cursor] = TagsCursorRecord(offset: offset, search: search)
+        return cursor
+    }
+
     private func updatedLines(
         from update: PurchaseUpdate,
         preserving current: [PurchaseDetailLine],
@@ -220,6 +305,30 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         }
         return minted.offset
     }
+
+    private func offset(
+        for cursor: String?, text: String, kind: PurchaseSearchKind,
+        status: PurchaseSearchStatus, tags: Set<String>, count: Int
+    ) throws -> Int {
+        guard let cursor else { return 0 }
+        guard let minted = mintedSearchCursors[cursor], minted.text == text,
+            minted.kind == kind, minted.status == status, minted.tags == tags,
+            minted.offset <= count
+        else {
+            throw RepositoryError.contractMismatch
+        }
+        return minted.offset
+    }
+
+    private func offset(for cursor: String?, search: String, count: Int) throws -> Int {
+        guard let cursor else { return 0 }
+        guard let minted = mintedTagCursors[cursor], minted.search == search,
+            minted.offset <= count
+        else {
+            throw RepositoryError.contractMismatch
+        }
+        return minted.offset
+    }
 }
 
 private func searchHit(_ hit: PurchaseSearchHit, matches status: PurchaseSearchStatus) -> Bool {
@@ -233,9 +342,21 @@ private func searchHit(_ hit: PurchaseSearchHit, matches status: PurchaseSearchS
     }
 }
 
+private func searchHit(_ hit: PurchaseSearchHit, matches kind: PurchaseSearchKind) -> Bool {
+    switch (kind, hit) {
+    case (.all, _), (.purchases, .purchase), (.lines, .line): true
+    default: false
+    }
+}
+
 private func searchHit(_ hit: PurchaseSearchHit, matches text: String) -> Bool {
-    let needle = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    return searchableValues(for: hit).contains { $0.localizedCaseInsensitiveContains(needle) }
+    searchableValues(for: hit).contains { $0.localizedCaseInsensitiveContains(text) }
+}
+
+private func searchHit(_ hit: PurchaseSearchHit, matches tags: Set<String>) -> Bool {
+    guard !tags.isEmpty else { return true }
+    guard case .line(_, _, _, _, _, let tagMatch) = hit, let tagMatch else { return false }
+    return tags.contains(tagMatch)
 }
 
 private func searchableValues(for hit: PurchaseSearchHit) -> [String] {

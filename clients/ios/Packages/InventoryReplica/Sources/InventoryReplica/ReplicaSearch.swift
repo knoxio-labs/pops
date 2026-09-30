@@ -160,20 +160,24 @@ internal enum ReplicaSearchIndex {
     /// through `MATCH`, so it falls back to `LIKE` over the same columns.
     private static func usesIndex(_ query: String) -> Bool { query.unicodeScalars.count >= 3 }
 
-    private static func matchClause(for query: String) -> String {
+    static func matchClause(for query: String) -> String {
         guard !usesIndex(query) else { return "item_fts MATCH ?" }
         let likes = searchableColumns.map { "item_fts.\($0) LIKE ? ESCAPE '\\'" }
         return "(\(likes.joined(separator: " OR ")))"
     }
 
-    private static func matchArguments(for query: String) -> StatementArguments {
+    static func matchArguments(for query: String) -> StatementArguments {
+        StatementArguments(matchValues(for: query))
+    }
+
+    static func matchValues(for query: String) -> [(any DatabaseValueConvertible)?] {
         guard !usesIndex(query) else {
             return ["\"" + query.replacingOccurrences(of: "\"", with: "\"\"") + "\""]
         }
         let escaped = ["\\", "%", "_"].reduce(query) {
             $0.replacingOccurrences(of: $1, with: "\\" + $1)
         }
-        return StatementArguments(Array(repeating: "%\(escaped)%", count: searchableColumns.count))
+        return Array(repeating: "%\(escaped)%", count: searchableColumns.count)
     }
 }
 
@@ -186,16 +190,18 @@ internal enum InventorySearchRanking {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         return items.enumerated()
             .sorted { lhs, rhs in
-                let left = tier(lhs.element.name, trimmed)
-                let right = tier(rhs.element.name, trimmed)
+                let left = rank(lhs.element.name, for: trimmed)
+                let right = rank(rhs.element.name, for: trimmed)
                 return left == right ? lhs.offset < rhs.offset : left < right
             }
             .map(\.element)
     }
 
-    private static func tier(_ name: String, _ query: String) -> Int {
-        guard !query.isEmpty else { return 2 }
-        if name.range(of: query, options: [.caseInsensitive, .anchored]) != nil { return 0 }
-        return name.localizedCaseInsensitiveContains(query) ? 1 : 2
+    static func rank(_ name: String, for query: String) -> Int {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return 2 }
+        if name.range(of: trimmed, options: [.caseInsensitive, .anchored]) != nil { return 0 }
+        return name.localizedCaseInsensitiveContains(trimmed) ? 1 : 2
     }
+
 }

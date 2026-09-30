@@ -34,6 +34,8 @@ public final class TransactionsListViewModel {
     /// rows in it; the view draws it as a footer under them.
     public private(set) var paging: PagingState = .idle
 
+    private(set) var pageRevision = 0
+
     /// A refresh that failed while rows the user can still read were on screen.
     ///
     /// Reported next to those rows rather than replacing them: a refresh is an
@@ -56,6 +58,8 @@ public final class TransactionsListViewModel {
 
     /// The next page's cursor, or `nil` when there is no next page. Opaque.
     private var cursor: String?
+
+    private var requestedCursors: Set<String> = []
 
     /// Whether a first page has ever landed. What separates "still loading"
     /// from "loaded, and empty", and what stops ``loadFirstPage()`` refetching
@@ -236,27 +240,48 @@ extension TransactionsListViewModel {
     }
 
     private func show(_ transactions: [Transaction], nextCursor: String?) async {
+        requestedCursors.removeAll()
         cursor = nextCursor
         hasLoaded = true
-        state = transactions.isEmpty ? .empty : .loaded(transactions)
+        let rows = rows(uniquing: transactions)
+        state = rows.isEmpty ? .empty : .loaded(rows)
+        pageRevision += 1
         settlePaging()
         await reachability.noteReachable()
     }
 
     private func show(merging incoming: [Transaction], nextCursor: String?) async {
-        await show(rows(merging: incoming), nextCursor: nextCursor)
+        if let cursor {
+            requestedCursors.insert(cursor)
+        }
+
+        let rows = rows(merging: incoming)
+        self.cursor = nextCursor
+        hasLoaded = true
+        state = rows.isEmpty ? .empty : .loaded(rows)
+        pageRevision += 1
+        if let nextCursor, requestedCursors.contains(nextCursor) {
+            paging = .failed(.contractMismatch)
+        } else {
+            settlePaging()
+        }
+        await reachability.noteReachable()
     }
 
     /// Appends the rows that are not already on screen.
     ///
-    /// A well-behaved cursor never re-sends one, so this is a belt: a duplicate
-    /// id renders as a duplicate row and confuses `ForEach`'s identity rather
-    /// than raising anything, which is the class of defect that reaches
-    /// production because nobody can tell it from a real repeated purchase.
+    /// A well-behaved cursor never re-sends one. Keeping the first copy gives
+    /// SwiftUI one stable identity per transaction even when pages overlap.
     private func rows(merging incoming: [Transaction]) -> [Transaction] {
-        guard case .loaded(let existing) = state else { return incoming }
-        let seen = Set(existing.map(\.id))
-        return existing + incoming.filter { !seen.contains($0.id) }
+        guard case .loaded(let existing) = state else { return rows(uniquing: incoming) }
+        var seen = Set(existing.map(\.id))
+        let uniqueIncoming = incoming.filter { seen.insert($0.id).inserted }
+        return existing + uniqueIncoming
+    }
+
+    private func rows(uniquing transactions: [Transaction]) -> [Transaction] {
+        var seen: Set<Transaction.ID> = []
+        return transactions.filter { seen.insert($0.id).inserted }
     }
 
     /// Puts the tail where the cursor says it belongs. A load that succeeded

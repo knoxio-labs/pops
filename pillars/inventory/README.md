@@ -319,6 +319,10 @@ offers typed Set type and Set field sheets, plus reversible Retire and Discard
 actions; each applied item write records its own history event and one undo
 toast covers the completed batch.
 
+BFM's `GET /mobile/inventory/items` exposes the same bounded query and result
+contract to the phone. It is a browse path; mobile replica sync continues to
+use the separate snapshot and change-feed routes.
+
 ### Web inventory routes and navigation
 
 The web app's route table lives in `app/src/routes.tsx`, while the rail and

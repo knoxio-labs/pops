@@ -11,8 +11,8 @@ import Testing
 @Suite("App search model: Inventory download and types")
 @MainActor
 internal struct AppSearchModelInventoryDownloadTests {
-    private typealias InventoryFake = ScriptedSearchProvider<Int, InventorySearchFilter>
-    private typealias PurchasesFake = ScriptedSearchProvider<Int, PurchasesSearchFilter>
+    private typealias InventoryFake = ScriptedSearchProvider<TestHit, InventorySearchFilter>
+    private typealias PurchasesFake = ScriptedSearchProvider<TestHit, PurchasesSearchFilter>
     private typealias Model = AppSearchModel<InventoryFake, PurchasesFake>
 
     @Test("loading Inventory types reads them once Inventory is available")
@@ -43,7 +43,10 @@ internal struct AppSearchModelInventoryDownloadTests {
         let inventory = InventoryFake(
             pillar: .inventory,
             scripts: [
-                "cable": [[Self.step(.results([1]))], [Self.step(.results([1, 2]))]]
+                "cable": [
+                    [Self.step(.results(Self.page([1])))],
+                    [Self.step(.results(Self.page([1, 2])))],
+                ]
             ])
         var downloadCalls = 0
         let model = Self.bothAvailable(
@@ -64,7 +67,7 @@ internal struct AppSearchModelInventoryDownloadTests {
     @Test("a failed download is surfaced and Inventory is not re-asked")
     func downloadInventoryFailureSurfacesAndSkipsReask() async {
         let inventory = InventoryFake(
-            pillar: .inventory, scripts: ["cable": [[Self.step(.results([1]))]]])
+            pillar: .inventory, scripts: ["cable": [[Self.step(.results(Self.page([1])))]]])
         struct Boom: Error {}
         let model = Self.bothAvailable(
             inventory: inventory,
@@ -105,9 +108,19 @@ internal struct AppSearchModelInventoryDownloadTests {
     }
 
     private static func step(
-        _ event: SearchProviderEvent<Int>, after delay: Duration = .zero
-    ) -> ScriptedSearchStep<Int> {
+        _ event: SearchProviderEvent<TestHit>, after delay: Duration = .zero
+    ) -> ScriptedSearchStep<TestHit> {
         ScriptedSearchStep(event: event, delay: delay)
+    }
+
+    private static func page(_ ids: [Int]) -> SearchProviderPage<TestHit> {
+        SearchProviderPage(hits: ids.map(TestHit.init), nextCursor: nil, totalCount: ids.count)
+    }
+
+    private struct TestHit: Identifiable, Sendable, Equatable {
+        let id: Int
+
+        init(_ id: Int) { self.id = id }
     }
 
     private static func eventually(

@@ -3,8 +3,7 @@
  * gateway and the real wire validation — with only finance's network
  * replaced. See `mobile-transactions.test.ts` for the shared reasoning
  * (money/shape assertions are exact key sets, since the iOS client is
- * generated from this document); this route carries no money and no cursor,
- * so those two concerns of that file do not apply here.
+ * generated from this document); this route carries no money, but its filters and cursor are part of the mobile contract.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -75,8 +74,8 @@ describe('the account row is mobile-shaped', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(200);
-    expect(Object.keys(res.body).toSorted()).toEqual(['data']);
-    expect(Object.keys(res.body.data[0]).toSorted()).toEqual([
+    expect(Object.keys(res.body).toSorted()).toEqual(['accounts', 'nextCursor', 'totalCount']);
+    expect(Object.keys(res.body.accounts[0]).toSorted()).toEqual([
       'archived',
       'balance',
       'contact',
@@ -98,7 +97,7 @@ describe('the account row is mobile-shaped', () => {
 
     const res = await get(app, token, LIST_PATH);
 
-    expect(res.body.data.map((a: { transactionCount: number }) => a.transactionCount)).toEqual([
+    expect(res.body.accounts.map((a: { transactionCount: number }) => a.transactionCount)).toEqual([
       412, 0,
     ]);
   });
@@ -120,13 +119,13 @@ describe('the account row is mobile-shaped', () => {
 
     const res = await get(app, token, LIST_PATH);
 
-    expect(Object.keys(res.body.data[0].balance).toSorted()).toEqual([
+    expect(Object.keys(res.body.accounts[0].balance).toSorted()).toEqual([
       'asOf',
       'balanceCents',
       'basis',
       'inconsistent',
     ]);
-    expect(res.body.data[0].balance).toMatchObject({
+    expect(res.body.accounts[0].balance).toMatchObject({
       balanceCents: -213_755,
       basis: 'checkpoint',
     });
@@ -148,7 +147,7 @@ describe('the account row is mobile-shaped', () => {
 
     const res = await get(app, token, LIST_PATH);
 
-    expect(res.body.data[0].balance).toEqual({
+    expect(res.body.accounts[0].balance).toEqual({
       balanceCents: 780_64,
       asOf: '2026-09-05',
       basis: 'transactions',
@@ -165,7 +164,7 @@ describe('the account row is mobile-shaped', () => {
     const res = await get(app, token, LIST_PATH);
 
     const byId = new Map<string, { archived: boolean }>(
-      res.body.data.map((row: { id: string }) => [row.id, row])
+      res.body.accounts.map((row: { id: string }) => [row.id, row])
     );
     expect(byId.get('active')?.archived).toBe(false);
     expect(byId.get('gone')?.archived).toBe(true);
@@ -179,7 +178,7 @@ describe('the account row is mobile-shaped', () => {
 
     const res = await get(app, token, LIST_PATH);
 
-    expect(res.body.data).toHaveLength(2);
+    expect(res.body.accounts).toHaveLength(2);
   });
 
   it('passes through a null institutionId rather than dropping the field', async () => {
@@ -187,15 +186,113 @@ describe('the account row is mobile-shaped', () => {
 
     const res = await get(app, token, LIST_PATH);
 
-    expect(res.body.data[0].institutionId).toBeNull();
+    expect(res.body.accounts[0].institutionId).toBeNull();
   });
 
-  it('asks finance for the whole list in one page, at the contract cap', async () => {
+  it('starts finance paging at offset zero with its contract cap', async () => {
     const { app, token, fake } = openWithRows([accountRow({ id: 'acc-1' })]);
 
     await get(app, token, LIST_PATH);
 
-    expect(fake.listCalls).toEqual([{ limit: 500 }]);
+    expect(fake.listCalls).toEqual([{ limit: 500, offset: 0 }]);
+  });
+});
+
+describe('search and cursor paging', () => {
+  it('filters resolved institution names before limiting and continues the same result set', async () => {
+    const { app, token } = openWithRows([
+      accountRow({ id: 'first', displayOrder: 0, name: 'Everyday' }),
+      accountRow({
+        id: 'second',
+        displayOrder: 1,
+        name: 'Bills',
+        entityId: 'bank-1',
+        entityDisplayName: 'Harbour Bank',
+      }),
+      accountRow({
+        id: 'third',
+        displayOrder: 2,
+        name: 'Savings',
+        entityId: 'bank-2',
+        entityDisplayName: 'Harbour Bank Plus',
+      }),
+    ]);
+
+    const first = await get(app, token, `${LIST_PATH}?search=harbour&limit=1`);
+    const cursor = first.body.nextCursor as string;
+    const second = await get(
+      app,
+      token,
+      `${LIST_PATH}?search=harbour&limit=1&cursor=${encodeURIComponent(cursor)}`
+    );
+
+    expect(first.status).toBe(200);
+    expect(first.body.accounts.map((account: { id: string }) => account.id)).toEqual(['second']);
+    expect(first.body.nextCursor).toEqual(expect.any(String));
+    expect(first.body.totalCount).toBe(2);
+    expect(second.status).toBe(200);
+    expect(second.body.accounts.map((account: { id: string }) => account.id)).toEqual(['third']);
+    expect(second.body.nextCursor).toBeNull();
+  });
+
+  it('preserves kind-label, kind, and archive matching on the server page', async () => {
+    const { app, token, fake } = openWithRows([
+      accountRow({ id: 'cash', displayOrder: 0, kind: 'cash', archivedAt: null }),
+      accountRow({
+        id: 'card',
+        displayOrder: 1,
+        kind: 'credit-card',
+        archivedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ]);
+
+    const res = await get(
+      app,
+      token,
+      `${LIST_PATH}?search=credit%20card&kind=credit-card&archived=true&limit=1`
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.accounts.map((account: { id: string }) => account.id)).toEqual(['card']);
+    expect(fake.listCalls).toEqual([
+      { limit: 500, offset: 0, kind: 'credit-card', archived: 'true' },
+    ]);
+  });
+
+  it('rejects a cursor reused with different search filters', async () => {
+    const { app, token } = openWithRows([
+      accountRow({
+        id: 'first',
+        displayOrder: 0,
+        entityId: 'bank-1',
+        entityDisplayName: 'Harbour Bank',
+      }),
+      accountRow({
+        id: 'second',
+        displayOrder: 1,
+        entityId: 'bank-2',
+        entityDisplayName: 'Harbour Bank Plus',
+      }),
+    ]);
+    const first = await get(app, token, `${LIST_PATH}?search=harbour&limit=1`);
+
+    const res = await get(
+      app,
+      token,
+      `${LIST_PATH}?search=bank&limit=1&cursor=${encodeURIComponent(first.body.nextCursor as string)}`
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
+  });
+
+  it('rejects a limit over the mobile cap', async () => {
+    const { app, token, fake } = openWithRows([accountRow({ id: 'first' })]);
+
+    const res = await get(app, token, `${LIST_PATH}?limit=101`);
+
+    expect(res.status).toBe(400);
+    expect(fake.listCalls).toEqual([]);
   });
 });
 
@@ -238,7 +335,7 @@ describe('finance being unreachable', () => {
       details: { upstream: { pillar: 'finance', status: 503 } },
     });
     expect(res.body.requestId).toBe(res.headers['x-request-id']);
-    expect(res.body.data).toBeUndefined();
+    expect(res.body.accounts).toBeUndefined();
   });
 
   it('degrades the get route the same way, rather than 500ing', async () => {
@@ -362,8 +459,8 @@ describe('the institution behind an account', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(200);
-    expect(res.body.data[0].institutionId).toBe('inst-anz');
-    expect(res.body.data[0].institutionName).toBe('ANZ');
+    expect(res.body.accounts[0].institutionId).toBe('inst-anz');
+    expect(res.body.accounts[0].institutionName).toBe('ANZ');
   });
 
   it("leaves the name null when finance's own resolution did not come back", async () => {
@@ -374,8 +471,8 @@ describe('the institution behind an account', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(200);
-    expect(res.body.data[0].institutionId).toBe('inst-gone');
-    expect(res.body.data[0].institutionName).toBeNull();
+    expect(res.body.accounts[0].institutionId).toBe('inst-gone');
+    expect(res.body.accounts[0].institutionName).toBeNull();
   });
 
   it('leaves both null for a cash account, which carries no issuer', async () => {
@@ -384,8 +481,8 @@ describe('the institution behind an account', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(200);
-    expect(res.body.data[0].institutionId).toBeNull();
-    expect(res.body.data[0].institutionName).toBeNull();
+    expect(res.body.accounts[0].institutionId).toBeNull();
+    expect(res.body.accounts[0].institutionName).toBeNull();
   });
 
   it("carries a person ledger's contact through as `contact`, not as an institution", async () => {
@@ -396,9 +493,9 @@ describe('the institution behind an account', () => {
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(200);
-    expect(res.body.data[0].contact).toBe('Jo');
-    expect(res.body.data[0].institutionId).toBeNull();
-    expect(res.body.data[0].institutionName).toBeNull();
+    expect(res.body.accounts[0].contact).toBe('Jo');
+    expect(res.body.accounts[0].institutionId).toBeNull();
+    expect(res.body.accounts[0].institutionName).toBeNull();
   });
 });
 

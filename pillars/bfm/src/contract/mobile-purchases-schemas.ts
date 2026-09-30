@@ -337,6 +337,9 @@ const MOBILE_SEARCH_STATUSES = [
 /** `GET /mobile/purchases/search`'s query. */
 export const MobileSearchQuerySchema = z.object({
   q: z.string().trim().min(1),
+  kind: z.enum(['any', 'purchases', 'lines']).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
   /**
    * Forwarded verbatim as `purchases`' `status eq` search filter — narrowing
    * on the SERVER, because the pillar's search is itself capped per adapter
@@ -402,6 +405,8 @@ export type MobilePurchaseSearchHit = z.infer<typeof MobilePurchaseSearchHitSche
 
 export const MobilePurchaseSearchResponseSchema = z.object({
   hits: z.array(MobilePurchaseSearchHitSchema),
+  nextCursor: z.string().nullable(),
+  totalCount: z.number().int().nonnegative().optional(),
 });
 
 export type MobilePurchaseSearchResponse = z.infer<typeof MobilePurchaseSearchResponseSchema>;
@@ -419,9 +424,20 @@ export const MobileTagCountSchema = z.object({
  */
 export const MobilePurchaseTagsResponseSchema = z.object({
   tags: z.array(MobileTagCountSchema),
+  nextCursor: z.string().nullable(),
+  totalCount: z.number().int().nonnegative().optional(),
 });
 
 export type MobilePurchaseTagsResponse = z.infer<typeof MobilePurchaseTagsResponseSchema>;
+
+/** `GET /mobile/purchases/tags`'s search and page inputs. */
+export const MobilePurchaseTagsQuerySchema = z.object({
+  search: z.string().trim().max(200).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export type MobilePurchaseTagsQuery = z.output<typeof MobilePurchaseTagsQuerySchema>;
 
 /** The home screen's figures for one calendar month. */
 export const MobileMonthSummarySchema = z.object({

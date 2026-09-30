@@ -13,7 +13,7 @@ internal struct UniversalSearchModelTests {
     }
 
     private func results(_ section: SearchSection?) -> Shown? {
-        guard case .results(let rows, let total, let query, let refining) = section?.content else {
+        guard case .results(let rows, let total, let query, let refining, _) = section?.content else {
             return nil
         }
         return Shown(rows: rows.count, total: total, query: query, refining: refining)
@@ -23,17 +23,35 @@ internal struct UniversalSearchModelTests {
         model.sections.first { $0.pillar == pillar }
     }
 
-    @Test("All caps each pillar at three rows and keeps the total; one pillar shows every row")
-    func capping() throws {
+    @Test("All shows a production-sized bounded fixture page for each in-scope pillar")
+    func boundedFirstPage() throws {
         let all = UniversalSearchModel(query: "tool")
         let inventory = try #require(results(section(all, .inventory)))
-        try #require(inventory.total > UniversalSearchModel.allCap)
-        #expect(inventory.rows == UniversalSearchModel.allCap)
+        try #require(inventory.total > 3)
+        #expect(inventory.rows == min(inventory.total, UniversalSearchModel.pageSize))
 
         let scoped = UniversalSearchModel(query: "tool", scope: .pillar(.inventory))
         let whole = try #require(results(section(scoped, .inventory)))
-        #expect(whole.rows == inventory.total)
+        #expect(whole.rows == inventory.rows)
         #expect(scoped.sections.map(\.pillar) == [.inventory])
+    }
+
+    @Test("fixture pages append complete bounded slices and stop at the end")
+    func fixturePageBoundaries() {
+        let rows = Array(0..<45)
+        let first = SearchFixturePage(
+            rows, loadedPageCount: 1, pageSize: UniversalSearchModel.pageSize)
+        let second = SearchFixturePage(
+            rows, loadedPageCount: 2, pageSize: UniversalSearchModel.pageSize)
+        let third = SearchFixturePage(
+            rows, loadedPageCount: 3, pageSize: UniversalSearchModel.pageSize)
+
+        #expect(first.rows == Array(0..<20))
+        #expect(first.hasMore)
+        #expect(second.rows == Array(0..<40))
+        #expect(second.hasMore)
+        #expect(third.rows == rows)
+        #expect(!third.hasMore)
     }
 
     @Test("sections follow tab-bar order, and a pillar with nothing leaves no section")

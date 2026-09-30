@@ -27,6 +27,76 @@ import type { PillarHandleFactory } from '../pillars/gateway.js';
 
 afterEach(closeOpenedApps);
 
+describe('the filtered mobile item page', () => {
+  it('forwards filters, cursor, and bounded page size to the inventory web query', async () => {
+    const fake = createInventoryFake({
+      webItemsResult: {
+        kind: 'ok',
+        value: {
+          items: [],
+          contentCounts: {},
+          nextCursor: 'next-page',
+          total: 4,
+          unfilteredTotal: 9,
+          hiddenInactiveCount: 2,
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const response = await get(
+      app,
+      token,
+      '/mobile/inventory/items?cursor=opaque&limit=12&typeKey=storage_box&locationId=garage&q=tool&includeInactive=true&isContainer=true&sort=name'
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ nextCursor: 'next-page', total: 4 });
+    expect(fake.webItemsCalls).toEqual([
+      {
+        cursor: 'opaque',
+        limit: 12,
+        typeKey: 'storage_box',
+        locationId: 'garage',
+        q: 'tool',
+        includeInactive: true,
+        isContainer: 'true',
+        sort: 'name',
+      },
+    ]);
+  });
+
+  it('defaults to a bounded first page and refuses a limit above the mobile cap', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory);
+
+    const first = await get(app, token, '/mobile/inventory/items');
+    const oversized = await get(app, token, '/mobile/inventory/items?limit=101');
+
+    expect(first.status).toBe(200);
+    expect(fake.webItemsCalls).toEqual([{ limit: 50 }]);
+    expect(oversized.status).toBe(400);
+    expect(oversized.body.code).toBe('bfm.request.invalid');
+    expect(fake.webItemsCalls).toHaveLength(1);
+  });
+
+  it('maps an inventory cursor refusal to the mobile invalid_cursor response', async () => {
+    const fake = createInventoryFake({
+      webItemsResult: {
+        kind: 'bad-request',
+        pillar: 'inventory',
+        message: 'cursor was not issued by this route',
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const response = await get(app, token, '/mobile/inventory/items?cursor=foreign');
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('invalid_cursor');
+  });
+});
+
 function post(app: Express, token: string | null, path: string, body: object) {
   return requestOn(app, (r) => {
     const request = r.post(path).send(body);

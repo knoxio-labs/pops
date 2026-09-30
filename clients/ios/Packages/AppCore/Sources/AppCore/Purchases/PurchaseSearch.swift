@@ -1,5 +1,15 @@
 import Foundation
 
+/// The kinds of purchase search matches the caller wants to include.
+public enum PurchaseSearchKind: Hashable, Sendable {
+    /// Both purchase and line-item matches.
+    case all
+    /// Matches on purchase-level fields.
+    case purchases
+    /// Matches on line-item fields.
+    case lines
+}
+
 /// The purchase-level context carried by every purchase search result.
 public struct PurchaseSearchOrder: Hashable, Sendable {
     public let id: Purchase.ID
@@ -52,6 +62,23 @@ public enum PurchaseSearchHit: Hashable, Sendable, Identifiable {
     }
 }
 
+/// One bounded page of purchase and line-item search matches.
+public struct PurchaseSearchPage: Hashable, Sendable {
+    /// The matching rows in server order.
+    public let hits: [PurchaseSearchHit]
+    /// The opaque cursor to request the following page, or `nil` when this is the last page.
+    public let nextCursor: String?
+    /// The number of all matching hits, when the server supplied it on the first page.
+    public let totalCount: Int?
+
+    /// Creates a search page.
+    public init(hits: [PurchaseSearchHit], nextCursor: String?, totalCount: Int?) {
+        self.hits = hits
+        self.nextCursor = nextCursor
+        self.totalCount = totalCount
+    }
+}
+
 /// The server-side settlement filter for purchase search.
 public enum PurchaseSearchStatus: String, Hashable, Sendable {
     case any
@@ -62,8 +89,7 @@ public enum PurchaseSearchStatus: String, Hashable, Sendable {
     case ignored
 }
 
-/// A tag in use across purchase line items, as read from
-/// ``PurchasesRepository/purchaseTags()``, ordered most-used first by the server.
+/// A tag in use across purchase line items, ordered most-used first by the server.
 public struct PurchaseTagCount: Hashable, Sendable {
     public let tag: String
     /// How many lines carry the tag. The BFM route (POPS-4544) puts the
@@ -74,5 +100,22 @@ public struct PurchaseTagCount: Hashable, Sendable {
     public init(tag: String, count: Int) {
         self.tag = tag
         self.count = count
+    }
+}
+
+/// One bounded page of tags in use across purchase line items.
+public struct PurchaseTagPage: Hashable, Sendable {
+    /// The matching tags in server order.
+    public let tags: [PurchaseTagCount]
+    /// The opaque cursor to request the following page, or `nil` when this is the last page.
+    public let nextCursor: String?
+    /// The number of all matching tags, when the server supplied it on the first page.
+    public let totalCount: Int?
+
+    /// Creates a page of purchase tags.
+    public init(tags: [PurchaseTagCount], nextCursor: String?, totalCount: Int?) {
+        self.tags = tags
+        self.nextCursor = nextCursor
+        self.totalCount = totalCount
     }
 }

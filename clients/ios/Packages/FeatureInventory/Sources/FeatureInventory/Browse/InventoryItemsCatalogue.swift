@@ -1,43 +1,85 @@
 import AppCore
 import Foundation
 
-/// What the Items browser reads, from one state of the store: every item
-/// that is not a container, which of them the current query matched, the
-/// types the filter offers, and whether the replica is cut off.
+/// A bounded Items browser answer, with every active filter already applied by the source.
 internal struct InventoryItemsCatalogue: Equatable, Sendable {
     internal let records: [InventoryRecord]
-    /// The records the replica's search matched, or nil with no query, when
-    /// every record is in play.
-    internal let matched: Set<InventoryItem.ID>?
+    internal let nextCursor: InventoryPageCursor?
     internal let types: [InventoryTypeName]
     internal let offline: InventoryOfflineState?
+    internal let summary: InventoryItemPageSummary
 
-    /// Reads `text` through the replica's own search, so the browser finds
-    /// exactly what Search would; inactive items are read only when the
-    /// filter includes them.
     internal static func query(
-        text: String, includeInactive: Bool
+        text: String, filter: InventorySearchFilter, sort: InventoryItemSort,
+        page: InventoryPageRequest, now: Date
     ) -> InventoryQuery<InventoryItemsCatalogue> {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let itemQuery = InventoryItemPageQuery(
+            text: trimmed,
+            filter: InventoryItemPageFilter(
+                includeInactive: filter.includesInactive,
+                excludeContainers: true,
+                placement: pagePlacement(filter.placement),
+                access: pageAccess(filter.containerState),
+                typeKey: filter.type?.key,
+                quantityGreaterThanOne: filter.quantity == .several,
+                missing: pageMissing(filter.missing),
+                sync: pageSync(filter.sync)),
+            order: sort == .name ? .name : .createdAtNewest,
+            page: page)
+        let recentCutoff = now.addingTimeInterval(-7 * 24 * 60 * 60)
         return InventoryQuery { source in
             let reader = InventoryRecordReader(source: source)
+            let page = source.inventoryItemPage(itemQuery)
             return InventoryItemsCatalogue(
-                records: source.inventoryItems(includeInactive: includeInactive)
-                    .filter { $0.containment == nil }
-                    .map(reader.record),
-                matched: trimmed.isEmpty
-                    ? nil
-                    : Set(
-                        source.inventorySearch(text: trimmed, includeInactive: includeInactive)
-                            .map(\.id)),
+                records: page.rows.map(reader.record), nextCursor: page.nextCursor,
                 types: reader.typeNames,
-                offline: InventoryOfflineState(source.inventoryReplicaStatus()))
+                offline: InventoryOfflineState(source.inventoryReplicaStatus()),
+                summary: source.inventoryItemPageSummary(createdSince: recentCutoff))
+        }
+    }
+
+    private static func pagePlacement(
+        _ placement: InventoryPlacementFilter
+    ) -> InventoryItemPagePlacement {
+        switch placement {
+        case .any: .any
+        case .inHand: .hand
+        case .direct: .location
+        case .contained: .container
+        }
+    }
+
+    private static func pageAccess(
+        _ state: InventoryContainerStateFilter
+    ) -> InventoryItemPageAccess {
+        switch state {
+        case .any: .any
+        case .open: .open
+        case .closed: .closed
+        }
+    }
+
+    private static func pageMissing(_ missing: InventoryMissingFilter) -> InventoryItemPageMissing {
+        switch missing {
+        case .nothing: .none
+        case .type: .type
+        case .code: .code
+        case .photo: .photo
+        }
+    }
+
+    private static func pageSync(_ sync: InventorySyncFilter) -> InventoryItemPageSync {
+        switch sync {
+        case .any: .any
+        case .waiting: .waiting
+        case .stale: .stale
+        case .needsAttention: .needsAttention
         }
     }
 }
 
-/// The replica being cut off from the server, and since when, as the notice
-/// line under a browser's title says it.
+/// The replica being cut off from the server, and since when, as the Items browser says.
 internal struct InventoryOfflineState: Equatable, Sendable {
     internal let lastRefreshAt: Date?
 
@@ -62,9 +104,7 @@ internal struct InventoryItemSection: Identifiable, Equatable {
 
     internal var id: String { title }
 
-    /// This week and earlier when sorted by recency; one section per initial
-    /// when sorted by name. Records keep the order they arrive in, and empty
-    /// sections are left out.
+    /// This week and earlier when sorted by recency; one section per initial when sorted by name.
     internal static func sections(
         _ records: [InventoryRecord], by sort: InventoryItemSort, now: Date
     ) -> [InventoryItemSection] {

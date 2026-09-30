@@ -17,19 +17,17 @@ import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import {
   FinanceAccountGetResponseSchema,
-  FinanceAccountListResponseSchema,
   FinanceBalanceHistoryResponseSchema,
   toMobileAccount,
   toMobileBalancePoints,
 } from './wire.js';
 
-import type { MobileAccountDetail, MobileAccountsPage } from '../../contract/rest-schemas.js';
+import type { MobileAccountDetail } from '../../contract/account.js';
 import type { FinanceAccountRow } from './wire.js';
 
 /** The subset of finance's router the mobile accounts screens call. */
 export type FinanceAccountsRouter = {
   accounts: {
-    list: (input: { limit?: number }) => Promise<unknown>;
     get: (input: { id: string }) => Promise<unknown>;
   };
   checkpoints: {
@@ -48,12 +46,6 @@ export type FinanceAccountsRouter = {
  * script's `resolveProducerId`.
  */
 export const FINANCE_PILLAR_ID = 'finance';
-
-/**
- * Rows requested per {@link FinanceAccountsRouter.accounts.list} call — the
- * contract's own cap, so one call gets every account without a second page.
- */
-const ACCOUNT_LIST_LIMIT = 500;
 
 /**
  * Months of history the dashboard's trend draws — finance's own default, sent
@@ -80,29 +72,6 @@ async function fetchAccountRow(
   if (!isGatewayOk(record)) return record;
 
   return { kind: 'ok', value: record.value.data };
-}
-
-export async function listAccounts(
-  gateway: PillarGateway
-): Promise<GatewayOutcome<MobileAccountsPage>> {
-  const outcome = await gateway.call<FinanceAccountsRouter, unknown>(FINANCE_PILLAR_ID, (handle) =>
-    handle.accounts.list({ limit: ACCOUNT_LIST_LIMIT })
-  );
-
-  const page = parseOrMismatch(
-    FINANCE_PILLAR_ID,
-    outcome,
-    FinanceAccountListResponseSchema,
-    'accounts.list'
-  );
-  if (!isGatewayOk(page)) return page;
-
-  return {
-    kind: 'ok',
-    value: {
-      data: page.value.data.map((row) => toMobileAccount(row)),
-    },
-  };
 }
 
 /**

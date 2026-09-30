@@ -34,10 +34,16 @@ internal enum AccountsWire {
         """
     }
 
-    internal static func page(_ accounts: String...) -> String {
-        """
-        {"data":[\(accounts.joined(separator: ","))]}
-        """
+    internal static func page(
+        _ accounts: String...,
+        nextCursor: String? = nil,
+        totalCount: Int? = nil
+    ) -> String {
+        let cursor = nextCursor.map { "\"\($0)\"" } ?? "null"
+        let count = totalCount.map { ",\"totalCount\":\($0)" } ?? ""
+        return """
+            {"accounts":[\(accounts.joined(separator: ","))],"nextCursor":\(cursor)\(count)}
+            """
     }
 
     internal static func point(month: String, balanceCents: Int) -> String {
@@ -49,6 +55,13 @@ internal enum AccountsWire {
     internal static func detail(account: String = account(), history: [String] = []) -> String {
         """
         {"account":\(account),"history":[\(history.joined(separator: ","))]}
+        """
+    }
+
+    internal static func failure(code: String) -> String {
+        """
+        {"code":"\(code)","message":"Request refused","requestId":"account-request",\
+        "retryable":false}
         """
     }
 }

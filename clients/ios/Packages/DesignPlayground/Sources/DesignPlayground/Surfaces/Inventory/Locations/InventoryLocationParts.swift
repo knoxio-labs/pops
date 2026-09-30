@@ -84,14 +84,27 @@ internal struct InventoryLocationRowLabel: View {
 /// Rows separated the way the dashboard separates them, in its panel.
 internal struct InventoryLocationPanel<Row: Identifiable, Content: View>: View {
     internal let rows: [Row]
+    internal let onReachEnd: (() -> Void)?
     @ViewBuilder internal let content: (Row) -> Content
+
+    internal init(
+        rows: [Row], onReachEnd: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping (Row) -> Content
+    ) {
+        self.rows = rows
+        self.onReachEnd = onReachEnd
+        self.content = content
+    }
 
     internal var body: some View {
         InventoryGroundedListPanel {
-            VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
                 ForEach(rows) { row in
                     content(row)
                         .transition(InventoryMotion.row)
+                        .onAppear {
+                            if row.id == rows.last?.id { onReachEnd?() }
+                        }
                     if row.id != rows.last?.id {
                         PopsDivider()
                             .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)

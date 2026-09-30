@@ -78,6 +78,16 @@ internal struct PurchasesArchiveTests {
         #expect(PurchasesArchive.months([], scope: .unmatched, paging: .end).isEmpty)
     }
 
+    @Test("appending a page preserves order and removes repeated boundary ids")
+    func appendedPageDeduplicatesBoundary() throws {
+        let loaded = Array(history.prefix(2))
+        let incoming = [loaded[1], history[2], history[2]]
+
+        let merged = PurchasesArchive.merging(incoming, into: loaded)
+
+        #expect(merged.map(\.id) == [loaded[0].id, loaded[1].id, history[2].id])
+    }
+
     @Test("in the whole history, a badge marks exactly the open purchases")
     func badgesInTheWholeHistory() {
         let marked = history.allSatisfy {

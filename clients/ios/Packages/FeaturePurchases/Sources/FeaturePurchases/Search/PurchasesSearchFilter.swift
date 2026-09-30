@@ -28,9 +28,8 @@ extension PurchaseSearchStatus {
     }
 }
 
-/// Every narrowing Purchases' universal search answers to: a kind applied on
-/// the phone, a settlement status the server filters by, and item tags the
-/// server narrows lines (and the purchases holding such a line) to.
+/// Every narrowing Purchases' universal search answers to: a server-applied
+/// result kind, settlement status, and item tags.
 public struct PurchasesSearchFilter: Equatable, Sendable {
     public var kind: PurchasesSearchKind
     public var status: PurchaseSearchStatus
@@ -72,13 +71,4 @@ public struct PurchasesSearchFilter: Equatable, Sendable {
         tags.isEmpty || !tags.isDisjoint(with: lineTags)
     }
 
-    internal func includes(_ hit: PurchaseSearchHit) -> Bool {
-        switch kind {
-        case .any: true
-        case .purchases:
-            if case .purchase = hit { true } else { false }
-        case .lines:
-            if case .line = hit { true } else { false }
-        }
-    }
 }

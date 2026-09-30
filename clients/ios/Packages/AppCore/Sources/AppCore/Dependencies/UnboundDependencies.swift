@@ -38,12 +38,15 @@ internal struct UnboundReceiptCaptureRepository: ReceiptCaptureRepository {
 
 internal struct UnboundPurchasesRepository: PurchasesRepository {
     func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] {
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
+        after cursor: String?, limit: Int
+    ) async throws -> PurchaseSearchPage {
         throw RepositoryError.dependencyNotBound
     }
 
-    func purchaseTags() async throws -> [PurchaseTagCount] {
+    func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
+        -> PurchaseTagPage
+    {
         throw RepositoryError.dependencyNotBound
     }
 

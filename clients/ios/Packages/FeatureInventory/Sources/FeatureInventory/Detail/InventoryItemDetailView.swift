@@ -70,11 +70,11 @@ internal struct InventoryItemDetailView<Capability: View>: View {
                 moreActions: moreActions, onAction: handleAction, perform: perform,
                 destroy: { Task { await model.destroy() } })
         }
-        .navigationDestination(for: InventoryItemHistoryRoute.self) { _ in
+        .navigationDestination(for: InventoryItemHistoryRoute.self) { route in
             InventoryItemHistoryView(
                 name: model.detail?.record.name ?? detail.record.name,
-                entries: model.detail?.activity ?? [], isLoading: model.detail == nil,
-                onUndo: revert)
+                model: InventoryRecentActivityModel(
+                    store: model.store, scope: .item(route.itemId)))
         }
         .sheet(item: $quantitySheet) { sheet in
             switch sheet {

@@ -8,15 +8,14 @@ import AppCore
 public enum AccountsListState: Hashable, Sendable {
     /// Nothing has arrived and nothing has failed.
     case loading
-    /// A fetch answered and it genuinely held no accounts at all — not "none
-    /// matched a search", which is a fact the sectioning owns, not the state.
+    /// The current account scope answered with no rows. A search with no
+    /// matches is instead represented by ``loaded(_:)`` with an empty array.
     case empty
     /// Nothing ever arrived. The screen *is* the failure, and it carries a
     /// retry.
     case failed(RepositoryError)
-    /// Every account this device can read, active and archived alike. What the
-    /// screen shows of them — which sections, whether archived ones are
-    /// visible, what a search narrowed away — is a presentation decision made
-    /// over this value, not a second state.
+    /// The accounts currently loaded for this search and archive scope. An
+    /// An empty array with non-empty search text means no matches; `.empty`
+    /// means the current archive scope contained no rows.
     case loaded([Account])
 }

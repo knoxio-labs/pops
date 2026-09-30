@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -5,16 +6,17 @@ import SwiftUI
 internal struct SearchSectionActions {
     internal let showAll: (SearchPillar) -> Void
     internal let retry: (SearchPillar) -> Void
+    internal let loadNextPage: (SearchPillar) -> Void
+    internal let retryNextPage: (SearchPillar) -> Void
     internal let download: () -> Void
 }
 
 /// One pillar's answer: a header, then its rows, skeleton rows while it is
 /// asking for the first time, or one status row saying why it cannot answer.
 ///
-/// In All the header names the pillar with its tab glyph, and when there is
-/// more than fits it ends in the total and a chevron that scopes to the
-/// pillar. Scoped, the chip above already names the pillar, so the header is
-/// Inventory's own: Results, and the count.
+/// In All the header names the pillar with its tab glyph, and its count can
+/// scope to that pillar. Scoped, the chip above already names the pillar, so
+/// the header is Inventory's own: Results, and the count.
 internal struct SearchSectionView: View {
     internal let section: SearchSection
     internal let isScoped: Bool
@@ -34,7 +36,7 @@ internal struct SearchSectionView: View {
 
     @ViewBuilder private var header: some View {
         if isScoped {
-            if case .results(_, let total, _, let isRefining) = section.content {
+            if case .results(_, let total, _, let isRefining, _) = section.content {
                 InventoryLocationSectionHeader(
                     title: "Results", trailing: isRefining ? nil : "\(total)")
             }
@@ -47,14 +49,21 @@ internal struct SearchSectionView: View {
 
     @ViewBuilder private var content: some View {
         switch section.content {
-        case .results(let rows, _, let query, let isRefining):
-            InventoryLocationPanel(rows: rows) { row in
-                rowView(row, query: query)
+        case .results(let rows, _, let query, let isRefining, let paging):
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                InventoryLocationPanel(
+                    rows: rows,
+                    onReachEnd: isRefining || paging != .idle
+                        ? nil : { actions.loadNextPage(section.pillar) }
+                ) { row in
+                    rowView(row, query: query)
+                }
+                .opacity(isRefining ? 0.45 : 1)
+                .inventoryMotion(value: isRefining)
+                pagingFooter(paging)
             }
-            .opacity(isRefining ? 0.45 : 1)
-            .inventoryMotion(value: isRefining)
         case .loading:
-            InventoryLocationListSkeleton(rows: isScoped ? 6 : UniversalSearchModel.allCap)
+            InventoryLocationListSkeleton(rows: isScoped ? 6 : 3)
         case .failed:
             SearchStatusRow(
                 symbol: "exclamationmark.triangle.fill", tone: .popsWarning,
@@ -76,6 +85,33 @@ internal struct SearchSectionView: View {
         }
     }
 
+    @ViewBuilder private func pagingFooter(_ paging: SearchPagingState) -> some View {
+        switch paging {
+        case .idle, .exhausted:
+            EmptyView()
+        case .loading:
+            HStack(spacing: PopsSpacing.sm) {
+                ProgressView()
+                Text("Loading more results")
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+            .frame(minHeight: PopsSize.touchTarget)
+            .padding(.horizontal, PopsSpacing.md)
+            .accessibilityElement(children: .combine)
+        case .failed:
+            HStack(spacing: PopsSpacing.sm) {
+                Text("Couldn't load more results")
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                Spacer(minLength: PopsSpacing.sm)
+                Button("Retry") { actions.retryNextPage(section.pillar) }
+                    .frame(minHeight: PopsSize.touchTarget)
+            }
+            .padding(.horizontal, PopsSpacing.md)
+        }
+    }
+
     @ViewBuilder private func rowView(_ row: SearchRow, query: String) -> some View {
         switch row {
         case .inventory(let hit):
@@ -87,8 +123,8 @@ internal struct SearchSectionView: View {
     }
 }
 
-/// A pillar's header in All: glyph and name, then the count, which becomes
-/// a button to the whole list when the section is capped.
+/// A pillar's header in All: glyph and name, then a count and a shortcut to
+/// its scoped results.
 private struct SearchPillarHeader: View {
     let pillar: SearchPillar
     let content: SearchSectionContent
@@ -107,7 +143,7 @@ private struct SearchPillarHeader: View {
     }
 
     @ViewBuilder private var trailing: some View {
-        if case .results(let rows, let total, _, let isRefining) = content {
+        if case .results(let rows, let total, _, let isRefining, _) = content {
             if isRefining {
                 SearchCountShimmer()
             } else if total > rows.count {

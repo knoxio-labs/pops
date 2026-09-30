@@ -807,6 +807,44 @@ describe('GET /items/tags', () => {
     expect(res.body.tags.map((t: { tag: string }) => t.tag)).toContain('coffee');
   });
 
+  it('searches tags before limiting and binds the continuation to that search', async () => {
+    for (const [index, tag] of ['tea', 'coffee-alpha', 'coffee-beta'].entries()) {
+      await requestOn(app)
+        .post('/purchases')
+        .send({
+          ...minimalOrder,
+          sourceOrderId: `tag-page-${String(index)}`,
+          checksum: `tag-page-${String(index)}`,
+          items: [
+            {
+              ref: 'line',
+              name: `Line ${String(index)}`,
+              unitPriceCents: 100,
+              lineTotalCents: 100,
+              tags: [tag],
+            },
+          ],
+        });
+    }
+
+    const first = await requestOn(app).get('/items/tags').query({ search: 'coffee', limit: 1 });
+    const second = await requestOn(app)
+      .get('/items/tags')
+      .query({ search: 'coffee', limit: 1, cursor: first.body.nextCursor });
+    const reused = await requestOn(app)
+      .get('/items/tags')
+      .query({ search: 'tea', limit: 1, cursor: first.body.nextCursor });
+
+    expect(first.status).toBe(200);
+    expect(first.body.tags).toEqual([{ tag: 'coffee-alpha', count: 1 }]);
+    expect(first.body.nextCursor).toEqual(expect.any(String));
+    expect(second.status).toBe(200);
+    expect(second.body.tags).toEqual([{ tag: 'coffee-beta', count: 1 }]);
+    expect(second.body.nextCursor).toBeNull();
+    expect(reused.status).toBe(400);
+    expect(reused.body.code).toBe('purchases.request.invalid_cursor');
+  });
+
   // This route is a literal sibling of `/items` — declared adjacent in the
   // contract precisely so it is never shadowed by a dynamic `:id` segment
   // the way rest-tag-rules.ts documents for a different pair of routes.

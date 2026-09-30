@@ -52,6 +52,7 @@ export interface FinanceFakeAccountRow {
   kind: string;
   currency: string;
   archivedAt: string | null;
+  displayOrder: number;
   entityId: string | null;
   entityDisplayName: string | null;
   transactionCount: number;
@@ -72,6 +73,7 @@ export function financeAccountRow(
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
+    displayOrder: 0,
     entityId: null,
     entityDisplayName: null,
     transactionCount: 0,

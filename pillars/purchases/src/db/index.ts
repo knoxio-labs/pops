@@ -45,10 +45,13 @@ export { countPurchases } from './services/purchase-count.js';
 
 export {
   listItemsByTag,
+  listTagVocabularyPage,
   listTagVocabulary,
   TAG_VOCABULARY_LIMIT,
   type TaggedItem,
   type TaggedItemPage,
+  type TagVocabularyPage,
+  type TagVocabularyPageOptions,
 } from './services/purchase-item-tags.js';
 
 export { listPurchaseRows, type PurchaseListRow } from './services/purchase-list-rows.js';
@@ -135,18 +138,7 @@ export {
   type ProductUnitPrice,
 } from './services/product-leaderboard.js';
 
-export {
-  searchPurchases,
-  type PurchaseSearchHit,
-  type SearchMatchType,
-} from './services/search.js';
-
-export {
-  searchFilterScope,
-  type PurchaseSearchScope,
-  type SearchFilter,
-  type SearchScopeResult,
-} from './services/search-filters.js';
+export * from './search.js';
 
 export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 

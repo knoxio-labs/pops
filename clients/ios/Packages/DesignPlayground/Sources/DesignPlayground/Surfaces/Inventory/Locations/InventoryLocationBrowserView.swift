@@ -46,7 +46,7 @@ internal struct InventoryLocationBrowserView: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryPageTitle(title: "Locations")
                 if let offline {
                     InventoryLocationNoticeLine(
