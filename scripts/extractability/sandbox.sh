@@ -112,33 +112,51 @@ if [[ -z "$has_build" ]]; then
   echo "sandbox: $unit has no build script — shell-bundled app unit (ADR-002); proving extraction via isolated typecheck/test, not a standalone bundle." >&2
 fi
 
+node "$repo_root/scripts/extractability/sandbox-tools.mjs" "$abs_unit"
+
 work="$(mktemp -d "${TMPDIR:-/tmp}/ex2-sandbox.XXXXXX")"
 cleanup() { [[ "$keep" == "--keep" ]] || rm -rf "$work"; }
 trap cleanup EXIT
 echo "sandbox: $unit -> $work" >&2
+
+if [[ "$abs_unit" == "$repo_root/"* ]]; then
+  sandbox_unit="${abs_unit#"$repo_root"/}"
+else
+  sandbox_unit="fixture/unit"
+fi
+unit_root="$work/u/$sandbox_unit"
 
 cd "$repo_root"
 
 # 1) Pack the unit's @pops/* workspace deps into the sandbox (builds each first).
 node "$repo_root/scripts/extractability/pack-deps.mjs" "$unit" "$work/.deps" >"$work/deps-manifest.json"
 
-# 2) Copy the unit verbatim (no node_modules / dist / build / lockfiles).
-mkdir -p "$work/u"
+# 2) Copy the unit verbatim (no node_modules / dist / build / lockfiles) at
+#    its original depth so repo-relative tool paths have the same resolution.
+mkdir -p "$unit_root"
 rsync -a \
   --exclude 'node_modules' \
   --exclude 'dist' \
   --exclude 'build' \
   --exclude '.turbo' \
   --exclude 'pnpm-lock.yaml' \
-  "$abs_unit/" "$work/u/"
+  "$abs_unit/" "$unit_root/"
 
-# 3) Rewrite workspace edges -> file: tarballs (the only mutation).
-node "$repo_root/scripts/extractability/rewrite-deps.mjs" "$work/u/package.json" "$work/deps-manifest.json"
+# The unit's typecheck/test scripts call this workspace-only guard. All packed
+# @pops dependencies were built before packing, so provide the guard inside the
+# sandbox layout while the unit's own typecheck verifies the installed artifacts.
+mkdir -p "$work/u/scripts/ci"
+cp "$repo_root/scripts/require-built-graph.mjs" "$work/u/scripts/require-built-graph.mjs"
+cp "$repo_root/scripts/ci/cold-graph-deps.mjs" "$work/u/scripts/ci/cold-graph-deps.mjs"
+cp "$repo_root/tsconfig.base.json" "$work/u/tsconfig.base.json"
+
+# 3) Rewrite workspace edges -> file: tarballs and provision root-owned tools.
+node "$repo_root/scripts/extractability/rewrite-deps.mjs" "$unit_root/package.json" "$work/deps-manifest.json"
 
 # 3b) Make the unit's tsconfig self-contained: inline any repo-root `extends`
 #     base that won't exist outside the monorepo (no setting is changed, the
 #     resolved values are just frozen — exactly what an extracted repo carries).
-node "$repo_root/scripts/extractability/materialize-tsconfig.mjs" "$work/u" "$abs_unit"
+node "$repo_root/scripts/extractability/materialize-tsconfig.mjs" "$unit_root" "$abs_unit"
 
 # 4) Install + prove with NO workspace resolution — the litmus.
 #
@@ -150,7 +168,7 @@ node "$repo_root/scripts/extractability/materialize-tsconfig.mjs" "$work/u" "$ab
 # is a monorepo-wide gate (`pnpm lint`), not part of the extraction proof; the
 # sandbox proves only what an extracted repo could genuinely run on its own:
 # install + build (or typecheck/test for shell-bundled app units).
-cd "$work/u"
+cd "$unit_root"
 # Isolation comes from the sandbox-local `pnpm-workspace.yaml` that
 # rewrite-deps.mjs writes (`packages: []` plus the @pops/* -> file: overrides),
 # not from `--ignore-workspace` any more: pnpm 11 stopped reading
