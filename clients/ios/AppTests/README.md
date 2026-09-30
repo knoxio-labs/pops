@@ -6,9 +6,9 @@ Everything else is an SPM test target under `Packages/*/Tests/`, and those alrea
 
 ## Which of them a suite belongs in
 
-**A suite goes here only if it needs an app bundle or an entitlement.** Everything else stays in the package that owns the code.
+**A suite goes here only if it needs the app bundle, an app-owned window scene, or an entitlement.** Everything else stays in the package that owns the code.
 
-Note what is _not_ on that list: needing iOS, or needing a simulator. Those used to imply the app target and no longer do — a package's suite runs on a booted simulator against the iOS SDK too. What a package's suite still cannot have is a **bundle** and the **entitlements** that come with one: a package test target is an unhosted bundle, injected into a bare `xctest` runner rather than into an app.
+Note what is _not_ on that list: needing iOS, or needing a simulator. Those used to imply the app target and no longer do — a package's suite runs on a booted simulator against the iOS SDK too. What a package's suite still cannot have is a **bundle**, an app-owned **scene**, or the **entitlements** that come with one: a package test target is an unhosted bundle, injected into a bare `xctest` runner rather than into an app.
 
 Measured on the same simulator, same Xcode, one probe run in each:
 
