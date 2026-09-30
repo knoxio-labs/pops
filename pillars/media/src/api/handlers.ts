@@ -6,6 +6,7 @@
  */
 import { getPillarRegistry } from './pillars/registry.js';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedMediaDb } from '../db/index.js';
@@ -21,6 +22,8 @@ export interface MediaApiDeps {
    * the host pillar.
    */
   selfBaseUrl: string;
+  /** Registry-backed by default; tests inject a verifier without a live registry. */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export interface HealthResponse {

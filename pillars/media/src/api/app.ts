@@ -6,9 +6,9 @@
  * factory so the test suite can spin up an in-process `supertest` instance
  * without binding a real port.
  *
- * The pillar trusts the docker network — the dispatcher/gateway in front
- * authenticates; there is no per-request auth here (parity with lists /
- * inventory / finance / food).
+ * A presented `X-API-Key` is checked against the registry grants for its
+ * contract operation. Requests without a key continue to rely on the gateway
+ * perimeter for browser traffic.
  *
  * The `/media/images` byte route (served from `MEDIA_IMAGES_DIR`) is mounted
  * after the contract endpoints; it is intentionally NOT part of the ts-rest
@@ -22,10 +22,12 @@ import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
 import { createPillarErrorHandlers } from '@pops/pillar-express';
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { mediaContract } from '../contract/rest.js';
 import { type MediaApiDeps, makeRequestHandler } from './handlers.js';
 import { createImagesRouter } from './images/router.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeMediaRestHandlers } from './rest/handlers.js';
 
 /**
@@ -81,6 +83,12 @@ export function createMediaApiApp(deps: MediaApiDeps): Express {
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
 
   createExpressEndpoints(mediaContract, makeMediaRestHandlers(deps), app, {
     requestValidationErrorHandler: (error, req, res, next) => {
