@@ -30,7 +30,7 @@ internal struct LocalReducerRebasedEditTests {
         }
     }
 
-    private static func archiving(_ fieldId: String)
+    static func archiving(_ fieldId: String)
         -> (InventoryCatalogueField) -> InventoryCatalogueField
     {
         { field in
@@ -46,7 +46,7 @@ internal struct LocalReducerRebasedEditTests {
         }
     }
 
-    private static func publish(
+    static func publish(
         _ replica: InventoryReplica, revision: Int,
         _ change: (InventoryCatalogueField) -> InventoryCatalogueField
     ) throws {
@@ -61,7 +61,7 @@ internal struct LocalReducerRebasedEditTests {
                 types: types))
     }
 
-    private static func width(of replica: InventoryReplica) throws -> InventoryPrimitiveValue? {
+    static func width(of replica: InventoryReplica) throws -> InventoryPrimitiveValue? {
         guard
             case .value(let values)? = try replica.read(.item(id: Setup.box))?.fieldValues
                 .first(where: { $0.fieldId == Setup.width })?.state
