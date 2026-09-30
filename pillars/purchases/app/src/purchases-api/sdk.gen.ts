@@ -64,6 +64,7 @@ import type {
   PurchasePatchItemErrors,
   PurchasePatchItemResponses,
   PurchaseTagVocabularyData,
+  PurchaseTagVocabularyErrors,
   PurchaseTagVocabularyResponses,
   PurchaseUpdateData,
   PurchaseUpdateErrors,
@@ -191,11 +192,12 @@ export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
  */
 export const purchaseTagVocabulary = <ThrowOnError extends boolean = false>(
   options?: Options<PurchaseTagVocabularyData, ThrowOnError>
-): RequestResult<PurchaseTagVocabularyResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<PurchaseTagVocabularyResponses, unknown, ThrowOnError>({
-    url: '/items/tags',
-    ...options,
-  });
+): RequestResult<PurchaseTagVocabularyResponses, PurchaseTagVocabularyErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    PurchaseTagVocabularyResponses,
+    PurchaseTagVocabularyErrors,
+    ThrowOnError
+  >({ url: '/items/tags', ...options });
 
 /**
  * The learned product dictionary: products and the printed wordings that resolve to them

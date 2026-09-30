@@ -38,6 +38,16 @@ import {
 
 const c = initContract();
 
+/** Search and page inputs for the item-tag vocabulary. */
+export const TagVocabularyQuerySchema = z.object({
+  search: z.string().trim().max(200).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+/** Parsed filters and page controls for the item-tag vocabulary. */
+export type TagVocabularyQuery = z.infer<typeof TagVocabularyQuerySchema>;
+
 /**
  * A line that carries the requested tag, with the tag's own confirmation
  * marker beside it.
@@ -301,8 +311,10 @@ export const purchasesPurchaseContract = c.router({
   tagVocabulary: {
     method: 'GET',
     path: '/items/tags',
+    query: TagVocabularyQuerySchema,
     responses: {
       200: z.object({ tags: z.array(TagVocabularyEntrySchema) }),
+      400: ErrorBodySchema,
     },
     summary: 'List the distinct item tags in use with their counts, most-used first',
   },

@@ -12,7 +12,7 @@ internal struct PurchasesSearchProviderTests {
         let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit])
         let reachability = ScriptedNetworkReachability(satisfied: false)
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter())
+            .answers(to: "bunnings", filter: PurchasesSearchFilter(), after: nil, limit: 20)
             .makeAsyncIterator()
 
         #expect(Self.isOffline(await events.next()))
@@ -24,14 +24,14 @@ internal struct PurchasesSearchProviderTests {
         let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit])
         let reachability = ScriptedNetworkReachability(satisfied: false)
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter())
+            .answers(to: "bunnings", filter: PurchasesSearchFilter(), after: nil, limit: 20)
             .makeAsyncIterator()
         #expect(Self.isOffline(await events.next()))
 
         reachability.set(true)
         let results = try #require(Self.results(await events.next()))
 
-        #expect(results == [Self.purchaseHit])
+        #expect(results.hits == [Self.purchaseHit])
         #expect(await repository.searchCalls.count == 1)
         #expect(await repository.searchCalls.first?.text == "bunnings")
     }
@@ -41,12 +41,16 @@ internal struct PurchasesSearchProviderTests {
         let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit, Self.lineHit])
         let reachability = ScriptedNetworkReachability(satisfied: true)
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter(kind: .purchases))
+            .answers(
+                to: "bunnings", filter: PurchasesSearchFilter(kind: .purchases), after: nil,
+                limit: 20
+            )
             .makeAsyncIterator()
 
         let results = try #require(Self.results(await events.next()))
 
-        #expect(results == [Self.purchaseHit])
+        #expect(results.hits == [Self.purchaseHit])
+        #expect(await repository.searchCalls.first?.kind == .purchases)
     }
 
     @Test("kind filters line hits from purchase hits on the phone")
@@ -54,12 +58,16 @@ internal struct PurchasesSearchProviderTests {
         let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit, Self.lineHit])
         let reachability = ScriptedNetworkReachability(satisfied: true)
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter(kind: .lines))
+            .answers(
+                to: "bunnings", filter: PurchasesSearchFilter(kind: .lines), after: nil,
+                limit: 20
+            )
             .makeAsyncIterator()
 
         let results = try #require(Self.results(await events.next()))
 
-        #expect(results == [Self.lineHit])
+        #expect(results.hits == [Self.lineHit])
+        #expect(await repository.searchCalls.first?.kind == .lines)
     }
 
     @Test("status is sent to the repository")
@@ -67,7 +75,10 @@ internal struct PurchasesSearchProviderTests {
         let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit])
         let reachability = ScriptedNetworkReachability(satisfied: true)
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter(status: .matched))
+            .answers(
+                to: "bunnings", filter: PurchasesSearchFilter(status: .matched), after: nil,
+                limit: 20
+            )
             .makeAsyncIterator()
 
         _ = await events.next()
@@ -80,7 +91,10 @@ internal struct PurchasesSearchProviderTests {
         let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit])
         let reachability = ScriptedNetworkReachability(satisfied: true)
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter(tags: ["garden", "camping"]))
+            .answers(
+                to: "bunnings", filter: PurchasesSearchFilter(tags: ["garden", "camping"]),
+                after: nil, limit: 20
+            )
             .makeAsyncIterator()
 
         _ = await events.next()
@@ -93,7 +107,7 @@ internal struct PurchasesSearchProviderTests {
         let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit])
         let reachability = ScriptedNetworkReachability(satisfied: true)
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter())
+            .answers(to: "bunnings", filter: PurchasesSearchFilter(), after: nil, limit: 20)
             .makeAsyncIterator()
 
         _ = await events.next()
@@ -107,7 +121,7 @@ internal struct PurchasesSearchProviderTests {
         await repository.fail(onCall: 1, with: .transport("boom"))
         let reachability = ScriptedNetworkReachability(satisfied: true)
         var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter())
+            .answers(to: "bunnings", filter: PurchasesSearchFilter(), after: nil, limit: 20)
             .makeAsyncIterator()
 
         #expect(Self.isFailed(await events.next()))
@@ -120,7 +134,7 @@ internal struct PurchasesSearchProviderTests {
             hits: [Self.purchaseHit], searchDelay: .milliseconds(200))
         let reachability = ScriptedNetworkReachability(satisfied: true)
         let stream = PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter())
+            .answers(to: "bunnings", filter: PurchasesSearchFilter(), after: nil, limit: 20)
 
         let task = Task<[SearchProviderEvent<PurchaseSearchHit>], Never> {
             var collected: [SearchProviderEvent<PurchaseSearchHit>] = []
@@ -142,7 +156,7 @@ internal struct PurchasesSearchProviderTests {
         let reachability = ScriptedNetworkReachability(satisfied: true)
         var iterator =
             PurchasesSearchProvider(repository: repository, reachability: reachability)
-            .answers(to: "bunnings", filter: PurchasesSearchFilter())
+            .answers(to: "bunnings", filter: PurchasesSearchFilter(), after: nil, limit: 20)
             .makeAsyncIterator()
 
         let firstCall = Task { await iterator.next() }
@@ -176,7 +190,7 @@ internal struct PurchasesSearchProviderTests {
 
     private static func results(
         _ event: SearchProviderEvent<PurchaseSearchHit>?
-    ) -> [PurchaseSearchHit]? {
+    ) -> SearchProviderPage<PurchaseSearchHit>? {
         guard case .results(let results) = event else { return nil }
         return results
     }
@@ -207,15 +221,17 @@ private struct DelayedPurchasesRepository: PurchasesRepository {
     let delay: Duration
     let tracker: CompletionTracker
 
-    func search(
-        text: String, status: PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [PurchaseSearchHit] {
+    func search(query: PurchaseSearchQuery, after cursor: String?, limit: Int) async throws
+        -> PurchaseSearchPage
+    {
         try await Task.sleep(for: delay)
         await tracker.markCompleted()
-        return hits
+        return PurchaseSearchPage(hits: hits, nextCursor: nil, totalCount: hits.count)
     }
 
-    func purchaseTags() async throws -> [PurchaseTagCount] { [] }
+    func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
+        -> PurchaseTagPage
+    { PurchaseTagPage(tags: [], nextCursor: nil, totalCount: 0) }
 
     func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter

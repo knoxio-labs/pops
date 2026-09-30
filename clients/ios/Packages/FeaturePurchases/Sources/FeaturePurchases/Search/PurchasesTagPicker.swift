@@ -8,19 +8,20 @@ import SwiftUI
 /// from a known set".
 public struct PurchasesTagPicker: View {
     @Binding private var selection: Set<String>
-    private let tags: [PurchaseTagCount]
     @State private var query: String
+    @State private var model: PurchasesTagPickerModel
 
-    /// Creates a tag picker over the tags in use, toggling into `selection`.
+    /// Creates a tag picker over server-paged tags, toggling into `selection`.
     public init(
-        selection: Binding<Set<String>>, tags: [PurchaseTagCount], query: String = ""
+        selection: Binding<Set<String>>,
+        repository: any PurchasesRepository,
+        query: String = ""
     ) {
         _selection = selection
-        self.tags = tags
         _query = State(initialValue: query)
+        _model = State(wrappedValue: PurchasesTagPickerModel(repository: repository))
     }
 
-    private var shown: [PurchaseTagCount] { Self.matching(tags, query) }
     private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
     public var body: some View {
@@ -34,9 +35,11 @@ public struct PurchasesTagPicker: View {
                     }
                 }
             }
-            if !shown.isEmpty {
+            if case .loaded = model.state,
+                !model.tags.isEmpty || model.paging != .exhausted
+            {
                 Section {
-                    ForEach(shown, id: \.tag) { entry in
+                    ForEach(model.tags, id: \.tag) { entry in
                         row(
                             title: entry.tag, count: entry.count, isAny: false,
                             isOn: selection.contains(entry.tag)
@@ -44,6 +47,7 @@ public struct PurchasesTagPicker: View {
                             toggle(entry.tag)
                         }
                     }
+                    pagingRow
                 }
             }
         }
@@ -51,28 +55,59 @@ public struct PurchasesTagPicker: View {
         .navigationTitle("Tags")
         .popsTitleDisplay(large: false)
         .overlay {
-            switch Self.emptyState(shown: shown, tagsInUse: tags, isSearching: isSearching) {
-            case .none: EmptyView()
-            case .noTagsYet: ContentUnavailableView("No tags yet", systemImage: "tag")
-            case .noMatches: ContentUnavailableView("No tags match", systemImage: "tag.slash")
-            }
+            emptyState
         }
         .purchasesPinnedSearchable(text: $query, prompt: "Tags")
+        .onChange(of: query) { _, query in model.updateQuery(query) }
+        .task(id: query) {
+            model.updateQuery(query)
+            await model.load()
+        }
         .popsMotion(value: selection)
         .popsMotion(value: query)
     }
 
-    /// The tags whose name holds the query, case-insensitively, in the order
-    /// given. A blank query keeps every tag.
-    ///
-    /// `nonisolated` because a main-actor static trapped when a nonisolated
-    /// test called it.
-    nonisolated public static func matching(
-        _ tags: [PurchaseTagCount], _ query: String
-    ) -> [PurchaseTagCount] {
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return tags }
-        return tags.filter { $0.tag.localizedCaseInsensitiveContains(trimmed) }
+    @ViewBuilder private var emptyState: some View {
+        switch model.state {
+        case .loading:
+            EmptyView()
+        case .failed:
+            VStack(spacing: PopsSpacing.md) {
+                ContentUnavailableView("Tags unavailable", systemImage: "tag.slash")
+                PopsButton("Retry") { Task { await model.retryFirstPage() } }
+            }
+        case .loaded where model.tags.isEmpty && model.paging == .exhausted:
+            switch Self.emptyState(shown: [], tagsInUse: [], isSearching: isSearching) {
+            case .none: EmptyView()
+            case .noTagsYet: ContentUnavailableView("No tags yet", systemImage: "tag")
+            case .noMatches: ContentUnavailableView("No tags match", systemImage: "tag.slash")
+            }
+        case .loaded:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder private var pagingRow: some View {
+        switch model.paging {
+        case .exhausted:
+            EmptyView()
+        case .idle, .loading:
+            Text("Loading more tags…")
+                .font(.popsBody)
+                .foregroundStyle(Color.popsMutedForeground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, PopsSpacing.md)
+                .listRowSeparator(.hidden)
+                .task(id: model.pageRevision) { await model.loadNextPageIfNeeded() }
+        case .failed:
+            HStack {
+                Text("Couldn’t load more tags")
+                    .foregroundStyle(Color.popsDestructive)
+                Spacer()
+                PopsButton("Retry") { Task { await model.retryNextPage() } }
+            }
+            .listRowSeparator(.hidden)
+        }
     }
 
     /// The digits shown beside a row for its use count, or `nil` for the
@@ -94,7 +129,6 @@ public struct PurchasesTagPicker: View {
         case noMatches
     }
 
-    /// `nonisolated` for the same reason ``matching(_:_:)`` is.
     nonisolated internal static func emptyState(
         shown: [PurchaseTagCount], tagsInUse: [PurchaseTagCount], isSearching: Bool
     ) -> EmptyState {

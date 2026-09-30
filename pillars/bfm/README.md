@@ -36,10 +36,13 @@ It also holds a service-account credential and one way to spend it — see
 | `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.                                                               |
 | `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.                                                                        |
 | `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
+| `GET /mobile/finance/accounts`         | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
 | `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                                                                         |
+| `GET /mobile/inventory/items`          | One cursor-paginated Items browser page, using Inventory's `/web/items` filters and ordering.                                                    |
 | `GET /mobile/barcode/lookup/:code`     | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes, with optional ADR-054 detail on `unavailable`. |
 | `GET /mobile/purchases`                | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape).                                                     |
-| `GET /mobile/purchases/search`         | Purchase and line matches, including the owning order context for each line.                                                                     |
+| `GET /mobile/purchases/search`         | One bounded cursor page of purchase and line matches after text and structured filters.                                                          |
+| `GET /mobile/purchases/tags`           | One bounded cursor page of item tags, optionally filtered by search text.                                                                        |
 | `GET /mobile/purchases/:id`            | One order with its lines and Inventory-link flags, for the detail screen.                                                                        |
 | `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).                                                             |
 | `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.                                                               |
@@ -351,6 +354,16 @@ bfm asks finance for one row more than the page. That extra row's existence is
 what proves another page exists — asking for a total instead would be a second
 count query per scroll tick, and a total that is stale the moment it is read.
 
+`GET /mobile/finance/accounts` uses an opaque cursor and accepts `search`,
+`kind`, and `archived` filters. Finance applies search to account names and
+kind labels before its page limit. The cursor is tied to those filters, so a
+changed query starts a new walk.
+
+`GET /mobile/inventory/items` relays Inventory's bounded `/web/items` query and
+result shape, including its filters, stable ordering, totals, and next cursor.
+This browse read is separate from `/mobile/inventory/sync/*`; the replica
+snapshot and change-feed protocol are unchanged.
+
 ### The purchases list, and where it differs
 
 `GET /mobile/purchases` and `GET /mobile/purchases/:id` are the same shape of
@@ -381,6 +394,13 @@ Detail renderers use `receiptUris`; list rows retain their single thumbnail URI.
 line's amount; `totalCents` is the owning order's total. BFM projects both
 from the purchases result because the phone opens the line in its order
 context, and substituting the line amount would make that context false.
+
+`GET /mobile/purchases/search` accepts `q`, status, tag, kind, cursor, and
+limit. Purchases applies the text and structured filters before limiting the
+complete deterministic ranked result set; BFM returns `hits`, `nextCursor`,
+and the optional total count. `GET /mobile/purchases/tags` pages the complete
+tag vocabulary, with optional search applied before the limit. Both cursors
+are opaque and tied to their search/filter inputs.
 
 **The date is a day, not an instant.** `orderedOn` is `YYYY-MM-DD`, derived by
 bfm from the offset the order's own `orderedAt` carries. That is deliberate and

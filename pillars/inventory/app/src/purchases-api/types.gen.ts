@@ -390,9 +390,23 @@ export type PurchaseItemsByTagResponse =
 export type PurchaseTagVocabularyData = {
   body?: never;
   path?: never;
-  query?: never;
+  query?: {
+    search?: string;
+    cursor?: string;
+    limit?: number;
+  };
   url: '/items/tags';
 };
+
+export type PurchaseTagVocabularyErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type PurchaseTagVocabularyError =
+  PurchaseTagVocabularyErrors[keyof PurchaseTagVocabularyErrors];
 
 export type PurchaseTagVocabularyResponses = {
   /**
@@ -3274,11 +3288,14 @@ export type SearchSearchData = {
       page: string | null;
     };
     query: {
+      cursor?: string;
       filters?: Array<{
         field: 'source' | 'status' | 'orderedAt' | 'tags';
         operator: 'eq' | 'gte' | 'lte';
         value: string;
       }>;
+      kind?: 'purchases' | 'lines';
+      limit?: number;
       text: string;
     };
   };
@@ -3310,6 +3327,8 @@ export type SearchSearchResponses = {
       score: number;
       uri: string;
     }>;
+    nextCursor?: string | null;
+    totalCount?: number;
   };
 };
 

@@ -13,7 +13,6 @@ import {
   getPurchase,
   listItemsByTag,
   listPurchaseRows,
-  listTagVocabulary,
 } from '../../db/index.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { purchaseErrorBody } from '../errors.js';
@@ -23,6 +22,7 @@ import { makePurchaseInventoryHandlers } from './purchase-inventory-handlers.js'
 import { resolvePurchaseListKeyset } from './purchase-list-keyset.js';
 import { makePurchaseManualHandlers } from './purchase-manual-handlers.js';
 import { resolvePurchaseScope } from './purchase-scope.js';
+import { makePurchaseTagVocabularyHandlers } from './purchase-tag-vocabulary-handlers.js';
 import { toPurchaseDetailBody, toPurchaseItemBody } from './serializers.js';
 
 import type { z } from 'zod';
@@ -174,9 +174,6 @@ export function makePurchaseHandlers(
       };
     },
 
-    tagVocabulary: async () => ({
-      status: 200 as const,
-      body: { tags: [...listTagVocabulary(db)] },
-    }),
+    ...makePurchaseTagVocabularyHandlers(db),
   };
 }

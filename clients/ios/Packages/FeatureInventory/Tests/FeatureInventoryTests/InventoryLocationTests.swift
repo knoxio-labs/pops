@@ -36,6 +36,31 @@ internal struct InventoryLocationTests {
             ])
     }
 
+    @Test("Store here pages eligible items and ignores concurrent duplicate loads")
+    func storeHerePages() async {
+        let items =
+            (0..<45).map { index in
+                Fixture.item("candidate-\(index)", "Candidate \(index)", at: .hand)
+            } + [Fixture.item("target-item", "Already here", at: .location("garage"))]
+        let base = InMemoryInventoryStore(items: items)
+        let model = InventoryStoreHereModel(
+            target: .location(id: "garage", name: "Garage"),
+            runner: InventoryCommandRunner(store: base))
+        let task = Task { await model.observe() }
+        defer { task.cancel() }
+
+        #expect(await eventually { model.shownCandidates.count == 40 && model.canLoadMore })
+        async let firstLoad: Void = model.loadNextPage()
+        async let duplicateLoad: Void = model.loadNextPage()
+        await firstLoad
+        await duplicateLoad
+
+        #expect(model.shownCandidates.count == 45)
+        #expect(Set(model.shownCandidates.map(\.id)).count == 45)
+        #expect(!model.shownCandidates.contains { $0.id == "target-item" })
+        #expect(!model.canLoadMore)
+    }
+
     @Test("a place's delete confirmation says its things become unlocated, from the replica")
     func deletionEffectReadsReplicaCounts() async throws {
         let base = InMemoryInventoryStore(

@@ -61,6 +61,13 @@ function financeHandle(
       list: (input: unknown): CallResult<unknown> => {
         calls.accounts.push(input);
         if (failWith !== undefined) return failWith;
+        const limit =
+          input !== null &&
+          typeof input === 'object' &&
+          'limit' in input &&
+          typeof input.limit === 'number'
+            ? input.limit
+            : 500;
         return {
           kind: 'ok',
           value: {
@@ -68,6 +75,7 @@ function financeHandle(
               financeAccountRow({ id: 'acc-up-everyday', name: 'Up Everyday', currency: 'AUD' }),
               financeAccountRow({ id: 'acc-wise', name: 'Wise EUR', currency: 'EUR' }),
             ],
+            pagination: { total: 2, limit, offset: 0, hasMore: false },
           },
         };
       },

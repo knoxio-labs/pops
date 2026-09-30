@@ -34,6 +34,8 @@ export type PurchasesSearchHit = z.infer<typeof PurchasesSearchHitSchema>;
 
 export const PurchasesSearchResponseSchema = z.object({
   hits: z.array(PurchasesSearchHitSchema),
+  nextCursor: z.string().nullable().optional(),
+  totalCount: z.number().int().nonnegative().optional(),
 });
 
 const OrderedAtOffsetSchema = z.int().min(-840).max(840).nullable().optional();

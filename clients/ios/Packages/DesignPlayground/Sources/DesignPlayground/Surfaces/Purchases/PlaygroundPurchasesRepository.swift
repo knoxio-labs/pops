@@ -12,12 +12,52 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
     let hangs: Bool
 
     func search(
-        text: String, status: AppCore.PurchaseSearchStatus, tags: Set<String>
-    ) async throws -> [AppCore.PurchaseSearchHit] {
-        []
+        query: AppCore.PurchaseSearchQuery, after cursor: String?, limit: Int
+    ) async throws -> AppCore.PurchaseSearchPage {
+        AppCore.PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
     }
 
-    func purchaseTags() async throws -> [AppCore.PurchaseTagCount] { [] }
+    func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
+        -> AppCore.PurchaseTagPage
+    {
+        if hangs {
+            try await Task.sleep(for: .seconds(3_600))
+        }
+        if let failure {
+            throw failure
+        }
+
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matchingTags = PurchasesSearchFixtures.tagsInUse
+            .filter { query.isEmpty || $0.tag.localizedCaseInsensitiveContains(query) }
+            .map { AppCore.PurchaseTagCount(tag: $0.tag, count: $0.count) }
+        let offset = try Self.offset(for: cursor, search: query)
+        guard offset <= matchingTags.count else { throw RepositoryError.contractMismatch }
+        let end = min(offset + min(max(1, limit), 100), matchingTags.count)
+        let nextCursor =
+            end < matchingTags.count
+            ? try Self.cursor(search: query, offset: end)
+            : nil
+        return AppCore.PurchaseTagPage(
+            tags: Array(matchingTags[offset..<end]), nextCursor: nextCursor,
+            totalCount: cursor == nil ? matchingTags.count : nil)
+    }
+
+    private static func cursor(search: String, offset: Int) throws -> String {
+        let data = try JSONEncoder().encode(PurchaseTagCursor(search: search, offset: offset))
+        return data.base64EncodedString()
+    }
+
+    private static func offset(for cursor: String?, search: String) throws -> Int {
+        guard let cursor else { return 0 }
+        guard let data = Data(base64Encoded: cursor),
+            let decoded = try? JSONDecoder().decode(PurchaseTagCursor.self, from: data),
+            decoded.search == search, decoded.offset >= 0
+        else {
+            throw RepositoryError.contractMismatch
+        }
+        return decoded.offset
+    }
 
     func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter
@@ -52,6 +92,11 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
     func receiptThumbnail(sha256: String) async throws -> AppCore.ReceiptImage? { nil }
 
     func receiptImage(sha256: String) async throws -> AppCore.ReceiptImage? { nil }
+}
+
+private struct PurchaseTagCursor: Codable {
+    let search: String
+    let offset: Int
 }
 
 /// Builds an ``AppDependencies`` around one ``PurchasesRepository`` shape,

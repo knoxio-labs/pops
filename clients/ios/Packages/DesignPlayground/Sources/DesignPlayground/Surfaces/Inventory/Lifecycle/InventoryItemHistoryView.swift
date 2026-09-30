@@ -33,7 +33,7 @@ internal struct InventoryItemHistoryView: View {
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                     InventoryPageTitle(title: "History") { filterMenu }
                     Text(name)

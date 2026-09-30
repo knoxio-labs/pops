@@ -1005,7 +1005,11 @@ export interface operations {
   };
   'purchase.tagVocabulary': {
     parameters: {
-      query?: never;
+      query?: {
+        search?: string;
+        cursor?: string;
+        limit?: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -1024,6 +1028,15 @@ export interface operations {
               tag: string;
             }[];
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4291,6 +4304,7 @@ export interface operations {
             page: string | null;
           };
           query: {
+            cursor?: string;
             filters?: {
               /** @enum {string} */
               field: 'source' | 'status' | 'orderedAt' | 'tags';
@@ -4298,6 +4312,9 @@ export interface operations {
               operator: 'eq' | 'gte' | 'lte';
               value: string;
             }[];
+            /** @enum {string} */
+            kind?: 'purchases' | 'lines';
+            limit?: number;
             text: string;
           };
         };
@@ -4321,6 +4338,8 @@ export interface operations {
               score: number;
               uri: string;
             }[];
+            nextCursor?: string | null;
+            totalCount?: number;
           };
         };
       };

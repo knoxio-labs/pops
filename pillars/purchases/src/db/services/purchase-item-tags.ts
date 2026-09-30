@@ -1,8 +1,10 @@
 /** Cross-order reads keyed on an item tag rather than an order. */
-import { asc, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, lt, or } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { purchaseItems, purchaseItemTags } from '../schema.js';
 import { type PurchasesDb } from './internal.js';
+import { containsLiteralInsensitive } from './search-text.js';
 
 import type { PurchaseItemRow } from '../schema.js';
 
@@ -86,4 +88,104 @@ export function listTagVocabulary(
     .orderBy(desc(count()), asc(purchaseItemTags.tag))
     .limit(limit)
     .all();
+}
+
+const TagVocabularyCursorSchema = z.object({
+  version: z.literal(1),
+  search: z.string().nullable(),
+  count: z.number().int().nonnegative(),
+  tag: z.string().min(1),
+});
+
+interface TagVocabularyCursor {
+  readonly search: string | null;
+  readonly count: number;
+  readonly tag: string;
+}
+
+export interface TagVocabularyPageOptions {
+  readonly search?: string;
+  readonly cursor?: string;
+  readonly limit: number;
+}
+
+export interface TagVocabularyPage {
+  readonly tags: readonly TagVocabularyEntry[];
+  readonly nextCursor: string | null;
+}
+
+function decodeTagVocabularyCursor(
+  encoded: string,
+  search: string | undefined
+): TagVocabularyCursor | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
+
+  const cursor = TagVocabularyCursorSchema.safeParse(parsed);
+  if (!cursor.success || cursor.data.search !== (search ?? null)) return null;
+  return cursor.data;
+}
+
+function encodeTagVocabularyCursor(entry: TagVocabularyEntry, search: string | undefined): string {
+  return Buffer.from(
+    JSON.stringify({
+      version: 1,
+      search: search ?? null,
+      count: entry.count,
+      tag: entry.tag,
+    }),
+    'utf8'
+  ).toString('base64url');
+}
+
+/**
+ * Return a bounded page of the complete tag vocabulary, ordered by use count
+ * descending and tag ascending. The search predicate is applied before the
+ * page limit, and the continuation token is valid only for the same search.
+ *
+ * `null` means the cursor is malformed or belongs to another search.
+ */
+export function listTagVocabularyPage(
+  db: PurchasesDb,
+  options: TagVocabularyPageOptions
+): TagVocabularyPage | null {
+  const cursor =
+    options.cursor === undefined ? null : decodeTagVocabularyCursor(options.cursor, options.search);
+  if (options.cursor !== undefined && cursor === null) return null;
+
+  const tagCount = count();
+  const rows = db
+    .select({ tag: purchaseItemTags.tag, count: tagCount })
+    .from(purchaseItemTags)
+    .where(
+      options.search === undefined
+        ? undefined
+        : containsLiteralInsensitive(purchaseItemTags.tag, options.search)
+    )
+    .groupBy(purchaseItemTags.tag)
+    .having(
+      cursor === null
+        ? undefined
+        : or(
+            lt(tagCount, cursor.count),
+            and(eq(tagCount, cursor.count), gt(purchaseItemTags.tag, cursor.tag))
+          )
+    )
+    .orderBy(desc(tagCount), asc(purchaseItemTags.tag))
+    .limit(options.limit + 1)
+    .all();
+
+  const tags = rows.slice(0, options.limit);
+  const last = tags.at(-1);
+  return {
+    tags,
+    nextCursor:
+      rows.length > options.limit && last !== undefined
+        ? encodeTagVocabularyCursor(last, options.search)
+        : null,
+  };
 }

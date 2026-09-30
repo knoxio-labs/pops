@@ -8,8 +8,12 @@ internal enum AccountsCopy {
     internal static let loading = "Loading accounts…"
     internal static let empty =
         "No accounts yet. Accounts are created on the desktop; this is where they are read."
+    internal static let noActiveAccounts = "No active accounts. Try showing archived accounts."
+    internal static let noMatches = "No accounts match this search."
     internal static let retry = "Retry"
     internal static let searchPlaceholder = "Search accounts"
+    internal static let loadingMore = "Loading more accounts…"
+    internal static let loadMoreFailed = "Could not load more accounts."
 
     internal static let sectionHeld = "Held"
     internal static let sectionOwed = "Owed"
@@ -23,6 +27,14 @@ internal enum AccountsCopy {
         let noun = active == 1 ? "account" : "accounts"
         guard archived > 0 else { return "\(active) \(noun)" }
         return "\(active) \(noun) · \(archived) archived"
+    }
+
+    internal static func refreshFailure(_ error: RepositoryError) -> String {
+        "Accounts could not be refreshed. \(message(for: error))"
+    }
+
+    internal static func loadMoreFailure(_ error: RepositoryError) -> String {
+        "\(loadMoreFailed) \(message(for: error))"
     }
 
     internal static let pickerTitle = "Account"

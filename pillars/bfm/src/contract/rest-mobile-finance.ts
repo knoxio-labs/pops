@@ -1,6 +1,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { MobileAccountsQuerySchema } from './account.js';
 import { requires } from './capabilities.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
@@ -69,13 +70,14 @@ export const mobileFinanceContract = c.router({
   listAccounts: {
     method: 'GET',
     path: '/mobile/finance/accounts',
+    query: MobileAccountsQuerySchema,
     responses: {
       200: MobileAccountsPageSchema,
       ...MOBILE_REQUEST_RESPONSES,
       ...MOBILE_PERIMETER_RESPONSES,
       ...MOBILE_UPSTREAM_RESPONSES,
     },
-    summary: 'Every account this device can read, active and archived alike',
+    summary: 'One cursor-paginated account page after search and filters',
     metadata: requires('finance.accounts.read'),
   },
   getAccount: {

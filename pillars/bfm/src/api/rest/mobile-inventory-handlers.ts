@@ -35,6 +35,7 @@ import { buildInventoryActorHeader } from '../inventory/actor-header.js';
 import { InventoryProtocolTooOldError } from '../inventory/protocol-error.js';
 import { isGatewayOk } from '../pillars/gateway.js';
 import { makeMobileInventoryMediaHandlers } from './mobile-inventory-media-handlers.js';
+import { invalidMobileCursorResponse } from './mobile-request-error.js';
 import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -89,6 +90,37 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
       return { status: 200 as const, body: outcome.value };
     },
 
+    listItems: async ({ query }: Req['listItems']) => {
+      const outcome = await deps.inventory.listItems({
+        cursor: query.cursor,
+        limit: query.limit,
+        typeKey: query.typeKey,
+        placementKind: query.placementKind,
+        locationId: query.locationId,
+        containingItemId: query.containingItemId,
+        ids: query.ids,
+        includeInactive: query.includeInactive,
+        q: query.q,
+        untyped: query.untyped,
+        isContainer: query.isContainer,
+        access: query.access,
+        isFull: query.isFull,
+        lifecycle: query.lifecycle,
+        legacyLabelOf: query.legacyLabelOf,
+        within: query.within,
+        effectiveLocationId: query.effectiveLocationId,
+        sort: query.sort,
+      });
+      if (!isGatewayOk(outcome)) {
+        if (outcome.kind === 'invalid-request') {
+          return invalidMobileCursorResponse(INVALID_CURSOR_MESSAGE);
+        }
+        return toCollectionUpstreamErrorResponse(outcome);
+      }
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
     snapshot: async ({ query }: Req['snapshot']) => {
       const outcome = orThrowIfTooOld(
         await deps.inventory.snapshot({
@@ -98,10 +130,7 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
       );
       if (!isGatewayOk(outcome)) {
         if (outcome.kind === 'invalid-request') {
-          return {
-            status: 400 as const,
-            body: { code: 'invalid_cursor' as const, message: INVALID_CURSOR_MESSAGE },
-          };
+          return invalidMobileCursorResponse(INVALID_CURSOR_MESSAGE);
         }
         if (outcome.kind === 'conflict') {
           return {
@@ -191,10 +220,7 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
       );
       if (!isGatewayOk(outcome)) {
         if (outcome.kind === 'invalid-request') {
-          return {
-            status: 400 as const,
-            body: { code: 'invalid_cursor' as const, message: INVALID_CURSOR_MESSAGE },
-          };
+          return invalidMobileCursorResponse(INVALID_CURSOR_MESSAGE);
         }
         return toUpstreamErrorResponse(outcome);
       }

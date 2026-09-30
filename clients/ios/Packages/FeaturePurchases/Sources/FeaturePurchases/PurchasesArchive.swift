@@ -2,6 +2,7 @@ import AppCore
 import Foundation
 
 internal enum ArchivePaging: Hashable, Sendable {
+    case idle
     case loading
     case failed
     case end
@@ -17,6 +18,8 @@ internal struct ArchiveMonth: Identifiable, Hashable {
 
 @MainActor
 internal enum PurchasesArchive {
+    private static let prefetchCount = 5
+
     internal static func months(
         _ loaded: [Purchase], scope: PurchasesArchiveScope, paging: ArchivePaging
     ) -> [ArchiveMonth] {
@@ -28,6 +31,13 @@ internal enum PurchasesArchive {
                 purchases: group.purchases,
                 isIncomplete: group.month == boundary)
         }
+    }
+
+    internal static func shouldPrefetch(
+        _ purchaseID: Purchase.ID, from loaded: [Purchase], scope: PurchasesArchiveScope
+    ) -> Bool {
+        let inScope = scope == .all ? loaded : loaded.filter(\.status.isUnsettled)
+        return inScope.suffix(prefetchCount).contains { $0.id == purchaseID }
     }
 
     internal static func showsBadge(

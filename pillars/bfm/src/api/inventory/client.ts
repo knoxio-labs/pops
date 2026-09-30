@@ -17,6 +17,10 @@
  * bfm's own OpenAPI and Swift codegen.
  */
 import { MobileInventoryLedgerReportResponseSchema } from '../../contract/mobile-inventory-ledger-schemas.js';
+import {
+  type MobileInventoryItemsPage,
+  type MobileInventoryItemsQuery,
+} from '../../contract/mobile-inventory-list-schemas.js';
 import { MobileMutationsResponseSchema } from '../../contract/mobile-inventory-mutation-schemas.js';
 import {
   MobileInventoryChangesSchema,
@@ -28,6 +32,7 @@ import { createMobileInventoryCatalogueClient } from './catalogue-client.js';
 import { callSuggestCodes } from './client-codes.js';
 import { callItem } from './client-item.js';
 import { withInventoryActor } from './handle-factory.js';
+import { fetchMobileInventoryItems } from './list-client.js';
 
 import type {
   MobileInventoryLedgerReport,
@@ -106,6 +111,7 @@ export interface LedgerReportRequest {
 }
 
 export interface MobileInventoryClient extends MobileInventoryCatalogueClient {
+  listItems(request: MobileInventoryItemsQuery): Promise<GatewayOutcome<MobileInventoryItemsPage>>;
   snapshot(request: SnapshotRequest): Promise<GatewayOutcome<MobileInventorySnapshot>>;
   changes(request: ChangesRequest): Promise<GatewayOutcome<MobileInventoryChanges>>;
   itemHistory(request: ItemHistoryRequest): Promise<GatewayOutcome<MobileInventoryItemHistory>>;
@@ -209,6 +215,7 @@ async function callReportLedger(
 export function createMobileInventoryClient(gateway: PillarGateway): MobileInventoryClient {
   return {
     ...createMobileInventoryCatalogueClient(gateway),
+    listItems: (request) => fetchMobileInventoryItems(gateway, request),
     snapshot: (request) => callSnapshot(gateway, request),
     changes: (request) => callChanges(gateway, request),
     itemHistory: (request) => callItemHistory(gateway, request),

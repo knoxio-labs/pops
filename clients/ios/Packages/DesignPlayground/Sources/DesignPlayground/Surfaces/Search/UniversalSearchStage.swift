@@ -1,8 +1,12 @@
+import AppCore
+
 /// What the universal search opens with, so each staged state is one value.
 internal struct UniversalSearchStage {
     internal var query = ""
     internal var scope = SearchScope.all
     internal var answers: [SearchPillar: SearchAnswer] = [:]
+    internal var loadedPageCounts: [SearchPillar: Int] = [:]
+    internal var pagingStates: [SearchPillar: SearchPagingState] = [:]
     internal var inventoryFilter = InventorySearchFilter()
     internal var purchasesFilter = PurchasesSearchFilter()
     /// Records whose local copy may be behind, drawn with their stale mark.

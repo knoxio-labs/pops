@@ -57,6 +57,20 @@ describe('listAccounts', () => {
     expect(rows.map((a) => a.name)).toEqual(['Travel Wallet']);
   });
 
+  it('matches an account kind label before applying the page limit', () => {
+    const db = freshDb();
+    const created = createAccount(db, { name: 'Rewards', kind: 'gift-card', currency: 'AUD' });
+
+    const { rows, total } = listAccounts(db, {
+      ...DEFAULT_PAGE,
+      limit: 1,
+      search: 'gift card',
+    });
+
+    expect(total).toBe(1);
+    expect(rows.map((account) => account.id)).toEqual([created.id]);
+  });
+
   it('filters by exact kind', () => {
     const db = freshDb();
     createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });

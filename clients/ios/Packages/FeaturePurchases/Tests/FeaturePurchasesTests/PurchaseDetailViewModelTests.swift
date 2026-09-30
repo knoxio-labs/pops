@@ -8,26 +8,6 @@ import Testing
 @Suite("Purchase detail model")
 @MainActor
 internal struct PurchaseDetailViewModelTests {
-    @Test("a detail and its thumbnails load in receipt order")
-    func loadsDetailAndOrderedThumbnails() async throws {
-        let late = DetailGate()
-        let detail = PurchaseDetail.fake(receiptURIs: [uri("first"), uri("second")])
-        let first = ReceiptImage.fake(data: Data([1]))
-        let second = ReceiptImage.fake(data: Data([2]))
-        let repository = DetailRepositoryDouble(
-            details: [.value(detail)],
-            thumbnails: ["first": .gated(late, first), "second": .value(second)])
-        let model = self.model(repository)
-        let loading = Task { await model.load() }
-        await repository.waitForThumbnailCalls(1)
-        await late.open()
-        await loading.value
-
-        #expect(model.phase == .loaded(detail, refresh: nil))
-        #expect(model.receiptPages.map(\.pageIndex) == [0, 1])
-        #expect(model.receiptThumbnails == [first, second])
-    }
-
     @Test("a missing detail becomes not found")
     func missingDetail() async {
         let model = model(DetailRepositoryDouble(details: [.value(nil)]))
@@ -146,8 +126,8 @@ internal struct PurchaseDetailViewModelTests {
         #expect(await repository.counts().details == 2)
     }
 
-    @Test("failed middle thumbnails keep their original receipt indexes")
-    func failedThumbnailKeepsOriginalIndex() async {
+    @Test("a later receipt keeps its detail index when opened")
+    func laterReceiptKeepsOriginalIndex() async {
         let detail = PurchaseDetail.fake(
             receiptURIs: [uri("first"), uri("missing"), uri("third")])
         let first = ReceiptImage.fake(data: Data([1]))
@@ -162,8 +142,8 @@ internal struct PurchaseDetailViewModelTests {
         let model = model(repository)
         await model.load()
 
-        #expect(model.receiptPages.map(\.pageIndex) == [0, 2])
-        await model.openReceipt(at: model.receiptPages[1].pageIndex)
+        #expect(model.receiptPages.map(\.pageIndex) == [0])
+        await model.openReceipt(at: 2)
         #expect(await repository.counts().images == ["third"])
         #expect(model.receiptFull == third)
     }
@@ -221,7 +201,7 @@ internal struct PurchaseDetailViewModelTests {
         let model = model(repository)
         await model.load()
 
-        #expect(model.receiptImages(for: detail) == [Data([1]), Data(), Data([3])])
+        #expect(model.receiptImages(for: detail) == [Data([1]), Data(), Data()])
 
         await model.openReceipt(at: 2)
 

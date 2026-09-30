@@ -270,11 +270,11 @@ export const EXPECTATIONS = [
     operationId: 'accounts.list',
     path: '/accounts',
     method: 'get',
-    // `limit` is set to the contract's own cap so one call gets the whole
-    // list — see `ACCOUNT_LIST_LIMIT`. Losing it would silently fall back to
-    // finance's smaller default page and the phone would never see the rest.
-    query: ['limit'],
-    usedBy: 'pillars/bfm/src/api/finance/accounts-client.ts',
+    // These filters and page controls must reach Finance unchanged; losing
+    // any of them would restart each upstream read at a different page or
+    // widen the account kinds and archive states BFM is asking for.
+    query: ['limit', 'offset', 'kind', 'archived'],
+    usedBy: 'pillars/bfm/src/api/finance/accounts-list-client.ts',
   },
   {
     consumer: 'bfm',
@@ -508,6 +508,36 @@ export const EXPECTATIONS = [
     query: [],
     pathParams: ['id'],
     usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'web.list',
+    path: '/web/items',
+    method: 'get',
+    // The mobile catalogue applies these filters and ordering on Inventory
+    // before the page limit, so every value must reach the producer intact.
+    query: [
+      'cursor',
+      'limit',
+      'typeKey',
+      'placementKind',
+      'locationId',
+      'containingItemId',
+      'ids',
+      'includeInactive',
+      'q',
+      'untyped',
+      'isContainer',
+      'access',
+      'isFull',
+      'lifecycle',
+      'legacyLabelOf',
+      'within',
+      'effectiveLocationId',
+      'sort',
+    ],
+    usedBy: 'pillars/bfm/src/api/inventory/list-client.ts',
   },
   {
     consumer: 'bfm',
@@ -3001,8 +3031,8 @@ function selfTest() {
       'pillar() token — these seven calls resolve their producer through gateway.call, not pillar()'
   );
   assert(
-    new Set(bfmFinanceSites.map((s) => s.file)).size === 3,
-    'and it must follow the wrapper into EVERY file that uses it: bfm reaches finance from three ' +
+    new Set(bfmFinanceSites.map((s) => s.file)).size === 4,
+    'and it must follow the wrapper into EVERY file that uses it: bfm reaches finance from four ' +
       'files of its finance leg, and a scan that found only one of them could still satisfy the ' +
       'count above'
   );

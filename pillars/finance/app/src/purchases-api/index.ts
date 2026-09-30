@@ -144,6 +144,8 @@ export type {
   PurchasePatchItemResponse,
   PurchasePatchItemResponses,
   PurchaseTagVocabularyData,
+  PurchaseTagVocabularyError,
+  PurchaseTagVocabularyErrors,
   PurchaseTagVocabularyResponse,
   PurchaseTagVocabularyResponses,
   PurchaseUpdateData,

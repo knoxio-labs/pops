@@ -154,8 +154,8 @@ describe('the other real pillars', () => {
     expect(CEREBRUM_ROUTES.length).toBe(4);
   });
 
-  it('BFM_ROUTES names all 10 bfm mobile routes known to carry query fields', () => {
-    expect(BFM_ROUTES.length).toBe(10);
+  it('BFM_ROUTES names all 13 bfm mobile routes known to carry query fields', () => {
+    expect(BFM_ROUTES.length).toBe(13);
   });
 
   it('MEDIA_ROUTES names all 32 media routes known to carry query fields', () => {

@@ -1312,7 +1312,7 @@ describe('against the live repo', () => {
     const { sites } = liveTree;
     const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
     expect(bfmFinanceSites).toHaveLength(7);
-    expect(new Set(bfmFinanceSites.map((s) => s.file)).size).toBe(3);
+    expect(new Set(bfmFinanceSites.map((s) => s.file)).size).toBe(4);
   });
 
   it('would report an unpinned seam reached only through the gateway wrapper', () => {

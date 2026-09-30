@@ -202,6 +202,12 @@ export const ROUTES = [
   },
   {
     method: 'get',
+    path: '/items/tags',
+    handlerFile: 'pillars/purchases/src/api/rest/purchase-tag-vocabulary-handlers.ts',
+    handlerKey: 'tagVocabulary',
+  },
+  {
+    method: 'get',
     path: '/products',
     handlerFile: 'pillars/purchases/src/api/rest/product-handlers.ts',
     handlerKey: 'list',
@@ -425,7 +431,7 @@ export const CEREBRUM_ALLOWLIST = [];
 export const BFM_OPENAPI_REL_PATH = 'pillars/bfm/openapi/bfm.openapi.json';
 
 /**
- * Ten routes carry query fields today — below every other pillar's floor,
+ * Thirteen routes carry query fields today — below every other pillar's floor,
  * but bfm's mobile surface is deliberately thin (POPS-1369): a device-gated
  * passthrough onto finance/purchases/inventory, not a domain of its own. The
  * floor still catches a collapse to 0.
@@ -448,6 +454,12 @@ export const BFM_ROUTES = [
   },
   {
     method: 'get',
+    path: '/mobile/finance/accounts',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-finance-handlers.ts',
+    handlerKey: 'listAccounts',
+  },
+  {
+    method: 'get',
     path: '/mobile/purchases',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-handlers.ts',
     handlerKey: 'listPurchases',
@@ -466,6 +478,12 @@ export const BFM_ROUTES = [
   },
   {
     method: 'get',
+    path: '/mobile/purchases/tags',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-search-handlers.ts',
+    handlerKey: 'purchaseTags',
+  },
+  {
+    method: 'get',
     path: '/mobile/inventory/type-catalogue',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
     handlerKey: 'catalogueRevision',
@@ -481,6 +499,12 @@ export const BFM_ROUTES = [
     path: '/mobile/inventory/sync/changes',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
     handlerKey: 'changes',
+  },
+  {
+    method: 'get',
+    path: '/mobile/inventory/items',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
+    handlerKey: 'listItems',
   },
   {
     method: 'get',

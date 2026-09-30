@@ -49,6 +49,11 @@ internal struct PurchasesArchiveScreen: View {
                                             purchase, in: model.scope)))
                             }
                             .buttonStyle(.plain)
+                            .task(
+                                id: ArchivePrefetchTask(scope: model.scope, purchaseID: purchase.id)
+                            ) {
+                                await model.loadNextPageIfNeeded(when: purchase.id)
+                            }
                         }
                     } header: {
                         header(month)
@@ -133,10 +138,11 @@ internal struct PurchasesArchiveScreen: View {
 
     @ViewBuilder private var footer: some View {
         switch model.paging {
+        case .idle:
+            EmptyView()
         case .loading:
             PopsListSkeleton(rows: 2)
                 .accessibilityLabel("Loading earlier purchases")
-                .task(id: model.nextPageCursor) { await model.loadNextPageIfNeeded() }
         case .failed:
             VStack(spacing: PopsSpacing.sm) {
                 Label(
@@ -165,4 +171,9 @@ internal struct PurchasesArchiveScreen: View {
             }
         }
     }
+}
+
+private struct ArchivePrefetchTask: Hashable {
+    let scope: PurchasesArchiveScope
+    let purchaseID: Purchase.ID
 }

@@ -319,6 +319,29 @@ describe('web.items.list', () => {
     expect(second.contentCounts).toEqual({ [beta.data.id]: { direct: 1, deep: 1 } });
   });
 
+  it('filters rows before applying the limit and keeps that filter across the cursor', async () => {
+    const plainFirst = await client().items.create({ itemName: 'A plain item' });
+    const containerFirst = await client().items.create({ itemName: 'B storage box' });
+    const plainSecond = await client().items.create({ itemName: 'C plain item' });
+    const containerSecond = await client().items.create({ itemName: 'D storage box' });
+    setPublishedType(containerFirst.data.id, 'storage_box', true);
+    setPublishedType(containerSecond.data.id, 'storage_box', true);
+
+    const first = await client().web.listItems({ isContainer: 'true', limit: 1, sort: 'name' });
+    const second = await client().web.listItems({
+      isContainer: 'true',
+      limit: 1,
+      sort: 'name',
+      cursor: first.nextCursor ?? undefined,
+    });
+
+    expect(first.items.map((item) => item.id)).toEqual([containerFirst.data.id]);
+    expect(second.items.map((item) => item.id)).toEqual([containerSecond.data.id]);
+    expect(first.total).toBe(2);
+    expect(second.nextCursor).toBeNull();
+    expect([plainFirst.data.id, plainSecond.data.id]).not.toContain(first.items[0]?.id);
+  });
+
   it('returns an empty content count map when the page has no containers', async () => {
     await client().items.create({ itemName: 'Plain item' });
 

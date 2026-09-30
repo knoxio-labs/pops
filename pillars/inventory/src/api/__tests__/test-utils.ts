@@ -136,6 +136,9 @@ export function makeClient(app: Express) {
           items: SyncItem[];
           contentCounts: WebItemContentCounts;
           nextCursor: string | null;
+          total: number;
+          unfilteredTotal: number;
+          hiddenInactiveCount: number;
         }>(r.get('/web/items').query(query)),
       getItem: (id: string, query: Record<string, unknown> = {}) =>
         send<{ item: SyncItem; history: { events: SyncEvent[]; nextCursor: string | null } }>(

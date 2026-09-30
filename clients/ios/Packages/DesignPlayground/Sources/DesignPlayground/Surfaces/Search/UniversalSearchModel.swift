@@ -23,9 +23,12 @@ internal enum SearchRow: Identifiable, Equatable {
 
 /// What one pillar's section holds.
 internal enum SearchSectionContent: Equatable {
-    /// `rows` are what fits, `total` is how many there are, and `query` is
-    /// the query they answer, which is the previous one while `isRefining`.
-    case results(rows: [SearchRow], total: Int, query: String, isRefining: Bool)
+    /// `rows` are loaded bounded pages, `total` is how many match, and `query`
+    /// is the query they answer, which is the previous one while `isRefining`.
+    case results(
+        rows: [SearchRow], total: Int, query: String, isRefining: Bool,
+        paging: SearchPagingState
+    )
     case loading
     case failed
     case offline
@@ -53,16 +56,17 @@ internal enum SearchChipStatus: Equatable {
 /// without a view: which pillars have a section, what each holds, and what
 /// each chip says.
 ///
-/// In All, each pillar answers in its own section, capped at `allCap` rows
-/// with the rest a tap on its header away, because a pillar that answers
-/// later, or not at all, has to say so somewhere. A pillar with nothing to
-/// show leaves no section. Scoped to one pillar, that pillar's list is whole.
+/// Each in-scope pillar answers in its own section, loading fixture matches in
+/// the same bounded windows as production search. A pillar with nothing to
+/// show leaves no section.
 internal struct UniversalSearchModel {
-    internal static let allCap = 3
+    internal static let pageSize = 20
 
     internal var query: String
     internal var scope = SearchScope.all
     internal var answers: [SearchPillar: SearchAnswer] = [:]
+    internal var loadedPageCounts: [SearchPillar: Int] = [:]
+    internal var pagingStates: [SearchPillar: SearchPagingState] = [:]
     internal var inventoryRecords: [InventorySearchRecord] = InventorySearchFixtures.records
     internal var inventoryFilter = InventorySearchFilter()
     internal var purchasesFilter = PurchasesSearchFilter()
@@ -142,8 +146,17 @@ internal struct UniversalSearchModel {
     ) -> SearchSectionContent? {
         let all = rows(pillar, for: query)
         guard !all.isEmpty else { return nil }
-        let shown = scope == .all ? Array(all.prefix(Self.allCap)) : all
-        return .results(rows: shown, total: all.count, query: query, isRefining: isRefining)
+        let pages = max(1, loadedPageCounts[pillar] ?? 1)
+        let page = SearchFixturePage(all, loadedPageCount: pages, pageSize: Self.pageSize)
+        let paging: SearchPagingState
+        if isRefining || !page.hasMore {
+            paging = .exhausted
+        } else {
+            paging = pagingStates[pillar] ?? .idle
+        }
+        return .results(
+            rows: page.rows, total: all.count, query: query, isRefining: isRefining,
+            paging: paging)
     }
 
     /// Items, containers and places, as Inventory's own search ranks them.
@@ -157,5 +170,18 @@ internal struct UniversalSearchModel {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let matchingPlaces = placeFilter.isActive ? [] : places.matching(trimmed)
         return InventorySearchRanking.rank(query, matches: matches, places: matchingPlaces)
+    }
+}
+
+internal struct SearchFixturePage<Element> {
+    internal let rows: [Element]
+    internal let hasMore: Bool
+
+    internal init(_ allRows: [Element], loadedPageCount: Int, pageSize: Int) {
+        let boundedPageSize = max(1, pageSize)
+        let pageCount = max(1, loadedPageCount)
+        let end = min(pageCount * boundedPageSize, allRows.count)
+        rows = Array(allRows[..<end])
+        hasMore = end < allRows.count
     }
 }

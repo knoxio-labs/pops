@@ -16,12 +16,8 @@ import { FALLBACK_MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
  */
 import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
-import {
-  getAccountDetail,
-  listAccounts,
-  resolveAccount,
-  resolveAccountCurrencies,
-} from './accounts-client.js';
+import { getAccountDetail, resolveAccount, resolveAccountCurrencies } from './accounts-client.js';
+import { listAccounts, type ListAccountsRequest } from './accounts-list-client.js';
 import { encodePageCursor, type PageCursor } from './cursor.js';
 import {
   FinanceTransactionGetResponseSchema,
@@ -79,7 +75,7 @@ export interface MobileFinanceClient {
     request: ListTransactionsRequest
   ): Promise<GatewayOutcome<MobileTransactionsPage>>;
   getTransaction(id: string): Promise<GatewayOutcome<MobileTransactionDetail>>;
-  listAccounts(): Promise<GatewayOutcome<MobileAccountsPage>>;
+  listAccounts(request: ListAccountsRequest): Promise<GatewayOutcome<MobileAccountsPage>>;
   getAccount(id: string): Promise<GatewayOutcome<MobileAccountDetail>>;
 }
 
@@ -136,7 +132,7 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
       };
     },
 
-    listAccounts: () => listAccounts(gateway),
+    listAccounts: (request) => listAccounts(gateway, request),
     getAccount: (id: string) => getAccountDetail(gateway, id),
   };
 }

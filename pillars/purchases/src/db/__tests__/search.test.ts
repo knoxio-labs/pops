@@ -15,6 +15,7 @@ import {
   createPurchase,
   getPurchase,
   searchPurchases,
+  searchPurchasesPage,
   setPurchaseStatus,
   upsertSource,
 } from '../index.js';
@@ -534,6 +535,200 @@ describe('matching an item tag', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0]?.matchField).toBe('tag');
     expect(hits[0]?.matchType).toBe('exact');
+  });
+});
+
+describe('cursor-paged ranked search', () => {
+  it('uses trimmed text for matching, scoring, and continuation identity', () => {
+    orderWithItems('trimmed-query-old', 'Bunnings Warehouse', [], '2026-01-01T00:00:00Z');
+    orderWithItems('trimmed-query-new', 'Bunnings Outdoors', [], '2026-01-02T00:00:00Z');
+
+    const legacy = searchPurchases(opened.db, ' bunnings ');
+    const first = searchPurchasesPage(
+      opened.db,
+      ' bunnings ',
+      {},
+      {
+        kind: 'purchases',
+        limit: 1,
+      }
+    );
+    if (first === null) throw new Error('Expected the first search page');
+    const second = searchPurchasesPage(
+      opened.db,
+      'bunnings  ',
+      {},
+      {
+        kind: 'purchases',
+        cursor: first?.nextCursor ?? undefined,
+        limit: 1,
+      }
+    );
+    if (second === null) throw new Error('Expected the second search page');
+
+    expect(first.hits).toHaveLength(1);
+    expect(second.hits).toHaveLength(1);
+    expect(second.nextCursor).toBeNull();
+    expect([...first.hits, ...second.hits]).toEqual(legacy);
+    expect(first.hits[0]?.score).toBe(0.8);
+    expect(second.hits[0]?.score).toBe(0.8);
+    expect(first.totalCount).toBe(2);
+  });
+
+  it('does not treat underscores in line-tag queries as SQL wildcards', () => {
+    const literalId = orderWithItems('literal-tag', 'Other', [{ name: 'Other item' }]);
+    tagItem(literalId, 'Other item', ['fifty-off']);
+    const otherId = orderWithItems('other-tag', 'Other', [{ name: 'Another item' }]);
+    tagItem(otherId, 'Another item', ['fifty-x-off']);
+
+    const page = searchPurchasesPage(opened.db, '_', {}, { kind: 'lines', limit: 1 });
+
+    expect(page?.hits).toEqual([]);
+    expect(page?.totalCount).toBe(0);
+    expect(page?.nextCursor).toBeNull();
+  });
+
+  it('applies status and selected-tag filters before the page limit', () => {
+    const newest = orderWithItems(
+      'wrong-status',
+      'Other',
+      [{ name: 'Dosing funnel' }],
+      '2026-03-03T00:00:00Z'
+    );
+    tagItem(newest, 'Dosing funnel', ['wanted']);
+    const next = orderWithItems(
+      'wrong-tag',
+      'Other',
+      [{ name: 'Dosing funnel' }],
+      '2026-03-02T00:00:00Z'
+    );
+    setPurchaseStatus(opened.db, next, 'linked');
+    tagItem(next, 'Dosing funnel', ['other']);
+    const expected = orderWithItems(
+      'matching',
+      'Other',
+      [{ name: 'Dosing funnel' }],
+      '2026-03-01T00:00:00Z'
+    );
+    setPurchaseStatus(opened.db, expected, 'linked');
+    tagItem(expected, 'Dosing funnel', ['wanted']);
+
+    const page = searchPurchasesPage(
+      opened.db,
+      'Dosing',
+      { statuses: ['linked'], tags: ['wanted'] },
+      { kind: 'lines', limit: 1 }
+    );
+
+    expect(page?.hits).toHaveLength(1);
+    expect(page?.hits[0]?.data['purchaseId']).toBe(expected);
+    expect(page?.totalCount).toBe(1);
+    expect(page?.nextCursor).toBeNull();
+  });
+
+  it('pages the complete ranking beyond the legacy per-adapter cap and applies kind before limit', () => {
+    const purchaseIds: string[] = [];
+    for (let index = 0; index < 30; index += 1) {
+      const orderedAt = new Date(Date.UTC(2026, 0, index + 1)).toISOString();
+      purchaseIds.push(
+        orderWithItems(
+          `paged-${String(index)}`,
+          'Bunnings',
+          index === 0 ? [{ name: 'Bunnings' }] : [],
+          orderedAt
+        )
+      );
+    }
+
+    expect(
+      searchPurchases(opened.db, 'bunnings').filter((hit) => hit.uri.includes('/purchase/'))
+    ).toHaveLength(25);
+
+    const first = searchPurchasesPage(opened.db, 'bunnings', {}, { kind: 'purchases', limit: 10 });
+    expect(first?.hits).toHaveLength(10);
+    expect(first?.totalCount).toBe(30);
+    expect(first?.candidateRowsRead).toBe(11);
+    expect(first?.nextCursor).toEqual(expect.any(String));
+
+    const mixedPage = searchPurchasesPage(opened.db, 'bunnings', {}, { limit: 10 });
+    expect(mixedPage?.totalCount).toBe(31);
+    expect(mixedPage?.candidateRowsRead).toBeLessThanOrEqual(22);
+
+    const mixedHits = [...(mixedPage?.hits ?? [])];
+    let mixedCursor = mixedPage?.nextCursor ?? null;
+    while (mixedCursor !== null) {
+      const next = searchPurchasesPage(
+        opened.db,
+        'bunnings',
+        {},
+        {
+          cursor: mixedCursor,
+          limit: 10,
+        }
+      );
+      if (next === null) throw new Error('the search page cursor was rejected');
+      expect(next.candidateRowsRead).toBeLessThanOrEqual(22);
+      mixedHits.push(...next.hits);
+      mixedCursor = next.nextCursor;
+    }
+    expect(mixedHits).toHaveLength(31);
+    expect(mixedHits.at(-1)?.uri).toContain('/purchase-item/');
+
+    const second = searchPurchasesPage(
+      opened.db,
+      'bunnings',
+      {},
+      {
+        kind: 'purchases',
+        cursor: first?.nextCursor ?? undefined,
+        limit: 10,
+      }
+    );
+    const third = searchPurchasesPage(
+      opened.db,
+      'bunnings',
+      {},
+      {
+        kind: 'purchases',
+        cursor: second?.nextCursor ?? undefined,
+        limit: 10,
+      }
+    );
+    expect(second?.hits).toHaveLength(10);
+    expect(third?.hits).toHaveLength(10);
+    expect(third?.nextCursor).toBeNull();
+    expect(
+      [...(first?.hits ?? []), ...(second?.hits ?? []), ...(third?.hits ?? [])].map(
+        (hit) => hit.uri
+      )
+    ).toEqual(purchaseIds.map((id) => `pops:purchases/purchase/${id}`).toReversed());
+
+    const linePage = searchPurchasesPage(
+      opened.db,
+      'bunnings',
+      {},
+      {
+        kind: 'lines',
+        limit: 1,
+      }
+    );
+    expect(linePage?.hits).toHaveLength(1);
+    expect(linePage?.hits[0]?.uri).toContain('/purchase-item/');
+  });
+
+  it('rejects a continuation reused with different search filters', () => {
+    orderWithItems('paged-a', 'Bunnings', []);
+    orderWithItems('paged-b', 'Bunnings', []);
+    const first = searchPurchasesPage(opened.db, 'bunnings', {}, { limit: 1 });
+
+    const page = searchPurchasesPage(
+      opened.db,
+      'bunnings',
+      { statuses: ['linked'] },
+      { cursor: first?.nextCursor ?? undefined, limit: 1 }
+    );
+
+    expect(page).toBeNull();
   });
 });
 

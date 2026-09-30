@@ -5,7 +5,7 @@ import SwiftUI
 /// pushing, so there is no screen between the choice and the existing-item
 /// search. New item does not swap the root: it opens the real create form as
 /// a sheet of its own, nested inside this one.
-internal enum InventoryStoreHereStep: Equatable {
+@MainActor internal enum InventoryStoreHereStep: Equatable {
     case choice
     case existing
 
@@ -125,14 +125,17 @@ internal struct InventoryStoreExistingPicker: View {
     internal var body: some View {
         @Bindable var model = model
         List {
-            switch model.candidates.phase {
+            switch model.candidates {
             case .loading:
                 PopsListSkeleton(rows: 6)
             case .unavailable:
-                Text(InventoryCopy.unavailable)
-                    .foregroundStyle(Color.popsMutedForeground)
-            case .loaded(let candidates):
-                rows(candidates)
+                VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                    Text(InventoryCopy.unavailable)
+                        .foregroundStyle(Color.popsMutedForeground)
+                    Button("Retry") { Task { await model.observe() } }
+                }
+            case .loaded:
+                rows(model.shownCandidates)
             }
         }
         .inventoryInsetGroupedList()
@@ -163,7 +166,21 @@ internal struct InventoryStoreExistingPicker: View {
                 toggle: { model.toggle(candidate.id) },
                 subtitle: {
                     InventoryPlacementPath(crumbs: candidate.crumbs, isInHand: candidate.isInHand)
-                })
+                }
+            )
+            .onAppear {
+                if candidate.id == model.shownCandidates.last?.id {
+                    Task { await model.loadNextPage() }
+                }
+            }
+        }
+        if model.canLoadMore {
+            if model.nextPageFailed {
+                Button("Retry loading more") { Task { await model.retryNextPage() } }
+            } else if model.isLoadingNextPage {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
 

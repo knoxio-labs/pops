@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ErrorBodySchema } from '../../contract/rest-schemas.js';
 import { purchasesContract } from '../../contract/rest.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
-import { createPurchase, upsertSource } from '../../db/index.js';
+import { createPurchase, setPurchaseStatus, upsertSource } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
 import { buildPurchasesManifest } from '../manifest.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
@@ -133,6 +133,63 @@ describe('POST /search', () => {
   it('rejects an envelope with no query rather than searching for nothing', async () => {
     const res = await requestOn(app).post('/search').send({});
     expect(res.status).toBe(400);
+  });
+
+  it('filters status before the bounded page and rejects a cursor reused for another query', async () => {
+    const purchaseIds: string[] = [];
+    for (let index = 0; index < 28; index += 1) {
+      const id = createPurchase(opened.db, {
+        source: 'amazon',
+        sourceOrderId: `page-${String(index)}`,
+        ingestMethod: 'export',
+        orderedAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+        currency: 'AUD',
+        totalCents: 1000,
+        checksum: `page-${String(index)}`,
+        merchantEntityName: 'Bunnings',
+        items: [],
+      });
+      purchaseIds.push(id);
+      if (index === 27) setPurchaseStatus(opened.db, id, 'linked');
+    }
+
+    const filtered = await requestOn(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'bunnings',
+          kind: 'purchases',
+          limit: 1,
+          filters: [{ field: 'status', operator: 'eq', value: 'linked' }],
+        },
+      });
+
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.hits.map((hit: { uri: string }) => hit.uri)).toEqual([
+      `pops:purchases/purchase/${purchaseIds[27]}`,
+    ]);
+    expect(filtered.body.totalCount).toBe(1);
+    expect(filtered.body.nextCursor).toBeNull();
+
+    const first = await requestOn(app)
+      .post('/search')
+      .send({ query: { text: 'bunnings', kind: 'purchases', limit: 1 } });
+    expect(first.body.nextCursor).toEqual(expect.any(String));
+
+    const reused = await requestOn(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'bunnings',
+          kind: 'purchases',
+          limit: 1,
+          cursor: first.body.nextCursor,
+          filters: [{ field: 'status', operator: 'eq', value: 'linked' }],
+        },
+      });
+
+    expect(reused.status).toBe(400);
+    expect(reused.body.code).toBe('purchases.request.invalid_cursor');
   });
 });
 

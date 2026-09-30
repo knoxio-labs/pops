@@ -1,120 +1,276 @@
 import AppCore
+import Foundation
 import Observation
 
-/// The accounts screen's whole decision surface.
-///
-/// The view reads these and renders; it decides nothing — the same split
-/// `TransactionsListViewModel` draws and for the same reason: "what does this
-/// screen do when finance goes down" is a test here rather than something
-/// somebody reproduces on a phone.
-///
-/// Unlike the transactions list, there is no cursor: an account list is small
-/// enough in the ordinary case to fetch whole, and ``AccountsRepository``
-/// says so — see its doc comment. So this model has one fetch, not a paging
-/// state machine.
 @MainActor
 @Observable
 public final class AccountsListViewModel {
+    /// The first page's loading, empty, failure, or loaded-row state.
     public private(set) var state: AccountsListState = .loading
 
-    /// A refresh that failed while accounts the user can still read were on
-    /// screen. Reported next to those rows rather than replacing them, for the
-    /// same reason `TransactionsListViewModel.refreshFailure` is.
+    /// The cursor state for additional pages while rows remain visible.
+    public private(set) var paging: AccountsPagingState = .exhausted
+
+    /// A failed refresh, retained beside rows already loaded.
     public private(set) var refreshFailure: RepositoryError?
 
-    /// Search text, live from the field. Filtering is a presentation decision
-    /// over ``state``, not a second network round trip — see
-    /// ``AccountsSections``.
+    /// The most recent failure while loading another page.
+    public private(set) var pageFailure: RepositoryError?
+
+    /// Total number of rows matching the current server-side filters, if known.
+    public private(set) var totalCount: Int?
+    internal private(set) var pageRevision = 0
+
+    /// Search text applied by the repository before paging.
     public var searchText = ""
 
-    /// Whether the Archived section is showing. Off by default: the screen
-    /// opens on the active list, because an archived account is one somebody
-    /// has already said they are done with.
+    /// Whether the list includes archived accounts in its server query.
     public var showArchived = false
 
     private let repository: any AccountsRepository
     private let router: Router
+    private let pageSize = 25
 
-    private var hasLoaded = false
-    private var isLoading = false
-    private var isRefreshing = false
+    private var cursor: String?
+    private var consumedCursors: Set<String> = []
+    private var loadedFilter: AccountsListFilter?
+    private var firstPageRequest: UUID?
+    private var firstPageFilter: AccountsListFilter?
+    private var refreshRequest: UUID?
     private var generation = 0
 
+    /// Creates the account list model with the account repository and router.
     public init(dependencies: AppDependencies, router: Router) {
         repository = dependencies.accounts
         self.router = router
     }
 
-    /// The section breakdown the view draws, built fresh from whatever is
-    /// loaded plus the live search text and archived toggle.
+    internal var requestFilter: AccountsListFilter {
+        let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return AccountsListFilter(
+            search: search.isEmpty ? nil : search,
+            archiveScope: showArchived ? .all : .active
+        )
+    }
+
     internal var sections: AccountsSections {
         guard case .loaded(let accounts) = state else {
             return AccountsSections(held: [], owed: [], archived: [])
         }
-        return AccountsSections.build(from: accounts, query: searchText, showArchived: showArchived)
+        return AccountsSections.build(from: accounts, showArchived: showArchived)
     }
-}
 
-extension AccountsListViewModel {
+    /// Opens the account detail route for a selected account.
     public func select(_ account: Account) {
         router.send(.push(.accountDetail(id: account.id)))
     }
 
-    /// The row this list is already holding for `id`, if it has one — what
-    /// lets the detail screen open on real content instead of a spinner.
+    /// Returns a currently loaded account by id, if one exists.
     public func account(id: Account.ID) -> Account? {
         guard case .loaded(let accounts) = state else { return nil }
         return accounts.first { $0.id == id }
     }
-}
 
-extension AccountsListViewModel {
-    /// Safe to call on every appearance: does nothing once a fetch has landed,
-    /// and retries when one never did.
+    /// Loads the first page for the current search and archive scope.
     public func loadAccounts() async {
-        guard !hasLoaded, !isLoading, !isRefreshing else { return }
+        guard let request = beginFirstPageRequest() else { return }
+        await loadFirstPage(request)
+    }
 
-        state = .loading
-        isLoading = true
-        defer { isLoading = false }
+    private func beginFirstPageRequest() -> AccountsFirstPageRequest? {
+        let filter = requestFilter
+        if loadedFilter == filter {
+            switch state {
+            case .empty, .loaded:
+                return nil
+            case .loading, .failed:
+                break
+            }
+        }
+        guard firstPageFilter != filter else { return nil }
 
+        generation += 1
         let epoch = generation
+        let requestID = UUID()
+        firstPageRequest = requestID
+        firstPageFilter = filter
+        cursor = nil
+        consumedCursors.removeAll()
+        paging = .exhausted
+        pageFailure = nil
+        refreshFailure = nil
+        totalCount = nil
+        state = .loading
+
+        return AccountsFirstPageRequest(id: requestID, epoch: epoch, filter: filter)
+    }
+
+    private func loadFirstPage(_ request: AccountsFirstPageRequest) async {
+        defer {
+            if firstPageRequest == request.id {
+                firstPageRequest = nil
+                firstPageFilter = nil
+            }
+        }
+
         do {
-            let accounts = try await repository.accounts()
-            guard epoch == generation else { return }
-            show(accounts)
+            let page = try await repository.accountPage(
+                search: request.filter.search,
+                archiveScope: request.filter.archiveScope,
+                cursor: nil,
+                limit: pageSize
+            )
+            guard isCurrent(epoch: request.epoch, filter: request.filter) else { return }
+            showFirstPage(page, for: request.filter)
         } catch let error where error.isCancellation {
             return
         } catch {
-            guard epoch == generation else { return }
+            guard isCurrent(epoch: request.epoch, filter: request.filter) else { return }
             state = .failed(RepositoryError.describing(error))
         }
     }
 
-    /// Pull-to-refresh. Replaces whatever is on screen; never merges into it.
+    /// Refreshes the current filtered list, keeping rows visible if it fails.
     public func refresh() async {
-        guard !isRefreshing else { return }
-
-        isRefreshing = true
+        let filter = requestFilter
         generation += 1
         let epoch = generation
+        let requestID = UUID()
+        refreshRequest = requestID
         refreshFailure = nil
-        defer { isRefreshing = false }
+
+        defer {
+            if refreshRequest == requestID { refreshRequest = nil }
+        }
 
         do {
-            let accounts = try await repository.accounts()
-            guard epoch == generation else { return }
-            show(accounts)
+            let page = try await repository.accountPage(
+                search: filter.search,
+                archiveScope: filter.archiveScope,
+                cursor: nil,
+                limit: pageSize
+            )
+            guard isCurrent(epoch: epoch, filter: filter) else { return }
+            showFirstPage(page, for: filter)
         } catch let error where error.isCancellation {
+            guard epoch == generation else { return }
+            settlePagingIfLoading()
             return
         } catch {
-            guard epoch == generation else { return }
+            guard isCurrent(epoch: epoch, filter: filter) else { return }
             refreshFailure = RepositoryError.describing(error)
+            settlePagingIfLoading()
         }
     }
 
-    private func show(_ accounts: [Account]) {
-        hasLoaded = true
-        state = accounts.isEmpty ? .empty : .loaded(accounts)
+    /// Fetches another page when the scroll footer reaches the viewport.
+    public func loadNextPageIfNeeded() async {
+        guard paging == .idle else { return }
+        await fetchNextPage()
     }
+
+    /// Retries a failed page using the same continuation token.
+    public func retryNextPage() async {
+        guard case .failed = paging else { return }
+        await fetchNextPage()
+    }
+
+    private func isCurrent(epoch: Int, filter: AccountsListFilter) -> Bool {
+        epoch == generation && filter == requestFilter
+    }
+
+    private func showFirstPage(_ page: AccountsPage, for filter: AccountsListFilter) {
+        let accounts = unique(page.accounts)
+        cursor = page.nextCursor
+        consumedCursors.removeAll()
+        loadedFilter = filter
+        totalCount = page.totalCount
+        state = accounts.isEmpty && filter.search == nil ? .empty : .loaded(accounts)
+        paging = page.nextCursor == nil ? .exhausted : .idle
+        pageRevision += 1
+    }
+
+    private func fetchNextPage() async {
+        guard let requestedCursor = cursor, loadedFilter == requestFilter else { return }
+        paging = .loading
+        pageFailure = nil
+
+        let epoch = generation
+        let filter = requestFilter
+        do {
+            let page = try await repository.accountPage(
+                search: filter.search,
+                archiveScope: filter.archiveScope,
+                cursor: requestedCursor,
+                limit: pageSize
+            )
+            guard isCurrent(epoch: epoch, filter: filter) else { return }
+
+            let nextCursor = page.nextCursor
+            let repeatedCursor =
+                nextCursor == requestedCursor
+                || nextCursor.map(consumedCursors.contains) == true
+            let accounts = merged(page.accounts)
+            cursor = repeatedCursor ? requestedCursor : nextCursor
+            consumedCursors.insert(requestedCursor)
+            totalCount = page.totalCount ?? totalCount
+            state = .loaded(accounts)
+            pageRevision += 1
+
+            if repeatedCursor {
+                paging = .failed(.contractMismatch)
+                pageFailure = .contractMismatch
+            } else {
+                paging = nextCursor == nil ? .exhausted : .idle
+            }
+        } catch let error where error.isCancellation {
+            guard epoch == generation else { return }
+            paging = cursor == nil ? .exhausted : .idle
+        } catch {
+            guard isCurrent(epoch: epoch, filter: filter) else { return }
+            let failure = RepositoryError.describing(error)
+            paging = .failed(failure)
+            pageFailure = failure
+        }
+    }
+
+    private func merged(_ incoming: [Account]) -> [Account] {
+        guard case .loaded(let existing) = state else { return unique(incoming) }
+        var seen = Set(existing.map(\.id))
+        return existing + incoming.filter { seen.insert($0.id).inserted }
+    }
+
+    private func unique(_ accounts: [Account]) -> [Account] {
+        var seen: Set<Account.ID> = []
+        return accounts.filter { seen.insert($0.id).inserted }
+    }
+
+    private func settlePagingIfLoading() {
+        guard paging == .loading else { return }
+        paging = cursor == nil ? .exhausted : .idle
+    }
+}
+
+internal struct AccountsListFilter: Hashable, Sendable {
+    let search: String?
+    let archiveScope: AccountsArchiveScope
+}
+
+private struct AccountsFirstPageRequest {
+    let id: UUID
+    let epoch: Int
+    let filter: AccountsListFilter
+}
+
+/// The state of the next page, kept separate so a tail failure does not hide
+/// accounts already on screen.
+public enum AccountsPagingState: Hashable, Sendable {
+    /// Another page is available and no request is running.
+    case idle
+    /// A page request is in flight.
+    case loading
+    /// The most recent page request failed and can be retried.
+    case failed(RepositoryError)
+    /// No next cursor was returned by the last successful page.
+    case exhausted
 }

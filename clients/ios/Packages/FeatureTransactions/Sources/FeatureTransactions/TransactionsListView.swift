@@ -148,7 +148,7 @@ extension TransactionsListView {
                 // scrolling away or navigating out leaves the fetch running and
                 // the view model's cancellation handling with nothing to react
                 // to. Same trigger, cancelled when the footer goes away.
-                .task { await model.loadNextPageIfNeeded() }
+                .task(id: model.pageRevision) { await model.loadNextPageIfNeeded() }
         case .failed(let error):
             failedFooter(error)
         }

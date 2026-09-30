@@ -14,7 +14,15 @@ import type { CallResult } from '@pops/pillar-sdk/server';
 import type { PillarHandleFactory } from '../../pillars/gateway.js';
 
 interface SearchCall {
-  readonly body: { readonly query: { readonly text: string; readonly filters?: unknown } };
+  readonly body: {
+    readonly query: {
+      readonly text: string;
+      readonly filters?: unknown;
+      readonly kind?: string;
+      readonly cursor?: string;
+      readonly limit?: number;
+    };
+  };
 }
 
 function factoryOver(
@@ -207,11 +215,28 @@ describe('search — forwarding filters', () => {
 
     expect(sent?.body.query.text).toBe('bunnings warehouse');
   });
+
+  it('forwards kind, cursor, and page size to the ranked purchases query', async () => {
+    let sent: SearchCall | undefined;
+    await clientOver(factoryOver([], (call) => (sent = call))).search({
+      q: 'bunnings',
+      kind: 'lines',
+      cursor: 'opaque-cursor',
+      limit: 17,
+    });
+
+    expect(sent?.body.query).toMatchObject({
+      text: 'bunnings',
+      kind: 'lines',
+      cursor: 'opaque-cursor',
+      limit: 17,
+    });
+  });
 });
 
 describe('tagVocabulary', () => {
   it('passes the vocabulary through unchanged', async () => {
-    const outcome = await clientOver(factoryOver([])).tagVocabulary();
+    const outcome = await clientOver(factoryOver([])).tagVocabulary({ limit: 25 });
 
     expect(isGatewayOk(outcome)).toBe(true);
     if (!isGatewayOk(outcome)) return;
@@ -229,7 +254,7 @@ describe('tagVocabulary', () => {
         },
       })) as PillarHandleFactory;
 
-    const outcome = await clientOver(factory).tagVocabulary();
+    const outcome = await clientOver(factory).tagVocabulary({ limit: 25 });
 
     expect(isGatewayOk(outcome)).toBe(false);
   });

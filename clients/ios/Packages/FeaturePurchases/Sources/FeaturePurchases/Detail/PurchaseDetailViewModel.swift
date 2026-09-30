@@ -190,35 +190,22 @@ internal final class PurchaseDetailViewModel {
     private func loadThumbnails(for detail: PurchaseDetail) async {
         thumbnailGeneration += 1
         let requestGeneration = thumbnailGeneration
-        let requests = detail.receiptURIs.enumerated().compactMap { index, uri in
+        let request = detail.receiptURIs.enumerated().lazy.compactMap { index, uri in
             ReceiptURI.sha256(from: uri).map { (index, $0) }
-        }
+        }.first
         receiptPages = []
-        guard !requests.isEmpty else { return }
-
-        let repository = repository
-        let pages = await withTaskGroup(of: PurchaseReceiptThumbnail?.self) { group in
-            for (index, sha256) in requests {
-                group.addTask {
-                    let image: ReceiptImage
-                    do {
-                        guard let loaded = try await repository.receiptThumbnail(sha256: sha256)
-                        else { return nil }
-                        image = loaded
-                    } catch {
-                        return nil
-                    }
-                    return PurchaseReceiptThumbnail(pageIndex: index, image: image)
-                }
+        guard let (index, sha256) = request else { return }
+        let page: PurchaseReceiptThumbnail
+        do {
+            guard let image = try await repository.receiptThumbnail(sha256: sha256) else {
+                return
             }
-            var received: [PurchaseReceiptThumbnail] = []
-            for await page in group {
-                if let page { received.append(page) }
-            }
-            return received.sorted { $0.pageIndex < $1.pageIndex }
+            page = PurchaseReceiptThumbnail(pageIndex: index, image: image)
+        } catch {
+            return
         }
         guard requestGeneration == thumbnailGeneration, !Task.isCancelled else { return }
-        receiptPages = pages
+        receiptPages = [page]
     }
 
     private func invalidateRequests() {

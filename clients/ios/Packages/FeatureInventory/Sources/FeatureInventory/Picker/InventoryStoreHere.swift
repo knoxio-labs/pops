@@ -3,7 +3,7 @@ import Foundation
 import Observation
 
 /// Where Store here puts things: into a container, or directly in a place.
-internal enum InventoryStoreTarget: Equatable {
+internal enum InventoryStoreTarget: Equatable, Sendable {
     case container(id: InventoryItem.ID, name: String)
     case location(id: InventoryLocation.ID, name: String)
 
@@ -22,7 +22,7 @@ internal enum InventoryStoreTarget: Equatable {
 }
 
 /// An item Store here can offer, as its pick row draws it.
-internal struct InventoryStoreCandidate: Identifiable, Equatable {
+internal struct InventoryStoreCandidate: Identifiable, Hashable, Sendable {
     internal let id: InventoryItem.ID
     internal let name: String
     internal let crumbs: [String]
@@ -30,29 +30,29 @@ internal struct InventoryStoreCandidate: Identifiable, Equatable {
     internal let access: InventoryAccess?
     internal let photo: String?
 
-    /// Items Store here offers for `query`: the recently touched ones while
-    /// nothing is typed, the matches once something is. Never an inactive
-    /// item, one already there, the container itself, or a container that
-    /// holds the target (storing it would put the target inside itself).
-    internal static func candidates(
-        reading source: any InventoryQuerySource, for target: InventoryStoreTarget,
-        query: String, recentLimit: Int = 50
-    ) -> [InventoryStoreCandidate] {
+    /// Reads one bounded page of eligible Store here items, applying placement exclusions before
+    /// the source evaluates the page boundary.
+    internal static func query(
+        for target: InventoryStoreTarget, query: String, page: InventoryPageRequest
+    ) -> InventoryQuery<InventoryPage<InventoryStoreCandidate>> {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let found =
-            text.isEmpty
-            ? source.inventoryRecents(limit: recentLimit)
-            : source.inventorySearch(text: text, includeInactive: false)
-        let crumbs = InventoryPlacementCrumbs(source: source)
-        let refused = refusedIds(for: target, source: source)
-        return found.filter {
-            $0.isLive && $0.placement != target.placement && !refused.contains($0.id)
-        }
-        .map { item in
-            InventoryStoreCandidate(
-                id: item.id, name: item.name, crumbs: crumbs.names(of: item.placement),
-                isInHand: item.placement == .hand, access: item.containment?.access,
-                photo: item.photos.first?.sha256)
+        return InventoryQuery { source in
+            let excluded = refusedIds(for: target, source: source)
+            let query = InventoryItemPageQuery(
+                text: text,
+                filter: InventoryItemPageFilter(
+                    excludingIDs: excluded, excludingPlacement: target.placement),
+                order: text.isEmpty ? .updatedAtNewest : .searchRelevance,
+                page: page)
+            let result = source.inventoryItemPage(query)
+            let crumbs = InventoryPlacementCrumbs(source: source)
+            let candidates = result.rows.map { item in
+                InventoryStoreCandidate(
+                    id: item.id, name: item.name, crumbs: crumbs.names(of: item.placement),
+                    isInHand: item.placement == .hand, access: item.containment?.access,
+                    photo: item.photos.first?.sha256)
+            }
+            return InventoryPage(rows: candidates, nextCursor: result.nextCursor)
         }
     }
 
@@ -78,7 +78,18 @@ internal final class InventoryStoreHereModel {
     internal let runner: InventoryCommandRunner
     internal var query: String
     internal var selected: Set<InventoryItem.ID>
-    internal private(set) var candidates: InventoryObservation<[InventoryStoreCandidate]>
+    internal private(set) var candidates: InventoryLoadPhase<[InventoryStoreCandidate]> = .loading
+    internal private(set) var isLoadingNextPage = false
+    internal private(set) var nextPageFailed = false
+
+    private let store: any InventoryStore
+    private var activeQuery: String?
+    private var firstPage: [InventoryStoreCandidate] = []
+    private var appendedCandidates: [InventoryStoreCandidate] = []
+    private var loadedIDs: Set<InventoryItem.ID> = []
+    private var nextCursor: InventoryPageCursor?
+    private var pageEpoch = UUID()
+    private var activePageRequestID: UUID?
 
     internal init(
         target: InventoryStoreTarget, runner: InventoryCommandRunner, query: String = "",
@@ -86,20 +97,89 @@ internal final class InventoryStoreHereModel {
     ) {
         self.target = target
         self.runner = runner
+        store = runner.store
         self.query = query
         self.selected = selected
-        candidates = Self.observation(target: target, query: query, store: runner.store)
     }
 
     /// Follows the candidates for the current query; the view restarts this
     /// whenever the query changes.
     internal func observe() async {
-        candidates = Self.observation(target: target, query: query, store: runner.store)
-        await candidates.observe()
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if activeQuery != text {
+            activeQuery = text
+            resetPages()
+        }
+        candidates = .loading
+        var answered = false
+        var firstEmission = true
+        for await page in store.observe(Self.query(target: target, text: text, cursor: nil)) {
+            guard !Task.isCancelled, activeQuery == text else { break }
+            answered = true
+            if !firstEmission {
+                pageEpoch = UUID()
+                appendedCandidates = []
+                loadedIDs = []
+                isLoadingNextPage = false
+                nextPageFailed = false
+                activePageRequestID = nil
+            }
+            firstEmission = false
+            firstPage = page.rows
+            appendedCandidates = []
+            loadedIDs = Set(page.rows.map(\.id))
+            nextCursor = page.nextCursor
+            candidates = .loaded(page.rows)
+        }
+        if !answered && activeQuery == text && !Task.isCancelled { candidates = .unavailable }
     }
 
     internal func toggle(_ id: InventoryItem.ID) {
         if selected.remove(id) == nil { selected.insert(id) }
+    }
+
+    internal var shownCandidates: [InventoryStoreCandidate] {
+        firstPage + appendedCandidates
+    }
+
+    internal var canLoadMore: Bool { nextCursor != nil }
+
+    /// Loads another eligible candidate page while preserving the cursor after a failed read.
+    internal func loadNextPage() async {
+        guard !isLoadingNextPage, let text = activeQuery,
+            text == query.trimmingCharacters(in: .whitespacesAndNewlines),
+            let cursor = nextCursor
+        else { return }
+        let epoch = pageEpoch
+        let requestID = UUID()
+        activePageRequestID = requestID
+        isLoadingNextPage = true
+        nextPageFailed = false
+        var answered = false
+        for await page in store.observe(Self.query(target: target, text: text, cursor: cursor)) {
+            guard !Task.isCancelled, activeQuery == text, pageEpoch == epoch,
+                activePageRequestID == requestID
+            else { break }
+            answered = true
+            for candidate in page.rows where loadedIDs.insert(candidate.id).inserted {
+                appendedCandidates.append(candidate)
+            }
+            nextCursor = page.nextCursor
+            break
+        }
+        if !answered && activeQuery == text && pageEpoch == epoch
+            && activePageRequestID == requestID
+        {
+            nextPageFailed = true
+        }
+        if activePageRequestID == requestID {
+            activePageRequestID = nil
+            isLoadingNextPage = false
+        }
+    }
+
+    internal func retryNextPage() async {
+        await loadNextPage()
     }
 
     /// Stores every picked item in the target and offers Undo. Returns
@@ -116,13 +196,22 @@ internal final class InventoryStoreHereModel {
         return landed
     }
 
-    private static func observation(
-        target: InventoryStoreTarget, query: String, store: any InventoryStore
-    ) -> InventoryObservation<[InventoryStoreCandidate]> {
-        InventoryObservation(
-            store: store,
-            query: InventoryQuery {
-                InventoryStoreCandidate.candidates(reading: $0, for: target, query: query)
-            })
+    private static func query(
+        target: InventoryStoreTarget, text: String, cursor: InventoryPageCursor?
+    ) -> InventoryQuery<InventoryPage<InventoryStoreCandidate>> {
+        InventoryStoreCandidate.query(
+            for: target, query: text,
+            page: InventoryPageRequest(cursor: cursor))
+    }
+
+    private func resetPages() {
+        firstPage = []
+        appendedCandidates = []
+        loadedIDs = []
+        nextCursor = nil
+        pageEpoch = UUID()
+        activePageRequestID = nil
+        isLoadingNextPage = false
+        nextPageFailed = false
     }
 }

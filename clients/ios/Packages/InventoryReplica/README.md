@@ -14,6 +14,8 @@ A snapshot page from a new epoch discards every stored row first: a restored ser
 
 Items and locations each have two tables of the same shape: `*_base` is what the server last sent, and the unsuffixed table is what queries read. A page writes only the base; the rebase that follows in the same transaction resets every row the page changed, or any logged change wrote, and replays the log over it.
 
+List reads use stable keyset pages. The replica applies item search, browse and picker predicates, event scope and kind filters, ordering, and the cursor in SQLite before `LIMIT`; Inventory search merges the bounded item and place candidates into one ranked page. The UI keeps a cursor after a failed read so Retry asks for the same boundary.
+
 ## Revisioned catalogue and values
 
 Protocol-2 catalogues are normalized into immutable revision, type, field and option tables. Storing a revision that already exists is idempotent only when every value matches; a different payload under the same revision is corruption. Older revisions remain readable while an item value or queued mutation still names them. A page cannot store protocol-2 rows until its exact catalogue revision exists, and the overload that accepts both commits the catalogue and the first dependent page in one transaction.

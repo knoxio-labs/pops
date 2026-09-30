@@ -16,12 +16,15 @@ internal struct PurchasesArchiveWiringTests {
     @Test("the source scan reads the archive screen")
     func sourceExists() { #expect(!Self.source.isEmpty) }
 
-    @Test("the loading footer restarts when its cursor changes")
-    func footerLoadsNextPage() {
+    @Test("the last rows trigger paging and the footer only reports request state")
+    func rowsTriggerNextPage() {
         #expect(Self.source.contains("case .loading:"))
+        #expect(Self.source.contains(".task("))
         #expect(
             Self.source.contains(
-                ".task(id: model.nextPageCursor) { await model.loadNextPageIfNeeded() }"))
+                "ArchivePrefetchTask(scope: model.scope, purchaseID: purchase.id)"))
+        #expect(Self.source.contains("await model.loadNextPageIfNeeded(when: purchase.id)"))
+        #expect(!Self.source.contains(".task(id: model.nextPageCursor)"))
     }
 
     @Test("the failed footer retries only through the model")

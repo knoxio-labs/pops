@@ -28,7 +28,7 @@ internal final class InventoryItemDetailViewModel {
     /// in this package shares.
     internal let runner: InventoryCommandRunner
 
-    private let store: any InventoryStore
+    internal let store: any InventoryStore
     private let now: @Sendable () -> Date
     private var receipts: [InventoryUndoOffer.ID: InventoryReceipt] = [:]
 

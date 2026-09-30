@@ -145,6 +145,7 @@ describe('GET /openapi', () => {
       '/mobile/finance/transactions',
       '/mobile/finance/transactions/{id}',
       '/mobile/inventory/codes/suggest',
+      '/mobile/inventory/items',
       '/mobile/inventory/items/{id}/history',
       '/mobile/inventory/media/{sha256}',
       '/mobile/inventory/mutations',

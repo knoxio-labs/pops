@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import GRDB
 
 /// The reads behind every `InventoryQuery`, over the optimistic layer. A
@@ -88,8 +89,30 @@ internal enum ReplicaQueries {
         ).map { try ItemRow.decode($0, in: db) }
     }
 
-    /// Only what sits directly inside: an item in a tin in this crate is the
-    /// tin's, not the crate's.
+    static func itemPage(
+        _ query: InventoryItemPageQuery, isStale: Bool, in db: Database
+    ) throws -> InventoryPage<InventoryItem> {
+        try ReplicaItemPageReader.read(query, isStale: isStale, in: db)
+    }
+
+    static func searchPage(
+        _ query: InventorySearchPageQuery, isStale: Bool, in db: Database
+    ) throws -> InventoryPage<InventorySearchPageRow> {
+        try ReplicaSearchPageReader.read(query, isStale: isStale, in: db)
+    }
+
+    static func eventPage(
+        _ query: InventoryEventPageQuery, in db: Database
+    ) throws -> InventoryPage<InventoryEvent> {
+        try ReplicaEventPageReader.read(query, in: db)
+    }
+
+    static func itemPageSummary(createdSince: Date, in db: Database) throws
+        -> InventoryItemPageSummary
+    {
+        try ReplicaItemPageSummaryReader.read(createdSince: createdSince, in: db)
+    }
+
     static func contents(ofContainer containerId: String, in db: Database) throws -> [InventoryItem]
     {
         try activeItems(

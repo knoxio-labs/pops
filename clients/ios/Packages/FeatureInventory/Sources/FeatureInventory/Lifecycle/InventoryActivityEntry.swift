@@ -4,7 +4,7 @@ import AppCore
 /// detail's History section and on the History page, and the full account
 /// its sheet opens into. Built from an `InventoryEvent` by
 /// `InventoryActivityEntries`.
-internal struct InventoryActivityEntry: Identifiable, Hashable {
+internal struct InventoryActivityEntry: Identifiable, Hashable, Sendable {
     /// The event's `seq`, which is what Undo reverts.
     internal let seq: Int
     internal let verb: String

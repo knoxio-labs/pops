@@ -149,6 +149,7 @@ export const FinanceAccountRowSchema = z.object({
   kind: z.string(),
   currency: z.string(),
   archivedAt: z.string().nullable(),
+  displayOrder: z.number().int(),
   /**
    * The counterparty (`person` accounts) or issuing bank (every other kind
    * that carries one — not `cash`) — one unified concept on finance's side.
@@ -166,6 +167,12 @@ export type FinanceAccountRow = z.infer<typeof FinanceAccountRowSchema>;
 
 export const FinanceAccountListResponseSchema = z.object({
   data: z.array(FinanceAccountRowSchema),
+  pagination: z.object({
+    total: z.number().int().nonnegative(),
+    limit: z.number().int().positive(),
+    offset: z.number().int().nonnegative(),
+    hasMore: z.boolean(),
+  }),
 });
 
 export const FinanceAccountGetResponseSchema = z.object({

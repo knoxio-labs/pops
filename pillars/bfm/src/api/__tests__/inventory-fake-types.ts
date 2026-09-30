@@ -1,12 +1,19 @@
 import type { CallResult } from '@pops/pillar-sdk/server';
 
+import type { MobileInventoryItemsQuery } from '../../contract/mobile-inventory-list-schemas.js';
+
 /** Records the id supplied to the fake targeted-item procedure. */
 export interface InventoryItemCall {
   id?: string;
 }
 
+/** Parsed input captured from inventory's filtered web item page route. */
+export type InventoryWebItemsCall = MobileInventoryItemsQuery;
+
 /** Configures the responses exposed by the inventory pillar fake. */
 export interface InventoryFakeOptions {
+  /** What `web.list` answers. Defaults to an empty, fully-drained page. */
+  webItemsResult?: CallResult<unknown>;
   /** What `sync.snapshot` answers. Defaults to an empty, fully-drained page. */
   snapshotResult?: CallResult<unknown>;
   /** What `sync.changes` answers. */

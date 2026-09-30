@@ -62,7 +62,7 @@ const UNAVAILABLE: GatewayOutcome<never> = {
 
 describe('searchPurchases', () => {
   it('answers the client’s hits on success', async () => {
-    const value: MobilePurchaseSearchResponse = { hits: [] };
+    const value: MobilePurchaseSearchResponse = { hits: [], nextCursor: null };
     const handlers = makeMobilePurchasesSearchHandlers(
       stubClient({ search: () => Promise.resolve({ kind: 'ok', value }) })
     );
@@ -85,16 +85,34 @@ describe('searchPurchases', () => {
 
     expect(response.status).toBe(503);
   });
+
+  it('maps a rejected continuation cursor to the mobile request error', async () => {
+    const handlers = makeMobilePurchasesSearchHandlers(
+      stubClient({
+        search: () =>
+          Promise.resolve({ kind: 'invalid-request', pillar: 'purchases', status: 400 }),
+      })
+    );
+
+    const response = await handlers.searchPurchases({
+      query: { q: 'bunnings', cursor: 'opaque', limit: 25 },
+    } as Parameters<typeof handlers.searchPurchases>[0]);
+
+    expect(response).toMatchObject({ status: 400, body: { code: 'invalid_cursor' } });
+  });
 });
 
 describe('purchaseTags', () => {
   it('answers the client’s vocabulary on success', async () => {
-    const value: MobilePurchaseTagsResponse = { tags: [{ tag: 'snack', count: 3 }] };
+    const value: MobilePurchaseTagsResponse = {
+      tags: [{ tag: 'snack', count: 3 }],
+      nextCursor: null,
+    };
     const handlers = makeMobilePurchasesSearchHandlers(
       stubClient({ tagVocabulary: () => Promise.resolve({ kind: 'ok', value }) })
     );
 
-    const response = await handlers.purchaseTags();
+    const response = await handlers.purchaseTags({ query: { limit: 25 } });
 
     expect(response).toEqual({ status: 200, body: value });
   });
@@ -104,9 +122,24 @@ describe('purchaseTags', () => {
       stubClient({ tagVocabulary: () => Promise.resolve(UNAVAILABLE) })
     );
 
-    const response = await handlers.purchaseTags();
+    const response = await handlers.purchaseTags({ query: { limit: 25 } });
 
     expect(response.status).toBe(503);
+  });
+
+  it('maps a rejected continuation cursor to the mobile request error', async () => {
+    const handlers = makeMobilePurchasesSearchHandlers(
+      stubClient({
+        tagVocabulary: () =>
+          Promise.resolve({ kind: 'invalid-request', pillar: 'purchases', status: 400 }),
+      })
+    );
+
+    const response = await handlers.purchaseTags({
+      query: { search: 'coffee', cursor: 'opaque', limit: 25 },
+    });
+
+    expect(response).toMatchObject({ status: 400, body: { code: 'invalid_cursor' } });
   });
 });
 
@@ -179,7 +212,7 @@ describe('route ordering: the fixed segments are not swallowed by :id', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ hits: [] });
+    expect(response.body).toEqual({ hits: [], nextCursor: null });
   });
 
   it('reaches purchaseTags rather than getPurchase("tags")', async () => {
@@ -190,6 +223,6 @@ describe('route ordering: the fixed segments are not swallowed by :id', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ tags: [] });
+    expect(response.body).toEqual({ tags: [], nextCursor: null });
   });
 });

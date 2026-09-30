@@ -55,7 +55,7 @@ public struct UniversalSearchScreen<Sections: View, EmptyContent: View, FilterFi
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 PopsPageTitle(title: "Search")
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
                     searchBar

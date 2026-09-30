@@ -2,19 +2,14 @@ import AppCore
 import Foundation
 import Observation
 
-/// What a list screen's observation depends on: a change to either restarts
-/// it, and nothing else does, so a filter that only narrows locally never
-/// re-reads the store.
-internal struct InventoryObservationKey: Hashable, Sendable {
+/// What changes the Items browser's ordered result set.
+internal struct InventoryObservationKey: Equatable, Sendable {
     internal let text: String
-    internal let includeInactive: Bool
+    internal let filter: InventorySearchFilter
+    internal let sort: InventoryItemSort
 }
 
 /// The Items browser's state and writes, over `InventoryStore`.
-///
-/// The store answers the query and the lifecycle half of the filter; the
-/// rest of the filter, the sort and the sections are local, per the filter
-/// sheet's predicates.
 @MainActor @Observable
 internal final class InventoryItemsBrowserViewModel {
     internal enum Phase: Equatable {
@@ -27,12 +22,19 @@ internal final class InventoryItemsBrowserViewModel {
     internal var filter = InventorySearchFilter()
     internal var sort = InventoryItemSort.recent
     internal private(set) var phase: Phase = .loading
+    internal private(set) var isLoadingNextPage = false
+    internal private(set) var nextPageFailed = false
     internal let writer: InventoryWriter
-    /// Move's writes: the one runner every placement picker in this package shares.
     internal let runner: InventoryCommandRunner
 
     private let store: any InventoryStore
     private let now: @Sendable () -> Date
+    private var activeKey: InventoryObservationKey?
+    private var pageEpoch = UUID()
+    private var appendedRecords: [InventoryRecord] = []
+    private var loadedIDs: Set<InventoryItem.ID> = []
+    private var nextCursor: InventoryPageCursor?
+    private var activePageRequestID: UUID?
 
     internal init(store: any InventoryStore, now: @escaping @Sendable () -> Date = { .now }) {
         self.store = store
@@ -43,41 +45,101 @@ internal final class InventoryItemsBrowserViewModel {
 
     internal var observationKey: InventoryObservationKey {
         InventoryObservationKey(
-            text: query.trimmingCharacters(in: .whitespacesAndNewlines),
-            includeInactive: filter.includesInactive)
+            text: query.trimmingCharacters(in: .whitespacesAndNewlines), filter: filter, sort: sort)
     }
 
     internal var catalogue: InventoryItemsCatalogue? {
-        guard case .loaded(let catalogue) = phase else { return nil }
-        return catalogue
+        guard case .loaded(let firstPage) = phase else { return nil }
+        var records = firstPage.records
+        records.append(contentsOf: appendedRecords)
+        return InventoryItemsCatalogue(
+            records: records, nextCursor: nextCursor, types: firstPage.types,
+            offline: firstPage.offline, summary: firstPage.summary)
     }
 
-    /// Follows the store for the current key until the calling task is
-    /// cancelled. The last answer stays up while a new key's first answer is
-    /// on its way, so typing never flashes the skeleton.
+    /// Follows the first page and invalidates later pages after every replica update.
     internal func observe() async {
-        var answered = false
-        for await catalogue in store.observe(
-            InventoryItemsCatalogue.query(
-                text: observationKey.text, includeInactive: observationKey.includeInactive))
-        {
-            answered = true
-            phase = .loaded(catalogue)
+        let key = observationKey
+        if activeKey != key {
+            activeKey = key
+            pageEpoch = UUID()
+            appendedRecords = []
+            loadedIDs = []
+            nextCursor = nil
+            isLoadingNextPage = false
+            nextPageFailed = false
+            activePageRequestID = nil
         }
-        if !answered && catalogue == nil && !Task.isCancelled { phase = .unavailable }
+        var answered = false
+        var firstEmission = true
+        for await firstPage in store.observe(Self.query(key: key, cursor: nil, now: now())) {
+            guard !Task.isCancelled, activeKey == key else { break }
+            answered = true
+            if !firstEmission {
+                pageEpoch = UUID()
+                appendedRecords = []
+                isLoadingNextPage = false
+                nextPageFailed = false
+                activePageRequestID = nil
+            }
+            firstEmission = false
+            loadedIDs = Set(firstPage.records.map(\.id))
+            nextCursor = firstPage.nextCursor
+            phase = .loaded(firstPage)
+        }
+        if !answered && activeKey == key && !Task.isCancelled { phase = .unavailable }
     }
 
-    /// The rows the list shows: the filter, then the query, then the sort.
-    internal var shown: [InventoryRecord] {
-        guard let catalogue else { return [] }
-        let kept = catalogue.records.filter {
-            filter.matches($0) && (catalogue.matched?.contains($0.id) ?? true)
+    /// Loads the next bounded page once, keeping its cursor available after a failed read.
+    internal func loadNextPage() async {
+        guard !isLoadingNextPage, let key = activeKey, key == observationKey,
+            let cursor = nextCursor
+        else { return }
+        let epoch = pageEpoch
+        let requestID = UUID()
+        activePageRequestID = requestID
+        isLoadingNextPage = true
+        nextPageFailed = false
+        var answered = false
+        for await page in store.observe(Self.query(key: key, cursor: cursor, now: now())) {
+            guard !Task.isCancelled, activeKey == key, pageEpoch == epoch else { break }
+            answered = true
+            for record in page.records where loadedIDs.insert(record.id).inserted {
+                appendedRecords.append(record)
+            }
+            nextCursor = page.nextCursor
+            break
         }
+        if !answered && activeKey == key && pageEpoch == epoch && activePageRequestID == requestID {
+            nextPageFailed = true
+        }
+        if activePageRequestID == requestID {
+            activePageRequestID = nil
+            isLoadingNextPage = false
+        }
+    }
+
+    internal func retryNextPage() async {
+        await loadNextPage()
+    }
+
+    internal var canLoadMore: Bool { nextCursor != nil }
+
+    internal var shown: [InventoryRecord] {
+        let rows = catalogue?.records.filter(filter.matches) ?? []
         switch sort {
         case .recent:
-            return kept.sorted { $0.createdAt > $1.createdAt }
+            return rows.sorted {
+                $0.createdAt == $1.createdAt ? $0.id < $1.id : $0.createdAt > $1.createdAt
+            }
         case .name:
-            return kept.sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
+            return rows.sorted {
+                switch $0.name.localizedCaseInsensitiveCompare($1.name) {
+                case .orderedAscending: true
+                case .orderedDescending: false
+                case .orderedSame: $0.id < $1.id
+                }
+            }
         }
     }
 
@@ -85,30 +147,36 @@ internal final class InventoryItemsBrowserViewModel {
         InventoryItemSection.sections(shown, by: sort, now: now())
     }
 
-    /// The counts over the list: active items only, whatever the filter.
+    /// Counts are computed in SQLite, independently of the loaded row pages.
     internal var tiles: [InventoryCountTile] {
-        let active = catalogue?.records.filter(\.isActive) ?? []
-        let today = now()
+        let summary = catalogue?.summary
         return [
             InventoryCountTile(
-                title: "Items", count: active.count, symbol: InventorySymbol.item.system),
+                title: "Items", count: summary?.activeItems ?? 0,
+                symbol: InventorySymbol.item.system),
             InventoryCountTile(
-                title: "In hand", count: active.filter { $0.placement == .hand }.count,
+                title: "In hand", count: summary?.inHand ?? 0,
                 symbol: InventorySymbol.inHand.system),
             InventoryCountTile(
-                title: "Untyped", count: active.filter { $0.typeKeys.isEmpty }.count,
+                title: "Untyped", count: summary?.untyped ?? 0,
                 symbol: InventorySymbol.waiting.system),
             InventoryCountTile(
-                title: "Recent", count: active.filter { $0.isRecent(now: today) }.count,
+                title: "Recent", count: summary?.createdRecently ?? 0,
                 symbol: InventorySymbol.activity.system),
         ]
     }
 
-    internal var offlineLine: String? {
-        catalogue?.offline?.line(now: now())
-    }
+    internal var offlineLine: String? { catalogue?.offline?.line(now: now()) }
 
     internal func thumbnail(_ sha256: String) async -> Data? {
         try? await store.photo(sha256, variant: .thumb)
+    }
+
+    private static func query(
+        key: InventoryObservationKey, cursor: InventoryPageCursor?, now: Date
+    ) -> InventoryQuery<InventoryItemsCatalogue> {
+        InventoryItemsCatalogue.query(
+            text: key.text, filter: key.filter, sort: key.sort,
+            page: InventoryPageRequest(cursor: cursor), now: now)
     }
 }

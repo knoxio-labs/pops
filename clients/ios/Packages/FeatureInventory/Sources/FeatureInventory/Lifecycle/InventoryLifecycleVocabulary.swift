@@ -78,7 +78,7 @@ extension InventoryLifecycleChange {
 }
 
 /// What kind of thing happened, which is what the History page filters by.
-internal enum InventoryHistoryKind: String, CaseIterable, Hashable, Identifiable {
+internal enum InventoryHistoryKind: String, CaseIterable, Hashable, Identifiable, Sendable {
     case move
     case lifecycle
     case edit

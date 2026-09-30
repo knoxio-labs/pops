@@ -1,3 +1,5 @@
+import AppCore
+import FeaturePurchases
 import SwiftUI
 
 /// The sheet the universal search's filter circle opens: one native form
@@ -9,6 +11,7 @@ internal struct UniversalSearchFilterSheet: View {
     @Binding internal var inventory: InventorySearchFilter
     @Binding internal var purchases: PurchasesSearchFilter
     internal let scope: SearchScope
+    internal let purchasesRepository: any PurchasesRepository
     @Environment(\.dismiss) private var dismiss
 
     private var isActive: Bool {
@@ -59,7 +62,7 @@ internal struct UniversalSearchFilterSheet: View {
             }
             NavigationLink {
                 PurchasesTagPicker(
-                    selection: $purchases.tags, tags: PurchasesSearchFixtures.tagsInUse)
+                    selection: $purchases.tags, repository: purchasesRepository)
             } label: {
                 LabeledContent("Tags", value: purchases.tagSummary ?? "Any")
             }

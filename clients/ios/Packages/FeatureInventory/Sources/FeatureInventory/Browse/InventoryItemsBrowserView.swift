@@ -25,8 +25,8 @@ internal struct InventoryItemsBrowserView: View {
             case .unavailable:
                 ErrorStateView(message: InventoryCopy.unavailable) { generation += 1 }
                     .navigationTitle("Items")
-            case .loaded(let catalogue):
-                content(catalogue)
+            case .loaded:
+                if let catalogue = model.catalogue { content(catalogue) }
             }
         }
         .task(id: TaskKey(key: model.observationKey, generation: generation)) {
@@ -34,7 +34,7 @@ internal struct InventoryItemsBrowserView: View {
         }
     }
 
-    private struct TaskKey: Hashable {
+    private struct TaskKey: Equatable {
         let key: InventoryObservationKey
         let generation: Int
     }
@@ -49,7 +49,9 @@ internal struct InventoryItemsBrowserView: View {
                             symbol: InventorySymbol.offline.system, tint: .popsWarning,
                             text: offline)
                     }
-                    if catalogue.records.isEmpty {
+                    if catalogue.summary.activeItems == 0 && !model.filter.includesInactive
+                        && !model.filter.isActive && model.query.isEmpty
+                    {
                         PopsDashedActionButton(
                             title: "Add an item", symbol: InventorySymbol.item.system,
                             tint: .popsInventory
@@ -114,9 +116,25 @@ internal struct InventoryItemsBrowserView: View {
                         }
                         .buttonStyle(.plain)
                         .inventorySelectable(record.id, in: $selection)
+                        .onAppear {
+                            if record.id == model.shown.last?.id {
+                                Task { await model.loadNextPage() }
+                            }
+                        }
                     }
                 }
                 .transition(.opacity)
+            }
+        }
+        if model.canLoadMore {
+            if model.nextPageFailed {
+                Button("Retry loading more") { Task { await model.retryNextPage() } }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, PopsSpacing.md)
+            } else if model.isLoadingNextPage {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, PopsSpacing.md)
             }
         }
     }

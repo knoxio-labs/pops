@@ -12,6 +12,7 @@
 import { requires } from './capabilities.js';
 import {
   MobilePurchaseSearchResponseSchema,
+  MobilePurchaseTagsQuerySchema,
   MobilePurchaseTagsResponseSchema,
   MobileSearchQuerySchema,
 } from './mobile-purchases-schemas.js';
@@ -41,6 +42,7 @@ export const mobilePurchasesSearchRoutes = {
   purchaseTags: {
     method: 'GET',
     path: '/mobile/purchases/tags',
+    query: MobilePurchaseTagsQuerySchema,
     responses: {
       200: MobilePurchaseTagsResponseSchema,
       ...MOBILE_REQUEST_RESPONSES,

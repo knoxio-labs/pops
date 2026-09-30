@@ -65,6 +65,36 @@ export const MobileAccountSchema = z.object({
 
 export type MobileAccount = z.infer<typeof MobileAccountSchema>;
 
+/** Account kinds accepted as an exact mobile list filter. */
+export const MobileAccountKindSchema = z.enum([
+  'checking',
+  'savings',
+  'credit-card',
+  'cash',
+  'gift-card',
+  'person',
+  'shared',
+  'loan',
+  'novated-lease',
+  'crypto',
+  'other',
+]);
+
+/** One known account kind accepted by the list route. */
+export type MobileAccountKind = z.infer<typeof MobileAccountKindSchema>;
+
+/** Search and filter fields for the bounded mobile account list. */
+export const MobileAccountsQuerySchema = z.object({
+  search: z.string().trim().max(200).optional(),
+  kind: MobileAccountKindSchema.optional(),
+  archived: z.enum(['true', 'false']).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+/** Parsed search, filter, cursor, and page-size input. */
+export type MobileAccountsQuery = z.output<typeof MobileAccountsQuerySchema>;
+
 /**
  * One month-end balance, oldest-first within a series. Ledger-signed like
  * {@link MobileAccountBalanceSchema}, and carrying no `basis` of its own:
@@ -97,15 +127,12 @@ export const MobileAccountDetailSchema = z.object({
 
 export type MobileAccountDetail = z.infer<typeof MobileAccountDetailSchema>;
 
-/**
- * Every account the list screen shows.
- *
- * Unpaged, unlike {@link MobileTransactionsPageSchema}: an account list is
- * small enough in practice to send whole (`AccountsRepository.accounts()`'s
- * own reasoning), so there is no cursor to get wrong.
- */
+/** One cursor page of accounts, after server-side search and filters. */
 export const MobileAccountsPageSchema = z.object({
-  data: z.array(MobileAccountSchema),
+  accounts: z.array(MobileAccountSchema),
+  nextCursor: z.string().nullable(),
+  totalCount: z.number().int().nonnegative().optional(),
 });
 
+/** A bounded account page returned by the mobile list route. */
 export type MobileAccountsPage = z.infer<typeof MobileAccountsPageSchema>;

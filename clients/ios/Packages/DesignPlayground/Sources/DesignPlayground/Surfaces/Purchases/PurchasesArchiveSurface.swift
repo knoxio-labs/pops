@@ -8,6 +8,7 @@ import AppCore
 @MainActor
 internal enum PurchasesArchiveSurface {
     private static let firstPage = Array(PurchasesFixtures.history.prefix(9))
+    private static let nextPage = Array(PurchasesFixtures.history.dropFirst(firstPage.count))
 
     static let surface = DesignSurface(
         id: SurfaceID(area: "purchases", slug: "archive"),
@@ -16,7 +17,7 @@ internal enum PurchasesArchiveSurface {
         chrome: .navigation,
         states: [
             DesignState.standard {
-                PurchasesArchiveView(loaded: firstPage)
+                PurchasesArchiveView(loaded: firstPage, nextPage: nextPage)
             },
             DesignState("first-page-loading", "Nothing loaded yet") {
                 PurchasesArchiveView(loaded: [])
@@ -28,7 +29,8 @@ internal enum PurchasesArchiveSurface {
             // a page that failed is not a reason to take away the ones that
             // did not.
             DesignState("page-failed", "A page failed to load") {
-                PurchasesArchiveView(loaded: firstPage, paging: .failed)
+                PurchasesArchiveView(
+                    loaded: firstPage, nextPage: nextPage, paging: .failed)
             },
             // Where the digest's unmatched strip lands.
             DesignState("unmatched", "Only the unmatched") {

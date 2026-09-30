@@ -40,6 +40,7 @@ import { itemCandidate, itemRows } from './search-item-adapter.js';
 import { orderCandidate, orderRows } from './search-order-adapter.js';
 import { byScoreDescending, rank } from './search-ranking.js';
 import { matchingTagByItem } from './search-tags.js';
+import { normalizeSearchText } from './search-text.js';
 
 import type { PurchasesDb } from './internal.js';
 import type { PurchaseSearchScope } from './search-filters.js';
@@ -51,13 +52,44 @@ function scored<TRow>(
   rows: readonly TRow[],
   toCandidate: (row: TRow, text: string) => ScoredCandidate | null,
   text: string
-): PurchaseSearchHit[] {
+): ScoredCandidate[] {
   const candidates: ScoredCandidate[] = [];
   for (const row of rows) {
     const candidate = toCandidate(row, text);
     if (candidate !== null) candidates.push(candidate);
   }
-  return rank(candidates);
+  return candidates;
+}
+
+/** Every text-matching candidate, split by adapter before the legacy cap. */
+export interface PurchaseSearchCandidates {
+  readonly purchases: readonly ScoredCandidate[];
+  readonly lines: readonly ScoredCandidate[];
+}
+
+/**
+ * Build the complete matching candidate sets shared by legacy and paginated
+ * purchase search. Text and purchase scope predicates are applied by the
+ * adapter queries before candidates reach the ranking stage.
+ */
+export function purchaseSearchCandidates(
+  db: PurchasesDb,
+  text: string,
+  scope: PurchaseSearchScope = {}
+): PurchaseSearchCandidates {
+  const normalizedText = normalizeSearchText(text);
+  if (normalizedText.length === 0) return { purchases: [], lines: [] };
+
+  const taggedItemIds = matchingTagByItem(db, normalizedText);
+
+  return {
+    purchases: scored(orderRows(db, normalizedText, scope), orderCandidate, normalizedText),
+    lines: scored(
+      itemRows(db, normalizedText, scope, taggedItemIds),
+      (row, query) => itemCandidate(row, query, taggedItemIds),
+      normalizedText
+    ),
+  };
 }
 
 /**
@@ -80,17 +112,6 @@ export function searchPurchases(
   text: string,
   scope: PurchaseSearchScope = {}
 ): PurchaseSearchHit[] {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return [];
-
-  const taggedItemIds = matchingTagByItem(db, trimmed);
-
-  return [
-    ...scored(orderRows(db, trimmed, scope), orderCandidate, trimmed),
-    ...scored(
-      itemRows(db, trimmed, scope, taggedItemIds),
-      (row, text) => itemCandidate(row, text, taggedItemIds),
-      trimmed
-    ),
-  ].toSorted(byScoreDescending);
+  const candidates = purchaseSearchCandidates(db, text, scope);
+  return [...rank(candidates.purchases), ...rank(candidates.lines)].toSorted(byScoreDescending);
 }

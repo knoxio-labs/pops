@@ -50,7 +50,7 @@ The cursor is the server's, opaque, and never derived here. Offsets are the alte
 
 The subtler failure is a response landing _after_ the list it was requested for has been thrown away. Pull-to-refresh resets the cursor while a page fetch may still be in flight; when that fetch completes it would append rows from a list that no longer exists. `TransactionsListViewModel` carries a generation counter for exactly this — a fetch captures it before awaiting and discards its own result if it moved underneath — and `TransactionsListRaceTests` drives the race deterministically rather than with a sleep, through a repository that parks mid-call until the test lets it go.
 
-The third is duplicate work: a footer that appears, provokes a fetch, and provokes another on the next layout pass. Every test that touches paging asserts the repository's call count, because a list that fetches the same page twice renders correctly either way and bills the difference to somebody's cellular plan.
+The third is duplicate work: a footer that appears, provokes a fetch, and provokes another on the next layout pass. The footer task is keyed to each successful page, so a short or duplicate-only page can advance again while the boundary remains visible; the model's loading state still coalesces repeated appearances. Repeated cursors fail closed. Every test that touches paging asserts the repository's call count, because a list that fetches the same page twice renders correctly either way and bills the difference to somebody's cellular plan.
 
 ## A failure never takes the content away
 
@@ -62,7 +62,7 @@ Three decisions, and all of them were made on purpose:
 
 None of them leaves a half-screen looking whole — the footer or the banner is always there saying so, and all of them are announced to VoiceOver rather than only drawn, because VoiceOver does not move focus to content that appears above or below what was just touched. Each of the three clears its failure _before_ re-requesting, so a retry that fails identically is still a `nil -> error` transition and still gets announced; without that, a second identical failure is silence for anyone who cannot see the banner.
 
-The one retry that is _not_ offered is an automatic one. The row that provoked a failed fetch is still on screen afterwards, so an appearance-triggered retry fires again on the next layout pass and keeps firing against a server that has already said no. Retrying the tail is a button.
+The one retry that is _not_ offered is an automatic one. The footer that provoked a failed fetch is still on screen afterwards, so an appearance-triggered retry would keep firing against a server that has already said no. Retrying the tail is a button.
 
 ## Amounts and dates
 

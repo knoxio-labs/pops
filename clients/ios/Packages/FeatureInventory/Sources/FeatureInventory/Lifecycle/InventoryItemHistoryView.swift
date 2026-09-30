@@ -2,61 +2,65 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// What an Item detail page pushes to see every event on the item.
+/// Identifies the item whose complete event history is being shown.
 internal struct InventoryItemHistoryRoute: Hashable {
     internal let itemId: InventoryItem.ID
 }
 
-/// One item's full history, newest first, one line per event under a month
-/// heading, narrowed by kind from the filter circle beside the title. A line
-/// opens its account as a sheet, and the account offers Undo while the event
-/// is still undoable.
-///
-/// Recent activity is the same page over every record's events, under its
-/// own `title`, with each line naming the record it is about.
+/// A filtered event history over an item's events or the whole replica's recent activity.
 internal struct InventoryItemHistoryView: View {
     internal let title: String
     internal let name: String
-    internal let entries: [InventoryActivityEntry]
-    internal let isLoading: Bool
-    internal let onUndo: (InventoryActivityEntry) -> Void
-    @State private var kind: InventoryHistoryKind?
+    @State private var model: InventoryRecentActivityModel
     @State private var viewing: InventoryActivityEntry?
+    @State private var generation = 0
     @ScaledMetric(relativeTo: .body) private var circleSize = PopsSize.touchTarget
 
     internal init(
-        title: String = "History",
-        name: String,
-        entries: [InventoryActivityEntry],
-        isLoading: Bool = false,
-        viewing: InventoryActivityEntry? = nil,
-        onUndo: @escaping (InventoryActivityEntry) -> Void
+        title: String = "History", name: String, model: InventoryRecentActivityModel
     ) {
         self.title = title
         self.name = name
-        self.entries = entries
-        self.isLoading = isLoading
-        self.onUndo = onUndo
-        _viewing = State(initialValue: viewing)
+        _model = State(initialValue: model)
     }
 
     internal var body: some View {
-        ScrollView {
+        Group {
+            if model.activity.phase == .unavailable {
+                InventoryUnavailableView { generation += 1 }
+            } else {
+                content
+            }
+        }
+        .task(id: HistoryTaskKey(kind: model.kind, generation: generation)) {
+            await model.observe()
+        }
+    }
+
+    private struct HistoryTaskKey: Equatable {
+        let kind: InventoryHistoryKind?
+        let generation: Int
+    }
+
+    private var content: some View {
+        @Bindable var model = model
+        return ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    PopsPageTitle(title: title) { filterMenu }
+                    PopsPageTitle(title: title) { filterMenu($model.kind) }
                     Text(name)
                         .font(.popsSubheadline)
                         .foregroundStyle(Color.popsMutedForeground)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if isLoading {
+                if model.isLoading {
                     PopsListSkeleton(rows: 8)
                 } else {
                     months
+                    pagingFooter
                 }
             }
-            .popsMotion(value: kind)
+            .popsMotion(value: model.kind)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
@@ -64,41 +68,58 @@ internal struct InventoryItemHistoryView: View {
         .background(Color.popsBackground)
         .tint(.popsInventory)
         .sheet(item: $viewing) { entry in
-            InventoryHistoryEventSheet(entry: entry) { onUndo(entry) }
+            InventoryHistoryEventSheet(entry: entry) { Task { await model.undo(entry) } }
         }
     }
 
-    private var shown: [InventoryActivityEntry] {
-        guard let kind else { return entries }
-        return entries.filter { $0.kind == kind }
-    }
-
-    @ViewBuilder private var months: some View {
-        let groups = InventoryHistoryMonth.group(shown)
-        if groups.isEmpty {
-            PopsCentredLine(text: kind.map { "No \($0.title.lowercased())" } ?? "No history")
-        } else {
-            ForEach(groups) { month in
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    PopsSectionHeader(
-                        title: month.title, trailing: "\(month.entries.count)")
-                    InventorySelectionPanel(rows: month.entries) { entry in
-                        Button {
-                            viewing = entry
-                        } label: {
-                            InventoryHistoryLine(entry: entry)
+    private var months: some View {
+        let groups = InventoryHistoryMonth.group(model.entries)
+        return Group {
+            if groups.isEmpty {
+                PopsCentredLine(
+                    text: model.kind.map { "No \($0.title.lowercased())" } ?? "No history")
+            } else {
+                ForEach(groups) { month in
+                    VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                        PopsSectionHeader(
+                            title: month.title, trailing: "\(month.entries.count)")
+                        InventorySelectionPanel(rows: month.entries) { entry in
+                            Button {
+                                viewing = entry
+                            } label: {
+                                InventoryHistoryLine(entry: entry)
+                            }
+                            .buttonStyle(.plain)
+                            .onAppear {
+                                if entry.seq == model.entries.last?.seq {
+                                    Task { await model.loadNextPage() }
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
             }
         }
     }
 
-    private var filterMenu: some View {
+    @ViewBuilder private var pagingFooter: some View {
+        if model.canLoadMore {
+            if model.nextPageFailed {
+                Button("Retry loading more") { Task { await model.retryNextPage() } }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, PopsSpacing.md)
+            } else if model.isLoadingNextPage {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, PopsSpacing.md)
+            }
+        }
+    }
+
+    private func filterMenu(_ selection: Binding<InventoryHistoryKind?>) -> some View {
         Menu {
-            Picker("Show", selection: $kind) {
+            Picker("Show", selection: selection) {
                 Text("Everything").tag(InventoryHistoryKind?.none)
                 ForEach(InventoryHistoryKind.allCases) { kind in
                     Label {
@@ -112,17 +133,19 @@ internal struct InventoryItemHistoryView: View {
         } label: {
             Image(systemName: "line.3.horizontal.decrease")
                 .font(.popsBody.weight(.semibold))
-                .foregroundStyle(kind == nil ? Color.popsInventory : Color.popsBackground)
+                .foregroundStyle(
+                    selection.wrappedValue == nil ? Color.popsInventory : Color.popsBackground
+                )
                 .frame(width: circleSize, height: circleSize)
                 .background {
-                    if kind != nil { Circle().fill(Color.popsInventory) }
+                    if selection.wrappedValue != nil { Circle().fill(Color.popsInventory) }
                 }
                 .popsGlass(in: Circle())
                 .contentShape(Circle())
-                .popsMotion(value: kind)
+                .popsMotion(value: selection.wrappedValue)
         }
         .accessibilityLabel("Filter")
-        .accessibilityValue(kind?.title ?? "Everything")
+        .accessibilityValue(selection.wrappedValue?.title ?? "Everything")
     }
 }
 

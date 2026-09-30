@@ -1430,7 +1430,32 @@
     "/items/tags": {
       "get": {
         "operationId": "purchase.tagVocabulary",
-        "parameters": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1464,6 +1489,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "List the distinct item tags in use with their counts, most-used first",
@@ -12009,6 +12044,9 @@
                   "query": {
                     "additionalProperties": false,
                     "properties": {
+                      "cursor": {
+                        "type": "string"
+                      },
                       "filters": {
                         "items": {
                           "additionalProperties": false,
@@ -12030,6 +12068,15 @@
                           "type": "object"
                         },
                         "type": "array"
+                      },
+                      "kind": {
+                        "enum": ["purchases", "lines"],
+                        "type": "string"
+                      },
+                      "limit": {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer"
                       },
                       "text": {
                         "type": "string"
@@ -12079,6 +12126,15 @@
                         "type": "object"
                       },
                       "type": "array"
+                    },
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "totalCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     }
                   },
                   "required": ["hits"],

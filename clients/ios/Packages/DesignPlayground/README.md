@@ -113,6 +113,11 @@ So the app works with the phone in flight mode, and that is a fact about the
 package graph rather than a promise: making it false means adding `BFMClient`
 to `Package.swift`, which is a change a reviewer sees.
 
+Search fixture results are exposed in 20-match slices, and the purchase archive
+advances when its last visible row appears. These small fictional datasets stage
+the loading boundary and do not measure row construction, memory use, or
+large-result performance.
+
 ## The catalogue is a list, and a test guards it
 
 `Catalog.swift` names every surface, component and experiment. The web

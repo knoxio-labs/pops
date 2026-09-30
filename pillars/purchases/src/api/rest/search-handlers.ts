@@ -19,7 +19,12 @@
  * caller sitting on an order than for one searching from anywhere else, so
  * honouring it in name only would be a claim the pillar cannot back.
  */
-import { searchFilterScope, searchPurchases } from '../../db/index.js';
+import {
+  searchFilterScope,
+  searchPurchases,
+  searchPurchasesPage,
+  type SearchMatchType,
+} from '../../db/index.js';
 import { purchaseErrorBody } from '../errors.js';
 
 import type { z } from 'zod';
@@ -29,10 +34,27 @@ import type { PurchasesDb } from '../../db/index.js';
 
 type SearchBody = { query: z.infer<typeof SearchQuerySchema> };
 
+function toSearchHit(hit: {
+  uri: string;
+  score: number;
+  matchField: string;
+  matchType: SearchMatchType;
+  data: Record<string, unknown>;
+}) {
+  return {
+    uri: hit.uri,
+    score: hit.score,
+    matchField: hit.matchField,
+    matchType: hit.matchType,
+    data: { ...hit.data },
+  };
+}
+
 export function makeSearchHandlers(db: PurchasesDb) {
   return {
     search: async ({ body }: { body: SearchBody }) => {
-      const scope = searchFilterScope(body.query.filters ?? []);
+      const { text, filters, cursor, kind, limit } = body.query;
+      const scope = searchFilterScope(filters ?? []);
       if (!scope.ok) {
         return {
           status: 400 as const,
@@ -40,17 +62,32 @@ export function makeSearchHandlers(db: PurchasesDb) {
         };
       }
 
+      if (cursor !== undefined || limit !== undefined || kind !== undefined) {
+        const page = searchPurchasesPage(db, text, scope.scope, {
+          ...(kind === undefined ? {} : { kind }),
+          ...(cursor === undefined ? {} : { cursor }),
+          limit: limit ?? 25,
+        });
+        if (page === null) {
+          return {
+            status: 400 as const,
+            body: purchaseErrorBody('invalid_cursor'),
+          };
+        }
+
+        return {
+          status: 200 as const,
+          body: {
+            hits: page.hits.map(toSearchHit),
+            nextCursor: page.nextCursor,
+            totalCount: page.totalCount,
+          },
+        };
+      }
+
       return {
         status: 200 as const,
-        body: {
-          hits: searchPurchases(db, body.query.text, scope.scope).map((hit) => ({
-            uri: hit.uri,
-            score: hit.score,
-            matchField: hit.matchField,
-            matchType: hit.matchType,
-            data: { ...hit.data },
-          })),
-        },
+        body: { hits: searchPurchases(db, text, scope.scope).map(toSearchHit) },
       };
     },
   };

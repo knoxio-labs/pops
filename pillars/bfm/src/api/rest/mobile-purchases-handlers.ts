@@ -16,6 +16,7 @@ import { isGatewayOk } from '../pillars/gateway.js';
 import { decodePurchasesCursor } from '../purchases/list-cursor.js';
 import { makeMobilePurchasesDraftHandlers } from './mobile-purchases-draft-handlers.js';
 import { makeMobilePurchasesSearchHandlers } from './mobile-purchases-search-handlers.js';
+import { invalidMobileCursorResponse } from './mobile-request-error.js';
 import {
   toCollectionUpstreamErrorResponse,
   toPurchaseUpdateErrorResponse,
@@ -49,13 +50,9 @@ export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
     listPurchases: async ({ query }: Req['listPurchases']) => {
       const cursor = query.cursor === undefined ? null : decodePurchasesCursor(query.cursor);
       if (query.cursor !== undefined && cursor === null) {
-        return {
-          status: 400 as const,
-          body: {
-            code: 'invalid_cursor' as const,
-            message: 'The cursor is not one this server issued. Start the list again.',
-          },
-        };
+        return invalidMobileCursorResponse(
+          'The cursor is not one this server issued. Start the list again.'
+        );
       }
 
       const statuses = query.status === 'unsettled' ? UNSETTLED_STATUSES : undefined;

@@ -15,20 +15,20 @@ public func purchasesSearchStatusOptions() -> [PurchaseSearchStatus] {
     [.any, .unmatched, .matched, .partial, .cash, .ignored]
 }
 
-/// Purchases' Show and Status pickers, and the Tags row, for use in a shared filter form.
+/// Purchases' Show and Status pickers and the paged Tags picker, for a shared filter form.
 public struct PurchasesSearchFilterFields<Header: View>: View {
     @Binding private var filter: PurchasesSearchFilter
-    private let tags: [PurchaseTagCount]
+    private let repository: any PurchasesRepository
     @ViewBuilder private let header: () -> Header
 
-    /// Creates Purchases filter fields with a caller-provided section header.
+    /// Creates Purchases filter fields backed by the repository that supplies search pages.
     public init(
         filter: Binding<PurchasesSearchFilter>,
-        tags: [PurchaseTagCount],
+        repository: any PurchasesRepository,
         @ViewBuilder header: @escaping () -> Header
     ) {
         _filter = filter
-        self.tags = tags
+        self.repository = repository
         self.header = header
     }
 
@@ -41,7 +41,7 @@ public struct PurchasesSearchFilterFields<Header: View>: View {
                 ForEach(purchasesSearchStatusOptions(), id: \.self) { Text($0.title).tag($0) }
             }
             NavigationLink {
-                PurchasesTagPicker(selection: $filter.tags, tags: tags)
+                PurchasesTagPicker(selection: $filter.tags, repository: repository)
             } label: {
                 LabeledContent("Tags", value: filter.tagSummary ?? "Any")
             }
@@ -54,7 +54,7 @@ public struct PurchasesSearchFilterFields<Header: View>: View {
 
 extension PurchasesSearchFilterFields where Header == EmptyView {
     /// Creates Purchases filter fields without a section header.
-    public init(filter: Binding<PurchasesSearchFilter>, tags: [PurchaseTagCount]) {
-        self.init(filter: filter, tags: tags) { EmptyView() }
+    public init(filter: Binding<PurchasesSearchFilter>, repository: any PurchasesRepository) {
+        self.init(filter: filter, repository: repository) { EmptyView() }
     }
 }

@@ -43,7 +43,7 @@ Four decisions carry the rest of it, and each is a rule the screens landing next
 
 ### Stored purchases and the shared form
 
-The Purchases tab renders the saved-purchase list with `PurchaseStatusFilter.all`; capture and draft creation use the receipt repository. A detail model reads the complete purchase and resolves stored receipt thumbnails concurrently while retaining their original document indexes. A failed page is omitted without shifting the pages that follow it, so opening a visible thumbnail still requests the corresponding receipt URI. Detail reads, refreshes, saves, and full-image requests each reject stale responses by generation; a failed refresh keeps the loaded purchase visible.
+The Purchases tab renders the saved-purchase list with `PurchaseStatusFilter.all`; capture and draft creation use the receipt repository. A detail model reads the complete purchase and preloads only the first stored receipt thumbnail for the header; opening any page requests its full image by the page's original index. Detail reads, refreshes, saves, and image requests each reject stale responses by generation; a failed refresh keeps the loaded purchase visible.
 
 The detail presentation uses the saved merchant identity, day, total, settlement state, receipt lines, and server charge components. Its totals foot appears only when at least one adjustment exists, currencies remain explicit when foreign to the reader, and an unknown settlement remains visible verbatim. Loading uses the final layout's shimmering shapes, and initial failures offer Retry only for transport and availability failures.
 
@@ -73,7 +73,7 @@ The archive groups each server-filtered scope into calendar months. Until a scop
 
 Each archive scope owns its rows, opaque cursor, first-page total, and paging state. Switching scope invalidates in-flight work without discarding either scope's loaded cache; returning to a scope resumes from its cursor. Later pages deduplicate purchase identifiers, keep the first page's server total, and expose failure only at the footer so already loaded months remain readable.
 
-The archive screen pins shared section headers over shared purchase-row panels. Its principal toolbar picker swaps All and Unmatched without creating another navigation stack, and rows push feature-local detail values. First-page loading and failure replace the screen; later-page loading, failure, retry, and the “Everything since” boundary live in the footer beneath rows that remain readable. The archive loading footer follows the next-page cursor, so a duplicate-only page can advance pagination without requiring new rows or a scroll gesture.
+The archive screen pins shared section headers over shared purchase-row panels. Its principal toolbar picker swaps All and Unmatched without creating another navigation stack, and rows push feature-local detail values. The last five in-scope rows request another page as they approach the viewport; concurrent appearances share one request, and a repeated cursor stops automatic requests. First-page loading and failure replace the screen; later-page loading, failure and retry live in the footer beneath rows that remain readable. A failed page keeps the current cursor and loaded rows until the reader retries it.
 
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
@@ -162,7 +162,7 @@ Money is parsed once, in `ReceiptDraftSaveMapping`, using `AppCore`'s `ReceiptMo
 
 ### Showing the receipt
 
-The pages on the draft form are the bytes the phone is holding — what the camera produced and what was uploaded, held by `ReceiptDraftView.parts` precisely so the reading can be checked against them. Stored purchase details instead resolve their ordered `receiptURIs` through `PurchasesRepository`: thumbnails fill the header and opening one requests the full image for that URI.
+The pages on the draft form are the bytes the phone is holding — what the camera produced and what was uploaded, held by `ReceiptDraftView.parts` precisely so the reading can be checked against them. Stored purchase details resolve the first valid `receiptURI` as the header thumbnail; opening any page requests its full image by the original URI index.
 
 An unreadable reading carries a page count, not stored-part URIs. `ReceiptDraftReading.receiptUris` identifies the stored parts a save attaches; those references become drawable only after the resulting saved purchase is read through the detail repository.
 

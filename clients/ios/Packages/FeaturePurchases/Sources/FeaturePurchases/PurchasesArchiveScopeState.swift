@@ -9,19 +9,17 @@ internal enum TopLevelState: Equatable, Sendable {
 internal struct ScopeState: Sendable {
     internal var purchases: [Purchase] = []
     internal var cursor: String?
+    internal var requestedCursors: Set<String> = []
     internal var hasLoaded = false
     internal var isLoadingFirstPage = false
-    internal var isFetchingNextPage = false
     internal var totalCount: Int?
     internal var topLevel: TopLevelState = .loading
-    internal var paging: ArchivePaging = .loading
+    internal var paging: ArchivePaging = .idle
 
     internal mutating func settleTransientLoading() {
-        let wasFetchingNextPage = isFetchingNextPage
         isLoadingFirstPage = false
-        isFetchingNextPage = false
-        if hasLoaded, wasFetchingNextPage {
-            paging = cursor == nil ? .end : .loading
+        if hasLoaded, paging == .loading {
+            paging = cursor == nil ? .end : .idle
         }
     }
 }

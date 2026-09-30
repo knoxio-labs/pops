@@ -968,7 +968,24 @@ export type MobileContactsCreateMerchantAddressResponse =
 export type MobileFinanceListAccountsData = {
   body?: never;
   path?: never;
-  query?: never;
+  query: {
+    search?: string;
+    kind?:
+      | 'checking'
+      | 'savings'
+      | 'credit-card'
+      | 'cash'
+      | 'gift-card'
+      | 'person'
+      | 'shared'
+      | 'loan'
+      | 'novated-lease'
+      | 'crypto'
+      | 'other';
+    archived?: 'true' | 'false';
+    cursor?: string;
+    limit: number;
+  };
   url: '/mobile/finance/accounts';
 };
 
@@ -1059,7 +1076,7 @@ export type MobileFinanceListAccountsResponses = {
    * 200
    */
   200: {
-    data: Array<{
+    accounts: Array<{
       archived: boolean;
       balance: {
         asOf: string;
@@ -1076,6 +1093,8 @@ export type MobileFinanceListAccountsResponses = {
       name: string;
       transactionCount: number;
     }>;
+    nextCursor: string | null;
+    totalCount?: number;
   };
 };
 
@@ -1583,6 +1602,254 @@ export type MobileInventorySuggestCodesResponses = {
 
 export type MobileInventorySuggestCodesResponse =
   MobileInventorySuggestCodesResponses[keyof MobileInventorySuggestCodesResponses];
+
+export type MobileInventoryListItemsData = {
+  body?: never;
+  path?: never;
+  query: {
+    cursor?: string;
+    limit: number;
+    typeKey?: string;
+    placementKind?: 'location' | 'container' | 'hand';
+    locationId?: string;
+    containingItemId?: string;
+    ids?: string;
+    includeInactive?: boolean;
+    q?: string;
+    untyped?: 'true' | 'false';
+    isContainer?: 'true' | 'false';
+    access?: 'open' | 'closed';
+    isFull?: 'true' | 'false';
+    lifecycle?: 'active' | 'retired' | 'discarded' | 'lost' | 'destroyed';
+    legacyLabelOf?: string;
+    within?: string;
+    effectiveLocationId?: string;
+    sort?: 'name' | 'updated' | 'type' | 'where' | 'packing';
+  };
+  url: '/mobile/inventory/items';
+};
+
+export type MobileInventoryListItemsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryListItemsError =
+  MobileInventoryListItemsErrors[keyof MobileInventoryListItemsErrors];
+
+export type MobileInventoryListItemsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    contentCounts: {
+      [key: string]: {
+        deep: number;
+        direct: number;
+      };
+    };
+    hiddenInactiveCount: number;
+    items: Array<{
+      access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
+      code: string | null;
+      computedValues: Array<
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            source: 'computed';
+            state: 'ok';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            fieldId: string;
+            override: {
+              catalogueRevision: number;
+            };
+            source: 'computed';
+            state: 'overridden';
+            traversedItemIds: Array<string>;
+            values: [unknown];
+          }
+        | {
+            catalogueRevision: number;
+            dependencies: Array<{
+              fieldId: string;
+              itemId: string;
+              revision: number;
+            }>;
+            failedFieldId: string;
+            fieldId: string;
+            missingInputs?: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
+            reason: string;
+            source: 'computed';
+            state: 'unavailable';
+            traversedItemIds: Array<string>;
+          }
+      >;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      legacyType: string | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeId: string | null;
+      typeKey: string | null;
+      updatedAt: string;
+    }>;
+    nextCursor: string | null;
+    total: number;
+    unfilteredTotal: number;
+  };
+};
+
+export type MobileInventoryListItemsResponse =
+  MobileInventoryListItemsResponses[keyof MobileInventoryListItemsResponses];
 
 export type MobileInventoryItemHistoryData = {
   body?: never;
@@ -4637,6 +4904,9 @@ export type MobilePurchasesSearchPurchasesData = {
   path?: never;
   query: {
     q: string;
+    kind?: 'any' | 'purchases' | 'lines';
+    cursor?: string;
+    limit: number;
     status?:
       | 'awaiting_settlement'
       | 'linked'
@@ -4764,6 +5034,8 @@ export type MobilePurchasesSearchPurchasesResponses = {
           totalCents: number;
         }
     >;
+    nextCursor: string | null;
+    totalCount?: number;
   };
 };
 
@@ -4896,7 +5168,11 @@ export type MobilePurchasesGetMonthSummaryResponse =
 export type MobilePurchasesPurchaseTagsData = {
   body?: never;
   path?: never;
-  query?: never;
+  query: {
+    search?: string;
+    cursor?: string;
+    limit: number;
+  };
   url: '/mobile/purchases/tags';
 };
 
@@ -4987,10 +5263,12 @@ export type MobilePurchasesPurchaseTagsResponses = {
    * 200
    */
   200: {
+    nextCursor: string | null;
     tags: Array<{
       count: number;
       tag: string;
     }>;
+    totalCount?: number;
   };
 };
 

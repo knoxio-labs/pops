@@ -1,9 +1,10 @@
 import AppCore
+import AppCoreFakes
 import Testing
 
 @testable import FeaturePurchases
 
-@Suite("Purchases tag picker")
+@MainActor @Suite("Purchases tag picker")
 internal struct PurchasesTagPickerTests {
     private static let tags = [
         PurchaseTagCount(tag: "garden", count: 4),
@@ -11,27 +12,58 @@ internal struct PurchasesTagPickerTests {
         PurchaseTagCount(tag: "Kitchen", count: 1),
     ]
 
-    @Test("a blank query keeps every tag, in order")
-    internal func blankQueryKeepsOrder() {
-        #expect(PurchasesTagPicker.matching(Self.tags, "") == Self.tags)
-        #expect(PurchasesTagPicker.matching(Self.tags, "   ") == Self.tags)
+    @Test("tags load in bounded pages and retain server order")
+    internal func tagsPageInOrder() async {
+        let repository = InMemoryPurchasesRepository(pageSize: 2, tagsInUse: Self.tags)
+        let model = PurchasesTagPickerModel(repository: repository)
+
+        model.updateQuery("")
+        await model.load()
+
+        #expect(model.tags == Array(Self.tags.prefix(2)))
+        #expect(model.paging == .idle)
+        #expect(await repository.tagsCalls.first?.cursor == nil)
+        #expect(await repository.tagsCalls.first?.limit == 20)
+
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.tags == Self.tags)
+        #expect(model.paging == .exhausted)
+        #expect(await repository.tagsCalls.count == 2)
     }
 
-    @Test("matching ignores case and keeps the given order")
-    internal func matchingIgnoresCase() {
-        let matched = PurchasesTagPicker.matching(Self.tags, "k")
+    @Test("tag search is sent to the repository before paging")
+    internal func tagSearchIsServerFiltered() async {
+        let repository = InMemoryPurchasesRepository(pageSize: 1, tagsInUse: Self.tags)
+        let model = PurchasesTagPickerModel(repository: repository)
 
-        #expect(matched.map(\.tag) == ["Kitchen"])
+        model.updateQuery("garden")
+        await model.load()
+
+        #expect(model.tags == [Self.tags[0]])
+        #expect(await repository.tagsCalls.first?.search == "garden")
+        #expect(model.paging == .exhausted)
     }
 
-    @Test("a query with no match returns nothing")
-    internal func noMatchReturnsNothing() {
-        #expect(PurchasesTagPicker.matching(Self.tags, "zzz").isEmpty)
-    }
+    @Test("a next-page failure keeps rows and retries the same cursor")
+    internal func retryUsesFailedCursor() async {
+        let repository = InMemoryPurchasesRepository(pageSize: 1, tagsInUse: Self.tags)
+        await repository.fail(onCall: 2, with: .unavailable)
+        let model = PurchasesTagPickerModel(repository: repository)
 
-    @Test("matching is nonisolated: a nonisolated test can call it directly")
-    internal nonisolated func matchingIsNonisolated() {
-        #expect(PurchasesTagPicker.matching(Self.tags, "garden").map(\.tag) == ["garden"])
+        model.updateQuery("")
+        await model.load()
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.tags == [Self.tags[0]])
+        #expect(model.paging == .failed)
+        let failedCursor = await repository.tagsCalls[1].cursor
+
+        await model.retryNextPage()
+
+        #expect(model.tags == Array(Self.tags.prefix(2)))
+        #expect(await repository.tagsCalls.map(\.cursor) == [nil, failedCursor, failedCursor])
+        #expect(model.paging == .idle)
     }
 
     @Test("toggling adds an unselected tag")

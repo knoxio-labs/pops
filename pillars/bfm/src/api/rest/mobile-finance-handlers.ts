@@ -10,8 +10,10 @@
  * These routes are reachable only behind `requireDevice` (mounted on the
  * `/mobile` prefix in `app.ts`), so they never check a caller themselves.
  */
+import { decodeAccountsCursor } from '../finance/accounts-cursor.js';
 import { decodePageCursor } from '../finance/cursor.js';
 import { isGatewayOk } from '../pillars/gateway.js';
+import { invalidMobileCursorResponse } from './mobile-request-error.js';
 import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -37,13 +39,9 @@ export function makeMobileFinanceHandlers(deps: MobileFinanceHandlerDeps) {
     listTransactions: async ({ query }: Req['listTransactions']) => {
       const cursor = query.cursor === undefined ? null : decodePageCursor(query.cursor);
       if (query.cursor !== undefined && cursor === null) {
-        return {
-          status: 400 as const,
-          body: {
-            code: 'invalid_cursor' as const,
-            message: 'The cursor is not one this server issued. Start the list again.',
-          },
-        };
+        return invalidMobileCursorResponse(
+          'The cursor is not one this server issued. Start the list again.'
+        );
       }
 
       const outcome = await deps.finance.listTransactions({
@@ -69,8 +67,30 @@ export function makeMobileFinanceHandlers(deps: MobileFinanceHandlerDeps) {
       return { status: 200 as const, body: outcome.value };
     },
 
-    listAccounts: async () => {
-      const outcome = await deps.finance.listAccounts();
+    listAccounts: async ({ query }: Req['listAccounts']) => {
+      const filters = {
+        ...(query.search === undefined || query.search === '' ? {} : { search: query.search }),
+        ...(query.kind === undefined ? {} : { kind: query.kind }),
+        ...(query.archived === undefined ? {} : { archived: query.archived }),
+      };
+      const cursor =
+        query.cursor === undefined ? null : decodeAccountsCursor(query.cursor, filters);
+      if (query.cursor !== undefined && cursor === null) {
+        return invalidMobileCursorResponse(
+          'The cursor is not one this server issued for these filters. Start the list again.'
+        );
+      }
+
+      const outcome = await deps.finance.listAccounts({
+        query: filters,
+        cursor,
+        limit: query.limit ?? DEFAULT_PAGE_LIMIT,
+      });
+      if (!isGatewayOk(outcome) && outcome.kind === 'invalid-request') {
+        return invalidMobileCursorResponse(
+          'The cursor no longer identifies an account in this list. Start the list again.'
+        );
+      }
       if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
 
       return { status: 200 as const, body: outcome.value };
