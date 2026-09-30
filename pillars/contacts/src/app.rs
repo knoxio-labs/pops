@@ -64,7 +64,7 @@ mod tests {
     use crate::db;
     use axum::body::Body;
     use axum::extract::State;
-    use axum::http::{HeaderMap, Request, StatusCode};
+    use axum::http::{HeaderMap, Method, Request, StatusCode};
     use axum::response::{IntoResponse, Response};
     use axum::routing::get;
     use serde_json::json;
@@ -102,6 +102,12 @@ mod tests {
                 "scopes": ["contacts.health"]
             }))
             .into_response(),
+            "entities" => axum::Json(json!({
+                "id": "entities-account",
+                "name": "Entities Account",
+                "scopes": ["contacts.entities"]
+            }))
+            .into_response(),
             _ => StatusCode::UNAUTHORIZED.into_response(),
         }
     }
@@ -137,8 +143,13 @@ mod tests {
         }
     }
 
-    async fn health_response(router: Router, api_key: Option<&str>) -> Response {
-        let mut request = Request::builder().uri("/health");
+    async fn request_response(
+        router: Router,
+        method: Method,
+        uri: &str,
+        api_key: Option<&str>,
+    ) -> Response {
+        let mut request = Request::builder().method(method).uri(uri);
         if let Some(api_key) = api_key {
             request = request.header("x-api-key", api_key);
         }
@@ -146,6 +157,10 @@ mod tests {
             .oneshot(request.body(Body::empty()).expect("health request"))
             .await
             .expect("contacts router response")
+    }
+
+    async fn health_response(router: Router, api_key: Option<&str>) -> Response {
+        request_response(router, Method::GET, "/health", api_key).await
     }
 
     #[tokio::test]
@@ -216,6 +231,57 @@ mod tests {
             StatusCode::SERVICE_UNAVAILABLE
         );
         assert_eq!(calls.load(Ordering::SeqCst), 5);
+
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn service_account_scopes_cover_parameterized_reads_and_mutations() {
+        let (registry_url, calls, server) = registry_mock().await;
+        let router = build_router(test_state(&registry_url).await);
+
+        assert_eq!(
+            request_response(
+                router.clone(),
+                Method::GET,
+                "/entities/missing",
+                Some("entities")
+            )
+            .await
+            .status(),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            request_response(
+                router.clone(),
+                Method::DELETE,
+                "/entities/missing",
+                Some("entities")
+            )
+            .await
+            .status(),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+
+        let method_not_allowed =
+            request_response(router.clone(), Method::DELETE, "/health", Some("invalid")).await;
+        assert_eq!(method_not_allowed.status(), StatusCode::METHOD_NOT_ALLOWED);
+        assert_eq!(
+            method_not_allowed
+                .headers()
+                .get(axum::http::header::ALLOW)
+                .and_then(|value| value.to_str().ok()),
+            Some("GET, HEAD")
+        );
+
+        assert_eq!(
+            request_response(router, Method::GET, "/missing", Some("invalid"))
+                .await
+                .status(),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
 
         server.abort();
     }

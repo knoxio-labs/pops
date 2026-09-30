@@ -1,13 +1,14 @@
 //! Registry-backed service-account scope enforcement for contacts.
 
 use std::collections::hash_map::RandomState;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use axum::extract::{MatchedPath, Request, State};
-use axum::http::{Method, StatusCode};
+use axum::http::header::ALLOW;
+use axum::http::{HeaderValue, Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use reqwest::Client;
@@ -199,19 +200,21 @@ impl ServiceAccountScopeGate {
 #[derive(Clone)]
 struct ContractScopeMap {
     routes: HashMap<String, String>,
+    paths: HashSet<String>,
 }
 
 impl ContractScopeMap {
     fn from_openapi(openapi: &str) -> Result<Self, String> {
         let document: Value = serde_json::from_str(openapi)
             .map_err(|error| format!("invalid OpenAPI JSON: {error}"))?;
-        let paths = document
+        let path_items = document
             .get("paths")
             .and_then(Value::as_object)
             .ok_or_else(|| "OpenAPI document is missing its paths object".to_string())?;
         let mut routes = HashMap::new();
+        let mut paths = HashSet::<String>::new();
 
-        for (path, path_item) in paths {
+        for (path, path_item) in path_items {
             let operations = path_item
                 .as_object()
                 .ok_or_else(|| format!("OpenAPI path {path} is not an object"))?;
@@ -227,6 +230,7 @@ impl ContractScopeMap {
                         format!("OpenAPI operation {method} {path} has no operationId")
                     })?;
                 let key = route_key(method, path);
+                paths.insert(path_key(path));
                 let scope = format!("contacts.{operation_id}");
                 if routes.insert(key.clone(), scope).is_some() {
                     return Err(format!("OpenAPI has duplicate service-account route {key}"));
@@ -238,7 +242,7 @@ impl ContractScopeMap {
             return Err("OpenAPI document has no service-account routes".to_string());
         }
 
-        Ok(Self { routes })
+        Ok(Self { routes, paths })
     }
 
     fn resolve(&self, method: &Method, path: &str) -> Option<&str> {
@@ -251,19 +255,39 @@ impl ContractScopeMap {
             }
         })
     }
+
+    fn allowed_methods(&self, path: &str) -> Option<String> {
+        let path = path_key(path);
+        if !self.paths.contains(&path) {
+            return None;
+        }
+
+        let mut methods = CONTRACT_METHODS
+            .iter()
+            .filter(|method| self.routes.contains_key(&route_key(method, &path)))
+            .map(|method| method.to_ascii_uppercase())
+            .collect::<Vec<_>>();
+        if methods.iter().any(|method| method == "GET")
+            && !methods.iter().any(|method| method == "HEAD")
+        {
+            methods.push("HEAD".to_string());
+        }
+
+        Some(methods.join(", "))
+    }
 }
 
 fn route_key(method: &str, path: &str) -> String {
+    format!("{} {}", method.to_ascii_uppercase(), path_key(path))
+}
+
+fn path_key(path: &str) -> String {
     let path = if path.len() > 1 && path.ends_with('/') {
         &path[..path.len() - 1]
     } else {
         path
     };
-    format!(
-        "{} {}",
-        method.to_ascii_uppercase(),
-        path.to_ascii_lowercase()
-    )
+    path.to_ascii_lowercase()
 }
 
 fn has_required_scope(granted_scopes: &[String], required_scope: &str) -> bool {
@@ -291,10 +315,24 @@ pub(crate) async fn enforce_service_account_scope(
     }
 
     let Some(matched_path) = request.extensions().get::<MatchedPath>() else {
-        return ApiError::service_account_unavailable().into_response();
+        return StatusCode::NOT_FOUND.into_response();
     };
     let Some(required_scope) = gate.scopes.resolve(request.method(), matched_path.as_str()) else {
-        return ApiError::service_account_unavailable().into_response();
+        let Some(allowed_methods) = gate.scopes.allowed_methods(matched_path.as_str()) else {
+            tracing::error!(
+                method = %request.method(),
+                path = %matched_path.as_str(),
+                "contacts route has no service-account scope"
+            );
+            return ApiError::service_account_scope_unmapped().into_response();
+        };
+        let mut response = StatusCode::METHOD_NOT_ALLOWED.into_response();
+        response.headers_mut().insert(
+            ALLOW,
+            HeaderValue::from_str(&allowed_methods)
+                .expect("OpenAPI methods are valid HTTP method names"),
+        );
+        return response;
     };
 
     let profile = match gate.verifier.verify(api_key).await {
@@ -344,6 +382,11 @@ mod tests {
             scopes.resolve(&Method::HEAD, "/health"),
             Some("contacts.health.get")
         );
+        assert_eq!(
+            scopes.allowed_methods("/health").as_deref(),
+            Some("GET, HEAD")
+        );
+        assert_eq!(scopes.allowed_methods("/missing"), None);
     }
 
     #[test]

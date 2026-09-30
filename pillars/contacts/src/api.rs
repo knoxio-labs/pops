@@ -127,6 +127,16 @@ impl ApiError {
         }
     }
 
+    pub(crate) fn service_account_scope_unmapped() -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: "This operation has no configured service-account scope.".to_string(),
+            code: ErrorCode::Internal,
+            retryable: false,
+            details: None,
+        }
+    }
+
     /// Log a database failure with its request id and return a generic error.
     pub fn database(error: sqlx::Error) -> Self {
         let request_id = current_request_id();
