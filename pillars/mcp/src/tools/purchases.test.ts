@@ -123,6 +123,37 @@ describe('purchases.search', () => {
     expect(search.search).toHaveBeenCalledWith({ query: { text: 'dosing funnel' } });
   });
 
+  it('exposes the purchase scope and translates it into structured filters', async () => {
+    const searchTool = tool('purchases.search');
+    const properties = searchTool.inputSchema['properties'];
+    expect(properties).toHaveProperty('sources');
+    expect(properties).toHaveProperty('statuses');
+    expect(properties).toHaveProperty('from');
+    expect(properties).toHaveProperty('to');
+
+    await searchTool.handler({
+      text: 'dosing funnel',
+      sources: ['amazon', 'woolworths'],
+      statuses: ['linked', 'future_status'],
+      from: '2026-01-01T00:00:00Z',
+      to: '2026-12-31T23:59:59Z',
+    });
+
+    expect(search.search).toHaveBeenCalledWith({
+      query: {
+        text: 'dosing funnel',
+        filters: [
+          { field: 'source', operator: 'eq', value: 'amazon' },
+          { field: 'source', operator: 'eq', value: 'woolworths' },
+          { field: 'status', operator: 'eq', value: 'linked' },
+          { field: 'status', operator: 'eq', value: 'future_status' },
+          { field: 'orderedAt', operator: 'gte', value: '2026-01-01T00:00:00Z' },
+          { field: 'orderedAt', operator: 'lte', value: '2026-12-31T23:59:59Z' },
+        ],
+      },
+    });
+  });
+
   it('refuses an empty query rather than asking the pillar for everything', async () => {
     const result = await tool('purchases.search').handler({ text: '' });
     expect(result.isError).toBe(true);
