@@ -13,33 +13,31 @@
  * tsconfig, not a dangling reference to a monorepo root. It does NOT change any
  * actual compiler setting — it just freezes the resolved values in place.
  *
- * Only the names in KNOWN_TSCONFIG_NAMES are recognised. A name present under
- * one of those in the ORIGINAL unit but missing from the SANDBOX copy —
- * renamed, deleted, or an incomplete copy — is a hard failure, not a silent
- * skip: the sandbox is the thing about to be built, and a config it lost is a
- * config nothing downstream will resolve. Likewise a tsconfig that exists but
- * fails to parse is a named error, never a swallowed `null`. A unit that
- * genuinely has none of the known names, in either copy, is fine — it is
- * reported as exactly that, distinct from the success case, per ADR-045.
+ * Every `tsconfig*.json` in the unit is recognised. A config present in the
+ * ORIGINAL unit but missing from the SANDBOX copy — renamed, deleted, or an
+ * incomplete copy — is a hard failure, not a silent skip: a config the copy
+ * lost is one nothing downstream will resolve. A config that exists but fails
+ * to parse is also a named error, never a swallowed `null`.
  *
  * Usage:
  *   node scripts/extractability/materialize-tsconfig.mjs <sandbox-unit-dir> <original-unit-dir>
  *   node scripts/extractability/materialize-tsconfig.mjs --self-test
  *
  * Exit codes: 0 = materialised (or genuinely had nothing to materialise), and
- *   said which; 1 = a known tsconfig could not be read or accounted for; 2 =
+ *   said which; 1 = a tsconfig could not be read or accounted for; 2 =
  *   bad invocation, or a self-test assertion failed.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
 import { toStringArray } from './lib.mjs';
 
-/** The only tsconfig filenames this script knows how to find and materialise. */
-export const KNOWN_TSCONFIG_NAMES = ['tsconfig.json', 'tsconfig.build.json'];
+const CONFIG_FILE = /^tsconfig.*\.json$/u;
+const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage', 'target', '.git']);
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** @param {string[]} argv */
 export function main(argv) {
@@ -53,27 +51,26 @@ export function main(argv) {
     return 2;
   }
 
+  const originalNames = findTsconfigNames(originalDir);
+  const sandboxNames = findTsconfigNames(sandboxDir);
+  const names = [...new Set([...originalNames, ...sandboxNames])].toSorted();
   let materialised = 0;
   let considered = 0;
   /** @type {string[]} */
   const problems = [];
 
-  for (const name of KNOWN_TSCONFIG_NAMES) {
+  for (const name of names) {
     const sandboxConfig = join(sandboxDir, name);
     const originalConfig = join(originalDir, name);
-    const originalExists = existsSync(originalConfig);
-    const sandboxExists = existsSync(sandboxConfig);
 
-    if (!originalExists && !sandboxExists) continue; // genuinely absent from this unit
-
-    if (!sandboxExists) {
+    if (!sandboxNames.has(name)) {
       problems.push(
         `${name}: present in ${originalDir} but missing from the sandbox copy at ${sandboxConfig} — ` +
           'renamed, deleted, or the copy that produced the sandbox is incomplete'
       );
       continue;
     }
-    if (!originalExists) {
+    if (!originalNames.has(name)) {
       problems.push(
         `${name}: present in the sandbox copy at ${sandboxConfig} but missing from ${originalDir} — ` +
           'cannot resolve its real extends chain without the unit it was copied from'
@@ -83,8 +80,8 @@ export function main(argv) {
 
     considered += 1;
     try {
-      let touched = materialiseOne(sandboxConfig, originalConfig);
-      touched = stripExternalReferences(sandboxConfig) || touched;
+      let touched = materialiseOne(sandboxConfig, originalConfig, sandboxDir);
+      touched = stripExternalReferences(sandboxConfig, sandboxDir) || touched;
       if (touched) materialised += 1;
     } catch (error) {
       problems.push(error instanceof Error ? error.message : String(error));
@@ -99,7 +96,7 @@ export function main(argv) {
 
   if (considered === 0) {
     process.stdout.write(
-      `materialize-tsconfig: ${originalDir} has none of [${KNOWN_TSCONFIG_NAMES.join(', ')}] — nothing to materialise\n`
+      `materialize-tsconfig: ${originalDir} has no tsconfig*.json — nothing to materialise\n`
     );
     return 0;
   }
@@ -110,12 +107,37 @@ export function main(argv) {
   return 0;
 }
 
+/** @param {string} unitDir @returns {Set<string>} Relative config paths */
+function findTsconfigNames(unitDir) {
+  /** @type {Set<string>} */
+  const names = new Set();
+  const walk = (/** @type {string} */ directory) => {
+    let entries;
+    try {
+      entries = readdirSync(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (!SKIP_DIRS.has(entry.name) && !entry.name.startsWith('.')) {
+          walk(join(directory, entry.name));
+        }
+      } else if (entry.isFile() && CONFIG_FILE.test(entry.name)) {
+        names.add(relative(unitDir, join(directory, entry.name)));
+      }
+    }
+  };
+  walk(unitDir);
+  return names;
+}
+
 /**
  * @param {string} sandboxConfig path to the copied tsconfig (rewritten in place)
  * @param {string} originalConfig path to the in-repo tsconfig (used to resolve the real chain)
  * @returns {boolean} whether an out-of-unit extends was inlined
  */
-function materialiseOne(sandboxConfig, originalConfig) {
+function materialiseOne(sandboxConfig, originalConfig, sandboxUnitDir) {
   const raw = readConfigJson(sandboxConfig);
 
   const extendsList = toStringArray(raw.extends);
@@ -123,8 +145,8 @@ function materialiseOne(sandboxConfig, originalConfig) {
   // Determine which extends targets point outside the unit (the ones that won't
   // exist in the sandbox). Local relative extends to a sibling in-unit config
   // are kept untouched.
-  const unitDir = dirname(sandboxConfig);
-  const outOfUnit = extendsList.filter((ext) => isOutsideUnit(unitDir, ext));
+  const configDir = dirname(sandboxConfig);
+  const outOfUnit = extendsList.filter((ext) => isOutsideUnit(sandboxUnitDir, configDir, ext));
   if (outOfUnit.length === 0) return false;
 
   // Resolve the fully-merged compilerOptions from the ORIGINAL location (where
@@ -139,7 +161,7 @@ function materialiseOne(sandboxConfig, originalConfig) {
 
   // Keep only in-unit extends; merge inherited options UNDER the unit's own
   // explicit options so local overrides still win.
-  const keptExtends = extendsList.filter((ext) => !isOutsideUnit(unitDir, ext));
+  const keptExtends = extendsList.filter((ext) => !isOutsideUnit(sandboxUnitDir, configDir, ext));
   const ownOptions =
     raw.compilerOptions && typeof raw.compilerOptions === 'object' ? raw.compilerOptions : {};
   raw.compilerOptions = { ...inlinedOptions, ...ownOptions };
@@ -158,12 +180,12 @@ function materialiseOne(sandboxConfig, originalConfig) {
  * @param {string} sandboxConfig
  * @returns {boolean} whether any reference was removed
  */
-function stripExternalReferences(sandboxConfig) {
+function stripExternalReferences(sandboxConfig, sandboxUnitDir) {
   const raw = readConfigJson(sandboxConfig);
   if (!Array.isArray(raw.references)) return false;
-  const unitDir = dirname(sandboxConfig);
+  const configDir = dirname(sandboxConfig);
   const kept = raw.references.filter(
-    (r) => r && typeof r.path === 'string' && !isOutsideUnit(unitDir, r.path)
+    (r) => r && typeof r.path === 'string' && !isOutsideUnit(sandboxUnitDir, configDir, r.path)
   );
   if (kept.length === raw.references.length) return false;
   if (kept.length === 0) delete raw.references;
@@ -172,11 +194,11 @@ function stripExternalReferences(sandboxConfig) {
   return true;
 }
 
-/** @param {string} unitDir @param {string} ext */
-function isOutsideUnit(unitDir, ext) {
-  if (!ext.startsWith('.')) return true; // package extends (e.g. @tsconfig/…) — also out of unit
-  const target = join(unitDir, ext);
-  return !target.startsWith(unitDir + '/') && target !== unitDir;
+/** @param {string} unitDir @param {string} configDir @param {string} targetPath */
+function isOutsideUnit(unitDir, configDir, targetPath) {
+  if (!targetPath.startsWith('.')) return true;
+  const target = resolve(configDir, targetPath);
+  return target !== unitDir && !target.startsWith(unitDir + '/');
 }
 
 /**
@@ -259,23 +281,20 @@ function normaliseOption(key, value) {
 }
 
 /**
- * Builds a throwaway fixture tree exercising the cases this guard must tell
+ * Builds a fixture tree exercising the cases this guard must tell
  * apart, shared between `--self-test` and the Vitest suite so the two fixture
  * sets cannot drift apart:
  *
  *   - `withRealExtends`         — a genuine out-of-unit extends that must be
  *                                 inlined, under `tsconfig.json`.
- *   - `withoutTsconfig`         — no known tsconfig name in either copy (fine).
+ *   - `withoutTsconfig`         — no tsconfig in either copy (fine).
  *   - `renamedInSandbox`        — `tsconfig.json`: the original has one, the
  *                                 sandbox copy does not — a rename, a delete,
  *                                 or an incomplete copy.
  *   - `malformed`               — `tsconfig.json`, present in both copies,
  *                                 but truncated JSON.
  *   - `renamedBuildJsonInSandbox` / `malformedBuildJson` — the same two
- *                                 failure modes again, under
- *                                 `tsconfig.build.json`, so the second known
- *                                 name is proven independently rather than
- *                                 assumed to behave like the first.
+ *                                 failure modes under `tsconfig.build.json`.
  *
  * @param {string} rootDir an empty directory to build the tree under
  */
@@ -346,7 +365,9 @@ function selfTest() {
     if (!cond) failures.push(msg);
   };
 
-  const root = mkdtempSync(join(tmpdir(), 'materialize-tsconfig-selftest-'));
+  const tempRoot = join(repoRoot, 'tmp');
+  mkdirSync(tempRoot, { recursive: true });
+  const root = mkdtempSync(join(tempRoot, 'materialize-tsconfig-selftest-'));
   try {
     const fixtures = buildFixtures(root);
 
@@ -398,8 +419,7 @@ function selfTest() {
       `expected exit 1 for a tsconfig that fails to parse, got ${malformedExit}`
     );
 
-    // The same two failure modes again under the SECOND known name — proven
-    // independently rather than assumed to behave like tsconfig.json.
+    // The same two failure modes again under tsconfig.build.json.
     const renamedBuildJsonExit = main([
       fixtures.renamedBuildJsonInSandbox.sandboxDir,
       fixtures.renamedBuildJsonInSandbox.originalDir,
