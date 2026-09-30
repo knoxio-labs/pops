@@ -37,11 +37,12 @@ import type {
   LabelDetails,
   LabelFieldChoice,
   PrintSubject,
-  ResolvedLabel,
   SheetGeometry,
   SheetLayout,
   SheetPage,
 } from '@pops/inventory/labels';
+
+import type { PrintLabelEntry } from './plan-labels';
 
 /**
  * What happened after the browser's print dialog closed. Browsers do not
@@ -51,12 +52,6 @@ export type PrintOutcome = 'none' | 'asking' | 'printed' | 'cancelled';
 
 /** Why Print is off: nothing to print, an item still without a code, or labels too small for a QR. */
 export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | null;
-
-/** One label of the job: what it is for and the content it prints with. */
-export interface PrintLabelEntry {
-  subject: PrintSubject;
-  label: ResolvedLabel;
-}
 
 /** The job's starting choices, from the page's address and inventory settings. */
 export interface LabelJobSeed {

@@ -15,7 +15,11 @@ import type {
   SheetLayout,
 } from '@pops/inventory/labels';
 
-import type { PrintLabelEntry } from './useLabelJob';
+/** One label of the job: what it is for and the content it prints with. */
+export interface PrintLabelEntry {
+  subject: PrintSubject;
+  label: ResolvedLabel;
+}
 
 function wantsCode(content: LabelContent, kind: PrintSubject['kind']): boolean {
   const parts = content.kind === 'auto' ? autoParts(kind) : content.parts;

@@ -15,7 +15,7 @@ import type { CSSProperties } from 'react';
 
 import type { SheetLayout, SheetPage, SheetSlot } from '@pops/inventory/labels';
 
-import type { PrintLabelEntry } from './useLabelJob';
+import type { PrintLabelEntry } from './plan-labels';
 
 /** Props for {@link PrintSheets}. */
 export interface PrintSheetsProps {
