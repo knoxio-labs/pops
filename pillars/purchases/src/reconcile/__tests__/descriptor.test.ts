@@ -11,6 +11,21 @@ describe('descriptorMatches', () => {
     expect(descriptorMatches('BUNNINGS WAREHOUSE 123', 'BUNNINGS%')).toBe(true);
   });
 
+  it('matches any LIKE alternative in the encoded pattern list', () => {
+    const pattern = `any-of:${JSON.stringify(['AMAZON%AU%', 'AMAZON%AMZN.COM/BILL%'])}`;
+
+    expect(descriptorMatches('AMAZON MKTPLACE AU', pattern)).toBe(true);
+    expect(descriptorMatches('AMAZON MKTPL*3D2QH1 AMZN.COM/BILL', pattern)).toBe(true);
+    expect(descriptorMatches('AMAZON WEB SERVICES', pattern)).toBe(false);
+  });
+
+  it.each(['any-of:not-json', 'any-of:[]', 'any-of:["AMAZON%",null]'])(
+    'blocks every descriptor for an invalid alternatives list: %s',
+    (pattern) => {
+      expect(descriptorMatches('AMAZON MKTPLACE AU', pattern)).toBe(false);
+    }
+  );
+
   it('is case-insensitive in both directions', () => {
     expect(descriptorMatches('amazon mktplace au', 'AMAZON%')).toBe(true);
     expect(descriptorMatches('AMAZON MKTPLACE AU', 'amazon%')).toBe(true);

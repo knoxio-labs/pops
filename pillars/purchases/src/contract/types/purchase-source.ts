@@ -10,7 +10,7 @@ export interface PurchaseSource {
   /** Stable slug — `amazon`, `paypal`, `woolworths`. */
   id: string;
   label: string;
-  /** Bank-descriptor pattern used to block candidate transactions. */
+  /** One LIKE pattern, or `any-of:` plus a JSON array of LIKE patterns. */
   descriptorPattern: string | null;
   /** How far apart `transaction.date` and `purchase.orderedAt` may be. */
   settlementWindowDays: number;

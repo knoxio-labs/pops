@@ -1,11 +1,13 @@
 /**
  * The `purchase_sources` settings the Amazon adapter registers.
  *
- * Here rather than inline in the CLI because migration 0018 writes the same
- * values into a database that already holds the row, and its test pins the
- * two together: the CLI's upsert is a full replace, so a value that lived
- * only in the migration would be undone by the next ingest.
+ * Here rather than inline in the CLI because migrations update the same row
+ * in databases that already hold it, and tests pin those values together: the
+ * CLI's upsert is a full replace, so a value that lived only in a migration
+ * would be undone by the next ingest.
  */
+
+const AMAZON_DESCRIPTOR_PATTERNS = ['AMAZON%AU%', 'AMAZON%AMZN.COM/BILL%'] as const;
 
 /**
  * The descriptors Amazon's retail orders bill under: `AMAZON MARKETPLACE
@@ -13,12 +15,10 @@
  *
  * Not `AMAZON%`, which also admits `AMAZON WEB SERVICES` — a cloud bill on
  * the same card, a few dollars a month, that stage 3 happily part-paid an
- * order with (POPS-4650). A LIKE pattern cannot exclude, so this requires
- * the `AU` the retail descriptors carry and the AWS one does not. It also
- * drops `AMAZON MKTPL*… AMZN.COM/BILL`, an amazon.com charge that settles
- * no order this adapter has ingested.
+ * order with (POPS-4650). Separate LIKE alternatives keep AWS out while
+ * admitting both AU retail charges and US-billed `AMZN.COM/BILL` charges.
  */
-export const AMAZON_DESCRIPTOR_PATTERN = 'AMAZON%AU%';
+export const AMAZON_DESCRIPTOR_PATTERN = `any-of:${JSON.stringify(AMAZON_DESCRIPTOR_PATTERNS)}`;
 
 /**
  * ±10 days around `orderedAt` (POPS-4647).
