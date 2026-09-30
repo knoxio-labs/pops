@@ -2,6 +2,8 @@
 //! the fully assembled axum router through `tower::ServiceExt::oneshot`
 //! against a migrated in-memory SQLite DB — same shape as `tests/entities.rs`.
 
+mod common;
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
@@ -18,6 +20,7 @@ async fn app() -> axum::Router {
     build_router(AppState {
         pool,
         version: "1.2.3-test".to_string(),
+        service_account_scope_verifier: common::service_account_scope_verifier(),
     })
 }
 

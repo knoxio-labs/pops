@@ -15,4 +15,5 @@ pub mod manifest;
 pub mod openapi;
 pub mod registry;
 pub mod search;
+pub mod service_account_scope;
 pub mod time;
