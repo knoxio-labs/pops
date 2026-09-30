@@ -37,7 +37,6 @@ function ContentsBody({
   contents,
 }: Pick<QrHeaderLabelProps, 'header' | 'contents'>): ReactElement {
   const lines = contentsLines(contents);
-  const lineHeightPt = Number((contents.pt * 1.3).toFixed(3));
   const rows = Math.min(header.rows, Math.max(1, Math.ceil(lines.length / header.columns)));
 
   return (
@@ -58,7 +57,10 @@ function ContentsBody({
         style={{
           fontSize: `${contents.pt}pt`,
           lineHeight: 1.3,
-          gridTemplateRows: `repeat(${rows}, ${lineHeightPt}pt)`,
+          // Rows follow the rendered line: a zoomed preview can hit the browser's
+          // minimum font size, which a fixed pt track would clip.
+          gridTemplateRows: `repeat(${rows}, auto)`,
+          alignContent: 'start',
           gridTemplateColumns: `repeat(${header.columns}, minmax(0, 1fr))`,
           gridAutoFlow: 'column',
           columnGap: `${header.columnGapMm}mm`,

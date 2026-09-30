@@ -65,11 +65,12 @@ describe('QrHeaderLabel', () => {
         .map((item) => item.textContent)
     ).toEqual(['One', 'Two', 'Three', 'Four', 'Five', '+1 more']);
     const style = list.getAttribute('style') ?? '';
-    expect(style).toContain('grid-template-rows: repeat(3, 10.4pt)');
+    expect(style).toContain('grid-template-rows: repeat(3, auto)');
     expect(style).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
     expect(style).toContain('grid-auto-flow: column');
     expect(style).toContain('column-gap: 3mm');
     expect(style).toContain('line-height: 1.3');
+    expect(style).toContain('align-content: start');
   });
 
   it('uses balanced rows below the maximum row budget', () => {
@@ -79,7 +80,7 @@ describe('QrHeaderLabel', () => {
     );
 
     expect(screen.getByRole('list', { name: 'Contents' }).getAttribute('style')).toContain(
-      'grid-template-rows: repeat(3, 10.4pt)'
+      'grid-template-rows: repeat(3, auto)'
     );
   });
 
@@ -91,7 +92,7 @@ describe('QrHeaderLabel', () => {
 
     const list = screen.getByRole('list', { name: 'Contents' });
     expect(list).toHaveAttribute('data-label-columns', '3');
-    expect(list.getAttribute('style')).toContain('grid-template-rows: repeat(3, 9.1pt)');
+    expect(list.getAttribute('style')).toContain('grid-template-rows: repeat(3, auto)');
     expect(list.getAttribute('style')).toContain(
       'grid-template-columns: repeat(3, minmax(0, 1fr))'
     );

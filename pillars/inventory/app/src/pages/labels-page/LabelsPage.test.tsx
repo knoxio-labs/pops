@@ -353,6 +353,17 @@ describe('items without a code', () => {
     expect(screen.getByText('Needs a code')).toBeInTheDocument();
   });
 
+  it('prints an uncoded item when the chosen label does not show the code', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    renderPage(`?ids=${CUPS}&shows=qr`);
+    const button = await screen.findByRole('button', { name: 'Print 1 label' });
+    expect(button).toBeEnabled();
+    expect(screen.queryByText('Needs a code')).not.toBeInTheDocument();
+    expect(screen.queryByText(/needs a code before printing/)).not.toBeInTheDocument();
+    fireEvent.click(button);
+    expect(print).toHaveBeenCalledOnce();
+  });
+
   it('will not print again after an uncoded item joins the job', async () => {
     const print = vi.spyOn(window, 'print').mockImplementation(() => {});
     renderPage(`?ids=${BOX}`);
