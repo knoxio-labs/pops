@@ -21,7 +21,7 @@ internal struct InventoryPhotoStrip: View {
 
     internal var body: some View {
         ScrollView(.horizontal) {
-            HStack(spacing: PopsSpacing.sm) {
+            LazyHStack(spacing: PopsSpacing.sm) {
                 captureTile
                 ForEach(photos) { photo in
                     InventoryPhotoTile(photo: photo, side: thumbSide)

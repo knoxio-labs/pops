@@ -45,7 +45,7 @@ internal struct InventoryItemHistoryView: View {
     private var content: some View {
         @Bindable var model = model
         return ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                     PopsPageTitle(title: title) { filterMenu($model.kind) }
                     Text(name)
@@ -54,13 +54,17 @@ internal struct InventoryItemHistoryView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if model.isLoading {
-                    PopsListSkeleton(rows: 8)
+                    InventoryRowsSkeleton(rows: 8).transition(.opacity)
                 } else {
-                    months
-                    pagingFooter
+                    Group {
+                        months
+                        pagingFooter
+                    }
+                    .transition(.opacity)
                 }
             }
             .popsMotion(value: model.kind)
+            .popsMotion(value: model.isLoading)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
@@ -79,26 +83,29 @@ internal struct InventoryItemHistoryView: View {
                 PopsCentredLine(
                     text: model.kind.map { "No \($0.title.lowercased())" } ?? "No history")
             } else {
-                ForEach(groups) { month in
-                    VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                        PopsSectionHeader(
-                            title: month.title, trailing: "\(month.entries.count)")
-                        InventorySelectionPanel(rows: month.entries) { entry in
-                            Button {
-                                viewing = entry
-                            } label: {
-                                InventoryHistoryLine(entry: entry)
-                            }
-                            .buttonStyle(.plain)
-                            .onAppear {
-                                if entry.seq == model.entries.last?.seq {
-                                    Task { await model.loadNextPage() }
+                LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                    ForEach(groups) { month in
+                        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                            PopsSectionHeader(
+                                title: month.title, trailing: "\(month.entries.count)")
+                            InventorySelectionPanel(rows: month.entries) { entry in
+                                Button {
+                                    viewing = entry
+                                } label: {
+                                    InventoryHistoryLine(entry: entry)
+                                }
+                                .buttonStyle(.plain)
+                                .onAppear {
+                                    if entry.seq == model.entries.last?.seq {
+                                        Task { await model.loadNextPage() }
+                                    }
                                 }
                             }
                         }
+                        .transition(PopsMotion.row)
                     }
-                    .transition(.opacity)
                 }
+                .popsMotion(value: groups.map(\.id))
             }
         }
     }
@@ -110,9 +117,10 @@ internal struct InventoryItemHistoryView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, PopsSpacing.md)
             } else if model.isLoadingNextPage {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, PopsSpacing.md)
+                InventoryGroundedListPanel {
+                    InventoryRowsSkeleton(rows: 1)
+                }
+                .transition(.opacity)
             }
         }
     }

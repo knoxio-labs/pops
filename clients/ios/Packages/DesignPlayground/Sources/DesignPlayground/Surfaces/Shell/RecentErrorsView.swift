@@ -13,6 +13,7 @@ internal struct RecentErrorsView: View {
                 } description: {
                     Text("Failures from this device will appear here.")
                 }
+                .transition(PopsMotion.row)
             } else {
                 List(errors.entries) { error in
                     Button {
@@ -21,10 +22,13 @@ internal struct RecentErrorsView: View {
                         RecentErrorRow(error: error)
                     }
                     .buttonStyle(.plain)
+                    .transition(PopsMotion.row)
                 }
                 .playgroundInsetGroupedList()
+                .transition(PopsMotion.row)
             }
         }
+        .popsMotion(PopsMotion.smooth, value: errors.entries)
         .sheet(item: $detail) { error in
             NavigationStack {
                 ErrorDetailSheet(error: error)

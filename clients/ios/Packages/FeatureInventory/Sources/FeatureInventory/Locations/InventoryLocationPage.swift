@@ -17,19 +17,23 @@ internal struct InventoryLocationPage: View {
         Group {
             switch model.tree.phase {
             case .loading:
-                InventoryLocationPageSkeleton()
+                InventoryLocationPageSkeleton().transition(.opacity)
             case .unavailable:
-                InventoryUnavailableView { generation += 1 }
+                InventoryUnavailableView { generation += 1 }.transition(.opacity)
             case .loaded(let tree):
                 if let place = tree.node(model.id) {
                     page(tree, place)
                         .onChange(of: place, initial: true) { _, latest in model.note(latest) }
+                        .transition(.opacity)
                 } else {
                     ContentUnavailableView(
-                        "Place not found", systemImage: InventorySymbol.location.system)
+                        "Place not found", systemImage: InventorySymbol.location.system
+                    )
+                    .transition(.opacity)
                 }
             }
         }
+        .popsMotion(value: model.tree.phase)
         .navigationTitle(placeName)
         .popsTitleDisplay(large: false)
         .toolbar {
@@ -60,7 +64,7 @@ internal struct InventoryLocationPage: View {
     private func page(_ tree: InventoryLocationTree, _ place: InventoryLocationNode) -> some View {
         @Bindable var model = model
         return ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryLocationHeader(tree: tree, place: place)
                 actions(place)
                 noticeLine
@@ -225,7 +229,7 @@ internal struct InventoryLocationPageSkeleton: View {
             }
             .popsShimmer()
             .padding(.horizontal, PopsSpacing.lg)
-            PopsListSkeleton(rows: 5)
+            InventoryRowsSkeleton(rows: 5, showsTrailingValue: false)
                 .padding(.horizontal, PopsSpacing.lg)
                 .padding(.top, PopsSpacing.lg)
         }

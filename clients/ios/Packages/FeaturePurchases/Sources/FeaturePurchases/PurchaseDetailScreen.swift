@@ -65,7 +65,11 @@ internal struct PurchaseDetailPage: View {
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-            PurchaseDetailHeader(detail: detail, receiptPages: model.receiptPages) { index in
+            PurchaseDetailHeader(
+                detail: detail,
+                receiptPages: model.receiptPages,
+                isLoadingReceiptThumbnail: model.receiptThumbnailState == .loading
+            ) { index in
                 viewing = PurchaseReceiptSelection(index: index)
                 Task { await model.openReceipt(at: index) }
             }
@@ -80,6 +84,7 @@ internal struct PurchaseDetailPage: View {
         .padding(.bottom, PopsSpacing.lg)
         .popsMotion(PopsMotion.smooth, value: detail)
         .popsMotion(PopsMotion.smooth, value: refresh)
+        .popsMotion(value: model.receiptThumbnailState)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.popsBackground)
         .navigationTitle("")

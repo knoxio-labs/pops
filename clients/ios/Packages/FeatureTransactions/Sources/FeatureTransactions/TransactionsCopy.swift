@@ -8,6 +8,7 @@ import AppCore
 /// hunt. Gathering it here makes that a change to one file.
 internal enum TransactionsCopy {
     internal static let loading = "Loading transactions…"
+    internal static let refreshing = "Refreshing transactions"
     internal static let loadingMore = "Loading more…"
     internal static let empty = "No transactions yet."
     internal static let retry = "Retry"

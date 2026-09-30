@@ -31,7 +31,7 @@ internal struct InventoryPhotoStrip: View {
 
     internal var body: some View {
         ScrollView(.horizontal) {
-            HStack(spacing: PopsSpacing.sm) {
+            LazyHStack(spacing: PopsSpacing.sm) {
                 captureTile
                 ForEach(photos) { photo in
                     InventoryPhotoTile(photo: photo, side: side, thumbnail: thumbnail)
@@ -121,17 +121,34 @@ private struct InventoryPhotoTile: View {
     let side: CGFloat
     let thumbnail: (String) async -> Data?
     @State private var data: Data?
+    @State private var isLoading = true
 
     var body: some View {
-        PopsPhoto(data: data, placeholderSymbol: InventorySymbol.photo.system)
+        picture
             .frame(width: side, height: side)
             // `PopsPhoto` clips only its paint; a very wide photo's
             // `scaledToFill()` ideal size would otherwise widen this tile's
             // slot in the strip.
             .clipped()
             .overlay(alignment: .topTrailing) { uploadMark }
-            .task(id: photo.sha256) { data = await thumbnail(photo.sha256) }
+            .task(id: photo.sha256) {
+                isLoading = true
+                let loadedData = await thumbnail(photo.sha256)
+                guard !Task.isCancelled else { return }
+                data = loadedData
+                isLoading = false
+            }
             .accessibilityLabel(photo.caption ?? "Photo")
+    }
+
+    @ViewBuilder private var picture: some View {
+        if let data {
+            PopsPhoto(data: data, placeholderSymbol: InventorySymbol.photo.system)
+        } else if isLoading {
+            InventoryPhotoPlaceholder(symbol: InventorySymbol.photo.system)
+        } else {
+            PopsPhoto(data: nil, placeholderSymbol: InventorySymbol.photo.system)
+        }
     }
 
     @ViewBuilder private var uploadMark: some View {

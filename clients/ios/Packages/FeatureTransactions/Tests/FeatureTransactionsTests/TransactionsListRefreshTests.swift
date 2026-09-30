@@ -29,6 +29,7 @@ internal struct TransactionsListRefreshTests {
 
         #expect(model.state == .loaded([Transaction.fake(id: "fresh-1")]))
         #expect(model.paging == .exhausted)
+        #expect(!model.isRefreshing)
     }
 
     /// The cursor is the server's and is only valid against the list it was
@@ -110,6 +111,33 @@ internal struct TransactionsListRefreshTests {
         await retry.value
 
         #expect(model.refreshFailure == .unavailable)
+    }
+
+    @Test("a pending refresh keeps rows visible and exposes its placeholder state")
+    func pendingRefreshRetainsRows() async {
+        let current = Transaction.fake(id: "current")
+        let refreshed = Transaction.fake(id: "refreshed")
+        let repository = ScriptedTransactionsRepository(
+            script: [
+                .page([current], next: nil),
+                .page([refreshed], next: nil),
+            ],
+            gating: [2]
+        )
+        let model = model(repository)
+        await model.loadFirstPage()
+
+        let refresh = Task { await model.refresh() }
+        await repository.waitUntilCalled(2)
+
+        #expect(model.isRefreshing)
+        #expect(model.state == .loaded([current]))
+
+        await repository.release()
+        await refresh.value
+
+        #expect(!model.isRefreshing)
+        #expect(model.state == .loaded([refreshed]))
     }
 
     /// A failed tail is waiting for a tap, and some *other* request failing is

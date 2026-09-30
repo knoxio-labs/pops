@@ -5,8 +5,6 @@ internal struct PurchasesHomeSkeleton: View {
     @ScaledMetric(relativeTo: .body) private var figureHeight = PopsSize.touchTarget * 3
     @ScaledMetric(relativeTo: .body) private var tileHeight = PopsSize.touchTarget * 1.6
     @ScaledMetric(relativeTo: .body) private var controlHeight = PopsSize.touchTarget * 0.75
-    @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
-
     internal var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
@@ -18,7 +16,7 @@ internal struct PurchasesHomeSkeleton: View {
                 VStack(spacing: PopsSpacing.sm) {
                     Capsule().fill(Color.popsSurface).frame(height: controlHeight)
                     ForEach(0..<PurchasesHomeDigest.recentLimit, id: \.self) { _ in
-                        block(height: rowHeight, radius: PopsRadius.control)
+                        PurchaseRowSkeleton()
                     }
                 }
             }

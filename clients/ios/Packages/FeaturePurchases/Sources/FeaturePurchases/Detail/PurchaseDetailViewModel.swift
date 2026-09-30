@@ -61,10 +61,17 @@ internal struct PurchaseReceiptThumbnail: Identifiable, Hashable, Sendable {
     internal var id: Int { pageIndex }
 }
 
+internal enum PurchaseReceiptThumbnailState: Equatable, Sendable {
+    case loading
+    case loaded
+    case unavailable
+}
+
 @MainActor @Observable
 internal final class PurchaseDetailViewModel {
     internal private(set) var phase: PurchaseDetailPhase = .loading
     internal private(set) var receiptPages: [PurchaseReceiptThumbnail] = []
+    internal private(set) var receiptThumbnailState: PurchaseReceiptThumbnailState = .unavailable
     internal private(set) var receiptFull: ReceiptImage?
     internal private(set) var openReceiptIndex: Int?
 
@@ -115,10 +122,13 @@ internal final class PurchaseDetailViewModel {
             } else {
                 false
             }
-        invalidateRequests()
+        detailGeneration += 1
+        fullImageGeneration += 1
         phase = .loaded(detail, refresh: nil)
         if !keepsReceipts {
+            thumbnailGeneration += 1
             receiptPages = []
+            receiptThumbnailState = .unavailable
             receiptFull = nil
             openReceiptIndex = nil
         }
@@ -166,6 +176,7 @@ internal final class PurchaseDetailViewModel {
             fullImageGeneration += 1
             receiptFull = nil
             openReceiptIndex = nil
+            receiptThumbnailState = .unavailable
             phase = .loaded(detail, refresh: nil)
             await loadThumbnails(for: detail)
         } catch let error where error is CancellationError || Task.isCancelled {
@@ -195,22 +206,25 @@ internal final class PurchaseDetailViewModel {
         }.first
         receiptPages = []
         guard let (index, sha256) = request else { return }
-        let page: PurchaseReceiptThumbnail
+        receiptThumbnailState = .loading
+        let image: ReceiptImage?
         do {
-            guard let image = try await repository.receiptThumbnail(sha256: sha256) else {
-                return
-            }
-            page = PurchaseReceiptThumbnail(pageIndex: index, image: image)
+            image = try await repository.receiptThumbnail(sha256: sha256)
         } catch {
+            guard requestGeneration == thumbnailGeneration else { return }
+            receiptThumbnailState = .unavailable
             return
         }
-        guard requestGeneration == thumbnailGeneration, !Task.isCancelled else { return }
-        receiptPages = [page]
-    }
-
-    private func invalidateRequests() {
-        detailGeneration += 1
-        thumbnailGeneration += 1
-        fullImageGeneration += 1
+        guard requestGeneration == thumbnailGeneration else { return }
+        guard !Task.isCancelled else {
+            receiptThumbnailState = .unavailable
+            return
+        }
+        guard let image else {
+            receiptThumbnailState = .unavailable
+            return
+        }
+        receiptPages = [PurchaseReceiptThumbnail(pageIndex: index, image: image)]
+        receiptThumbnailState = .loaded
     }
 }

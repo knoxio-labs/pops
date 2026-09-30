@@ -57,28 +57,33 @@ public struct AccountPickerView: View {
 
     @ViewBuilder private var list: some View {
         let sections = AccountPickerSections.build(from: accounts, query: searchText)
-        if sections.active.isEmpty && sections.archived.isEmpty {
-            EmptyStateView(message: AccountsCopy.empty)
-        } else {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                    rows(sections.active)
-                    if !sections.archived.isEmpty {
-                        VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                            Text(AccountsCopy.sectionArchived)
-                                .font(.popsSectionLabel)
-                                .foregroundStyle(Color.popsMutedForeground)
-                            rows(sections.archived)
+        Group {
+            if sections.active.isEmpty && sections.archived.isEmpty {
+                EmptyStateView(message: AccountsCopy.empty)
+                    .transition(PopsMotion.row)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                        rows(sections.active)
+                        if !sections.archived.isEmpty {
+                            LazyVStack(alignment: .leading, spacing: PopsSpacing.md) {
+                                Text(AccountsCopy.sectionArchived)
+                                    .font(.popsSectionLabel)
+                                    .foregroundStyle(Color.popsMutedForeground)
+                                rows(sections.archived)
+                            }
                         }
                     }
+                    .padding(PopsSpacing.lg)
                 }
-                .padding(PopsSpacing.lg)
+                .transition(PopsMotion.row)
             }
         }
+        .popsMotion(PopsMotion.smooth, value: sections)
     }
 
     private func rows(_ accounts: [Account]) -> some View {
-        VStack(spacing: PopsSpacing.zero) {
+        LazyVStack(spacing: PopsSpacing.zero) {
             ForEach(accounts) { account in
                 Button {
                     onSelect(account)
@@ -87,8 +92,11 @@ public struct AccountPickerView: View {
                         account: account, markSize: .medium, selected: account.id == selectedID)
                 }
                 .buttonStyle(.plain)
+                .transition(PopsMotion.row)
                 .accessibilityIdentifier(AccountsAccessibility.pickerRow(account.id))
-                if account.id != accounts.last?.id { PopsDivider() }
+                if account.id != accounts.last?.id {
+                    PopsDivider().transition(PopsMotion.row)
+                }
             }
         }
     }

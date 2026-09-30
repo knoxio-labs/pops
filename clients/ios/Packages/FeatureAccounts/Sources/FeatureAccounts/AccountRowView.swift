@@ -39,6 +39,7 @@ internal struct AccountRowView: View {
         layout
             .padding(.vertical, PopsSpacing.sm)
             .opacity(account.archived ? 0.55 : 1)
+            .popsMotion(PopsMotion.snappy, value: selected)
             // One element, one sentence — the same reasoning `TransactionRowView`
             // gives: VoiceOver reads a row as one utterance.
             .accessibilityElement(children: .ignore)
@@ -92,6 +93,7 @@ internal struct AccountRowView: View {
         if selected {
             Image(systemName: "checkmark")
                 .foregroundStyle(Color.popsAccent)
+                .transition(PopsMotion.flip)
         }
     }
 

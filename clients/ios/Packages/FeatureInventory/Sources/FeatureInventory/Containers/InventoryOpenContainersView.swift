@@ -15,20 +15,21 @@ internal struct InventoryOpenContainersView: View {
         Group {
             switch model.containers.phase {
             case .loading:
-                InventoryOpenContainersSkeleton()
+                InventoryOpenContainersSkeleton().transition(.opacity)
             case .unavailable:
-                InventoryUnavailableView { generation += 1 }
+                InventoryUnavailableView { generation += 1 }.transition(.opacity)
             case .loaded(let containers):
-                content(containers)
+                content(containers).transition(.opacity)
             }
         }
+        .popsMotion(value: model.containers.phase)
         .task(id: generation) { await model.observe() }
         .inventoryRunnerChrome(model.runner)
     }
 
     private func content(_ containers: [InventoryContainerProfile]) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 if containers.isEmpty {
                     ContentUnavailableView("No open containers", systemImage: "shippingbox")
                 } else {
@@ -52,18 +53,28 @@ internal struct InventoryOpenContainersView: View {
 
 /// The open-containers page before its records arrive.
 internal struct InventoryOpenContainersSkeleton: View {
-    @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
+    @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget
+    @ScaledMetric(relativeTo: .caption) private var lineHeight = PopsSpacing.sm
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                ForEach(0..<4, id: \.self) { _ in
+            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                HStack(spacing: PopsSpacing.md) {
                     RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
-                        .fill(Color.popsSurface)
-                        .frame(height: rowHeight)
+                        .fill(Color.popsSeparator)
+                        .frame(width: markSize, height: markSize)
+                    VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                        Capsule()
+                            .fill(Color.popsSeparator)
+                            .frame(width: markSize * 2, height: lineHeight)
+                        Capsule()
+                            .fill(Color.popsSeparator)
+                            .frame(width: markSize * 3, height: lineHeight)
+                    }
                 }
+                .popsShimmer()
+                InventoryRowsSkeleton(rows: 4)
             }
-            .popsShimmer()
             .padding(PopsSpacing.lg)
             .background {
                 RoundedRectangle(cornerRadius: PopsRadius.card)

@@ -17,6 +17,9 @@ public struct AccountsListView: View {
             content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.popsBackground)
+            .popsMotion(PopsMotion.smooth, value: model.state)
+            .popsMotion(PopsMotion.smooth, value: model.paging)
+            .popsMotion(PopsMotion.smooth, value: model.isRefreshing)
             .task(id: model.requestFilter) { await model.loadAccounts() }
             .onChange(of: model.refreshFailure) { _, failure in
                 guard let failure else { return }
@@ -45,7 +48,8 @@ public struct AccountsListView: View {
     @ViewBuilder private var content: some View {
         switch model.state {
         case .loading:
-            LoadingStateView(message: AccountsCopy.loading)
+            AccountsListSkeleton()
+                .transition(PopsMotion.row)
         case .failed(let error):
             ErrorStateView(
                 message: AccountsCopy.message(for: error),
@@ -53,8 +57,9 @@ public struct AccountsListView: View {
             ) {
                 Task { await model.loadAccounts() }
             }
+            .transition(PopsMotion.row)
         case .empty, .loaded:
-            scrollingContent
+            scrollingContent.transition(PopsMotion.row)
         }
     }
 }
@@ -65,6 +70,10 @@ extension AccountsListView {
             LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 header
                 searchField
+                if model.isRefreshing {
+                    AccountGridSkeleton(rows: 2, accessibilityLabel: AccountsCopy.refreshing)
+                        .transition(PopsMotion.row)
+                }
                 sections
                 pagingFooter
             }
@@ -112,6 +121,7 @@ extension AccountsListView {
                     .foregroundStyle(Color.popsMutedForeground)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, PopsSpacing.lg)
+                    .transition(PopsMotion.row)
             }
         }
     }
@@ -141,6 +151,7 @@ extension AccountsListView {
                             AccountCardView(account: account)
                         }
                         .buttonStyle(.plain)
+                        .transition(PopsMotion.row)
                         .accessibilityIdentifier(AccountsAccessibility.row(account.id))
                     }
                 }
@@ -159,11 +170,8 @@ extension AccountsListView {
         case .exhausted:
             EmptyView()
         case .idle, .loading:
-            Text(AccountsCopy.loadingMore)
-                .font(.popsBody)
-                .foregroundStyle(Color.popsMutedForeground)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, PopsSpacing.lg)
+            AccountGridSkeleton(rows: 4, accessibilityLabel: AccountsCopy.loadingMore)
+                .transition(PopsMotion.row)
                 .task(id: model.pageRevision) { await model.loadNextPageIfNeeded() }
         case .failed(let error):
             VStack(alignment: .leading, spacing: PopsSpacing.md) {

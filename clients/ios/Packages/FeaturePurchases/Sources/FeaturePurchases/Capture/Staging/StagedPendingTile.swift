@@ -46,8 +46,21 @@ internal struct StagedPendingTile: View {
     @ViewBuilder private var state: some View {
         switch item.phase {
         case .loading:
-            ProgressView()
-                .accessibilityLabel("Loading")
+            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                Capsule()
+                    .fill(Color.popsMutedForeground.opacity(0.14))
+                    .frame(width: width * 0.56, height: PopsSpacing.md)
+                Capsule()
+                    .fill(Color.popsMutedForeground.opacity(0.14))
+                    .frame(width: width * 0.78, height: PopsSpacing.sm)
+                Capsule()
+                    .fill(Color.popsMutedForeground.opacity(0.14))
+                    .frame(width: width * 0.64, height: PopsSpacing.sm)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(PopsSpacing.md)
+            .popsShimmer()
+            .accessibilityLabel("Loading receipt image")
         case .failed:
             VStack(spacing: PopsSpacing.sm) {
                 Image(systemName: "exclamationmark.triangle.fill")

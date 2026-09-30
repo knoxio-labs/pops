@@ -78,7 +78,7 @@ public final class TransactionsListViewModel {
     /// reason somebody pulled to refresh in the first place — would stop the
     /// refreshed list paging until it finally answered.
     private var isLoadingFirstPage = false
-    private var isRefreshing = false
+    internal private(set) var isRefreshing = false
 
     /// Bumped by every refresh, so an older in-flight fetch can recognise that
     /// the list it was reading into has been replaced.

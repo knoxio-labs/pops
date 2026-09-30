@@ -72,7 +72,7 @@ internal struct PurchaseDetailReceipt: View {
     }
 
     private var lines: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+        LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
             ForEach(detail.lines) { line in
                 PurchaseDetailLineRow(line: line)
                     .transition(InventoryMotion.row)

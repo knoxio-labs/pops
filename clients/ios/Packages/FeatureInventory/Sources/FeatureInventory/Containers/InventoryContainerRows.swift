@@ -14,7 +14,7 @@ internal struct InventoryOpenContainersPanel: View {
 
     internal var body: some View {
         InventoryGroundedOpenPanel {
-            VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
                 summary
                     .padding(.bottom, PopsSpacing.sm)
                 ForEach(containers) { container in
@@ -26,6 +26,7 @@ internal struct InventoryOpenContainersPanel: View {
                     }
                 }
             }
+            .popsMotion(value: containers.map(\.id))
         }
     }
 

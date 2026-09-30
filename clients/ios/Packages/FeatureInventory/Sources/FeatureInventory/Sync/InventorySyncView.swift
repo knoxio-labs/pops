@@ -80,7 +80,7 @@ internal struct InventorySyncView: View {
 
     private func content(_ page: InventorySyncPage) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 header(page)
                 InventoryCountTiles(tiles: tiles(page))
                 if !page.repairRows.isEmpty || !page.issueRows.isEmpty { needsAttention(page) }
@@ -150,7 +150,7 @@ internal struct InventorySyncView: View {
                 title: "Needs attention",
                 status: "\(page.repairRows.count + page.issueRows.count)")
             InventoryGroundedListPanel {
-                VStack(spacing: PopsSpacing.zero) {
+                LazyVStack(spacing: PopsSpacing.zero) {
                     ForEach(page.repairRows) { row in
                         NavigationLink(value: InventoryRoute.repair(row.repair.id)) {
                             InventorySyncRepairRowView(
@@ -184,7 +184,7 @@ internal struct InventorySyncView: View {
             InventoryGroundedSectionHeader(
                 title: "Waiting to sync", status: "\(page.waitingRows.count)")
             InventoryGroundedListPanel {
-                VStack(spacing: PopsSpacing.zero) {
+                LazyVStack(spacing: PopsSpacing.zero) {
                     ForEach(page.waitingRows) { row in
                         InventorySyncWaitingRowView(
                             row: row, loadPhoto: { await model.thumbnail($0) })
@@ -222,7 +222,7 @@ extension InventorySyncView {
             .accessibilityValue(showsResolved ? "Expanded" : "Collapsed")
             if showsResolved {
                 InventoryGroundedListPanel {
-                    VStack(spacing: PopsSpacing.zero) {
+                    LazyVStack(spacing: PopsSpacing.zero) {
                         ForEach(page.resolvedRows.prefix(Self.resolvedShown)) { row in
                             InventorySyncResolvedRowView(
                                 row: row, loadPhoto: { await model.thumbnail($0) })

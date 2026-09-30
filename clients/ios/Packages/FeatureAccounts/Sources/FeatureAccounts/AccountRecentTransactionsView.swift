@@ -23,12 +23,14 @@ internal struct AccountRecentTransactionsView: View {
                     .foregroundStyle(Color.popsMutedForeground)
             } else {
                 PopsCard {
-                    VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+                    LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
                         ForEach(transactions) { transaction in
                             if transaction.id != transactions.first?.id { PopsDivider() }
                             row(transaction)
+                                .transition(PopsMotion.row)
                         }
                     }
+                    .popsMotion(PopsMotion.smooth, value: transactions)
                 }
             }
         }

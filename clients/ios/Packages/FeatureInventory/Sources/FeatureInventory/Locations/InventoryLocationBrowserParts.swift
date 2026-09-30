@@ -22,7 +22,7 @@ internal struct InventoryLocationBrowserSkeleton: View {
                 PopsPageTitle(title: "Locations")
                 Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
                     .popsShimmer()
-                PopsListSkeleton(rows: 5)
+                InventoryRowsSkeleton(rows: 5, showsTrailingValue: false)
             }
             .padding(.horizontal, PopsSpacing.lg)
         }

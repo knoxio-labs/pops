@@ -198,7 +198,6 @@ internal struct PurchasesArchiveView: View {
 /// the next one at the bottom of the list.
 internal struct PurchasesArchiveSkeleton: View {
     internal let rows: Int
-    @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
     @ScaledMetric(relativeTo: .body) private var headerHeight = PopsSpacing.md
 
     internal var body: some View {
@@ -211,9 +210,7 @@ internal struct PurchasesArchiveSkeleton: View {
                     .padding(.horizontal, PopsSpacing.md)
             }
             ForEach(0..<rows, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
-                    .fill(Color.popsSurface)
-                    .frame(height: rowHeight)
+                PurchasesRowSkeleton()
             }
         }
         .popsShimmer()

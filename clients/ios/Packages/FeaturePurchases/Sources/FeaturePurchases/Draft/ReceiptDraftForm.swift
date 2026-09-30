@@ -292,7 +292,7 @@ extension ReceiptDraftForm {
                 }
             }
             PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                     rows()
                 }
             }

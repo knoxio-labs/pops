@@ -25,13 +25,15 @@ internal struct InventoryDashboardView: View {
         Group {
             switch model.phase {
             case .loading:
-                InventoryDashboardSkeleton()
+                InventoryDashboardSkeleton().transition(.opacity)
             case .unavailable:
                 ErrorStateView(message: InventoryCopy.unavailable) { generation += 1 }
+                    .transition(.opacity)
             case .loaded(let dashboard):
-                content(dashboard)
+                content(dashboard).transition(.opacity)
             }
         }
+        .popsMotion(value: model.phase)
         .task(id: generation) { await model.observe() }
         .task(id: generation) { await model.syncOnAppear() }
         .inventoryWriterFeedback(model.writer)

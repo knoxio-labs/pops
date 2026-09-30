@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import Foundation
 import SwiftUI
 import Testing
 
@@ -7,6 +8,16 @@ import Testing
 
 @Suite("Search section chrome")
 internal struct SearchSectionChromeTests {
+    private static let source: String = {
+        let packageRoot = URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let path = packageRoot.appending(
+            path: "Sources/FeatureSearch/SearchSectionChrome.swift")
+        return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
+    }()
+
     @Test("unscoped sections expose uncapped totals")
     func unscopedTrailing() {
         #expect(
@@ -53,5 +64,16 @@ internal struct SearchSectionChromeTests {
         #expect(SearchPillar.inventory.tint != SearchPillar.purchases.tint)
         #expect(SearchScope.all.tint == Color.popsAccent)
         #expect(SearchScope.pillar(.inventory).tint == Color.popsInventory)
+    }
+
+    @Test("initial and next-page loading use row-shaped placeholders without spinners")
+    func loadingPresentation() {
+        #expect(!Self.source.isEmpty)
+        #expect(Self.source.contains("SearchRowsSkeleton(rows: isScoped ? 6 : 3)"))
+        #expect(Self.source.contains("SearchRowsSkeleton(rows: 2)"))
+        #expect(!Self.source.contains("ProgressView"))
+        #expect(Self.source.contains(".popsMotion(value: summary)"))
+        #expect(Self.source.contains(".popsMotion(value: pagingState)"))
+        #expect(Self.source.contains("reduceMotion ? .identity : .opacity"))
     }
 }

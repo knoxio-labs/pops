@@ -47,6 +47,28 @@ internal struct PurchaseDetailSavedStateTests {
         #expect(model.openReceiptIndex == 0)
     }
 
+    @Test("saving the same receipt keeps its in-flight thumbnail request")
+    func savedDetailKeepsLoadingThumbnail() async {
+        let gate = DetailGate()
+        let original = PurchaseDetail.fake(receiptURIs: [uri("receipt")])
+        let saved = PurchaseDetail.fake(
+            purchase: original.purchase, receiptURIs: original.receiptURIs,
+            edit: PurchaseEdit(editedAt: .now, changes: []))
+        let repository = DetailRepositoryDouble(
+            details: [.value(original)], thumbnails: ["receipt": .gated(gate, .fake())])
+        let model = model(repository)
+        let loading = Task { await model.load() }
+        await repository.waitForThumbnailCalls(1)
+
+        #expect(model.receiptThumbnailState == .loading)
+        model.applySaved(saved)
+        await gate.open()
+        await loading.value
+
+        #expect(model.receiptThumbnailState == .loaded)
+        #expect(model.receiptPages.count == 1)
+    }
+
     @Test("saving a detail with different receipt URIs clears stale images")
     func savedDetailClearsChangedReceipts() async {
         let image = ReceiptImage.fake(data: Data([7]))

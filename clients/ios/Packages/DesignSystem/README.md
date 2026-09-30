@@ -8,7 +8,7 @@ The **structural** primitives under `Sources/DesignSystem/Primitives/` are a dif
 
 ## Shared list and page primitives
 
-`PopsListPanel` composes `popsPanelInsets()` and `popsPanelGround()`. A feature that draws selection highlights between the content and surface uses those modifiers separately, in that order. `PopsDividedRows` supplies stable identifiable rows and inset separators without imposing a surface.
+`PopsListPanel` composes `popsPanelInsets()` and `popsPanelGround()`. A feature that draws selection highlights between the content and surface uses those modifiers separately, in that order. `PopsDividedRows` lazily realizes stable identifiable rows with inset separators and row-change motion, without imposing a surface.
 
 `PopsSectionHeader`, `PopsCentredLine`, `PopsEmptyLine`, `PopsNotice` and `PopsListSkeleton` share the list's headings, placeholders and local status. `PopsPageTitle` pairs with `popsCollapsingTitle` for a title drawn inside the scroll view. `PopsMotion` provides shared springs and transitions; `popsMotion` and `popsFadeIn` respect Reduce Motion. `popsTitleDisplay` contains the iOS navigation-title platform difference.
 

@@ -6,10 +6,23 @@ internal struct PurchaseDetailHeader: View {
     internal let detail: PurchaseDetail
     internal let receiptPages: [PurchaseReceiptThumbnail]
     internal let open: (Int) -> Void
+    internal var isLoadingReceiptThumbnail = false
     @ScaledMetric(relativeTo: .title) private var markSize = PopsSize.touchTarget + PopsSpacing.sm
     @ScaledMetric(relativeTo: .title) private var plateWidth = PopsSize.pageWidth * 0.55
 
     private var purchase: Purchase { detail.purchase }
+
+    internal init(
+        detail: PurchaseDetail,
+        receiptPages: [PurchaseReceiptThumbnail],
+        isLoadingReceiptThumbnail: Bool = false,
+        open: @escaping (Int) -> Void
+    ) {
+        self.detail = detail
+        self.receiptPages = receiptPages
+        self.isLoadingReceiptThumbnail = isLoadingReceiptThumbnail
+        self.open = open
+    }
 
     internal var body: some View {
         HStack(alignment: .top, spacing: PopsSpacing.lg) {
@@ -85,6 +98,16 @@ internal struct PurchaseDetailHeader: View {
             .accessibilityHint("Opens the receipt")
             .accessibilityIdentifier(PurchaseDetailAccessibility.receiptPlate)
             .accessibilityElement(children: .ignore)
+        } else if isLoadingReceiptThumbnail {
+            RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
+                .fill(Color.popsSurface)
+                .frame(
+                    width: plateWidth,
+                    height: plateWidth * PopsSize.pageHeight / PopsSize.pageWidth
+                )
+                .popsShimmer()
+                .accessibilityLabel("Loading receipt preview")
+                .transition(.opacity)
         }
     }
 

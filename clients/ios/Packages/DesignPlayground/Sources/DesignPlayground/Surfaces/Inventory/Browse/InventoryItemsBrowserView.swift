@@ -144,20 +144,24 @@ internal struct InventoryItemsBrowserView: View {
                 text: query.isEmpty
                     ? "No items with these filters" : "No items match \u{201C}\(query)\u{201D}")
         } else {
-            ForEach(sections) { section in
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    InventoryLocationSectionHeader(
-                        title: section.title, trailing: "\(section.records.count)")
-                    InventoryLocationPanel(rows: section.records) { record in
-                        NavigationLink(value: InventoryRoute.record(record)) {
-                            InventoryRecordRowLabel(record: record, query: query, showsCode: true)
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                ForEach(sections) { section in
+                    VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                        InventoryLocationSectionHeader(
+                            title: section.title, trailing: "\(section.records.count)")
+                        InventoryLocationPanel(rows: section.records) { record in
+                            NavigationLink(value: InventoryRoute.record(record)) {
+                                InventoryRecordRowLabel(
+                                    record: record, query: query, showsCode: true)
+                            }
+                            .buttonStyle(.plain)
+                            .inventorySelectable(record.id, in: $selection)
                         }
-                        .buttonStyle(.plain)
-                        .inventorySelectable(record.id, in: $selection)
                     }
+                    .transition(InventoryMotion.row)
                 }
-                .transition(.opacity)
             }
+            .inventoryMotion(value: sections.map(\.id))
         }
     }
 }

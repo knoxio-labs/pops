@@ -39,6 +39,8 @@ public final class AccountsListViewModel {
     private var refreshRequest: UUID?
     private var generation = 0
 
+    internal var isRefreshing: Bool { refreshRequest != nil }
+
     /// Creates the account list model with the account repository and router.
     public init(dependencies: AppDependencies, router: Router) {
         repository = dependencies.accounts

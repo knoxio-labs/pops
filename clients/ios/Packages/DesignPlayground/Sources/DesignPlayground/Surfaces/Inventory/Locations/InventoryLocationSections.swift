@@ -69,7 +69,7 @@ internal struct InventoryLocationSections: View {
             InventoryLocationSectionHeader(
                 title: "Inside containers here",
                 trailing: InventoryPlaceTally(items: count).summary)
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.sm) {
                 ForEach(filledContainers) { container in
                     InventoryLocationContainedGroup(container: container) { entryRow($0) }
                 }
@@ -147,7 +147,7 @@ private struct InventoryLocationContainedGroup<Row: View>: View {
 
     var body: some View {
         InventoryGroundedListPanel {
-            VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
                 Label {
                     Text("In \(container.name)")
                         .font(.popsSubheadline.weight(.semibold))
@@ -165,6 +165,7 @@ private struct InventoryLocationContainedGroup<Row: View>: View {
                     row(entry)
                 }
             }
+            .inventoryMotion(value: container.contents.map(\.id))
         }
     }
 }

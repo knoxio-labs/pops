@@ -92,7 +92,7 @@ internal struct InventoryRepairScreen: View {
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 InventoryGroundedSectionHeader(title: row.repair.field?.capitalized ?? "")
                 InventoryGroundedListPanel {
-                    VStack(spacing: PopsSpacing.zero) {
+                    LazyVStack(spacing: PopsSpacing.zero) {
                         ForEach(row.repair.options) { option in
                             InventoryConflictChoiceRow(
                                 option: option, isChosen: chosen == option.id,

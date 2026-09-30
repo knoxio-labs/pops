@@ -23,20 +23,26 @@ internal struct InventoryDestinationLevel: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 if let effect, !effect.isEmpty {
                     InventoryLocationNoticeLine(
                         symbol: InventorySymbol.move.system, tint: .popsInventory, text: effect)
                 }
                 if isLoading {
-                    PopsListSkeleton(rows: 6)
+                    InventoryRowsSkeleton(rows: 6, showsTrailingValue: false)
+                        .transition(.opacity)
                 } else if let levelID {
                     destinationSection(
                         heading: nil, nodes: levelNodes(at: levelID), parentID: levelID,
-                        includesNewPlace: tree.node(levelID)?.isLocation == true)
+                        includesNewPlace: tree.node(levelID)?.isLocation == true
+                    )
+                    .transition(.opacity)
                 } else {
-                    searchBar
-                    if query.isEmpty { topLevel } else { results }
+                    Group {
+                        searchBar
+                        if query.isEmpty { topLevel } else { results }
+                    }
+                    .transition(.opacity)
                 }
             }
             .padding(.horizontal, PopsSpacing.lg)
@@ -44,6 +50,7 @@ internal struct InventoryDestinationLevel: View {
             .popsMotion(value: query.isEmpty)
             .popsMotion(value: filter)
             .popsMotion(value: selection)
+            .popsMotion(value: isLoading)
             .popsMotion(value: tree.nodes.count)
         }
         .background(Color.popsBackground)
@@ -150,7 +157,7 @@ internal struct InventoryDestinationLevel: View {
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 if let heading { PopsSectionHeader(title: heading) }
                 InventoryGroundedListPanel {
-                    VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+                    LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
                         ForEach(offeredNodes) { node in
                             row(node)
                             if node.id != offeredNodes.last?.id {
@@ -174,7 +181,7 @@ internal struct InventoryDestinationLevel: View {
     private func section(_ title: String, @ViewBuilder rows: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             PopsSectionHeader(title: title)
-            InventoryGroundedListPanel { VStack(spacing: PopsSpacing.zero) { rows() } }
+            InventoryGroundedListPanel { LazyVStack(spacing: PopsSpacing.zero) { rows() } }
         }
     }
 
@@ -183,7 +190,7 @@ internal struct InventoryDestinationLevel: View {
     }
 
     private func divided(_ destinations: [InventoryDestination]) -> some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+        LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
             ForEach(destinations) { destination in
                 row(destination)
                 if destination.id != destinations.last?.id {

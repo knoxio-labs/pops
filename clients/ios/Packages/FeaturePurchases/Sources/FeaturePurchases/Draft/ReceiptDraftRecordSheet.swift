@@ -90,7 +90,10 @@ internal struct ReceiptDraftRecordSheet: View {
             List {
                 switch resultState {
                 case .searching:
-                    ProgressView()
+                    ForEach(0..<3, id: \.self) { _ in
+                        ReceiptDraftRecordSkeleton()
+                            .listRowSeparator(.hidden)
+                    }
                 case .prompt:
                     Text(ReceiptDraftCopy.searchChoices)
                         .font(.popsSubheadline)
@@ -116,6 +119,26 @@ internal struct ReceiptDraftRecordSheet: View {
                     Button(ReceiptDraftCopy.cancelChoosing) { dismiss() }
                 }
             }
+        }
+    }
+
+    private struct ReceiptDraftRecordSkeleton: View {
+        @ScaledMetric(relativeTo: .body) private var symbolSize = PopsSize.touchTarget
+
+        var body: some View {
+            HStack(spacing: PopsSpacing.md) {
+                RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
+                    .fill(Color.popsSurface)
+                    .frame(width: symbolSize, height: symbolSize)
+                Capsule()
+                    .fill(Color.popsSurface)
+                    .frame(width: symbolSize * 2, height: PopsSpacing.md)
+                Spacer(minLength: PopsSpacing.sm)
+            }
+            .frame(minHeight: PopsSize.touchTarget)
+            .popsShimmer()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Searching records")
         }
     }
 

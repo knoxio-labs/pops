@@ -71,15 +71,16 @@ public struct InventoryRecentlyScanned: View {
     public var body: some View {
         Group {
             if !records.isEmpty {
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                LazyVStack(alignment: .leading, spacing: PopsSpacing.xs) {
                     PopsSectionHeader(title: "Recently scanned")
-                    HStack(alignment: .top, spacing: PopsSpacing.sm) {
+                    LazyHStack(alignment: .top, spacing: PopsSpacing.sm) {
                         ForEach(records) { record in
                             InventoryScannedTile(
                                 record: record,
                                 loadPhoto: { try? await store.photo($0, variant: .thumb) })
                         }
                     }
+                    .popsMotion(value: records.map(\.id))
                 }
                 .transition(.opacity)
             }
@@ -105,6 +106,7 @@ internal struct InventoryScannedTile: View {
     internal let record: InventoryRecord
     internal let loadPhoto: @MainActor (String) async -> Data?
     @State private var image: Image?
+    @State private var isLoadingPhoto = false
 
     private var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
@@ -130,8 +132,15 @@ internal struct InventoryScannedTile: View {
         .accessibilityLabel(record.name)
         .task(id: record.photo) {
             image = nil
-            guard let photo = record.photo, let data = await loadPhoto(photo) else { return }
-            image = InventoryRecordMark.decode(data)
+            guard let photo = record.photo else {
+                isLoadingPhoto = false
+                return
+            }
+            isLoadingPhoto = true
+            let data = await loadPhoto(photo)
+            guard !Task.isCancelled else { return }
+            image = data.flatMap(InventoryRecordMark.decode)
+            isLoadingPhoto = false
         }
     }
 
@@ -140,6 +149,8 @@ internal struct InventoryScannedTile: View {
             image
                 .resizable()
                 .scaledToFill()
+        } else if isLoadingPhoto {
+            InventoryPhotoPlaceholder(symbol: InventorySymbol.record(access: record.access).system)
         } else {
             InventorySymbol.record(access: record.access).image
                 .font(.popsLargeTitle)

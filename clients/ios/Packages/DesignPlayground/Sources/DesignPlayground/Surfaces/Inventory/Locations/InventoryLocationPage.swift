@@ -59,7 +59,7 @@ internal struct InventoryLocationPage: View {
 
     private func content(_ place: InventoryLocationNode) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryLocationHeader(tree: tree, place: place, jump: $jump)
                 actions(place)
                 noticeLine

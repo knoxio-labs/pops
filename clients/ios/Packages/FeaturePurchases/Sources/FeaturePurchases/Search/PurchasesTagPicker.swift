@@ -10,6 +10,7 @@ public struct PurchasesTagPicker: View {
     @Binding private var selection: Set<String>
     @State private var query: String
     @State private var model: PurchasesTagPickerModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Creates a tag picker over server-paged tags, toggling into `selection`.
     public init(
@@ -32,6 +33,14 @@ public struct PurchasesTagPicker: View {
                 Section {
                     row(title: "Any", count: nil, isAny: true, isOn: selection.isEmpty) {
                         selection = []
+                    }
+                }
+            }
+            if case .loading = model.state {
+                Section {
+                    ForEach(0..<4, id: \.self) { _ in
+                        PurchasesTagRowSkeleton()
+                            .listRowSeparator(.hidden)
                     }
                 }
             }
@@ -65,6 +74,8 @@ public struct PurchasesTagPicker: View {
         }
         .popsMotion(value: selection)
         .popsMotion(value: query)
+        .popsMotion(value: model.pageRevision)
+        .popsMotion(value: model.paging)
     }
 
     @ViewBuilder private var emptyState: some View {
@@ -92,12 +103,9 @@ public struct PurchasesTagPicker: View {
         case .exhausted:
             EmptyView()
         case .idle, .loading:
-            Text("Loading more tags…")
-                .font(.popsBody)
-                .foregroundStyle(Color.popsMutedForeground)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, PopsSpacing.md)
+            PurchasesTagRowSkeleton()
                 .listRowSeparator(.hidden)
+                .accessibilityLabel("Loading more tags")
                 .task(id: model.pageRevision) { await model.loadNextPageIfNeeded() }
         case .failed:
             HStack {
@@ -107,6 +115,26 @@ public struct PurchasesTagPicker: View {
                 PopsButton("Retry") { Task { await model.retryNextPage() } }
             }
             .listRowSeparator(.hidden)
+        }
+    }
+
+    private struct PurchasesTagRowSkeleton: View {
+        @ScaledMetric(relativeTo: .body) private var symbolSize = PopsSize.touchTarget
+
+        var body: some View {
+            HStack(spacing: PopsSpacing.md) {
+                RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
+                    .fill(Color.popsSurface)
+                    .frame(width: symbolSize, height: symbolSize)
+                Capsule().fill(Color.popsSurface)
+                    .frame(width: symbolSize * 1.8, height: PopsSpacing.md)
+                Spacer(minLength: PopsSpacing.sm)
+                Capsule().fill(Color.popsSurface)
+                    .frame(width: PopsSpacing.xl, height: PopsSpacing.md)
+            }
+            .frame(minHeight: PopsSize.touchTarget)
+            .popsShimmer()
+            .accessibilityElement(children: .ignore)
         }
     }
 
@@ -159,6 +187,7 @@ public struct PurchasesTagPicker: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .transition(reduceMotion ? .identity : PopsMotion.row)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 

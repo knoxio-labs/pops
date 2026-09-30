@@ -56,6 +56,11 @@ internal struct PurchaseDetailRenderingTests {
         let detail = PurchaseDetail.fake(receiptURIs: ["pops://receipt/sha256/page-one"])
         let withoutReceipt = try #require(
             Self.render(PurchaseDetailHeader(detail: detail, receiptPages: [], open: { _ in })))
+        let loadingReceipt = try #require(
+            Self.render(
+                PurchaseDetailHeader(
+                    detail: detail, receiptPages: [], isLoadingReceiptThumbnail: true,
+                    open: { _ in })))
         let withReceipt = try #require(
             Self.render(
                 PurchaseDetailHeader(
@@ -68,6 +73,7 @@ internal struct PurchaseDetailRenderingTests {
                 )))
 
         #expect(!RenderedPixels.drawTheSame(withoutReceipt, withReceipt))
+        #expect(!RenderedPixels.drawTheSame(withoutReceipt, loadingReceipt))
     }
 
     @Test("itemised and empty receipts render differently", .requiresCompiledColorCatalog)

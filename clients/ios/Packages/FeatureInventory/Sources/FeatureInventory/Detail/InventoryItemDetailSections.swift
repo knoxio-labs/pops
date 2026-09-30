@@ -25,7 +25,7 @@ internal struct InventoryItemDetailGroup<Content: View>: View {
                     .accessibilityAddTraits(.isHeader)
             }
             Group(subviews: content) { rows in
-                VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+                LazyVStack(alignment: .leading, spacing: PopsSpacing.zero) {
                     ForEach(rows) { row in
                         if row.id != rows.first?.id {
                             Divider().padding(.leading, PopsSpacing.lg)
