@@ -37,11 +37,8 @@ internal struct CatalogueCompatibility {
         }
     }
 
-    /// The same schema-only judgement ``incompatibility(of:itemTypeId:)`` applies
-    /// to a command's own fields, exposed for a stored item's fields directly
-    /// (``LocalReducer/editProtocol2Item(id:catalogueRevision:values:)``, moving
-    /// an item's untouched values onto a newer revision it has not itself
-    /// caught up to yet).
+    /// The schema-only judgement ``incompatibility(of:itemTypeId:)`` applies
+    /// to a command's own fields.
     func incompatibility(
         typeId: String, fieldIds: [String], values: [InventoryPrimitiveValue],
         requiresAll: Bool
@@ -71,8 +68,31 @@ internal struct CatalogueCompatibility {
         return nil
     }
 
+    /// Whether values an item already holds can be carried onto the target
+    /// revision unchanged. Looser than ``incompatibility(typeId:fieldIds:values:requiresAll:)``
+    /// in the way the server is: an archived type, an archived field or a
+    /// retired option may keep what it has, it only refuses new values. A
+    /// definition gone from the revision, or redefined, still refuses.
+    func retainedIncompatibility(
+        typeId: String, fieldIds: [String], values: [InventoryPrimitiveValue]
+    ) -> InventoryCatalogueChange? {
+        guard let found = target.types.first(where: { $0.id == typeId }),
+            let type = target.effectiveType(id: found.id)
+        else {
+            return change(.type, typeId, typeId: typeId, .notInRevision)
+        }
+        if let field = fieldIncompatibility(type: type, fieldIds: fieldIds, retaining: true) {
+            return field
+        }
+        let knownOptions = Set(type.fields.flatMap(\.enumOptions).map(\.id))
+        for case .enumeration(let optionId) in values where !knownOptions.contains(optionId) {
+            return change(.option, optionId, typeId: typeId, .notInRevision)
+        }
+        return nil
+    }
+
     private func fieldIncompatibility(
-        type: InventoryCatalogueType, fieldIds: [String]
+        type: InventoryCatalogueType, fieldIds: [String], retaining: Bool = false
     ) -> InventoryCatalogueChange? {
         let fields = Dictionary(uniqueKeysWithValues: type.fields.map { ($0.id, $0) })
         let before = authored?.effectiveType(id: type.id).map { authoredType in
@@ -82,7 +102,7 @@ internal struct CatalogueCompatibility {
             guard let field = fields[fieldId] else {
                 return change(.field, fieldId, typeId: type.id, fieldId: fieldId, .notInRevision)
             }
-            if field.archivedAt != nil {
+            if field.archivedAt != nil && !retaining {
                 return change(.field, fieldId, typeId: type.id, fieldId: fieldId, .archived)
             }
             let shapeChanged = before?[fieldId].map { !CatalogueReplacement.sameShape($0, field) }

@@ -65,12 +65,12 @@ extension LocalReducer {
     /// "Edit item" path, reaching a replica that has not synced the item's
     /// migration back yet).
     ///
-    /// Judged the same way ``CatalogueRebase`` judges a queued command:
-    /// schema only, against the field ids this item currently stores (an
-    /// override is untouched either way). A field this item still carries
-    /// that the newer revision no longer has as it was refuses the edit,
-    /// same as a stale revision always has; the server has the final word
-    /// once the change reaches it.
+    /// Judged schema only, against the field ids this item currently stores
+    /// (an override is untouched either way), by the server's retention
+    /// rule: an archived field or retired option keeps the values it already
+    /// holds. A field the newer revision no longer declares, or declares
+    /// with a different shape, refuses the edit; the server has the final
+    /// word once the change reaches it.
     ///
     /// - Throws: ``AppCore/InventoryCommandError`` when `target` is older
     ///   than the item's own revision, or the item's fields do not fit it.
@@ -93,8 +93,8 @@ extension LocalReducer {
             guard case .value(let values) = entry.state else { return [] }
             return values
         }
-        if let incompatible = check.incompatibility(
-            typeId: typeId, fieldIds: stored.map(\.fieldId), values: values, requiresAll: false)
+        if let incompatible = check.retainedIncompatibility(
+            typeId: typeId, fieldIds: stored.map(\.fieldId), values: values)
         {
             throw refusal(
                 .invalid,

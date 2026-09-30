@@ -33,9 +33,7 @@ internal struct InventoryProtocol2FieldTests {
         draft.removeEntry(id: "second", for: field)
         draft.removeEntry(id: "first", for: field)
         #expect(draft.draftEntries(for: field).isEmpty)
-        let patch = try #require(draft.patches(for: type).first)
-        #expect(patch.fieldId == field.id)
-        #expect(patch.values == nil)
+        #expect(draft.patches(for: type).isEmpty)
     }
 
     @Test("required checks value presence without inventing a minimum for optional many fields")

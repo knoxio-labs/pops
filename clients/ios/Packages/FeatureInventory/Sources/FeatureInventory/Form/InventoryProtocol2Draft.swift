@@ -13,6 +13,8 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
     /// An existing item's overrides are written at once instead, so this
     /// stays empty while editing.
     internal var overrides: [String: InventoryPrimitiveValue] = [:]
+    /// The edited item's stored values, by field ID, as the draft opened.
+    private var stored: [String: [InventoryPrimitiveValue]] = [:]
 
     internal init(
         type: InventoryCatalogueType, catalogueRevision: Int, item: InventoryItem? = nil
@@ -43,6 +45,12 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
                 return values.isEmpty ? nil : (field.id, values)
             })
         touched = []
+        stored = itemEntries.compactMapValues { entry in
+            guard entry.source == .stored, case .value(let values) = entry.state else {
+                return nil
+            }
+            return values
+        }
     }
 
     private static func startingEntryId(for field: InventoryCatalogueField) -> String {
@@ -215,10 +223,14 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
         }
     }
 
+    /// A patch for each stored field whose values differ from the item's own.
+    /// Touching a field without changing it, as a control writing back the
+    /// value it shows does, patches nothing.
     internal func patches(for type: InventoryCatalogueType) -> [InventoryProtocol2FieldPatch] {
         type.fields.compactMap { field in
             guard field.storage == .stored, touched.contains(field.id) else { return nil }
             let values = entries[field.id, default: []].compactMap(\.value)
+            guard values != stored[field.id, default: []] else { return nil }
             return .init(fieldId: field.id, values: values.isEmpty ? nil : values)
         }
     }
