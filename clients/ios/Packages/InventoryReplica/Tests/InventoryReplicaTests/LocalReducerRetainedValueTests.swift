@@ -57,4 +57,45 @@ internal struct LocalReducerRetainedValueTests {
         #expect(try replica.outboundMutations().isEmpty)
         #expect(try replica.read(.item(id: Setup.box))?.catalogueRevision == Setup.revision)
     }
+
+    @Test("an item keeps an option retired since, and takes an edit to another field")
+    func retiredOptionIsRetainedAcrossTheRebase() throws {
+        typealias Lamp = RebaseFixture
+        let warm = InventoryItemFieldEntry(
+            fieldId: Lamp.colour, state: .value([.enumeration(optionId: Lamp.warm)]),
+            source: .stored, catalogueRevision: 1)
+        let lamp = InventoryItem(
+            id: Lamp.lampId, revision: 1, seq: 1, catalogueRevision: 1, name: "Lamp",
+            typeId: Lamp.typeId, typeKey: "bulb", fieldValues: [warm], placement: .hand,
+            createdAt: Fixture.created, updatedAt: Fixture.created)
+        let replica = try InventoryReplica()
+        try replica.apply(
+            InventorySnapshotPage(
+                epoch: Fixture.epoch, highWaterSeq: 10, catalogueVersion: "c1", total: 1,
+                items: [lamp], locations: [], nextCursor: nil, catalogueRevision: 1),
+            catalogue: Lamp.catalogue(1, Lamp.baseFields))
+        try replica.store(
+            Lamp.catalogue(
+                2,
+                [
+                    Lamp.baseFields[0],
+                    Lamp.field(
+                        Lamp.colour, key: "colour", kind: .enumeration, sortOrder: 1,
+                        options: [Lamp.option(archivedAt: "2026-09-29T00:00:00.000Z")]),
+                ]))
+        let bright = InventoryPrimitiveValue.measurement(
+            amount: try InventoryDecimal("800"), unit: "lm")
+
+        _ = try replica.perform(
+            .editProtocol2Item(
+                id: Lamp.lampId, catalogueRevision: 2,
+                values: [InventoryProtocol2FieldPatch(fieldId: Lamp.lumens, values: [bright])]),
+            mutationId: "m1", clientTime: Setup.time)
+
+        #expect(try replica.outboundMutations().map(\.mutationId) == ["m1"])
+        let item = try #require(try replica.read(.item(id: Lamp.lampId)))
+        #expect(item.catalogueRevision == 2)
+        let colour = item.fieldValues.first { $0.fieldId == Lamp.colour }?.state
+        #expect(colour == .value([.enumeration(optionId: Lamp.warm)]))
+    }
 }
