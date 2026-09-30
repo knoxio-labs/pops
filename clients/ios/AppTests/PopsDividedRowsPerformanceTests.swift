@@ -97,6 +97,8 @@ internal struct PopsDividedRowsPerformanceTests {
             scrollView.setContentOffset(
                 CGPoint(x: 0, y: scrollView.contentSize.height - scrollView.bounds.height),
                 animated: false)
+            window.layoutIfNeeded()
+            scrollView.layoutIfNeeded()
         }
 
         func dismiss() {
