@@ -186,10 +186,7 @@ describe('purchases.search', () => {
   });
 
   it('rejects a plain date with a field-specific timestamp hint', async () => {
-    const result = await tool('purchases.search').handler({
-      text: 'coffee',
-      from: '2026-01-01',
-    });
+    const result = await tool('purchases.search').handler({ text: 'kettle', from: '2026-01-01' });
 
     expect(result.isError).toBe(true);
     expect(extractText(result)).toContain("Invalid field 'from'");
