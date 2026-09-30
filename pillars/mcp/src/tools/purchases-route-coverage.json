@@ -32,6 +32,7 @@
     "receipt.thumbnail": "Receipt thumbnails are binary document content and are not exposed through the structured MCP purchase surface.",
     "receipt.upload": "Receipt upload is a binary ingest operation; MCP is read-only.",
     "reconcile.confirm": "Confirming a reconciliation is a human financial assertion; the assistant cannot write it.",
+    "reconcile.deactivateRule": "Rule deactivation changes future financial matching and stays in the operator workflow; MCP is read-only.",
     "reconcile.links": "Reconciliation links are operator review data, not part of assistant purchase answers.",
     "reconcile.linksBatch": "Batch reconciliation links are operator review data, not part of assistant purchase answers.",
     "reconcile.queue": "The reconciliation queue is an operator workflow surface and is not exposed to the assistant.",

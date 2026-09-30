@@ -54,6 +54,10 @@ export const QueuedLinkSchema = z.object({
   amountCents: CentsSchema,
   linkType: LinkTypeSchema,
   confidence: z.number().min(0).max(1),
+  matchRuleId: z.string().nullable(),
+  matchRulePattern: z.string().nullable(),
+  matchRuleSource: z.string().nullable(),
+  matchRuleIsActive: z.boolean().nullable(),
 });
 
 export const QueueEntrySchema = z.object({
@@ -220,6 +224,14 @@ export const purchasesReconcileContract = c.router({
     body: LinkDecisionBodySchema,
     responses: { 200: OkSchema, 404: ErrorBodySchema },
     summary: 'Rule a pairing out for good, so no later sweep proposes it again',
+  },
+  deactivateRule: {
+    method: 'POST',
+    path: '/reconcile/rules/:ruleId/deactivate',
+    pathParams: z.object({ ruleId: z.string().min(1) }),
+    body: z.object({}).optional(),
+    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    summary: 'Deactivate a learned match rule without removing its attribution history',
   },
   sweep: {
     method: 'POST',

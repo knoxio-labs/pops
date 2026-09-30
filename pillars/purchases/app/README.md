@@ -141,6 +141,10 @@ the posting date and payee. It keeps the description stored with the proposal,
 so the row remains useful when Finance is unavailable; missing live details
 show as unavailable rather than failing the queue.
 
+A stage-4 proposal is labelled as a rule and shows the stored descriptor
+pattern and source that admitted it. The decision bar can deactivate that
+rule; the link keeps its attribution, while later sweeps stop using the rule.
+
 **It is keyboard-driven, and that is the feature.** The queue arrives focused,
 so `j`/`k` move the cursor, `enter` accepts and `x` rejects without a click
 first. Arrow keys do what `j`/`k` do, because the queue is one `role="listbox"`
@@ -215,6 +219,10 @@ bearing rather than stylistic:
 A row discloses the orders it was totalled from, each linking to
 `/purchases/:purchaseId`. Naming $151.20 as unexplained and leaving no way to
 ask which orders it is in was a weaker version of hiding it.
+
+Each order row also carries the readable patterns and source scopes behind its
+stage-4 links. The operator can deactivate a rule from the expanded list, and
+the row keeps showing the rule as inactive while its historical links remain.
 
 **The request carries the row's own identity, not its label.** The roll-up
 groups three ways and `GET /purchases` takes the same three:

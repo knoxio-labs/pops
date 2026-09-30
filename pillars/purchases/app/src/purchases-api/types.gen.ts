@@ -715,6 +715,12 @@ export type PurchaseListResponses = {
       paymentHint: string | null;
       rawRef: string | null;
       receiptUri: string | null;
+      ruleLinks: Array<{
+        descriptionPattern: string;
+        id: string;
+        isActive: boolean;
+        source: string | null;
+      }>;
       settlementMode: 'card' | 'cash' | 'unknown';
       shippingCents: number;
       shippingIncluded: boolean | null;
@@ -3150,6 +3156,10 @@ export type ReconcileQueueResponses = {
         amountCents: number;
         confidence: number;
         linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+        matchRuleId: string | null;
+        matchRuleIsActive: boolean | null;
+        matchRulePattern: string | null;
+        matchRuleSource: string | null;
         transactionDate: string | null;
         transactionDescription: string | null;
         transactionPayee: string | null;
@@ -3196,6 +3206,42 @@ export type ReconcileRejectResponses = {
 };
 
 export type ReconcileRejectResponse = ReconcileRejectResponses[keyof ReconcileRejectResponses];
+
+export type ReconcileDeactivateRuleData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    ruleId: string;
+  };
+  query?: never;
+  url: '/reconcile/rules/{ruleId}/deactivate';
+};
+
+export type ReconcileDeactivateRuleErrors = {
+  /**
+   * 404
+   */
+  404: ErrorBody;
+};
+
+export type ReconcileDeactivateRuleError =
+  ReconcileDeactivateRuleErrors[keyof ReconcileDeactivateRuleErrors];
+
+export type ReconcileDeactivateRuleResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ReconcileDeactivateRuleResponse =
+  ReconcileDeactivateRuleResponses[keyof ReconcileDeactivateRuleResponses];
 
 export type ReconcileSweepData = {
   /**

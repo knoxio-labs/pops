@@ -54,7 +54,11 @@ export {
   type TagVocabularyPageOptions,
 } from './services/purchase-item-tags.js';
 
-export { listPurchaseRows, type PurchaseListRow } from './services/purchase-list-rows.js';
+export {
+  listPurchaseRows,
+  type PurchaseListRow,
+  type PurchaseRuleLink,
+} from './services/purchase-list-rows.js';
 
 export {
   confirmItemClassification,
@@ -225,6 +229,7 @@ export {
 
 export {
   listActiveMatchRules,
+  deactivateMatchRule,
   recordMatchRule,
   type MatchRuleEvidence,
 } from './services/match-rules.js';

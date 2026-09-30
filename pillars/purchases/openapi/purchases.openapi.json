@@ -2226,6 +2226,29 @@
                             "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                             "type": "string"
                           },
+                          "ruleLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "descriptionPattern": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "source": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "descriptionPattern", "source", "isActive"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "settlementMode": {
                             "enum": ["card", "cash", "unknown"],
                             "type": "string"
@@ -2320,7 +2343,8 @@
                           "createdAt",
                           "updatedAt",
                           "itemCount",
-                          "receiptUri"
+                          "receiptUri",
+                          "ruleLinks"
                         ],
                         "type": "object"
                       },
@@ -11710,6 +11734,22 @@
                                   ],
                                   "type": "string"
                                 },
+                                "matchRuleId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "matchRuleIsActive": {
+                                  "nullable": true,
+                                  "type": "boolean"
+                                },
+                                "matchRulePattern": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "matchRuleSource": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
                                 "transactionDate": {
                                   "nullable": true,
                                   "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
@@ -11735,7 +11775,11 @@
                                 "transactionPayee",
                                 "amountCents",
                                 "linkType",
-                                "confidence"
+                                "confidence",
+                                "matchRuleId",
+                                "matchRulePattern",
+                                "matchRuleSource",
+                                "matchRuleIsActive"
                               ],
                               "type": "object"
                             },
@@ -11838,6 +11882,66 @@
           }
         },
         "summary": "Rule a pairing out for good, so no later sweep proposes it again",
+        "tags": ["reconcile"]
+      }
+    },
+    "/reconcile/rules/{ruleId}/deactivate": {
+      "post": {
+        "operationId": "reconcile.deactivateRule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ruleId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Deactivate a learned match rule without removing its attribution history",
         "tags": ["reconcile"]
       }
     },

@@ -9,11 +9,25 @@
  */
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
 
-import { purchaseDocuments, purchaseItems } from '../schema.js';
+import {
+  purchaseChargeLinks,
+  purchaseCharges,
+  purchaseDocuments,
+  purchaseItems,
+  purchaseMatchRules,
+} from '../schema.js';
 import { listPurchases, type ListPurchasesFilter } from './purchase-reads.js';
 
 import type { PurchaseRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
+
+/** Rule identity and operator state attached to a purchase list row. */
+export interface PurchaseRuleLink {
+  readonly id: string;
+  readonly descriptionPattern: string;
+  readonly source: string | null;
+  readonly isActive: boolean;
+}
 
 /**
  * An order as a LIST renders it.
@@ -39,6 +53,7 @@ export interface PurchaseListRow {
    * till slip.
    */
   readonly receiptUri: string | null;
+  readonly ruleLinks: readonly PurchaseRuleLink[];
 }
 
 /**
@@ -81,9 +96,53 @@ export function listPurchaseRows(
     if (!receipts.has(row.purchaseId)) receipts.set(row.purchaseId, row.uri);
   }
 
+  const ruleLinksByPurchase = listRuleLinksByPurchase(db, ids);
+
   return page.map((purchase) => ({
     purchase,
     itemCount: counts.get(purchase.id) ?? 0,
     receiptUri: receipts.get(purchase.id) ?? null,
+    ruleLinks: ruleLinksByPurchase.get(purchase.id) ?? [],
   }));
+}
+
+function listRuleLinksByPurchase(
+  db: PurchasesDb,
+  purchaseIds: readonly string[]
+): Map<string, PurchaseRuleLink[]> {
+  const ruleLinksByPurchase = new Map<string, PurchaseRuleLink[]>();
+  const seenRuleIds = new Map<string, Set<string>>();
+  for (const rule of db
+    .select({
+      purchaseId: purchaseCharges.purchaseId,
+      id: purchaseMatchRules.id,
+      descriptionPattern: purchaseMatchRules.descriptionPattern,
+      source: purchaseMatchRules.source,
+      isActive: purchaseMatchRules.isActive,
+    })
+    .from(purchaseChargeLinks)
+    .innerJoin(purchaseCharges, eq(purchaseChargeLinks.chargeId, purchaseCharges.id))
+    .innerJoin(purchaseMatchRules, eq(purchaseChargeLinks.matchRuleId, purchaseMatchRules.id))
+    .where(
+      and(
+        inArray(purchaseCharges.purchaseId, purchaseIds),
+        eq(purchaseChargeLinks.linkType, 'rule')
+      )
+    )
+    .orderBy(asc(purchaseMatchRules.descriptionPattern), asc(purchaseMatchRules.id))
+    .all()) {
+    const seenForPurchase = seenRuleIds.get(rule.purchaseId) ?? new Set<string>();
+    if (seenForPurchase.has(rule.id)) continue;
+    seenForPurchase.add(rule.id);
+    seenRuleIds.set(rule.purchaseId, seenForPurchase);
+    const links = ruleLinksByPurchase.get(rule.purchaseId) ?? [];
+    links.push({
+      id: rule.id,
+      descriptionPattern: rule.descriptionPattern,
+      source: rule.source,
+      isActive: rule.isActive,
+    });
+    ruleLinksByPurchase.set(rule.purchaseId, links);
+  }
+  return ruleLinksByPurchase;
 }

@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 /**
  * The reconcile surface, through the real app and a real database.
  *
@@ -8,7 +9,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
-import { createPurchase } from '../../db/index.js';
+import {
+  createPurchase,
+  listActiveMatchRules,
+  persistProposedLinks,
+  purchaseCharges,
+  recordMatchRule,
+} from '../../db/index.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
 import { FINANCE_UNAVAILABLE, financeReturning } from '../finance/__tests__/fixtures.js';
@@ -38,6 +45,47 @@ function order(totalCents: number, checksum: string) {
     totalCents,
     checksum,
   });
+}
+
+function seedRuleProposal(): { chargeId: string; purchaseId: string; ruleId: string } {
+  const purchaseId = createPurchase(opened.db, {
+    source: 'amazon',
+    sourceOrderId: 'rule-order',
+    ingestMethod: 'export',
+    orderedAt: '2026-03-04T00:00:00Z',
+    currency: 'AUD',
+    totalCents: 4128,
+    checksum: 'rule-order',
+    charges: [{ amountCents: 4128, role: 'capture' }],
+  });
+  const charge = opened.db
+    .select({ id: purchaseCharges.id })
+    .from(purchaseCharges)
+    .where(eq(purchaseCharges.purchaseId, purchaseId))
+    .get();
+  if (charge === undefined) throw new Error('Expected the purchase charge to be stored');
+
+  const ruleId = recordMatchRule(opened.db, {
+    transactionDescription: 'WOOLWORTHS 1234 SYDNEY',
+    source: 'amazon',
+    entityId: null,
+    entityName: 'Woolworths',
+    confidence: 0.9,
+  });
+  if (ruleId === null) throw new Error('Expected the merchant descriptor to produce a rule');
+
+  persistProposedLinks(opened.db, [
+    {
+      chargeId: charge.id,
+      transactionUri: TXN,
+      transactionDescription: 'WOOLWORTHS 1234 SYDNEY',
+      amountCents: 4128,
+      linkType: 'rule',
+      confidence: 0.9,
+      matchRuleId: ruleId,
+    },
+  ]);
+  return { chargeId: charge.id, purchaseId, ruleId };
 }
 
 function build(finance: FinanceClient & FinanceTransactionLookup = financeReturning()): Express {
@@ -93,6 +141,11 @@ describe('the queue', () => {
     const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items[0].proposed).toHaveLength(1);
     expect(res.body.items[0].proposed[0].linkType).toBe('exact');
+    expect(res.body.items[0].proposed[0]).toMatchObject({
+      matchRuleId: null,
+      matchRulePattern: null,
+      matchRuleIsActive: null,
+    });
     expect(res.body.items[0].deltaCents).toBe(0);
   });
 
@@ -326,6 +379,51 @@ describe('the queue', () => {
 
     const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items).toEqual([]);
+  });
+});
+
+describe('learned rule attribution', () => {
+  it('names the readable rule in the queue and merchant order list', async () => {
+    const { chargeId, purchaseId, ruleId } = seedRuleProposal();
+
+    const queue = await requestOn(app).get('/reconcile/queue').expect(200);
+    expect(queue.body.items[0].chargeId).toBe(chargeId);
+    expect(queue.body.items[0].proposed[0]).toMatchObject({
+      linkType: 'rule',
+      matchRuleId: ruleId,
+      matchRulePattern: 'WOOLWORTHS SYDNEY',
+      matchRuleIsActive: true,
+    });
+
+    const orders = await requestOn(app).get('/purchases?source=amazon').expect(200);
+    expect(
+      orders.body.items.find((item: { id: string }) => item.id === purchaseId).ruleLinks
+    ).toEqual([
+      {
+        id: ruleId,
+        descriptionPattern: 'WOOLWORTHS SYDNEY',
+        source: 'amazon',
+        isActive: true,
+      },
+    ]);
+  });
+
+  it('deactivates a rule without deleting its attribution, and 404s an unknown rule', async () => {
+    const { chargeId, purchaseId, ruleId } = seedRuleProposal();
+
+    await requestOn(app).post(`/reconcile/rules/${ruleId}/deactivate`).expect(200, { ok: true });
+    expect(listActiveMatchRules(opened.db)).toEqual([]);
+
+    const queue = await requestOn(app).get('/reconcile/queue').expect(200);
+    expect(queue.body.items[0].chargeId).toBe(chargeId);
+    expect(queue.body.items[0].proposed[0].matchRuleIsActive).toBe(false);
+
+    const orders = await requestOn(app).get('/purchases?source=amazon').expect(200);
+    expect(
+      orders.body.items.find((item: { id: string }) => item.id === purchaseId).ruleLinks
+    ).toMatchObject([{ id: ruleId, descriptionPattern: 'WOOLWORTHS SYDNEY', isActive: false }]);
+
+    await requestOn(app).post('/reconcile/rules/missing/deactivate').expect(404);
   });
 });
 

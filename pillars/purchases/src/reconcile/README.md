@@ -68,6 +68,8 @@ So a stage-4 miss costs nothing: a rule that admits no candidate at the charge a
 
 Every other blocking test still applies — window, sign, non-zero, and the rejection set. A rule can therefore never resurrect a pairing a human ruled out, which is where the negative signal lives: rejections are stored as pairings, not as negative rules (see below).
 
+An operator can deactivate a learned rule with `POST /reconcile/rules/:ruleId/deactivate`. This sets `isActive` to false without deleting the rule or the links that cite it. Later sweeps no longer consider it; the queue and merchant order list keep showing its pattern and inactive state so historical attribution remains readable.
+
 **A rule's own confidence caps the link's, and the stage caps that.** The rule inherits the confidence of the link that taught it, so one learned from a part-payment stays weaker than one learned from an exact match, and both sit below a plain `exact`. A rule below `MIN_MATCH_CONFIDENCE` never fires at all.
 
 **The sweep does not touch `timesApplied` or `lastUsedAt`.** Those record attributions a rule has earned — one per human decision, never revised downward — and unconfirmed links are re-derived from scratch on a timer, so counting an auto-link would add one every fifteen minutes for a link that never changed. The count happens when a stage-4 link is confirmed, which is also when the descriptor is re-recorded against the same rule row.

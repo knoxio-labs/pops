@@ -484,6 +484,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/reconcile/rules/{ruleId}/deactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Deactivate a learned match rule without removing its attribution history */
+    post: operations['reconcile.deactivateRule'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/reconcile/sweep': {
     parameters: {
       query?: never;
@@ -1356,6 +1373,12 @@ export interface operations {
               paymentHint: string | null;
               rawRef: string | null;
               receiptUri: string | null;
+              ruleLinks: {
+                descriptionPattern: string;
+                id: string;
+                isActive: boolean;
+                source: string | null;
+              }[];
               /** @enum {string} */
               settlementMode: 'card' | 'cash' | 'unknown';
               shippingCents: number;
@@ -4138,6 +4161,10 @@ export interface operations {
                 confidence: number;
                 /** @enum {string} */
                 linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                matchRuleId: string | null;
+                matchRuleIsActive: boolean | null;
+                matchRulePattern: string | null;
+                matchRuleSource: string | null;
                 transactionDate: string | null;
                 transactionDescription: string | null;
                 transactionPayee: string | null;
@@ -4166,6 +4193,45 @@ export interface operations {
           chargeId: string;
           transactionUri: string;
         };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'reconcile.deactivateRule': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ruleId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
       };
     };
     responses: {

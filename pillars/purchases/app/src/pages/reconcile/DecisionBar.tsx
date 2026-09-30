@@ -3,6 +3,8 @@ import { Link } from 'react-router';
 
 import { Button } from '@pops/ui';
 
+import { MatchRuleAttribution } from '../MatchRuleAttribution.js';
+
 import type { ReactElement } from 'react';
 
 import type { DecisionKind, QueueEntry } from './types.js';
@@ -32,6 +34,7 @@ export function DecisionBar({
 }: DecisionBarProps): ReactElement {
   const { t } = useTranslation('purchases');
   const disabled = isPending || activeEntry === undefined || activeEntry.proposed.length === 0;
+  const learnedRules = activeRules(activeEntry);
 
   return (
     <div className="space-y-2">
@@ -62,6 +65,16 @@ export function DecisionBar({
         <p className="text-muted-foreground text-xs">{t('reconcile.keys.hint')}</p>
       </div>
 
+      {learnedRules.length > 0 && (
+        <ul className="space-y-2" aria-label={t('reconcile.rule.listLabel')}>
+          {learnedRules.map((rule) => (
+            <li key={rule.id}>
+              <MatchRuleAttribution {...rule} />
+            </li>
+          ))}
+        </ul>
+      )}
+
       <p role="status" aria-live="polite" className="text-sm">
         {outcomeMessage(lastOutcome, t)}
       </p>
@@ -69,6 +82,36 @@ export function DecisionBar({
       <p className="text-muted-foreground text-xs">{t('reconcile.action.caveat')}</p>
     </div>
   );
+}
+
+function activeRules(entry: QueueEntry | undefined): Array<{
+  id: string;
+  pattern: string;
+  source: string | null;
+  isActive: boolean;
+}> {
+  if (entry === undefined) return [];
+  const rules = new Map<
+    string,
+    { id: string; pattern: string; source: string | null; isActive: boolean }
+  >();
+  for (const link of entry.proposed) {
+    if (
+      link.linkType !== 'rule' ||
+      link.matchRuleId === null ||
+      link.matchRulePattern === null ||
+      link.matchRuleIsActive === null
+    ) {
+      continue;
+    }
+    rules.set(link.matchRuleId, {
+      id: link.matchRuleId,
+      pattern: link.matchRulePattern,
+      source: link.matchRuleSource,
+      isActive: link.matchRuleIsActive,
+    });
+  }
+  return [...rules.values()];
 }
 
 type Translate = ReturnType<typeof useTranslation<'purchases'>>['t'];

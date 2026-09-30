@@ -81,6 +81,7 @@ export function makePurchaseHandlers(
             ...row.purchase,
             itemCount: row.itemCount,
             receiptUri: row.receiptUri,
+            ruleLinks: [...row.ruleLinks],
           })),
           ...(total === undefined ? {} : { total }),
         },
