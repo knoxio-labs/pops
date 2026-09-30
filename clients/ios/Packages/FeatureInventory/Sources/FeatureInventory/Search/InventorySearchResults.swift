@@ -60,44 +60,8 @@ internal struct InventorySearchPageResults: Sendable {
         text: String, filter: InventorySearchFilter, page: InventoryPageRequest
     ) -> InventoryQuery<InventorySearchPageResults> {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let placement: InventoryItemPagePlacement =
-            switch filter.placement {
-            case .any: .any
-            case .inHand: .hand
-            case .direct: .location
-            case .contained: .container
-            }
-        let access: InventoryItemPageAccess =
-            switch filter.containerState {
-            case .any: .any
-            case .open: .open
-            case .closed: .closed
-            }
-        let missing: InventoryItemPageMissing =
-            switch filter.missing {
-            case .nothing: .none
-            case .type: .type
-            case .code: .code
-            case .photo: .photo
-            }
-        let sync: InventoryItemPageSync =
-            switch filter.sync {
-            case .any: .any
-            case .waiting: .waiting
-            case .stale: .stale
-            case .needsAttention: .needsAttention
-            }
-        let itemFilter = InventoryItemPageFilter(
-            includeInactive: filter.includesInactive,
-            placement: placement,
-            access: access,
-            typeKey: filter.type?.key,
-            quantityGreaterThanOne: filter.quantity == .several,
-            missing: missing,
-            sync: sync)
-        var locationFilter = filter
-        locationFilter.includesInactive = false
-        let includeLocations = !locationFilter.isActive
+        let itemFilter = itemPageFilter(from: filter)
+        let includeLocations = includesLocations(for: filter)
         return InventoryQuery { source in
             let reader = InventoryRecordReader(source: source)
             guard !trimmed.isEmpty else {
@@ -109,26 +73,96 @@ internal struct InventorySearchPageResults: Sendable {
                 InventorySearchPageQuery(
                     text: trimmed, filter: itemFilter, includeLocations: includeLocations,
                     page: page))
-            let hits = resultPage.rows.compactMap { row -> InventorySearchHit? in
-                switch row {
-                case .item(let item): return .record(reader.record(item))
-                case .location(let location):
-                    var parents: [String] = []
-                    var parentId = location.parentId
-                    while let currentId = parentId,
-                        let parent = source.inventoryLocation(id: currentId)
-                    {
-                        parents.insert(parent.name, at: 0)
-                        parentId = parent.parentId
-                    }
-                    return .place(
-                        InventorySearchPlace(id: location.id, name: location.name, parents: parents)
-                    )
-                }
-            }
+            let hits = pageHits(from: resultPage.rows, source: source, reader: reader)
             return InventorySearchPageResults(
                 isFirstRun: source.inventoryReplicaStatus() == .empty, hits: hits,
                 nextCursor: resultPage.nextCursor)
         }
+    }
+
+    private static func itemPageFilter(from filter: InventorySearchFilter)
+        -> InventoryItemPageFilter
+    {
+        return InventoryItemPageFilter(
+            includeInactive: filter.includesInactive,
+            placement: pagePlacement(for: filter.placement),
+            access: pageAccess(for: filter.containerState),
+            typeKey: filter.type?.key,
+            quantityGreaterThanOne: filter.quantity == .several,
+            missing: pageMissing(for: filter.missing),
+            sync: pageSync(for: filter.sync))
+    }
+
+    private static func pagePlacement(
+        for placement: InventoryPlacementFilter
+    ) -> InventoryItemPagePlacement {
+        switch placement {
+        case .any: .any
+        case .inHand: .hand
+        case .direct: .location
+        case .contained: .container
+        }
+    }
+
+    private static func pageAccess(
+        for access: InventoryContainerStateFilter
+    ) -> InventoryItemPageAccess {
+        switch access {
+        case .any: .any
+        case .open: .open
+        case .closed: .closed
+        }
+    }
+
+    private static func pageMissing(
+        for missing: InventoryMissingFilter
+    ) -> InventoryItemPageMissing {
+        switch missing {
+        case .nothing: .none
+        case .type: .type
+        case .code: .code
+        case .photo: .photo
+        }
+    }
+
+    private static func pageSync(
+        for sync: InventorySyncFilter
+    ) -> InventoryItemPageSync {
+        switch sync {
+        case .any: .any
+        case .waiting: .waiting
+        case .stale: .stale
+        case .needsAttention: .needsAttention
+        }
+    }
+
+    private static func includesLocations(for filter: InventorySearchFilter) -> Bool {
+        var locationFilter = filter
+        locationFilter.includesInactive = false
+        return !locationFilter.isActive
+    }
+
+    private static func pageHits(
+        from rows: [InventorySearchPageRow], source: any InventoryQuerySource,
+        reader: InventoryRecordReader
+    ) -> [InventorySearchHit] {
+        rows.compactMap { row in
+            switch row {
+            case .item(let item): .record(reader.record(item))
+            case .location(let location): .place(placeHit(location, source: source))
+            }
+        }
+    }
+
+    private static func placeHit(
+        _ location: InventoryLocation, source: any InventoryQuerySource
+    ) -> InventorySearchPlace {
+        var parents: [String] = []
+        var parentId = location.parentId
+        while let currentId = parentId, let parent = source.inventoryLocation(id: currentId) {
+            parents.insert(parent.name, at: 0)
+            parentId = parent.parentId
+        }
+        return InventorySearchPlace(id: location.id, name: location.name, parents: parents)
     }
 }

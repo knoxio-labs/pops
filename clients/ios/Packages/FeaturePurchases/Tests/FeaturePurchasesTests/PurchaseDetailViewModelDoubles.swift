@@ -89,10 +89,9 @@ internal actor DetailRepositoryDouble: PurchasesRepository {
         PurchasePage(purchases: [], nextCursor: nil, totalCount: 0)
     }
 
-    internal func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
-    ) async throws -> PurchaseSearchPage {
+    internal func search(query: PurchaseSearchQuery, after cursor: String?, limit: Int) async throws
+        -> PurchaseSearchPage
+    {
         PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
     }
 

@@ -224,10 +224,9 @@ private actor EditRepositoryDouble: PurchasesRepository {
         PurchasePage(purchases: [], nextCursor: nil, totalCount: 0)
     }
 
-    func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
-    ) async throws -> PurchaseSearchPage {
+    func search(query: PurchaseSearchQuery, after cursor: String?, limit: Int) async throws
+        -> PurchaseSearchPage
+    {
         PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
     }
 

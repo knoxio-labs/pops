@@ -12,7 +12,7 @@ internal struct AccountsRequestTests {
     func firstPageTargetsAccountsRoute() async throws {
         let transport = StubTransport(status: .ok, json: AccountsWire.page())
         _ = try await BFMAccountsRepository.stubbed(transport).accountPage(
-            search: nil, archived: false, cursor: nil, limit: 25)
+            search: nil, archiveScope: .active, cursor: nil, limit: 25)
 
         let sent = try #require(await transport.recorded.all.first)
         #expect(sent.request.method == .get)
@@ -24,7 +24,7 @@ internal struct AccountsRequestTests {
     func pageFiltersAreMappedToQuery() async throws {
         let transport = StubTransport(status: .ok, json: AccountsWire.page())
         _ = try await BFMAccountsRepository.stubbed(transport).accountPage(
-            search: "Home loan", archived: true, cursor: "opaque cursor", limit: 25)
+            search: "Home loan", archiveScope: .archived, cursor: "opaque cursor", limit: 25)
 
         let sent = try #require(await transport.recorded.all.first)
         #expect(sent.request.path?.hasPrefix("/mobile/finance/accounts?") == true)
@@ -41,7 +41,7 @@ internal struct AccountsRequestTests {
     func includesBothArchiveScopes() async throws {
         let transport = StubTransport(status: .ok, json: AccountsWire.page())
         _ = try await BFMAccountsRepository.stubbed(transport).accountPage(
-            search: nil, archived: nil, cursor: nil, limit: 25)
+            search: nil, archiveScope: .all, cursor: nil, limit: 25)
 
         let sent = try #require(await transport.recorded.all.first)
         #expect(query(of: sent.request) == ["limit": "25"])
@@ -93,7 +93,7 @@ internal struct AccountsRequestTests {
         }
 
         let page = try await BFMAccountsRepository.stubbed(transport).accountPage(
-            search: "Home loan", archived: false, cursor: "stale", limit: 25)
+            search: "Home loan", archiveScope: .active, cursor: "stale", limit: 25)
 
         #expect(page.accounts.map(\.id) == ["acc-1"])
         #expect(page.nextCursor == "fresh")
@@ -121,7 +121,7 @@ internal struct AccountsRequestTests {
 
         await #expect(throws: RepositoryError.contractMismatch) {
             try await BFMAccountsRepository.stubbed(transport).accountPage(
-                search: nil, archived: false, cursor: nil, limit: 25)
+                search: nil, archiveScope: .active, cursor: nil, limit: 25)
         }
         #expect(await transport.recorded.all.count == 1)
     }

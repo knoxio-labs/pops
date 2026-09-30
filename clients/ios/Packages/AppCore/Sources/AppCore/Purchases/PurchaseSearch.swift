@@ -10,6 +10,28 @@ public enum PurchaseSearchKind: Hashable, Sendable {
     case lines
 }
 
+/// The predicates applied by the server before it limits a purchase-search page.
+public struct PurchaseSearchQuery: Hashable, Sendable {
+    /// The text matched against purchase and line-item fields.
+    public let text: String
+    /// The kinds of matches included in the result.
+    public let kind: PurchaseSearchKind
+    /// The purchase settlement state included in the result.
+    public let status: PurchaseSearchStatus
+    /// Any-of line-item tags included in the result; an empty set applies no tag filter.
+    public let tags: Set<String>
+
+    /// Creates the server-side predicates for one purchase search.
+    public init(
+        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>
+    ) {
+        self.text = text
+        self.kind = kind
+        self.status = status
+        self.tags = tags
+    }
+}
+
 /// The purchase-level context carried by every purchase search result.
 public struct PurchaseSearchOrder: Hashable, Sendable {
     public let id: Purchase.ID

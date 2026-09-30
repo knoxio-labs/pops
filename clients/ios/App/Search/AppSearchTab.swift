@@ -97,51 +97,62 @@ internal struct AppSearchTab: View {
         switch pillar {
         case .inventory:
             if let state = model.inventory?.section(scope: model.scope) {
-                SearchSectionChrome(
-                    pillar: .inventory,
-                    summary: Self.summary(state),
-                    pagingState: model.inventory?.pagingState ?? .idle,
-                    isScoped: model.scope != .all,
-                    showAll: { model.scope = .pillar(.inventory) },
-                    retry: { model.inventory?.retry() },
-                    retryNextPage: { Task { await model.inventory?.retryNextPage() } },
-                    download: { Task { await model.downloadInventory() } },
-                    rows: {
-                        InventorySearchRows(
-                            Self.rows(state), query: model.query, session: session,
-                            onReachEnd: {
-                                Task { await model.inventory?.loadNextPageIfNeeded() }
-                            })
-                    }
-                )
+                inventorySection(state)
             }
         case .purchases:
             if let state = model.purchases?.section(scope: model.scope) {
-                let rows = Self.rows(state)
-                SearchSectionChrome(
-                    pillar: .purchases,
-                    summary: Self.summary(state),
-                    pagingState: model.purchases?.pagingState ?? .idle,
-                    isScoped: model.scope != .all,
-                    showAll: { model.scope = .pillar(.purchases) },
-                    retry: { model.purchases?.retry() },
-                    retryNextPage: { Task { await model.purchases?.retryNextPage() } },
-                    download: {},
-                    rows: {
-                        LazyVStack(spacing: PopsSpacing.zero) {
-                            ForEach(Array(rows.enumerated()), id: \.element.id) {
-                                index, hit in
-                                PurchaseSearchRow(hit: hit, query: model.query)
-                                    .onAppear {
-                                        guard index == rows.count - 1 else { return }
-                                        Task { await model.purchases?.loadNextPageIfNeeded() }
-                                    }
-                            }
-                        }
-                    }
-                )
+                purchasesSection(state)
             }
         }
+    }
+
+    private func inventorySection(
+        _ state: SearchSectionState<InventorySearchResult>
+    ) -> some View {
+        SearchSectionChrome(
+            pillar: .inventory,
+            summary: Self.summary(state),
+            pagingState: model.inventory?.pagingState ?? .idle,
+            isScoped: model.scope != .all,
+            showAll: { model.scope = .pillar(.inventory) },
+            retry: { model.inventory?.retry() },
+            retryNextPage: { Task { await model.inventory?.retryNextPage() } },
+            download: { Task { await model.downloadInventory() } },
+            rows: {
+                InventorySearchRows(
+                    Self.rows(state), query: model.query, session: session,
+                    onReachEnd: {
+                        Task { await model.inventory?.loadNextPageIfNeeded() }
+                    })
+            }
+        )
+    }
+
+    private func purchasesSection(
+        _ state: SearchSectionState<PurchaseSearchHit>
+    ) -> some View {
+        let rows = Self.rows(state)
+        return SearchSectionChrome(
+            pillar: .purchases,
+            summary: Self.summary(state),
+            pagingState: model.purchases?.pagingState ?? .idle,
+            isScoped: model.scope != .all,
+            showAll: { model.scope = .pillar(.purchases) },
+            retry: { model.purchases?.retry() },
+            retryNextPage: { Task { await model.purchases?.retryNextPage() } },
+            download: {},
+            rows: {
+                LazyVStack(spacing: PopsSpacing.zero) {
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, hit in
+                        PurchaseSearchRow(hit: hit, query: model.query)
+                            .onAppear {
+                                guard index == rows.count - 1 else { return }
+                                Task { await model.purchases?.loadNextPageIfNeeded() }
+                            }
+                    }
+                }
+            }
+        )
     }
 
     @ViewBuilder private var filterFields: some View {

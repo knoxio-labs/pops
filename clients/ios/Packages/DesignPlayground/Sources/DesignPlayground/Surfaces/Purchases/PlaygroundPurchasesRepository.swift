@@ -12,8 +12,7 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
     let hangs: Bool
 
     func search(
-        text: String, kind: AppCore.PurchaseSearchKind, status: AppCore.PurchaseSearchStatus,
-        tags: Set<String>, after cursor: String?, limit: Int
+        query: AppCore.PurchaseSearchQuery, after cursor: String?, limit: Int
     ) async throws -> AppCore.PurchaseSearchPage {
         AppCore.PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
     }

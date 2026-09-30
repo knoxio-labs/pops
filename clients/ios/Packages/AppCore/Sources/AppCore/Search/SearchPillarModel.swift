@@ -98,12 +98,6 @@ public final class SearchPillarModel<Provider: SearchProvider>: SearchPillarStat
         nextPageTask = nil
     }
 
-    /// Repeats the latest non-empty request with the same filter.
-    public func retry() {
-        guard let request else { return }
-        ask(request.query, filter: request.filter)
-    }
-
     /// Loads the next bounded page when a result boundary becomes visible.
     public func loadNextPageIfNeeded() async {
         await startNextPageIfNeeded()
@@ -115,41 +109,10 @@ public final class SearchPillarModel<Provider: SearchProvider>: SearchPillarStat
         await startNextPageIfNeeded()
     }
 
-    /// Shapes this pillar's current answer for the supplied screen scope.
-    public func section(scope: SearchScope) -> SearchSectionState<Provider.Hit>? {
-        guard scope.includes(pillar) else { return nil }
-        if !hits.isEmpty {
-            return .results(
-                rows: hits, total: totalCount ?? hits.count,
-                query: answeredQuery, isRefining: false)
-        }
-
-        switch answer {
-        case .current:
-            if pagingState == .loading { return .loading }
-            if pagingState == .failed { return .failed }
-            return nil
-        case .pending:
-            return .loading
-        case .failed:
-            return .failed
-        case .offline:
-            return .offline
-        case .notOnPhone:
-            return .notOnPhone
-        }
-    }
-
-    internal static func chipStatus(
-        answer: SearchAnswer, hitCount: Int, query: String
-    ) -> SearchChipStatus {
-        switch answer {
-        case .offline: .offline
-        case .notOnPhone: .notOnPhone
-        case .failed: query.isEmpty ? .none : .failed
-        case .pending: query.isEmpty ? .none : .pending
-        case .current: query.isEmpty ? .none : .count(hitCount)
-        }
+    /// Repeats the latest non-empty request with the same filter.
+    public func retry() {
+        guard let request else { return }
+        ask(request.query, filter: request.filter)
     }
 
     private func consumeFirstPage(
@@ -200,71 +163,48 @@ public final class SearchPillarModel<Provider: SearchProvider>: SearchPillarStat
         }
     }
 
-    private func consumeNextPages(
-        provider: Provider,
-        query: String,
-        filter: Provider.Filter,
-        startingAt initialCursor: String,
-        generation currentGeneration: Int
-    ) async {
-        var cursor: String? = initialCursor
-        while let requestedCursor = cursor {
-            guard isCurrent(currentGeneration) else { return }
-            let priorCount = hits.count
-            var receivedPage: SearchProviderPage<Provider.Hit>?
-            var terminalAnswer: SearchAnswer?
+    func finishNextPage(with answer: SearchAnswer) {
+        self.answer = answer
+        pagingState = .failed
+    }
 
-            for await event in provider.answers(
-                to: query, filter: filter, after: requestedCursor, limit: Self.pageSize)
-            {
-                guard isCurrent(currentGeneration) else { return }
-                switch event {
-                case .results(let page):
-                    receivedPage = page
-                    break
-                case .failed:
-                    terminalAnswer = .failed
-                case .offline:
-                    terminalAnswer = .offline
-                    answer = .offline
-                    continue
-                case .notOnPhone:
-                    terminalAnswer = .notOnPhone
-                }
-                if receivedPage != nil || terminalAnswer != nil { break }
-            }
+    func noteOfflinePage() {
+        answer = .offline
+    }
 
-            guard isCurrent(currentGeneration) else { return }
-            guard let page = receivedPage else {
-                answer = terminalAnswer ?? .failed
-                pagingState = .failed
-                return
-            }
+    func applyNextPage(
+        _ page: SearchProviderPage<Provider.Hit>, after requestedCursor: String
+    ) -> Bool {
+        if let next = page.nextCursor,
+            next == requestedCursor || acceptedCursors.contains(next)
+        {
+            finishNextPage(with: .failed)
+            return false
+        }
 
-            if let next = page.nextCursor,
-                next == requestedCursor || acceptedCursors.contains(next)
-            {
-                answer = .failed
-                pagingState = .failed
-                return
-            }
+        appendUnique(page.hits)
+        totalCount = page.totalCount ?? totalCount
+        nextCursor = page.nextCursor
+        if let next = page.nextCursor {
+            acceptedCursors.insert(next)
+            pagingState = .idle
+        } else {
+            pagingState = .exhausted
+        }
+        answer = .current
+        return true
+    }
 
-            appendUnique(page.hits)
-            if let reported = page.totalCount {
-                totalCount = reported
-            }
-            nextCursor = page.nextCursor
-            if let next = page.nextCursor {
-                acceptedCursors.insert(next)
-                pagingState = .idle
-            } else {
-                pagingState = .exhausted
-            }
-            answer = .current
-            cursor = page.nextCursor
+    func continuePagingAfterDuplicatePage(previousCount: Int) -> Bool {
+        guard hits.count == previousCount, nextCursor != nil else { return false }
+        pagingState = .loading
+        return true
+    }
 
-            guard hits.count == priorCount, cursor != nil else { return }
-            pagingState = .loading
+    private func appendUnique(_ pageHits: [Provider.Hit]) {
+        var known = Set(hits.map(\.id))
+        for hit in pageHits where known.insert(hit.id).inserted {
+            hits.append(hit)
         }
     }
 
@@ -281,17 +221,12 @@ public final class SearchPillarModel<Provider: SearchProvider>: SearchPillarStat
         answer = .current
     }
 
-    private func appendUnique(_ pageHits: [Provider.Hit]) {
-        var known = Set(hits.map(\.id))
-        hits.append(contentsOf: Self.unique(pageHits).filter { known.insert($0.id).inserted })
-    }
-
     private static func unique(_ pageHits: [Provider.Hit]) -> [Provider.Hit] {
         var seen = Set<Provider.Hit.ID>()
         return pageHits.filter { seen.insert($0.id).inserted }
     }
 
-    private func isCurrent(_ candidate: Int) -> Bool {
+    func isCurrent(_ candidate: Int) -> Bool {
         !Task.isCancelled && generation == candidate
     }
 

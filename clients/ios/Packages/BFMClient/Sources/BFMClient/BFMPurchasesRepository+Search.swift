@@ -4,19 +4,18 @@ import OpenAPIRuntime
 
 extension BFMPurchasesRepository {
     public func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
+        query: PurchaseSearchQuery, after cursor: String?, limit: Int
     ) async throws -> PurchaseSearchPage {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        guard !query.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
         }
         let output: SearchPurchases.Output
         do {
             output = try await client.generated.mobilePurchases_searchPurchases(
                 query: .init(
-                    q: text, kind: Self.wireKind(kind), cursor: cursor, limit: limit,
-                    status: Self.wireStatus(status),
-                    tags: tags.isEmpty ? nil : tags.sorted())
+                    q: query.text, kind: Self.wireKind(query.kind), cursor: cursor, limit: limit,
+                    status: Self.wireStatus(query.status),
+                    tags: query.tags.isEmpty ? nil : query.tags.sorted())
             )
         } catch let error as ClientError {
             throw BFMRepositoryFailure.failure(error, operation: SearchPurchases.id)

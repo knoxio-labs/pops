@@ -6,6 +6,7 @@ import {
   searchPageQueryKey,
 } from './search-page-query.js';
 import { byScoreDescending } from './search-ranking.js';
+import { normalizeSearchText } from './search-text.js';
 
 import type { PurchasesDb } from './internal.js';
 import type { PurchaseSearchScope } from './search-filters.js';
@@ -43,7 +44,7 @@ export function searchPurchasesPage(
   scope: PurchaseSearchScope,
   options: SearchPageOptions
 ): SearchPage | null {
-  const normalizedText = text.trim();
+  const normalizedText = normalizeSearchText(text);
   const key = searchPageQueryKey(normalizedText, scope, options.kind);
   const cursor = options.cursor === undefined ? null : decodeSearchPageCursor(options.cursor, key);
   if (options.cursor !== undefined && cursor === null) return null;

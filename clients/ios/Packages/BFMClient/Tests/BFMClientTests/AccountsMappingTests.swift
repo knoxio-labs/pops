@@ -30,7 +30,7 @@ internal struct AccountsMappingTests {
                     AccountsWire.account(), nextCursor: "next-page", totalCount: 31)))
 
         let page = try await repository.accountPage(
-            search: nil, archived: false, cursor: nil, limit: 25)
+            search: nil, archiveScope: .active, cursor: nil, limit: 25)
 
         #expect(page.accounts.map(\.id) == ["acc-1"])
         #expect(page.nextCursor == "next-page")

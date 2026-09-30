@@ -2,13 +2,12 @@ import Foundation
 
 /// The purchase records the phone can read.
 public protocol PurchasesRepository: Sendable {
-    /// Searches purchase and line matches in one bounded page. The server applies `text`, `kind`,
-    /// `status`, and, when non-empty, any-of `tags` before the page limit. `after` is an opaque
-    /// cursor from the preceding page; pass `nil` for the first page. Blank text matches nothing
-    /// and sends no request.
+    /// Searches purchase and line matches in one bounded page. The server applies the query's text,
+    /// kind, status, and, when non-empty, any-of tag predicates before the page limit. `after` is an
+    /// opaque cursor from the preceding page; pass `nil` for the first page. Blank text matches
+    /// nothing and sends no request.
     func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
+        query: PurchaseSearchQuery, after cursor: String?, limit: Int
     ) async throws -> PurchaseSearchPage
 
     /// Reads one page of item tags in use across purchase lines, in the server's most-used-first

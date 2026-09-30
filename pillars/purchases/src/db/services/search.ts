@@ -40,6 +40,7 @@ import { itemCandidate, itemRows } from './search-item-adapter.js';
 import { orderCandidate, orderRows } from './search-order-adapter.js';
 import { byScoreDescending, rank } from './search-ranking.js';
 import { matchingTagByItem } from './search-tags.js';
+import { normalizeSearchText } from './search-text.js';
 
 import type { PurchasesDb } from './internal.js';
 import type { PurchaseSearchScope } from './search-filters.js';
@@ -76,17 +77,17 @@ export function purchaseSearchCandidates(
   text: string,
   scope: PurchaseSearchScope = {}
 ): PurchaseSearchCandidates {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return { purchases: [], lines: [] };
+  const normalizedText = normalizeSearchText(text);
+  if (normalizedText.length === 0) return { purchases: [], lines: [] };
 
-  const taggedItemIds = matchingTagByItem(db, trimmed);
+  const taggedItemIds = matchingTagByItem(db, normalizedText);
 
   return {
-    purchases: scored(orderRows(db, trimmed, scope), orderCandidate, trimmed),
+    purchases: scored(orderRows(db, normalizedText, scope), orderCandidate, normalizedText),
     lines: scored(
-      itemRows(db, trimmed, scope, taggedItemIds),
+      itemRows(db, normalizedText, scope, taggedItemIds),
       (row, query) => itemCandidate(row, query, taggedItemIds),
-      trimmed
+      normalizedText
     ),
   };
 }

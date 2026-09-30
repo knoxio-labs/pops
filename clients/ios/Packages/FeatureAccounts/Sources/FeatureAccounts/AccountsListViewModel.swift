@@ -48,7 +48,9 @@ public final class AccountsListViewModel {
     internal var requestFilter: AccountsListFilter {
         let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return AccountsListFilter(
-            search: search.isEmpty ? nil : search, archived: showArchived ? nil : false)
+            search: search.isEmpty ? nil : search,
+            archiveScope: showArchived ? .all : .active
+        )
     }
 
     internal var sections: AccountsSections {
@@ -71,16 +73,21 @@ public final class AccountsListViewModel {
 
     /// Loads the first page for the current search and archive scope.
     public func loadAccounts() async {
+        guard let request = beginFirstPageRequest() else { return }
+        await loadFirstPage(request)
+    }
+
+    private func beginFirstPageRequest() -> AccountsFirstPageRequest? {
         let filter = requestFilter
         if loadedFilter == filter {
             switch state {
             case .empty, .loaded:
-                return
+                return nil
             case .loading, .failed:
                 break
             }
         }
-        guard firstPageFilter != filter else { return }
+        guard firstPageFilter != filter else { return nil }
 
         generation += 1
         let epoch = generation
@@ -95,8 +102,12 @@ public final class AccountsListViewModel {
         totalCount = nil
         state = .loading
 
+        return AccountsFirstPageRequest(id: requestID, epoch: epoch, filter: filter)
+    }
+
+    private func loadFirstPage(_ request: AccountsFirstPageRequest) async {
         defer {
-            if firstPageRequest == requestID {
+            if firstPageRequest == request.id {
                 firstPageRequest = nil
                 firstPageFilter = nil
             }
@@ -104,17 +115,17 @@ public final class AccountsListViewModel {
 
         do {
             let page = try await repository.accountPage(
-                search: filter.search,
-                archived: filter.archived,
+                search: request.filter.search,
+                archiveScope: request.filter.archiveScope,
                 cursor: nil,
                 limit: pageSize
             )
-            guard isCurrent(epoch: epoch, filter: filter) else { return }
-            showFirstPage(page, for: filter)
+            guard isCurrent(epoch: request.epoch, filter: request.filter) else { return }
+            showFirstPage(page, for: request.filter)
         } catch let error where error.isCancellation {
             return
         } catch {
-            guard isCurrent(epoch: epoch, filter: filter) else { return }
+            guard isCurrent(epoch: request.epoch, filter: request.filter) else { return }
             state = .failed(RepositoryError.describing(error))
         }
     }
@@ -135,7 +146,7 @@ public final class AccountsListViewModel {
         do {
             let page = try await repository.accountPage(
                 search: filter.search,
-                archived: filter.archived,
+                archiveScope: filter.archiveScope,
                 cursor: nil,
                 limit: pageSize
             )
@@ -189,7 +200,7 @@ public final class AccountsListViewModel {
         do {
             let page = try await repository.accountPage(
                 search: filter.search,
-                archived: filter.archived,
+                archiveScope: filter.archiveScope,
                 cursor: requestedCursor,
                 limit: pageSize
             )
@@ -242,7 +253,13 @@ public final class AccountsListViewModel {
 
 internal struct AccountsListFilter: Hashable, Sendable {
     let search: String?
-    let archived: Bool?
+    let archiveScope: AccountsArchiveScope
+}
+
+private struct AccountsFirstPageRequest {
+    let id: UUID
+    let epoch: Int
+    let filter: AccountsListFilter
 }
 
 /// The state of the next page, kept separate so a tail failure does not hide

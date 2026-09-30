@@ -62,7 +62,7 @@ internal struct AccountsListPagingTests {
         #expect(model.totalCount == 1)
         let firstRequest = await repository.pageRequests.first
         #expect(firstRequest?.search == "shared")
-        #expect(firstRequest?.archived == false)
+        #expect(firstRequest?.archiveScope == .active)
         #expect(firstRequest?.limit == 25)
     }
 
@@ -72,7 +72,7 @@ internal struct AccountsListPagingTests {
         let repository = InMemoryAccountsRepository(rows: [account])
 
         let page = try await repository.accountPage(
-            search: nil, archived: nil, cursor: nil, limit: .max)
+            search: nil, archiveScope: .all, cursor: nil, limit: .max)
 
         #expect(page.accounts == [account])
         #expect(page.nextCursor == nil)
@@ -86,10 +86,10 @@ internal struct AccountsListPagingTests {
         let repository = LegacyAccountsRepository(rows: [first, second, archived])
 
         let firstPage = try await repository.accountPage(
-            search: "shared", archived: false, cursor: nil, limit: 1)
+            search: "shared", archiveScope: .active, cursor: nil, limit: 1)
         let cursor = try #require(firstPage.nextCursor)
         let secondPage = try await repository.accountPage(
-            search: "shared", archived: false, cursor: cursor, limit: 1)
+            search: "shared", archiveScope: .active, cursor: cursor, limit: 1)
 
         #expect(firstPage.accounts == [first])
         #expect(firstPage.totalCount == 2)
@@ -109,7 +109,7 @@ internal struct AccountsListPagingTests {
 
         #expect(model.state == .loaded([active, archived]))
         #expect(model.sections.archived == [archived])
-        #expect(await repository.pageRequests.first?.archived == nil)
+        #expect(await repository.pageRequests.first?.archiveScope == .all)
     }
 
     @Test("a search with no matches differs from an empty account set")
@@ -231,7 +231,7 @@ private actor RepeatedPageAccountsRepository: AccountsRepository {
 
     func accountPage(
         search: String?,
-        archived: Bool?,
+        archiveScope: AccountsArchiveScope,
         cursor: String?,
         limit: Int
     ) async throws -> AccountsPage {
@@ -271,7 +271,7 @@ private actor ControlledAccountsRepository: AccountsRepository {
 
     func accountPage(
         search: String?,
-        archived: Bool?,
+        archiveScope: AccountsArchiveScope,
         cursor: String?,
         limit: Int
     ) async throws -> AccountsPage {

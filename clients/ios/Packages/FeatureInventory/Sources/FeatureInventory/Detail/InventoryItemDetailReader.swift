@@ -21,19 +21,9 @@ extension InventoryItemDetail {
         let protocol2Catalogue = source.inventoryProtocol2Catalogue()
         let protocol2Type = Self.protocol2Type(for: item, catalogue: protocol2Catalogue)
         let type = item.typeKey.flatMap { source.inventoryCatalogue().type(forKey: $0) }
-        let historyScope = InventoryEventPageScope.item(id)
-        let preview = source.inventoryEventPage(
-            InventoryEventPageQuery(
-                scope: historyScope, page: InventoryPageRequest(limit: 4)))
-        let latestLifecycleChange = source.inventoryEventPage(
-            InventoryEventPageQuery(
-                scope: historyScope, filter: .lifecycleChanges,
-                page: InventoryPageRequest(limit: 1))
-        ).rows.first
-        let fields =
-            protocol2Type.map {
-                InventoryDetailFields(item: item, type: $0, source: source)
-            } ?? InventoryDetailFields(values: item.fields, type: type)
+        let history = Self.history(of: id, source: source)
+        let fields = Self.fields(
+            item: item, protocol2Type: protocol2Type, legacyType: type, source: source)
         record = InventoryDetailRecord(
             id: item.id, name: item.name, typeName: protocol2Type?.label ?? type?.name,
             typePath: Self.typePath(
@@ -55,13 +45,35 @@ extension InventoryItemDetail {
         provenance = item.provenance.map(Self.provenance)
         documents = Self.documents(of: item)
         activity = InventoryActivityEntries(source: source, now: now, calendar: calendar)
-            .entries(for: preview.rows)
+            .entries(for: history.preview)
         conflict = ledger.repairs.first { $0.entityId == id }.map {
             InventoryDetailConflicts.conflict(
                 $0, catalogue: InventorySyncPage.catalogueReading(source, for: [$0]).detail($0))
         }
         lastSynced = Self.lastSynced(status, now: now)
-        lifecycleChange = Self.lifecycleChange(of: item, latest: latestLifecycleChange)
+        lifecycleChange = Self.lifecycleChange(of: item, latest: history.latestLifecycleChange)
+    }
+
+    private static func history(
+        of id: InventoryItem.ID, source: any InventoryQuerySource
+    ) -> (preview: [InventoryEvent], latestLifecycleChange: InventoryEvent?) {
+        let scope = InventoryEventPageScope.item(id)
+        let preview = source.inventoryEventPage(
+            InventoryEventPageQuery(scope: scope, page: InventoryPageRequest(limit: 4)))
+        let latestLifecycleChange = source.inventoryEventPage(
+            InventoryEventPageQuery(
+                scope: scope, filter: .lifecycleChanges, page: InventoryPageRequest(limit: 1))
+        ).rows.first
+        return (preview.rows, latestLifecycleChange)
+    }
+
+    private static func fields(
+        item: InventoryItem, protocol2Type: InventoryCatalogueType?, legacyType: InventoryType?,
+        source: any InventoryQuerySource
+    ) -> InventoryDetailFields {
+        protocol2Type.map {
+            InventoryDetailFields(item: item, type: $0, source: source)
+        } ?? InventoryDetailFields(values: item.fields, type: legacyType)
     }
 
     private static func protocol2Type(

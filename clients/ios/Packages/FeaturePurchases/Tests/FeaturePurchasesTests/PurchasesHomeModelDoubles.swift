@@ -29,10 +29,9 @@ internal struct FailingHomeRepository: PurchasesRepository {
         throw error
     }
 
-    func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
-    ) async throws -> PurchaseSearchPage { throw error }
+    func search(query: PurchaseSearchQuery, after cursor: String?, limit: Int) async throws
+        -> PurchaseSearchPage
+    { throw error }
 
     func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
         -> PurchaseTagPage
@@ -53,10 +52,9 @@ internal struct CancellingHomeRepository: PurchasesRepository {
         throw CancellationError()
     }
 
-    func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
-    ) async throws -> PurchaseSearchPage { throw CancellationError() }
+    func search(query: PurchaseSearchQuery, after cursor: String?, limit: Int) async throws
+        -> PurchaseSearchPage
+    { throw CancellationError() }
 
     func purchaseTags(search: String, after cursor: String?, limit: Int) async throws
         -> PurchaseTagPage
@@ -100,10 +98,9 @@ internal actor MutableHomeRepository: PurchasesRepository {
         return PurchasePage(purchases: rows, nextCursor: nil, totalCount: rows.count)
     }
 
-    func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
-    ) async throws -> PurchaseSearchPage {
+    func search(query: PurchaseSearchQuery, after cursor: String?, limit: Int) async throws
+        -> PurchaseSearchPage
+    {
         PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
     }
 
@@ -197,10 +194,9 @@ internal actor SequencedHomeRepository: PurchasesRepository {
         return try await response.value()
     }
 
-    func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
-    ) async throws -> PurchaseSearchPage {
+    func search(query: PurchaseSearchQuery, after cursor: String?, limit: Int) async throws
+        -> PurchaseSearchPage
+    {
         PurchaseSearchPage(hits: [], nextCursor: nil, totalCount: 0)
     }
 

@@ -221,10 +221,9 @@ private struct DelayedPurchasesRepository: PurchasesRepository {
     let delay: Duration
     let tracker: CompletionTracker
 
-    func search(
-        text: String, kind: PurchaseSearchKind, status: PurchaseSearchStatus, tags: Set<String>,
-        after cursor: String?, limit: Int
-    ) async throws -> PurchaseSearchPage {
+    func search(query: PurchaseSearchQuery, after cursor: String?, limit: Int) async throws
+        -> PurchaseSearchPage
+    {
         try await Task.sleep(for: delay)
         await tracker.markCompleted()
         return PurchaseSearchPage(hits: hits, nextCursor: nil, totalCount: hits.count)

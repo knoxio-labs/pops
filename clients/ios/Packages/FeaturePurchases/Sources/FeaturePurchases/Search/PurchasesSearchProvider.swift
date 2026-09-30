@@ -32,10 +32,11 @@ public struct PurchasesSearchProvider: SearchProvider {
                         }
                     }
                     let page = try await repository.search(
-                        text: query,
-                        kind: Self.kind(filter.kind),
-                        status: filter.status,
-                        tags: filter.tags,
+                        query: PurchaseSearchQuery(
+                            text: query,
+                            kind: Self.kind(filter.kind),
+                            status: filter.status,
+                            tags: filter.tags),
                         after: cursor,
                         limit: limit
                     )

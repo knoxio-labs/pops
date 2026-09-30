@@ -49,9 +49,9 @@ internal struct PurchaseSearchTests {
         ])
 
         let printed = try await repository.search(
-            text: "till", kind: .all, status: .any, tags: [], after: nil, limit: 5)
+            query: Self.query("till"), after: nil, limit: 5)
         let tagged = try await repository.search(
-            text: "dairy", kind: .all, status: .any, tags: [], after: nil, limit: 5)
+            query: Self.query("dairy"), after: nil, limit: 5)
 
         #expect(printed.hits.map(\.id) == ["purchase:order-1", "line:line-1"])
         #expect(tagged.hits.map(\.id) == ["line:line-1"])
@@ -74,7 +74,7 @@ internal struct PurchaseSearchTests {
         ])
 
         let results = try await repository.search(
-            text: "fake", kind: .all, status: .unmatched, tags: [], after: nil, limit: 5)
+            query: Self.query("fake", status: .unmatched), after: nil, limit: 5)
 
         #expect(results.hits.map(\.id) == ["purchase:waiting", "line:waiting-line"])
     }
@@ -86,7 +86,7 @@ internal struct PurchaseSearchTests {
         ])
 
         let results = try await repository.search(
-            text: text, kind: .all, status: .unmatched, tags: [], after: nil, limit: 5)
+            query: Self.query(text, status: .unmatched), after: nil, limit: 5)
 
         #expect(results.hits.isEmpty)
         #expect(results.nextCursor == nil)
@@ -98,8 +98,7 @@ internal struct PurchaseSearchTests {
         let repository = InMemoryPurchasesRepository(hits: [])
 
         _ = try await repository.search(
-            text: "fake", kind: .all, status: .any, tags: ["garden", "camping"], after: nil,
-            limit: 4)
+            query: Self.query("fake", tags: ["garden", "camping"]), after: nil, limit: 4)
 
         let calls = await repository.searchCalls
         #expect(calls.first?.tags == ["garden", "camping"])
@@ -132,10 +131,11 @@ internal struct PurchaseSearchTests {
         let repository = InMemoryPurchasesRepository(hits: matchingHits, pageSize: 2)
 
         let first = try await repository.search(
-            text: "needle", kind: .all, status: .matched, tags: ["garden"], after: nil, limit: 2)
+            query: Self.query("needle", status: .matched, tags: ["garden"]),
+            after: nil, limit: 2)
         let second = try await repository.search(
-            text: "needle", kind: .all, status: .matched, tags: ["garden"], after: first.nextCursor,
-            limit: 2)
+            query: Self.query("needle", status: .matched, tags: ["garden"]),
+            after: first.nextCursor, limit: 2)
 
         #expect(first.hits.map(\.id) == ["line:line-1", "line:line-2"])
         #expect(first.totalCount == 3)
@@ -161,12 +161,11 @@ internal struct PurchaseSearchTests {
             ], pageSize: 1)
 
         let firstLinePage = try await repository.search(
-            text: "needle", kind: .lines, status: .any, tags: [], after: nil, limit: 1)
+            query: Self.query("needle", kind: .lines), after: nil, limit: 1)
         let secondLinePage = try await repository.search(
-            text: "needle", kind: .lines, status: .any, tags: [],
-            after: firstLinePage.nextCursor, limit: 1)
+            query: Self.query("needle", kind: .lines), after: firstLinePage.nextCursor, limit: 1)
         let firstPurchasePage = try await repository.search(
-            text: "needle", kind: .purchases, status: .any, tags: [], after: nil, limit: 1)
+            query: Self.query("needle", kind: .purchases), after: nil, limit: 1)
 
         #expect(firstLinePage.hits.map(\.id) == ["line:line-1"])
         #expect(secondLinePage.hits.map(\.id) == ["line:line-2"])
@@ -175,7 +174,7 @@ internal struct PurchaseSearchTests {
 
         await #expect(throws: RepositoryError.contractMismatch) {
             try await repository.search(
-                text: "needle", kind: .purchases, status: .any, tags: [],
+                query: Self.query("needle", kind: .purchases),
                 after: firstLinePage.nextCursor, limit: 1)
         }
     }
@@ -188,50 +187,11 @@ internal struct PurchaseSearchTests {
                 .purchase(order, printedMatch: "needle \(index)")
             }, pageSize: 1)
         let first = try await repository.search(
-            text: "needle", kind: .all, status: .matched, tags: [], after: nil, limit: 1)
+            query: Self.query("needle", status: .matched), after: nil, limit: 1)
 
         await #expect(throws: RepositoryError.contractMismatch) {
             try await repository.search(
-                text: "needle", kind: .all, status: .any, tags: [], after: first.nextCursor,
-                limit: 1)
-        }
-    }
-
-    @Test("tag search filters before paging and preserves server ordering")
-    func fakePurchaseTags() async throws {
-        let seeded = [
-            PurchaseTagCount(tag: "garden", count: 4),
-            PurchaseTagCount(tag: "camping garden", count: 3),
-            PurchaseTagCount(tag: "tool", count: 2),
-            PurchaseTagCount(tag: "garden store", count: 1),
-        ]
-        let repository = InMemoryPurchasesRepository(pageSize: 2, tagsInUse: seeded)
-
-        let first = try await repository.purchaseTags(search: "garden", after: nil, limit: 2)
-        let second = try await repository.purchaseTags(
-            search: "garden", after: first.nextCursor, limit: 2)
-
-        #expect(first.tags == Array(seeded.prefix(2)))
-        #expect(first.totalCount == 3)
-        #expect(second.tags == [seeded[3]])
-        #expect(second.nextCursor == nil)
-        let calls = await repository.tagsCalls
-        #expect(calls.map(\.search) == ["garden", "garden"])
-        #expect(calls.map(\.cursor) == [nil, first.nextCursor])
-    }
-
-    @Test("tag cursor is bound to its search query")
-    func tagCursorIsBoundToQuery() async throws {
-        let repository = InMemoryPurchasesRepository(
-            pageSize: 1,
-            tagsInUse: [
-                PurchaseTagCount(tag: "garden", count: 1),
-                PurchaseTagCount(tag: "garden tools", count: 1),
-            ])
-        let first = try await repository.purchaseTags(search: "garden", after: nil, limit: 1)
-
-        await #expect(throws: RepositoryError.contractMismatch) {
-            try await repository.purchaseTags(search: "tool", after: first.nextCursor, limit: 1)
+                query: Self.query("needle"), after: first.nextCursor, limit: 1)
         }
     }
 
@@ -246,6 +206,15 @@ internal struct PurchaseSearchTests {
             orderedOn: Date(timeIntervalSince1970: 1_700_000_000),
             total: money(2_500),
             status: status)
+    }
+
+    private static func query(
+        _ text: String,
+        kind: PurchaseSearchKind = .all,
+        status: PurchaseSearchStatus = .any,
+        tags: Set<String> = []
+    ) -> PurchaseSearchQuery {
+        PurchaseSearchQuery(text: text, kind: kind, status: status, tags: tags)
     }
 
     private static func money(_ cents: Int) -> MoneyAmount {

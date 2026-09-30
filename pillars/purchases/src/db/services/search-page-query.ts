@@ -116,12 +116,12 @@ export function searchRankOrderBy(
 
 /** Canonical request tuple the continuation token belongs to. */
 export function searchPageQueryKey(
-  text: string,
+  normalizedText: string,
   scope: PurchaseSearchScope,
   kind?: SearchPageKind
 ): string {
   return JSON.stringify({
-    text: text.trim(),
+    text: normalizedText,
     kind: kind ?? null,
     sources: [...(scope.sources ?? [])].toSorted(),
     statuses: [...(scope.statuses ?? [])].toSorted(),

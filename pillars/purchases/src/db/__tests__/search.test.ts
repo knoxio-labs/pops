@@ -539,22 +539,40 @@ describe('matching an item tag', () => {
 });
 
 describe('cursor-paged ranked search', () => {
-  it('trims the query before matching, like legacy ranked search', () => {
-    orderWithItems('trimmed-query', 'Bunnings Warehouse', []);
+  it('uses trimmed text for matching, scoring, and continuation identity', () => {
+    orderWithItems('trimmed-query-old', 'Bunnings Warehouse', [], '2026-01-01T00:00:00Z');
+    orderWithItems('trimmed-query-new', 'Bunnings Outdoors', [], '2026-01-02T00:00:00Z');
 
     const legacy = searchPurchases(opened.db, ' bunnings ');
-    const page = searchPurchasesPage(
+    const first = searchPurchasesPage(
       opened.db,
       ' bunnings ',
       {},
       {
         kind: 'purchases',
-        limit: 10,
+        limit: 1,
       }
     );
+    if (first === null) throw new Error('Expected the first search page');
+    const second = searchPurchasesPage(
+      opened.db,
+      'bunnings  ',
+      {},
+      {
+        kind: 'purchases',
+        cursor: first?.nextCursor ?? undefined,
+        limit: 1,
+      }
+    );
+    if (second === null) throw new Error('Expected the second search page');
 
-    expect(page?.hits).toEqual(legacy);
-    expect(page?.totalCount).toBe(1);
+    expect(first.hits).toHaveLength(1);
+    expect(second.hits).toHaveLength(1);
+    expect(second.nextCursor).toBeNull();
+    expect([...first.hits, ...second.hits]).toEqual(legacy);
+    expect(first.hits[0]?.score).toBe(0.8);
+    expect(second.hits[0]?.score).toBe(0.8);
+    expect(first.totalCount).toBe(2);
   });
 
   it('does not treat underscores in line-tag queries as SQL wildcards', () => {
