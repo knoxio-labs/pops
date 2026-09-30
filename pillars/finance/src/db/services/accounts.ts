@@ -9,7 +9,7 @@
  * hides an account from active views without touching what already points
  * at it, and is reversible by patching `archivedAt` back to `null`.
  */
-import { and, asc, count, eq, inArray, isNotNull, isNull, like } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, isNull, like, or } from 'drizzle-orm';
 
 import { DAY_ONE_ACCOUNT_KINDS } from '../../contract/account-kind.js';
 import { AccountNotFoundError, ReservedAccountKindError } from '../errors.js';
@@ -19,6 +19,7 @@ import {
   validatePersonEntityInvariant,
   validatePersonEntityInvariantOnUpdate,
 } from './account-entity-invariant.js';
+import { accountKindsMatchingSearch } from './account-search.js';
 import * as entityPrecreateOutboxService from './entity-precreate-outbox.js';
 
 import type { AccountKind } from '../../contract/account-kind.js';
@@ -91,13 +92,19 @@ function isDayOneAccountKind(kind: AccountKind): boolean {
  * List accounts matching the given filters, ordered by `displayOrder` then
  * name, with a total count for pagination.
  *
- * `search` matches `name` case-insensitively (SQLite `LIKE`'s default ASCII
- * case-folding), `kind` is an exact match, and `archived` restricts to only
- * archived (`true`) or only active (`false`) rows — omitted returns both.
+ * `search` matches `name` or an account-kind label case-insensitively,
+ * `kind` is an exact match, and `archived` restricts to only archived
+ * (`true`) or only active (`false`) rows — omitted returns both.
  */
 export function listAccounts(db: FinanceDb, opts: ListAccountsOptions): AccountListResult {
   const conditions = [];
-  if (opts.search) conditions.push(like(accounts.name, `%${opts.search}%`));
+  if (opts.search) {
+    const matchingKinds = accountKindsMatchingSearch(opts.search);
+    const nameMatch = like(accounts.name, `%${opts.search}%`);
+    conditions.push(
+      matchingKinds.length === 0 ? nameMatch : or(nameMatch, inArray(accounts.kind, matchingKinds))
+    );
+  }
   if (opts.kind) conditions.push(eq(accounts.kind, opts.kind));
   if (opts.archived === true) conditions.push(isNotNull(accounts.archivedAt));
   if (opts.archived === false) conditions.push(isNull(accounts.archivedAt));

@@ -355,10 +355,9 @@ what proves another page exists — asking for a total instead would be a second
 count query per scroll tick, and a total that is stale the moment it is read.
 
 `GET /mobile/finance/accounts` uses an opaque cursor and accepts `search`,
-`kind`, and `archived` filters. BFM applies search to the mapped account's
-name, resolved institution/contact name, and kind label before its page limit,
-so a later account matching a resolved label remains reachable. The cursor is
-tied to those filters, so a changed query starts a new walk.
+`kind`, and `archived` filters. Finance applies search to account names and
+kind labels before its page limit. The cursor is tied to those filters, so a
+changed query starts a new walk.
 
 `GET /mobile/inventory/items` relays Inventory's bounded `/web/items` query and
 result shape, including its filters, stable ordering, totals, and next cursor.

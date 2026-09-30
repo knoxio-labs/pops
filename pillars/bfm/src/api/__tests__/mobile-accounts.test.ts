@@ -189,18 +189,18 @@ describe('the account row is mobile-shaped', () => {
     expect(res.body.accounts[0].institutionId).toBeNull();
   });
 
-  it('starts finance paging at offset zero with its contract cap', async () => {
+  it('starts Finance paging with one extra row to detect another page', async () => {
     const { app, token, fake } = openWithRows([accountRow({ id: 'acc-1' })]);
 
     await get(app, token, LIST_PATH);
 
-    expect(fake.listCalls).toEqual([{ limit: 500, offset: 0 }]);
+    expect(fake.listCalls).toEqual([{ limit: 26, offset: 0 }]);
   });
 });
 
 describe('search and cursor paging', () => {
-  it('filters resolved institution names before limiting and continues the same result set', async () => {
-    const { app, token } = openWithRows([
+  it('searches account names before limiting and continues with bounded Finance pages', async () => {
+    const { app, token, fake } = openWithRows([
       accountRow({ id: 'first', displayOrder: 0, name: 'Everyday' }),
       accountRow({
         id: 'second',
@@ -212,30 +212,59 @@ describe('search and cursor paging', () => {
       accountRow({
         id: 'third',
         displayOrder: 2,
-        name: 'Savings',
+        name: 'Everyday Savings',
         entityId: 'bank-2',
         entityDisplayName: 'Harbour Bank Plus',
       }),
     ]);
 
-    const first = await get(app, token, `${LIST_PATH}?search=harbour&limit=1`);
+    const first = await get(app, token, `${LIST_PATH}?search=everyday&limit=1`);
     const cursor = first.body.nextCursor as string;
     const second = await get(
       app,
       token,
-      `${LIST_PATH}?search=harbour&limit=1&cursor=${encodeURIComponent(cursor)}`
+      `${LIST_PATH}?search=everyday&limit=1&cursor=${encodeURIComponent(cursor)}`
     );
 
     expect(first.status).toBe(200);
-    expect(first.body.accounts.map((account: { id: string }) => account.id)).toEqual(['second']);
+    expect(first.body.accounts.map((account: { id: string }) => account.id)).toEqual(['first']);
     expect(first.body.nextCursor).toEqual(expect.any(String));
     expect(first.body.totalCount).toBe(2);
     expect(second.status).toBe(200);
     expect(second.body.accounts.map((account: { id: string }) => account.id)).toEqual(['third']);
     expect(second.body.nextCursor).toBeNull();
+    expect(fake.listCalls).toEqual([
+      { limit: 2, offset: 0, search: 'everyday' },
+      { limit: 2, offset: 1, search: 'everyday' },
+    ]);
   });
 
-  it('preserves kind-label, kind, and archive matching on the server page', async () => {
+  it('does not match linked institution or contact labels in BFM', async () => {
+    const { app, token, fake } = openWithRows([
+      accountRow({
+        id: 'bank',
+        name: 'Bills',
+        entityId: 'bank-1',
+        entityDisplayName: 'Harbour Bank',
+      }),
+      accountRow({
+        id: 'person',
+        name: 'IOU',
+        kind: 'person',
+        entityId: 'contact-1',
+        entityDisplayName: 'Harbour Contact',
+      }),
+    ]);
+
+    const res = await get(app, token, `${LIST_PATH}?search=harbour&limit=1`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.accounts).toEqual([]);
+    expect(res.body.totalCount).toBe(0);
+    expect(fake.listCalls).toEqual([{ limit: 2, offset: 0, search: 'harbour' }]);
+  });
+
+  it('applies kind-label search and exact kind/archive filters in Finance', async () => {
     const { app, token, fake } = openWithRows([
       accountRow({ id: 'cash', displayOrder: 0, kind: 'cash', archivedAt: null }),
       accountRow({
@@ -255,26 +284,16 @@ describe('search and cursor paging', () => {
     expect(res.status).toBe(200);
     expect(res.body.accounts.map((account: { id: string }) => account.id)).toEqual(['card']);
     expect(fake.listCalls).toEqual([
-      { limit: 500, offset: 0, kind: 'credit-card', archived: 'true' },
+      { limit: 2, offset: 0, search: 'credit card', kind: 'credit-card', archived: 'true' },
     ]);
   });
 
   it('rejects a cursor reused with different search filters', async () => {
     const { app, token } = openWithRows([
-      accountRow({
-        id: 'first',
-        displayOrder: 0,
-        entityId: 'bank-1',
-        entityDisplayName: 'Harbour Bank',
-      }),
-      accountRow({
-        id: 'second',
-        displayOrder: 1,
-        entityId: 'bank-2',
-        entityDisplayName: 'Harbour Bank Plus',
-      }),
+      accountRow({ id: 'first', displayOrder: 0, name: 'Everyday Checking' }),
+      accountRow({ id: 'second', displayOrder: 1, name: 'Everyday Savings' }),
     ]);
-    const first = await get(app, token, `${LIST_PATH}?search=harbour&limit=1`);
+    const first = await get(app, token, `${LIST_PATH}?search=everyday&limit=1`);
 
     const res = await get(
       app,

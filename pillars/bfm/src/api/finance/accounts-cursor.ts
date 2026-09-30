@@ -5,25 +5,25 @@ import { MobileAccountKindSchema } from '../../contract/account.js';
 import type { MobileAccountsQuery } from '../../contract/account.js';
 
 const AccountsCursorSchema = z.object({
-  v: z.literal(1),
-  id: z.string().min(1),
+  v: z.literal(2),
+  offset: z.number().int().nonnegative(),
   search: z.string().nullable(),
   kind: MobileAccountKindSchema.nullable(),
   archived: z.enum(['true', 'false']).nullable(),
 });
 
-/** The last account served and the filters that define its list. */
+/** The next Finance offset and the filters that define the list. */
 export type AccountsCursor = z.infer<typeof AccountsCursorSchema>;
 
-/** Encode an account id and its active filters as an opaque continuation token. */
+/** Encode the next Finance offset and active filters as an opaque continuation token. */
 export function encodeAccountsCursor(
-  id: string,
+  offset: number,
   query: Pick<MobileAccountsQuery, 'search' | 'kind' | 'archived'>
 ): string {
   return Buffer.from(
     JSON.stringify({
-      v: 1,
-      id,
+      v: 2,
+      offset,
       search: query.search ?? null,
       kind: query.kind ?? null,
       archived: query.archived ?? null,

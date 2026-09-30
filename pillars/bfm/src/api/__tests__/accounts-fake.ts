@@ -3,8 +3,8 @@
  * {@link PillarGateway} — see `finance-fake.ts` for why this fakes the HANDLE
  * rather than the gateway.
  *
- * Finance account rows are served in bounded pages so the BFM can search
- * resolved institution and contact labels before returning its mobile page.
+ * Finance applies account name, account-kind, and list filters before serving
+ * each bounded page to the BFM.
  */
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
@@ -75,9 +75,24 @@ export function accountRow(overrides: Partial<AccountFakeRow> & { id: string }):
 interface AccountListInput {
   readonly limit: number;
   readonly offset: number;
+  readonly search: string | undefined;
   readonly kind: string | undefined;
   readonly archived: 'true' | 'false' | undefined;
 }
+
+const ACCOUNT_KIND_LABELS: Readonly<Record<string, string>> = {
+  checking: 'Checking',
+  savings: 'Savings',
+  'credit-card': 'Credit card',
+  cash: 'Cash',
+  'gift-card': 'Gift card',
+  person: 'Person',
+  shared: 'Shared',
+  loan: 'Loan',
+  'novated-lease': 'Novated lease',
+  crypto: 'Crypto',
+  other: 'Other',
+};
 
 interface AccountListPage {
   readonly data: readonly AccountFakeRow[];
@@ -92,21 +107,41 @@ interface AccountListPage {
 function readAccountListInput(rawInput: unknown): AccountListInput {
   const input = typeof rawInput === 'object' && rawInput !== null ? rawInput : {};
   return {
-    limit: 'limit' in input && typeof input.limit === 'number' ? input.limit : 50,
-    offset: 'offset' in input && typeof input.offset === 'number' ? input.offset : 0,
-    kind: 'kind' in input && typeof input.kind === 'string' ? input.kind : undefined,
-    archived:
-      'archived' in input && (input.archived === 'true' || input.archived === 'false')
-        ? input.archived
-        : undefined,
+    limit: readNumber(input, 'limit') ?? 50,
+    offset: readNumber(input, 'offset') ?? 0,
+    search: readString(input, 'search'),
+    kind: readString(input, 'kind'),
+    archived: readArchived(input),
   };
 }
 
+function readNumber(input: object, key: string): number | undefined {
+  const value = Reflect.get(input, key);
+  return typeof value === 'number' ? value : undefined;
+}
+
+function readString(input: object, key: string): string | undefined {
+  const value = Reflect.get(input, key);
+  return typeof value === 'string' ? value : undefined;
+}
+
+function readArchived(input: object): 'true' | 'false' | undefined {
+  const value = Reflect.get(input, 'archived');
+  return value === 'true' || value === 'false' ? value : undefined;
+}
+
 function matchesAccountListInput(row: AccountFakeRow, input: AccountListInput): boolean {
+  const search = input.search?.toLocaleLowerCase();
+  const kindLabel = ACCOUNT_KIND_LABELS[row.kind] ?? row.kind.replaceAll('-', ' ');
+  const matchesSearch =
+    search === undefined ||
+    row.name.toLocaleLowerCase().includes(search) ||
+    kindLabel.toLocaleLowerCase().includes(search) ||
+    row.kind.toLocaleLowerCase().includes(search);
   const matchesKind = input.kind === undefined || row.kind === input.kind;
   const matchesArchive =
     input.archived === undefined || (row.archivedAt !== null) === (input.archived === 'true');
-  return matchesKind && matchesArchive;
+  return matchesSearch && matchesKind && matchesArchive;
 }
 
 function accountListPage(rows: readonly AccountFakeRow[], rawInput: unknown): AccountListPage {
