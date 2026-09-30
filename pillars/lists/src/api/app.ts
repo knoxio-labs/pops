@@ -14,9 +14,11 @@ import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
 import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { listsContract } from '../contract/rest.js';
 import { type ListsApiDeps, makeRequestHandler } from './handlers.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeListsRestHandlers } from './rest/handlers.js';
 
 /**
@@ -74,6 +76,12 @@ export function createListsApiApp(deps: ListsApiDeps): Express {
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
 
   createExpressEndpoints(listsContract, makeListsRestHandlers(deps), app, {
     requestValidationErrorHandler: (error, _req, _res, next) => {

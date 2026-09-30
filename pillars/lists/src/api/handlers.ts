@@ -6,6 +6,7 @@
  */
 import { getPillarRegistry } from './pillars/registry.js';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedListsDb } from '../db/index.js';
@@ -21,6 +22,11 @@ export interface ListsApiDeps {
    * special-case the host pillar.
    */
   selfBaseUrl: string;
+  /**
+   * Resolves a presented `X-API-Key` to its service account. Defaults to a
+   * registry-backed verifier; tests inject a fake so no test needs a live registry.
+   */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export interface HealthResponse {

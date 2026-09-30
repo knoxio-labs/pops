@@ -78,8 +78,12 @@ Everything inside the pillar imports across subdirs using **relative paths**
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`
 from `@pops/pillar-sdk`, which POSTs the manifest to the `registry` pillar
 (`/registry/register`) and deregisters on `SIGTERM`. There is no per-request
-auth: the pillar trusts the docker network and the gateway in front
-authenticates.
+auth for requests without `X-API-Key`; browser traffic remains governed by the
+shell and Cloudflare Access perimeter. When a key is presented, the contract
+routes resolve it through the registry and enforce scopes derived from
+`listsContract`. Unknown or revoked keys receive 401, insufficient grants
+receive 403, and an unreachable registry receives 503. The `/health`,
+`/pillars`, and `/openapi` routes remain outside the contract gate.
 
 ## Error responses
 
