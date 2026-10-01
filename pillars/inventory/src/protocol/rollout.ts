@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { syncMeta, type SyncMetaKey } from '../db/index.js';
 
-import type { CommandDb } from '../domain/commands/index.js';
+import type { CommandDb } from '../db/command-db.js';
 
 /** Highest inventory sync protocol understood by this server build. */
 export const SUPPORTED_INVENTORY_PROTOCOL = 3;
