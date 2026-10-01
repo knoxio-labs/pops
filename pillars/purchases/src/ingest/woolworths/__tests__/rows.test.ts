@@ -82,6 +82,7 @@ describe('single-item receipts', () => {
         quantity: 1,
         lineTotalCents: 800,
         unitPriceCents: 800,
+        pricedByMeasure: false,
         notes: [],
         gstApplicable: true,
         promotional: false,
@@ -130,6 +131,27 @@ describe('weighed goods', () => {
 
   it('keeps the weight, which is the only record of how much was bought', () => {
     expect(groupReceiptRows(WEIGHED).items[0]?.notes).toEqual(['0.202 kg NET @ $2.90/kg']);
+  });
+
+  it('marks the line priced by weight', () => {
+    expect(groupReceiptRows(WEIGHED).items.map((item) => item.pricedByMeasure)).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('keeps a per-each unit-price row without marking the line as weighed', () => {
+    const [item] = groupReceiptRows([
+      { description: 'Loose Pear', amount: '' },
+      { description: '1 ea @ $5.00', amount: '5.00' },
+    ]).items;
+
+    expect(item).toMatchObject({
+      name: 'Loose Pear',
+      lineTotalCents: 500,
+      pricedByMeasure: false,
+      notes: ['1 ea @ $5.00'],
+    });
   });
 
   it('reports no anomaly for a receipt of nothing but weighed goods', () => {

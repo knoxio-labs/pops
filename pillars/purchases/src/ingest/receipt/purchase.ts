@@ -32,6 +32,7 @@ import {
   instantFromLocalPartsAtOffset,
   utcOffsetMinutesAt,
 } from '../local-time.js';
+import { isMeasureNote } from '../measure-notes.js';
 import { parseAmountCents } from '../money.js';
 import { RECEIPT_SOURCE_ID } from '../source-ids.js';
 import { resolveCapture } from './capture.js';
@@ -112,6 +113,7 @@ export function toItem(
     // Prose the receipt printed, not a classification of the product. The
     // model is never asked what the thing IS — see `extraction.ts`.
     notes: line.unitNote === undefined ? [] : [line.unitNote],
+    pricedByMeasure: line.unitNote !== undefined && isMeasureNote(line.unitNote),
     // A machine reading, never a human assertion at this point in the
     // pipeline — `listPriceAsserted` is deliberately omitted.
     listPriceCents,

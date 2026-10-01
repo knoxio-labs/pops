@@ -60,7 +60,7 @@ import {
   type RankedLine,
 } from './product-group.js';
 import { identifyProduct } from './product-identity.js';
-import { selectMeasuredItemIds, selectScopedLines } from './product-leaderboard-lines.js';
+import { selectScopedLines } from './product-leaderboard-lines.js';
 import { tupleKey } from './tuple-key.js';
 
 import type { PurchasesDb } from './internal.js';
@@ -124,7 +124,6 @@ export function rankProductPurchases(
   filter: ProductLeaderboardFilter = {}
 ): ProductLeaderboard {
   const lines = selectScopedLines(db, filter);
-  const measuredItemIds = selectMeasuredItemIds(db, filter);
   const dictionary = loadProductDictionary(db);
 
   const buckets = new Map<string, ProductBucket>();
@@ -156,7 +155,7 @@ export function rankProductPurchases(
     const existing = buckets.get(key);
     const bucket = existing ?? startBucket(ranked, identity);
     if (existing === undefined) buckets.set(key, bucket);
-    accumulate(bucket, ranked, identity, measuredItemIds.has(line.itemId));
+    accumulate(bucket, ranked, identity, line.pricedByMeasure);
     noteMerchant(bucket, line);
   }
 

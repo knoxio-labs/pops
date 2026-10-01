@@ -148,6 +148,13 @@
       "when": 1790795453155,
       "tag": "0020_amazon_descriptor_alternatives",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790812800000,
+      "tag": "0021_purchase_item_priced_by_measure",
+      "breakpoints": true
     }
   ]
 }

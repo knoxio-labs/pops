@@ -258,11 +258,31 @@ describe('the line items', () => {
       ],
     }).items;
     expect(items?.[0]).toMatchObject({ quantity: 1, unitPriceCents: 1250 });
+    expect(items?.[0]?.pricedByMeasure).toBe(true);
     // A note rather than a tag: the model transcribes what was printed and
     // is never asked what the product is, so the drop-zone asserts no
     // classification at all.
     expect(items?.[0]?.notes).toEqual(['0.202 kg NET @ $2.90/kg']);
     expect(items?.[0]?.tags).toBeUndefined();
+  });
+
+  it('does not mark a per-each qualifier as priced by measure', () => {
+    const items = mapped({
+      total: '$5.00',
+      lines: [
+        {
+          description: 'Loose Pear',
+          amount: '$5.00',
+          unitNote: '1 ea @ $5.00',
+          listAmount: null,
+        },
+      ],
+    }).items;
+
+    expect(items?.[0]).toMatchObject({
+      pricedByMeasure: false,
+      notes: ['1 ea @ $5.00'],
+    });
   });
 
   it('carries a stated list price, unasserted', () => {

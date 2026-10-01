@@ -58,6 +58,8 @@ export interface CreateItemInput {
   readonly url?: string | null;
   readonly imageUrl?: string | null;
   readonly quantity?: number;
+  /** Set at ingest when the source's unit-price note identifies weight or volume pricing. */
+  readonly pricedByMeasure?: boolean;
   readonly unitPriceCents: number;
   readonly lineTotalCents: number;
   readonly allocatedShippingCents?: number;

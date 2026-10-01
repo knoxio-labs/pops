@@ -9,6 +9,20 @@ const map = (options: Parameters<typeof receiptPage>[0] = {}, id = 'abc') =>
   mapReceipt(id, receiptPage(options) as ReceiptPage);
 
 describe('a real shop', () => {
+  it('maps weight and per-each continuation rows to the right measure flag', () => {
+    const purchase = map({
+      lines: [
+        { prefixChar: null, description: 'Orange Navel Loose', amount: '' },
+        { prefixChar: null, description: '0.202 kg NET @ $2.90/kg', amount: '0.59' },
+        { prefixChar: null, description: 'Loose Pear', amount: '' },
+        { prefixChar: null, description: '1 ea @ $5.00', amount: '5.00' },
+      ],
+      total: '$5.59',
+    })?.purchase;
+
+    expect(purchase?.items?.map((item) => item.pricedByMeasure)).toEqual([true, false]);
+  });
+
   it('maps to one purchase carrying one charge for the whole receipt', () => {
     const purchase = map()?.purchase;
     expect(purchase?.totalCents).toBe(3258);
