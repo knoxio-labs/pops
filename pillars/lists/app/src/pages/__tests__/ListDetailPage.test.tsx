@@ -298,6 +298,7 @@ describe('pillars/lists/docs/prds/crud-ui — ListDetailPage', () => {
     render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
     await userEvent.click(await screen.findByRole('button', { name: /2kg apples/i }));
     const input = screen.getByLabelText(/edit item label/i);
+    expect(input).toHaveClass('text-base', 'md:text-xs');
     await userEvent.clear(input);
     await userEvent.type(input, 'Green apples{Enter}');
     await waitFor(() =>

@@ -33,7 +33,7 @@ export function SearchFilterControls({
         options={[...typeOptions]}
         placeholder="Type"
         disabled={disabled}
-        className="h-9 w-28 text-xs"
+        className="h-9 w-28 text-base md:text-xs"
         containerClassName="bg-background"
       />
       <Select
@@ -43,7 +43,7 @@ export function SearchFilterControls({
         options={[...placementOptions]}
         placeholder="Placement"
         disabled={disabled}
-        className="h-9 w-32 text-xs"
+        className="h-9 w-32 text-base md:text-xs"
         containerClassName="bg-background"
       />
     </div>
