@@ -363,10 +363,10 @@ describe('the scope job is wired to the workflow it scopes', () => {
   });
 });
 
-describe("ios-quality.yml's macOS job condition", () => {
-  // Evaluated rather than pattern-matched: the condition is the whole of the
-  // stacked-PR policy (POPS-4150), and a regex over it would still pass with
-  // an operator flipped. GitHub's expression grammar as this condition uses it
+describe("ios-quality.yml's macOS job conditions", () => {
+  // Evaluated rather than pattern-matched: these conditions select the iOS
+  // validation lane for each PR base, and a regex would still pass with an
+  // operator flipped. GitHub's expression grammar as these conditions use it
   // — quoted literals, `==`, `!=`, `&&`, `||`, `!`, property access and
   // `cancelled()` and `startsWith()` — are also valid JavaScript once
   // `==`/`!=` are made strict.
@@ -379,11 +379,12 @@ describe("ios-quality.yml's macOS job condition", () => {
     cancelled?: boolean;
   };
 
-  function runsFor(event: Event): boolean {
-    const raw = jobsOf('ios-quality.yml').get('quality')?.if;
-    if (typeof raw !== 'string') throw new Error('quality job has no string `if:`');
+  function runsFor(jobName: 'quality' | 'stacked-build', event: Event): boolean {
+    const raw = jobsOf('ios-quality.yml').get(jobName)?.if;
+    if (typeof raw !== 'string') throw new Error(`${jobName} job has no string \`if:\``);
     const body = /^\$\{\{([\s\S]*)\}\}$/u.exec(raw.trim())?.[1];
-    if (body === undefined) throw new Error(`quality job's \`if:\` is not one expression: ${raw}`);
+    if (body === undefined)
+      throw new Error(`${jobName} job's \`if:\` is not one expression: ${raw}`);
     const js = body.replace(/==/gu, '===').replace(/!=/gu, '!==');
     const github = {
       event_name: event.eventName,
@@ -460,7 +461,35 @@ describe("ios-quality.yml's macOS job condition", () => {
       { eventName: 'pull_request', baseRef: 'main', fullValidation: true, cancelled: true },
     ],
   ] as const)('%s → runs=%s', (_label, expected, event) => {
-    expect(runsFor(event)).toBe(expected);
+    expect(runsFor('quality', event)).toBe(expected);
+  });
+
+  it.each([
+    ['a PR based on main', false, { eventName: 'pull_request', baseRef: 'main' }],
+    [
+      'a PR based on an integration branch',
+      true,
+      { eventName: 'pull_request', baseRef: 'integration/workstream' },
+    ],
+    [
+      'a PR based on another feature branch',
+      true,
+      { eventName: 'pull_request', baseRef: 'pops-1-lower' },
+    ],
+    ['a merge group', false, { eventName: 'merge_group', selected: 'true' }],
+    [
+      'a cancelled stacked PR',
+      false,
+      { eventName: 'pull_request', baseRef: 'integration/workstream', cancelled: true },
+    ],
+  ] as const)('%s → build-for-testing=%s', (_label, expected, event) => {
+    expect(runsFor('stacked-build', event)).toBe(expected);
+  });
+
+  it('compiles the app and test targets in the non-default-base job', () => {
+    const job = jobsOf('ios-quality.yml').get('stacked-build');
+    if (job === undefined) throw new Error('stacked-build job is missing');
+    expect(runScriptOf(job)).toContain('mise run build:for-testing');
   });
 });
 
