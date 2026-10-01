@@ -1,5 +1,5 @@
 import { getPillar } from '../pillar-client.js';
-import { mapCallResult, toolError } from './utils.js';
+import { mapCallResult, ok, toolError } from './utils.js';
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
@@ -84,12 +84,18 @@ const DRAFT_CONFLICT_RECOVERY =
   "Another session changed this draft. Call inventory.catalogue.readDraft, reapply the intended change to the draft it returns, and retry with that draft's revision.draftVersion as expectedDraftVersion.";
 
 /**
- * Maps a draft-mutation result like `mapCallResult`, adding the recovery steps
- * when inventory refused the call because `expectedDraftVersion` was stale.
+ * Maps a draft-mutation result, optionally projecting a successful response,
+ * and adds recovery steps when inventory refused a stale draft version.
  *
  * @param scope Forwarded to `mapCallResult` — the scope this tool declares.
+ * @param project Projects successful values before encoding them for MCP.
  */
-export function mapDraftCallResult<T>(result: CallResult<T>, scope?: string): CallToolResult {
+export function mapDraftCallResult<T>(
+  result: CallResult<T>,
+  scope?: string,
+  project?: (value: T) => unknown
+): CallToolResult {
+  if (result.kind === 'ok') return ok(project === undefined ? result.value : project(result.value));
   const mapped = mapCallResult(result, scope);
   if (result.kind !== 'conflict' || result.code !== 'inventory.catalogue.draft_conflict') {
     return mapped;

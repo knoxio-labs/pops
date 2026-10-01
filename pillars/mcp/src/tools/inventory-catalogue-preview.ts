@@ -1,6 +1,7 @@
 import { catalogueClient, mapDraftCallResult } from './inventory-catalogue-client.js';
 import {
   expectedDraftVersionSchema,
+  catalogueIncludeSchema,
   objectArray,
   requiredPositiveInteger,
 } from './inventory-catalogue-input.js';
@@ -43,6 +44,15 @@ function draftOperationInputSchema(minItems: number): ToolDef['inputSchema'] {
 /** Shared MCP schema for mutating draft operation batches: at least one operation. */
 export const catalogueDraftOperationInputSchema: ToolDef['inputSchema'] =
   draftOperationInputSchema(1);
+
+/** MCP schema for catalogue patches, including the optional full response. */
+export const cataloguePatchDraftInputSchema: ToolDef['inputSchema'] = {
+  ...catalogueDraftOperationInputSchema,
+  properties: {
+    ...catalogueDraftOperationInputSchema.properties,
+    include: catalogueIncludeSchema,
+  },
+};
 
 /**
  * MCP schema for non-mutating preview batches: an empty `operations` array is

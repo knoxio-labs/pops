@@ -37,6 +37,24 @@ function draftRevision(body: Record<string, unknown>): { revision: number; draft
   return { revision: revision.revision, draftVersion: revision.draftVersion };
 }
 
+function changedId(body: Record<string, unknown>, kind: string, key: string): string {
+  const changed = body['changed'];
+  if (!Array.isArray(changed))
+    throw new Error('patch response did not include changed definitions');
+  const match = changed.find(
+    (entry): entry is Record<string, unknown> =>
+      typeof entry === 'object' &&
+      entry !== null &&
+      !Array.isArray(entry) &&
+      entry['kind'] === kind &&
+      entry['key'] === key
+  );
+  if (match === undefined) throw new Error(`patch response did not include ${kind} ${key}`);
+  const id = match['id'];
+  if (typeof id !== 'string') throw new Error(`patch response had no id for ${kind} ${key}`);
+  return id;
+}
+
 const readDraft = tool('inventory.catalogue.readDraft');
 const createDraft = tool('inventory.catalogue.createDraft');
 const patchDraft = tool('inventory.catalogue.patchDraft');
@@ -357,8 +375,7 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
         ],
       })
     );
-    const types = (created['draft'] as { types: { id: string; key: string }[] }).types;
-    const idOf = (key: string): string => types.find((type) => type.key === key)?.id ?? '';
+    const idOf = (key: string): string => changedId(created, 'type', key);
     const version = draftRevision(created).draftVersion;
     try {
       const refused = await patchDraft.handler({
@@ -373,6 +390,7 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
         await patchDraft.handler({
           ...target,
           expectedDraftVersion: version,
+          include: 'catalogue',
           operations: [
             { kind: 'archive_type', id: idOf('seam_old_meter'), replacedBy: idOf('seam_meter') },
           ],
@@ -402,10 +420,7 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
         operations: [{ kind: 'put_type', key: 'seam_defaulted', label: 'Defaulted' }],
       })
     );
-    const typeId =
-      (withType['draft'] as { types: { id: string; key: string }[] }).types.find(
-        (type) => type.key === 'seam_defaulted'
-      )?.id ?? '';
+    const typeId = changedId(withType, 'type', 'seam_defaulted');
     const version = draftRevision(withType).draftVersion;
     try {
       const refused = await patchDraft.handler({
@@ -431,6 +446,7 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
         await patchDraft.handler({
           ...target,
           expectedDraftVersion: version,
+          include: 'catalogue',
           operations: [
             {
               kind: 'put_field',

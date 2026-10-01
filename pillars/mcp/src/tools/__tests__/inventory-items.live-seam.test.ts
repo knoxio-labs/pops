@@ -35,6 +35,38 @@ function ok(result: CallToolResult): Record<string, unknown> {
   return JSON.parse(text(result)) as Record<string, unknown>;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function revisionOf(body: Record<string, unknown>): { revision: number; draftVersion: number } {
+  const revision = body['revision'];
+  if (!isRecord(revision)) {
+    throw new Error('catalogue response did not include revision metadata');
+  }
+  const { revision: revisionNumber, draftVersion } = revision;
+  if (typeof revisionNumber !== 'number' || typeof draftVersion !== 'number') {
+    throw new Error('catalogue response included invalid revision metadata');
+  }
+  return { revision: revisionNumber, draftVersion };
+}
+
+function changedId(body: Record<string, unknown>, kind: string, key: string): string {
+  const changed = body['changed'];
+  if (!Array.isArray(changed))
+    throw new Error('patch response did not include changed definitions');
+  const match = changed.find(
+    (entry): entry is Record<string, unknown> =>
+      isRecord(entry) && entry['kind'] === kind && entry['key'] === key
+  );
+  if (match === undefined) {
+    throw new Error(`patch response did not include ${kind} ${key}`);
+  }
+  const id = match['id'];
+  if (typeof id !== 'string') throw new Error(`patch response had no id for ${kind} ${key}`);
+  return id;
+}
+
 const catalogueGet = tool(catalogueTools, 'inventory.catalogue.get');
 const createDraft = tool(catalogueTools, 'inventory.catalogue.createDraft');
 const patchDraft = tool(catalogueTools, 'inventory.catalogue.patchDraft');
@@ -92,7 +124,7 @@ describe('inventory item MCP tools — real HTTP boundary', () => {
     const baseRevision = (published['revision'] as { revision: number }).revision;
 
     const created = ok(await createDraft.handler({ baseRevision }));
-    const createdRevision = created['revision'] as { revision: number; draftVersion: number };
+    const createdRevision = revisionOf(created);
 
     const withType = ok(
       await patchDraft.handler({
@@ -102,15 +134,8 @@ describe('inventory item MCP tools — real HTTP boundary', () => {
         operations: [{ kind: 'put_type', key: 'seam_gadget', label: 'Seam gadget' }],
       })
     );
-    const withTypeDraft = withType['draft'] as Record<string, unknown>;
-    const withTypeTypes = withTypeDraft['types'] as { id: string; key: string }[];
-    const gadgetTypeId = withTypeTypes.find((entry) => entry.key === 'seam_gadget')?.id;
-    if (gadgetTypeId === undefined) throw new Error('seam_gadget type was not created');
-    typeId = gadgetTypeId;
-    const withTypeRevision = withTypeDraft['revision'] as {
-      revision: number;
-      draftVersion: number;
-    };
+    typeId = changedId(withType, 'type', 'seam_gadget');
+    const withTypeRevision = revisionOf(withType);
 
     const withPrice = ok(
       await patchDraft.handler({
@@ -131,20 +156,8 @@ describe('inventory item MCP tools — real HTTP boundary', () => {
         ],
       })
     );
-    const withPriceDraft = withPrice['draft'] as Record<string, unknown>;
-    const withPriceTypes = withPriceDraft['types'] as {
-      id: string;
-      fields: { id: string; key: string }[];
-    }[];
-    const priceId = withPriceTypes
-      .find((entry) => entry.id === typeId)
-      ?.fields.find((field) => field.key === 'price')?.id;
-    if (priceId === undefined) throw new Error('price field was not created');
-    priceFieldId = priceId;
-    const withPriceRevision = withPriceDraft['revision'] as {
-      revision: number;
-      draftVersion: number;
-    };
+    priceFieldId = changedId(withPrice, 'field', 'price');
+    const withPriceRevision = revisionOf(withPrice);
 
     const withDoubled = ok(
       await patchDraft.handler({
@@ -172,20 +185,8 @@ describe('inventory item MCP tools — real HTTP boundary', () => {
         ],
       })
     );
-    const withDoubledDraft = withDoubled['draft'] as Record<string, unknown>;
-    const withDoubledTypes = withDoubledDraft['types'] as {
-      id: string;
-      fields: { id: string; key: string }[];
-    }[];
-    const doubledId = withDoubledTypes
-      .find((entry) => entry.id === typeId)
-      ?.fields.find((field) => field.key === 'doubled')?.id;
-    if (doubledId === undefined) throw new Error('doubled field was not created');
-    doubledFieldId = doubledId;
-    const withDoubledRevision = withDoubledDraft['revision'] as {
-      revision: number;
-      draftVersion: number;
-    };
+    doubledFieldId = changedId(withDoubled, 'field', 'doubled');
+    const withDoubledRevision = revisionOf(withDoubled);
 
     const publishedResult = ok(
       await publishDraft.handler({
@@ -195,7 +196,7 @@ describe('inventory item MCP tools — real HTTP boundary', () => {
         note: 'live-seam item lifecycle fixture',
       })
     );
-    catalogueRevision = (publishedResult['revision'] as { revision: number }).revision;
+    catalogueRevision = revisionOf(publishedResult).revision;
   }, 60_000);
 
   afterAll(async () => {
