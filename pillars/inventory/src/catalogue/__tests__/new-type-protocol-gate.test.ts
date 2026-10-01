@@ -1,7 +1,5 @@
 /**
- * A type added by a draft is classified by its field kinds, so a new type
- * that introduces a primitive kind is protocol-gated in the draft preview and
- * in the compatibility proof publication records (Inventory ADR-002 D5).
+ * New vocabulary stays protocol-gated until the active minimum supports it.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -61,7 +59,7 @@ describe('publishing a new type that introduces a primitive kind', () => {
     );
   });
 
-  it('records the protocol gate in the compatibility proof it publishes', () => {
+  it('records new vocabulary as compatible once protocol 2 is active', () => {
     const { db, raw, revision, patched } = draftWithType('date_time');
     activatePersistedCatalogueProtocol(db);
 
@@ -76,7 +74,7 @@ describe('publishing a new type that introduces a primitive kind', () => {
       raw
         .prepare('SELECT classification FROM catalogue_compatibility WHERE to_revision = ?')
         .get(revision)
-    ).toEqual({ classification: 'protocol_gated' });
+    ).toEqual({ classification: 'compatible' });
   });
 
   it('leaves a new type that only uses existing kinds compatible', () => {

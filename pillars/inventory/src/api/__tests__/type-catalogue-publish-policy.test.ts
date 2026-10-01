@@ -1,5 +1,5 @@
 /**
- * Publication policy over REST: the protocol gate on new vocabulary, and the
+ * Publication policy over REST: runtime-aware protocol gates on new vocabulary, and the
  * computed-field classification (derived values publish compatibly; disabling
  * overrides that items hold needs a migration that discards and audits them).
  */
@@ -276,6 +276,36 @@ describe('the non-mutating draft preview', () => {
 });
 
 describe('the publication protocol gate over REST', () => {
+  it('previews a new primitive kind as compatible when the active minimum already covers it', async () => {
+    await activateProtocol2();
+    const current = await api.get('/type-catalogue');
+    const typeId = current.body.types[0]?.id as string;
+    const draft = await createDraft();
+    const patched = await patch(draft, [
+      {
+        kind: 'put_field',
+        typeId,
+        key: 'quantity',
+        label: 'Quantity',
+        fieldKind: 'integer',
+        cardinality: 'one',
+        required: false,
+        storage: 'stored',
+      },
+    ]);
+
+    expect(patched.body.compatibility.classification).toBe('compatible');
+    expect(patched.body.compatibility.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ classification: 'compatible', code: 'primitive_kind_added' }),
+      ])
+    );
+
+    const published = await publish(patched.draft);
+    expect(published.status, JSON.stringify(published.body)).toBe(200);
+    expect(published.body.revision.minimumProtocol).toBe(2);
+  });
+
   it('answers 409 protocol_rollout_required until protocol 2 is active, then publishes at protocol 2', async () => {
     const current = await api.get('/type-catalogue');
     const typeId = current.body.types[0].id as string;
