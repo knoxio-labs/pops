@@ -120,7 +120,7 @@ describe('AddBatchModal', () => {
       expect(screen.getByRole('combobox', { name: label })).toHaveClass('text-base', 'md:text-sm');
     }
     for (const label of [/^produced$/i, /expires \(optional\)/i]) {
-      expect(screen.getByLabelText(label)).toHaveClass('sm:text-base', 'md:text-sm');
+      expect(screen.getByLabelText(label)).toHaveClass('text-base', 'md:text-sm');
     }
   });
 });

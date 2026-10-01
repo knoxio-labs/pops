@@ -43,7 +43,6 @@ export function PrepAndQtySection({ state }: { state: AddFormState }): ReactElem
   return (
     <>
       <Select
-        className="text-base md:text-sm"
         label="Prep state (optional)"
         value={state.form.prepStateId}
         onChange={(e) => state.setForm({ ...state.form, prepStateId: e.target.value })}
@@ -61,7 +60,6 @@ export function PrepAndQtySection({ state }: { state: AddFormState }): ReactElem
           />
         </FieldRow>
         <Select
-          className="text-base md:text-sm"
           label="Unit"
           value={state.form.unit}
           onChange={(e) => state.setForm({ ...state.form, unit: e.target.value as BatchUnit })}
@@ -107,14 +105,12 @@ export function DateAndNotesSection({ state }: { state: AddFormState }): ReactEl
       <div className="grid grid-cols-2 gap-2">
         <FieldRow label="Produced">
           <DateInput
-            className="sm:text-base md:text-sm"
             value={state.form.producedAt}
             onChange={(e) => set({ producedAt: e.target.value })}
           />
         </FieldRow>
         <FieldRow label="Expires (optional)">
           <DateInput
-            className="sm:text-base md:text-sm"
             value={state.form.expiresAt}
             onChange={(e) => set({ expiresAt: e.target.value })}
           />

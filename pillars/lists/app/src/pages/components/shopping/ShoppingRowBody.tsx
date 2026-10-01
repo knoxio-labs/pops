@@ -39,7 +39,6 @@ export function ShoppingRowBody(props: ShoppingRowBodyProps): React.ReactElement
         {edit.editing ? (
           <div className="min-w-0 flex-1">
             <TextInput
-              className="text-base md:text-xs"
               size="sm"
               // h-8 matches the row's tallest sibling (the 32px checkbox and
               // drag handle); the kit's smallest height, h-9, makes the row

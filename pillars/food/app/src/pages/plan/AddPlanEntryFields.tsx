@@ -81,7 +81,6 @@ function ServingsField(props: {
         Planned servings
       </label>
       <NumberInput
-        className="text-base md:text-sm"
         id="add-plan-servings"
         data-testid="add-plan-servings"
         min={1}
@@ -112,7 +111,7 @@ function NotesField(props: { notes: string; setNotes: (s: string) => void }): Re
       <Textarea
         id="add-plan-notes"
         data-testid="add-plan-notes"
-        className="h-20 text-base md:text-sm"
+        className="h-20"
         value={props.notes}
         onChange={(e) => props.setNotes(e.target.value)}
         maxLength={1000}

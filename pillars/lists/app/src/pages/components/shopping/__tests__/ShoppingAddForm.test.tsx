@@ -39,10 +39,7 @@ describe('ShoppingAddForm', () => {
     renderForm();
     expect(screen.getByLabelText('Qty')).toHaveClass('text-base', 'md:text-sm');
     expect(screen.getByLabelText('Item')).toHaveClass('text-base', 'md:text-sm');
-    expect(screen.getByLabelText('Unit').closest('[data-slot="command"]')).toHaveClass(
-      '[&_input]:text-base',
-      'md:[&_input]:text-sm'
-    );
+    expect(screen.getByLabelText('Unit')).toHaveClass('text-base', 'md:text-sm');
   });
 
   it('submits a unit that is not one of the suggestions', async () => {

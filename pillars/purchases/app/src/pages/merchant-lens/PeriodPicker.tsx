@@ -24,7 +24,6 @@ export function PeriodPicker({ value, onChange, now }: Props): ReactElement {
   return (
     <div className="max-w-xs">
       <Select
-        className="text-base md:text-sm"
         label={label}
         options={options}
         value={value}

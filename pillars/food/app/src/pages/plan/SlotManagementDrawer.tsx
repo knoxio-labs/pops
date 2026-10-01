@@ -134,7 +134,6 @@ function AddSlotForm({ onSubmit, isPending }: AddSlotFormProps): ReactElement {
       <h3 className="text-sm font-medium mb-2">Add a custom slot</h3>
       <div className="space-y-2">
         <TextInput
-          className="text-base md:text-sm"
           data-testid="add-slot-slug"
           label="Slug"
           placeholder="slug (e.g. late-night)"
@@ -142,7 +141,6 @@ function AddSlotForm({ onSubmit, isPending }: AddSlotFormProps): ReactElement {
           onChange={(e) => setSlug(e.target.value.toLowerCase())}
         />
         <TextInput
-          className="text-base md:text-sm"
           data-testid="add-slot-name"
           label="Display name"
           placeholder="Display name"

@@ -261,7 +261,6 @@ function MergeControl({
   return (
     <>
       <Select
-        className="text-base md:text-sm"
         aria-label={t('products.action.mergeLabel', {
           wording: alias.printedName,
           label: currentProductLabel,

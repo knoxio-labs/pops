@@ -85,7 +85,6 @@ function NameField({
   const { t } = useTranslation('lists');
   return (
     <TextInput
-      className="text-base md:text-sm"
       id="list-edit-name"
       label={t('detail.edit.name')}
       value={value}

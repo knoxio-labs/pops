@@ -109,7 +109,6 @@ function EditFields({ form, setForm, isFromRun, prepStates }: EditFieldsProps): 
     <>
       <FieldRow label="Expires">
         <DateInput
-          className="sm:text-base md:text-sm"
           value={form.expiresAt}
           onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
         />
@@ -147,7 +146,6 @@ function PrepStateSelect({
   return (
     <div className="space-y-1">
       <Select
-        className="text-base md:text-sm"
         label="Prep state"
         value={form.prepStateId}
         onChange={(e) => setForm({ ...form, prepStateId: e.target.value })}
