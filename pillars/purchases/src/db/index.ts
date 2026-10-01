@@ -227,6 +227,8 @@ export {
   type ConfirmOutcome,
 } from './services/reconcile-writes.js';
 
+export { linkChargeManually, type ManualLinkOutcome } from './services/reconcile-manual-write.js';
+
 export {
   listActiveMatchRules,
   deactivateMatchRule,

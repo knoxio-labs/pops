@@ -12,6 +12,7 @@ import {
 import { Skeleton } from '../primitives/skeleton';
 import { TextInput } from './TextInput';
 
+/** Props for a modal that searches a bounded set of selectable results. */
 export interface SearchPickerDialogProps<T> {
   trigger: React.ReactElement;
   open: boolean;
@@ -27,6 +28,8 @@ export interface SearchPickerDialogProps<T> {
   getResultKey: (item: T) => string | number;
   trailing?: React.ReactNode;
   minChars?: number;
+  /** Localized guidance shown until the search reaches `minChars`. */
+  minCharsMessage?: string;
   maxResultsHeight?: string;
   emptyMessage?: string;
 }
@@ -34,6 +37,7 @@ export interface SearchPickerDialogProps<T> {
 interface ResultsBodyProps<T> {
   search: string;
   minChars: number;
+  minCharsMessage: string;
   isLoading: boolean;
   results: T[];
   renderResult: (item: T) => React.ReactNode;
@@ -44,6 +48,7 @@ interface ResultsBodyProps<T> {
 function ResultsBody<T>({
   search,
   minChars,
+  minCharsMessage,
   isLoading,
   results,
   renderResult,
@@ -51,11 +56,7 @@ function ResultsBody<T>({
   emptyMessage,
 }: ResultsBodyProps<T>) {
   if (search.length < minChars) {
-    return (
-      <p className="text-sm text-muted-foreground py-4 text-center">
-        Type at least {minChars} characters to search
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground py-4 text-center">{minCharsMessage}</p>;
   }
   if (isLoading) {
     return (
@@ -78,6 +79,7 @@ function ResultsBody<T>({
   );
 }
 
+/** Renders a searchable dialog with localized loading, guidance and empty states. */
 export function SearchPickerDialog<T>({
   trigger,
   open,
@@ -93,6 +95,7 @@ export function SearchPickerDialog<T>({
   getResultKey,
   trailing,
   minChars = 2,
+  minCharsMessage = `Type at least ${String(minChars)} characters to search`,
   maxResultsHeight = 'max-h-64',
   emptyMessage = 'No results found',
 }: SearchPickerDialogProps<T>) {
@@ -121,6 +124,7 @@ export function SearchPickerDialog<T>({
           <ResultsBody
             search={search}
             minChars={minChars}
+            minCharsMessage={minCharsMessage}
             isLoading={isLoading}
             results={results}
             renderResult={renderResult}

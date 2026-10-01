@@ -56,6 +56,7 @@ export function ReconcileQueuePage(): ReactElement {
             isPending={decisions.isPending}
             lastOutcome={decisions.lastOutcome}
             onDecide={decisions.decide}
+            onLinked={cursor.skipPast}
           />
           <QueueBody
             entries={entries}

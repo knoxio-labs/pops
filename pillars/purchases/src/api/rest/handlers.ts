@@ -21,7 +21,7 @@ import { makeSourceHandlers } from './source-handlers.js';
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
 import type { MerchantResolver } from '../contacts/merchant.js';
-import type { FinanceTransactionLookup } from '../finance/client.js';
+import type { FinanceTransactionLookup, FinanceTransactionSearch } from '../finance/client.js';
 import type { InventoryAssetCreator, InventoryLinkClearer } from '../inventory/client.js';
 
 const server: ReturnType<typeof initServer> = initServer();
@@ -34,6 +34,8 @@ export function makePurchasesRestHandlers(deps: {
   sweep?: SweepTrigger;
   /** Adds live posting dates and payees to queued proposals when Finance responds. */
   financeTransactionLookup?: FinanceTransactionLookup;
+  /** Searches Finance transactions for the queue's manual-link action. */
+  financeTransactionSearch?: FinanceTransactionSearch;
   /** Reads photographed receipts. Null declines every upload with a 503. */
   vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
@@ -55,7 +57,8 @@ export function makePurchasesRestHandlers(deps: {
     reconcile: makeReconcileHandlers(
       deps.purchasesDb.db,
       deps.sweep,
-      deps.financeTransactionLookup
+      deps.financeTransactionLookup,
+      deps.financeTransactionSearch
     ),
     search: makeSearchHandlers(deps.purchasesDb.db),
     source: makeSourceHandlers(deps.purchasesDb.db),

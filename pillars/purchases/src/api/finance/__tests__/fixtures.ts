@@ -13,7 +13,12 @@ import {
   type CandidateTransaction,
 } from '../wire.js';
 
-import type { CandidateFetch, FinanceClient, FinanceTransactionLookup } from '../client.js';
+import type {
+  CandidateFetch,
+  FinanceClient,
+  FinanceTransactionLookup,
+  FinanceTransactionSearch,
+} from '../client.js';
 
 /**
  * Everything a test may vary about a candidate.
@@ -45,7 +50,7 @@ function aCandidateTransaction(overrides: CandidateOverrides): CandidateTransact
 /** A finance client whose window holds exactly the given candidates. */
 export function financeReturning(
   ...candidates: readonly CandidateOverrides[]
-): FinanceClient & FinanceTransactionLookup {
+): FinanceClient & FinanceTransactionLookup & FinanceTransactionSearch {
   const transactions = candidates.map((candidate) => aCandidateTransaction(candidate));
   return {
     fetchCandidates: () => Promise.resolve<CandidateFetch>({ kind: 'ok', transactions }),
@@ -54,6 +59,15 @@ export function financeReturning(
         kind: 'ok',
         transactions: transactions.filter((transaction) => ids.includes(transaction.id)),
       }),
+    searchTransactions: ({ search, limit }) =>
+      Promise.resolve<CandidateFetch>({
+        kind: 'ok',
+        transactions: transactions
+          .filter((transaction) =>
+            transaction.description.toLowerCase().includes(search.toLowerCase())
+          )
+          .slice(0, limit),
+      }),
   };
 }
 
@@ -61,9 +75,13 @@ export function financeReturning(
  * A finance client that cannot be read at all — the case a sweep must
  * distinguish from an empty window, or it unlinks correctly matched orders.
  */
-export const FINANCE_UNAVAILABLE: FinanceClient & FinanceTransactionLookup = {
+export const FINANCE_UNAVAILABLE: FinanceClient &
+  FinanceTransactionLookup &
+  FinanceTransactionSearch = {
   fetchCandidates: () =>
     Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' }),
   fetchTransactionsByIds: () =>
+    Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' }),
+  searchTransactions: () =>
     Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' }),
 };

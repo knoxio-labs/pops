@@ -118,6 +118,18 @@ export interface FinanceTransactionLookup {
   fetchTransactionsByIds(ids: readonly string[]): Promise<CandidateFetch>;
 }
 
+/** Filters for the bounded transaction search shown when linking a charge manually. */
+export interface FinanceTransactionSearchQuery {
+  readonly search: string;
+  readonly limit: number;
+}
+
+/** Searches Finance transactions for a human-selected reconciliation link. */
+export interface FinanceTransactionSearch {
+  /** Returns the most recent matching transactions, or why they could not be read. */
+  searchTransactions(query: FinanceTransactionSearchQuery): Promise<CandidateFetch>;
+}
+
 /**
  * How a handle is obtained per sweep. `null` means this process has no
  * service-account key, which is a configuration answer rather than a
@@ -136,7 +148,7 @@ export function createFinanceClient(
   handleFactory: FinanceHandleFactory = () =>
     credentialled(FINANCE_PILLAR_ID, () => pillar<FinanceRouter>(FINANCE_PILLAR_ID)),
   options: FinanceClientOptions = {}
-): FinanceClient & FinanceTransactionLookup {
+): FinanceClient & FinanceTransactionLookup & FinanceTransactionSearch {
   const maxPages = options.maxPages ?? MAX_PAGES;
   return {
     fetchCandidates(query: CandidateQuery): Promise<CandidateFetch> {
@@ -158,7 +170,25 @@ export function createFinanceClient(
       }
       return readTransactionsByIds(handle, uniqueIds);
     },
+    searchTransactions(query: FinanceTransactionSearchQuery): Promise<CandidateFetch> {
+      const handle = handleFactory();
+      if (handle === null) {
+        return Promise.resolve({ kind: 'unavailable', reason: NO_CREDENTIAL_REASON });
+      }
+      return searchTransactions(handle, query);
+    },
   };
+}
+
+async function searchTransactions(
+  handle: PillarHandle<FinanceRouter>,
+  query: FinanceTransactionSearchQuery
+): Promise<CandidateFetch> {
+  const parsed = readPage(
+    await handle.transactions.list({ search: query.search, limit: query.limit, offset: 0 })
+  );
+  if (parsed.kind !== 'ok') return parsed;
+  return { kind: 'ok', transactions: parsed.page.data.map(toCandidateTransaction) };
 }
 
 async function readTransactionsByIds(

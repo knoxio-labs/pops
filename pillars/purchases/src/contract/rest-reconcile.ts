@@ -93,6 +93,22 @@ export const ReconcileQueueQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
+/** Filters for finding a Finance transaction to link to an unexplained charge. */
+export const ManualTransactionSearchQuerySchema = z.object({
+  search: z.string().trim().min(2).max(120),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+});
+
+/** The Finance details shown while an operator chooses a manual link. */
+export const ManualTransactionCandidateSchema = z.object({
+  transactionUri: FinanceTransactionUriSchema,
+  description: z.string(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
+  payee: z.string().nullable(),
+  amountCents: CentsSchema,
+  settlementCurrency: CurrencySchema,
+});
+
 export const TransactionLinksQuerySchema = z.object({
   transactionUri: FinanceTransactionUriSchema,
 });
@@ -176,6 +192,28 @@ export const purchasesReconcileContract = c.router({
     query: ReconcileQueueQuerySchema,
     responses: { 200: z.object({ items: z.array(QueueEntrySchema) }) },
     summary: 'Charges awaiting a decision, newest order first',
+  },
+  manualCandidates: {
+    method: 'GET',
+    path: '/reconcile/manual-candidates',
+    query: ManualTransactionSearchQuerySchema,
+    responses: {
+      200: z.object({ items: z.array(ManualTransactionCandidateSchema) }),
+      503: ErrorBodySchema,
+    },
+    summary: 'Search Finance transactions for a manual reconciliation link',
+  },
+  manual: {
+    method: 'POST',
+    path: '/reconcile/manual',
+    body: LinkDecisionBodySchema,
+    responses: {
+      200: OkSchema,
+      404: ErrorBodySchema,
+      409: ErrorBodySchema,
+      503: ErrorBodySchema,
+    },
+    summary: 'Create and confirm a manually selected charge link',
   },
   /**
    * The direction a person actually arrives from: a finance transaction in

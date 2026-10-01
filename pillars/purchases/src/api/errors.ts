@@ -1,6 +1,8 @@
 import { defineErrors } from '@pops/pillar-express';
 import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 
+import { RECONCILIATION_ERROR_DEFINITIONS } from './reconciliation-error-definitions.js';
+
 import type { ErrorBody } from '@pops/types';
 
 const ERROR_DEFINITIONS = {
@@ -142,18 +144,7 @@ const ERROR_DEFINITIONS = {
     message: 'The uploaded bytes do not match the stated media type.',
     retryable: false,
   },
-  link_not_found: {
-    area: 'reconciliation',
-    status: 404,
-    message: 'The requested transaction link was not found.',
-    retryable: false,
-  },
-  sweep_unavailable: {
-    area: 'reconciliation',
-    status: 503,
-    message: 'Purchase reconciliation is unavailable.',
-    retryable: false,
-  },
+  ...RECONCILIATION_ERROR_DEFINITIONS,
   unauthorized: {
     area: 'inventory',
     status: 502,

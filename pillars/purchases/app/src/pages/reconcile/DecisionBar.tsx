@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { Button } from '@pops/ui';
 
 import { MatchRuleAttribution } from '../MatchRuleAttribution.js';
+import { ManualLinkAction } from './ManualLinkAction.js';
 
 import type { ReactElement } from 'react';
 
@@ -15,6 +16,7 @@ interface DecisionBarProps {
   isPending: boolean;
   lastOutcome: DecisionOutcome | null;
   onDecide: (entry: QueueEntry, kind: DecisionKind) => void;
+  onLinked: (entry: QueueEntry) => void;
 }
 
 /**
@@ -31,37 +33,20 @@ export function DecisionBar({
   isPending,
   lastOutcome,
   onDecide,
+  onLinked,
 }: DecisionBarProps): ReactElement {
   const { t } = useTranslation('purchases');
-  const disabled = isPending || activeEntry === undefined || activeEntry.proposed.length === 0;
   const learnedRules = activeRules(activeEntry);
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="sm"
-          disabled={disabled}
-          onClick={() => activeEntry !== undefined && onDecide(activeEntry, 'accept')}
-        >
-          {t('reconcile.action.accept')}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={disabled}
-          onClick={() => activeEntry !== undefined && onDecide(activeEntry, 'reject')}
-        >
-          {t('reconcile.action.reject')}
-        </Button>
-        {activeEntry !== undefined && (
-          <Link
-            to={`/purchases/${activeEntry.purchaseId}`}
-            className="text-sm underline underline-offset-4"
-          >
-            {t('reconcile.action.openOrder')}
-          </Link>
-        )}
+        <DecisionActions
+          activeEntry={activeEntry}
+          isPending={isPending}
+          onDecide={onDecide}
+          onLinked={onLinked}
+        />
         <p className="text-muted-foreground text-xs">{t('reconcile.keys.hint')}</p>
       </div>
 
@@ -81,6 +66,59 @@ export function DecisionBar({
 
       <p className="text-muted-foreground text-xs">{t('reconcile.action.caveat')}</p>
     </div>
+  );
+}
+
+interface DecisionActionsProps {
+  activeEntry: QueueEntry | undefined;
+  isPending: boolean;
+  onDecide: (entry: QueueEntry, kind: DecisionKind) => void;
+  onLinked: (entry: QueueEntry) => void;
+}
+
+function DecisionActions({
+  activeEntry,
+  isPending,
+  onDecide,
+  onLinked,
+}: DecisionActionsProps): ReactElement {
+  const { t } = useTranslation('purchases');
+  const disabled = isPending || activeEntry === undefined || activeEntry.proposed.length === 0;
+
+  return (
+    <>
+      <Button
+        size="sm"
+        disabled={disabled}
+        onClick={() => activeEntry !== undefined && onDecide(activeEntry, 'accept')}
+      >
+        {t('reconcile.action.accept')}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => activeEntry !== undefined && onDecide(activeEntry, 'reject')}
+      >
+        {t('reconcile.action.reject')}
+      </Button>
+      {activeEntry !== undefined && activeEntry.proposed.length === 0 && (
+        <ManualLinkAction
+          key={activeEntry.chargeId}
+          entry={activeEntry}
+          disabled={isPending}
+          onLinked={onLinked}
+        />
+      )}
+      {activeEntry !== undefined && (
+        <Link
+          to={`/purchases/${activeEntry.purchaseId}`}
+          className="text-sm underline underline-offset-4"
+        >
+          {t('reconcile.action.openOrder')}
+        </Link>
+      )}
+    </>
   );
 }
 
