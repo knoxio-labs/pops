@@ -33,12 +33,10 @@ export const MobileTransactionSchema = z.object({
   id: z.string(),
   description: z.string(),
   /**
-   * Signed decimal dollars, mirroring finance's own wire field exactly:
-   * expenses are negative, income positive. Finance persists integer cents
-   * and converts once at its REST edge; re-deriving cents here would be a
-   * second money representation and a second chance to round differently.
+   * Signed integer minor units, preserving finance's sign. BFM converts the
+   * finance amount once before it reaches the distributed mobile client.
    */
-  amount: z.number(),
+  amountMinorUnits: z.number().int(),
   /**
    * ISO 4217 code. Left an open string rather than an `enum`/`literal` on
    * purpose, for the same reason as {@link MobileTransactionSchema.shape.type}
@@ -59,7 +57,7 @@ export const MobileTransactionSchema = z.object({
    * Finance's semantic transaction type (`purchase`, `income`, `transfer`, …).
    * Left an open string rather than an enum on purpose: finance adding a type
    * must not make every transaction fail to render on the phone. It never
-   * carries direction — that is the sign of {@link MobileTransactionSchema.shape.amount}.
+   * carries direction — that is the sign of {@link MobileTransactionSchema.shape.amountMinorUnits}.
    */
   type: z.string(),
   /** Display name of the counterparty, or null when finance has none. */
@@ -67,6 +65,7 @@ export const MobileTransactionSchema = z.object({
   tags: z.array(z.string()),
 });
 
+/** A mobile transaction row with a signed integer amount in currency minor units. */
 export type MobileTransaction = z.infer<typeof MobileTransactionSchema>;
 
 /** The fuller record behind one list row, for the detail screen. */

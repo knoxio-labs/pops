@@ -57,7 +57,7 @@ internal struct TransactionDetailMappingTests {
         let detail = try #require(
             try await record(
                 TransactionsWire.record(
-                    amount: "19.99",
+                    amountMinorUnits: 1999,
                     entityName: "null",
                     location: "null",
                     country: "null",
@@ -74,7 +74,7 @@ internal struct TransactionDetailMappingTests {
     func carriesTheRelatedLeg() async throws {
         let detail = try #require(
             try await record(
-                TransactionsWire.record(amount: "19.99", relatedTransactionId: "\"txn-2\"")))
+                TransactionsWire.record(amountMinorUnits: 1999, relatedTransactionId: "\"txn-2\"")))
 
         #expect(detail.relatedTransactionId == "txn-2")
     }
@@ -87,11 +87,11 @@ internal struct TransactionDetailMappingTests {
         let withMillis = try #require(
             try await record(
                 TransactionsWire.record(
-                    amount: "19.99", lastEditedTime: "\"2026-03-06T04:30:00.000Z\"")))
+                    amountMinorUnits: 1999, lastEditedTime: "\"2026-03-06T04:30:00.000Z\"")))
         let withoutMillis = try #require(
             try await record(
                 TransactionsWire.record(
-                    amount: "19.99", lastEditedTime: "\"2026-03-06T04:30:00Z\"")))
+                    amountMinorUnits: 1999, lastEditedTime: "\"2026-03-06T04:30:00Z\"")))
 
         #expect(withMillis.lastEditedAt == withoutMillis.lastEditedAt)
     }
@@ -103,7 +103,7 @@ internal struct TransactionDetailMappingTests {
     func rejectsANonTimestamp() async {
         await #expect(throws: RepositoryError.contractMismatch) {
             try await record(
-                TransactionsWire.record(amount: "19.99", lastEditedTime: "\"2026-03-06\""))
+                TransactionsWire.record(amountMinorUnits: 1999, lastEditedTime: "\"2026-03-06\""))
         }
     }
 
@@ -113,7 +113,9 @@ internal struct TransactionDetailMappingTests {
     @Test("a record this build cannot represent fails rather than half-renders")
     func rejectsAnUnreadableRecord() async {
         await #expect(throws: RepositoryError.contractMismatch) {
-            try await record(TransactionsWire.record(amount: "19.99", date: "2026-03-05T00:00:00Z"))
+            try await record(
+                TransactionsWire.record(
+                    amountMinorUnits: 1999, date: "2026-03-05T00:00:00Z"))
         }
     }
 
@@ -122,7 +124,7 @@ internal struct TransactionDetailMappingTests {
     @Test("a transaction type this build has never heard of still renders")
     func unknownTypesSurvive() async throws {
         let detail = try #require(
-            try await record(TransactionsWire.record(amount: "19.99", type: "escrow")))
+            try await record(TransactionsWire.record(amountMinorUnits: 1999, type: "escrow")))
 
         #expect(detail.type == TransactionType(rawValue: "escrow"))
     }
@@ -133,7 +135,7 @@ internal struct TransactionDetailMappingTests {
     @Test("a currency this build has never heard of still renders")
     func unknownCurrencyCode() async throws {
         let detail = try #require(
-            try await record(TransactionsWire.record(amount: "19.99", currency: "USD")))
+            try await record(TransactionsWire.record(amountMinorUnits: 1999, currency: "USD")))
 
         #expect(detail.amount.currencyCode == "USD")
     }

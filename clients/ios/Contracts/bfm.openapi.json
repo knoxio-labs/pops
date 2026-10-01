@@ -3459,8 +3459,10 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
-                          "amount": {
-                            "type": "number"
+                          "amountMinorUnits": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
                           },
                           "currency": {
                             "type": "string"
@@ -3492,7 +3494,7 @@
                         "required": [
                           "id",
                           "description",
-                          "amount",
+                          "amountMinorUnits",
                           "currency",
                           "date",
                           "type",
@@ -3778,8 +3780,10 @@
                     "account": {
                       "type": "string"
                     },
-                    "amount": {
-                      "type": "number"
+                    "amountMinorUnits": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
                     },
                     "country": {
                       "nullable": true,
@@ -3834,7 +3838,7 @@
                   "required": [
                     "id",
                     "description",
-                    "amount",
+                    "amountMinorUnits",
                     "currency",
                     "date",
                     "type",

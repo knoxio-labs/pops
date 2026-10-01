@@ -1341,7 +1341,7 @@ export type MobileFinanceListTransactionsResponses = {
    */
   200: {
     data: Array<{
-      amount: number;
+      amountMinorUnits: number;
       currency: string;
       date: string;
       description: string;
@@ -1470,7 +1470,7 @@ export type MobileFinanceGetTransactionResponses = {
    */
   200: {
     account: string;
-    amount: number;
+    amountMinorUnits: number;
     country: string | null;
     currency: string;
     date: string;
