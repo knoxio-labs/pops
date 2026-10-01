@@ -1,14 +1,18 @@
-import { Ban, Clock, EyeOff, MoreHorizontal } from 'lucide-react';
+import { Ban, Clock, EyeOff, Info, MoreHorizontal } from 'lucide-react';
 
+import { Popover, PopoverContent, PopoverTrigger } from '../primitives/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../primitives/tooltip';
 import { Button } from './Button';
 import { DropdownMenu } from './DropdownMenu';
+
+const STALE_ACTION_DESCRIPTION = 'Mark as stale — reduces score weight for future comparisons';
 
 export interface ResponsiveActionBarMovie {
   id: number;
   title: string;
 }
 
+/** Marks a movie stale and exposes the scoring effect through a touch-accessible popover. */
 export function StaleButton({
   movie,
   testId,
@@ -21,23 +25,35 @@ export function StaleButton({
   onStale: (id: number) => void;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onStale(movie.id)}
-          disabled={pending}
-          aria-label={`Mark ${movie.title} as stale`}
-          data-testid={testId}
-        >
-          <Clock className="h-3.5 w-3.5 mr-1.5" />
-          <span className="hidden sm:inline">Stale:</span>
-          <span className="truncate max-w-32">{movie.title}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>Mark as stale — reduces score weight for future comparisons</TooltipContent>
-    </Tooltip>
+    <div className="inline-flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onStale(movie.id)}
+            disabled={pending}
+            aria-label={`Mark ${movie.title} as stale`}
+            data-testid={testId}
+          >
+            <Clock className="h-3.5 w-3.5 mr-1.5" />
+            <span className="hidden sm:inline">Stale:</span>
+            <span className="truncate max-w-32">{movie.title}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{STALE_ACTION_DESCRIPTION}</TooltipContent>
+      </Tooltip>
+      <span className="md:hidden">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Stale status details">
+              <Info className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 text-sm">{STALE_ACTION_DESCRIPTION}</PopoverContent>
+        </Popover>
+      </span>
+    </div>
   );
 }
 

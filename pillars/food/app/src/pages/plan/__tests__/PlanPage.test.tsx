@@ -157,6 +157,22 @@ describe('PlanPage', () => {
     expect(screen.getByTestId('plan-week-grid')).toBeTruthy();
     expect(screen.getByTestId('servings-badge-1')).toBeTruthy();
     expect(screen.getByTestId('cooked-chip-2')).toBeTruthy();
+    await userEvent.setup().click(screen.getByTestId('cooked-chip-2'));
+    expect(await screen.findByText('Cooked entries cannot be moved')).toBeVisible();
+  });
+
+  it('reveals the full recipe title when a truncated plan title is tapped', async () => {
+    const fullTitle = 'Baked potatoes with rosemary and sea salt';
+    planWeekViewMock.mockResolvedValueOnce({
+      data: {
+        ...weekViewData,
+        entries: [{ ...weekViewData.entries[0], recipeTitle: fullTitle }],
+      },
+    });
+    renderPage();
+    const title = await screen.findByRole('button', { name: fullTitle });
+    await userEvent.setup().click(title);
+    expect(screen.getByText(fullTitle)).toBeVisible();
   });
 
   it.each([

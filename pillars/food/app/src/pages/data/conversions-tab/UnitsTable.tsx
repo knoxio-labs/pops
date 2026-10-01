@@ -3,6 +3,7 @@
  * (edit + delete) are delegated to the parent so this file stays focused
  * on layout + the seeded-row affordance.
  */
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@pops/ui';
@@ -34,16 +35,33 @@ function DeleteButton({
   seededTooltip: string;
 }) {
   if (row.seeded) {
-    return (
-      <Button size="sm" variant="ghost" disabled title={seededTooltip} aria-label={seededTooltip}>
-        {deleteLabel}
-      </Button>
-    );
+    return <SeededDeleteButton deleteLabel={deleteLabel} reason={seededTooltip} />;
   }
   return (
-    <Button size="sm" variant="ghost" onClick={() => onDelete(row)}>
+    <Button size="sm" variant="ghost" className="min-h-11" onClick={() => onDelete(row)}>
       {deleteLabel}
     </Button>
+  );
+}
+
+function SeededDeleteButton({ deleteLabel, reason }: { deleteLabel: string; reason: string }) {
+  const reasonId = useId();
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <Button
+        size="sm"
+        variant="ghost"
+        className="min-h-11"
+        disabled
+        title={reason}
+        aria-describedby={reasonId}
+      >
+        {deleteLabel}
+      </Button>
+      <span id={reasonId} className="max-w-48 text-left text-xs text-muted-foreground">
+        {reason}
+      </span>
+    </div>
   );
 }
 
@@ -74,7 +92,7 @@ function UnitRow({
         <NotesCell notes={row.notes} />
       </TableCell>
       <TableCell className="flex justify-end gap-1">
-        <Button size="sm" variant="ghost" onClick={() => onEdit(row)}>
+        <Button size="sm" variant="ghost" className="min-h-11" onClick={() => onEdit(row)}>
           {editLabel}
         </Button>
         <DeleteButton

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
 import { useMemo, type ReactElement } from 'react';
@@ -154,6 +154,30 @@ describe('pillars/lists/docs/prds/crud-ui — ListDetailPage', () => {
     expect(screen.getByText('Todo')).toHaveAttribute('data-kind', 'todo');
     expect(screen.getByTestId('list-item-1')).toBeInTheDocument();
     expect(screen.getByTestId('list-item-2')).toBeInTheDocument();
+  });
+
+  it('expands a truncated item note from the row on tap', async () => {
+    const note =
+      'A note longer than eighty characters should remain available from the row on a narrow screen after its summary is clipped';
+    setListGet({ list: makeList(), items: [makeItem({ notes: note })] });
+    render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
+
+    const noteButton = await screen.findByRole('button', { name: note });
+    expect(noteButton).toHaveAttribute('aria-expanded', 'false');
+    expect(noteButton).toHaveClass('h-11', 'sm:h-auto');
+    await userEvent.click(noteButton);
+    expect(noteButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(note)).toBeInTheDocument();
+  });
+
+  it('renders short item notes without a disclosure control', async () => {
+    const note = 'Keep chilled';
+    setListGet({ list: makeList(), items: [makeItem({ notes: note })] });
+    render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
+
+    const row = await screen.findByTestId('list-item-1');
+    expect(within(row).getByText(note)).toBeVisible();
+    expect(within(row).queryByRole('button', { name: note })).not.toBeInTheDocument();
   });
 
   it('renders the not-found shell when the query resolves to null', async () => {

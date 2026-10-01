@@ -47,10 +47,13 @@ export function DrawTierButtons({ onDraw, onSkip, disabled, skipPending }: DrawT
                 onDraw(tier);
               }}
               disabled={disabled}
-              className={`rounded-full h-10 w-10 bg-background ${hoverColor}`}
+              className={`h-auto min-h-11 w-20 flex-col gap-0.5 rounded-full bg-background px-1 py-1.5 ${hoverColor} sm:h-10 sm:w-10 sm:min-h-0 sm:flex-row sm:gap-0 sm:px-0 sm:py-0`}
               aria-label={label}
             >
               <Icon className="h-4 w-4" />
+              <span className="max-w-full text-center text-xs leading-tight sm:hidden">
+                {label}
+              </span>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">{label}</TooltipContent>
@@ -66,10 +69,11 @@ export function DrawTierButtons({ onDraw, onSkip, disabled, skipPending }: DrawT
             size="icon"
             onClick={onSkip}
             disabled={disabled || skipPending}
-            className="rounded-full h-10 w-10 bg-background hover:border-muted-foreground"
+            className="h-auto min-h-11 w-20 flex-col gap-0.5 rounded-full bg-background px-1 py-1.5 hover:border-muted-foreground sm:h-10 sm:w-10 sm:min-h-0 sm:flex-row sm:gap-0 sm:px-0 sm:py-0"
             aria-label="Skip this pair"
           >
             <SkipForward className="h-4 w-4" />
+            <span className="text-center text-xs leading-tight sm:hidden">Skip pair</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent side="right">Skip pair</TooltipContent>
