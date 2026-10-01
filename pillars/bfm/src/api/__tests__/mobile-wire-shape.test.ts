@@ -84,7 +84,7 @@ function fieldNames(schema: JsonSchema): string[] {
 }
 
 const LIST_ROW_FIELDS = [
-  'amount',
+  'amountMinorUnits',
   'currency',
   'date',
   'description',
@@ -164,11 +164,11 @@ describe('the list row', () => {
     expect(type?.enum).toBeUndefined();
   });
 
-  it('declares amount a plain number — decimal dollars, signed, as finance publishes it', () => {
+  it('declares amountMinorUnits as a signed integer', () => {
     const schema = okSchema(LIST_PATH);
 
-    const amount = schema.properties?.['data']?.items?.properties?.['amount'];
-    expect(amount?.type).toBe('number');
+    const amount = schema.properties?.['data']?.items?.properties?.['amountMinorUnits'];
+    expect(amount?.type).toBe('integer');
     expect(amount?.nullable).toBeUndefined();
   });
 });

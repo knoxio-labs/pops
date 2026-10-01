@@ -75,7 +75,7 @@ export const FinanceTransactionGetResponseSchema = z.object({
 });
 
 /**
- * Finance list row → mobile list row. Field-for-field; no arithmetic.
+ * Finance list row → mobile list row with an amount in currency minor units.
  *
  * `currency` is the caller's to resolve — a transaction's currency is its
  * account's (POPS-3571), and this mapper never reaches finance itself. The
@@ -90,13 +90,25 @@ export function toMobileTransaction(
   return {
     id: row.id,
     description: row.description,
-    amount: row.amount,
+    amountMinorUnits: toMinorUnits(row.amount, currency),
     currency,
     date: row.date,
     type: row.type,
     entityName: row.entityName,
     tags: row.tags,
   };
+}
+
+function toMinorUnits(amount: number, currency: string): number {
+  let fractionDigits: number;
+  try {
+    fractionDigits =
+      new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions()
+        .maximumFractionDigits ?? 2;
+  } catch {
+    fractionDigits = 2;
+  }
+  return Math.round(amount * 10 ** fractionDigits);
 }
 
 /**

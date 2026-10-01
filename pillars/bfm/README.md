@@ -320,14 +320,13 @@ properties follow, and each is asserted in
   detail route. The path segment says `finance` because that is what the data
   is about, not where the phone should look — the app holds no notion that
   finance is a separate service.
-- **The money is finance's, mirrored.** `amount` is signed decimal dollars
-  (expenses negative), exactly as finance publishes it; finance persists
-  integer cents and divides once at its own REST edge. bfm does no arithmetic
-  on it at all, because a second conversion is a second rounding rule and that
-  is how two services come to disagree about what somebody spent. `type` is a
-  semantic label and never the direction. `currency` is a literal `AUD`: the
-  fleet has always been single-currency and finance carries no such field, so
-  stating the assumption on the wire beats leaving the phone to guess it.
+- **The money is finance's, mirrored.** `amountMinorUnits` is a signed integer
+  in the transaction account's currency. Finance persists integer cents and
+  publishes decimal amounts; BFM converts once at its REST edge using the
+  resolved account currency, so the phone receives the exact integer it
+  stores. `type` is a semantic label and never the direction. `currency` is an
+  open string carrying the account's ISO 4217 code; AUD is only the fallback
+  when the account lookup fails.
 - **A degraded federation is a typed answer, never an empty page.** A list that
   answered `[]` while finance was down would be telling the user they have no
   transactions, which they cannot tell from the truth. `unavailable`,

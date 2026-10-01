@@ -54,18 +54,15 @@ internal struct TransactionsMappingTests {
         #expect(page.nextCursor == nil)
     }
 
-    /// The values a `Double` cannot hold exactly, which is most of them.
-    /// `Int(19.99 * 100)` is 1998, and every one of these would be off by a
-    /// cent through the obvious conversion.
     @Test(
-        "amounts survive the wire's float exactly",
+        "integer minor units arrive unchanged",
         arguments: [
-            ("19.99", 1999), ("0.07", 7), ("-19.99", -1999), ("-0.01", -1),
-            ("0", 0), ("1234567.89", 123_456_789), ("-98765.43", -9_876_543),
+            (1999, 1999), (7, 7), (-1999, -1999), (-1, -1),
+            (0, 0), (123_456_789, 123_456_789), (-9_876_543, -9_876_543),
         ]
     )
-    func amountsAreExact(wire: String, minorUnits: Int) async throws {
-        let transaction = try await onlyRow(TransactionsWire.row(amount: wire))
+    func minorUnitsAreCarried(wire: Int, minorUnits: Int) async throws {
+        let transaction = try await onlyRow(TransactionsWire.row(amountMinorUnits: wire))
 
         #expect(transaction.amount == MoneyAmount(minorUnits: minorUnits, currencyCode: "AUD"))
     }
@@ -75,8 +72,8 @@ internal struct TransactionsMappingTests {
     /// disagree with the first.
     @Test("the sign is carried through, not inferred from the type")
     func signIsCarried() async throws {
-        let credit = try await onlyRow(TransactionsWire.row(amount: "42.50", type: "purchase"))
-        let debit = try await onlyRow(TransactionsWire.row(amount: "-42.50", type: "income"))
+        let credit = try await onlyRow(TransactionsWire.row(amountMinorUnits: 4250, type: "purchase"))
+        let debit = try await onlyRow(TransactionsWire.row(amountMinorUnits: -4250, type: "income"))
 
         #expect(credit.amount.minorUnits == 4250)
         #expect(debit.amount.minorUnits == -4250)
@@ -87,19 +84,17 @@ internal struct TransactionsMappingTests {
     /// pillar can add a type tomorrow.
     @Test("a transaction type this build has never heard of still renders")
     func unknownTransactionType() async throws {
-        let transaction = try await onlyRow(TransactionsWire.row(amount: "1.00", type: "escrow"))
+        let transaction = try await onlyRow(TransactionsWire.row(amountMinorUnits: 100, type: "escrow"))
 
         #expect(transaction.type == TransactionType(rawValue: "escrow"))
     }
 
     /// The whole reason `currency` is `Swift.String` rather than a closed
-    /// enum: bfm emits only `AUD` today, but a build already on a phone must
-    /// still decode the day it emits something else. Before the fix, this
-    /// value failed to decode at all — not silently, but as a page that could
-    /// not be read.
+    /// enum: bfm can emit each account's currency, and a build already on a
+    /// phone must still decode a value it has never seen.
     @Test("a currency this build has never heard of still renders")
     func unknownCurrencyCode() async throws {
-        let transaction = try await onlyRow(TransactionsWire.row(amount: "1.00", currency: "USD"))
+        let transaction = try await onlyRow(TransactionsWire.row(amountMinorUnits: 100, currency: "USD"))
 
         #expect(transaction.amount.currencyCode == "USD")
     }
@@ -107,7 +102,7 @@ internal struct TransactionsMappingTests {
     @Test("a row with no entity keeps the absence rather than inventing a name")
     func missingEntityName() async throws {
         let json = """
-            {"id":"t","description":"d","amount":1,"currency":"AUD","date":"2026-03-05",\
+            {"id":"t","description":"d","amountMinorUnits":100,"currency":"AUD","date":"2026-03-05",\
             "type":"purchase","entityName":null,"tags":[]}
             """
 
@@ -119,7 +114,7 @@ internal struct TransactionsMappingTests {
     /// renders as the same date in Sydney and the previous one in Los Angeles.
     @Test("a date-only value lands on midnight in the reader's own zone")
     func dateIsReadInTheGivenZone() async throws {
-        let transaction = try await onlyRow(TransactionsWire.row(amount: "1", date: "2026-01-01"))
+        let transaction = try await onlyRow(TransactionsWire.row(amountMinorUnits: 100, date: "2026-01-01"))
 
         #expect(transaction.date == (try TransactionsWire.midnight(year: 2026, month: 1, day: 1)))
     }

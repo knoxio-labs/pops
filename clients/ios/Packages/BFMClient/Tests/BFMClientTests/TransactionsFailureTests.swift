@@ -107,9 +107,8 @@ internal struct TransactionsFailureTests {
     @Test(
         "a value this build cannot represent is a contract mismatch",
         arguments: [
-            TransactionsWire.row(amount: "1.005"),
-            TransactionsWire.row(amount: "1", date: "2026-03-05T00:00:00Z"),
-            TransactionsWire.row(amount: "1", date: "5 March 2026"),
+            TransactionsWire.row(amountMinorUnits: 100, date: "2026-03-05T00:00:00Z"),
+            TransactionsWire.row(amountMinorUnits: 100, date: "5 March 2026"),
         ]
     )
     func unrepresentableRow(json: String) async {
@@ -120,6 +119,22 @@ internal struct TransactionsFailureTests {
         }
 
         #expect(actual == .contractMismatch)
+    }
+
+    @Test("fractional minor units fail the generated integer decoder")
+    func fractionalMinorUnitsFailDecoding() async {
+        let row = """
+            {"id":"txn-1","description":"Coffee","amountMinorUnits":1.5,"currency":"AUD",\
+            "date":"2026-03-05","type":"purchase","entityName":"Cafe","tags":[]}
+            """
+        let actual = await failure {
+            try await BFMTransactionsRepository
+                .stubbed(StubTransport(status: .ok, json: TransactionsWire.page(row)))
+                .transactions(after: nil)
+        }
+
+        #expect(isTransport(actual))
+        #expect(actual != .contractMismatch)
     }
 
     private func isTransport(_ error: RepositoryError?) -> Bool {

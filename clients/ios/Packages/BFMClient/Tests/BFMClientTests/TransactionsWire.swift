@@ -12,17 +12,17 @@ import Testing
 /// from the contract, so a field renamed on the producer's side fails here.
 internal enum TransactionsWire {
     /// One row, with every field at a value that is uninteresting on its own.
-    internal static let row = row(amount: "19.99")
+    internal static let row = row(amountMinorUnits: 1999)
 
     internal static func row(
         id: String = "txn-1",
-        amount: String,
+        amountMinorUnits: Int,
         date: String = "2026-03-05",
         type: String = "purchase",
         currency: String = "AUD"
     ) -> String {
         """
-        {"id":"\(id)","description":"Coffee","amount":\(amount),"currency":"\(currency)",\
+        {"id":"\(id)","description":"Coffee","amountMinorUnits":\(amountMinorUnits),"currency":"\(currency)",\
         "date":"\(date)","type":"\(type)","entityName":"Cafe","tags":["food"]}
         """
     }
@@ -37,11 +37,11 @@ internal enum TransactionsWire {
     /// test that is about one of them says so by nulling it — a fixture of
     /// all-nulls would make the degenerate record the one every test asserts
     /// against by accident.
-    internal static let record = record(amount: "19.99")
+    internal static let record = record(amountMinorUnits: 1999)
 
     internal static func record(
         id: String = "txn-1",
-        amount: String,
+        amountMinorUnits: Int,
         date: String = "2026-03-05",
         type: String = "purchase",
         currency: String = "AUD",
@@ -53,7 +53,7 @@ internal enum TransactionsWire {
         relatedTransactionId: String = "null"
     ) -> String {
         """
-        {"id":"\(id)","description":"Coffee","amount":\(amount),"currency":"\(currency)",\
+        {"id":"\(id)","description":"Coffee","amountMinorUnits":\(amountMinorUnits),"currency":"\(currency)",\
         "date":"\(date)","type":"\(type)","entityName":\(entityName),"tags":["food"],\
         "account":"Everyday","entityId":"entity-1","location":\(location),\
         "country":\(country),"notes":\(notes),\

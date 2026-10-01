@@ -205,15 +205,13 @@ extension BFMTransactionsRepository {
     /// reason.
     private func row(from wire: ListTransactionRow) throws -> Transaction {
         guard
-            let majorUnits = Self.majorUnits(of: wire.amount),
-            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency),
             let date = Self.day(from: wire.date, in: timeZone())
         else { throw RepositoryError.contractMismatch }
 
         return Transaction(
             id: wire.id,
             description: wire.description,
-            amount: amount,
+            amount: MoneyAmount(minorUnits: wire.amountMinorUnits, currencyCode: wire.currency),
             date: date,
             type: TransactionType(rawValue: wire._type),
             entityName: wire.entityName,
@@ -227,15 +225,8 @@ extension BFMTransactionsRepository {
         ISO8601Day.parse(raw, in: timeZone)
     }
 
-    /// The wire carries money as a JSON number, so the generator hands over a
-    /// `Double` and this conversion exists only because of that choice.
-    ///
-    /// It goes through the shortest decimal string that round-trips the value,
-    /// never through arithmetic on the `Double` itself.
-    /// `19.99` is not a binary float; `Decimal(19.99)` is
-    /// `19.989999999999998976` and scaling that yields `1998` cents. Its
-    /// `description` is `"19.99"`, which is exactly what the server serialised
-    /// and what `Decimal(string:)` reads back without loss.
+    /// Preserves the JSON number's shortest decimal spelling before parsing it
+    /// as Decimal, avoiding arithmetic on its binary floating-point value.
     static func majorUnits(of amount: Double) -> Decimal? {
         guard amount.isFinite else { return nil }
         return Decimal(string: String(amount))
@@ -277,8 +268,6 @@ extension BFMTransactionsRepository {
     /// the record.
     private func detail(from wire: DetailPayload) throws -> TransactionDetail {
         guard
-            let majorUnits = Self.majorUnits(of: wire.amount),
-            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency),
             let date = Self.day(from: wire.date, in: timeZone()),
             let lastEditedAt = Self.instant(from: wire.lastEditedTime)
         else { throw RepositoryError.contractMismatch }
@@ -286,7 +275,7 @@ extension BFMTransactionsRepository {
         return TransactionDetail(
             id: wire.id,
             description: wire.description,
-            amount: amount,
+            amount: MoneyAmount(minorUnits: wire.amountMinorUnits, currencyCode: wire.currency),
             date: date,
             type: TransactionType(rawValue: wire._type),
             account: wire.account,

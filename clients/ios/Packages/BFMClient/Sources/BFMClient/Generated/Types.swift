@@ -14049,8 +14049,8 @@ internal enum Operations {
                     internal struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload`.
                         internal struct DataPayloadPayload: Codable, Hashable, Sendable {
-                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/amount`.
-                            internal var amount: Swift.Double
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/amountMinorUnits`.
+                            internal var amountMinorUnits: Swift.Int
                             /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/currency`.
                             internal var currency: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/date`.
@@ -14068,7 +14068,7 @@ internal enum Operations {
                             /// Creates a new `DataPayloadPayload`.
                             ///
                             /// - Parameters:
-                            ///   - amount:
+                            ///   - amountMinorUnits:
                             ///   - currency:
                             ///   - date:
                             ///   - description:
@@ -14077,7 +14077,7 @@ internal enum Operations {
                             ///   - tags:
                             ///   - _type:
                             internal init(
-                                amount: Swift.Double,
+                                amountMinorUnits: Swift.Int,
                                 currency: Swift.String,
                                 date: Swift.String,
                                 description: Swift.String,
@@ -14086,7 +14086,7 @@ internal enum Operations {
                                 tags: [Swift.String],
                                 _type: Swift.String
                             ) {
-                                self.amount = amount
+                                self.amountMinorUnits = amountMinorUnits
                                 self.currency = currency
                                 self.date = date
                                 self.description = description
@@ -14096,7 +14096,7 @@ internal enum Operations {
                                 self._type = _type
                             }
                             internal enum CodingKeys: String, CodingKey {
-                                case amount
+                                case amountMinorUnits
                                 case currency
                                 case date
                                 case description
@@ -14107,9 +14107,9 @@ internal enum Operations {
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
-                                self.amount = try container.decode(
-                                    Swift.Double.self,
-                                    forKey: .amount
+                                self.amountMinorUnits = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .amountMinorUnits
                                 )
                                 self.currency = try container.decode(
                                     Swift.String.self,
@@ -14140,7 +14140,7 @@ internal enum Operations {
                                     forKey: ._type
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                    "amount",
+                                    "amountMinorUnits",
                                     "currency",
                                     "date",
                                     "description",
@@ -15292,8 +15292,8 @@ internal enum Operations {
                     internal struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/account`.
                         internal var account: Swift.String
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/amount`.
-                        internal var amount: Swift.Double
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/amountMinorUnits`.
+                        internal var amountMinorUnits: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/country`.
                         internal var country: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/currency`.
@@ -15324,7 +15324,7 @@ internal enum Operations {
                         ///
                         /// - Parameters:
                         ///   - account:
-                        ///   - amount:
+                        ///   - amountMinorUnits:
                         ///   - country:
                         ///   - currency:
                         ///   - date:
@@ -15340,7 +15340,7 @@ internal enum Operations {
                         ///   - _type:
                         internal init(
                             account: Swift.String,
-                            amount: Swift.Double,
+                            amountMinorUnits: Swift.Int,
                             country: Swift.String? = nil,
                             currency: Swift.String,
                             date: Swift.String,
@@ -15356,7 +15356,7 @@ internal enum Operations {
                             _type: Swift.String
                         ) {
                             self.account = account
-                            self.amount = amount
+                            self.amountMinorUnits = amountMinorUnits
                             self.country = country
                             self.currency = currency
                             self.date = date
@@ -15373,7 +15373,7 @@ internal enum Operations {
                         }
                         internal enum CodingKeys: String, CodingKey {
                             case account
-                            case amount
+                            case amountMinorUnits
                             case country
                             case currency
                             case date
@@ -15394,9 +15394,9 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .account
                             )
-                            self.amount = try container.decode(
-                                Swift.Double.self,
-                                forKey: .amount
+                            self.amountMinorUnits = try container.decode(
+                                Swift.Int.self,
+                                forKey: .amountMinorUnits
                             )
                             self.country = try container.decodeIfPresent(
                                 Swift.String.self,
@@ -15452,7 +15452,7 @@ internal enum Operations {
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "account",
-                                "amount",
+                                "amountMinorUnits",
                                 "country",
                                 "currency",
                                 "date",
