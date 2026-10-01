@@ -1,5 +1,5 @@
 /**
- * `retryWithLockClear` is the orchestration `.github/workflows/fe-test-e2e.yml`
+ * `retryWithLockClear` is the orchestration `.github/workflows/inventory-acceptance.yml`
  * delegates its Playwright install retries to. The bug it replaces (a bounded
  * retry that abandons a stalled attempt instead of killing it, so the next
  * attempt races the orphan for the same dpkg lock and dies instantly) only
@@ -18,11 +18,7 @@ import { load } from 'js-yaml';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import {
-  CLI_DEFAULTS,
-  retryWithLockClear,
-  worstCaseSeconds,
-} from '../playwright-install-retry.mjs';
+import { retryWithLockClear, worstCaseSeconds } from '../playwright-install-retry.mjs';
 
 describe('retryWithLockClear', () => {
   it('returns success on the first attempt without touching the lock machinery', async () => {
@@ -140,83 +136,51 @@ describe('retryWithLockClear', () => {
   });
 });
 
-/**
- * The retry budget and the step timeout are two numbers in two files that only
- * work if they are held against each other. Before POPS-2302's fix they were
- * not: three 300s attempts plus two gaps came to 1155s inside a step capped at
- * 900s, so a genuinely starved mirror never reached the script's own
- * `::error::` — GitHub killed the step first and the log ended on a bare
- * `The operation was canceled`. That is the failure the ticket describes,
- * relocated from the job timeout to the step timeout rather than fixed.
- *
- * These read the real workflow, including the flags on the real command line,
- * so overriding `--attempts` in the YAML is covered too.
- */
-describe('the retry budget fits the step timeout it runs under', () => {
+describe('the required E2E lane uses pinned browser dependencies', () => {
   const StepSchema = z.object({
     name: z.string().optional(),
     run: z.string().optional(),
-    'timeout-minutes': z.number().optional(),
   });
   const WorkflowSchema = z.object({
-    jobs: z.record(z.string(), z.object({ steps: z.array(StepSchema) })),
+    jobs: z.object({
+      'e2e-tests': z.object({
+        container: z.object({ image: z.string(), options: z.string().optional() }),
+        steps: z.array(StepSchema),
+      }),
+    }),
+  });
+  const LockfileSchema = z.object({
+    importers: z.object({
+      'pillars/shell': z.object({
+        devDependencies: z.object({
+          '@playwright/test': z.object({ version: z.string() }),
+        }),
+      }),
+    }),
   });
 
-  const workflowPath = resolve(
-    dirname(fileURLToPath(import.meta.url)),
-    '..',
-    '..',
-    '..',
-    '.github',
-    'workflows',
-    'fe-test-e2e.yml'
-  );
+  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
-  /** Every step whose `run` invokes this script, with the flags it passes. */
-  function invokingSteps(): { name: string; timeoutMinutes: number | undefined; run: string }[] {
-    const workflow = WorkflowSchema.parse(load(readFileSync(workflowPath, 'utf8')));
-    return Object.values(workflow.jobs)
-      .flatMap((job) => job.steps)
-      .filter((step) => step.run?.includes('playwright-install-retry.mjs'))
-      .map((step) => ({
-        name: step.name ?? '(unnamed)',
-        timeoutMinutes: step['timeout-minutes'],
-        run: step.run ?? '',
-      }));
-  }
+  it('uses the lockfile-matched image and never installs browser dependencies from apt', () => {
+    const workflow = WorkflowSchema.parse(
+      load(readFileSync(resolve(repoRoot, '.github/workflows/fe-test-e2e.yml'), 'utf8'))
+    );
+    const lockfile = LockfileSchema.parse(
+      load(readFileSync(resolve(repoRoot, 'pnpm-lock.yaml'), 'utf8'))
+    );
+    const job = workflow.jobs['e2e-tests'];
+    const runSteps = job.steps.map((step) => step.run ?? '').join('\n');
+    const testStep = job.steps.find((step) => step.name === 'Run Playwright tests');
 
-  function flagNumber(run: string, flag: string, fallback: number): number {
-    const match = new RegExp(`${flag}\\s+(\\d+)`).exec(run);
-    return match ? Number(match[1]) : fallback;
-  }
-
-  it('finds the steps that actually invoke it, so the assertions below are not vacuous', () => {
-    expect(invokingSteps().map((s) => s.name)).toEqual([
-      'Install Playwright browsers',
-      'Install Playwright system dependencies',
-    ]);
+    expect(job.container.image).toBe(
+      `mcr.microsoft.com/playwright:v${lockfile.importers['pillars/shell'].devDependencies['@playwright/test'].version}-noble`
+    );
+    expect(job.container.options).toContain('--ipc=host');
+    expect(runSteps).not.toMatch(
+      /playwright-install-retry|playwright install(?:-deps|\s+--with-deps)/u
+    );
+    expect(testStep?.run).toContain('pnpm test:e2e');
   });
-
-  it.each(invokingSteps())(
-    '$name leaves the script room to report its own failure',
-    ({ timeoutMinutes, run }) => {
-      expect(timeoutMinutes, 'the step must carry its own timeout-minutes').toBeTypeOf('number');
-
-      const budget = worstCaseSeconds({
-        ...CLI_DEFAULTS,
-        attempts: flagNumber(run, '--attempts', CLI_DEFAULTS.attempts),
-        timeoutSeconds: flagNumber(run, '--timeout-seconds', CLI_DEFAULTS.timeoutSeconds),
-      });
-
-      expect(
-        budget,
-        `the retry can burn ${String(budget)}s but the step is capped at ` +
-          `${String((timeoutMinutes ?? 0) * 60)}s. The runner would kill it mid-loop and the ` +
-          'script would never print why it gave up — the POPS-2302 signature. Shrink attempts, ' +
-          'the per-attempt timeout or the backoff; do not raise the step, the job has no room.'
-      ).toBeLessThan((timeoutMinutes ?? 0) * 60);
-    }
-  );
 });
 
 describe('worstCaseSeconds', () => {
