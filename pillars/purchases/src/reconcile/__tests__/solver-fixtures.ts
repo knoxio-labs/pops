@@ -38,6 +38,7 @@ export function txn(overrides: Partial<SolvableTransaction> = {}): SolvableTrans
     uri: 'pops://finance/transaction/t1',
     description: 'AMAZON MKTPLACE AU',
     accountId: 'acct-amex',
+    type: 'purchase',
     amountCents: 4128,
     settlementCurrency: 'AUD',
     foreignAmountMinor: null,
