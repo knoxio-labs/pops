@@ -171,6 +171,46 @@ describe('fetchTransactionsByIds', () => {
   });
 });
 
+describe('searchTransactions', () => {
+  it('searches Finance and returns bounded transaction details', async () => {
+    const { handle, calls } = stubHandle([
+      page([
+        row({ id: 'txn-1', description: 'AMAZON MARKETPLACE', entityName: 'Amazon' }),
+        row({ id: 'txn-2', description: 'AMAZON PRIME' }),
+      ]),
+    ]);
+
+    const result = await createFinanceClient(() => handle).searchTransactions({
+      search: 'AMAZON',
+      limit: 25,
+    });
+
+    expect(calls).toEqual([{ search: 'AMAZON', limit: 25, offset: 0 }]);
+    expect(result.kind).toBe('ok');
+    if (result.kind !== 'ok') return;
+    expect(
+      result.transactions.map(({ id, amountCents, entityName }) => ({
+        id,
+        amountCents,
+        entityName,
+      }))
+    ).toEqual([
+      { id: 'txn-1', amountCents: 4128, entityName: 'Amazon' },
+      { id: 'txn-2', amountCents: 4128, entityName: null },
+    ]);
+  });
+
+  it('reports unavailable when Finance refuses the search', async () => {
+    const { handle } = stubHandle([{ kind: 'unavailable', pillar: 'finance' }]);
+    const result = await createFinanceClient(() => handle).searchTransactions({
+      search: 'AMAZON',
+      limit: 25,
+    });
+
+    expect(result.kind).toBe('unavailable');
+  });
+});
+
 describe('an outage is not an empty window', () => {
   // The single most important behaviour in this file. Auto-links are
   // re-derived by tearing down unconfirmed links and re-solving against

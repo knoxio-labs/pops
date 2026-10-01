@@ -1,6 +1,10 @@
 import { defineErrors } from '@pops/pillar-express';
 
 import { createErrorBodyBuilder } from './error-body-builder.js';
+import {
+  RECONCILIATION_ERROR_DEFINITIONS,
+  reconciliationErrors,
+} from './reconciliation-error-definitions.js';
 
 const ERROR_DEFINITIONS = {
   not_found: {
@@ -147,18 +151,6 @@ const ERROR_DEFINITIONS = {
     message: 'The uploaded bytes do not match the stated media type.',
     retryable: false,
   },
-  link_not_found: {
-    area: 'reconciliation',
-    status: 404,
-    message: 'The requested transaction link was not found.',
-    retryable: false,
-  },
-  sweep_unavailable: {
-    area: 'reconciliation',
-    status: 503,
-    message: 'Purchase reconciliation is unavailable.',
-    retryable: false,
-  },
   unauthorized: {
     area: 'inventory',
     status: 502,
@@ -185,13 +177,21 @@ const ERROR_DEFINITIONS = {
   },
 } as const;
 
-export type PurchaseErrorReason = keyof typeof ERROR_DEFINITIONS;
+const ALL_ERROR_DEFINITIONS = {
+  ...ERROR_DEFINITIONS,
+  ...RECONCILIATION_ERROR_DEFINITIONS,
+};
+
+export type PurchaseErrorReason = keyof typeof ALL_ERROR_DEFINITIONS;
 
 /** Typed throwing helpers for every purchases-owned error code. */
-export const purchaseErrors = defineErrors('purchases', ERROR_DEFINITIONS);
+export const purchaseErrors = {
+  ...defineErrors('purchases', ERROR_DEFINITIONS),
+  ...reconciliationErrors,
+};
 
 /**
  * Build an ADR-054 response for contract handlers that return declared error statuses.
  * Request middleware establishes the id; the fallback only supports isolated unit calls.
  */
-export const purchaseErrorBody = createErrorBodyBuilder('purchases', ERROR_DEFINITIONS);
+export const purchaseErrorBody = createErrorBodyBuilder('purchases', ALL_ERROR_DEFINITIONS);

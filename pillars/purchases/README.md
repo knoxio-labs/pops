@@ -294,14 +294,14 @@ This is not a weaker gate, and it is no longer untested. The whole mechanism is 
 
 The mirror of the section above, and the half with a production failure mode. purchases makes six outbound cross-pillar calls, all through `pillar()` from `@pops/pillar-sdk/server`, which attaches the pillar's service-account key as `X-API-Key`:
 
-| Leg                            | Call                | Scope needed           | Where                           |
-| ------------------------------ | ------------------- | ---------------------- | ------------------------------- |
-| reconciliation candidate fetch | `transactions.list` | `finance.transactions` | `src/api/finance/client.ts`     |
-| soft-URI check, inventory      | `items.get`         | `inventory.items`      | `src/api/cron/pillar-lookup.ts` |
-| soft-URI check, documents      | `paperless.get`     | `documents.paperless`  | `src/api/cron/pillar-lookup.ts` |
-| receipt merchant resolution    | `entities.list`     | `contacts.entities`    | `src/api/contacts/merchant.ts`  |
-| accepted proposal → asset      | `items.create`      | `inventory.items`      | `src/api/inventory/client.ts`   |
-| edit removes a linked line     | `items.update`      | `inventory.items`      | `src/api/inventory/client.ts`   |
+| Leg                                       | Call                | Scope needed           | Where                           |
+| ----------------------------------------- | ------------------- | ---------------------- | ------------------------------- |
+| reconciliation candidates + manual search | `transactions.list` | `finance.transactions` | `src/api/finance/client.ts`     |
+| soft-URI check, inventory                 | `items.get`         | `inventory.items`      | `src/api/cron/pillar-lookup.ts` |
+| soft-URI check, documents                 | `paperless.get`     | `documents.paperless`  | `src/api/cron/pillar-lookup.ts` |
+| receipt merchant resolution               | `entities.list`     | `contacts.entities`    | `src/api/contacts/merchant.ts`  |
+| accepted proposal → asset                 | `items.create`      | `inventory.items`      | `src/api/inventory/client.ts`   |
+| edit removes a linked line                | `items.update`      | `inventory.items`      | `src/api/inventory/client.ts`   |
 
 **Four of those six read. The other two write**, and they are the only calls in this pillar that change data another pillar owns — see [the fan-out](#the-inventory-fan-out) for why the first sits here rather than in the browser, and what that costs. Note what the Scope column shows: neither needs a scope the cron's `items.get` did not already carry, because prefix matching cannot separate reading an item from creating or updating one. The list below therefore did not grow when either leg landed, which is exactly why they are documented in three places instead.
 

@@ -231,6 +231,12 @@ export const ROUTES = [
     handlerKey: 'queue',
   },
   {
+    method: 'get',
+    path: '/reconcile/manual-candidates',
+    handlerFile: 'pillars/purchases/src/api/rest/manual-reconcile-handlers.ts',
+    handlerKey: 'manualCandidates',
+  },
+  {
     method: 'post',
     path: '/search',
     handlerFile: 'pillars/purchases/src/api/rest/search-handlers.ts',

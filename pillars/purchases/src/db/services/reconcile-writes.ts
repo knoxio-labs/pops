@@ -161,6 +161,7 @@ export function persistProposedLinks(db: PurchasesDb, links: readonly ProposedLi
   return written;
 }
 
+/** Outcome of manually linking an unexplained charge. */
 /**
  * Remove one link entirely, confirmed or not, remembering nothing.
  *

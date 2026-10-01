@@ -18,12 +18,16 @@ const reconcileQueueMock = vi.fn();
 const reconcileConfirmMock = vi.fn();
 const reconcileUnlinkMock = vi.fn();
 const reconcileDeactivateRuleMock = vi.fn();
+const reconcileManualCandidatesMock = vi.fn();
+const reconcileManualMock = vi.fn();
 
 vi.mock('../../purchases-api/index.js', () => ({
   reconcileQueue: (...args: unknown[]) => reconcileQueueMock(...args),
   reconcileConfirm: (...args: unknown[]) => reconcileConfirmMock(...args),
   reconcileUnlink: (...args: unknown[]) => reconcileUnlinkMock(...args),
   reconcileDeactivateRule: (...args: unknown[]) => reconcileDeactivateRuleMock(...args),
+  reconcileManualCandidates: (...args: unknown[]) => reconcileManualCandidatesMock(...args),
+  reconcileManual: (...args: unknown[]) => reconcileManualMock(...args),
 }));
 
 function buildLink(overrides: Partial<ProposedLink> = {}): ProposedLink {
@@ -121,6 +125,8 @@ beforeEach(() => {
   reconcileConfirmMock.mockReset();
   reconcileUnlinkMock.mockReset();
   reconcileDeactivateRuleMock.mockReset();
+  reconcileManualCandidatesMock.mockReset();
+  reconcileManualMock.mockReset();
 });
 
 describe('ReconcileQueuePage — copy', () => {
@@ -438,6 +444,64 @@ describe('ReconcileQueuePage — decisions', () => {
     expect(
       screen.getByRole('button', { name: enAUPurchases['reconcile.action.accept'] })
     ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: enAUPurchases['reconcile.action.linkManually'] })
+    ).toBeEnabled();
+  });
+
+  it('searches Finance and pins a selected transaction to an unexplained charge', async () => {
+    const user = userEvent.setup();
+    const candidate = {
+      transactionUri: 'pops://finance/transaction/tx-1',
+      description: 'AMAZON MKTPLACE AU',
+      date: '2026-05-03',
+      payee: 'Amazon',
+      amountCents: 4599,
+      settlementCurrency: 'AUD',
+    };
+    reconcileManualCandidatesMock.mockResolvedValue({
+      data: { items: [candidate] },
+      error: undefined,
+    });
+    reconcileManualMock.mockResolvedValue({ data: { ok: true }, error: undefined });
+    queueReturns([entryAt(1, { proposed: [], deltaCents: -4599 })], []);
+    renderQueue();
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: enAUPurchases['reconcile.action.linkManually'],
+      })
+    );
+    expect(screen.getByText(enAUPurchases['reconcile.manual.typeToSearch'])).toBeVisible();
+    await user.type(
+      screen.getByPlaceholderText(enAUPurchases['reconcile.manual.searchPlaceholder']),
+      'AMAZON'
+    );
+    await user.click(await screen.findByRole('button', { name: /AMAZON MKTPLACE AU/u }));
+
+    await waitFor(() =>
+      expect(reconcileManualCandidatesMock).toHaveBeenCalledWith({
+        query: { search: 'AMAZON', limit: 25 },
+      })
+    );
+    expect(reconcileManualMock).toHaveBeenCalledWith({
+      body: {
+        chargeId: 'charge-1',
+        transactionUri: candidate.transactionUri,
+      },
+    });
+    expect(await screen.findByText(enAUPurchases['reconcile.empty.title'])).toBeVisible();
+  });
+
+  it('does not offer manual linking for a charge that already has proposals', async () => {
+    queueReturns([entryAt(1)]);
+    renderQueue();
+
+    await screen.findByRole('listbox');
+
+    expect(
+      screen.queryByRole('button', { name: enAUPurchases['reconcile.action.linkManually'] })
+    ).not.toBeInTheDocument();
   });
 
   it('ignores a second enter while the first is still in flight', async () => {

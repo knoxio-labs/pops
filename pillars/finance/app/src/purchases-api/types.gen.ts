@@ -3131,6 +3131,86 @@ export type ReconcileLinksBatchResponses = {
 export type ReconcileLinksBatchResponse =
   ReconcileLinksBatchResponses[keyof ReconcileLinksBatchResponses];
 
+export type ReconcileManualData = {
+  /**
+   * Body
+   */
+  body?: {
+    chargeId: string;
+    transactionUri: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/reconcile/manual';
+};
+
+export type ReconcileManualErrors = {
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type ReconcileManualError = ReconcileManualErrors[keyof ReconcileManualErrors];
+
+export type ReconcileManualResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ReconcileManualResponse = ReconcileManualResponses[keyof ReconcileManualResponses];
+
+export type ReconcileManualCandidatesData = {
+  body?: never;
+  path?: never;
+  query: {
+    search: string;
+    limit?: number;
+  };
+  url: '/reconcile/manual-candidates';
+};
+
+export type ReconcileManualCandidatesErrors = {
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type ReconcileManualCandidatesError =
+  ReconcileManualCandidatesErrors[keyof ReconcileManualCandidatesErrors];
+
+export type ReconcileManualCandidatesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    items: Array<{
+      amountCents: number;
+      date: string;
+      description: string;
+      payee: string | null;
+      settlementCurrency: string;
+      transactionUri: string;
+    }>;
+  };
+};
+
+export type ReconcileManualCandidatesResponse =
+  ReconcileManualCandidatesResponses[keyof ReconcileManualCandidatesResponses];
+
 export type ReconcileQueueData = {
   body?: never;
   path?: never;

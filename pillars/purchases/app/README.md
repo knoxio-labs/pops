@@ -167,6 +167,7 @@ rather than implying otherwise.
 | ----------------- | ------------------------- | ------------------------------------------------------------------ |
 | Accept            | `POST /reconcile/confirm` | pins the link, and writes the merchant rule the pin was made under |
 | Reject            | `POST /reconcile/unlink`  | deletes the link, and remembers nothing                            |
+| Link manually     | `POST /reconcile/manual`  | writes and confirms the operator-selected transaction in one step  |
 
 **The view has not caught up with the server.** `POST /reconcile/reject` now
 exists and is the durable decision — it records the pairing so no later sweep
@@ -179,9 +180,14 @@ That is also why the cursor is keyed by charge id and parks on the successor
 before the refetch lands, instead of counting indexes: an unlinked charge comes
 back as unexplained rather than leaving the queue.
 
-An unexplained charge (no proposals) has nothing to confirm or delete, so both
-keys refuse rather than firing a request that would 404. Nothing can link it by
-hand yet either — POPS-1900.
+An unexplained charge (no proposals) has nothing to confirm or delete, so the
+accept and reject actions stay disabled. The toolbar offers **Link transaction**
+for that row. It searches Finance by transaction description through
+`GET /reconcile/manual-candidates`, then `POST /reconcile/manual` re-fetches the
+selected transaction before creating a `manual`, confidence-1 link with
+`confirmedAt` set in the same transaction. The link uses the full charge amount
+and remains pinned through later sweeps. Finance outages leave the charge
+unlinked and return a retryable error.
 
 ### Paging
 

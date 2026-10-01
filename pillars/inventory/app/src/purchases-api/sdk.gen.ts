@@ -94,6 +94,12 @@ import type {
   ReconcileLinksBatchResponses,
   ReconcileLinksData,
   ReconcileLinksResponses,
+  ReconcileManualCandidatesData,
+  ReconcileManualCandidatesErrors,
+  ReconcileManualCandidatesResponses,
+  ReconcileManualData,
+  ReconcileManualErrors,
+  ReconcileManualResponses,
   ReconcileQueueData,
   ReconcileQueueResponses,
   ReconcileRejectData,
@@ -611,6 +617,37 @@ export const reconcileLinksBatch = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
   });
+
+/**
+ * Create and confirm a manually selected charge link
+ */
+export const reconcileManual = <ThrowOnError extends boolean = false>(
+  options?: Options<ReconcileManualData, ThrowOnError>
+): RequestResult<ReconcileManualResponses, ReconcileManualErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ReconcileManualResponses, ReconcileManualErrors, ThrowOnError>({
+    url: '/reconcile/manual',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Search Finance transactions for a manual reconciliation link
+ */
+export const reconcileManualCandidates = <ThrowOnError extends boolean = false>(
+  options: Options<ReconcileManualCandidatesData, ThrowOnError>
+): RequestResult<
+  ReconcileManualCandidatesResponses,
+  ReconcileManualCandidatesErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ReconcileManualCandidatesResponses,
+    ReconcileManualCandidatesErrors,
+    ThrowOnError
+  >({ url: '/reconcile/manual-candidates', ...options });
 
 /**
  * Charges awaiting a decision, newest order first

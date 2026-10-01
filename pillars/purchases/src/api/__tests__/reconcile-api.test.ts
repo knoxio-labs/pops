@@ -12,6 +12,7 @@ import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import {
   createPurchase,
   listActiveMatchRules,
+  purchaseChargeLinks,
   persistProposedLinks,
   purchaseCharges,
   recordMatchRule,
@@ -25,7 +26,11 @@ import { createTestTransport } from './test-http.js';
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
-import type { FinanceClient, FinanceTransactionLookup } from '../finance/client.js';
+import type {
+  FinanceClient,
+  FinanceTransactionLookup,
+  FinanceTransactionSearch,
+} from '../finance/client.js';
 
 const { requestOn } = createTestTransport();
 
@@ -88,13 +93,16 @@ function seedRuleProposal(): { chargeId: string; purchaseId: string; ruleId: str
   return { chargeId: charge.id, purchaseId, ruleId };
 }
 
-function build(finance: FinanceClient & FinanceTransactionLookup = financeReturning()): Express {
+function build(
+  finance: FinanceClient & FinanceTransactionLookup & FinanceTransactionSearch = financeReturning()
+): Express {
   return createPurchasesApiApp({
     vision: null,
     purchasesDb: opened,
     version: '1.2.3',
     selfBaseUrl: 'http://localhost:3013',
     financeTransactionLookup: finance,
+    financeTransactionSearch: finance,
     sweep: () => runSweep({ db: opened.db, finance, defaultWindowDays: 21 }),
   });
 }
@@ -424,6 +432,123 @@ describe('learned rule attribution', () => {
     ).toMatchObject([{ id: ruleId, descriptionPattern: 'WOOLWORTHS SYDNEY', isActive: false }]);
 
     await requestOn(app).post('/reconcile/rules/missing/deactivate').expect(404);
+  });
+});
+
+describe('manual links', () => {
+  it('searches Finance candidates with date, payee and amount details', async () => {
+    app = build(
+      financeReturning(
+        {
+          id: 't1',
+          amountCents: 4128,
+          date: '2026-03-06',
+          description: 'AMAZON MARKETPLACE',
+          entityName: 'Amazon',
+        },
+        {
+          id: 't2',
+          amountCents: 5000,
+          description: 'WOOLWORTHS',
+        }
+      )
+    );
+
+    const response = await requestOn(app)
+      .get('/reconcile/manual-candidates?search=AMAZON')
+      .expect(200);
+
+    expect(response.body.items).toEqual([
+      {
+        transactionUri: TXN,
+        description: 'AMAZON MARKETPLACE',
+        date: '2026-03-06',
+        payee: 'Amazon',
+        amountCents: 4128,
+        settlementCurrency: 'AUD',
+      },
+    ]);
+  });
+
+  it('fails closed when Finance cannot search transactions', async () => {
+    app = build(FINANCE_UNAVAILABLE);
+
+    await requestOn(app).get('/reconcile/manual-candidates?search=AMAZON').expect(503);
+  });
+
+  it('creates a confirmed manual link that a later sweep keeps', async () => {
+    order(4128, 'manual-link');
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
+    const queue = await requestOn(app).get('/reconcile/queue?kind=unexplained').expect(200);
+    const chargeId = queue.body.items[0].chargeId as string;
+    app = build(
+      financeReturning({
+        id: 't1',
+        amountCents: 4128,
+        date: '2026-03-06',
+        description: 'AMAZON MARKETPLACE',
+      })
+    );
+
+    await requestOn(app)
+      .post('/reconcile/manual')
+      .send({ chargeId, transactionUri: TXN })
+      .expect(200);
+
+    const created = opened.db.select().from(purchaseChargeLinks).all();
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      chargeId,
+      transactionUri: TXN,
+      transactionDescription: 'AMAZON MARKETPLACE',
+      amountCents: 4128,
+      linkType: 'manual',
+      confidence: 1,
+    });
+    expect(created[0]?.confirmedAt).not.toBeNull();
+
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
+
+    const afterSweep = opened.db.select().from(purchaseChargeLinks).all();
+    expect(afterSweep).toHaveLength(1);
+    expect(afterSweep[0]?.confirmedAt).toBe(created[0]?.confirmedAt);
+    expect(afterSweep[0]?.linkType).toBe('manual');
+  });
+
+  it('does not replace a link that appeared after the queue was read', async () => {
+    order(4128, 'proposal-won-race');
+    const finance = financeReturning(
+      { id: 't1', amountCents: 4128 },
+      { id: 't2', amountCents: 6000, description: 'UNRELATED TRANSACTION' }
+    );
+    await runSweep({ db: opened.db, finance, defaultWindowDays: 21 });
+    const queue = await requestOn(app).get('/reconcile/queue?kind=proposed').expect(200);
+    const chargeId = queue.body.items[0].chargeId as string;
+    app = build(finance);
+
+    await requestOn(app)
+      .post('/reconcile/manual')
+      .send({ chargeId, transactionUri: 'pops://finance/transaction/t2' })
+      .expect(409);
+
+    const links = opened.db.select().from(purchaseChargeLinks).all();
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({ transactionUri: TXN, linkType: 'exact' });
+    expect(links[0]?.confirmedAt).toBeNull();
+  });
+
+  it('does not write a link for a Finance transaction that no longer exists', async () => {
+    order(4128, 'missing-finance-transaction');
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
+    const queue = await requestOn(app).get('/reconcile/queue?kind=unexplained').expect(200);
+    const chargeId = queue.body.items[0].chargeId as string;
+
+    await requestOn(app)
+      .post('/reconcile/manual')
+      .send({ chargeId, transactionUri: TXN })
+      .expect(404);
+
+    expect(opened.db.select().from(purchaseChargeLinks).all()).toEqual([]);
   });
 });
 
