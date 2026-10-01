@@ -8,12 +8,10 @@
  * is not good enough here: a producer-side rename would arrive as `undefined`
  * and reach a phone screen as a blank or a zero, months before anyone noticed.
  *
- * The money contract is finance's and is mirrored, not reinterpreted.
- * `amount` is SIGNED DECIMAL DOLLARS on finance's wire (it persists integer
- * cents and divides once at its REST edge) and stays exactly that here.
- * Converting to cents and back would be a second representation and a second
- * rounding rule, which is how two services come to disagree about what
- * somebody spent.
+ * Finance sends signed decimal amounts after converting its persisted minor
+ * units at the REST edge. BFM converts that decimal to the account currency's
+ * integer minor units once for the mobile contract, and rejects values that
+ * cannot be represented exactly at that precision.
  */
 import { z } from 'zod';
 
@@ -82,15 +80,21 @@ export const FinanceTransactionGetResponseSchema = z.object({
  * caller passes {@link import('../../contract/transaction.js').FALLBACK_MOBILE_CURRENCY}
  * when that lookup failed,
  * never as the ordinary answer.
+ *
+ * Returns `null` when the decimal amount cannot be represented exactly as a
+ * safe integer in the currency's minor units.
  */
 export function toMobileTransaction(
   row: FinanceTransactionRow,
   currency: string
-): MobileTransaction {
+): MobileTransaction | null {
+  const amountMinorUnits = toMinorUnits(row.amount, currency);
+  if (amountMinorUnits === null) return null;
+
   return {
     id: row.id,
     description: row.description,
-    amountMinorUnits: toMinorUnits(row.amount, currency),
+    amountMinorUnits,
     currency,
     date: row.date,
     type: row.type,
@@ -99,16 +103,68 @@ export function toMobileTransaction(
   };
 }
 
-function toMinorUnits(amount: number, currency: string): number {
-  let fractionDigits: number;
+type DecimalAmount = {
+  sign: string;
+  digits: string;
+  decimalPlaces: number;
+};
+
+function currencyFractionDigits(currency: string): number {
   try {
-    fractionDigits =
+    return (
       new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions()
-        .maximumFractionDigits ?? 2;
+        .maximumFractionDigits ?? 2
+    );
   } catch {
-    fractionDigits = 2;
+    return 2;
   }
-  return Math.round(amount * 10 ** fractionDigits);
+}
+
+function parseDecimalAmount(amount: number): DecimalAmount | null {
+  const parts = /^(-?)(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/iu.exec(amount.toString());
+  if (parts === null) return null;
+
+  const sign = parts[1];
+  const whole = parts[2];
+  if (sign === undefined || whole === undefined) return null;
+
+  const fraction = parts[3] ?? '';
+  const exponent = Number(parts[4] ?? 0);
+  if (!Number.isSafeInteger(exponent)) return null;
+
+  return { sign, digits: `${whole}${fraction}`, decimalPlaces: fraction.length - exponent };
+}
+
+function scaleDecimalAmount(amount: DecimalAmount, fractionDigits: number): string | null {
+  const shift = fractionDigits - amount.decimalPlaces;
+  if (shift >= 0) return `${amount.digits}${'0'.repeat(shift)}`;
+
+  const discardedDigits = -shift;
+  if (discardedDigits >= amount.digits.length) {
+    return /[^0]/u.test(amount.digits) ? null : '0';
+  }
+
+  const retainedLength = amount.digits.length - discardedDigits;
+  const discarded = amount.digits.slice(retainedLength);
+  return /[^0]/u.test(discarded) ? null : amount.digits.slice(0, retainedLength);
+}
+
+function toMinorUnits(amount: number, currency: string): number | null {
+  const decimalAmount = parseDecimalAmount(amount);
+  if (decimalAmount === null) return null;
+
+  const digits = scaleDecimalAmount(decimalAmount, currencyFractionDigits(currency));
+  if (digits === null) return null;
+
+  const normalizedDigits = digits.replace(/^0+/u, '') || '0';
+  const minorUnits = BigInt(`${decimalAmount.sign}${normalizedDigits}`);
+  if (
+    minorUnits > BigInt(Number.MAX_SAFE_INTEGER) ||
+    minorUnits < BigInt(Number.MIN_SAFE_INTEGER)
+  ) {
+    return null;
+  }
+  return Number(minorUnits);
 }
 
 /**
@@ -116,15 +172,20 @@ function toMinorUnits(amount: number, currency: string): number {
  *
  * `accountName` and `currency` are resolved by the caller via the accounts
  * lookup (POPS-2770, POPS-3571) — finance's own response carries only
- * `accountId`, and this mapper has no way to reach finance itself.
+ * `accountId`, and this mapper has no way to reach finance itself. Returns
+ * `null` when the decimal amount cannot be represented exactly as a safe
+ * integer in the currency's minor units.
  */
 export function toMobileTransactionDetail(
   row: FinanceTransactionDetail,
   accountName: string,
   currency: string
-): MobileTransactionDetail {
+): MobileTransactionDetail | null {
+  const transaction = toMobileTransaction(row, currency);
+  if (transaction === null) return null;
+
   return {
-    ...toMobileTransaction(row, currency),
+    ...transaction,
     account: accountName,
     entityId: row.entityId,
     location: row.location,

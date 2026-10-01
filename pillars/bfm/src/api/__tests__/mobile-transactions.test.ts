@@ -158,6 +158,47 @@ describe('the list row is mobile-shaped', () => {
     expect(res.body.data[0]).toMatchObject({ amountMinorUnits: -42, currency: 'JPY' });
   });
 
+  it('rejects more precision than the currency rather than rounding it', async () => {
+    const fake = createFinanceFake(
+      [
+        financeRow({ id: 'txn-jpy', amount: 42.5, accountId: 'acc-jpy' }),
+        financeRow({ id: 'txn-aud', amount: 1.005, accountId: 'acc-aud' }),
+      ],
+      undefined,
+      [
+        financeAccountRow({ id: 'acc-jpy', currency: 'JPY' }),
+        financeAccountRow({ id: 'acc-aud', currency: 'AUD' }),
+      ]
+    );
+    const { app, token } = openWith(fake.factory);
+
+    for (const accountId of ['acc-jpy', 'acc-aud']) {
+      const res = await get(app, token, `${LIST_PATH}?accountId=${accountId}`);
+
+      expect(res.status).toBe(502);
+      expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
+    }
+
+    const detail = await get(app, token, `${LIST_PATH}/txn-jpy`);
+
+    expect(detail.status).toBe(502);
+    expect(detail.body.code).toBe('bfm.upstream.contract_mismatch');
+  });
+
+  it('uses two minor digits for a malformed currency', async () => {
+    const fake = createFinanceFake(
+      [financeRow({ id: 'txn-malformed-currency', amount: -42.5, accountId: 'acc-malformed' })],
+      undefined,
+      [financeAccountRow({ id: 'acc-malformed', currency: 'AU' })]
+    );
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0]).toMatchObject({ amountMinorUnits: -4250, currency: 'AU' });
+  });
+
   it("emits the transaction's own account currency, not a fleet-wide assumption (POPS-3571)", async () => {
     const fake = createFinanceFake(
       [financeRow({ id: 'txn-brl', accountId: 'acc-brazil-cash' })],

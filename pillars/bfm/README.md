@@ -324,9 +324,11 @@ properties follow, and each is asserted in
   in the transaction account's currency. Finance persists integer cents and
   publishes decimal amounts; BFM converts once at its REST edge using the
   resolved account currency, so the phone receives the exact integer it
-  stores. `type` is a semantic label and never the direction. `currency` is an
-  open string carrying the account's ISO 4217 code; AUD is only the fallback
-  when the account lookup fails.
+  stores. BFM returns a contract mismatch if the amount has more precision
+  than that currency can represent, instead of rounding it. A malformed
+  currency code uses two minor digits. `type` is a semantic label and never
+  the direction. `currency` is an open string carrying the account's ISO 4217
+  code; AUD is only the fallback when the account lookup fails.
 - **A degraded federation is a typed answer, never an empty page.** A list that
   answered `[]` while finance was down would be telling the user they have no
   transactions, which they cannot tell from the truth. `unavailable`,

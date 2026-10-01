@@ -113,7 +113,9 @@ internal struct TransactionDetailMappingTests {
     @Test("a record this build cannot represent fails rather than half-renders")
     func rejectsAnUnreadableRecord() async {
         await #expect(throws: RepositoryError.contractMismatch) {
-            try await record(TransactionsWire.record(amountMinorUnits: 1999, date: "2026-03-05T00:00:00Z"))
+            try await record(
+                TransactionsWire.record(
+                    amountMinorUnits: 1999, date: "2026-03-05T00:00:00Z"))
         }
     }
 
