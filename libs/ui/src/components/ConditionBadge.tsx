@@ -2,7 +2,7 @@ import { cn } from '../lib/utils';
 import { Badge } from '../primitives/badge';
 import { STATUS_BADGE_BASE, statusBadgeToneClass } from './statusBadgeTones';
 
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 
 /**
  * Condition values accepted by the badge.
@@ -46,18 +46,19 @@ function resolveStyles(condition: string): string {
   return KNOWN_CONDITIONS.has(key) ? conditionStyles[key as NormalisedCondition] : '';
 }
 
-/** Props for rendering a recognized condition value stored by an inventory item. */
+/** Props for rendering stored inventory conditions, with optional content for unknown values. */
 export interface ConditionBadgeProps extends Omit<
   ComponentProps<typeof Badge>,
   'variant' | 'children'
 > {
   condition: string;
+  fallback?: ReactNode;
 }
 
-/** Renders recognized conditions and returns nothing for unrecognized stored values. */
-export function ConditionBadge({ condition, className, ...props }: ConditionBadgeProps) {
+/** Renders recognized conditions and uses the fallback, if provided, for unrecognized values. */
+export function ConditionBadge({ condition, className, fallback, ...props }: ConditionBadgeProps) {
   const styles = resolveStyles(condition);
-  if (!styles) return null;
+  if (!styles) return fallback ?? null;
 
   return (
     <Badge variant="outline" className={cn(STATUS_BADGE_BASE, styles, className)} {...props}>

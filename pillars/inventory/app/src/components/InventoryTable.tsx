@@ -51,7 +51,12 @@ function conditionCell(condition: string | null): React.ReactNode {
   if (!condition) {
     return <span className="text-muted-foreground">—</span>;
   }
-  return <ConditionBadge condition={condition} />;
+  return (
+    <ConditionBadge
+      condition={condition}
+      fallback={<span className="text-muted-foreground">—</span>}
+    />
+  );
 }
 
 function purchaseDateCell(date: string | null): React.ReactNode {

@@ -65,9 +65,9 @@ describe('Condition column — badge colour mapping', () => {
     expect(firstRowConditionCell()).toHaveTextContent('—');
   });
 
-  it('does not render a badge for unknown condition strings', () => {
+  it('renders a dash for unknown condition strings', () => {
     renderTable([{ ...baseItem, condition: 'mint' }]);
-    expect(firstRowConditionCell()).toBeEmptyDOMElement();
+    expect(firstRowConditionCell()).toHaveTextContent('—');
   });
 });
 
