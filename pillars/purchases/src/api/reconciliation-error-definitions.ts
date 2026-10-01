@@ -1,3 +1,5 @@
+import { defineErrors } from '@pops/pillar-express';
+
 /** Errors owned by the purchases reconciliation routes. */
 export const RECONCILIATION_ERROR_DEFINITIONS = {
   link_not_found: {
@@ -25,3 +27,6 @@ export const RECONCILIATION_ERROR_DEFINITIONS = {
     retryable: false,
   },
 } as const;
+
+/** Typed throwing helpers for reconciliation-owned errors. */
+export const reconciliationErrors = defineErrors('purchases', RECONCILIATION_ERROR_DEFINITIONS);

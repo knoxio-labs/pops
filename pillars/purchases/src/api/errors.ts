@@ -1,7 +1,10 @@
 import { defineErrors } from '@pops/pillar-express';
 import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 
-import { RECONCILIATION_ERROR_DEFINITIONS } from './reconciliation-error-definitions.js';
+import {
+  RECONCILIATION_ERROR_DEFINITIONS,
+  reconciliationErrors,
+} from './reconciliation-error-definitions.js';
 
 import type { ErrorBody } from '@pops/types';
 
@@ -144,7 +147,6 @@ const ERROR_DEFINITIONS = {
     message: 'The uploaded bytes do not match the stated media type.',
     retryable: false,
   },
-  ...RECONCILIATION_ERROR_DEFINITIONS,
   unauthorized: {
     area: 'inventory',
     status: 502,
@@ -171,10 +173,18 @@ const ERROR_DEFINITIONS = {
   },
 } as const;
 
-export type PurchaseErrorReason = keyof typeof ERROR_DEFINITIONS;
+const ALL_ERROR_DEFINITIONS = {
+  ...ERROR_DEFINITIONS,
+  ...RECONCILIATION_ERROR_DEFINITIONS,
+};
+
+export type PurchaseErrorReason = keyof typeof ALL_ERROR_DEFINITIONS;
 
 /** Typed throwing helpers for every purchases-owned error code. */
-export const purchaseErrors = defineErrors('purchases', ERROR_DEFINITIONS);
+export const purchaseErrors = {
+  ...defineErrors('purchases', ERROR_DEFINITIONS),
+  ...reconciliationErrors,
+};
 
 /**
  * Build an ADR-054 response for contract handlers that return declared error statuses.
@@ -184,7 +194,7 @@ export function purchaseErrorBody(
   reason: PurchaseErrorReason,
   options: { readonly message?: string; readonly details?: unknown } = {}
 ): ErrorBody {
-  const definition = ERROR_DEFINITIONS[reason];
+  const definition = ALL_ERROR_DEFINITIONS[reason];
   return {
     code: `purchases.${definition.area}.${reason}`,
     message: options.message ?? definition.message,
