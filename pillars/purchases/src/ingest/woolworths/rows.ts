@@ -1,4 +1,4 @@
-import { isMeasureNote } from '../measure-notes.js';
+import { isMeasureNote, isUnitPriceRow } from '../measure-notes.js';
 import { parseAmountCents } from '../money.js';
 
 /**
@@ -49,6 +49,7 @@ export interface GroupedItem {
   readonly lineTotalCents: number;
   /** Per-unit price in cents. Equals the line total for a quantity of one. */
   readonly unitPriceCents: number;
+  readonly pricedByMeasure: boolean;
   /** `PRICE REDUCED BY $x each` and similar, verbatim, for provenance. */
   readonly notes: readonly string[];
   /** `#` marks a GST-applicable line on this receipt. */
@@ -120,6 +121,7 @@ interface OpenItem {
   notes: string[];
   gstApplicable: boolean;
   promotional: boolean;
+  pricedByMeasure: boolean;
 }
 
 /**
@@ -149,6 +151,7 @@ class Grouper {
       quantity: open.quantity,
       lineTotalCents: open.lineTotalCents,
       unitPriceCents: open.unitPriceCents ?? Math.round(open.lineTotalCents / open.quantity),
+      pricedByMeasure: open.pricedByMeasure,
       notes: open.notes,
       gstApplicable: open.gstApplicable,
       promotional: open.promotional,
@@ -173,6 +176,7 @@ class Grouper {
       notes: [],
       gstApplicable: (row.prefixChar ?? '') === '#',
       promotional: (row.prefixChar ?? '') === '^',
+      pricedByMeasure: false,
     };
   }
 
@@ -216,6 +220,7 @@ class Grouper {
       });
       return;
     }
+    this.open.pricedByMeasure ||= isMeasureNote(description);
     this.open.notes.push(description);
     const total = parseAmountCents(row.amount);
     if (total !== null) this.open.lineTotalCents = total;
@@ -265,7 +270,7 @@ export function groupReceiptRows(rows: readonly ReceiptRow[]): GroupedRows {
     const amount = parseAmountCents(row.amount);
     if (quantityMatch !== null) {
       grouper.applyQuantity(row, quantityMatch, description);
-    } else if (isMeasureNote(description)) {
+    } else if (isUnitPriceRow(description)) {
       grouper.applyMeasure(row, description);
     } else if (amount !== null && amount < 0) {
       grouper.applyDiscount(description, amount);

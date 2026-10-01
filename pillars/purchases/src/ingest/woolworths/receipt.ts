@@ -110,6 +110,7 @@ function toItem(grouped: ReturnType<typeof groupReceiptRows>['items'][number]): 
     quantity: grouped.quantity,
     unitPriceCents: grouped.unitPriceCents,
     lineTotalCents: grouped.lineTotalCents,
+    pricedByMeasure: grouped.pricedByMeasure,
     // The receipt's own wording for a promotion, kept verbatim rather than
     // parsed into a discount the merchant never stated as one. Prose, so it
     // is evidence rather than classification, and ordered.

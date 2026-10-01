@@ -20,6 +20,7 @@ const BASE_ROW: PurchaseItemRow = {
   url: null,
   imageUrl: null,
   quantity: 1,
+  pricedByMeasure: false,
   unitPriceCents: 350,
   lineTotalCents: 350,
   refundedCents: 0,

@@ -1245,8 +1245,8 @@ describe('unit price history', () => {
   });
 
   it('counts the lines whose price is a weight, so a heavier bag is not read as a dearer one', () => {
-    boughtAt(145, '01', { notes: ['0.500 kg NET @ $2.90/kg'] });
-    boughtAt(348, '02', { notes: ['1.200 kg NET @ $2.90/kg'] });
+    boughtAt(145, '01', { pricedByMeasure: true, notes: ['0.500 kg NET @ $2.90/kg'] });
+    boughtAt(348, '02', { pricedByMeasure: true, notes: ['1.200 kg NET @ $2.90/kg'] });
 
     const { unitPrice, lineCount } = only(rankProductPurchases(opened.db));
 
@@ -1258,14 +1258,17 @@ describe('unit price history', () => {
     expect(unitPrice.measuredLineCount).toBe(lineCount);
   });
 
-  it('does not count a quantity note as a measure', () => {
-    boughtAt(924, '01', { notes: ['Qty 2 @ $9.24 each', 'PRICE REDUCED BY $7.26 each'] });
+  it('does not infer measured pricing from per-each prose at read time', () => {
+    boughtAt(924, '01', { notes: ['1 ea @ $5.00'] });
 
     expect(only(rankProductPurchases(opened.db)).unitPrice.measuredLineCount).toBe(0);
   });
 
   it('counts a line carrying several notes once', () => {
-    boughtAt(145, '01', { notes: ['0.500 kg NET @ $2.90/kg', 'PRICE REDUCED BY $0.20'] });
+    boughtAt(145, '01', {
+      pricedByMeasure: true,
+      notes: ['0.500 kg NET @ $2.90/kg', 'PRICE REDUCED BY $0.20'],
+    });
 
     const entry = only(rankProductPurchases(opened.db));
 
