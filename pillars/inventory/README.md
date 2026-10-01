@@ -577,9 +577,10 @@ entry for `inventory -> ai (codes.rank)` and this slice's PR description for
 what an operator needs to provision before that call can succeed.
 
 `src/api/pillars/service-account.ts`'s `INVENTORY_SERVICE_ACCOUNT_SCOPES`
-lists only `ai.codes.rank` — the reconciliation worker's `finance` call is
-pre-existing, opaque (`callDynamic`, no operation to scope) and outside this
-slice, so it is deliberately not added here.
+grants `ai.codes.rank` for code suggestions and `finance.transactions.get`
+for the purchase-transaction URI reconciliation worker. The owner URI leg is
+dormant: no current write path populates it, so the account is not granted a
+registry users scope until that leg has an operation to call.
 
 ## Commands
 
