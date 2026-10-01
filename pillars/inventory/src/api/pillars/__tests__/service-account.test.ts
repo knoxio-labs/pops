@@ -102,12 +102,15 @@ describe('resolveServiceAccountKey', () => {
 
 describe('the account grant', () => {
   /**
-   * One scope per outbound leg, and the leg is `codes/suggest`'s call in
-   * `../ai/client.ts`. Scopes match by dot prefix, so this authorises
-   * exactly the domain named and nothing under a sibling one.
+   * Scopes match by dot prefix, so these entries authorise exactly the
+   * operations the current outbound legs call and nothing under sibling
+   * domains.
    */
-  it('names exactly the domain the outbound leg calls', () => {
-    expect([...INVENTORY_SERVICE_ACCOUNT_SCOPES]).toEqual(['ai.codes.rank']);
+  it('names exactly the operations the outbound legs call', () => {
+    expect([...INVENTORY_SERVICE_ACCOUNT_SCOPES]).toEqual([
+      'ai.codes.rank',
+      'finance.transactions.get',
+    ]);
   });
 
   it('grants no whole-pillar or wildcard scope', () => {
