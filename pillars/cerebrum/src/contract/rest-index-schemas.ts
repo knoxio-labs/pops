@@ -5,7 +5,8 @@
  * (`rest-index.ts`) and the test client so the request/response shapes have a
  * single source of truth (mirrors the ingest split). The `cerebrum.index.*`
  * domain drives watcher health, on-demand reindex, cross-source re-embedding,
- * and reconciliation dry-runs — all on the docker-net trust boundary.
+ * and reconciliation dry-runs — all behind the docker-network perimeter and
+ * the API's optional service-account scope gate.
  */
 import { z } from 'zod';
 

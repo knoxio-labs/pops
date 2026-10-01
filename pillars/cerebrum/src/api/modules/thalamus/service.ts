@@ -1,8 +1,8 @@
 /**
  * IndexService — request-scoped orchestration for the `cerebrum.index.*` procs.
  *
- * Stateless and DB-bound (docker-net trust, no per-request auth). Owns the four
- * index operations:
+ * Stateless and DB-bound. The Express API checks presented service-account
+ * scopes before dispatching these index operations:
  *
  *  - `status`     — watcher health (reads the opt-in watcher singleton) +
  *                   embeddings-queue pending count (`null` when no Redis).

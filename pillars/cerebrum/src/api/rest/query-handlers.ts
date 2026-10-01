@@ -5,7 +5,8 @@
  * db (drizzle + raw + vec availability), the injected peer/embedding retrieval
  * clients, and the injected {@link QueryLlm}/{@link QueryStreamLlm} ports, then
  * delegates. The service is stateless — all scope/domain filtering rides in the
- * request body — so there is no per-request auth.
+ * request body — while the API boundary checks any presented service-account
+ * key against the route's scope.
  *
  * The streaming variant is NOT here: SSE can't be modelled by ts-rest, so it is
  * mounted as a plain Express route in `app.ts`.

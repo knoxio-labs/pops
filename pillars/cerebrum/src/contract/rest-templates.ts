@@ -4,7 +4,7 @@
  * Templates are read-only at runtime — the operator edits `.md` files on
  * disk; the pillar exposes list/get for UIs that let the user pick a
  * template when creating an engram. Non-identity domain: served on the
- * docker-network trust boundary, no per-request auth.
+ * docker-network trust boundary, with presented keys checked by the API scope gate.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';

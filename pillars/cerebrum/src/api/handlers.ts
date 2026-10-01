@@ -7,6 +7,7 @@
  */
 import { getPillarRegistry } from './pillars/registry.js';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedCerebrumDb } from '../db/index.js';
@@ -23,6 +24,7 @@ import type { TemplateRegistry } from './modules/templates/registry.js';
 import type { EmbeddingsQueueAccessor } from './modules/thalamus/queue.js';
 import type { ContradictionDetector } from './modules/workers/auditor.js';
 
+/** Dependencies injected into Cerebrum's HTTP app. */
 export interface CerebrumApiDeps {
   /** Open handle to the cerebrum pillar's SQLite (sqlite-vec loaded). */
   cerebrumDb: OpenedCerebrumDb;
@@ -119,6 +121,12 @@ export interface CerebrumApiDeps {
    * canned tokens (no real API).
    */
   queryStreamLlm?: QueryStreamLlm;
+  /**
+   * Resolves a presented `X-API-Key` to its service account. Defaults to a
+   * registry-backed verifier; tests inject a fake so no test needs a live
+   * registry.
+   */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export interface HealthResponse {
