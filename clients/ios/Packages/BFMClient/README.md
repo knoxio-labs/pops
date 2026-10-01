@@ -52,7 +52,7 @@ Three things hold it, because the failure is silent — flipping that line produ
 
 ## The façade
 
-`BFMHTTPClient` takes a base URL and a transport. The public initialiser supplies `URLSessionTransport`; the internal one takes any `ClientTransport`, which is why no test here stubs `URLProtocol` — a `URLProtocol` subclass is process-global mutable state that survives a test that failed before tearing it down.
+`BFMHTTPClient` takes a base URL and a transport. The public initialiser supplies `URLSessionTransport` with response caching disabled; the internal one takes any `ClientTransport`, which is why no test here stubs `URLProtocol` — a `URLProtocol` subclass is process-global mutable state that survives a test that failed before tearing it down.
 
 Two things it does that the generated client does not:
 
