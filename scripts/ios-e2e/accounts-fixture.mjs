@@ -45,6 +45,7 @@ export const seededAccounts = [
       asOf: '2026-03-03',
       basis: 'transactions',
       anchor: null,
+      reconciliation: 'unmeasured',
       inconsistent: false,
     },
     importStatus: {

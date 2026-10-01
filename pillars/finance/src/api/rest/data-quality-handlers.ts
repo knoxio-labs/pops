@@ -30,13 +30,16 @@ import {
   accountsService,
   balancesFor,
   checkpointDelta,
+  type AccountBalance,
   type AccountRow,
   type FinanceDb,
 } from '../../db/index.js';
 import {
   toCheckpointInconsistencyNudge,
   toStaleAccountNudge,
+  toUnmeasuredAccountNudge,
   type CheckpointInconsistencyNudge,
+  type UnmeasuredAccountNudge,
 } from '../modules/data-quality-types.js';
 import { staleAccounts } from '../modules/data-quality/stale-accounts.js';
 import { runHttp } from './error-mapping.js';
@@ -59,13 +62,9 @@ function activeAccounts(db: FinanceDb): AccountRow[] {
 
 function checkpointInconsistencyNudges(
   db: FinanceDb,
-  accounts: readonly AccountRow[]
+  accounts: readonly AccountRow[],
+  balances: Map<string, AccountBalance>
 ): CheckpointInconsistencyNudge[] {
-  const balances = balancesFor(
-    db,
-    accounts.map((account) => account.id)
-  );
-
   const nudges: CheckpointInconsistencyNudge[] = [];
   for (const account of accounts) {
     if (balances.get(account.id)?.inconsistent !== true) continue;
@@ -82,24 +81,47 @@ function checkpointInconsistencyNudges(
   return nudges;
 }
 
+function unmeasuredAccountNudges(
+  accounts: readonly AccountRow[],
+  balances: Map<string, AccountBalance>
+): UnmeasuredAccountNudge[] {
+  const nudges: UnmeasuredAccountNudge[] = [];
+  for (const account of accounts) {
+    const balance = balances.get(account.id);
+    if (balance?.reconciliation !== 'unmeasured') continue;
+    nudges.push(
+      toUnmeasuredAccountNudge(account, balance.anchor === null ? 'no-checkpoint' : 'anchor-only')
+    );
+  }
+  return nudges;
+}
+
 /**
- * Inconsistencies first, largest |delta| first; then stale accounts, most
- * overdue relative to their own cadence first. The two kinds have no common
- * unit to rank across, and a ledger that contradicts a bank statement is the
- * more urgent fact — a stale account is behind, an inconsistent one is wrong.
+ * Inconsistencies first, largest |delta| first; then unmeasured accounts; then
+ * stale accounts, most overdue relative to their own cadence first. A ledger
+ * that contradicts a statement is the most urgent fact, while a stale account
+ * is behind and an unmeasured one has not yet been checked.
  */
 export function makeDataQualityHandlers(db: FinanceDb) {
   return {
     nudges: () =>
       runHttp(() => {
         const accounts = activeAccounts(db);
-        const inconsistencies = checkpointInconsistencyNudges(db, accounts).toSorted(
+        const balances = balancesFor(
+          db,
+          accounts.map((account) => account.id)
+        );
+        const inconsistencies = checkpointInconsistencyNudges(db, accounts, balances).toSorted(
           (a, b) => Math.abs(b.deltaCents) - Math.abs(a.deltaCents)
         );
+        const unmeasured = unmeasuredAccountNudges(accounts, balances);
         const stale = staleAccounts(db, accounts).map(({ account, staleness }) =>
           toStaleAccountNudge(account, staleness)
         );
-        return { status: 200 as const, body: { data: [...inconsistencies, ...stale] } };
+        return {
+          status: 200 as const,
+          body: { data: [...inconsistencies, ...unmeasured, ...stale] },
+        };
       }),
   };
 }

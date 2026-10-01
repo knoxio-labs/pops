@@ -86,13 +86,15 @@ export type CheckpointSource = (typeof CHECKPOINT_SOURCES)[number];
  * negative is money owed, for assets and liabilities alike. `basis:
  * 'transactions'` means no checkpoint exists yet and the figure is net flow
  * of whatever was imported, not a real balance. Mirrors `AccountBalanceSchema`
- * in `pillars/finance/src/contract/rest-checkpoints-schemas.ts`.
+ * in `pillars/finance/src/contract/rest-checkpoints-schemas.ts`. `reconciliation`
+ * distinguishes no comparison from an agreed or disagreeing latest checkpoint.
  */
 export type AccountBalance = {
   balanceCents: number;
   asOf: string;
   basis: 'checkpoint' | 'transactions';
   anchor: { checkpointId: string; asOf: string; source: CheckpointSource } | null;
+  reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
   inconsistent: boolean;
 };
 

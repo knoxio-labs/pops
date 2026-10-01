@@ -53,6 +53,7 @@ export type AccountsListResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       createdAt: string;
       currency: string;
@@ -194,6 +195,7 @@ export type AccountsCreateResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       createdAt: string;
       currency: string;
@@ -314,6 +316,7 @@ export type AccountsReorderResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       createdAt: string;
       currency: string;
@@ -433,6 +436,7 @@ export type AccountsDeleteResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       createdAt: string;
       currency: string;
@@ -547,6 +551,7 @@ export type AccountsGetResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       createdAt: string;
       currency: string;
@@ -685,6 +690,7 @@ export type AccountsUpdateResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       createdAt: string;
       currency: string;
@@ -799,6 +805,7 @@ export type CheckpointsBalanceResponses = {
       balanceCents: number;
       basis: 'checkpoint' | 'transactions';
       inconsistent: boolean;
+      reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
     };
   };
 };
@@ -2126,6 +2133,7 @@ export type AccountsMergeResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       createdAt: string;
       currency: string;
@@ -2254,6 +2262,7 @@ export type AccountsPreviewMergeResponses = {
           balanceCents: number;
           basis: 'checkpoint' | 'transactions';
           inconsistent: boolean;
+          reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
         };
         createdAt: string;
         currency: string;
@@ -2311,6 +2320,7 @@ export type AccountsPreviewMergeResponses = {
           balanceCents: number;
           basis: 'checkpoint' | 'transactions';
           inconsistent: boolean;
+          reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
         };
         createdAt: string;
         currency: string;
@@ -5267,6 +5277,13 @@ export type DataQualityNudgesResponses = {
           deltaCents: number;
           href: string;
           kind: 'checkpoint-inconsistency';
+        }
+      | {
+          accountId: string;
+          accountName: string;
+          href: string;
+          kind: 'unmeasured-account';
+          reason: 'no-checkpoint' | 'anchor-only';
         }
       | {
           accountId: string;

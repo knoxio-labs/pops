@@ -32,6 +32,7 @@ export const NO_BALANCE = {
   asOf: '2026-01-01',
   basis: 'transactions',
   anchor: null,
+  reconciliation: 'unmeasured',
   inconsistent: false,
 } as const;
 

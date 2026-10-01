@@ -32,6 +32,21 @@ export const CheckpointInconsistencyNudgeSchema = z.object({
   href: z.string(),
 });
 
+/** Why an account's checkpoint history has not yet been measured. */
+export const UnmeasuredAccountReasonSchema = z.enum(['no-checkpoint', 'anchor-only']);
+
+/** A no-checkpoint or anchor-only reason for an unmeasured account. */
+export type UnmeasuredAccountReason = z.infer<typeof UnmeasuredAccountReasonSchema>;
+
+/** An account with no checkpoint comparison available yet. */
+export const UnmeasuredAccountNudgeSchema = z.object({
+  kind: z.literal('unmeasured-account'),
+  accountId: z.string(),
+  accountName: z.string(),
+  reason: UnmeasuredAccountReasonSchema,
+  href: z.string(),
+});
+
 /**
  * An account nobody has fed for longer than its own rhythm (POPS-2890). The
  * threshold is per account — the median gap between its last import batches,
@@ -57,5 +72,6 @@ export const StaleAccountNudgeSchema = z.object({
 /** One entry in the nudge feed, discriminated on `kind`. */
 export const NudgeSchema = z.discriminatedUnion('kind', [
   CheckpointInconsistencyNudgeSchema,
+  UnmeasuredAccountNudgeSchema,
   StaleAccountNudgeSchema,
 ]);

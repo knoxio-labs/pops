@@ -112,6 +112,7 @@ describe('the account row is mobile-shaped', () => {
           asOf: '2026-09-02',
           basis: 'checkpoint',
           anchor: { checkpointId: 'chk-1', asOf: '2026-09-02', source: 'manual' },
+          reconciliation: 'agreed',
           inconsistent: false,
         },
       }),
@@ -124,6 +125,7 @@ describe('the account row is mobile-shaped', () => {
       'balanceCents',
       'basis',
       'inconsistent',
+      'reconciliation',
     ]);
     expect(res.body.accounts[0].balance).toMatchObject({
       balanceCents: -213_755,
@@ -140,7 +142,8 @@ describe('the account row is mobile-shaped', () => {
           asOf: '2026-09-05',
           basis: 'transactions',
           anchor: null,
-          inconsistent: true,
+          reconciliation: 'unmeasured',
+          inconsistent: false,
         },
       }),
     ]);
@@ -151,7 +154,8 @@ describe('the account row is mobile-shaped', () => {
       balanceCents: 780_64,
       asOf: '2026-09-05',
       basis: 'transactions',
-      inconsistent: true,
+      reconciliation: 'unmeasured',
+      inconsistent: false,
     });
   });
 

@@ -4,6 +4,7 @@
  * schemas.ts`); this file keeps only the row → response projection and its
  * TS shape, the same split `checkpoints-types.ts` makes for checkpoints.
  */
+import type { UnmeasuredAccountReason } from '../../contract/rest-data-quality-schemas.js';
 import type { AccountCheckpointRow, AccountRow } from '../../db/index.js';
 
 /** An account whose latest checkpoint disagrees with the ledger. */
@@ -15,6 +16,15 @@ export interface CheckpointInconsistencyNudge {
   asOf: string;
   deltaCents: number;
   currency: string;
+  href: string;
+}
+
+/** An account whose checkpoint history cannot yet establish agreement. */
+export interface UnmeasuredAccountNudge {
+  kind: 'unmeasured-account';
+  accountId: string;
+  accountName: string;
+  reason: UnmeasuredAccountReason;
   href: string;
 }
 
@@ -30,7 +40,7 @@ export interface StaleAccountNudge {
 }
 
 /** One entry in the nudge feed. */
-export type Nudge = CheckpointInconsistencyNudge | StaleAccountNudge;
+export type Nudge = CheckpointInconsistencyNudge | UnmeasuredAccountNudge | StaleAccountNudge;
 
 export function toCheckpointInconsistencyNudge(
   account: AccountRow,
@@ -45,6 +55,20 @@ export function toCheckpointInconsistencyNudge(
     asOf: checkpoint.asOf,
     deltaCents,
     currency: account.currency,
+    href: `/accounts/${account.id}/checkpoints`,
+  };
+}
+
+/** Build the data-quality row that links an unmeasured account to its checkpoints. */
+export function toUnmeasuredAccountNudge(
+  account: AccountRow,
+  reason: UnmeasuredAccountReason
+): UnmeasuredAccountNudge {
+  return {
+    kind: 'unmeasured-account',
+    accountId: account.id,
+    accountName: account.name,
+    reason,
     href: `/accounts/${account.id}/checkpoints`,
   };
 }

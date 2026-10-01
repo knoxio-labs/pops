@@ -11111,6 +11111,14 @@ internal enum Operations {
                                 internal var basis: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.BasisPayload
                                 /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/AccountsPayload/balance/inconsistent`.
                                 internal var inconsistent: Swift.Bool
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/AccountsPayload/balance/reconciliation`.
+                                internal enum ReconciliationPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case unmeasured = "unmeasured"
+                                    case agreed = "agreed"
+                                    case disagrees = "disagrees"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/AccountsPayload/balance/reconciliation`.
+                                internal var reconciliation: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.ReconciliationPayload
                                 /// Creates a new `BalancePayload`.
                                 ///
                                 /// - Parameters:
@@ -11118,22 +11126,26 @@ internal enum Operations {
                                 ///   - balanceCents:
                                 ///   - basis:
                                 ///   - inconsistent:
+                                ///   - reconciliation:
                                 internal init(
                                     asOf: Swift.String,
                                     balanceCents: Swift.Int,
                                     basis: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.BasisPayload,
-                                    inconsistent: Swift.Bool
+                                    inconsistent: Swift.Bool,
+                                    reconciliation: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.ReconciliationPayload
                                 ) {
                                     self.asOf = asOf
                                     self.balanceCents = balanceCents
                                     self.basis = basis
                                     self.inconsistent = inconsistent
+                                    self.reconciliation = reconciliation
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case asOf
                                     case balanceCents
                                     case basis
                                     case inconsistent
+                                    case reconciliation
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -11153,11 +11165,16 @@ internal enum Operations {
                                         Swift.Bool.self,
                                         forKey: .inconsistent
                                     )
+                                    self.reconciliation = try container.decode(
+                                        Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.ReconciliationPayload.self,
+                                        forKey: .reconciliation
+                                    )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "asOf",
                                         "balanceCents",
                                         "basis",
-                                        "inconsistent"
+                                        "inconsistent",
+                                        "reconciliation"
                                     ])
                                 }
                             }
@@ -12452,6 +12469,14 @@ internal enum Operations {
                                 internal var basis: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.BasisPayload
                                 /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/balance/inconsistent`.
                                 internal var inconsistent: Swift.Bool
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/balance/reconciliation`.
+                                internal enum ReconciliationPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case unmeasured = "unmeasured"
+                                    case agreed = "agreed"
+                                    case disagrees = "disagrees"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/balance/reconciliation`.
+                                internal var reconciliation: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.ReconciliationPayload
                                 /// Creates a new `BalancePayload`.
                                 ///
                                 /// - Parameters:
@@ -12459,22 +12484,26 @@ internal enum Operations {
                                 ///   - balanceCents:
                                 ///   - basis:
                                 ///   - inconsistent:
+                                ///   - reconciliation:
                                 internal init(
                                     asOf: Swift.String,
                                     balanceCents: Swift.Int,
                                     basis: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.BasisPayload,
-                                    inconsistent: Swift.Bool
+                                    inconsistent: Swift.Bool,
+                                    reconciliation: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.ReconciliationPayload
                                 ) {
                                     self.asOf = asOf
                                     self.balanceCents = balanceCents
                                     self.basis = basis
                                     self.inconsistent = inconsistent
+                                    self.reconciliation = reconciliation
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case asOf
                                     case balanceCents
                                     case basis
                                     case inconsistent
+                                    case reconciliation
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -12494,11 +12523,16 @@ internal enum Operations {
                                         Swift.Bool.self,
                                         forKey: .inconsistent
                                     )
+                                    self.reconciliation = try container.decode(
+                                        Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.ReconciliationPayload.self,
+                                        forKey: .reconciliation
+                                    )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "asOf",
                                         "balanceCents",
                                         "basis",
-                                        "inconsistent"
+                                        "inconsistent",
+                                        "reconciliation"
                                     ])
                                 }
                             }

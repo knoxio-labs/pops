@@ -68,15 +68,32 @@ describe('AccountCard', () => {
   });
 
   it('shows the inconsistency icon with an accessible label when the balance is flagged', () => {
-    renderCard({ balance: { ...NO_BALANCE, inconsistent: true } });
+    renderCard({
+      balance: { ...NO_BALANCE, reconciliation: 'disagrees', inconsistent: true },
+    });
     expect(
       screen.getByRole('img', { name: "Balance doesn't match the latest checkpoint" })
     ).toBeInTheDocument();
   });
 
   it('shows no such icon when the balance is not flagged', () => {
-    renderCard({ balance: { ...NO_BALANCE, inconsistent: false } });
+    renderCard({
+      balance: { ...NO_BALANCE, reconciliation: 'agreed', inconsistent: false },
+    });
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.queryByText('not reconciled')).not.toBeInTheDocument();
+  });
+
+  it('labels a checkpoint that has not been measured against an earlier one', () => {
+    renderCard({
+      balance: {
+        ...NO_BALANCE,
+        basis: 'checkpoint',
+        asOf: '2026-09-01',
+        reconciliation: 'unmeasured',
+      },
+    });
+    expect(screen.getByText('not reconciled · as of 1 Sept')).toBeInTheDocument();
   });
 
   it('shows an as-of date for a checkpoint-anchored balance', () => {
@@ -91,19 +108,19 @@ describe('AccountCard', () => {
 
   it('reds a person ledger in debt and names the direction the sign cannot carry', () => {
     renderCard({ kind: 'person', balance: { ...NO_BALANCE, balanceCents: -5_000 } });
-    expect(screen.getByText('you owe')).toBeInTheDocument();
+    expect(screen.getByText(/you owe/)).toBeInTheDocument();
     expect(screen.getByText('-$50.00').className).toContain('text-destructive');
   });
 
   it('greens a person ledger in credit and names its direction too', () => {
     renderCard({ kind: 'person', balance: { ...NO_BALANCE, balanceCents: 5_000 } });
-    expect(screen.getByText('owed to you')).toBeInTheDocument();
+    expect(screen.getByText(/owed to you/)).toBeInTheDocument();
     expect(screen.getByText('$50.00').className).toContain('text-primary');
   });
 
   it('says a person ledger at zero is settled up', () => {
     renderCard({ kind: 'person', balance: { ...NO_BALANCE, balanceCents: 0 } });
-    expect(screen.getByText('settled up')).toBeInTheDocument();
+    expect(screen.getByText(/settled up/)).toBeInTheDocument();
   });
 
   it('keeps a points balance neutral in tone regardless of sign', () => {

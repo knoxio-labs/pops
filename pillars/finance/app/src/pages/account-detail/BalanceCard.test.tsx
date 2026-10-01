@@ -47,6 +47,7 @@ const anchored = (balanceCents: number, asOf = '2026-09-01') => ({
   asOf,
   basis: 'checkpoint' as const,
   anchor: { checkpointId: 'c1', asOf, source: 'manual' as const },
+  reconciliation: 'agreed' as const,
   inconsistent: false,
 });
 
@@ -168,7 +169,9 @@ describe('BalanceCard inconsistency flag', () => {
 
   it('announces a disagreement beside the caption', () => {
     renderCard({
-      account: account({ balance: { ...anchored(1_000), inconsistent: true } }),
+      account: account({
+        balance: { ...anchored(1_000), reconciliation: 'disagrees', inconsistent: true },
+      }),
     });
     expect(screen.getByText('Disagrees with a checkpoint')).toBeInTheDocument();
   });
@@ -177,7 +180,7 @@ describe('BalanceCard inconsistency flag', () => {
     renderCard({
       account: account({
         kind: 'credit-card',
-        balance: { ...anchored(-213_755), inconsistent: true },
+        balance: { ...anchored(-213_755), reconciliation: 'disagrees', inconsistent: true },
       }),
     });
     expect(screen.getByText('Disagrees with a checkpoint')).toBeInTheDocument();
