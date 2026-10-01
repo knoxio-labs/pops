@@ -22,17 +22,17 @@ function isYear(value: string): value is YearSelection {
 }
 
 /**
- * Narrow an arbitrary string — today a `<select>` value, in principle any
- * caller-supplied one — to a selection this view can act on.
+ * Narrow an arbitrary URL or `<select>` value to one of the years this view
+ * offers, or to all time.
  *
  * Anything unrecognised falls back to all time, which shows *more* than was
  * asked for rather than less. The opposite default would let a bad value
  * silently scope spend away, which is the failure this whole view is built
  * against.
  */
-export function parsePeriodSelection(value: string): PeriodSelection {
+export function parsePeriodSelection(value: string, now: Date): PeriodSelection {
   if (value === ALL_TIME) return ALL_TIME;
-  return isYear(value) ? value : ALL_TIME;
+  return isYear(value) && periodYears(now).includes(value) ? value : ALL_TIME;
 }
 
 /**

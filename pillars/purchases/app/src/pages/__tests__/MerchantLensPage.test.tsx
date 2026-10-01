@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUPurchases from '../../locales/en-AU.json';
+import { ALL_TIME } from '../merchant-lens/period';
 import { leakedAriaLabels, rawCatalogKeyPattern } from './aria-label-guard.js';
 
 const merchantSpendMock = vi.hoisted(() => vi.fn());
@@ -35,17 +36,35 @@ const RAW_CATALOG_KEY = rawCatalogKeyPattern('merchants');
  * model would assert the page renders what it was handed, which is the one
  * thing that was never in doubt.
  */
-function renderPage(): ReturnType<typeof userEvent.setup> {
+function renderPage(initialEntry = '/purchases/merchants'): ReturnType<typeof userEvent.setup> {
   const user = userEvent.setup();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/purchases/merchants']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <LocationProbe />
         <MerchantLensPage />
       </MemoryRouter>
     </QueryClientProvider>
   );
   return user;
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <output data-testid="location">
+        {location.pathname}
+        {location.search}
+      </output>
+      <button type="button" onClick={() => navigate(-1)}>
+        Back in history
+      </button>
+    </>
+  );
 }
 
 function accounting(overrides: Partial<SpendAccounting> = {}): SpendAccounting {
@@ -406,6 +425,43 @@ describe('MerchantLensPage — period', () => {
         },
       });
     });
+
+    expect(screen.getByTestId('location')).toHaveTextContent(`?period=${year}`);
+
+    await user.click(screen.getByRole('button', { name: 'Back in history' }));
+
+    await waitFor(() => {
+      expect(periodPicker()).toHaveValue(ALL_TIME);
+      expect(merchantSpendMock).toHaveBeenCalledWith({ query: {} });
+    });
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/purchases\/merchants$/);
+  });
+
+  it('reads a shared year from the URL before making the first request', async () => {
+    rollupReturns([namedMerchant('Amazon')]);
+    const year = `${new Date().getUTCFullYear() - 1}`;
+    renderPage(`/purchases/merchants?period=${year}`);
+    await settled();
+
+    expect(periodPicker()).toHaveValue(year);
+    expect(merchantSpendMock).toHaveBeenCalledWith({
+      query: {
+        from: `${year}-01-01T00:00:00.000000000Z`,
+        to: `${year}-12-31T23:59:59Z`,
+      },
+    });
+  });
+
+  it.each([
+    ['malformed', 'not-a-year'],
+    ['out of range', '1900'],
+  ])('uses all time for a %s URL period', async (_label, value) => {
+    rollupReturns([namedMerchant('Amazon')]);
+    renderPage(`/purchases/merchants?period=${value}`);
+    await settled();
+
+    expect(periodPicker()).toHaveValue(ALL_TIME);
+    expect(merchantSpendMock).toHaveBeenCalledWith({ query: {} });
   });
 
   it('echoes the window the figures were actually computed over', async () => {

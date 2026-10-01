@@ -101,19 +101,21 @@ describe('periodYears', () => {
 });
 
 describe('parsePeriodSelection', () => {
+  const now = new Date('2026-08-12T00:00:00Z');
+
   it('keeps a selection it recognises', () => {
-    expect(parsePeriodSelection(ALL_TIME)).toBe(ALL_TIME);
-    expect(parsePeriodSelection('2026')).toBe('2026');
+    expect(parsePeriodSelection(ALL_TIME, now)).toBe(ALL_TIME);
+    expect(parsePeriodSelection('2026', now)).toBe('2026');
   });
 
   // Falling back to all time shows more than was asked for. Falling back to a
   // year would silently scope spend away, which is the failure this view is
   // built against — so the direction of the default is the assertion here.
-  it.each(['', '20261', '202', 'twenty-twenty-six', '2026-01', ' 2026'])(
+  it.each(['', '20261', '202', 'twenty-twenty-six', '2026-01', ' 2026', '1900', '2027'])(
     'falls back to all time rather than to a narrower window for %o',
     (value) => {
-      expect(parsePeriodSelection(value)).toBe(ALL_TIME);
-      expect(periodRange(parsePeriodSelection(value))).toEqual({});
+      expect(parsePeriodSelection(value, now)).toBe(ALL_TIME);
+      expect(periodRange(parsePeriodSelection(value, now))).toEqual({});
     }
   );
 });
