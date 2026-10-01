@@ -60,7 +60,9 @@
   "section.active": "Active",
   "section.expired": "Expired",
   "section.warrantyTracking": "Warranty Tracking",
-  "section.criticalUnder30Days": "Critical \u2014 Under 30 Days",
+  "section.warrantySoon": "Next 30 days",
+  "section.warrantyQuarter": "31 to 90 days",
+  "section.warrantyLater": "Later",
 
   "action.connect": "Connect",
   "action.disconnect": "Disconnect",

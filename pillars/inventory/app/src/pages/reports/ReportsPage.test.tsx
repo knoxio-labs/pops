@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { getI18n } from 'react-i18next';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LOCATIONS_TREE_QUERY_KEY } from '../../inventory-web/queryKeys.js';
 import { createTestQueryClient } from '../../inventory-web/test-utils';
+import ptBRInventory from '../../locales/pt-BR.json';
 import { PAPERLESS_DOWN_REASON } from './insurance-rows.js';
 import { valuesGroup, valuesReport } from './reports-test-fixtures.js';
 import { ReportsPage } from './ReportsPage.js';
@@ -405,6 +407,27 @@ describe('ReportsPage', () => {
     expect(screen.getByText('No warranty runs longer than 90 days.')).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByRole('tab', { name: /Expired/ }));
     expect(screen.getByText('No recorded warranty has ended.')).toBeInTheDocument();
+  });
+
+  it('translates warranty tier tabs through the inventory locale', async () => {
+    const i18n = getI18n();
+    const initialLanguage = i18n.language;
+    i18n.addResourceBundle('pt-BR', 'inventory', ptBRInventory, true, true);
+    await i18n.changeLanguage('pt-BR');
+
+    try {
+      mocks.useReportEntries.mockReturnValue(
+        queryState({ data: [reportEntry('soon', { warrantyExpires: '2026-10-01' })] })
+      );
+      renderReports('/inventory/reports?tab=warranties');
+
+      expect(screen.getByRole('tab', { name: /Próximos 30 dias/ })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /31 a 90 dias/ })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Mais de 90 dias/ })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Expiradas0' })).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage(initialLanguage);
+    }
   });
 
   it('no warranty rows shows No warranties recorded', () => {
