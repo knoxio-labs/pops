@@ -214,6 +214,11 @@ describe('PlanPage', () => {
     expect(within(drawer).getByTestId('slot-row-breakfast')).toBeTruthy();
     expect(within(drawer).getByTestId('slot-default-dinner')).toBeTruthy();
     expect(within(drawer).getByTestId('slot-delete-late-night')).toBeTruthy();
+    await user.click(within(drawer).getByTestId('slot-rename-btn-late-night'));
+    expect(within(drawer).getByTestId('slot-rename-late-night')).toHaveClass(
+      'text-base',
+      'md:text-sm'
+    );
   });
 
   it('rejects invalid slug input in the add-slot form before calling the API', async () => {
