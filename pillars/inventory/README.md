@@ -391,14 +391,14 @@ merely admitted alongside everything else — and is gated on
 deployment can never reach it.
 
 **This gate must not deploy before the registry grants below are in place.**
-bfm's service account needs its grant widened to `inventory.sync`,
-`inventory.types`, `inventory.codes` and `inventory.media`, and the MCP
+bfm's service account needs `inventory.sync`, `inventory.types.catalogue`,
+`inventory.types.read`, `inventory.codes` and `inventory.media`, and the MCP
 service account's grant must include `inventory` (ADR-048's mobile
 capabilities and the MCP tools both reach this pillar with a key). Until
 those grants exist, every one of those callers starts answering `403` the
 moment this ships — precisely what POPS-1878 did to purchases when its own
-gate landed ahead of the MCP grant. Minting or widening a grant is a row in
-the registry DB, an operator step rather than a repo change.
+gate landed ahead of the MCP grant. Minting, widening or narrowing a grant is
+a row in the registry DB, an operator step rather than a repo change.
 
 ## Sync protocol
 
@@ -406,8 +406,8 @@ the registry DB, an operator step rather than a repo change.
 `/mobile/inventory/*` (Inventory ADR-002, D9 and D10), in three sub-routers so
 the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
 `GET /sync/changes`, `GET /sync/items/:id/events`, `POST /sync/mutations`),
-`inventory.types` (`GET /types`) and `inventory.codes`
-(`POST /codes/suggest`).
+`inventory.types.catalogue` (`GET /types`; the handler also checks
+`inventory.types.read`) and `inventory.codes` (`POST /codes/suggest`).
 
 - Every one of those routes needs `Pops-Inventory-Protocol: <n>`; missing or
   below `sync_meta.min_protocol` is `426 inventory.sync.client_too_old`, checked by

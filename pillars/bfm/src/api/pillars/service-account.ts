@@ -31,7 +31,10 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * purchases' `receipt.*`, the mobile purchases screens read purchases'
  * `purchase.*`, the mobile search box calls purchases' separate `search.*`
  * sub-router, the inventory replica's reads and its mutation batch lean on
- * `inventory.sync`/`inventory.types`, `inventory.codes` is the
+ * `inventory.sync`, and the type-catalogue routes use their
+ * `inventory.types.catalogue` route scope and `inventory.types.read` handler
+ * scope. Neither grants the catalogue's `manage` routes.
+ * `inventory.codes` is the
  * code-suggestion route's own sub-router grant (A12), and `inventory.media`
  * is inventory's raw content-addressed media store's own scope, reached by
  * the media relay's `PUT`/`GET` (A13). Every later mobile
@@ -67,7 +70,8 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'purchases.search',
   'purchases.receipt',
   'inventory.sync',
-  'inventory.types',
+  'inventory.types.catalogue',
+  'inventory.types.read',
   'inventory.codes',
   'inventory.media',
   'barcode.lookup',

@@ -126,11 +126,18 @@ describe('the granted scopes', () => {
       'purchases.search',
       'purchases.receipt',
       'inventory.sync',
-      'inventory.types',
+      'inventory.types.catalogue',
+      'inventory.types.read',
       'inventory.codes',
       'inventory.media',
       'barcode.lookup',
     ]);
+  });
+
+  it('can read the catalogue without managing drafts', () => {
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.types.catalogue')).toBe(true);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.types.read')).toBe(true);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.types.manage')).toBe(false);
   });
 
   it('keeps the provisioning command in sync with the source of truth', () => {

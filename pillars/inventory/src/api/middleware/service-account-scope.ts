@@ -16,7 +16,8 @@
  * docker network that present none must keep working. A caller that
  * presents an `X-API-Key` is a machine, and is held to the service account
  * behind that key: purchases (`inventory.items`), bfm's mobile relay
- * (`inventory.sync`, `inventory.types`, `inventory.codes`, `inventory.media`)
+ * (`inventory.sync`, `inventory.types.catalogue`, `inventory.types.read`,
+ * `inventory.codes`, `inventory.media`)
  * and the MCP tools in `pillars/mcp/src/tools/inventory.ts`, which reach
  * this pillar through `pillar('inventory')`. The README records what would
  * reverse the default.
@@ -37,8 +38,9 @@
  * `/health`, `/pillars`, `/openapi` — resolves to no scope and is untouched.
  *
  * **This gate must not deploy before the registry grants are widened.**
- * bfm's service account needs `inventory.sync`, `inventory.types`,
- * `inventory.codes` and `inventory.media`, and the MCP account's grant must
+ * bfm's service account needs `inventory.sync`, `inventory.types.catalogue`,
+ * `inventory.types.read`, `inventory.codes` and `inventory.media`, and the
+ * MCP account's grant must
  * include `inventory`, or every one of those callers starts answering `403`
  * the moment this ships — exactly what POPS-1878 did to purchases when its
  * own gate landed ahead of the MCP grant. See the README's "Who may call
