@@ -311,13 +311,31 @@ describe('ContainersPage', () => {
   });
 
   it('shows moving-day packing progress and prints the server returned closed ids', async () => {
+    const returnedClosedIds = Array.from(
+      { length: MAX_LABEL_IDS + 5 },
+      (_, index) => `closed-${String(index)}`
+    );
     renderPage('/inventory/containers?state=moving');
 
     expect(screen.getByText('of 2 closed')).toBeInTheDocument();
+    mocks.webList.mockResolvedValueOnce(
+      ok({
+        contentCounts: {},
+        hiddenInactiveCount: 0,
+        items: returnedClosedIds.map((id) => ({ id })),
+        nextCursor: null,
+        total: returnedClosedIds.length,
+        unfilteredTotal: returnedClosedIds.length,
+      })
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Print labels for 1 closed' }));
 
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/inventory/labels?ids=box-closed')
+      expect(screen.getByTestId('location')).toHaveTextContent('/inventory/labels')
+    );
+    const search = screen.getByTestId('location').textContent?.split('?')[1] ?? '';
+    expect(new URLSearchParams(search).get('ids')?.split(',')).toEqual(
+      returnedClosedIds.slice(0, MAX_LABEL_IDS)
     );
     expect(mocks.webList).toHaveBeenCalledWith({
       query: { isContainer: 'true', access: 'closed', limit: MAX_LABEL_IDS },
