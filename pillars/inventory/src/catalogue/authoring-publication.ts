@@ -2,11 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import { catalogueRevisions } from '../db/schema.js';
 import { DEFAULT_COMPUTED_DEPENDENT_LIMIT } from '../domain/commands/computed-dependents.js';
-import {
-  PERSISTED_CATALOGUE_PROTOCOL,
-  readMinimumProtocol,
-  TYPE_TREE_PROTOCOL,
-} from '../protocol/rollout.js';
+import { readMinimumProtocol } from '../protocol/rollout.js';
 import { claimCurrentDraft } from './authoring-draft-version.js';
 import { migrationInput } from './authoring-migration.js';
 import { writePublication } from './authoring-publication-write.js';
@@ -15,6 +11,7 @@ import { CatalogueApiError } from './authoring-types.js';
 import { validateCatalogue } from './authoring-validation.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
 import { assessCatalogueCompatibility } from './compatibility-preview.js';
+import { requiredVocabularyProtocol } from './compatibility-protocol.js';
 import { clearComputedValueCache } from './computed-value-runtime-cache.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
@@ -46,14 +43,10 @@ function assessPublication(
 }
 
 function gatesVocabulary(compatibility: CatalogueCompatibilityAssessment): number | undefined {
-  const requiredProtocols = compatibility.changes
-    .filter(
-      (change) =>
-        change.classification === 'protocol_gated' && change.code !== 'minimum_protocol_increased'
-    )
-    .map((change) =>
-      change.code === 'type_parent_set' ? TYPE_TREE_PROTOCOL : PERSISTED_CATALOGUE_PROTOCOL
-    );
+  const requiredProtocols = compatibility.changes.flatMap((change) => {
+    const requiredProtocol = requiredVocabularyProtocol(change.code);
+    return requiredProtocol === undefined ? [] : [requiredProtocol];
+  });
   return requiredProtocols.length === 0 ? undefined : Math.max(...requiredProtocols);
 }
 

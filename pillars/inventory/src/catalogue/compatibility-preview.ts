@@ -1,6 +1,7 @@
 import { and, countDistinct, eq, inArray, isNull } from 'drizzle-orm';
 
 import { itemFieldValues, items } from '../db/schema.js';
+import { readMinimumProtocol } from '../protocol/rollout.js';
 import { classifyCatalogueCompatibility } from './compatibility.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
@@ -111,7 +112,8 @@ export function assessCatalogueCompatibility(
   const compatibility = classifyCatalogueCompatibility(
     base,
     candidate,
-    new Set(discardedOverrides.map((entry) => entry.fieldId))
+    new Set(discardedOverrides.map((entry) => entry.fieldId)),
+    readMinimumProtocol(db)
   );
   return {
     ...compatibility,

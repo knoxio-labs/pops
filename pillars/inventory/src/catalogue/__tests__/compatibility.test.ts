@@ -139,6 +139,38 @@ describe('classifyCatalogueCompatibility', () => {
     expect(classifyCatalogueCompatibility(base, candidate).classification).toBe('protocol_gated');
   });
 
+  it('treats protocol changes as compatible when the active minimum covers them', () => {
+    const baseField = field();
+    const base = catalogue(1, [type([baseField])]);
+    const candidate = catalogue(
+      2,
+      [type([baseField, field({ id: 'field-b', key: 'field-b', kind: 'date' })])],
+      2
+    );
+
+    expect(classifyCatalogueCompatibility(base, candidate, new Set(), 2)).toMatchObject({
+      classification: 'compatible',
+      changes: [
+        { classification: 'compatible', code: 'minimum_protocol_increased' },
+        { classification: 'compatible', code: 'primitive_kind_added' },
+      ],
+    });
+  });
+
+  it('keeps a subtype gated until the active minimum reaches protocol 3', () => {
+    const base = catalogue(1, [type([field()])]);
+    const candidate = catalogue(2, [type([field()]), namedType('type-b', 'type-b', [], 'type-a')]);
+
+    expect(classifyCatalogueCompatibility(base, candidate, new Set(), 2).classification).toBe(
+      'protocol_gated'
+    );
+    expect(classifyCatalogueCompatibility(base, candidate, new Set(), 3).changes).toContainEqual({
+      classification: 'compatible',
+      definitionId: 'type-b',
+      code: 'type_parent_set',
+    });
+  });
+
   it('protocol-gates a new subtype', () => {
     const base = catalogue(1, [type([field()])]);
     const candidate = catalogue(2, [type([field()]), namedType('type-b', 'type-b', [], 'type-a')]);
