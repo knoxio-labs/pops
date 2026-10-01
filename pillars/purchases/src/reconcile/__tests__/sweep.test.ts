@@ -105,6 +105,51 @@ describe('derived charges', () => {
   });
 });
 
+describe('shipment settlement windows', () => {
+  it('fetches and matches a charge using its linked shipment date', async () => {
+    createPurchase(db, {
+      source: 'amazon',
+      sourceOrderId: 'shipment-window',
+      ingestMethod: 'export',
+      orderedAt: '2026-06-24T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 4128,
+      checksum: 'amazon:shipment-window',
+      shipments: [{ ref: 'shipment', shippedAt: '2026-07-10T00:00:00Z' }],
+      charges: [{ amountCents: 4128, shipmentRef: 'shipment' }],
+    });
+
+    const finance = financeReturning({
+      id: 'shipment-capture',
+      amountCents: 4128,
+      date: '2026-07-15',
+    });
+    const windowedFinance: FinanceSweepClient = {
+      ...finance,
+      fetchCandidates: async (query) => {
+        const result = await finance.fetchCandidates(query);
+        if (result.kind !== 'ok') return result;
+        return {
+          ...result,
+          transactions: result.transactions.filter(
+            (transaction) =>
+              transaction.date >= query.startDate && transaction.date <= query.endDate
+          ),
+        };
+      },
+    };
+
+    const result = await runSweep(deps(windowedFinance));
+
+    expect(result.kind).toBe('swept');
+    if (result.kind !== 'swept') return;
+    expect(result.linksWritten).toBe(1);
+    expect(linkRows().map((row) => row.uri)).toEqual([
+      'pops://finance/transaction/shipment-capture',
+    ]);
+  });
+});
+
 describe('an order whose only charge is a refund', () => {
   const aRefund: CreateChargeInput = { amountCents: -4520, role: 'refund', origin: 'merchant' };
 

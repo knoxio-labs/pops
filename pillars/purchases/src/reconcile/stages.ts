@@ -136,7 +136,7 @@ function eligibilityWith(
   if (charge.amountCents === 0) return () => false;
 
   const window = settlementWindowFor(
-    charge.orderedAt,
+    charge.shippedAt ?? charge.orderedAt,
     charge.settlementWindowDays ?? blocking.defaultWindowDays
   );
   if (window === null) return () => false;
