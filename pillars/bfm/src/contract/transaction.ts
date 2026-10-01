@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+/** A finance transaction's date-only `YYYY-MM-DD` wire value. */
+export const TransactionDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/u, 'expected a date-only YYYY-MM-DD value');
+
 /**
  * Stamped only when a transaction's own account currency could not be
  * resolved — a finance account lookup that failed or timed out, never the
@@ -48,8 +53,8 @@ export const MobileTransactionSchema = z.object({
    * that lookup fails — either way this stays an open string.
    */
   currency: z.string(),
-  /** Date-only `YYYY-MM-DD`. Finance's transactions carry no time component. */
-  date: z.string(),
+  /** Date-only `YYYY-MM-DD`, matching the finance row BFM reads. */
+  date: TransactionDateSchema,
   /**
    * Finance's semantic transaction type (`purchase`, `income`, `transfer`, …).
    * Left an open string rather than an enum on purpose: finance adding a type
