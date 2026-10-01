@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { mockPillarInventory, parseResult, pillarMockGetter } from './test-helpers.js';
+import { callOk, mockPillarInventory, parseResult, pillarMockGetter } from './test-helpers.js';
 
 vi.mock('../pillar-client.js', () => ({
   getPillar: pillarMockGetter,
@@ -87,6 +87,7 @@ describe('inventory catalogue draft management', () => {
     expect(tool('inventory.catalogue.patchDraft').inputSchema).toMatchObject({
       properties: {
         revision: { type: 'integer', minimum: 1 },
+        include: { enum: ['catalogue'] },
         operations: {
           items: {
             oneOf: [
@@ -165,9 +166,10 @@ describe('inventory catalogue draft management', () => {
   });
 
   it('creates a draft from the named published revision', async () => {
-    await tool('inventory.catalogue.createDraft').handler({ baseRevision: 4 });
+    const result = await tool('inventory.catalogue.createDraft').handler({ baseRevision: 4 });
 
     expect(types.manage.createDraft).toHaveBeenCalledWith({ baseRevision: 4 });
+    expect(parseResult(result)).toEqual({ revision: { revision: 2 }, changed: [] });
   });
 
   it('rejects an invalid base revision before calling inventory', async () => {
@@ -196,6 +198,122 @@ describe('inventory catalogue draft management', () => {
       expectedDraftVersion: 3,
       operations,
     });
+  });
+
+  it('returns only changed type, field and option identities after a patch', async () => {
+    const beforeRevision = {
+      revision: 2,
+      baseRevision: 1,
+      status: 'draft',
+      draftVersion: 1,
+      minimumProtocol: 1,
+    };
+    const afterRevision = { ...beforeRevision, draftVersion: 2 };
+    const type = {
+      id: 'type-1',
+      key: 'tool',
+      label: 'Tool',
+      fields: [
+        {
+          id: 'field-1',
+          typeId: 'type-1',
+          key: 'status',
+          label: 'Status',
+          enumOptions: [{ id: 'option-1', key: 'ready', label: 'Ready' }],
+        },
+      ],
+    };
+    const compatibility = { classification: 'compatible', affectedIds: [], changes: [] };
+    types.manage.readDraft.mockResolvedValueOnce(callOk({ revision: beforeRevision, types: [] }));
+    types.manage.patchDraft.mockResolvedValueOnce(
+      callOk({ draft: { revision: afterRevision, types: [type] }, compatibility })
+    );
+
+    const result = await tool('inventory.catalogue.patchDraft').handler({
+      revision: 2,
+      baseRevision: 1,
+      expectedDraftVersion: 1,
+      operations: [{ kind: 'put_type', key: 'tool', label: 'Tool' }],
+    });
+
+    expect(parseResult(result)).toEqual({
+      revision: afterRevision,
+      compatibility,
+      changed: [
+        { kind: 'type', id: 'type-1', key: 'tool' },
+        { kind: 'field', id: 'field-1', key: 'status', typeId: 'type-1' },
+        { kind: 'enum_option', id: 'option-1', key: 'ready', fieldId: 'field-1' },
+      ],
+    });
+    expect(parseResult(result)).not.toHaveProperty('types');
+    expect(types.manage.readDraft).toHaveBeenCalledOnce();
+  });
+
+  it('does not report type revision advances caused by a draft edit', async () => {
+    const revision = {
+      revision: 2,
+      baseRevision: 1,
+      status: 'draft',
+      draftVersion: 1,
+      minimumProtocol: 1,
+    };
+    const type = { id: 'type-1', revision: 1, key: 'tool', label: 'Tool', fields: [] };
+    types.manage.readDraft.mockResolvedValueOnce(callOk({ revision, types: [type] }));
+    types.manage.patchDraft.mockResolvedValueOnce(
+      callOk({
+        draft: {
+          revision: { ...revision, draftVersion: 2 },
+          types: [{ ...type, revision: 2 }],
+        },
+        compatibility: { classification: 'compatible', affectedIds: [], changes: [] },
+      })
+    );
+
+    const result = await tool('inventory.catalogue.patchDraft').handler({
+      revision: 2,
+      baseRevision: 1,
+      expectedDraftVersion: 1,
+      operations: [{ kind: 'put_field', typeId: 'type-1', key: 'serial', label: 'Serial' }],
+    });
+
+    expect(parseResult(result)).toMatchObject({ changed: [] });
+  });
+
+  it('returns the full patch response when include is catalogue', async () => {
+    const full = {
+      draft: { revision: { revision: 2 }, types: [{ id: 'type-1', key: 'tool' }] },
+      compatibility: { classification: 'compatible', affectedIds: [], changes: [] },
+    };
+    types.manage.patchDraft.mockResolvedValueOnce(callOk(full));
+
+    const result = await tool('inventory.catalogue.patchDraft').handler({
+      revision: 2,
+      baseRevision: 1,
+      expectedDraftVersion: 1,
+      operations: [{ kind: 'put_type', key: 'tool', label: 'Tool' }],
+      include: 'catalogue',
+    });
+
+    expect(parseResult(result)).toEqual(full);
+    expect(types.manage.readDraft).not.toHaveBeenCalled();
+  });
+
+  it('does not patch when the draft read needed for change identities fails', async () => {
+    types.manage.readDraft.mockResolvedValueOnce({
+      kind: 'not-found',
+      pillar: 'inventory',
+      message: 'catalogue draft not found',
+    });
+
+    const result = await tool('inventory.catalogue.patchDraft').handler({
+      revision: 2,
+      baseRevision: 1,
+      expectedDraftVersion: 1,
+      operations: [{ kind: 'put_type', key: 'tool', label: 'Tool' }],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(types.manage.patchDraft).not.toHaveBeenCalled();
   });
 
   it('rejects an empty operation list before calling inventory', async () => {
@@ -285,6 +403,50 @@ describe('inventory catalogue draft management', () => {
     });
   });
 
+  it('returns the published revision summary without the full catalogue', async () => {
+    const published = {
+      revision: {
+        revision: 5,
+        baseRevision: 4,
+        status: 'published',
+        draftVersion: 3,
+        minimumProtocol: 2,
+      },
+      types: [{ id: 'type-1', key: 'tool' }],
+    };
+    types.manage.publishDraft.mockResolvedValueOnce(callOk(published));
+
+    const result = await tool('inventory.catalogue.publishDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+    });
+
+    expect(parseResult(result)).toEqual({
+      revision: {
+        revision: 5,
+        baseRevision: 4,
+        status: 'published',
+        draftVersion: 3,
+        minimumProtocol: 2,
+      },
+      changed: [],
+    });
+    expect(parseResult(result)).not.toHaveProperty('types');
+  });
+
+  it('rejects an unsupported catalogue include mode before any write', async () => {
+    const result = await tool('inventory.catalogue.publishDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+      include: 'summary',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(types.manage.publishDraft).not.toHaveBeenCalled();
+  });
+
   it('rejects a non-object migration before calling inventory', async () => {
     const result = await tool('inventory.catalogue.publishDraft').handler({
       revision: 5,
@@ -320,6 +482,38 @@ describe('inventory catalogue draft management', () => {
       revision: 5,
       baseRevision: 4,
       expectedDraftVersion: 3,
+    });
+  });
+
+  it('returns an abandoned revision summary without the full catalogue', async () => {
+    types.manage.abandonDraft.mockResolvedValueOnce(
+      callOk({
+        revision: {
+          revision: 5,
+          baseRevision: 4,
+          status: 'abandoned',
+          draftVersion: 3,
+          minimumProtocol: 1,
+        },
+        types: [{ id: 'type-1', key: 'tool' }],
+      })
+    );
+
+    const result = await tool('inventory.catalogue.abandonDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+    });
+
+    expect(parseResult(result)).toEqual({
+      revision: {
+        revision: 5,
+        baseRevision: 4,
+        status: 'abandoned',
+        draftVersion: 3,
+        minimumProtocol: 1,
+      },
+      changed: [],
     });
   });
 

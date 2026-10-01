@@ -8,6 +8,13 @@ export const expectedDraftVersionSchema = {
 
 type Parsed<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; error: string };
 
+/** MCP schema for opting into a full catalogue write response. */
+export const catalogueIncludeSchema = {
+  type: 'string',
+  enum: ['catalogue'],
+  description: 'Return the full catalogue body instead of the compact write summary',
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -22,6 +29,26 @@ export function requiredPositiveInteger(
     return { ok: false, error: `Missing or invalid required field: ${key}` };
   }
   return { ok: true, value };
+}
+
+/** Parses the exact draft, base and optimistic-concurrency revisions for a write. */
+export function catalogueDraftTarget(
+  args: Record<string, unknown>
+): Parsed<{ revision: number; baseRevision: number; expectedDraftVersion: number }> {
+  const revision = requiredPositiveInteger(args, 'revision');
+  if (!revision.ok) return revision;
+  const baseRevision = requiredPositiveInteger(args, 'baseRevision');
+  if (!baseRevision.ok) return baseRevision;
+  const expectedDraftVersion = requiredPositiveInteger(args, 'expectedDraftVersion');
+  if (!expectedDraftVersion.ok) return expectedDraftVersion;
+  return {
+    ok: true,
+    value: {
+      revision: revision.value,
+      baseRevision: baseRevision.value,
+      expectedDraftVersion: expectedDraftVersion.value,
+    },
+  };
 }
 
 /** Parses an optional positive integer, with an inclusive upper bound when supplied. */
@@ -65,4 +92,11 @@ export function optionalObject(
   if (value === undefined) return { ok: true, value: undefined };
   if (!isRecord(value)) return { ok: false, error: `Invalid field: ${key}` };
   return { ok: true, value };
+}
+
+/** Parses the optional full-catalogue response mode from MCP arguments. */
+export function catalogueInclude(args: Record<string, unknown>): Parsed<boolean> {
+  if (!('include' in args)) return { ok: true, value: false };
+  if (args['include'] === 'catalogue') return { ok: true, value: true };
+  return { ok: false, error: "Invalid field: include (expected 'catalogue')" };
 }
