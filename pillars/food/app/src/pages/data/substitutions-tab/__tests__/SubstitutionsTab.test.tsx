@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type JSX, type ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const substitutionsListHydratedMock = vi.hoisted(() => vi.fn());
 const slugsSearchMock = vi.hoisted(() => vi.fn());
@@ -10,6 +10,8 @@ const ingredientsGetMock = vi.hoisted(() => vi.fn());
 const substitutionsCreateMock = vi.hoisted(() => vi.fn());
 const substitutionsUpdateMock = vi.hoisted(() => vi.fn());
 const substitutionsDeleteMock = vi.hoisted(() => vi.fn());
+
+let queryClient: QueryClient | null = null;
 
 vi.mock('../../../../food-api/index.js', () => ({
   substitutionsListHydrated: substitutionsListHydratedMock,
@@ -25,8 +27,12 @@ import { SubstitutionsTab } from '../../SubstitutionsTab';
 
 function withClient(children: ReactNode): JSX.Element {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { gcTime: Infinity, retry: false },
+      mutations: { gcTime: Infinity, retry: false },
+    },
   });
+  queryClient = client;
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
@@ -83,6 +89,13 @@ function row(
 function seedList(rows: ReturnType<typeof row>[]) {
   substitutionsListHydratedMock.mockResolvedValue({ data: { items: rows } });
 }
+
+afterEach(async () => {
+  cleanup();
+  queryClient?.clear();
+  queryClient = null;
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -163,21 +176,26 @@ describe('SubstitutionsTab', () => {
       response: { status: 409 },
     });
     renderTab();
+    const user = userEvent.setup();
 
     const form = screen.getByRole('form', { name: /add substitution/i });
     const slugBoxes = within(form).getAllByPlaceholderText(/search slug/i);
     const fromBox = elementAt(slugBoxes, 0);
-    const toBox = elementAt(slugBoxes, 1);
-    await userEvent.type(fromBox, 'butter');
+    await user.type(fromBox, 'butter');
     // `Autocomplete`'s option list renders through a `Popover` portal, outside
     // `form`'s own DOM subtree, so the option itself has to be found globally.
-    await userEvent.click(await screen.findByRole('option', { name: /butter/i }));
-    await userEvent.type(toBox, 'butter');
-    // `Autocomplete`'s option list renders through a `Popover` portal, outside
-    // `form`'s own DOM subtree, so the option itself has to be found globally.
-    await userEvent.click(await screen.findByRole('option', { name: /butter/i }));
+    await user.click(await screen.findByRole('option', { name: /butter/i }));
+    expect(await screen.findByTestId('endpoint-picker-selected')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
 
-    await userEvent.click(within(form).getByRole('button', { name: /^add$/i }));
+    const toBox = elementAt(within(form).getAllByPlaceholderText(/search slug/i), 0);
+    await user.type(toBox, 'butter');
+    // `Autocomplete`'s option list renders through a `Popover` portal, outside
+    // `form`'s own DOM subtree, so the option itself has to be found globally.
+    await user.click(await screen.findByRole('option', { name: /butter/i }));
+    expect(await screen.findAllByTestId('endpoint-picker-selected')).toHaveLength(2);
+
+    await user.click(within(form).getByRole('button', { name: /^add$/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/i);
   });
