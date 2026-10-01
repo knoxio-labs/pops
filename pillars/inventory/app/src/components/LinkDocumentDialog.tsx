@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -6,8 +6,9 @@ import { toast } from 'sonner';
 import { Button, formatDate, SearchPickerDialog, Select, toastError } from '@pops/ui';
 
 import { unwrap } from '../inventory-api-helpers.js';
-import { documentsLink, paperlessSearch } from '../inventory-api/index.js';
+import { documentsLink } from '../inventory-api/index.js';
 import { linkDocumentError } from './link-document-error';
+import { usePaperlessSearch } from './use-paperless-search';
 
 import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 
@@ -149,15 +150,6 @@ function DocumentLinkTrigger({
       Link Document
     </Button>
   );
-}
-
-function usePaperlessSearch(open: boolean, search: string) {
-  const searchInput = { query: search };
-  return useQuery({
-    queryKey: ['inventory', 'paperless', 'search', searchInput],
-    queryFn: async () => unwrap(await paperlessSearch({ query: searchInput })),
-    enabled: open && search.length >= 2,
-  });
 }
 
 /** Opens Paperless search and links a selected document to an item. */
