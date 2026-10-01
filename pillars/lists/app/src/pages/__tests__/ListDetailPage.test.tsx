@@ -164,7 +164,7 @@ describe('pillars/lists/docs/prds/crud-ui — ListDetailPage', () => {
 
     const noteButton = await screen.findByRole('button', { name: note });
     expect(noteButton).toHaveAttribute('aria-expanded', 'false');
-    expect(noteButton).toHaveClass('h-11');
+    expect(noteButton).toHaveClass('h-11', 'sm:h-auto');
     await userEvent.click(noteButton);
     expect(noteButton).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText(note)).toBeInTheDocument();

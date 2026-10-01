@@ -2,7 +2,10 @@ import { Ban, Bookmark, Clock, EyeOff } from 'lucide-react';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
 
-import type { ComparisonMovieCardMovie, ComparisonMovieCardProps } from './ComparisonMovieCard';
+import type {
+  ComparisonMovieCardMovie,
+  ComparisonMovieCardProps,
+} from './ComparisonMovieCard.types';
 
 /** Props shared by the desktop action overlay and narrow-screen action popover. */
 export type CardActionProps = Pick<

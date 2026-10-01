@@ -249,6 +249,7 @@ describe('pillars/lists/docs/prds/shopping-specialisation — ShoppingDetailCont
     render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
     const noteButton = await screen.findByRole('button', { name: notes });
     expect(noteButton).toHaveAttribute('aria-expanded', 'false');
+    expect(noteButton).toHaveClass('h-11', 'sm:h-auto');
     await userEvent.click(noteButton);
     expect(noteButton).toHaveAttribute('aria-expanded', 'true');
     expect(noteButton).toHaveTextContent('Show less');

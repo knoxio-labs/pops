@@ -83,7 +83,7 @@ function Subline({ notes, isDragDisabled }: { notes: string | null; isDragDisabl
             <Button
               type="button"
               variant="ghost"
-              className="w-full justify-start px-0 text-left text-xs font-normal text-muted-foreground"
+              className="h-11 w-full justify-start px-0 text-left text-xs font-normal text-muted-foreground sm:h-auto sm:py-0"
               aria-label={notes ?? undefined}
               title={notes ?? undefined}
             >
