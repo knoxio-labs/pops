@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
+import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
 import type { ListItemRow } from './types.js';
 
@@ -35,17 +35,18 @@ function NoteDisclosure({ row, t }: { row: ListItemRow; t: (key: string) => stri
   return (
     <Collapsible open={expanded} onOpenChange={setExpanded}>
       <CollapsibleTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          className="w-full justify-start px-0 text-left text-xs font-normal text-muted-foreground"
           aria-label={fullText}
           title={fullText}
-          className="flex min-h-11 w-full items-center gap-2 text-left text-xs text-muted-foreground sm:min-h-0"
         >
           <span className="min-w-0 truncate">{preview}</span>
           <span className="shrink-0 text-primary sm:hidden">
             {expanded ? t('detail.item.showLess') : t('detail.item.showMore')}
           </span>
-        </button>
+        </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <p className="whitespace-normal text-xs text-muted-foreground">{fullText}</p>

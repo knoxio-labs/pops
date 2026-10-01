@@ -1,4 +1,4 @@
-import { Badge, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
+import { Badge, Button, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
 
 import type { TagRule, TagRuleOverlap } from './types';
 
@@ -25,15 +25,16 @@ function ExplainedBadge({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          className="min-w-11 rounded-full p-0"
           aria-label={`${label}. ${explanation}`}
-          className="relative inline-flex cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring before:absolute before:-inset-3 before:content-['']"
         >
           <Badge variant="outline" className={className} title={explanation}>
             {label}
           </Badge>
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-3" align="start">
         <p className="text-xs">{explanation}</p>

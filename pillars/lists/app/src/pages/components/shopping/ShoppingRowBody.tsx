@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger, TextInput } from '@pops/ui';
+import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger, TextInput } from '@pops/ui';
 
 import type { ListItemRow as ItemRow } from '../../detail/types.js';
 
@@ -80,17 +80,18 @@ function Subline({ notes, isDragDisabled }: { notes: string | null; isDragDisabl
       {hasNotes ? (
         <Collapsible open={expanded} onOpenChange={setExpanded}>
           <CollapsibleTrigger asChild>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              className="w-full justify-start px-0 text-left text-xs font-normal text-muted-foreground"
               aria-label={notes ?? undefined}
               title={notes ?? undefined}
-              className="flex min-h-11 w-full items-center gap-2 text-left text-xs text-muted-foreground sm:min-h-0"
             >
               <span className="min-w-0 truncate">{notes}</span>
               <span className="shrink-0 text-primary sm:hidden">
                 {expanded ? t('shopping.item.showLess') : t('shopping.item.showMore')}
               </span>
-            </button>
+            </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <p className="whitespace-normal text-xs text-muted-foreground">{notes}</p>

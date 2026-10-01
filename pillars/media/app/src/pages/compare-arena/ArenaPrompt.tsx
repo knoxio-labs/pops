@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
 
 interface ArenaPromptProps {
   dimensionName: string;
@@ -24,16 +24,17 @@ export function ArenaPrompt({ dimensionName, dimensionDescription }: ArenaPrompt
               </TooltipTrigger>
               <TooltipContent>{dimensionDescription}</TooltipContent>
             </Tooltip>
-            <button
+            <Button
               type="button"
+              variant="link"
+              className="px-0 font-medium text-foreground decoration-dotted sm:hidden"
               onClick={() => setDescriptionOpen((open) => !open)}
               aria-label={`${descriptionOpen ? 'Hide' : 'Show'} description for ${dimensionName}`}
               aria-expanded={descriptionOpen}
               aria-controls="arena-dimension-description"
-              className="inline-flex min-h-11 items-center font-medium text-foreground underline decoration-dotted sm:hidden"
             >
               {dimensionName}
-            </button>
+            </Button>
           </>
         ) : (
           <span className="font-medium text-foreground">{dimensionName}</span>
