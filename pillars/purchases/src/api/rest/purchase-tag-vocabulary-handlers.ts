@@ -1,7 +1,7 @@
 import { listTagVocabulary, listTagVocabularyPage, type PurchasesDb } from '../../db/index.js';
 import { purchaseErrorBody } from '../errors.js';
 
-import type { TagVocabularyQuery } from '../../contract/rest-purchases.js';
+import type { TagVocabularyQuery } from '../../contract/rest-purchase-tags.js';
 
 /** Build the tag-vocabulary route with the purchases database it reads. */
 export function makePurchaseTagVocabularyHandlers(db: PurchasesDb) {

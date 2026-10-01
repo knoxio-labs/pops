@@ -14,6 +14,7 @@ import {
   InventoryProposalDecisionSchema,
   InventoryProposalSchema,
 } from './inventory-proposals.js';
+import { TaggedItemSchema, TagVocabularyQuerySchema } from './rest-purchase-tags.js';
 import {
   AttachDocumentBodySchema,
   CreateManualPurchaseBodySchema,
@@ -29,38 +30,12 @@ import {
 import { TagVocabularyEntrySchema } from './schemas/item.js';
 import { PurchaseDetailSchema, PurchaseItemDetailSchema } from './schemas/purchase-detail.js';
 import {
-  IsoTimestampSchema,
   PurchaseDocumentSchema,
-  PurchaseItemSchema,
   PurchaseItemUnitSchema,
   PurchaseListRowSchema,
 } from './schemas/purchase.js';
 
 const c = initContract();
-
-/** Search and page inputs for the item-tag vocabulary. */
-export const TagVocabularyQuerySchema = z.object({
-  search: z.string().trim().max(200).optional(),
-  cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-});
-
-/** Parsed filters and page controls for the item-tag vocabulary. */
-export type TagVocabularyQuery = z.infer<typeof TagVocabularyQuerySchema>;
-
-/**
- * A line that carries the requested tag, with the tag's own confirmation
- * marker beside it.
- *
- * The marker travels because the item alone cannot carry it — the tag is on
- * the join row, not the line — and a list of lines "tagged `snack`" that
- * silently mixes proposals with decisions is exactly the counterfactual a
- * consumer must not compute.
- */
-const TaggedItemSchema = z.object({
-  item: PurchaseItemSchema,
-  confirmedAt: IsoTimestampSchema.nullable(),
-});
 
 export const purchasesPurchaseContract = c.router({
   list: {
@@ -98,6 +73,7 @@ export const purchasesPurchaseContract = c.router({
       // A checksum that already exists. Adapters treat this as a skip, not
       // a failure — re-ingesting the same export bundle is expected.
       409: ErrorBodySchema,
+      503: ErrorBodySchema,
     },
     summary: 'Create an order with its deliveries, lines, charges and documents',
   },

@@ -17,6 +17,7 @@ import {
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { purchaseErrorBody } from '../errors.js';
 import { paginationMeta } from '../shared/pagination.js';
+import { isBusyError } from '../shared/sqlite-errors.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { makePurchaseInventoryHandlers } from './purchase-inventory-handlers.js';
 import { resolvePurchaseListKeyset } from './purchase-list-keyset.js';
@@ -25,6 +26,7 @@ import { resolvePurchaseScope } from './purchase-scope.js';
 import { makePurchaseTagVocabularyHandlers } from './purchase-tag-vocabulary-handlers.js';
 import { toPurchaseDetailBody, toPurchaseItemBody } from './serializers.js';
 
+import type { Response } from 'express';
 import type { z } from 'zod';
 
 import type {
@@ -94,11 +96,15 @@ export function makePurchaseHandlers(
       return { status: 200 as const, body: toPurchaseDetailBody(detail) };
     },
 
-    create: async ({ body }: { body: CreateBody }) => {
+    create: async ({ body, res }: { body: CreateBody; res: Response }) => {
       let id: string;
       try {
         id = createPurchase(db, body);
       } catch (err) {
+        if (isBusyError(err)) {
+          res.setHeader('Retry-After', '5');
+          return { status: 503 as const, body: purchaseErrorBody('database_busy') };
+        }
         const mapped = tryMapServiceError(err);
         if (mapped?.status === 409) return { status: 409 as const, body: mapped.body };
         if (mapped?.status === 400) return { status: 400 as const, body: mapped.body };

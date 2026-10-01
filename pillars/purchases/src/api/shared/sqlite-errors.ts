@@ -29,3 +29,8 @@ export function isForeignKeyConstraintError(err: unknown): boolean {
 export function isCheckConstraintError(err: unknown): boolean {
   return hasCode(err) && err.code === 'SQLITE_CONSTRAINT_CHECK';
 }
+
+/** Identify SQLite's primary and extended SQLITE_BUSY result codes. */
+export function isBusyError(err: unknown): boolean {
+  return hasCode(err) && /^SQLITE_BUSY(?:_|$)/.test(err.code);
+}
