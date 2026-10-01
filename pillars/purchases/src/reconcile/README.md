@@ -133,6 +133,8 @@ Every stage that could pick between equally-good candidates routes to review ins
 
 It is **LIKE**, matching what the stored data already assumed: `%` is any run of characters, `_` is exactly one, the pattern is anchored and matching is case-insensitive. A pattern with no wildcard is therefore an equality test — which is why the CLI was corrected to write `AMAZON%`.
 
+`descriptorPattern` can hold one LIKE pattern or several alternatives encoded as `any-of:` followed by a JSON array of LIKE patterns. Alternatives are joined with OR. The Amazon source uses `any-of:["AMAZON%AU%","AMAZON%AMZN.COM/BILL%"]` to admit its AU and US-billed retail descriptors without admitting `AMAZON WEB SERVICES`. A malformed or empty alternatives list matches no descriptors.
+
 Patterns are compiled with regex metacharacters escaped first, because `PAYPAL *MERCHANT` is a real bank descriptor and an unescaped `*` would be read as a quantifier.
 
 ## The window

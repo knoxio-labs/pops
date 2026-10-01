@@ -1,7 +1,7 @@
 /**
  * The Amazon source's registered settings, driven through the solver.
  *
- * Pinned against the constants the ingest CLI and migration 0018 write, so
+ * Pinned against the constants the ingest CLI and source migrations write, so
  * a change to either value is a change to what these assert.
  */
 import { describe, expect, it } from 'vitest';
@@ -18,7 +18,7 @@ const amazonCharge = charge({
   settlementWindowDays: AMAZON_SETTLEMENT_WINDOW_DAYS,
 });
 
-describe('the Amazon descriptor pattern (POPS-4650)', () => {
+describe('the Amazon descriptor patterns (POPS-4650, POPS-4658)', () => {
   it('admits no AMAZON WEB SERVICES transaction, even at exactly the charge amount', () => {
     const out = run({
       charges: [amazonCharge],
@@ -47,6 +47,15 @@ describe('the Amazon descriptor pattern (POPS-4650)', () => {
     'Amazon AU',
   ])('admits the retail descriptor %s', (description) => {
     const out = run({ charges: [amazonCharge], transactions: [txn({ description })] });
+
+    expect(out.links).toEqual([expect.objectContaining({ linkType: 'exact' })]);
+  });
+
+  it('admits a US-billed Amazon marketplace transaction', () => {
+    const out = run({
+      charges: [amazonCharge],
+      transactions: [txn({ description: 'AMAZON MKTPL*3D2QH1 AMZN.COM/BILL' })],
+    });
 
     expect(out.links).toEqual([expect.objectContaining({ linkType: 'exact' })]);
   });

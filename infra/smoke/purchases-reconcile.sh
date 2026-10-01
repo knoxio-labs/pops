@@ -168,7 +168,7 @@ in_purchases node -e "
     headers,
     body: JSON.stringify({
       label: 'Smoke',
-      descriptorPattern: 'AMAZON%',
+      descriptorPattern: 'any-of:[\"AMAZON%AU%\",\"AMAZON%AMZN.COM/BILL%\"]',
       settlementWindowDays: 21,
       autoLinkPolicy: 'review',
     }),
