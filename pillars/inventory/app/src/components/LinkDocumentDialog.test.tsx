@@ -52,6 +52,44 @@ describe('LinkDocumentDialog', () => {
     expect(screen.getByRole('heading', { name: 'Link Document' })).toBeInTheDocument();
   });
 
+  it('shows search failures distinctly and retries the current search', async () => {
+    paperlessSearchMock.mockReset();
+    paperlessSearchMock
+      .mockRejectedValueOnce(new Error('Paperless is unavailable'))
+      .mockResolvedValueOnce({
+        data: {
+          data: [
+            {
+              id: 1,
+              title: 'Manual',
+              created: '2026-09-30',
+              originalFileName: 'manual.pdf',
+              thumbnailUrl: '',
+            },
+          ],
+        },
+        error: undefined,
+        response: { status: 200 },
+      });
+
+    renderWithProviders(<LinkDocumentDialog itemId="item-1" onLinked={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Link Document' }));
+    fireEvent.change(screen.getByPlaceholderText('Search documents...'), {
+      target: { value: 'manual' },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Paperless search failed. Try again.'
+    );
+    expect(screen.queryByText('No results found')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Manual')).toBeInTheDocument();
+    expect(paperlessSearchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('uses a caller-provided trigger', () => {
     renderWithProviders(
       <LinkDocumentDialog

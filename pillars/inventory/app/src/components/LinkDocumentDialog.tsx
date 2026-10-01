@@ -151,6 +151,15 @@ function DocumentLinkTrigger({
   );
 }
 
+function usePaperlessSearch(open: boolean, search: string) {
+  const searchInput = { query: search };
+  return useQuery({
+    queryKey: ['inventory', 'paperless', 'search', searchInput],
+    queryFn: async () => unwrap(await paperlessSearch({ query: searchInput })),
+    enabled: open && search.length >= 2,
+  });
+}
+
 /** Opens Paperless search and links a selected document to an item. */
 export function LinkDocumentDialog({
   itemId,
@@ -163,12 +172,7 @@ export function LinkDocumentDialog({
   const [docType, setDocType] = useState<DocType>('receipt');
   const [linkingId, setLinkingId] = useState<number | null>(null);
 
-  const searchInput = { query: search };
-  const { data, isLoading } = useQuery({
-    queryKey: ['inventory', 'paperless', 'search', searchInput],
-    queryFn: async () => unwrap(await paperlessSearch({ query: searchInput })),
-    enabled: open && search.length >= 2,
-  });
+  const { data, isFetching, isError, refetch } = usePaperlessSearch(open, search);
   const linkMutation = useLinkDocumentMutation(onLinked, setOpen, setSearch, setLinkingId);
   const results: PaperlessDocResult[] = data?.data ?? [];
 
@@ -190,8 +194,10 @@ export function LinkDocumentDialog({
       searchPlaceholder="Search documents..."
       search={search}
       onSearchChange={setSearch}
-      isLoading={isLoading}
+      isLoading={isFetching}
       results={results}
+      errorMessage={isError ? 'Paperless search failed. Try again.' : undefined}
+      onRetry={() => void refetch()}
       getResultKey={(doc: PaperlessDocResult) => doc.id}
       maxResultsHeight="max-h-72"
       trailing={<DocTypeSelect docType={docType} setDocType={setDocType} />}
