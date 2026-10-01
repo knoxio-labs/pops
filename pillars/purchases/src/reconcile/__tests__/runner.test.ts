@@ -4,7 +4,11 @@ import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchase } from '../../db/index.js';
 import { createSweepRunner } from '../runner.js';
 
-import type { CandidateFetch, FinanceClient } from '../../api/finance/client.js';
+import type {
+  CandidateFetch,
+  FinanceClient,
+  FinanceSweepClient,
+} from '../../api/finance/client.js';
 import type { OpenedPurchasesDb, PurchasesDb } from '../../db/index.js';
 
 let opened: OpenedPurchasesDb;
@@ -28,12 +32,17 @@ afterEach(() => {
   cleanup();
 });
 
-const finance: FinanceClient = {
-  fetchCandidates: () => {
-    fetches += 1;
-    return Promise.resolve<CandidateFetch>({ kind: 'ok', transactions: [] });
-  },
-};
+function financeClient(fetchCandidates: FinanceClient['fetchCandidates']): FinanceSweepClient {
+  return {
+    fetchCandidates,
+    fetchTransactionsByIds: () => Promise.resolve<CandidateFetch>({ kind: 'ok', transactions: [] }),
+  };
+}
+
+const finance = financeClient(() => {
+  fetches += 1;
+  return Promise.resolve<CandidateFetch>({ kind: 'ok', transactions: [] });
+});
 
 function order(checksum: string) {
   return createPurchase(db, {
@@ -113,13 +122,11 @@ describe('coalescing', () => {
     const gate = new Promise<CandidateFetch>((resolve) => {
       resolveFetch = resolve;
     });
-    const slowFinance: FinanceClient = {
-      fetchCandidates: () => {
-        fetches += 1;
-        // Only the first call blocks; later ones return immediately.
-        return fetches === 1 ? gate : Promise.resolve({ kind: 'ok', transactions: [] });
-      },
-    };
+    const slowFinance = financeClient(() => {
+      fetches += 1;
+      // Only the first call blocks; later ones return immediately.
+      return fetches === 1 ? gate : Promise.resolve({ kind: 'ok', transactions: [] });
+    });
     const sweeper = runner({ finance: slowFinance });
 
     const first = sweeper.runOnce();
@@ -159,13 +166,11 @@ describe('the timed triggers', () => {
     // worker: reconciliation silently ends and nothing says so.
     order('a');
     let calls = 0;
-    const flaky: FinanceClient = {
-      fetchCandidates: () => {
-        calls += 1;
-        if (calls === 1) return Promise.reject(new Error('boom'));
-        return Promise.resolve<CandidateFetch>({ kind: 'ok', transactions: [] });
-      },
-    };
+    const flaky = financeClient(() => {
+      calls += 1;
+      if (calls === 1) return Promise.reject(new Error('boom'));
+      return Promise.resolve<CandidateFetch>({ kind: 'ok', transactions: [] });
+    });
     const warn = vi.fn();
     const sweeper = runner({ finance: flaky, logger: { warn } });
     sweeper.start();
@@ -207,12 +212,10 @@ describe('the timed triggers', () => {
     const gate = new Promise<CandidateFetch>((resolve) => {
       resolveFetch = resolve;
     });
-    const slow: FinanceClient = {
-      fetchCandidates: () => {
-        fetches += 1;
-        return gate;
-      },
-    };
+    const slow = financeClient(() => {
+      fetches += 1;
+      return gate;
+    });
     const sweeper = runner({ finance: slow });
 
     void sweeper.runOnce().catch(() => undefined);
@@ -260,10 +263,9 @@ describe('reporting', () => {
   it('logs a skipped sweep distinctly from a completed one', async () => {
     order('a');
     const info = vi.fn();
-    const down: FinanceClient = {
-      fetchCandidates: () =>
-        Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' }),
-    };
+    const down = financeClient(() =>
+      Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' })
+    );
     const sweeper = runner({ finance: down, logger: { info } });
 
     await sweeper.runOnce();

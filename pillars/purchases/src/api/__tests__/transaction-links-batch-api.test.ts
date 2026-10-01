@@ -30,7 +30,7 @@ import { createTestTransport } from './test-http.js';
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
-import type { FinanceClient } from '../finance/client.js';
+import type { FinanceSweepClient } from '../finance/client.js';
 
 const { requestOn } = createTestTransport();
 
@@ -61,7 +61,7 @@ function order(totalCents: number, checksum: string, source = 'amazon') {
   });
 }
 
-async function sweepWith(finance: FinanceClient): Promise<void> {
+async function sweepWith(finance: FinanceSweepClient): Promise<void> {
   await runSweep({ db: opened.db, finance, defaultWindowDays: 21 });
 }
 
