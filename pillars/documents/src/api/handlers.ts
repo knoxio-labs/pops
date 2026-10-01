@@ -9,8 +9,10 @@
  */
 import { getPillarRegistry } from './pillars/registry.js';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
+/** Dependencies for the documents HTTP API. */
 export interface DocumentsApiDeps {
   /** Semver of the build, surfaced on the health response. */
   version: string;
@@ -20,6 +22,11 @@ export interface DocumentsApiDeps {
    * have to special-case the host pillar.
    */
   selfBaseUrl: string;
+  /**
+   * Resolves presented `X-API-Key` values. Defaults to the registry-backed
+   * verifier in `app.ts`; tests inject a fake.
+   */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export interface HealthResponse {

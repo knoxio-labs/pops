@@ -6,9 +6,9 @@
  * paperless thumbnail proxy. Kept as a factory so the test suite can spin
  * up an in-process `supertest` instance without binding a real port.
  *
- * The pillar trusts the docker network — the dispatcher/gateway in front
- * authenticates; there is no per-request auth here (parity with the other
- * data pillars).
+ * Contract and thumbnail routes validate presented service-account keys.
+ * The inventory bridge call has no key and retains the network-perimeter
+ * posture; the health, pillars and OpenAPI probes stay outside the gate.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -18,10 +18,12 @@ import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
 import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { documentsContract } from '../contract/rest.js';
 import { createDocumentsFilesRouter } from './files/router.js';
 import { type DocumentsApiDeps, makeRequestHandler } from './handlers.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeDocumentsRestHandlers } from './rest/handlers.js';
 
 /**
@@ -54,6 +56,7 @@ const documentsErrors = defineErrors('documents', {
   },
 });
 
+/** Build the documents app with contract and thumbnail service-account scopes. */
 export function createDocumentsApiApp(deps: DocumentsApiDeps): Express {
   const app = express();
   const errors = createPillarErrorHandlers({ pillar: 'documents' });
@@ -79,6 +82,12 @@ export function createDocumentsApiApp(deps: DocumentsApiDeps): Express {
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
 
   createExpressEndpoints(documentsContract, makeDocumentsRestHandlers(), app, {
     requestValidationErrorHandler: (error, _req, _res, next) => {
