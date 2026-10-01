@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router';
  */
 import {
   AssetIdBadge,
-  type Condition,
   ConditionBadge,
   DataTable,
   formatAUD,
@@ -32,20 +31,6 @@ import type { InventoryTableItem } from './InventoryTable.columns';
 
 export type { InventoryTableItem } from './InventoryTable.columns';
 
-/** Known condition values (lowercase canonical + legacy Title Case). */
-const VALID_CONDITIONS = new Set<string>([
-  'new',
-  'good',
-  'fair',
-  'poor',
-  'broken',
-  // Legacy Title Case values from seed data / Notion import
-  'Excellent',
-  'Good',
-  'Fair',
-  'Poor',
-]);
-
 function locationCell(
   locationPathMap: ReadonlyMap<string, LocationSegment[]>,
   row: { original: InventoryTableItem }
@@ -63,10 +48,10 @@ function locationCell(
 }
 
 function conditionCell(condition: string | null): React.ReactNode {
-  if (!condition || !VALID_CONDITIONS.has(condition)) {
+  if (!condition) {
     return <span className="text-muted-foreground">—</span>;
   }
-  return <ConditionBadge condition={condition as Condition} />;
+  return <ConditionBadge condition={condition} />;
 }
 
 function purchaseDateCell(date: string | null): React.ReactNode {

@@ -46,13 +46,15 @@ function resolveStyles(condition: string): string {
   return KNOWN_CONDITIONS.has(key) ? conditionStyles[key as NormalisedCondition] : '';
 }
 
+/** Props for rendering a recognized condition value stored by an inventory item. */
 export interface ConditionBadgeProps extends Omit<
   ComponentProps<typeof Badge>,
   'variant' | 'children'
 > {
-  condition: Condition;
+  condition: string;
 }
 
+/** Renders recognized conditions and returns nothing for unrecognized stored values. */
 export function ConditionBadge({ condition, className, ...props }: ConditionBadgeProps) {
   const styles = resolveStyles(condition);
   if (!styles) return null;
