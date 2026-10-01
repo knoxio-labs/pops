@@ -1,12 +1,10 @@
 import { defineErrors } from '@pops/pillar-express';
-import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 
+import { createErrorBodyBuilder } from './error-body-builder.js';
 import {
   RECONCILIATION_ERROR_DEFINITIONS,
   reconciliationErrors,
 } from './reconciliation-error-definitions.js';
-
-import type { ErrorBody } from '@pops/types';
 
 const ERROR_DEFINITIONS = {
   not_found: {
@@ -74,6 +72,12 @@ const ERROR_DEFINITIONS = {
     status: 400,
     message: 'The request contains a value purchases cannot accept.',
     retryable: false,
+  },
+  database_busy: {
+    area: 'storage',
+    status: 503,
+    message: 'Purchase storage is busy. Retry this request shortly.',
+    retryable: true,
   },
   keyset_anchor_incomplete: {
     area: 'request',
@@ -190,16 +194,4 @@ export const purchaseErrors = {
  * Build an ADR-054 response for contract handlers that return declared error statuses.
  * Request middleware establishes the id; the fallback only supports isolated unit calls.
  */
-export function purchaseErrorBody(
-  reason: PurchaseErrorReason,
-  options: { readonly message?: string; readonly details?: unknown } = {}
-): ErrorBody {
-  const definition = ALL_ERROR_DEFINITIONS[reason];
-  return {
-    code: `purchases.${definition.area}.${reason}`,
-    message: options.message ?? definition.message,
-    requestId: getRequestId() ?? mintRequestId(),
-    retryable: definition.retryable,
-    ...(options.details === undefined ? {} : { details: options.details }),
-  };
-}
+export const purchaseErrorBody = createErrorBodyBuilder('purchases', ALL_ERROR_DEFINITIONS);

@@ -80,6 +80,8 @@ export interface SolvableTransaction {
   readonly description: string;
   /** The finance account the transaction was posted to. */
   readonly accountId: string;
+  /** Finance's semantic type; unfamiliar values cannot settle a purchase charge. */
+  readonly type: string;
   /** Signed, integer cents, in {@link settlementCurrency}. */
   readonly amountCents: number;
   /** ISO-4217 the account settled in — what {@link amountCents} is stated in. */

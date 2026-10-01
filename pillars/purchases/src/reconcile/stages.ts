@@ -10,6 +10,7 @@ import { comparableAmountCents, comparableCandidates } from './currency.js';
 import { descriptorMatcherFor, type DescriptorMatcher } from './descriptor.js';
 import { ruleMatcherFor } from './rules.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
+import { isTransactionTypeAllowedForRole } from './transaction-types.js';
 import {
   STAGE_CONFIDENCE,
   type ChargeForReview,
@@ -71,9 +72,9 @@ export function orderedTransactions(
  * Stage 0 — blocking, compiled once per charge.
  *
  * Narrows the field to transactions that could plausibly settle this
- * charge: inside its window, matching its source descriptor, same sign,
- * non-zero on both sides, and stating an amount that can honestly be
- * compared with the charge's.
+ * charge: inside its window, matching its source descriptor, compatible
+ * with the charge's semantic role and sign, non-zero on both sides, and
+ * stating an amount that can honestly be compared with the charge's.
  *
  * That last test is where a cross-currency pairing is refused. A charge in
  * one currency and a transaction that says nothing about that currency have
@@ -147,6 +148,7 @@ function eligibilityWith(
 
   return (transaction) => {
     if (rejected?.has(transaction.uri) === true) return false;
+    if (!isTransactionTypeAllowedForRole(charge.role, transaction.type)) return false;
     if (cardAccount !== undefined && transaction.accountId !== cardAccount) return false;
     if (!isWithinWindow(transaction.date, window)) return false;
     if (transaction.amountCents === 0) return false;

@@ -17,6 +17,8 @@
  */
 import { z } from 'zod';
 
+import { TransactionDateSchema } from '../../contract/transaction.js';
+
 import type {
   MobileAccount,
   MobileAccountBalancePoint,
@@ -44,7 +46,7 @@ export const FinanceTransactionRowSchema = z.object({
    * it is half the keyset cursor, and a producer that started emitting a full
    * timestamp would silently change what "the next page" means.
    */
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, 'expected a date-only YYYY-MM-DD value'),
+  date: TransactionDateSchema,
   type: z.string(),
   entityName: z.string().nullable(),
   tags: z.array(z.string()),

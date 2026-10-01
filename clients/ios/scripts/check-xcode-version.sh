@@ -8,8 +8,7 @@
 # anything (checked against Xcode 27 Beta 2). `xcodebuild -version` is what
 # CI itself parses to select the pinned Xcode (see
 # .github/actions/select-xcode/action.yml), so this reads the same
-# line the same way and is the only thing `mise run lint`'s `verify:xcode-
-# version` task calls.
+# line the same way and is the only thing `verify:xcode-version` calls.
 #
 # The comparison and the message are split from the two calls that reach the
 # real toolchain (`xcodebuild -version`, and installing a wrong Xcode to
@@ -66,22 +65,29 @@ OPT_IN_FORMAT_TASK="format:unpinned"
 
 report_mismatch() {
     local pinned_version="$1" pinned_build="$2" actual_version="$3" actual_build="$4"
+    local consumer="${5:-formatter}"
     {
         printf 'check-xcode-version: local Xcode is %s (build %s), but clients/ios/mise.toml (and CI) pins %s (build %s).\n' \
             "$actual_version" "$actual_build" "$pinned_version" "$pinned_build"
-        printf '                      swift-format ships inside the toolchain, so this Xcode can\n'
-        printf '                      format-lint differently than CI without warning. Install Xcode\n'
-        printf '                      %s (build %s) and point xcode-select at it — adjust the path\n' \
-            "$pinned_version" "$pinned_build"
-        printf '                      below to match how Xcode is installed on this machine, e.g.:\n'
-        printf '                        sudo xcode-select -s /Applications/Xcode_%s.app/Contents/Developer\n' \
-            "$pinned_version"
-        printf '\n'
-        printf '                      If you have to act on this toolchain\47s advisory lint findings\n'
-        printf '                      before you can install the pinned toolchain, ask for it by name:\n'
-        printf '                        mise run -C clients/ios %s\n' "$OPT_IN_FORMAT_TASK"
-        printf '                      That still runs the rule-list drift check the wrapper exists\n'
-        printf '                      for; a hand-written `xcrun swift-format format` does not.\n'
+        if [ "$consumer" = "analyzer" ]; then
+            printf '                      SwiftLint analyzer findings use compiler data from this Xcode\n'
+            printf '                      and can differ from CI. Local findings are advisory off-pin;\n'
+            printf '                      CI\47s analyzer result on the pinned Xcode is authoritative.\n'
+        else
+            printf '                      swift-format ships inside the toolchain, so this Xcode can\n'
+            printf '                      format-lint differently than CI without warning. Install Xcode\n'
+            printf '                      %s (build %s) and point xcode-select at it — adjust the path\n' \
+                "$pinned_version" "$pinned_build"
+            printf '                      below to match how Xcode is installed on this machine, e.g.:\n'
+            printf '                        sudo xcode-select -s /Applications/Xcode_%s.app/Contents/Developer\n' \
+                "$pinned_version"
+            printf '\n'
+            printf '                      If you have to act on this toolchain\47s advisory lint findings\n'
+            printf '                      before you can install the pinned toolchain, ask for it by name:\n'
+            printf '                        mise run -C clients/ios %s\n' "$OPT_IN_FORMAT_TASK"
+            printf '                      That still runs the rule-list drift check the wrapper exists\n'
+            printf '                      for; a hand-written `xcrun swift-format format` does not.\n'
+        fi
     } >&2
 }
 
@@ -90,10 +96,14 @@ report_mismatch() {
 # ---------------------------------------------------------------------------
 
 cmd_check() {
-    local pinned_version="${1-}" pinned_build="${2-}"
+    local pinned_version="${1-}" pinned_build="${2-}" consumer="${3:-formatter}"
     if [ -z "$pinned_version" ] || [ -z "$pinned_build" ]; then
-        die "no complete pinned version given." "usage: check-xcode-version.sh check <version> <build>"
+        die "no complete pinned version given." "usage: check-xcode-version.sh check <version> <build> [formatter|analyzer]"
     fi
+    case "$consumer" in
+        formatter|analyzer) ;;
+        *) die "unknown consumer '$consumer'." "expected 'formatter' or 'analyzer'." ;;
+    esac
 
     local raw
     if ! raw="$(xcodebuild -version 2>&1)"; then
@@ -107,7 +117,7 @@ cmd_check() {
     fi
 
     if ! pin_matches "$pinned_version" "$pinned_build" "$actual_version" "$actual_build"; then
-        report_mismatch "$pinned_version" "$pinned_build" "$actual_version" "$actual_build"
+        report_mismatch "$pinned_version" "$pinned_build" "$actual_version" "$actual_build" "$consumer"
         return 1
     fi
 }
@@ -194,6 +204,13 @@ cmd_self_test() {
     expect "mismatch message omitted the opt-in task ($OPT_IN_FORMAT_TASK)." \
         grep -qF "$OPT_IN_FORMAT_TASK" <<<"$message" || status=1
 
+    local analyzer_message
+    analyzer_message="$(report_mismatch 27.0 27A266a 27.0 27A5209h analyzer 2>&1)" || true
+    expect "analyzer mismatch message did not mark local findings advisory." \
+        grep -qF 'Local findings are advisory off-pin' <<<"$analyzer_message" || status=1
+    expect "analyzer mismatch message did not identify CI as authoritative." \
+        grep -qF "CI's analyzer result on the pinned Xcode is authoritative" <<<"$analyzer_message" || status=1
+
     # 7. And that task actually exists. A message naming a task mise does not
     #    define sends the reader somewhere worse than the hand-written
     #    invocation it is trying to replace.
@@ -202,7 +219,7 @@ cmd_self_test() {
         grep -qF "[tasks.\"$OPT_IN_FORMAT_TASK\"]" "$manifest" || status=1
 
     if [ "$status" -eq 0 ]; then
-        printf 'check-xcode-version: parsing, build matching, the mismatch message, and the opt-in task all hold.\n'
+        printf 'check-xcode-version: parsing, build matching, formatter and analyzer messages, and the opt-in task all hold.\n'
     fi
     return "$status"
 }

@@ -111,6 +111,21 @@ context green — and, once it is required, the PR mergeable — minutes before 
 slowest gated workflow has an opinion, and the failure would land after the
 merge. Hence `in_progress` until nothing is pending.
 
+**A stack can report `blocked` after every required context succeeds.** During
+POPS-2750, three stacked PRs reported `mergeable_state: "blocked"` even though
+all seven required contexts, including `CI Gate` from its pinned app, succeeded.
+The stack merge refusal misleadingly named `CI Gate`. A cancelled, non-required
+`Review` run correlated with each blocked PR, but rerunning the cancelled runs,
+rewriting a PR body, and waiting did not clear the state. In one recorded case,
+amending a commit without changing its tree gave #4402 a new head SHA and it
+became clean; restacking later PRs onto `main` gave them fresh SHAs and cleared
+those blocks too. Merging the largest clean prefix and restacking worked, but
+reran CI for each remaining PR. This is an observed mitigation, not an explanation
+of the cause or a guarantee that a new SHA will always clear the state. If this
+recurs, inspect each stack member's complete `statusCheckRollup` and
+`mergeable_state`; a green `gh pr checks` summary or an error naming `CI Gate`
+may not identify the blocked member. The cause remains unresolved (POPS-2913).
+
 **A guard must be exercised against the condition it exists to detect, not
 against a healthy tree.** Everything above shares one shape — a check that
 looked fine precisely because it was never put in the state it was built for.
