@@ -34,6 +34,11 @@ const FILE_SECRETS = [
     secret: 'pops_inventory_api_key',
   },
   {
+    service: 'pops-orchestrator',
+    variable: 'POPS_INTERNAL_API_KEY_FILE',
+    secret: 'pops_orchestrator_api_key',
+  },
+  {
     service: 'finance-api',
     variable: 'POPS_INTERNAL_API_KEY_FILE',
     secret: 'pops_finance_api_key',
@@ -69,10 +74,16 @@ describe('credential files mounted in infra/docker-compose.yml', () => {
   );
 });
 
-describe('local inventory credential in infra/docker-compose.dev.yml', () => {
-  it('passes through the optional host environment value', () => {
+describe('local service-account credentials in infra/docker-compose.dev.yml', () => {
+  it('passes through the optional inventory key', () => {
     expect(devCompose.services['inventory-api']?.environment?.POPS_INTERNAL_API_KEY).toBe(
       '${POPS_INTERNAL_API_KEY:-}'
+    );
+  });
+
+  it('passes through the optional orchestrator key', () => {
+    expect(devCompose.services['pops-orchestrator']?.environment?.POPS_INTERNAL_API_KEY).toBe(
+      '${POPS_ORCHESTRATOR_API_KEY:-}'
     );
   });
 });
