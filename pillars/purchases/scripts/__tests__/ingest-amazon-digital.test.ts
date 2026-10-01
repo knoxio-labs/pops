@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { INGEST_API_KEY_ENV } from '../backfill.js';
 
-vi.mock('node:fs', () => ({ readFileSync: vi.fn() }));
+vi.mock('node:fs', () => ({ readFileSync: vi.fn(), readdirSync: vi.fn(() => []) }));
 vi.mock('../../src/ingest/amazon-digital/index.js', () => ({
   AMAZON_DIGITAL_SOURCE_ID: 'amazon-digital',
   DIGITAL_ORDERS_BUNDLE_PATH: ['Your Amazon Orders', 'Digital Content Orders.csv'],

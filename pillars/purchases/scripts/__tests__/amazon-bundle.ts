@@ -6,8 +6,8 @@
  * exercised against the filesystem rather than against a stub of it.
  */
 import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { vi } from 'vitest';
 
@@ -21,9 +21,11 @@ import type { CreatePurchaseInput } from '../../src/db/services/purchase-input.j
 export const KNOWN_ORDER = '503-1631401-2789435';
 export const UNKNOWN_ORDER = '249-4494679-2017412';
 export const DOCUMENT = '12484342-INV-AU-2021-26473870';
+const TEST_TMP_ROOT = fileURLToPath(new URL('../../../../tmp/purchases/', import.meta.url));
 
 export function temporaryDirectory(prefix: string): string {
-  return mkdtempSync(join(tmpdir(), prefix));
+  mkdirSync(TEST_TMP_ROOT, { recursive: true });
+  return mkdtempSync(join(TEST_TMP_ROOT, prefix));
 }
 
 /**
@@ -57,6 +59,16 @@ export function bundleWith(invoices: Readonly<Record<string, Buffer>> = {}): str
   return root;
 }
 
+/** A bundle root with the digital orders file and the supplied invoice PDFs. */
+export function digitalBundleWith(invoices: Readonly<Record<string, Buffer>> = {}): string {
+  const root = bundleWith(invoices);
+  writeFileSync(
+    join(root, 'Your Amazon Orders', 'Digital Content Orders.csv'),
+    'Order ID,Order Date\n'
+  );
+  return root;
+}
+
 export function invoiceFor(sourceOrderId: string, documentNumber = DOCUMENT): Buffer {
   return pdfWithRuns(legacyInvoice(sourceOrderId, documentNumber));
 }
@@ -71,6 +83,10 @@ export function orderNamed(sourceOrderId: string): CreatePurchaseInput {
     totalCents: 7575,
     checksum: 'checksum',
   };
+}
+
+export function digitalOrderNamed(sourceOrderId: string): CreatePurchaseInput {
+  return { ...orderNamed(sourceOrderId), source: 'amazon-digital' };
 }
 
 /** Everything the CLI printed, as one string. */
