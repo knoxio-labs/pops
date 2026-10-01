@@ -1,24 +1,19 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Link2 } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Button, formatDate, SearchPickerDialog, Select, toastError } from '@pops/ui';
+import { Button, SearchPickerDialog, Select, toastError } from '@pops/ui';
 
 import { unwrap } from '../inventory-api-helpers.js';
 import { documentsLink } from '../inventory-api/index.js';
 import { linkDocumentError } from './link-document-error';
+import { PaperlessDocumentResultRow } from './PaperlessDocumentResultRow';
 import { usePaperlessSearch } from './use-paperless-search';
 
 import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 
-interface PaperlessDocResult {
-  id: number;
-  title: string;
-  created: string;
-  originalFileName: string;
-  thumbnailUrl: string;
-}
+import type { PaperlessDocResult } from './PaperlessDocumentResultRow';
 
 const DOCUMENT_TYPES = ['receipt', 'warranty', 'manual', 'invoice', 'other'] as const;
 
@@ -28,41 +23,6 @@ interface LinkDocumentDialogProps {
   trigger?: ReactElement;
   /** Explains why Paperless actions are unavailable and disables the trigger. */
   disabledReason?: string;
-}
-
-interface DocumentResultRowProps {
-  doc: PaperlessDocResult;
-  linkingId: number | null;
-  isPending: boolean;
-  onLink: (doc: PaperlessDocResult) => void;
-}
-
-function DocumentResultRow({ doc, linkingId, isPending, onLink }: DocumentResultRowProps) {
-  return (
-    <div className="flex items-center gap-3 p-2.5 rounded-md hover:bg-accent transition-colors">
-      {doc.thumbnailUrl ? (
-        <img src={doc.thumbnailUrl} alt="" className="h-10 w-10 rounded object-cover shrink-0" />
-      ) : (
-        <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm truncate">{doc.title}</div>
-        <div className="text-xs text-muted-foreground">
-          {doc.created ? formatDate(doc.created) : 'No date'}
-          {doc.originalFileName ? ` · ${doc.originalFileName}` : ''}
-        </div>
-      </div>
-      <Button variant="ghost" size="sm" onClick={() => onLink(doc)} disabled={isPending}>
-        {linkingId === doc.id ? (
-          <span className="text-xs">Linking...</span>
-        ) : (
-          <Link2 className="h-4 w-4" />
-        )}
-      </Button>
-    </div>
-  );
 }
 
 type DocType = (typeof DOCUMENT_TYPES)[number];
@@ -194,7 +154,7 @@ export function LinkDocumentDialog({
       maxResultsHeight="max-h-72"
       trailing={<DocTypeSelect docType={docType} setDocType={setDocType} />}
       renderResult={(doc: PaperlessDocResult) => (
-        <DocumentResultRow
+        <PaperlessDocumentResultRow
           doc={doc}
           linkingId={linkingId}
           isPending={linkMutation.isPending}
