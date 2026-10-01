@@ -5,17 +5,23 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
 import type { ListItemRow } from './types.js';
 
+const NOTE_PREVIEW_LENGTH = 80;
+
 /** Renders an item's reference label and expands a truncated note on tap. */
 export function ListItemSubline({ row }: { row: ListItemRow }) {
   const { t } = useTranslation('lists');
   const text = formatSubline(row, t, false);
+  const hasNote = row.notes !== null && row.notes.length > 0;
 
-  if (row.notes !== null && row.notes.length > 0) {
+  if (row.notes !== null && row.notes.length > NOTE_PREVIEW_LENGTH) {
     return <NoteDisclosure row={row} t={t} />;
   }
   if (text === null) return null;
   return (
-    <p className="truncate text-xs text-muted-foreground" title={text}>
+    <p
+      className={`${hasNote ? 'whitespace-normal break-words' : 'truncate'} text-xs text-muted-foreground`}
+      title={text}
+    >
       {text}
     </p>
   );
@@ -55,7 +61,7 @@ function formatSubline(
 ): string | null {
   let noteSummary: string | null = null;
   if (row.notes !== null && row.notes.length > 0) {
-    noteSummary = expanded ? row.notes : truncate(row.notes, 80);
+    noteSummary = expanded ? row.notes : truncate(row.notes, NOTE_PREVIEW_LENGTH);
   }
   if (row.refKind !== 'free') {
     const refLabel = t(`detail.item.ref.${row.refKind}`);
