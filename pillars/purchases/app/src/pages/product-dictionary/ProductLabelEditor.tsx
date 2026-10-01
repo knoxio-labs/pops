@@ -129,6 +129,7 @@ function RenameForm({
   return (
     <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
       <TextInput
+        className="text-base md:text-sm"
         aria-label={t('products.action.renameLabel', { label: product.label })}
         containerClassName="max-w-sm"
         value={draftLabel}

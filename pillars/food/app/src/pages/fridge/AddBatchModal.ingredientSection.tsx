@@ -48,6 +48,7 @@ export function IngredientPickerSection({ state }: { state: AddFormState }): Rea
         />
       </FieldRow>
       <Select
+        className="text-base md:text-sm"
         label="Ingredient"
         value={state.form.ingredientId}
         onChange={(e) =>
@@ -56,6 +57,7 @@ export function IngredientPickerSection({ state }: { state: AddFormState }): Rea
         options={ingredientOptions}
       />
       <Select
+        className="text-base md:text-sm"
         label="Variant"
         value={state.form.variantId}
         onChange={(e) => state.setForm(buildVariantChange(state, e.target.value))}

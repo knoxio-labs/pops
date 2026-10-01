@@ -43,3 +43,11 @@ describe('DataTable — initialColumnFilters', () => {
     expect(screen.getByText('Bunnings')).toBeInTheDocument();
   });
 });
+
+describe('DataTable pagination touch typography', () => {
+  it('keeps the page-size select at 16px before desktop sizing', () => {
+    render(<DataTable columns={columns} data={rows} />);
+    const pageSize = screen.getByRole('combobox');
+    expect(pageSize).toHaveClass('text-base', 'md:text-sm');
+  });
+});

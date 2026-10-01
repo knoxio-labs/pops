@@ -111,4 +111,16 @@ describe('AddBatchModal', () => {
     expect(screen.getByLabelText(/^produced$/i)).toHaveAttribute('lang', 'en-AU');
     expect(screen.getByLabelText(/expires \(optional\)/i)).toHaveAttribute('lang', 'en-AU');
   });
+
+  it('keeps editable controls at 16px through narrow viewport breakpoints', async () => {
+    renderModal();
+    await screen.findByRole('option', { name: 'Tomato (tomato)' });
+
+    for (const label of [/^ingredient$/i, /^variant$/i, /prep state/i, /^unit$/i]) {
+      expect(screen.getByRole('combobox', { name: label })).toHaveClass('text-base', 'md:text-sm');
+    }
+    for (const label of [/^produced$/i, /expires \(optional\)/i]) {
+      expect(screen.getByLabelText(label)).toHaveClass('sm:text-base', 'md:text-sm');
+    }
+  });
 });

@@ -34,7 +34,7 @@ export function NotesEditor({
         rows={2}
         maxLength={500}
         aria-label={`Notes for ${title}`}
-        className="text-xs min-h-0 resize-none"
+        className="min-h-0 resize-none text-base md:text-xs"
       />
       <div className="flex items-center gap-2">
         <Button

@@ -52,6 +52,11 @@ function renderModal() {
 }
 
 describe('ListEditModal', () => {
+  it('uses 16px name input text on narrow screens while retaining desktop sizing', () => {
+    renderModal();
+    expect(screen.getByLabelText('Name')).toHaveClass('text-base', 'md:text-sm');
+  });
+
   it('shows the current kind as the only selected option', () => {
     renderModal();
     expect(screen.getByRole('radio', { name: 'Shopping' })).toBeChecked();

@@ -178,6 +178,7 @@ describe('PlanPage', () => {
     renderPage();
     await screen.findByText('Pancakes');
     expect(screen.getByTestId('week-date-picker')).toHaveAttribute('lang', 'en-AU');
+    expect(screen.getByTestId('week-date-picker')).toHaveClass('sm:text-base', 'md:text-xs');
   });
 
   it('opens the add modal pre-filled with (date, slot) and submits', async () => {

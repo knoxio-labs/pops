@@ -146,6 +146,7 @@ function Header(props: HeaderProps): ReactElement {
         ›
       </Button>
       <DateInput
+        className="sm:text-base md:text-xs"
         size="sm"
         data-testid="week-date-picker"
         value={props.weekStart}

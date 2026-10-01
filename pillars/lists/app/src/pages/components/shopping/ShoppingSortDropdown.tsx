@@ -24,6 +24,7 @@ export function ShoppingSortDropdown(props: ShoppingSortDropdownProps) {
         {labelText}
       </span>
       <Select
+        className="text-base md:text-sm"
         value={props.mode}
         onChange={(e) => props.onChange(e.target.value as ShoppingSortMode)}
         aria-label={labelText}

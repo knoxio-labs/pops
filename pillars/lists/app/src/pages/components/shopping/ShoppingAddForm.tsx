@@ -91,6 +91,7 @@ function QtyUnitInputs({
   return (
     <>
       <NumberInput
+        className="text-base md:text-sm"
         ref={qtyRef}
         inputMode="decimal"
         step="any"
@@ -113,7 +114,7 @@ function QtyUnitInputs({
         // query — so no magnifier and no "no results" line (POPS-3294).
         chrome="bare"
         emptyMessage={null}
-        className="w-32"
+        className="w-32 [&_input]:text-base md:[&_input]:text-sm"
       />
     </>
   );
@@ -134,6 +135,7 @@ function LabelSubmit({
     <>
       <div className="min-w-32 flex-1">
         <TextInput
+          className="text-base md:text-sm"
           value={state.label}
           onChange={(e) => setState({ ...state, label: e.target.value })}
           placeholder={t('shopping.add.label')}

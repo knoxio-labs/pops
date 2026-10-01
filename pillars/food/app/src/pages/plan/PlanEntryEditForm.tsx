@@ -77,6 +77,7 @@ function EditableFields(props: EditableFieldsProps): ReactElement {
           Planned servings
         </label>
         <NumberInput
+          className="text-base md:text-sm"
           id="edit-servings"
           data-testid="edit-servings"
           min={1}
@@ -91,7 +92,7 @@ function EditableFields(props: EditableFieldsProps): ReactElement {
         <Textarea
           id="edit-notes"
           data-testid="edit-notes"
-          className="h-24"
+          className="h-24 text-base md:text-sm"
           value={props.notes}
           onChange={(e) => props.setNotes(e.target.value)}
           maxLength={1000}

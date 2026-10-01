@@ -35,6 +35,16 @@ function renderForm() {
 }
 
 describe('ShoppingAddForm', () => {
+  it('uses 16px input text on narrow screens while retaining desktop sizing', () => {
+    renderForm();
+    expect(screen.getByLabelText('Qty')).toHaveClass('text-base', 'md:text-sm');
+    expect(screen.getByLabelText('Item')).toHaveClass('text-base', 'md:text-sm');
+    expect(screen.getByLabelText('Unit').closest('[data-slot="command"]')).toHaveClass(
+      '[&_input]:text-base',
+      'md:[&_input]:text-sm'
+    );
+  });
+
   it('submits a unit that is not one of the suggestions', async () => {
     const { onAdd } = renderForm();
     await userEvent.type(screen.getByLabelText('Unit'), 'sachets');

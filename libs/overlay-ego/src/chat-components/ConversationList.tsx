@@ -113,7 +113,7 @@ function ConversationSearchBar({
           value={value}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
           placeholder="Search conversations..."
-          className="h-9 pl-8 text-sm"
+          className="h-9 pl-8 text-base md:text-sm"
           aria-label="Search conversations"
         />
       </div>

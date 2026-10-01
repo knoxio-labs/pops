@@ -51,6 +51,7 @@ export function DictionaryFilters({
       </div>
 
       <Select
+        className="text-base md:text-sm"
         aria-label={t('products.filter.sourceLabel')}
         containerClassName="max-w-xs"
         value={value.source}

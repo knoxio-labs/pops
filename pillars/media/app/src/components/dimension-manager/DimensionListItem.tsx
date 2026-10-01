@@ -76,7 +76,7 @@ function EditView({
           if (e.key === 'Enter') onSaveEdit();
           if (e.key === 'Escape') setEditing(null);
         }}
-        className="h-7 text-sm"
+        className="h-7 text-base md:text-sm"
         autoFocus
       />
       <Textarea
@@ -85,7 +85,7 @@ function EditView({
           setEditing({ ...editing, description: e.target.value });
         }}
         rows={1}
-        className="resize-none text-sm"
+        className="resize-none text-base md:text-sm"
         placeholder="Description"
       />
       <div className="flex gap-1">

@@ -142,9 +142,11 @@ describe('SubstitutionsTab', () => {
     const row5 = await screen.findByTestId('sub-row-5');
     await userEvent.click(within(row5).getByRole('button', { name: /^edit$/i }));
     const ratioInput = within(row5).getByLabelText(/edit ratio for substitution 5/i);
+    expect(ratioInput).toHaveClass('text-base', 'md:text-xs');
     await userEvent.clear(ratioInput);
     await userEvent.type(ratioInput, '2.5');
     const tagsInput = within(row5).getByLabelText(/edit context tags for substitution 5/i);
+    expect(tagsInput).toHaveClass('text-base', 'md:text-xs');
     await userEvent.clear(tagsInput);
     await userEvent.type(tagsInput, 'baking, vegan');
     await userEvent.click(within(row5).getByRole('button', { name: /^save$/i }));

@@ -141,7 +141,7 @@ function PickerDropdown({
             onFocus={onFocus}
             onKeyDown={onKeyDown}
             placeholder="+ Add tag…"
-            className="w-24 rounded-full border border-dashed border-border bg-background px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-24 rounded-full border border-dashed border-border bg-background px-2 py-0.5 text-base focus:outline-none focus:ring-1 focus:ring-ring md:text-xs"
           />
         </PopoverAnchor>
         <PopoverContent

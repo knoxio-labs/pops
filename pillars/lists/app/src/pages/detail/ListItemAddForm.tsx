@@ -94,6 +94,7 @@ function LabelRow({
     <div className="flex gap-2">
       <div className="flex-1">
         <TextInput
+          className="text-base md:text-sm"
           value={label}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -125,6 +126,7 @@ function ExpandedFields({
   return (
     <div className="flex gap-2">
       <NumberInput
+        className="text-base md:text-xs"
         inputMode="decimal"
         step="any"
         showSteppers={false}
@@ -138,6 +140,7 @@ function ExpandedFields({
       />
       <div className="w-28">
         <TextInput
+          className="text-base md:text-xs"
           size="sm"
           value={state.unit}
           onChange={(e) => setState({ ...state, unit: e.target.value })}

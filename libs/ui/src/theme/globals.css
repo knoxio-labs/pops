@@ -613,3 +613,11 @@
 }
 
 /* App accent — removed @utility block, handled via @theme inline below */
+
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='range']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}

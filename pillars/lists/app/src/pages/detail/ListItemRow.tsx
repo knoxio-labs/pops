@@ -137,6 +137,7 @@ function RowBody({
     <div className="min-w-0 flex-1">
       {edit.editing ? (
         <TextInput
+          className="text-base md:text-xs"
           size="sm"
           // h-8 matches the row's tallest sibling (the 32px menu trigger); the
           // kit's smallest height, h-9, makes the row grow 4px the moment the
