@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -125,9 +124,12 @@ describe(
     let optOutUnit: string;
     let malformedUnit: string;
     let multilineReasonUnit: string;
+    let outsideToolUnit: string;
 
     beforeAll(() => {
-      root = mkdtempSync(join(tmpdir(), 'ex2-proof-surface-'));
+      const tempRoot = join(repoRoot, 'tmp');
+      mkdirSync(tempRoot, { recursive: true });
+      root = mkdtempSync(join(tempRoot, 'ex2-proof-surface-'));
 
       renamedUnit = join(root, 'renamed-fixture');
       mkdirSync(renamedUnit, { recursive: true });
@@ -190,6 +192,18 @@ describe(
           2
         )
       );
+
+      outsideToolUnit = join(root, 'outside-tool-fixture');
+      mkdirSync(outsideToolUnit, { recursive: true });
+      writeFileSync(
+        join(outsideToolUnit, 'package.json'),
+        JSON.stringify({
+          name: '@pops/outside-tool-fixture',
+          version: '0.0.0',
+          private: true,
+          scripts: { build: 'node ../../scripts/missing-generator.mjs' },
+        })
+      );
     });
 
     afterAll(() => {
@@ -241,6 +255,15 @@ describe(
       expect(result.stderr).toContain('declared opt-out: data-only see the README for why');
       // The array-length guard must not fire on legitimate input.
       expect(result.stderr).not.toContain('expected 7');
+    });
+
+    it('names an unprovided out-of-unit script tool before attempting to execute it', () => {
+      const result = spawnSync('bash', [sandboxScript, outsideToolUnit], { encoding: 'utf8' });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('tool "missing-generator.mjs"');
+      expect(result.stderr).toContain('no sandbox provider is configured');
+      expect(result.stderr).not.toContain('Command failed');
     });
   }
 );

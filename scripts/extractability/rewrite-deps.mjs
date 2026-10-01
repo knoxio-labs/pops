@@ -2,17 +2,19 @@
 /**
  * EX-2 helper — rewrite a copied unit's package.json for isolated install.
  *
- * Mutates ONLY where shared deps come from (the legal "extraction" mutation):
+ * Mutates the dependency source and explicitly sandbox-provided tooling:
  *   - every `@pops/*: workspace:*` runtime dep  -> `file:<tarball>` from the manifest
  *   - any remaining `workspace:*` spec (e.g. a workspace devDep not packed) is
  *     dropped, so the isolated `pnpm install` does not fail resolving an
  *     unreachable workspace protocol. Dropping devDeps is safe: the sandbox
  *     proves the BUILD, and build/typecheck deps it actually needs are packed
- *     or external.
+ *     or external;
+ *   - a root-owned tool used by the unit is added at the version declared by
+ *     the root package manifest.
  *
- * Nothing else in the manifest changes — same source, same exports, same
- * external deps. If the unit's declared surface is incomplete, the isolated
- * install/build fails. That is the proof.
+ * The unit's source and exports stay unchanged. If its declared surface and
+ * the sandbox's listed providers are incomplete, the isolated install/build
+ * fails. That is the proof.
  *
  * Usage: node scripts/extractability/rewrite-deps.mjs <copied-package.json> <deps-manifest.json>
  */
@@ -21,6 +23,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+
+import { sandboxToolDependencies } from './sandbox-tools.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -123,6 +127,23 @@ function main(argv) {
         block[name] = `file:${manifest[name]}`;
       } else if (spec.startsWith('workspace:')) {
         delete block[name];
+      }
+    }
+  }
+
+  const rootPackagePath = join(repoRoot, 'package.json');
+  /** @type {Record<string, unknown>} */
+  const rootPackage = JSON.parse(readFileSync(rootPackagePath, 'utf8'));
+  const sandboxDependencies = sandboxToolDependencies(dirname(pkgPath), pkg, rootPackage);
+  if (Object.keys(sandboxDependencies).length > 0) {
+    const currentDevDependencies = pkg.devDependencies;
+    const devDependencies =
+      currentDevDependencies && typeof currentDevDependencies === 'object'
+        ? currentDevDependencies
+        : (pkg.devDependencies = {});
+    for (const [name, version] of Object.entries(sandboxDependencies)) {
+      if (!Object.prototype.hasOwnProperty.call(devDependencies, name)) {
+        devDependencies[name] = version;
       }
     }
   }
