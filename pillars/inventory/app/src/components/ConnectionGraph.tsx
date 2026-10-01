@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router';
 
-import { Skeleton } from '@pops/ui';
+import { Button, Skeleton } from '@pops/ui';
 
 import { isUnavailableError, unwrap } from '../inventory-api-helpers.js';
 import { connectionsGraph } from '../inventory-api/index.js';
@@ -26,7 +26,13 @@ function useConnectionGraphQuery(itemId: string) {
   });
 }
 
-function GraphCanvas({ itemId }: { itemId: string }): React.ReactElement {
+function GraphCanvas({
+  itemId,
+  nodes,
+}: {
+  itemId: string;
+  nodes: ReadonlyArray<Pick<GraphNode, 'id' | 'itemName' | 'isFixture'>>;
+}): React.ReactElement {
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -55,15 +61,51 @@ function GraphCanvas({ itemId }: { itemId: string }): React.ReactElement {
   });
 
   return (
-    <div
-      ref={containerRef}
-      className="relative h-100 w-full border rounded-lg bg-muted/20 overflow-hidden"
-    >
-      <canvas ref={canvasRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
-      <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-        Scroll to zoom, drag to pan, click an item node to navigate
+    <div>
+      <div
+        ref={containerRef}
+        className="relative h-100 w-full border rounded-lg bg-muted/20 overflow-hidden"
+      >
+        <canvas ref={canvasRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+          Scroll to zoom, drag to pan, click or tap a connected item to navigate
+        </div>
       </div>
+      <MobileConnectedItems itemId={itemId} nodes={nodes} />
     </div>
+  );
+}
+
+function MobileConnectedItems({
+  itemId,
+  nodes,
+}: {
+  itemId: string;
+  nodes: ReadonlyArray<Pick<GraphNode, 'id' | 'itemName' | 'isFixture'>>;
+}) {
+  const navigate = useNavigate();
+  return (
+    <ul className="flex flex-wrap gap-2 pt-2 sm:hidden" aria-label="Connected inventory items">
+      {nodes.map((node) => (
+        <li key={node.id}>
+          {node.id === itemId || node.isFixture ? (
+            <span className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-2 text-sm">
+              {node.itemName}
+            </span>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="default"
+              onClick={() => navigate(`/inventory/items/${node.id}`)}
+              className="max-w-full whitespace-normal break-words text-left"
+            >
+              {node.itemName}
+            </Button>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -81,5 +123,5 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
     );
   }
 
-  return <GraphCanvas itemId={itemId} />;
+  return <GraphCanvas itemId={itemId} nodes={data.data.nodes} />;
 }

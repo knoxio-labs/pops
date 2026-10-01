@@ -105,6 +105,19 @@ describe('DraftsTab', () => {
     expect(bands.map((b) => b.getAttribute('data-band')).toSorted()).toEqual(['clean', 'minor']);
   });
 
+  it('reveals the top quality signals when the band is tapped', async () => {
+    mockList([makeRow()]);
+    render(
+      <Wrapper>
+        <StatefulHost now={FIXED_NOW} />
+      </Wrapper>
+    );
+    const badge = await screen.findByTestId('quality-band-badge');
+    expect(badge).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.setup().click(badge);
+    expect(await screen.findByText('NO_YIELD')).toBeVisible();
+  });
+
   it('shows the "<no title>" placeholder when the row has no title', async () => {
     mockList([makeRow({ title: null })]);
     render(

@@ -1,7 +1,7 @@
-import { type KeyboardEvent } from 'react';
+import { type KeyboardEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { TextInput } from '@pops/ui';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger, TextInput } from '@pops/ui';
 
 import type { ListItemRow as ItemRow } from '../../detail/types.js';
 
@@ -12,6 +12,7 @@ import type { ListItemRow as ItemRow } from '../../detail/types.js';
 export interface ShoppingRowBodyProps {
   row: ItemRow;
   isChecked: boolean;
+  isDragDisabled: boolean;
   edit: {
     editing: boolean;
     draft: string;
@@ -64,17 +65,44 @@ export function ShoppingRowBody(props: ShoppingRowBodyProps): React.ReactElement
           </button>
         )}
       </div>
-      <Subline notes={row.notes} />
+      <Subline notes={row.notes} isDragDisabled={props.isDragDisabled} />
     </div>
   );
 }
 
-function Subline({ notes }: { notes: string | null }) {
-  if (notes === null || notes.length === 0) return null;
+function Subline({ notes, isDragDisabled }: { notes: string | null; isDragDisabled: boolean }) {
+  const { t } = useTranslation('lists');
+  const [expanded, setExpanded] = useState(false);
+  const hasNotes = notes !== null && notes.length > 0;
+  if (!hasNotes && !isDragDisabled) return null;
   return (
-    <p className="truncate text-xs text-muted-foreground" title={notes}>
-      {notes}
-    </p>
+    <div>
+      {hasNotes ? (
+        <Collapsible open={expanded} onOpenChange={setExpanded}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              aria-label={notes ?? undefined}
+              title={notes ?? undefined}
+              className="flex min-h-11 w-full items-center gap-2 text-left text-xs text-muted-foreground sm:min-h-0"
+            >
+              <span className="min-w-0 truncate">{notes}</span>
+              <span className="shrink-0 text-primary sm:hidden">
+                {expanded ? t('shopping.item.showLess') : t('shopping.item.showMore')}
+              </span>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <p className="whitespace-normal text-xs text-muted-foreground">{notes}</p>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+      {isDragDisabled ? (
+        <p className="text-xs text-muted-foreground sm:sr-only">
+          {t('shopping.item.dragDisabled')}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

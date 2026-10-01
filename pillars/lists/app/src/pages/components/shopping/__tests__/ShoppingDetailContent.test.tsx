@@ -173,6 +173,8 @@ describe('pillars/lists/docs/prds/shopping-specialisation — ShoppingDetailCont
     await screen.findByRole('button', { name: 'Uncheck all' });
     expect(screen.getByRole('button', { name: 'Uncheck all' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Clear checked' })).toBeDisabled();
+    expect(screen.getByText('No items to uncheck')).toBeInTheDocument();
+    expect(screen.getByText('No checked items to clear')).toBeInTheDocument();
   });
 
   it('confirms uncheck-all and fires the mutation', async () => {
@@ -220,6 +222,7 @@ describe('pillars/lists/docs/prds/shopping-specialisation — ShoppingDetailCont
     const select = (await screen.findAllByTestId('shopping-sort-dropdown'))[0];
     if (!select) throw new Error('sort dropdown missing');
     await userEvent.selectOptions(select, 'unchecked-first');
+    expect(screen.getAllByText('Switch to Manual sort to reorder')).toHaveLength(2);
     const ids = screen
       .getAllByTestId(/^shopping-item-/)
       .map((node) => node.getAttribute('data-testid'));
@@ -236,13 +239,20 @@ describe('pillars/lists/docs/prds/shopping-specialisation — ShoppingDetailCont
     expect(await screen.findByTestId('qty-unit')).toHaveTextContent('—');
   });
 
-  it('renders notes as the sub-line content', async () => {
+  it('expands a truncated note from the row on tap', async () => {
+    const notes =
+      'From Brownies, Pancakes, and the pantry shelf next to the kettle, with a longer note for the shopping list';
     setListGet({
       list: makeList(),
-      items: [makeItem({ notes: 'From Brownies, Pancakes' })],
+      items: [makeItem({ notes })],
     });
     render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
-    expect(await screen.findByText('From Brownies, Pancakes')).toBeInTheDocument();
+    const noteButton = await screen.findByRole('button', { name: notes });
+    expect(noteButton).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(noteButton);
+    expect(noteButton).toHaveAttribute('aria-expanded', 'true');
+    expect(noteButton).toHaveTextContent('Show less');
+    expect(screen.getByText(notes, { selector: 'p' })).toBeInTheDocument();
   });
 
   it('keeps the row checkbox at its enlarged 32px tap target', async () => {

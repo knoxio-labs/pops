@@ -13,6 +13,7 @@
 import { CardWithActionOverlay, Skeleton } from '@pops/ui';
 
 import { CardActionsOverlay, ScoreDeltaBadge, WatchlistButton } from './ComparisonMovieCardActions';
+import { MobileCardActions } from './ComparisonMovieCardMobileActions';
 
 export interface ComparisonMovieCardMovie {
   id: number;
@@ -60,8 +61,14 @@ export function ComparisonMovieCard(props: ComparisonMovieCardProps) {
     />
   ) : undefined;
 
+  const hasCardActions = props.onNA || props.onMarkStale || props.onBlacklist;
   const topRight =
-    scoreDelta != null ? <ScoreDeltaBadge movieId={movie.id} scoreDelta={scoreDelta} /> : undefined;
+    scoreDelta != null || hasCardActions ? (
+      <div className="flex items-center gap-1">
+        {scoreDelta != null && <ScoreDeltaBadge movieId={movie.id} scoreDelta={scoreDelta} />}
+        <MobileCardActions {...props} movie={movie} />
+      </div>
+    ) : undefined;
 
   const overlay = <CardActionsOverlay {...props} movie={movie} />;
 

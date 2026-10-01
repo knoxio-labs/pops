@@ -1,4 +1,4 @@
-import { Badge } from '@pops/ui';
+import { Badge, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
 
 import type { TagRule, TagRuleOverlap } from './types';
 
@@ -13,28 +13,53 @@ function named(overlaps: readonly TagRuleOverlap[]): string {
     : `${overlaps.length} rules`;
 }
 
+function ExplainedBadge({
+  label,
+  explanation,
+  className,
+}: {
+  label: string;
+  explanation: string;
+  className?: string;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${label}. ${explanation}`}
+          className="relative inline-flex cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring before:absolute before:-inset-3 before:content-['']"
+        >
+          <Badge variant="outline" className={className} title={explanation}>
+            {label}
+          </Badge>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-3" align="start">
+        <p className="text-xs">{explanation}</p>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function OverlapBadges({ overlaps }: { overlaps: readonly TagRuleOverlap[] }) {
   const contradicts = overlaps.filter((overlap) => overlap.kind === 'contradicts');
   const redundant = overlaps.filter((overlap) => overlap.kind === 'redundant');
   return (
     <>
       {contradicts.length > 0 && (
-        <Badge
-          variant="outline"
+        <ExplainedBadge
+          label={`Contradicts ${named(contradicts)}`}
+          explanation={`Matches the same transactions as ${quoted(contradicts)} and writes a different value on the same single-valued axis, so one of them silently loses`}
           className="border-destructive text-destructive"
-          title={`Matches the same transactions as ${quoted(contradicts)} and writes a different value on the same single-valued axis, so one of them silently loses`}
-        >
-          Contradicts {named(contradicts)}
-        </Badge>
+        />
       )}
       {redundant.length > 0 && (
-        <Badge
-          variant="outline"
+        <ExplainedBadge
+          label={`Redundant with ${named(redundant)}`}
+          explanation={`Every transaction this matches is already given the same tags by ${quoted(redundant)}`}
           className="text-muted-foreground"
-          title={`Every transaction this matches is already given the same tags by ${quoted(redundant)}`}
-        >
-          Redundant with {named(redundant)}
-        </Badge>
+        />
       )}
     </>
   );
@@ -49,13 +74,11 @@ export function PatternCell({ rule }: { rule: TagRule }) {
     <div className="flex flex-wrap items-center gap-2">
       <span className="font-mono text-sm">{rule.descriptionPattern}</span>
       {rule.ledgerMatchStatus === 'broken' && (
-        <Badge
-          variant="outline"
+        <ExplainedBadge
+          label="Never matches"
+          explanation="This pattern matches no transaction in the ledger — it can never fire"
           className="border-destructive text-destructive"
-          title="This pattern matches no transaction in the ledger — it can never fire"
-        >
-          Never matches
-        </Badge>
+        />
       )}
       <OverlapBadges overlaps={rule.overlaps} />
     </div>

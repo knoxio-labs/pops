@@ -156,6 +156,20 @@ describe('pillars/lists/docs/prds/crud-ui — ListDetailPage', () => {
     expect(screen.getByTestId('list-item-2')).toBeInTheDocument();
   });
 
+  it('expands a truncated item note from the row on tap', async () => {
+    const note =
+      'A note longer than eighty characters should remain available from the row on a narrow screen after its summary is clipped';
+    setListGet({ list: makeList(), items: [makeItem({ notes: note })] });
+    render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
+
+    const noteButton = await screen.findByRole('button', { name: note });
+    expect(noteButton).toHaveAttribute('aria-expanded', 'false');
+    expect(noteButton).toHaveClass('min-h-11');
+    await userEvent.click(noteButton);
+    expect(noteButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(note)).toBeInTheDocument();
+  });
+
   it('renders the not-found shell when the query resolves to null', async () => {
     setListGet(null);
     render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);

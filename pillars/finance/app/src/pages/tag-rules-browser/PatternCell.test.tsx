@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { PatternCell } from './PatternCell';
@@ -74,5 +75,51 @@ describe('PatternCell (POPS-3691)', () => {
   it('still marks a pattern that never matches', () => {
     render(<PatternCell rule={rule({ ledgerMatchStatus: 'broken' })} />);
     expect(screen.getByText('Never matches')).toBeInTheDocument();
+  });
+
+  it('exposes the never-matches explanation without hover and opens it on tap', async () => {
+    const user = userEvent.setup();
+    render(<PatternCell rule={rule({ ledgerMatchStatus: 'broken' })} />);
+
+    const trigger = screen.getByRole('button', {
+      name: 'Never matches. This pattern matches no transaction in the ledger — it can never fire',
+    });
+    expect(trigger).toBeInTheDocument();
+
+    await user.click(trigger);
+    const popover = await screen.findByRole('dialog');
+    expect(
+      within(popover).getByText(
+        'This pattern matches no transaction in the ledger — it can never fire'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('exposes overlap explanations without hover and opens one on tap', async () => {
+    const user = userEvent.setup();
+    render(
+      <PatternCell
+        rule={rule({
+          overlaps: [overlap('HOTEL', 'contradicts'), overlap('WOOLWORTHS', 'redundant')],
+        })}
+      />
+    );
+
+    const contradiction = screen.getByRole('button', {
+      name: /Contradicts “HOTEL”\. Matches the same transactions as “HOTEL” and writes a different value/,
+    });
+    expect(
+      screen.getByRole('button', {
+        name: /Redundant with “WOOLWORTHS”\. Every transaction this matches is already given the same tags/,
+      })
+    ).toBeInTheDocument();
+
+    await user.click(contradiction);
+    const popover = await screen.findByRole('dialog');
+    expect(
+      within(popover).getByText(
+        'Matches the same transactions as “HOTEL” and writes a different value on the same single-valued axis, so one of them silently loses'
+      )
+    ).toBeInTheDocument();
   });
 });

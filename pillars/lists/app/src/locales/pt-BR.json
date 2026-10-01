@@ -90,6 +90,8 @@
     "item": {
       "checkbox": "Alternar concluído para {{label}}",
       "editLabel": "Editar rótulo do item",
+      "showMore": "Mostrar nota completa",
+      "showLess": "Mostrar menos",
       "dragHandle": "Arrastar para reordenar",
       "unnamed": "(sem nome)",
       "ref": {
@@ -152,6 +154,8 @@
     "item": {
       "checkbox": "Alternar concluído para {{label}}",
       "editLabel": "Editar rótulo do item",
+      "showMore": "Mostrar nota completa",
+      "showLess": "Mostrar menos",
       "dragHandle": "Arrastar para reordenar",
       "dragDisabled": "Mude para ordenação Manual para reordenar",
       "swipe": {
