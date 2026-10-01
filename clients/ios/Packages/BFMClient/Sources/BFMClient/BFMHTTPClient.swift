@@ -26,6 +26,7 @@ public struct BFMHTTPClient: Sendable {
     /// one. The type it names is itself `internal`, so this widens nothing
     /// outside this module.
     internal let generated: Client
+    internal let urlSession: URLSession?
 
     /// - Parameter baseURL: The BFM's origin. Paths from the contract are
     ///   appended to it, so a trailing path component here becomes a prefix on
@@ -48,14 +49,15 @@ public struct BFMHTTPClient: Sendable {
     ///   reverse on the way back, per `swift-openapi-runtime`.
     public init(baseURL: URL, middlewares: [any ClientMiddleware]) {
         let session = Self.makeUncachedURLSession()
-        self.init(
+        urlSession = session
+        generated = Self.makeGeneratedClient(
             baseURL: baseURL,
             transport: URLSessionTransport(configuration: .init(session: session)),
             middlewares: middlewares
         )
     }
 
-    internal static func makeUncachedURLSession() -> URLSession {
+    private static func makeUncachedURLSession() -> URLSession {
         let configuration = URLSessionConfiguration.default
         configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -72,11 +74,24 @@ public struct BFMHTTPClient: Sendable {
         transport: any ClientTransport,
         middlewares: [any ClientMiddleware] = []
     ) {
+        urlSession = nil
+        generated = Self.makeGeneratedClient(
+            baseURL: baseURL,
+            transport: transport,
+            middlewares: middlewares
+        )
+    }
+
+    private static func makeGeneratedClient(
+        baseURL: URL,
+        transport: any ClientTransport,
+        middlewares: [any ClientMiddleware]
+    ) -> Client {
         // The configuration exists for one reason: the date transcoder. The
         // runtime's default reads `withInternetDateTime` alone and refuses a
         // fractional part, which every TypeScript pillar's `toISOString()`
         // emits — see ``BFMDateTranscoder``.
-        generated = Client(
+        return Client(
             serverURL: baseURL,
             configuration: Configuration(dateTranscoder: BFMDateTranscoder()),
             transport: transport,

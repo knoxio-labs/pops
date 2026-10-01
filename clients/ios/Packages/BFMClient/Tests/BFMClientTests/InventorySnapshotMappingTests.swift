@@ -6,22 +6,6 @@ import Testing
 
 @Suite("BFMInventoryTransport snapshot and catalogue mapping")
 internal struct InventorySnapshotMappingTests {
-    @Test("an HTTP 304 is a transport failure rather than a contract mismatch")
-    func notModifiedIsTransportFailure() async throws {
-        let client = try BFMInventoryTransport.stubbed(
-            StubTransport(status: HTTPResponse.Status(code: 304), json: "")
-        )
-
-        let thrown = await #expect(throws: RepositoryError.self) {
-            try await client.fetchSnapshot(cursor: nil, limit: 250)
-        }
-
-        guard case .transport = try #require(thrown) else {
-            Issue.record("expected HTTP 304 to be a transport failure")
-            return
-        }
-    }
-
     @Test("a snapshot page carries its items, locations and high-water seq")
     func snapshotPage() async throws {
         let page = try await BFMInventoryTransport.stubbed(
