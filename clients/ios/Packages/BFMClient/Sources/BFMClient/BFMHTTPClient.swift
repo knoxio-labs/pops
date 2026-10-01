@@ -47,7 +47,19 @@ public struct BFMHTTPClient: Sendable {
     /// - Parameter middlewares: Invoked in order before the transport, and in
     ///   reverse on the way back, per `swift-openapi-runtime`.
     public init(baseURL: URL, middlewares: [any ClientMiddleware]) {
-        self.init(baseURL: baseURL, transport: URLSessionTransport(), middlewares: middlewares)
+        let session = Self.makeUncachedURLSession()
+        self.init(
+            baseURL: baseURL,
+            transport: URLSessionTransport(configuration: .init(session: session)),
+            middlewares: middlewares
+        )
+    }
+
+    internal static func makeUncachedURLSession() -> URLSession {
+        let configuration = URLSessionConfiguration.default
+        configuration.urlCache = nil
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: configuration)
     }
 
     /// The seam every test uses, and the reason none of them stub `URLProtocol`.
