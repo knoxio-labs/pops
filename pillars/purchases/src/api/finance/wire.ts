@@ -13,6 +13,8 @@
  */
 import { z } from 'zod';
 
+import { FINANCE_TRANSACTION_URI } from '../../contract/schemas/scalars.js';
+
 const CENTS_PER_DOLLAR = 100;
 
 /**
@@ -148,6 +150,17 @@ export interface CandidateTransaction {
 /** Soft cross-pillar reference to a finance transaction (ADR-012, ADR-042). */
 export function financeTransactionUri(id: string): string {
   return `pops://finance/transaction/${id}`;
+}
+
+/**
+ * Returns the bare id from a finance transaction URI, or null for any other URI.
+ *
+ * The contract pattern prevents another pillar's URI from being treated as a
+ * Finance reference just because it has a final path segment.
+ */
+export function financeTransactionId(uri: string | null): string | null {
+  if (uri === null) return null;
+  return FINANCE_TRANSACTION_URI.exec(uri)?.[1] ?? null;
 }
 
 /**

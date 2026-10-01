@@ -108,7 +108,7 @@ export interface FinanceClient {
   fetchCandidates(query: CandidateQuery): Promise<CandidateFetch>;
 }
 
-/** Reads finance transactions already referenced by proposals in the queue. */
+/** Reads finance transactions already referenced by links or queue proposals. */
 export interface FinanceTransactionLookup {
   /**
    * Reads transaction details in finance's 500-id batches. A missing finance
@@ -117,6 +117,9 @@ export interface FinanceTransactionLookup {
    */
   fetchTransactionsByIds(ids: readonly string[]): Promise<CandidateFetch>;
 }
+
+/** Supplies both window candidates and historical link details to a sweep. */
+export type FinanceSweepClient = FinanceClient & FinanceTransactionLookup;
 
 /** Filters for the bounded transaction search shown when linking a charge manually. */
 export interface FinanceTransactionSearchQuery {

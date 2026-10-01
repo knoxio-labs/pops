@@ -23,7 +23,7 @@ import {
 } from '../../db/index.js';
 import { runSweep } from '../sweep.js';
 
-import type { FinanceClient } from '../../api/finance/client.js';
+import type { FinanceSweepClient } from '../../api/finance/client.js';
 import type { CreatePurchaseInput, OpenedPurchasesDb, PurchasesDb } from '../../db/index.js';
 
 let opened: OpenedPurchasesDb;
@@ -58,7 +58,7 @@ function anOrder(overrides: Partial<CreatePurchaseInput> & { checksum: string })
   });
 }
 
-const deps = (finance: FinanceClient) => ({ db, finance, defaultWindowDays: 21 });
+const deps = (finance: FinanceSweepClient) => ({ db, finance, defaultWindowDays: 21 });
 
 interface RuleRow {
   id: string;
@@ -455,7 +455,7 @@ describe('what the rule then does on a later sweep', () => {
     });
   }
 
-  const bothStores = (): FinanceClient =>
+  const bothStores = (): FinanceSweepClient =>
     financeReturning(
       { id: 't1', description: STORE_ONE, amountCents: 4128 },
       { id: 't2', description: STORE_TWO, amountCents: 2200 }

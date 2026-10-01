@@ -10,8 +10,10 @@
  */
 import { z } from 'zod';
 
-import { FINANCE_TRANSACTION_URI } from '../../contract/schemas/scalars.js';
 import { calendarDateAtOffset, calendarDateInZone } from '../../ingest/local-time.js';
+import { financeTransactionId } from '../finance/wire.js';
+
+export { financeTransactionId } from '../finance/wire.js';
 
 import type { InventoryProposal } from '../../db/index.js';
 
@@ -39,25 +41,6 @@ export interface InventoryItemCreateBody {
   readonly deductible: boolean;
   readonly notes: string;
   readonly sourceRef: string;
-}
-
-/**
- * The bare transaction id inside a `pops://finance/transaction/<id>` URI.
- *
- * Inventory's create body takes the id and no URI field, so this is the only
- * way the settling transaction crosses. It is not lossy: that pillar derives
- * `home_inventory.purchase_transaction_uri` from the id on both its write
- * paths, reproducing this exact spelling — so sending the id populates the
- * URI column too, and the two sides must keep agreeing on the shape.
- *
- * Anything not addressed to a finance transaction answers null rather than
- * being split on its last slash: the column means "a finance transaction",
- * and filing a documents id in it would be a false statement no reader
- * could catch.
- */
-export function financeTransactionId(uri: string | null): string | null {
-  if (uri === null) return null;
-  return FINANCE_TRANSACTION_URI.exec(uri)?.[1] ?? null;
 }
 
 /**
