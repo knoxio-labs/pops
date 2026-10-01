@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
+import { INVENTORY_CONDITIONS } from '@pops/inventory';
+
 import { InventoryTable, type InventoryTableItem } from './InventoryTable';
 
 function renderTable(
@@ -29,6 +31,14 @@ const baseItem: InventoryTableItem = {
   assetId: null,
 };
 
+function firstRowConditionCell() {
+  const conditionColumnIndex = screen
+    .getAllByRole('columnheader')
+    .findIndex((header) => header.textContent?.trim() === 'Condition');
+  const firstDataRow = screen.getAllByRole('row')[1];
+  return firstDataRow?.querySelectorAll('td').item(conditionColumnIndex);
+}
+
 // ---------------------------------------------------------------------------
 // Condition badge colour mapping
 // ---------------------------------------------------------------------------
@@ -45,26 +55,19 @@ describe('Condition column — badge colour mapping', () => {
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
 
-  it('renders badge for legacy Title Case "Good"', () => {
-    renderTable([{ ...baseItem, condition: 'Good' }]);
-    expect(screen.getByText('Good')).toBeInTheDocument();
-  });
-
-  it('renders badge for legacy Title Case "Excellent"', () => {
-    renderTable([{ ...baseItem, condition: 'Excellent' }]);
-    expect(screen.getByText('Excellent')).toBeInTheDocument();
+  it.each(INVENTORY_CONDITIONS)('renders badge for contract condition "%s"', (condition) => {
+    renderTable([{ ...baseItem, condition }]);
+    expect(screen.getByText(condition)).toBeInTheDocument();
   });
 
   it('renders dash for null condition', () => {
     renderTable([{ ...baseItem, condition: null }]);
-    const cells = screen.getAllByText('—');
-    expect(cells.length).toBeGreaterThan(0);
+    expect(firstRowConditionCell()).toHaveTextContent('—');
   });
 
-  it('renders dash for unknown condition string', () => {
+  it('renders a dash for unknown condition strings', () => {
     renderTable([{ ...baseItem, condition: 'mint' }]);
-    const cells = screen.getAllByText('—');
-    expect(cells.length).toBeGreaterThan(0);
+    expect(firstRowConditionCell()).toHaveTextContent('—');
   });
 });
 
