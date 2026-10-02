@@ -19,7 +19,7 @@ import {
   AI_CATEGORIZER_MODEL_KEY,
   AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
 } from '../../../contract/settings/ai-settings-keys.js';
-import { resolveAiMaxTokens, resolveAiPercent, resolveAiString } from '../ai-settings-resolver.js';
+import { resolveAiMaxTokens, resolveAiModel, resolveAiPercent } from '../ai-settings-resolver.js';
 
 import type { FinanceDb } from '../../../db/index.js';
 
@@ -65,7 +65,7 @@ export function isTagsForMatchedEnabled(): boolean {
 }
 
 export function getModel(db: FinanceDb): string {
-  return resolveAiString(
+  return resolveAiModel(
     db,
     AI_CATEGORIZER_MODEL_KEY,
     'FINANCE_AI_CATEGORIZER_MODEL',

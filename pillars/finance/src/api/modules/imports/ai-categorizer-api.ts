@@ -13,9 +13,10 @@
  * `ai-categorizer-batch-api.ts` and reuses the prompt-rule constants and
  * `callRawApi`/`entryFromParsed` exported here rather than duplicating them.
  */
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
 
 import { extractJsonFromReply } from '../ai-json.js';
+import { thinkingBudgetParams } from '../ai-model-request.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 import {
@@ -141,11 +142,11 @@ export async function callRawApi(opts: RawApiCallOptions): Promise<ApiCallRespon
           () =>
             client.messages.create({
               model,
-              max_tokens: maxTokens,
+              ...thinkingBudgetParams(model, maxTokens),
               // Closed-set classification has one right answer per row; sampling
               // at the default 1.0 let the same descriptor come back two ways
-              // (POPS-3669).
-              temperature: 0,
+              // (POPS-3669). Models that reject sampling params get none.
+              ...samplingParams(model, 0),
               messages: [{ role: 'user', content: prompt }],
             }),
           sanitizedDescription
@@ -161,10 +162,9 @@ export async function callRawApi(opts: RawApiCallOptions): Promise<ApiCallRespon
     },
     financeTelemetryDeps()
   );
-  const block = response.content[0];
-  const text = block?.type === 'text' ? block.text : null;
+  const text = messageText(response.content);
   return {
-    text,
+    text: text === '' ? null : text,
     inputTokens: response.usage.input_tokens,
     outputTokens: response.usage.output_tokens,
   };
