@@ -11,13 +11,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { Queue } from 'bullmq';
+import { Redis } from 'ioredis';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
 import { makeCerebrumApiDeps, makeClient, makeFakeIngestLlm } from './test-utils.js';
 
 import type { IngestLlm } from '../modules/ingest/llm.js';
+import type { ClassifyEngramJobData } from '../modules/ingest/queue.js';
 
 let tmpDir: string;
 let engramRoot: string;
@@ -157,6 +160,28 @@ describe('POST /ingest/infer-scopes', () => {
   });
 });
 
+describe('scope vocabulary on the sync path', () => {
+  it('feeds existing scopes to LLM scope inference on submit', async () => {
+    let prompt = '';
+    const llm = makeFakeIngestLlm({
+      [CLASSIFY_OP]: () =>
+        JSON.stringify({ type: 'note', confidence: 0.9, template: null, suggested_tags: [] }),
+      [EXTRACT_OP]: () => JSON.stringify([]),
+      [INFER_OP]: (req) => {
+        prompt = req.prompt;
+        return JSON.stringify({ scopes: ['work.karbon.projects'], confidence: 0.8 });
+      },
+    });
+    const c = client(llm);
+    await c.ingest.submit({ body: 'seed', type: 'note', scopes: ['work.projects.karbon'] });
+
+    const result = await c.ingest.submit({ body: 'karbon planning notes', type: 'note' });
+
+    expect(prompt).toContain('work.projects.karbon');
+    expect(result.scopeInference.scopes).toEqual(['work.projects.karbon']);
+  });
+});
+
 describe('POST /ingest/submit', () => {
   it('runs the full pipeline and writes an engram to disk + index', async () => {
     const llm = makeFakeIngestLlm({
@@ -270,5 +295,33 @@ describe('POST /ingest/retry-enrichment', () => {
     await expect(client().ingest.retryEnrichment('eng_20260101_0000_ghost')).rejects.toMatchObject({
       status: 404,
     });
+  });
+});
+
+describe('retry-enrichment queue payload', () => {
+  it('forces the job past the worker idempotency guard', async () => {
+    const redis = new Redis({ lazyConnect: true, maxRetriesPerRequest: null });
+    const queue = new Queue<ClassifyEngramJobData>('retry-enrichment-test', { connection: redis });
+    const add = vi.spyOn(queue, 'add').mockRejectedValue(new Error('stop'));
+    const c = makeClient(
+      createCerebrumApiApp(
+        makeCerebrumApiDeps(
+          { cerebrumDb, tmpDir, engramRoot },
+          { ingestLlm: makeFakeIngestLlm(), curationQueue: () => queue }
+        )
+      )
+    );
+    try {
+      const captured = await c.ingest.quickCapture({ text: 'retry payload probe' });
+      add.mockClear();
+      await c.ingest.retryEnrichment(captured.id);
+      expect(add).toHaveBeenCalledWith('classifyEngram', {
+        type: 'classifyEngram',
+        engramId: captured.id,
+        force: true,
+      });
+    } finally {
+      redis.disconnect();
+    }
   });
 });
