@@ -230,7 +230,7 @@ purchase carrying both as evidence, not a conflict to refuse.
 | `unreadable`   | nothing usable came back — **not** a receipt with no items      |
 | `truncated`    | the answer hit `max_tokens`; nothing was parsed                 |
 | `refused`      | the model declined (`stop_reason: refusal`); nothing was parsed |
-| `rejected`     | the API answered 400; the same upload will fail again           |
+| `rejected`     | the API answered 400 about the request; it will fail again      |
 
 `unreadable` and `needs-review` are deliberately distinct: "retry later" and "photograph it
 again" are different actions, and a transport failure is not a statement

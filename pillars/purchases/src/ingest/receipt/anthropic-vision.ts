@@ -41,6 +41,11 @@ export const DEFAULT_RECEIPT_MODEL = 'claude-sonnet-5-5';
  */
 const MAX_TOKENS = 16_000;
 
+// A 400 is also how the API reports an exhausted credit balance. That is the
+// account's fault, not the upload's: the same receipt reads fine once it is
+// topped up, so it stays on the failure path that invites a retry.
+const ACCOUNT_REJECTION = /credit balance/i;
+
 export function receiptModel(): string {
   const override = process.env['PURCHASES_RECEIPT_MODEL'];
   return override === undefined || override === '' ? DEFAULT_RECEIPT_MODEL : override;
@@ -158,7 +163,7 @@ export function createAnthropicVision(): ReceiptVision | null {
           purchasesTelemetryDeps()
         );
       } catch (error) {
-        if (error instanceof Anthropic.BadRequestError) {
+        if (error instanceof Anthropic.BadRequestError && !ACCOUNT_REJECTION.test(error.message)) {
           return { stopped: 'rejected', detail: error.message };
         }
         throw error;

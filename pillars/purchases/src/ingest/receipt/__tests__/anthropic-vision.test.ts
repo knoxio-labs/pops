@@ -316,6 +316,25 @@ describe('read', () => {
     expect(record.status).toBe('error');
   });
 
+  it('rethrows a 400 about the account, which says nothing about the upload', async () => {
+    const captured = captureReports();
+    const message = 'Your credit balance is too low to access the API.';
+    createMock.mockRejectedValue(
+      new BadRequestError(
+        400,
+        { type: 'error', error: { type: 'invalid_request_error', message } },
+        message,
+        new Headers()
+      )
+    );
+
+    await expect(
+      createAnthropicVision()?.read([{ mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' }])
+    ).rejects.toBeInstanceOf(BadRequestError);
+    const record = await captured.nextReport();
+    expect(record.status).toBe('error');
+  });
+
   it('sends the normalised copy of an image, upright and inside the size limits', async () => {
     captureReports();
     createMock.mockResolvedValue(anthropicMessage('x'));
