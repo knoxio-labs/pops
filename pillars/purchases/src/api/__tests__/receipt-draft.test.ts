@@ -25,7 +25,7 @@ import { createTestTransport } from './test-http.js';
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
-import type { ReceiptVision } from '../../ingest/receipt/vision.js';
+import type { ReceiptVision, VisionStop } from '../../ingest/receipt/vision.js';
 import type { MerchantResolver } from '../contacts/merchant.js';
 
 const JPEG_BASE64 = Buffer.concat([
@@ -56,7 +56,9 @@ const MISMATCHED_READING = JSON.stringify({
   total: '$99.00',
 });
 
-const saying = (answer: string | null): ReceiptVision => ({ read: async () => answer });
+const saying = (answer: string | null | VisionStop): ReceiptVision => ({
+  read: async () => answer,
+});
 const NO_MERCHANT: MerchantResolver = { resolve: async () => null };
 
 const { requestOn } = createTestTransport();
@@ -159,6 +161,26 @@ describe('POST /receipts/extract', () => {
   it('answers unreadable when the model returns nothing usable', async () => {
     const response = await extract(appWith(saying(null)));
     expect(response.body.kind).toBe('unreadable');
+  });
+
+  it.each([
+    ['max_tokens', 'truncated'],
+    ['refusal', 'refused'],
+    ['rejected', 'rejected'],
+  ] as const)(
+    'carries a %s stop to the client as an unreadable receipt with cause %s',
+    async (stopped, cause) => {
+      const response = await extract(appWith(saying({ stopped, detail: 'why' })));
+      expect(response.status).toBe(200);
+      expect(response.body.kind).toBe('unreadable');
+      expect(response.body.cause).toBe(cause);
+    }
+  );
+
+  it('gives an ordinary unreadable answer no cause', async () => {
+    const response = await extract(appWith(saying(null)));
+    expect(response.body.kind).toBe('unreadable');
+    expect(response.body).not.toHaveProperty('cause');
   });
 
   it('refuses to re-extract a file that already became a purchase', async () => {

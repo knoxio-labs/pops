@@ -22,7 +22,7 @@ import {
 import { resolveAnthropicApiKey } from '../../api/anthropic-key.js';
 import { extractionPrompt, isImageMediaType } from './vision.js';
 
-import type { ReceiptPart, ReceiptVision } from './vision.js';
+import type { ReceiptPart, ReceiptVision, VisionStop } from './vision.js';
 
 /**
  * Reading a crumpled thermal receipt is the hard end of vision, so this is
@@ -31,15 +31,14 @@ import type { ReceiptPart, ReceiptVision } from './vision.js';
  * buy very little and give the drop-zone two answers to explain. The env
  * override exists because the right answer will change before this file does.
  */
-export const DEFAULT_RECEIPT_MODEL = 'claude-sonnet-5';
+export const DEFAULT_RECEIPT_MODEL = 'claude-sonnet-5-5';
 
 /**
- * A receipt is a few hundred short lines at most. The ceiling is generous
- * enough that a long shop is never truncated mid-list — a truncated JSON
- * object fails to parse, which reads as "unusable output" rather than as
- * "the answer was too long", and would be a confusing thing to debug.
+ * Adaptive thinking is on for this model and its tokens count against this
+ * ceiling, so it covers the thinking as well as the JSON. A cut-off answer
+ * is reported as such (`stop_reason: 'max_tokens'`), never parsed.
  */
-const MAX_TOKENS = 8_000;
+const MAX_TOKENS = 16_000;
 
 export function receiptModel(): string {
   const override = process.env['PURCHASES_RECEIPT_MODEL'];
@@ -110,57 +109,72 @@ export function createAnthropicVision(): ReceiptVision | null {
   const model = receiptModel();
 
   return {
-    async read(parts: readonly ReceiptPart[]): Promise<string | null> {
-      return callWithLogging(
-        {
-          domain: PURCHASES_DOMAIN,
-          operation: 'receipt-extraction',
-          provider: ANTHROPIC_PROVIDER,
-          model,
-          call: async () => {
-            const message = await client.messages.create({
-              model,
-              max_tokens: MAX_TOKENS,
-              // No `temperature`. Zero would say what this call wants —
-              // transcription, not composition — but the current models
-              // reject the parameter outright with a 400, which turns every
-              // upload into an unreadable receipt. The prompt carries the
-              // instruction instead, and the gate is what actually stops an
-              // invented digit.
-              messages: [
-                {
-                  role: 'user',
-                  // The receipt first, in the order it was sent, then the
-                  // instruction: the model reads the parts as one document
-                  // top to bottom, and the prompt is what tells it how the
-                  // shapes it was given can mislead it.
-                  content: [
-                    ...parts.map(toContentBlock),
-                    {
-                      type: 'text' as const,
-                      text: extractionPrompt(parts.map((part) => part.mediaType)),
-                    },
-                  ],
+    async read(parts: readonly ReceiptPart[]): Promise<string | null | VisionStop> {
+      try {
+        return await callWithLogging(
+          {
+            domain: PURCHASES_DOMAIN,
+            operation: 'receipt-extraction',
+            provider: ANTHROPIC_PROVIDER,
+            model,
+            call: async () => {
+              const message = await client.messages.create({
+                model,
+                max_tokens: MAX_TOKENS,
+                // This model rejects `temperature`, `thinking: disabled` and
+                // a forced `tool_choice` with a 400, and thinks adaptively
+                // unless told otherwise. Effort is the one dial, and it
+                // defaults to `high`, more than transcription needs.
+                output_config: { effort: 'medium' },
+                messages: [
+                  {
+                    role: 'user',
+                    // The receipt first, in the order it was sent, then the
+                    // instruction: the model reads the parts as one document
+                    // top to bottom, and the prompt is what tells it how the
+                    // shapes it was given can mislead it.
+                    content: [
+                      ...parts.map(toContentBlock),
+                      {
+                        type: 'text' as const,
+                        text: extractionPrompt(parts.map((part) => part.mediaType)),
+                      },
+                    ],
+                  },
+                ],
+              });
+
+              return {
+                response: readingOf(message),
+                usage: {
+                  inputTokens: message.usage.input_tokens,
+                  outputTokens: message.usage.output_tokens,
                 },
-              ],
-            });
-
-            const text = message.content
-              .filter((block) => block.type === 'text')
-              .map((block) => block.text)
-              .join('');
-
-            return {
-              response: text === '' ? null : text,
-              usage: {
-                inputTokens: message.usage.input_tokens,
-                outputTokens: message.usage.output_tokens,
-              },
-            };
+              };
+            },
           },
-        },
-        purchasesTelemetryDeps()
-      );
+          purchasesTelemetryDeps()
+        );
+      } catch (error) {
+        if (error instanceof Anthropic.BadRequestError) {
+          return { stopped: 'rejected', detail: error.message };
+        }
+        throw error;
+      }
     },
   };
+}
+
+function readingOf(message: Anthropic.Message): string | null | VisionStop {
+  if (message.stop_reason === 'max_tokens') {
+    return { stopped: 'max_tokens', detail: `stopped at ${MAX_TOKENS} tokens` };
+  }
+  if (message.stop_reason === 'refusal') {
+    return { stopped: 'refusal', detail: 'stop_reason refusal' };
+  }
+  const text = message.content
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('');
+  return text === '' ? null : text;
 }

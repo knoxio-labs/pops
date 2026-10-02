@@ -24,7 +24,7 @@ import { createTestTransport } from './test-http.js';
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
-import type { ReceiptVision } from '../../ingest/receipt/vision.js';
+import type { ReceiptVision, VisionStop } from '../../ingest/receipt/vision.js';
 import type { MerchantResolver } from '../contacts/merchant.js';
 
 /** A real JPEG magic number, so the edge check passes. */
@@ -76,7 +76,9 @@ const GOOD_READING = JSON.stringify({
   unreadable: [],
 });
 
-const saying = (answer: string | null): ReceiptVision => ({ read: async () => answer });
+const saying = (answer: string | null | VisionStop): ReceiptVision => ({
+  read: async () => answer,
+});
 
 const { requestOn } = createTestTransport();
 
@@ -684,6 +686,26 @@ describe('a model that says nothing usable', () => {
     expect(response.body.kind).toBe('unreadable');
     expect(response.body.receiptUris).toHaveLength(1);
     expect(response.body.receiptUris[0]).toMatch(/^pops:\/\/purchases\/receipt\//u);
+  });
+
+  it.each([
+    ['max_tokens', 'truncated'],
+    ['refusal', 'refused'],
+    ['rejected', 'rejected'],
+  ] as const)(
+    'carries a %s stop to the client as an unreadable receipt with cause %s',
+    async (stopped, cause) => {
+      const response = await upload(appWith(saying({ stopped, detail: 'why' })));
+      expect(response.status).toBe(200);
+      expect(response.body.kind).toBe('unreadable');
+      expect(response.body.cause).toBe(cause);
+    }
+  );
+
+  it('gives an ordinary unreadable answer no cause', async () => {
+    const response = await upload(appWith(saying(null)));
+    expect(response.body.kind).toBe('unreadable');
+    expect(response.body).not.toHaveProperty('cause');
   });
 
   it('keeps the photograph even then, so it can be read again later', async () => {
