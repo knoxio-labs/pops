@@ -4341,19 +4341,7 @@
             "name": "key",
             "required": true,
             "schema": {
-              "enum": [
-                "ai.model",
-                "ai.modelOverrides.query",
-                "ai.modelOverrides.emit",
-                "ai.modelOverrides.classifier",
-                "ai.modelOverrides.entityExtractor",
-                "ai.modelOverrides.scopeInference",
-                "ai.modelOverrides.auditorContradiction",
-                "ai.modelOverrides.patternContradiction",
-                "ai.monthlyTokenBudget",
-                "ai.budgetExceededFallback",
-                "ai.logRetentionDays"
-              ],
+              "enum": ["ai.monthlyTokenBudget", "ai.budgetExceededFallback", "ai.logRetentionDays"],
               "type": "string"
             }
           }
@@ -4439,19 +4427,7 @@
             "name": "key",
             "required": true,
             "schema": {
-              "enum": [
-                "ai.model",
-                "ai.modelOverrides.query",
-                "ai.modelOverrides.emit",
-                "ai.modelOverrides.classifier",
-                "ai.modelOverrides.entityExtractor",
-                "ai.modelOverrides.scopeInference",
-                "ai.modelOverrides.auditorContradiction",
-                "ai.modelOverrides.patternContradiction",
-                "ai.monthlyTokenBudget",
-                "ai.budgetExceededFallback",
-                "ai.logRetentionDays"
-              ],
+              "enum": ["ai.monthlyTokenBudget", "ai.budgetExceededFallback", "ai.logRetentionDays"],
               "type": "string"
             }
           }
@@ -4558,19 +4534,7 @@
             "name": "key",
             "required": true,
             "schema": {
-              "enum": [
-                "ai.model",
-                "ai.modelOverrides.query",
-                "ai.modelOverrides.emit",
-                "ai.modelOverrides.classifier",
-                "ai.modelOverrides.entityExtractor",
-                "ai.modelOverrides.scopeInference",
-                "ai.modelOverrides.auditorContradiction",
-                "ai.modelOverrides.patternContradiction",
-                "ai.monthlyTokenBudget",
-                "ai.budgetExceededFallback",
-                "ai.logRetentionDays"
-              ],
+              "enum": ["ai.monthlyTokenBudget", "ai.budgetExceededFallback", "ai.logRetentionDays"],
               "type": "string"
             }
           }
@@ -4674,19 +4638,7 @@
             "name": "key",
             "required": true,
             "schema": {
-              "enum": [
-                "ai.model",
-                "ai.modelOverrides.query",
-                "ai.modelOverrides.emit",
-                "ai.modelOverrides.classifier",
-                "ai.modelOverrides.entityExtractor",
-                "ai.modelOverrides.scopeInference",
-                "ai.modelOverrides.auditorContradiction",
-                "ai.modelOverrides.patternContradiction",
-                "ai.monthlyTokenBudget",
-                "ai.budgetExceededFallback",
-                "ai.logRetentionDays"
-              ],
+              "enum": ["ai.monthlyTokenBudget", "ai.budgetExceededFallback", "ai.logRetentionDays"],
               "type": "string"
             }
           }

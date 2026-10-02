@@ -1727,18 +1727,7 @@ export type SettingsSetManyResponse = SettingsSetManyResponses[keyof SettingsSet
 export type SettingsGetData = {
   body?: never;
   path: {
-    key:
-      | 'ai.model'
-      | 'ai.modelOverrides.query'
-      | 'ai.modelOverrides.emit'
-      | 'ai.modelOverrides.classifier'
-      | 'ai.modelOverrides.entityExtractor'
-      | 'ai.modelOverrides.scopeInference'
-      | 'ai.modelOverrides.auditorContradiction'
-      | 'ai.modelOverrides.patternContradiction'
-      | 'ai.monthlyTokenBudget'
-      | 'ai.budgetExceededFallback'
-      | 'ai.logRetentionDays';
+    key: 'ai.monthlyTokenBudget' | 'ai.budgetExceededFallback' | 'ai.logRetentionDays';
   };
   query?: never;
   url: '/settings/{key}';
@@ -1787,18 +1776,7 @@ export type SettingsSetData = {
     value: string;
   };
   path: {
-    key:
-      | 'ai.model'
-      | 'ai.modelOverrides.query'
-      | 'ai.modelOverrides.emit'
-      | 'ai.modelOverrides.classifier'
-      | 'ai.modelOverrides.entityExtractor'
-      | 'ai.modelOverrides.scopeInference'
-      | 'ai.modelOverrides.auditorContradiction'
-      | 'ai.modelOverrides.patternContradiction'
-      | 'ai.monthlyTokenBudget'
-      | 'ai.budgetExceededFallback'
-      | 'ai.logRetentionDays';
+    key: 'ai.monthlyTokenBudget' | 'ai.budgetExceededFallback' | 'ai.logRetentionDays';
   };
   query?: never;
   url: '/settings/{key}';
@@ -1848,18 +1826,7 @@ export type SettingsEnsureData = {
     value: string;
   };
   path: {
-    key:
-      | 'ai.model'
-      | 'ai.modelOverrides.query'
-      | 'ai.modelOverrides.emit'
-      | 'ai.modelOverrides.classifier'
-      | 'ai.modelOverrides.entityExtractor'
-      | 'ai.modelOverrides.scopeInference'
-      | 'ai.modelOverrides.auditorContradiction'
-      | 'ai.modelOverrides.patternContradiction'
-      | 'ai.monthlyTokenBudget'
-      | 'ai.budgetExceededFallback'
-      | 'ai.logRetentionDays';
+    key: 'ai.monthlyTokenBudget' | 'ai.budgetExceededFallback' | 'ai.logRetentionDays';
   };
   query?: never;
   url: '/settings/{key}/ensure';
@@ -1908,18 +1875,7 @@ export type SettingsResetKeyData = {
     [key: string]: never;
   };
   path: {
-    key:
-      | 'ai.model'
-      | 'ai.modelOverrides.query'
-      | 'ai.modelOverrides.emit'
-      | 'ai.modelOverrides.classifier'
-      | 'ai.modelOverrides.entityExtractor'
-      | 'ai.modelOverrides.scopeInference'
-      | 'ai.modelOverrides.auditorContradiction'
-      | 'ai.modelOverrides.patternContradiction'
-      | 'ai.monthlyTokenBudget'
-      | 'ai.budgetExceededFallback'
-      | 'ai.logRetentionDays';
+    key: 'ai.monthlyTokenBudget' | 'ai.budgetExceededFallback' | 'ai.logRetentionDays';
   };
   query?: never;
   url: '/settings/{key}/reset';
