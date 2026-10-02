@@ -43,6 +43,7 @@ export const generationMetadataSchema = z.object({
   scopeCoverage: z.array(z.string()),
   mode: generationModeSchema,
   truncated: z.boolean(),
+  outputTruncated: z.boolean(),
 });
 
 /**

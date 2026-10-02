@@ -59,15 +59,3 @@ Active scopes for this conversation: ${scopeList}${contextBlock}
 When referencing engrams, always cite them by ID in square brackets: [eng_YYYYMMDD_HHmm_slug]
 If the available context doesn't contain enough information, say so explicitly rather than guessing.`;
 }
-
-/**
- * Build a summarisation prompt for compressing older conversation history.
- *
- * @param messages - Formatted message block to summarise.
- */
-export function buildSummarisationPrompt(messages: string): string {
-  return `Summarise this conversation so far in 2-3 sentences. Focus on the key topics discussed, decisions made, and any engrams referenced. Be concise.
-
-Conversation:
-${messages}`;
-}
