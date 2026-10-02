@@ -24,7 +24,8 @@ export function appContextChanged(
     stored.app !== incoming.app ||
     stored.route !== incoming.route ||
     stored.entityId !== incoming.entityId ||
-    stored.entityType !== incoming.entityType
+    stored.entityType !== incoming.entityType ||
+    stored.entityTitle !== incoming.entityTitle
   );
 }
 

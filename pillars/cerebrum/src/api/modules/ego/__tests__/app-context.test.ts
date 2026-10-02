@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { egoAppContextSchema } from '../../../../contract/rest-ego-schemas.js';
+import { appContextChanged } from '../chat-helpers.js';
 import { biasScopes } from '../context-helpers.js';
 import { buildEgoSystemPrompt, formatAppContextBlock } from '../prompts.js';
 
@@ -73,5 +74,28 @@ describe('egoAppContextSchema', () => {
 
   it('keeps entityTitle', () => {
     expect(egoAppContextSchema.parse({ app: 'finance', entityTitle: 'x' }).entityTitle).toBe('x');
+  });
+});
+
+describe('appContextChanged', () => {
+  const stored = {
+    app: 'inventory',
+    route: '/inventory/items/42',
+    entityType: 'item',
+    entityId: '42',
+    entityTitle: 'Bosch drill',
+  };
+
+  it('is false for an identical context', () => {
+    expect(appContextChanged(stored, { ...stored })).toBe(false);
+  });
+
+  it('is true when only the entity title changed', () => {
+    expect(appContextChanged(stored, { ...stored, entityTitle: 'Bosch hammer drill' })).toBe(true);
+  });
+
+  it('is true when a title appears on a context stored without one', () => {
+    const { entityTitle: _title, ...untitled } = stored;
+    expect(appContextChanged(untitled, stored)).toBe(true);
   });
 });
