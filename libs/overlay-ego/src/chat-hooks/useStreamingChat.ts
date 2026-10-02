@@ -6,6 +6,8 @@
  */
 import { useCallback, useRef, useState } from 'react';
 
+import { useEgoAppContext } from './useEgoAppContext';
+
 import type { RetrievedEngram } from './types';
 
 /** SSE token event from /api/ego/chat/stream. */
@@ -113,6 +115,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const appContext = useEgoAppContext();
 
   const stream = useCallback(
     (params: StreamChatParams, callbacks: StreamCallbacks) => {
@@ -131,6 +134,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
         body: JSON.stringify({
           conversationId: params.conversationId ?? undefined,
           message: params.message,
+          appContext,
         }),
         signal: controller.signal,
       })
@@ -149,7 +153,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
           abortRef.current = null;
         });
     },
-    [isStreaming]
+    [isStreaming, appContext]
   );
 
   const clearError = useCallback(() => setError(null), []);

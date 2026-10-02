@@ -21,11 +21,15 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createMock = vi.hoisted(() => vi.fn());
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: class {
-    messages = { create: createMock };
-  },
-}));
+vi.mock('@anthropic-ai/sdk', async () => {
+  const actual = await vi.importActual<typeof import('@anthropic-ai/sdk')>('@anthropic-ai/sdk');
+  return {
+    default: class {
+      static BadRequestError = actual.BadRequestError;
+      messages = { create: createMock };
+    },
+  };
+});
 
 import type { ReceiptPart } from '../vision.js';
 

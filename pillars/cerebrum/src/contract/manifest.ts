@@ -9,13 +9,10 @@
  * the registry's workspace discovery walk
  * (`libs/module-registry/scripts/known-modules.ts`) consumes them on build.
  *
- * `ego` is co-located here because its settings nest under cerebrum; the pillar
- * does not have its own contract package.
+ * `ego` is co-located here because it is served by the cerebrum pillar and has
+ * no contract package of its own.
  */
-import {
-  cerebrumManifest as cerebrumSettingsManifest,
-  egoManifest as egoSettingsManifest,
-} from './settings/index.js';
+import { cerebrumManifest as cerebrumSettingsManifest } from './settings/index.js';
 
 import type { ModuleManifest } from '@pops/types';
 
@@ -47,5 +44,4 @@ export const egoManifest: ModuleManifest = {
       shortcut: 'mod+i',
     },
   },
-  settings: [egoSettingsManifest],
 };

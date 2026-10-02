@@ -17,14 +17,16 @@ import { ExtractedLineSchema, ExtractedReceiptSchema, parseExtraction } from '..
 import { readReceipt } from '../read-receipt.js';
 import { extractionPrompt, kindOf, MEDIA_TYPES, PROMPT_FIELDS } from '../vision.js';
 
-import type { ReceiptMediaType, ReceiptPart, ReceiptVision } from '../vision.js';
+import type { ReceiptMediaType, ReceiptPart, ReceiptVision, VisionStop } from '../vision.js';
 
 const IMAGE: ReceiptPart = { mediaType: 'image/jpeg', dataBase64: 'ZmFrZQ==' };
 
 /** Every shape the drop-zone accepts, each on its own. */
 const EVERY_KIND: readonly ReceiptMediaType[][] = MEDIA_TYPES.map((mediaType) => [mediaType]);
 
-const saying = (answer: string | null): ReceiptVision => ({ read: async () => answer });
+const saying = (answer: string | null | VisionStop): ReceiptVision => ({
+  read: async () => answer,
+});
 const failing = (error: unknown): ReceiptVision => ({
   read: () => Promise.reject(error),
 });
@@ -293,5 +295,24 @@ describe('the prompt', () => {
     // And independent of the order the parts arrived in: the instructions
     // describe the shapes present, not the sequence.
     expect(extractionPrompt(parts)).toBe(extractionPrompt([...parts].toReversed()));
+  });
+});
+
+describe('a call that ended without an answer', () => {
+  it.each([
+    ['max_tokens', 'truncated'],
+    ['refusal', 'refused'],
+    ['rejected', 'rejected'],
+  ] as const)('maps a %s stop to its own outcome and never parses', async (stopped, kind) => {
+    vi.mocked(parseExtraction).mockClear();
+
+    const outcome = await readReceipt(saying({ stopped, detail: 'because' }), [IMAGE]);
+
+    expect(outcome.kind).toBe(kind);
+    expect(outcome.kind === 'unreadable').toBe(false);
+    if (outcome.kind === 'truncated' || outcome.kind === 'refused' || outcome.kind === 'rejected') {
+      expect(outcome.reason).toContain('because');
+    }
+    expect(parseExtraction).not.toHaveBeenCalled();
   });
 });

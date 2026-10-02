@@ -8941,6 +8941,10 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "cause": {
+                          "enum": ["truncated", "refused", "rejected"],
+                          "type": "string"
+                        },
                         "kind": {
                           "enum": ["unreadable"],
                           "type": "string"
@@ -10903,6 +10907,10 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "cause": {
+                          "enum": ["truncated", "refused", "rejected"],
+                          "type": "string"
+                        },
                         "kind": {
                           "enum": ["unreadable"],
                           "type": "string"

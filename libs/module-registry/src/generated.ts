@@ -561,122 +561,6 @@ export const MODULES = [
     hasBackend: false,
     hasFrontend: true,
     overlay: { chromeSlot: 'assistant', shortcut: 'mod+i' },
-    settings: [
-      {
-        id: 'ego',
-        title: 'Ego (Conversational AI)',
-        icon: 'MessageCircle',
-        order: 310,
-        groups: [
-          {
-            id: 'engine',
-            title: 'Conversation Engine',
-            description: 'Defaults for multi-turn conversation sessions.',
-            fields: [
-              {
-                key: 'ego.defaultModel',
-                label: 'Default Model',
-                type: 'text',
-                default: 'claude-sonnet-4-6',
-                description: 'LLM model used for chat and context retrieval.',
-              },
-              {
-                key: 'ego.maxHistory',
-                label: 'Max History Messages',
-                type: 'number',
-                default: '20',
-                description: 'Maximum conversation messages to include in context.',
-                validation: {
-                  min: 1,
-                  max: 200,
-                },
-              },
-              {
-                key: 'ego.maxRetrieval',
-                label: 'Max Retrieval Results',
-                type: 'number',
-                default: '5',
-                description: 'Maximum engram retrieval results per turn.',
-                validation: {
-                  min: 1,
-                  max: 50,
-                },
-              },
-              {
-                key: 'ego.tokenBudget',
-                label: 'Token Budget',
-                type: 'number',
-                default: '4096',
-                description: 'Token budget for the assembled retrieval context.',
-                validation: {
-                  min: 256,
-                },
-              },
-              {
-                key: 'ego.relevanceThreshold',
-                label: 'Relevance Threshold',
-                type: 'number',
-                default: '0.3',
-                description: 'Minimum cosine similarity for retrieval results (0–1).',
-                validation: {
-                  min: 0,
-                  max: 1,
-                },
-              },
-            ],
-          },
-          {
-            id: 'llm',
-            title: 'LLM Parameters',
-            description: 'Token limits and temperature for chat and summary calls.',
-            fields: [
-              {
-                key: 'ego.chat.maxTokens',
-                label: 'Chat Max Tokens',
-                type: 'number',
-                default: '2048',
-                description: 'Maximum output tokens for chat responses.',
-                validation: {
-                  min: 64,
-                },
-              },
-              {
-                key: 'ego.chat.temperature',
-                label: 'Chat Temperature',
-                type: 'number',
-                default: '0.3',
-                description: 'Sampling temperature for chat responses (0–1).',
-                validation: {
-                  min: 0,
-                  max: 1,
-                },
-              },
-              {
-                key: 'ego.summary.maxTokens',
-                label: 'Summary Max Tokens',
-                type: 'number',
-                default: '512',
-                description: 'Maximum output tokens for history summarisation.',
-                validation: {
-                  min: 64,
-                },
-              },
-              {
-                key: 'ego.summary.temperature',
-                label: 'Summary Temperature',
-                type: 'number',
-                default: '0',
-                description: 'Sampling temperature for history summarisation (0–1).',
-                validation: {
-                  min: 0,
-                  max: 1,
-                },
-              },
-            ],
-          },
-        ],
-      },
-    ] satisfies readonly SettingsManifest[],
   },
   {
     id: 'finance',
@@ -701,10 +585,24 @@ export const MODULES = [
               {
                 key: 'finance.aiCategorizer.model',
                 label: 'Categorizer Model',
-                type: 'text',
+                type: 'select',
                 default: 'claude-haiku-4-5-20251001',
+                options: [
+                  {
+                    value: 'claude-haiku-4-5-20251001',
+                    label: 'Claude Haiku 4.5',
+                  },
+                  {
+                    value: 'claude-sonnet-5-5',
+                    label: 'Claude Sonnet 5.5',
+                  },
+                  {
+                    value: 'claude-opus-5-5',
+                    label: 'Claude Opus 5.5',
+                  },
+                ],
                 description:
-                  'Anthropic model id, passed through verbatim. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
+                  'Anthropic model used for categorisation. Sonnet 5.5 and Opus 5.5 are sent no sampling parameters and a low effort setting, with a 2000 token floor so thinking cannot use up the reply. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
               },
               {
                 key: 'finance.aiCategorizer.maxTokens',
@@ -736,10 +634,24 @@ export const MODULES = [
               {
                 key: 'finance.ruleGen.model',
                 label: 'Rule Generation Model',
-                type: 'text',
+                type: 'select',
                 default: 'claude-haiku-4-5-20251001',
+                options: [
+                  {
+                    value: 'claude-haiku-4-5-20251001',
+                    label: 'Claude Haiku 4.5',
+                  },
+                  {
+                    value: 'claude-sonnet-5-5',
+                    label: 'Claude Sonnet 5.5',
+                  },
+                  {
+                    value: 'claude-opus-5-5',
+                    label: 'Claude Opus 5.5',
+                  },
+                ],
                 description:
-                  'Anthropic model id used when your manual corrections are analysed for a repeatable rule. Runs once per analysis rather than once per row, so a larger model here is far cheaper than on the categorizer.',
+                  'Anthropic model used when your manual corrections are analysed for a repeatable rule. Runs once per analysis rather than once per row, so a larger model here is far cheaper than on the categorizer.',
               },
               {
                 key: 'finance.ruleGen.maxTokens',
@@ -747,12 +659,12 @@ export const MODULES = [
                 type: 'number',
                 default: '200',
                 description:
-                  'Cap on the reply when the model proposes a rule from your corrections. A proposal is a match pattern and a target entity, so the bounds are the categorizer ones for the same reasons: under 50 the proposal is truncated and discarded, over 2000 you are paying for headroom a few lines of rule will never use.',
+                  'Ceiling on the reply for the two short corrections calls: analysing a correction into a rule (200 tokens) and interpreting rejection feedback (250). Revising a change set and generating rules keep their own fixed 2000 and ignore this setting. Under 50 the reply is truncated and discarded; above 250 has no effect. Sonnet 5.5 and Opus 5.5 are always given at least 2000 so thinking cannot use up the reply.',
                 validation: {
                   min: 50,
-                  max: 2000,
+                  max: 250,
                   message:
-                    'Use 50-2000. Below 50 the proposal is truncated and discarded; above 2000 you only pay more for the same answer.',
+                    'Use 50-250. Below 50 the reply is truncated and discarded; above 250 the setting has no effect.',
                 },
               },
             ],

@@ -16,6 +16,7 @@ export interface AppContext {
   route?: string;
   entityId?: string;
   entityType?: string;
+  entityTitle?: string;
 }
 
 /** Scope negotiation outcome included in ChatResult. */

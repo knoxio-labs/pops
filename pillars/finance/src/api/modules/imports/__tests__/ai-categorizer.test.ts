@@ -125,12 +125,12 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
   });
 
   it('honours the model + maxTokens env overrides', async () => {
-    process.env['FINANCE_AI_CATEGORIZER_MODEL'] = 'claude-sonnet-4-6';
+    process.env['FINANCE_AI_CATEGORIZER_MODEL'] = 'claude-haiku-4-5';
     process.env['FINANCE_AI_CATEGORIZER_MAX_TOKENS'] = '512';
     createMock.mockResolvedValue(textResponse('{"entityName":"X","contains":[]}'));
     await categorizeWithAi({ description: 'X' }, undefined, VOCAB, { db });
     const req = createMock.mock.calls[0]?.[0] as { model: string; max_tokens: number };
-    expect(req.model).toBe('claude-sonnet-4-6');
+    expect(req.model).toBe('claude-haiku-4-5');
     expect(req.max_tokens).toBe(512);
   });
 

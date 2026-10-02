@@ -31,8 +31,7 @@ describe('@pops/cerebrum /manifest — ModuleManifest exports', () => {
     });
   });
 
-  it('egoManifest contributes the ego settings section', () => {
-    const sectionIds = (egoManifest.settings ?? []).map((s) => s.id);
-    expect(sectionIds).toEqual(['ego']);
+  it('egoManifest contributes no settings section', () => {
+    expect(egoManifest.settings).toBeUndefined();
   });
 });

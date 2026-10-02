@@ -96,6 +96,21 @@ export interface DecodedReceiptPart {
   readonly bytes: Buffer;
 }
 
+/**
+ * Why a call produced no text worth parsing, as a fact about the call rather
+ * than the receipt. `max_tokens` is a cut-off answer, `refusal` is the model
+ * declining, and `rejected` is the API refusing the request itself (a 400),
+ * which no retry of the same upload can change.
+ */
+export interface VisionStop {
+  readonly stopped: 'max_tokens' | 'refusal' | 'rejected';
+  readonly detail: string;
+}
+
+export function isVisionStop(reading: string | null | VisionStop): reading is VisionStop {
+  return typeof reading === 'object' && reading !== null;
+}
+
 export interface ReceiptVision {
   /**
    * Read one receipt from one or more parts of it.
@@ -106,9 +121,10 @@ export interface ReceiptVision {
    *
    * Returns the model's raw text, or `null` when the model is unavailable —
    * no API key, transport failure. `null` means "ask a human", never "the
-   * receipt is empty".
+   * receipt is empty". A {@link VisionStop} says the call ended without an
+   * answer the parser may see.
    */
-  read(parts: readonly ReceiptPart[]): Promise<string | null>;
+  read(parts: readonly ReceiptPart[]): Promise<string | null | VisionStop>;
 }
 
 /**

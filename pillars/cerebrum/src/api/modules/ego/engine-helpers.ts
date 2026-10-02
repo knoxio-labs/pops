@@ -29,16 +29,6 @@ export function buildRetrievalFilters(scopes: string[]): RetrievalFilters {
   return filters;
 }
 
-function roleLabel(role: string): string {
-  if (role === 'user') return 'User';
-  if (role === 'assistant') return 'Assistant';
-  return 'System';
-}
-
-export function formatHistoryForContext(messages: Message[]): string {
-  return messages.map((m) => `${roleLabel(m.role)}: ${m.content}`).join('\n\n');
-}
-
 /**
  * Build the LLM message array: the most recent `maxHistoryMessages` user/
  * assistant turns, then the current message (with the retrieved-knowledge
