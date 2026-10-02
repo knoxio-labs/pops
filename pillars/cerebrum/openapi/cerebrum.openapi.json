@@ -768,6 +768,9 @@
                       "entityId": {
                         "type": "string"
                       },
+                      "entityTitle": {
+                        "type": "string"
+                      },
                       "entityType": {
                         "type": "string"
                       },

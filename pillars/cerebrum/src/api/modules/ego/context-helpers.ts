@@ -11,6 +11,9 @@ const APP_SCOPE_PREFIXES: Record<string, string[]> = {
   finance: ['personal.finance'],
   media: ['personal.media'],
   inventory: ['personal.inventory'],
+  purchases: ['personal.purchases'],
+  food: ['personal.food'],
+  lists: ['personal.lists'],
   cerebrum: [],
   ai: ['personal.ai', 'work.ai'],
 };

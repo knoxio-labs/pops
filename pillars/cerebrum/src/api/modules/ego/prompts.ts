@@ -31,7 +31,15 @@ export function formatAppContextBlock(appContext?: AppContext): string {
     parts.push(`Current route: ${appContext.route}`);
   }
   if (appContext.entityId && appContext.entityType) {
-    parts.push(`Viewing ${appContext.entityType}: ${appContext.entityId}`);
+    const label = appContext.entityTitle
+      ? `${appContext.entityTitle} (${appContext.entityId})`
+      : appContext.entityId;
+    parts.push(`Viewing ${appContext.entityType}: ${label}`);
+    if (appContext.entityType !== 'engram') {
+      parts.push(
+        `You can see only the title and id of this ${appContext.entityType}, not its contents. Do not guess at details it does not carry.`
+      );
+    }
   }
 
   return `\n\nCurrent app context:\n${parts.join('\n')}`;
