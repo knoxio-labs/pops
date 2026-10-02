@@ -39,6 +39,7 @@ import { createPeerClients } from './modules/retrieval/peer-clients.js';
 import { TemplateRegistry } from './modules/templates/registry.js';
 import { startThalamusWatcher, stopThalamusWatcher } from './modules/thalamus/instance.js';
 import { closeCerebrumEmbeddingsQueue, getEmbeddingsQueue } from './modules/thalamus/queue.js';
+import { reconcileEngramSearchIndex } from './modules/thalamus/search-index.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -94,6 +95,16 @@ const app = createCerebrumApiApp({
   queryLlm: new AnthropicQueryLlm(),
   queryStreamLlm: new AnthropicQueryStreamLlm(),
 });
+
+try {
+  const searchIndex = reconcileEngramSearchIndex(cerebrumDb.db, engramRoot);
+  console.warn(
+    `[cerebrum-api] Search index reconciled: ${searchIndex.indexed} indexed, ` +
+      `${searchIndex.removed} removed, ${searchIndex.skipped} skipped`
+  );
+} catch (err) {
+  console.error('[cerebrum-api] Search index reconcile failed; lexical search may be stale:', err);
+}
 
 startThalamusWatcher({ db: cerebrumDb.db, engramRoot, queueAccessor: getEmbeddingsQueue });
 
