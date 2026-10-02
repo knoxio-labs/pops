@@ -363,7 +363,7 @@ describe('processCurationJob', () => {
         [EXTRACT_OP]: () => EMPTY_ENTITIES,
         [INFER_OP]: (req) => {
           prompt = req.prompt;
-          return JSON.stringify({ scopes: ['work.projects.karbn'], confidence: 0.8 });
+          return JSON.stringify({ scopes: ['work.karbon.projects'], confidence: 0.8 });
         },
       });
       await processCurationJob(makeDeps(llm), { type: 'classifyEngram', engramId: created.id });

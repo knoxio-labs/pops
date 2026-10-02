@@ -56,40 +56,52 @@ describe('ScopeInferenceService prompt', () => {
 });
 
 describe('ScopeInferenceService reconciliation post-check', () => {
-  const vocabulary = [{ scope: 'work.projects.karbon', count: 5 }];
+  const vocabulary = [
+    { scope: 'work.projects.karbon', count: 5 },
+    { scope: 'work.projects', count: 9 },
+    { scope: 'personal.journal.2025', count: 30 },
+  ];
 
-  it('snaps a near-duplicate LLM scope to the canonical one', async () => {
+  async function inferWith(
+    answer: string,
+    known: { vocabulary: typeof vocabulary } | { knownScopes: string[] } = { vocabulary }
+  ): Promise<string[]> {
     const llm = makeFakeIngestLlm({
-      [OPERATION]: () => JSON.stringify({ scopes: ['work.projects.karbn'], confidence: 0.8 }),
+      [OPERATION]: () => JSON.stringify({ scopes: [answer], confidence: 0.8 }),
     });
     const result = await createScopeInferenceService(noRulesConfig, llm).infer({
       ...baseInput,
-      vocabulary,
+      ...known,
     });
-    expect(result.scopes).toEqual(['work.projects.karbon']);
-    expect(result.source).toBe('llm');
-  });
+    return result.scopes;
+  }
 
-  it('leaves an unrelated new scope alone', async () => {
-    const llm = makeFakeIngestLlm({
-      [OPERATION]: () => JSON.stringify({ scopes: ['personal.health.sleep'], confidence: 0.8 }),
-    });
-    const result = await createScopeInferenceService(noRulesConfig, llm).infer({
-      ...baseInput,
-      vocabulary,
-    });
-    expect(result.scopes).toEqual(['personal.health.sleep']);
+  it('snaps a reordering of a known scope to the canonical one', async () => {
+    expect(await inferWith('work.karbon.projects')).toEqual(['work.projects.karbon']);
   });
 
   it('snaps against wire-supplied knownScopes too', async () => {
-    const llm = makeFakeIngestLlm({
-      [OPERATION]: () => JSON.stringify({ scopes: ['work.projects.karbn'], confidence: 0.8 }),
-    });
-    const result = await createScopeInferenceService(noRulesConfig, llm).infer({
-      ...baseInput,
-      knownScopes: ['work.projects.karbon'],
-    });
-    expect(result.scopes).toEqual(['work.projects.karbon']);
+    expect(
+      await inferWith('work.karbon.projects', { knownScopes: ['work.projects.karbon'] })
+    ).toEqual(['work.projects.karbon']);
+  });
+
+  it('keeps a sibling one edit away from a known scope', async () => {
+    expect(await inferWith('personal.journal.2026')).toEqual(['personal.journal.2026']);
+  });
+
+  it('keeps a new scope under a known parent', async () => {
+    expect(await inferWith('work.projects.pops')).toEqual(['work.projects.pops']);
+  });
+
+  it('does not narrow a broad scope to a known deeper one', async () => {
+    expect(await inferWith('work.projects', { knownScopes: ['work.projects.karbon'] })).toEqual([
+      'work.projects',
+    ]);
+  });
+
+  it('leaves an unrelated new scope alone', async () => {
+    expect(await inferWith('personal.health.sleep')).toEqual(['personal.health.sleep']);
   });
 });
 

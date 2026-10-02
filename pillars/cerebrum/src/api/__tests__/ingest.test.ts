@@ -169,7 +169,7 @@ describe('scope vocabulary on the sync path', () => {
       [EXTRACT_OP]: () => JSON.stringify([]),
       [INFER_OP]: (req) => {
         prompt = req.prompt;
-        return JSON.stringify({ scopes: ['work.projects.karbn'], confidence: 0.8 });
+        return JSON.stringify({ scopes: ['work.karbon.projects'], confidence: 0.8 });
       },
     });
     const c = client(llm);

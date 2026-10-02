@@ -124,8 +124,9 @@ export class ScopeInferenceService {
    * returned nothing or an unparseable response, so the fallback scope is a
    * placeholder rather than a verdict.
    *
-   * LLM output is snapped to the supplied vocabulary through the scope
-   * reconciliation service. `vocabulary` (with counts) wins over `knownScopes`.
+   * An LLM scope that only reorders the segments of a known scope is snapped to
+   * it; every other answer is kept as given. `vocabulary` (with counts) wins
+   * over `knownScopes`.
    */
   async inferWithStatus(input: ScopeInferenceInput): Promise<ScopeInferenceOutcome> {
     if (input.explicitScopes && input.explicitScopes.length > 0) {
@@ -196,13 +197,23 @@ export class ScopeInferenceService {
   }
 }
 
+// The reconciler's weaker matches are proposals for a person to accept. Applied
+// unattended, a one-segment typo match turns `journal.2026` into `journal.2025`,
+// and the subset matches make a new scope under an existing parent impossible.
+// Only a reordering of the same segments is safe to apply without asking.
+const AUTO_SNAP_MIN_CONFIDENCE = 0.95;
+
 function snapToVocabulary(scopes: string[], vocabulary: ScopeInfo[]): string[] {
   if (vocabulary.length === 0) return scopes;
   const { suggestions } = createScopeReconciliationService().reconcile({
     suggestedScopes: scopes,
     knownScopes: vocabulary,
   });
-  const canonical = new Map(suggestions.map((s) => [s.original, s.canonical]));
+  const canonical = new Map(
+    suggestions
+      .filter((s) => s.confidence >= AUTO_SNAP_MIN_CONFIDENCE)
+      .map((s) => [s.original, s.canonical])
+  );
   return dedupeScopes(scopes.map((s) => canonical.get(s) ?? s));
 }
 
