@@ -1539,6 +1539,15 @@ export interface operations {
           };
         };
       };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
     };
   };
   'aiProviders.list': {
