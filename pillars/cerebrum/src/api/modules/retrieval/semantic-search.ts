@@ -13,9 +13,9 @@ import { resolveMetadata } from './semantic-search-metadata.js';
  * shaping.
  *
  *  - The query vector comes from the injected {@link EmbeddingClient}. With no
- *    client configured (no `EMBEDDING_API_KEY`), `search` returns no results,
- *    and so does hybrid. A provider error is swallowed to the same no-results
- *    path so a flaky embedder never crashes retrieval.
+ *    client configured (no `EMBEDDING_API_KEY`), `search` returns no results
+ *    and hybrid falls back to its lexical leg. A provider error is swallowed
+ *    to the same no-results path so a flaky embedder never crashes retrieval.
  *  - Thresholds are minimum cosine similarity. They are converted to the L2
  *    ceiling sqlite-vec understands here and nowhere else; see `cosine.ts`.
  *  - kNN reads the pillar's own raw handle (`embeddings` + `embeddings_vec`
@@ -38,7 +38,7 @@ export interface SemanticSearchDeps {
   raw: BetterSqlite3.Database;
   vecAvailable: boolean;
   peers: PeerClients;
-  /** Absent → semantic search, and therefore hybrid, returns no results. */
+  /** Absent → semantic search returns no results and hybrid is lexical only. */
   embeddingClient?: EmbeddingClient;
 }
 

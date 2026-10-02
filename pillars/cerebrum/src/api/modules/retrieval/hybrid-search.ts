@@ -2,18 +2,25 @@
  * HybridSearchService — query-ranked retrieval behind the `search` / `context`
  * / `similar` handlers and the query, emit and ego services.
  *
- * The semantic leg is the only leg, so nothing is fused and a hit's `score` is
- * its cosine similarity. {@link StructuredQueryService} lists engrams by
- * filter, newest first; it never sees the query text, so it is not a relevance
- * signal. Filters constrain the candidate set instead.
+ * `hybrid` runs two legs and fuses them with reciprocal rank fusion: the
+ * lexical leg (FTS5 + BM25 over engram title and body) and the semantic leg
+ * (k-NN over embeddings). Fusion sets the order only; see `rank-fusion.ts` for
+ * what `score` means on a fused hit.
  *
  * The semantic leg is best-effort. A missing embedding client, a
  * vec-unavailable database, or a provider error all collapse it to an empty
- * list (logged), and `hybrid` then returns nothing.
+ * list (logged), and `hybrid` then returns the lexical hits alone.
  *
- * Thresholds are minimum cosine similarity; see `cosine.ts`.
+ * {@link StructuredQueryService} lists engrams by filter, newest first; it
+ * never sees the query text, so it is not a leg. Filters constrain both legs'
+ * candidate sets instead.
+ *
+ * Thresholds are minimum cosine similarity and apply to the semantic leg; see
+ * `cosine.ts`.
  */
 import { DEFAULT_SEARCH_MIN_COSINE, DEFAULT_SIMILAR_MIN_COSINE } from './cosine.js';
+import { LexicalSearchService } from './lexical-search.js';
+import { fuseByReciprocalRank } from './rank-fusion.js';
 import { SemanticSearchService, type SemanticSearchDeps } from './semantic-search.js';
 import { StructuredQueryService } from './structured-query.js';
 
@@ -27,39 +34,53 @@ function isSecretScope(scope: string): boolean {
 
 export class HybridSearchService {
   private readonly semanticSvc: SemanticSearchService;
+  private readonly lexicalSvc: LexicalSearchService;
   private readonly structuredSvc: StructuredQueryService;
 
   constructor(deps: SemanticSearchDeps) {
     this.semanticSvc = new SemanticSearchService(deps);
+    this.lexicalSvc = new LexicalSearchService(deps.db);
     this.structuredSvc = new StructuredQueryService(deps.db);
   }
 
-  /** Rank `query` against the corpus; `score` on each hit is its cosine similarity to `query`. */
+  /**
+   * Rank `query` against the corpus with both legs. `score` on each hit is its
+   * cosine similarity to `query` when the semantic leg found it, and its BM25
+   * relative to the query's best lexical hit when only the lexical leg did.
+   */
   async hybrid(
     query: string,
     filters: RetrievalFilters = {},
     limit = DEFAULT_LIMIT,
     minCosine = DEFAULT_SEARCH_MIN_COSINE
   ): Promise<RetrievalResult[]> {
+    const semantic = await this.semanticLeg(query, filters, limit, minCosine);
+    const lexical = this.lexicalSvc.search(query, filters, limit);
+    return fuseByReciprocalRank(semantic, lexical, limit);
+  }
+
+  private async semanticLeg(
+    query: string,
+    filters: RetrievalFilters,
+    limit: number,
+    minCosine: number
+  ): Promise<RetrievalResult[]> {
     const results = await this.semanticSvc
       .search(query, filters, limit, minCosine)
       .catch((error: unknown) => {
         console.warn(
-          `[retrieval/hybrid] Semantic search failed; returning no results: ${
+          `[retrieval/hybrid] Semantic search failed; continuing with lexical hits only: ${
             error instanceof Error ? error.message : String(error)
           }`
         );
         return [] as RetrievalResult[];
       });
 
-    if (!filters.includeSecret) {
-      return results.filter((r) => {
-        const scopes = (r.metadata['scopes'] as string[] | undefined) ?? [];
-        return !scopes.some(isSecretScope);
-      });
-    }
-
-    return results;
+    if (filters.includeSecret) return results;
+    return results.filter((r) => {
+      const scopes = (r.metadata['scopes'] as string[] | undefined) ?? [];
+      return !scopes.some(isSecretScope);
+    });
   }
 
   /** Semantic leg alone; `score` on each hit is its cosine similarity to `query`. */

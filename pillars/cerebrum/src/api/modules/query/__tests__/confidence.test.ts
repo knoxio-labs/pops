@@ -6,13 +6,17 @@ import { buildQuerySystemPrompt, INSUFFICIENT_INFORMATION_PHRASE } from '../prom
 import type { RetrievalResult } from '../../retrieval/types.js';
 import type { SourceCitation } from '../types.js';
 
-function retrieved(id: string, matchType: RetrievalResult['matchType']): RetrievalResult {
+function retrieved(
+  id: string,
+  matchType: RetrievalResult['matchType'],
+  score = 0.016
+): RetrievalResult {
   return {
     sourceType: 'engram',
     sourceId: id,
     title: id,
     contentPreview: '',
-    score: 0.016,
+    score,
     matchType,
     metadata: {},
   };
@@ -36,6 +40,27 @@ describe('computeConfidence', () => {
   it('counts a source both legs agreed on as semantically matched', () => {
     const sources = [retrieved('a', 'both'), retrieved('b', 'structured')];
     expect(computeConfidence('Yes [a] [b].', [citation('a'), citation('b')], sources)).toBe('high');
+  });
+
+  it('is high on lexical hits alone when a cited one scores at least half the best hit', () => {
+    const sources = [retrieved('a', 'lexical', 0.5), retrieved('b', 'lexical', 0.1)];
+    expect(computeConfidence('Yes [a] [b].', [citation('a'), citation('b')], sources)).toBe('high');
+  });
+
+  it('is medium when every cited lexical hit scores under half the best hit', () => {
+    const sources = [
+      retrieved('top', 'lexical', 1),
+      retrieved('a', 'lexical', 0.49),
+      retrieved('b', 'lexical', 0.1),
+    ];
+    expect(computeConfidence('Yes [a] [b].', [citation('a'), citation('b')], sources)).toBe(
+      'medium'
+    );
+  });
+
+  it('is medium with a single citation to the best lexical hit', () => {
+    const sources = [retrieved('a', 'lexical', 1), retrieved('b', 'lexical', 0.8)];
+    expect(computeConfidence('Yes [a].', [citation('a')], sources)).toBe('medium');
   });
 
   it('is medium with a single valid citation', () => {

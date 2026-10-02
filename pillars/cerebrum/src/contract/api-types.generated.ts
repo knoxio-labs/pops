@@ -6066,7 +6066,7 @@ export interface operations {
               contentPreview: string;
               distance?: number;
               /** @enum {string} */
-              matchType: 'semantic' | 'structured' | 'both';
+              matchType: 'semantic' | 'lexical' | 'structured' | 'both';
               metadata: {
                 [key: string]: unknown;
               };
@@ -6135,7 +6135,7 @@ export interface operations {
               contentPreview: string;
               distance?: number;
               /** @enum {string} */
-              matchType: 'semantic' | 'structured' | 'both';
+              matchType: 'semantic' | 'lexical' | 'structured' | 'both';
               metadata: {
                 [key: string]: unknown;
               };

@@ -9819,7 +9819,7 @@
                             "type": "number"
                           },
                           "matchType": {
-                            "enum": ["semantic", "structured", "both"],
+                            "enum": ["semantic", "lexical", "structured", "both"],
                             "type": "string"
                           },
                           "metadata": {
@@ -9982,7 +9982,7 @@
                             "type": "number"
                           },
                           "matchType": {
-                            "enum": ["semantic", "structured", "both"],
+                            "enum": ["semantic", "lexical", "structured", "both"],
                             "type": "string"
                           },
                           "metadata": {

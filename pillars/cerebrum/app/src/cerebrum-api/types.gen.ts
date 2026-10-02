@@ -3728,7 +3728,7 @@ export type RetrievalSearchResponses = {
     results: Array<{
       contentPreview: string;
       distance?: number;
-      matchType: 'semantic' | 'structured' | 'both';
+      matchType: 'semantic' | 'lexical' | 'structured' | 'both';
       metadata: {
         [key: string]: unknown;
       };
@@ -3791,7 +3791,7 @@ export type RetrievalSimilarResponses = {
     results: Array<{
       contentPreview: string;
       distance?: number;
-      matchType: 'semantic' | 'structured' | 'both';
+      matchType: 'semantic' | 'lexical' | 'structured' | 'both';
       metadata: {
         [key: string]: unknown;
       };

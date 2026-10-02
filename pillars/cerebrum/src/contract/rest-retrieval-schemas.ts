@@ -41,7 +41,7 @@ export const retrievalResultSchema = z.object({
   contentPreview: z.string(),
   score: z.number(),
   distance: z.number().optional(),
-  matchType: z.enum(['semantic', 'structured', 'both']),
+  matchType: z.enum(['semantic', 'lexical', 'structured', 'both']),
   metadata: z.record(z.string(), z.unknown()),
 });
 export type RetrievalResultWire = z.infer<typeof retrievalResultSchema>;
