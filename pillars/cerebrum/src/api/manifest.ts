@@ -11,7 +11,7 @@ import {
  * generator). Declares the cerebrum + ego settings UI contributions under
  * `settings.manifests`.
  */
-import { cerebrumManifest, egoManifest } from '../contract/settings/index.js';
+import { cerebrumManifest } from '../contract/settings/index.js';
 
 import type { CapabilityReporter } from '@pops/pillar-sdk/bootstrap';
 import type {
@@ -99,7 +99,7 @@ export function buildCerebrumManifest(version: string): ManifestPayload {
     ai: { tools: [] },
     uri: { types: [] },
     consumedSettings: { keys: [] },
-    settings: { manifests: [cerebrumManifest, egoManifest] },
+    settings: { manifests: [cerebrumManifest] },
     features: [
       {
         key: 'cerebrum.vectorSearch',

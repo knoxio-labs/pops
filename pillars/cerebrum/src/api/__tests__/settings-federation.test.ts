@@ -56,7 +56,7 @@ afterEach(() => {
 const { requestOn } = createTestTransport();
 
 describe('cerebrum federated /settings', () => {
-  it('lists every declared key (cerebrum + ego) resolved to its manifest default', async () => {
+  it('lists every declared key resolved to its manifest default', async () => {
     const res = await requestOn(app()).get('/settings');
     expect(res.status).toBe(200);
     const byKey = new Map<string, string>(
@@ -64,23 +64,29 @@ describe('cerebrum federated /settings', () => {
     );
     expect(byKey.get('cerebrum.query.maxSources')).toBe('10');
     expect(byKey.get('cerebrum.captureHotkey')).toBe('c');
-    expect(byKey.get('ego.defaultModel')).toBe('claude-sonnet-4-6');
-    expect(byKey.get('ego.chat.temperature')).toBe('0.3');
+    expect([...byKey.keys()].filter((key) => key.startsWith('ego.'))).toEqual([]);
+  });
+
+  it('rejects the retired ego.* keys as undeclared', async () => {
+    const res = await requestOn(app()).get('/settings/ego.defaultModel');
+    expect(res.status).toBe(400);
   });
 
   it('round-trips an update through cerebrum.db and resets to the default', async () => {
-    const put = await requestOn(app()).put('/settings/ego.maxHistory').send({ value: '99' });
+    const put = await requestOn(app())
+      .put('/settings/cerebrum.query.maxSources')
+      .send({ value: '99' });
     expect(put.status).toBe(200);
-    expect(put.body.data).toEqual({ key: 'ego.maxHistory', value: '99' });
+    expect(put.body.data).toEqual({ key: 'cerebrum.query.maxSources', value: '99' });
 
-    const afterSet = await requestOn(app()).get('/settings/ego.maxHistory');
-    expect(afterSet.body.data).toEqual({ key: 'ego.maxHistory', value: '99' });
+    const afterSet = await requestOn(app()).get('/settings/cerebrum.query.maxSources');
+    expect(afterSet.body.data).toEqual({ key: 'cerebrum.query.maxSources', value: '99' });
 
-    const reset = await requestOn(app()).post('/settings/ego.maxHistory/reset');
+    const reset = await requestOn(app()).post('/settings/cerebrum.query.maxSources/reset');
     expect(reset.status).toBe(200);
-    expect(reset.body.data).toEqual({ key: 'ego.maxHistory', value: '20' });
+    expect(reset.body.data).toEqual({ key: 'cerebrum.query.maxSources', value: '10' });
 
-    const afterReset = await requestOn(app()).get('/settings/ego.maxHistory');
+    const afterReset = await requestOn(app()).get('/settings/cerebrum.query.maxSources');
     expect(afterReset.body.data).toBeNull();
   });
 
