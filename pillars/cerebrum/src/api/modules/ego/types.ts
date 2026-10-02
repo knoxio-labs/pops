@@ -85,5 +85,6 @@ export interface EngineConfig {
   maxHistoryMessages: number;
   maxRetrievalResults: number;
   tokenBudget: number;
-  relevanceThreshold: number;
+  /** Minimum cosine similarity a retrieved engram must reach to enter the context. */
+  minCosine: number;
 }

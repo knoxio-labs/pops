@@ -1,6 +1,7 @@
 /**
- * StructuredQueryService — filters `engram_index` + junction tables (the BM25
- * leg) on the pillar drizzle handle. Returns `RetrievalResult[]` with
+ * StructuredQueryService — lists `engram_index` rows matching the filters,
+ * newest first, on the pillar drizzle handle. It never sees query text, so the
+ * order says nothing about relevance. Returns `RetrievalResult[]` with
  * `matchType: 'structured'`.
  */
 import { and, desc, eq, inArray } from 'drizzle-orm';

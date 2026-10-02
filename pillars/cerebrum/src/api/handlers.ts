@@ -99,8 +99,7 @@ export interface CerebrumApiDeps {
   peerClients: PeerClients;
   /**
    * Optional query-embedding client for `retrieval` semantic search. Absent
-   * (no `EMBEDDING_API_KEY`) → semantic search returns no results and hybrid
-   * degrades to BM25-only.
+   * (no `EMBEDDING_API_KEY`) → semantic and hybrid search return no results.
    */
   embeddingClient?: EmbeddingClient;
   /**

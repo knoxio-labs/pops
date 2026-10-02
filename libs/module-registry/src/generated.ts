@@ -219,7 +219,7 @@ export const MODULES = [
                 label: 'Relevance Threshold',
                 type: 'number',
                 default: '0.3',
-                description: 'Minimum relevance score for retrieved sources (0-1).',
+                description: 'Minimum cosine similarity for retrieved sources (0-1).',
                 validation: {
                   min: 0,
                   max: 1,
@@ -257,8 +257,8 @@ export const MODULES = [
                 key: 'cerebrum.emit.relevanceThreshold',
                 label: 'Relevance Threshold',
                 type: 'number',
-                default: '0.2',
-                description: 'Minimum relevance score for emit retrieval (0-1).',
+                default: '0.35',
+                description: 'Minimum cosine similarity for emit retrieval (0-1).',
                 validation: {
                   min: 0,
                   max: 1,
@@ -307,8 +307,8 @@ export const MODULES = [
                 key: 'cerebrum.semantic.defaultThreshold',
                 label: 'Semantic Default Threshold',
                 type: 'number',
-                default: '0.8',
-                description: 'Default distance threshold for semantic search (0-1).',
+                default: '0.3',
+                description: 'Default minimum cosine similarity for semantic search (0-1).',
                 validation: {
                   min: 0,
                   max: 1,
@@ -349,8 +349,8 @@ export const MODULES = [
                 key: 'cerebrum.hybrid.defaultThreshold',
                 label: 'Hybrid Default Threshold',
                 type: 'number',
-                default: '0.8',
-                description: 'Default distance threshold for hybrid search (0-1).',
+                default: '0.3',
+                description: 'Default minimum cosine similarity for hybrid search (0-1).',
                 validation: {
                   min: 0,
                   max: 1,
@@ -416,7 +416,7 @@ export const MODULES = [
                 label: 'Consolidation Similarity',
                 type: 'number',
                 default: '0.85',
-                description: 'Minimum Thalamus similarity to propose consolidation.',
+                description: 'Minimum cosine similarity to propose consolidation.',
                 validation: {
                   min: 0,
                   max: 1,
@@ -696,7 +696,7 @@ export const MODULES = [
                 label: 'Relevance Threshold',
                 type: 'number',
                 default: '0.3',
-                description: 'Minimum relevance score for retrieval results (0–1).',
+                description: 'Minimum cosine similarity for retrieval results (0–1).',
                 validation: {
                   min: 0,
                   max: 1,

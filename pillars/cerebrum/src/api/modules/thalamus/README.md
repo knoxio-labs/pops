@@ -26,8 +26,9 @@ A corpus can be completely indexed and still have zero semantic reach:
   embeddings worker, so any queued job sits unconsumed.
 - sqlite-vec (`../../../db/vec-loader.ts`) — a failed load leaves
   `vecAvailable` false and every k-NN call throws. `HybridSearchService.hybrid`
-  catches that, warns, and returns its BM25 leg alone, but `semanticSearch()`
-  and `similar()` propagate — and `similar()` is what the consolidator and
+  catches that, warns, and returns nothing, because the semantic leg is its
+  only leg (see `../retrieval/README.md`), but `semanticSearch()` and
+  `similar()` propagate — and `similar()` is what the consolidator and
   linker in `../workers` call, so those runs reject rather than degrade.
 - `CEREBRUM_INDEX_WATCH` and Redis gate the hops before that; the conditions
   are in the headers of `instance.ts`, `queue.ts` and `embedding-trigger.ts`.

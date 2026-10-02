@@ -51,5 +51,6 @@ inbound links alone.
 good as the semantic leg. The auditor additionally takes an injected LLM
 contradiction detector; a failed comparison yields an action with
 `status: 'error'` rather than aborting the run. Thresholds are the
-`DEFAULT_*_CONFIG` constants in `types.ts` plus module-private constants in
+`DEFAULT_*_CONFIG` constants in `types.ts` (a `similarityThreshold` is a
+minimum cosine, per `../retrieval/README.md`) plus module-private constants in
 `pruner-helpers.ts` and `auditor-helpers.ts`.

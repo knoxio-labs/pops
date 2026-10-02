@@ -8,7 +8,12 @@ export interface RetrievalResult {
   sourceId: string;
   title: string;
   contentPreview: string;
+  /**
+   * Cosine similarity for a semantic or `similar` hit, the fused RRF score for
+   * a hybrid hit, and 1 for a structured listing row.
+   */
   score: number;
+  /** L2 distance as sqlite-vec reported it; present on hits the semantic leg found. */
   distance?: number;
   matchType: 'semantic' | 'structured' | 'both';
   metadata: Record<string, unknown>;

@@ -3697,7 +3697,10 @@ export type RetrievalSearchData = {
     mode: 'semantic' | 'structured' | 'hybrid';
     offset: number;
     query?: string;
-    threshold: number;
+    /**
+     * Minimum cosine similarity a semantic hit must reach. Omit for the server default.
+     */
+    threshold?: number;
   };
   path?: never;
   query?: never;
@@ -3761,7 +3764,10 @@ export type RetrievalSimilarData = {
       types?: Array<string>;
     };
     limit: number;
-    threshold: number;
+    /**
+     * Minimum cosine similarity a semantic hit must reach. Omit for the server default.
+     */
+    threshold?: number;
   };
   path?: never;
   query?: never;

@@ -6044,8 +6044,8 @@ export interface operations {
           /** @default 0 */
           offset: number;
           query?: string;
-          /** @default 0.8 */
-          threshold: number;
+          /** @description Minimum cosine similarity a semantic hit must reach. Omit for the server default. */
+          threshold?: number;
         };
       };
     };
@@ -6118,8 +6118,8 @@ export interface operations {
           };
           /** @default 20 */
           limit: number;
-          /** @default 0.8 */
-          threshold: number;
+          /** @description Minimum cosine similarity a semantic hit must reach. Omit for the server default. */
+          threshold?: number;
         };
       };
     };

@@ -7,6 +7,7 @@
  * lives behind the port so tests inject a fake that yields canned tokens.
  */
 import { CitationParser } from './citation-parser.js';
+import { computeConfidence } from './confidence.js';
 
 import type { RetrievalResult } from '../retrieval/types.js';
 import type { QueryStreamLlm } from './llm.js';
@@ -32,14 +33,6 @@ export interface QueryStreamDone {
 
 /** Union type for all events yielded by `streamQueryAnswer`. */
 export type QueryStreamEvent = QueryStreamToken | QueryStreamDone;
-
-function computeConfidence(sources: SourceCitation[]): ConfidenceLevel {
-  if (sources.length === 0) return 'low';
-  const topScore = sources[0]?.relevance ?? 0;
-  if (topScore > 0.8) return 'high';
-  if (topScore >= 0.5) return 'medium';
-  return 'low';
-}
 
 export interface StreamQueryAnswerParams {
   llm: QueryStreamLlm;
@@ -76,7 +69,7 @@ export async function* streamQueryAnswer(
   }
 
   const { cleanedAnswer, citations } = citationParser.parse(fullText, retrievedResults);
-  const confidence: ConfidenceLevel = citations.length === 0 ? 'low' : computeConfidence(citations);
+  const confidence = computeConfidence(cleanedAnswer, citations, retrievedResults);
 
   yield {
     type: 'done',

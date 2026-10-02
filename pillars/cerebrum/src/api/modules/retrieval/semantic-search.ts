@@ -1,3 +1,4 @@
+import { cosineToMaxL2, DEFAULT_SEARCH_MIN_COSINE, DEFAULT_SIMILAR_MIN_COSINE } from './cosine.js';
 import {
   collectResults,
   dedupeBySource,
@@ -12,9 +13,11 @@ import { resolveMetadata } from './semantic-search-metadata.js';
  * shaping.
  *
  *  - The query vector comes from the injected {@link EmbeddingClient}. With no
- *    client configured (no `EMBEDDING_API_KEY`), `search` returns no semantic
- *    results and hybrid degrades to BM25-only. A provider error is swallowed to
- *    the same no-results path so a flaky embedder never crashes retrieval.
+ *    client configured (no `EMBEDDING_API_KEY`), `search` returns no results,
+ *    and so does hybrid. A provider error is swallowed to the same no-results
+ *    path so a flaky embedder never crashes retrieval.
+ *  - Thresholds are minimum cosine similarity. They are converted to the L2
+ *    ceiling sqlite-vec understands here and nowhere else; see `cosine.ts`.
  *  - kNN reads the pillar's own raw handle (`embeddings` + `embeddings_vec`
  *    live in cerebrum.db); vector availability is `vecAvailable`, captured at
  *    construction.
@@ -29,14 +32,13 @@ import type { PeerClients } from './peer-clients.js';
 import type { RetrievalFilters, RetrievalResult } from './types.js';
 
 const DEFAULT_LIMIT = 20;
-const DEFAULT_THRESHOLD = 0.8;
 
 export interface SemanticSearchDeps {
   db: CerebrumDb;
   raw: BetterSqlite3.Database;
   vecAvailable: boolean;
   peers: PeerClients;
-  /** Absent → semantic search returns no results (hybrid degrades to BM25). */
+  /** Absent → semantic search, and therefore hybrid, returns no results. */
   embeddingClient?: EmbeddingClient;
 }
 
@@ -45,7 +47,8 @@ export interface SearchByVectorOptions {
   sourceIdToExclude: string;
   filters?: RetrievalFilters;
   limit?: number;
-  threshold?: number;
+  /** Minimum cosine similarity a neighbour must reach. */
+  minCosine?: number;
 }
 
 export class SemanticSearchService {
@@ -70,7 +73,7 @@ export class SemanticSearchService {
     query: string,
     filters: RetrievalFilters = {},
     limit = DEFAULT_LIMIT,
-    threshold = DEFAULT_THRESHOLD
+    minCosine = DEFAULT_SEARCH_MIN_COSINE
   ): Promise<RetrievalResult[]> {
     if (!query.trim()) {
       throw Object.assign(new Error('Query is required for semantic search'), {
@@ -83,8 +86,9 @@ export class SemanticSearchService {
     const queryVector = await this.embedQuery(query);
     if (!queryVector) return [];
     const vectorBlob = Float32Array.from(queryVector);
+    const maxDistance = cosineToMaxL2(minCosine);
     const rows = knnQuery(this.deps.raw, vectorBlob, limit * 3).filter(
-      (r) => r.distance <= threshold
+      (r) => r.distance <= maxDistance
     );
     const seen = dedupeBySource(rows);
 
@@ -104,11 +108,11 @@ export class SemanticSearchService {
   async searchByVector(opts: SearchByVectorOptions): Promise<RetrievalResult[]> {
     if (!this.deps.vecAvailable) throw vecUnavailableError();
     const limit = opts.limit ?? DEFAULT_LIMIT;
-    const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
+    const maxDistance = cosineToMaxL2(opts.minCosine ?? DEFAULT_SIMILAR_MIN_COSINE);
     const filters = opts.filters ?? {};
 
     const rows = knnQuery(this.deps.raw, opts.vectorBlob, limit * 3).filter(
-      (r) => r.distance <= threshold && r.source_id !== opts.sourceIdToExclude
+      (r) => r.distance <= maxDistance && r.source_id !== opts.sourceIdToExclude
     );
     const seen = dedupeBySource(rows);
 

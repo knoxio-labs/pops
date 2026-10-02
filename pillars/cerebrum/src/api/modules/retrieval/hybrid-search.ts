@@ -1,14 +1,19 @@
 /**
- * HybridSearchService — orchestrates {@link SemanticSearchService} and
- * {@link StructuredQueryService}, merges with reciprocal rank fusion (RRF,
- * k=60), and backs the `search` / `context` / `similar` handlers.
+ * HybridSearchService — rank-fuses the retrieval legs with reciprocal rank
+ * fusion (RRF, k=60) and backs the `search` / `context` / `similar` handlers.
  *
- * Graceful degradation: the semantic leg is best-effort. A missing embedding
- * client, a vec-unavailable database, or a provider error all collapse the
- * semantic leg to an empty list (logged), so hybrid retrieval falls back to
- * the BM25 (structured) leg, which is independent. This mirrors the monolith's
- * `Thalamus retrieval failed` fallback.
+ * The semantic leg is the only leg. {@link StructuredQueryService} lists
+ * engrams by filter, newest first; it never sees the query text, so it is not a
+ * relevance signal and stays out of fusion. Filters constrain the candidate set
+ * instead.
+ *
+ * The semantic leg is best-effort. A missing embedding client, a
+ * vec-unavailable database, or a provider error all collapse it to an empty
+ * list (logged), and `hybrid` then returns nothing.
+ *
+ * Thresholds are minimum cosine similarity; see `cosine.ts`.
  */
+import { DEFAULT_SEARCH_MIN_COSINE, DEFAULT_SIMILAR_MIN_COSINE } from './cosine.js';
 import { SemanticSearchService, type SemanticSearchDeps } from './semantic-search.js';
 import { StructuredQueryService } from './structured-query.js';
 
@@ -16,45 +21,33 @@ import type { RetrievalFilters, RetrievalResult } from './types.js';
 
 const RRF_K = 60;
 const DEFAULT_LIMIT = 20;
-const DEFAULT_THRESHOLD = 0.8;
 
 function isSecretScope(scope: string): boolean {
   return scope.split('.').includes('secret');
 }
 
-/** Apply RRF to merge two ranked lists. Returns merged list sorted by descending score. */
-function reciprocalRankFusion(
-  semanticResults: RetrievalResult[],
-  structuredResults: RetrievalResult[],
-  limit: number
-): RetrievalResult[] {
+/**
+ * Merge ranked legs with RRF, best first. A hit several legs agree on has its
+ * metadata merged and is marked `both`.
+ */
+function reciprocalRankFusion(legs: RetrievalResult[][], limit: number): RetrievalResult[] {
   const scores = new Map<string, { score: number; result: RetrievalResult; inBoth: boolean }>();
 
-  for (const [i, r] of semanticResults.entries()) {
-    const key = `${r.sourceType}:${r.sourceId}`;
-    const contribution = 1 / (RRF_K + i + 1);
-    const existing = scores.get(key);
-    if (existing) {
-      existing.score += contribution;
-      existing.inBoth = true;
-    } else {
-      scores.set(key, { score: contribution, result: r, inBoth: false });
-    }
-  }
-
-  for (const [i, r] of structuredResults.entries()) {
-    const key = `${r.sourceType}:${r.sourceId}`;
-    const contribution = 1 / (RRF_K + i + 1);
-    const existing = scores.get(key);
-    if (existing) {
-      existing.score += contribution;
-      existing.inBoth = true;
-      existing.result = {
-        ...existing.result,
-        metadata: { ...existing.result.metadata, ...r.metadata },
-      };
-    } else {
-      scores.set(key, { score: contribution, result: r, inBoth: false });
+  for (const leg of legs) {
+    for (const [i, r] of leg.entries()) {
+      const key = `${r.sourceType}:${r.sourceId}`;
+      const contribution = 1 / (RRF_K + i + 1);
+      const existing = scores.get(key);
+      if (existing) {
+        existing.score += contribution;
+        existing.inBoth = true;
+        existing.result = {
+          ...existing.result,
+          metadata: { ...existing.result.metadata, ...r.metadata },
+        };
+      } else {
+        scores.set(key, { score: contribution, result: r, inBoth: false });
+      }
     }
   }
 
@@ -77,27 +70,29 @@ export class HybridSearchService {
     this.structuredSvc = new StructuredQueryService(deps.db);
   }
 
+  /**
+   * Rank `query` against the corpus. `score` on each hit is the fused RRF
+   * score, which orders hits and is not a similarity; `distance` still carries
+   * the semantic leg's L2 distance.
+   */
   async hybrid(
     query: string,
     filters: RetrievalFilters = {},
     limit = DEFAULT_LIMIT,
-    threshold = DEFAULT_THRESHOLD
+    minCosine = DEFAULT_SEARCH_MIN_COSINE
   ): Promise<RetrievalResult[]> {
-    const fetchLimit = limit * 3;
-
-    const [semanticResults, structuredResults] = await Promise.all([
-      this.semanticSvc.search(query, filters, limit, threshold).catch((error: unknown) => {
+    const semanticResults = await this.semanticSvc
+      .search(query, filters, limit, minCosine)
+      .catch((error: unknown) => {
         console.warn(
-          `[retrieval/hybrid] Semantic search failed — falling back to BM25-only: ${
+          `[retrieval/hybrid] Semantic search failed; returning no results: ${
             error instanceof Error ? error.message : String(error)
           }`
         );
         return [] as RetrievalResult[];
-      }),
-      Promise.resolve(this.structuredSvc.query(filters, fetchLimit)),
-    ]);
+      });
 
-    const merged = reciprocalRankFusion(semanticResults, structuredResults, limit);
+    const merged = reciprocalRankFusion([semanticResults], limit);
 
     if (!filters.includeSecret) {
       return merged.filter((r) => {
@@ -109,15 +104,17 @@ export class HybridSearchService {
     return merged;
   }
 
+  /** Semantic leg alone; `score` on each hit is its cosine similarity to `query`. */
   async semanticSearch(
     query: string,
     filters: RetrievalFilters = {},
     limit = DEFAULT_LIMIT,
-    threshold = DEFAULT_THRESHOLD
+    minCosine = DEFAULT_SEARCH_MIN_COSINE
   ): Promise<RetrievalResult[]> {
-    return this.semanticSvc.search(query, filters, limit, threshold);
+    return this.semanticSvc.search(query, filters, limit, minCosine);
   }
 
+  /** Engrams matching `filters`, newest first. No relevance ranking. */
   structuredOnly(filters: RetrievalFilters, limit = DEFAULT_LIMIT, offset = 0): RetrievalResult[] {
     return this.structuredSvc.query(filters, limit, offset);
   }
@@ -125,12 +122,13 @@ export class HybridSearchService {
   /**
    * Find engrams similar to the given engram by its existing embedding vector.
    * No embedding call — reads the vector directly from `embeddings_vec`.
+   * `score` on each hit is its cosine similarity to that engram.
    */
   async similar(
     engramId: string,
     filters: RetrievalFilters = {},
     limit = DEFAULT_LIMIT,
-    threshold = DEFAULT_THRESHOLD
+    minCosine = DEFAULT_SIMILAR_MIN_COSINE
   ): Promise<RetrievalResult[]> {
     const vector = this.semanticSvc.getVectorForEngram(engramId);
     if (!vector) {
@@ -141,7 +139,7 @@ export class HybridSearchService {
       sourceIdToExclude: engramId,
       filters,
       limit,
-      threshold,
+      minCosine,
     });
   }
 }

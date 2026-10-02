@@ -187,7 +187,7 @@ export class ConversationEngine {
         query,
         filters,
         this.config.maxRetrievalResults,
-        this.config.relevanceThreshold
+        this.config.minCosine
       );
     } catch (err) {
       console.warn(

@@ -28,7 +28,7 @@ import type { GenerationLlm } from './llm.js';
 import type { GenerationRequest, GenerationResult, PreviewResult } from './types.js';
 
 const EMIT_TOKEN_BUDGET = 8192;
-const EMIT_RELEVANCE_THRESHOLD = 0.2;
+const EMIT_MIN_COSINE = 0.35;
 const EMIT_MAX_SOURCES = 20;
 
 /** Retrieval deps + the injected LLM port the generation pipeline consumes. */
@@ -74,7 +74,7 @@ export class GenerationService {
     const query = request.query ?? '';
     const includeSecret = request.includeSecret ?? false;
     const filters = buildFiltersFromRequest(request);
-    const results = await this.retrieve(query, filters);
+    const results = await this.retrieve(request.query, filters);
     const filtered = filterByScope(results, request.audienceScope, includeSecret);
 
     const insufficientCheck = checkReportSources(filtered);
@@ -100,7 +100,7 @@ export class GenerationService {
     const includeSecret = request.includeSecret ?? false;
     const query = request.query ?? 'summary of all content';
     const filters = buildFiltersFromRequest(request);
-    const results = await this.retrieve(query, filters);
+    const results = await this.retrieve(request.query, filters);
     const filtered = filterByScope(results, request.audienceScope, includeSecret);
     const audienceScope = request.audienceScope ?? computeDefaultAudienceScope(filtered);
     const effectiveDateRange = request.dateRange ?? { from: 'unknown', to: 'unknown' };
@@ -137,7 +137,7 @@ export class GenerationService {
     const includeSecret = request.includeSecret ?? false;
     const query = request.query ?? 'timeline of all events';
     const filters = buildFiltersFromRequest(request);
-    const results = await this.retrieve(query, filters);
+    const results = await this.retrieve(request.query, filters);
     const filtered = filterByScope(results, request.audienceScope, includeSecret);
     const audienceScope = request.audienceScope ?? computeDefaultAudienceScope(filtered);
 
@@ -165,7 +165,7 @@ export class GenerationService {
     const query = request.query ?? 'preview';
     const includeSecret = request.includeSecret ?? false;
     const filters = buildFiltersFromRequest(request);
-    const results = await this.retrieve(query, filters);
+    const results = await this.retrieve(request.query, filters);
     const filtered = filterByScope(results, request.audienceScope, includeSecret);
     const sources = toSourceCitations(filtered);
 
@@ -183,8 +183,16 @@ export class GenerationService {
     return { sources, outline };
   }
 
-  /** Run hybrid search against the in-pillar retrieval slice. */
-  private async retrieve(query: string, filters: RetrievalFilters): Promise<RetrievalResult[]> {
-    return this.search.hybrid(query, filters, EMIT_MAX_SOURCES, EMIT_RELEVANCE_THRESHOLD);
+  /**
+   * A request with a topic is ranked against it. A request without one (a
+   * digest of a date range, a timeline of a scope) has nothing to rank against,
+   * so its sources are the engrams the filters select, newest first.
+   */
+  private async retrieve(
+    query: string | undefined,
+    filters: RetrievalFilters
+  ): Promise<RetrievalResult[]> {
+    if (query === undefined) return this.search.structuredOnly(filters, EMIT_MAX_SOURCES);
+    return this.search.hybrid(query, filters, EMIT_MAX_SOURCES, EMIT_MIN_COSINE);
   }
 }

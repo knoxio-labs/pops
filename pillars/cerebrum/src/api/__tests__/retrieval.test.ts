@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
 import { makeCerebrumApiDeps, makeClient, makeEmptyPeerClients } from './test-utils.js';
+import { anchorEmbeddingClient, seedEngramVector, unitVectorAtCosine } from './vector-fixtures.js';
 
 import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
 import type { PeerClients } from '../modules/retrieval/peer-clients.js';
@@ -170,7 +171,7 @@ describe('GET /retrieval/stats', () => {
   });
 });
 
-describe('POST /retrieval/search — structured (BM25)', () => {
+describe('POST /retrieval/search — structured', () => {
   it('filters engrams by scope and returns a total', async () => {
     seedEngram(cerebrumDb, {
       id: 'eng_20260101_0000_alpha',
@@ -306,8 +307,60 @@ describe('POST /retrieval/search — semantic + cross-pillar enrichment', () => 
   });
 });
 
-describe('POST /retrieval/search — hybrid degradation', () => {
-  it('falls back to BM25-only when the db has no vec support', async () => {
+describe('POST /retrieval/search — hybrid', () => {
+  it('keeps a hit at cosine 0.5 and drops one at 0.2 on the default threshold', async () => {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_related', title: 'Related' });
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_unrelated', title: 'Unrelated' });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_related', unitVectorAtCosine(0.5, 1));
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_unrelated', unitVectorAtCosine(0.2, 2));
+
+    const res = await client({ embeddingClient: anchorEmbeddingClient() }).retrieval.search({
+      mode: 'hybrid',
+      query: 'anything',
+    });
+
+    expect(res.results.map((r) => r.sourceId)).toEqual(['eng_20260101_0000_related']);
+    expect(res.results[0]?.matchType).toBe('semantic');
+  });
+
+  it('returns nothing, not the newest engrams, when no engram is semantically close', async () => {
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260101_0000_newest',
+      title: 'Newest',
+      scopes: ['work.projects.alpha'],
+      modifiedAt: '2026-09-01T00:00:00.000Z',
+    });
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260101_0000_orthogonal',
+      title: 'Orthogonal',
+      scopes: ['work.projects.alpha'],
+    });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_orthogonal', unitVectorAtCosine(0, 1));
+
+    const res = await client({ embeddingClient: anchorEmbeddingClient() }).retrieval.search({
+      mode: 'hybrid',
+      query: 'anything',
+      filters: { scopes: ['work.projects.alpha'] },
+    });
+
+    expect(res.results).toEqual([]);
+    expect(res.meta.total).toBe(0);
+  });
+
+  it('returns nothing when no embedding client is configured', async () => {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_alpha', title: 'Alpha', tags: ['x'] });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_alpha', unitVectorAtCosine(1, 1));
+
+    const res = await client().retrieval.search({
+      mode: 'hybrid',
+      query: 'alpha',
+      filters: { tags: ['x'] },
+    });
+
+    expect(res.results).toEqual([]);
+  });
+
+  it('returns nothing, without failing, when the db has no vec support', async () => {
     const noVecDir = mkdtempSync(join(tmpdir(), 'cerebrum-api-retrieval-novec-'));
     const noVecDb = openCerebrumDb(join(noVecDir, 'cerebrum.db'), { loadVec: false });
     expect(noVecDb.vecAvailable).toBe(false);
@@ -319,17 +372,92 @@ describe('POST /retrieval/search — hybrid degradation', () => {
     });
 
     try {
-      // Hybrid with an embedding client but no vec → semantic leg throws
-      // vec-unavailable, hybrid swallows it, BM25 leg still returns the engram.
       const res = await client({
         db: noVecDb,
-        embeddingClient: fakeEmbeddingClient(0),
+        embeddingClient: anchorEmbeddingClient(),
       }).retrieval.search({ mode: 'hybrid', query: 'alpha', filters: { tags: ['x'] } });
-      expect(res.results.map((r) => r.sourceId)).toContain('eng_20260101_0000_alpha');
+      expect(res.results).toEqual([]);
     } finally {
       noVecDb.raw.close();
       rmSync(noVecDir, { recursive: true, force: true });
     }
+  });
+
+  it('applies the threshold as a minimum cosine', async () => {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_close', title: 'Close' });
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_closer', title: 'Closer' });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_close', unitVectorAtCosine(0.5, 1));
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_closer', unitVectorAtCosine(0.8, 2));
+    const c = client({ embeddingClient: anchorEmbeddingClient() });
+
+    const strict = await c.retrieval.search({ mode: 'hybrid', query: 'q', threshold: 0.6 });
+    expect(strict.results.map((r) => r.sourceId)).toEqual(['eng_20260101_0000_closer']);
+
+    const loose = await c.retrieval.search({ mode: 'hybrid', query: 'q', threshold: 0.4 });
+    expect(loose.results.map((r) => r.sourceId)).toEqual([
+      'eng_20260101_0000_closer',
+      'eng_20260101_0000_close',
+    ]);
+  });
+
+  it('rejects a threshold outside the cosine range a caller may ask for', async () => {
+    await expect(
+      client().retrieval.search({ mode: 'hybrid', query: 'q', threshold: 1.2 })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('constrains semantic candidates by every filter, not only scope and type', async () => {
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260101_0000_tagged',
+      title: 'Tagged',
+      tags: ['keep'],
+      modifiedAt: '2026-03-01T00:00:00.000Z',
+    });
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260101_0000_untagged',
+      title: 'Untagged',
+      modifiedAt: '2026-03-01T00:00:00.000Z',
+    });
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260101_0000_old',
+      title: 'Old',
+      tags: ['keep'],
+      modifiedAt: '2025-01-01T00:00:00.000Z',
+    });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_tagged', unitVectorAtCosine(0.9, 1));
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_untagged', unitVectorAtCosine(0.9, 2));
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_old', unitVectorAtCosine(0.9, 3));
+    const c = client({ embeddingClient: anchorEmbeddingClient() });
+
+    const byTag = await c.retrieval.search({
+      mode: 'hybrid',
+      query: 'q',
+      filters: { tags: ['keep'], dateRange: { from: '2026-01-01T00:00:00.000Z' } },
+    });
+    expect(byTag.results.map((r) => r.sourceId)).toEqual(['eng_20260101_0000_tagged']);
+
+    const semanticOnly = await c.retrieval.search({
+      mode: 'semantic',
+      query: 'q',
+      filters: { tags: ['keep'], dateRange: { from: '2026-01-01T00:00:00.000Z' } },
+    });
+    expect(semanticOnly.results.map((r) => r.sourceId)).toEqual(['eng_20260101_0000_tagged']);
+  });
+});
+
+describe('POST /retrieval/search — semantic score', () => {
+  it('reports cosine similarity as the score and keeps the L2 distance beside it', async () => {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_half', title: 'Half' });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_half', unitVectorAtCosine(0.5, 1));
+
+    const res = await client({ embeddingClient: anchorEmbeddingClient() }).retrieval.search({
+      mode: 'semantic',
+      query: 'q',
+    });
+
+    expect(res.results).toHaveLength(1);
+    expect(res.results[0]?.score).toBeCloseTo(0.5, 5);
+    expect(res.results[0]?.distance).toBeCloseTo(1, 5);
   });
 });
 
@@ -354,6 +482,29 @@ describe('POST /retrieval/similar', () => {
     expect(ids).not.toContain('eng_20260101_0000_self');
   });
 
+  it('keeps a neighbour at cosine 0.9 and drops one at 0.5 on the default threshold', async () => {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_self', title: 'Self' });
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_near', title: 'Near' });
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_far', title: 'Far' });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_self', unitVectorAtCosine(1, 1));
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_near', unitVectorAtCosine(0.9, 2));
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_far', unitVectorAtCosine(0.5, 3));
+    const c = client();
+
+    const byDefault = await c.retrieval.similar({ engramId: 'eng_20260101_0000_self' });
+    expect(byDefault.results.map((r) => r.sourceId)).toEqual(['eng_20260101_0000_near']);
+    expect(byDefault.results[0]?.score).toBeCloseTo(0.9, 5);
+
+    const loose = await c.retrieval.similar({
+      engramId: 'eng_20260101_0000_self',
+      threshold: 0.4,
+    });
+    expect(loose.results.map((r) => r.sourceId)).toEqual([
+      'eng_20260101_0000_near',
+      'eng_20260101_0000_far',
+    ]);
+  });
+
   it('returns an empty list for an engram with no vector', async () => {
     const res = await client().retrieval.similar({ engramId: 'eng_20260101_0000_missing' });
     expect(res.results).toEqual([]);
@@ -369,8 +520,9 @@ describe('POST /retrieval/context', () => {
       tags: ['ctx'],
       preview: 'The alpha engram body for context.',
     });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_alpha', unitVectorAtCosine(0.5, 1));
 
-    const res = await client().retrieval.context({
+    const res = await client({ embeddingClient: anchorEmbeddingClient() }).retrieval.context({
       query: 'alpha',
       filters: { tags: ['ctx'] },
       tokenBudget: 2048,
@@ -380,6 +532,23 @@ describe('POST /retrieval/context', () => {
     expect(res.sources.map((s) => s.sourceId)).toContain('eng_20260101_0000_alpha');
     expect(res.truncated).toBe(false);
     expect(res.tokenEstimate).toBeGreaterThan(0);
+  });
+
+  it('assembles no sources when nothing is semantically close to the query', async () => {
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260101_0000_alpha',
+      title: 'Alpha',
+      tags: ['ctx'],
+    });
+    seedEngramVector(cerebrumDb, 'eng_20260101_0000_alpha', unitVectorAtCosine(0.1, 1));
+
+    const res = await client({ embeddingClient: anchorEmbeddingClient() }).retrieval.context({
+      query: 'alpha',
+      filters: { tags: ['ctx'] },
+    });
+
+    expect(res.sources).toEqual([]);
+    expect(res.context).not.toContain('Alpha');
   });
 
   it('400s on an empty query', async () => {

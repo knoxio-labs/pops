@@ -51,7 +51,7 @@ export const egoManifest: SettingsManifest = {
           label: 'Relevance Threshold',
           type: 'number',
           default: '0.3',
-          description: 'Minimum relevance score for retrieval results (0–1).',
+          description: 'Minimum cosine similarity for retrieval results (0–1).',
           validation: { min: 0, max: 1 },
         },
       ],
