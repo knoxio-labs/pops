@@ -6,14 +6,21 @@
  * with the right operation/domain/provider and that a failure still reports
  * before rethrowing.
  */
+import { BadRequestError } from '@anthropic-ai/sdk';
+import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createMock = vi.hoisted(() => vi.fn());
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: class {
-    messages = { create: createMock };
-  },
-}));
+vi.mock('@anthropic-ai/sdk', async () => {
+  const actual = await vi.importActual<typeof import('@anthropic-ai/sdk')>('@anthropic-ai/sdk');
+  return {
+    BadRequestError: actual.BadRequestError,
+    default: class {
+      static BadRequestError = actual.BadRequestError;
+      messages = { create: createMock };
+    },
+  };
+});
 
 import {
   ANTHROPIC_PROVIDER,
@@ -31,8 +38,14 @@ const MODEL_VAR = 'PURCHASES_RECEIPT_MODEL';
 
 const PRICING: PricingEntry = { input: 1, output: 5 };
 
-function anthropicMessage(text: string, inputTokens = 100, outputTokens = 20) {
+function anthropicMessage(
+  text: string,
+  inputTokens = 100,
+  outputTokens = 20,
+  stopReason: string = 'end_turn'
+) {
   return {
+    stop_reason: stopReason,
     content: [{ type: 'text', text }],
     usage: { input_tokens: inputTokens, output_tokens: outputTokens },
   };
@@ -222,5 +235,126 @@ describe('read', () => {
 
     const record = await captured.nextReport();
     expect(record.model).toBe('claude-receipt-override');
+  });
+
+  it('asks for the 5.5 request shape: 16k tokens, medium effort, none of the rejected parameters', async () => {
+    captureReports();
+    createMock.mockResolvedValue(anthropicMessage('x'));
+
+    await createAnthropicVision()?.read([{ mediaType: 'image/png', dataBase64: 'ZmFrZQ==' }]);
+
+    const [request] = createMock.mock.calls[0] as [Record<string, unknown>];
+    expect(request['model']).toBe('claude-sonnet-5-5');
+    expect(request['max_tokens']).toBe(16_000);
+    expect(request['output_config']).toEqual({ effort: 'medium' });
+    for (const rejected of ['temperature', 'thinking', 'budget_tokens', 'tool_choice', 'effort']) {
+      expect(request).not.toHaveProperty(rejected);
+    }
+  });
+
+  it('joins every text block rather than reading only the first', async () => {
+    captureReports();
+    createMock.mockResolvedValue({
+      stop_reason: 'end_turn',
+      content: [
+        { type: 'thinking', thinking: 'hmm', signature: 's' },
+        { type: 'text', text: '{"a":' },
+        { type: 'text', text: '1}' },
+      ],
+      usage: { input_tokens: 1, output_tokens: 1 },
+    });
+
+    const result = await createAnthropicVision()?.read([
+      { mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' },
+    ]);
+    expect(result).toBe('{"a":1}');
+  });
+
+  it('reports a max_tokens stop as a stop, not as the half-written text', async () => {
+    const captured = captureReports();
+    createMock.mockResolvedValue(
+      anthropicMessage('{"merchantName": "Bun', 10, 16_000, 'max_tokens')
+    );
+
+    const result = await createAnthropicVision()?.read([
+      { mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' },
+    ]);
+
+    expect(result).toMatchObject({ stopped: 'max_tokens' });
+    const record = await captured.nextReport();
+    expect(record.status).toBe('success');
+    expect(record.outputTokens).toBe(16_000);
+  });
+
+  it('reports a refusal as a stop even when the message carries text', async () => {
+    captureReports();
+    createMock.mockResolvedValue(anthropicMessage('I cannot help with that', 10, 5, 'refusal'));
+
+    const result = await createAnthropicVision()?.read([
+      { mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' },
+    ]);
+    expect(result).toMatchObject({ stopped: 'refusal' });
+  });
+
+  it('reports an API 400 as a rejection after recording the error', async () => {
+    const captured = captureReports();
+    createMock.mockRejectedValue(
+      new BadRequestError(
+        400,
+        { type: 'error', error: { type: 'invalid_request_error', message: 'image too large' } },
+        'image too large',
+        new Headers()
+      )
+    );
+
+    const result = await createAnthropicVision()?.read([
+      { mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' },
+    ]);
+
+    expect(result).toMatchObject({ stopped: 'rejected' });
+    const record = await captured.nextReport();
+    expect(record.status).toBe('error');
+  });
+
+  it('rethrows a 400 about the account, which says nothing about the upload', async () => {
+    const captured = captureReports();
+    const message = 'Your credit balance is too low to access the API.';
+    createMock.mockRejectedValue(
+      new BadRequestError(
+        400,
+        { type: 'error', error: { type: 'invalid_request_error', message } },
+        message,
+        new Headers()
+      )
+    );
+
+    await expect(
+      createAnthropicVision()?.read([{ mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' }])
+    ).rejects.toBeInstanceOf(BadRequestError);
+    const record = await captured.nextReport();
+    expect(record.status).toBe('error');
+  });
+
+  it('sends the normalised copy of an image, upright and inside the size limits', async () => {
+    captureReports();
+    createMock.mockResolvedValue(anthropicMessage('x'));
+    const wide = await sharp({
+      create: { width: 3000, height: 1000, channels: 3, background: '#888' },
+    })
+      .jpeg()
+      .withMetadata({ orientation: 6 })
+      .toBuffer();
+
+    await createAnthropicVision()?.read([
+      { mediaType: 'image/jpeg', dataBase64: wide.toString('base64') },
+    ]);
+
+    const [request] = createMock.mock.calls[0] as [
+      { messages: { content: { source: { data: string; media_type: string } }[] }[] },
+    ];
+    const sent = request.messages[0]!.content[0]!.source;
+    expect(sent.media_type).toBe('image/jpeg');
+    const meta = await sharp(Buffer.from(sent.data, 'base64')).metadata();
+    expect(meta.height).toBeGreaterThan(meta.width ?? 0);
   });
 });

@@ -14,6 +14,7 @@ export const egoAppContextSchema = z.object({
   route: z.string().optional(),
   entityId: z.string().optional(),
   entityType: z.string().optional(),
+  entityTitle: z.string().optional(),
 });
 export type EgoAppContextWire = z.infer<typeof egoAppContextSchema>;
 

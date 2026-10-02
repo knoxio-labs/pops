@@ -3315,6 +3315,8 @@ export interface operations {
               }
             | {
                 /** @enum {string} */
+                cause?: 'truncated' | 'refused' | 'rejected';
+                /** @enum {string} */
                 kind: 'unreadable';
                 reason: string;
                 receiptUris: string[];
@@ -3848,6 +3850,8 @@ export interface operations {
                 reconciled: boolean;
               }
             | {
+                /** @enum {string} */
+                cause?: 'truncated' | 'refused' | 'rejected';
                 /** @enum {string} */
                 kind: 'unreadable';
                 reason: string;

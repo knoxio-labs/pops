@@ -2416,6 +2416,7 @@ export type ReceiptUploadResponses = {
         receiptUris: Array<string>;
       }
     | {
+        cause?: 'truncated' | 'refused' | 'rejected';
         kind: 'unreadable';
         reason: string;
         receiptUris: Array<string>;
@@ -2884,6 +2885,7 @@ export type ReceiptExtractResponses = {
         reconciled: boolean;
       }
     | {
+        cause?: 'truncated' | 'refused' | 'rejected';
         kind: 'unreadable';
         reason: string;
         receiptUris: Array<string>;

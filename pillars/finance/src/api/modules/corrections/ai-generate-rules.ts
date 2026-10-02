@@ -7,19 +7,16 @@
  * the per-file line cap — the two share `AcceptedCorrectionExample`'s few-shot
  * formatting but are otherwise independent prompts.
  *
- * Model and max-tokens are resolved through the shared settings > env var >
+ * The model is resolved through the shared settings > env var >
  * compiled-default ladder (POPS-2589), the same one `analyzeCorrection` and
- * `interpretRejectionFeedback` use — `finance.ruleGen.model`/
- * `finance.ruleGen.maxTokens`, `FINANCE_CORRECTIONS_AI_MODEL`, then this
- * call's own compiled cap.
+ * `interpretRejectionFeedback` use — `finance.ruleGen.model`,
+ * `FINANCE_CORRECTIONS_AI_MODEL`, then the default. The token cap is this
+ * call's own and ignores `finance.ruleGen.maxTokens`.
  */
-import {
-  RULE_GEN_MAX_TOKENS_KEY,
-  RULE_GEN_MODEL_KEY,
-} from '../../../contract/settings/ai-settings-keys.js';
+import { RULE_GEN_MODEL_KEY } from '../../../contract/settings/ai-settings-keys.js';
 import { accountsService, type FinanceDb, tagVocabularyService } from '../../../db/index.js';
 import { extractJsonFromReply } from '../ai-json.js';
-import { resolveAiMaxTokens, resolveAiString } from '../ai-settings-resolver.js';
+import { resolveAiModel } from '../ai-settings-resolver.js';
 import {
   closedFacetFields,
   closedFacetOptions,
@@ -34,8 +31,8 @@ import {
 import { CORRECTIONS_DEFAULT_MODEL, getClaudeCompleter } from './ai-runtime.js';
 import { type ProposedRule } from './ai-types.js';
 
-/** This call's own natural cap (matches the manifest's `finance.ruleGen.maxTokens` default of 2000) — a batch of rule proposals is the largest reply this cluster asks for. */
-const GENERATE_RULES_MAX_TOKENS_DEFAULT = 2000;
+/** Fixed cap: a batch of rule proposals is the largest reply this cluster asks for, so `finance.ruleGen.maxTokens` (sized for the short analyze reply) does not apply. */
+const GENERATE_RULES_MAX_TOKENS = 2000;
 
 export interface GenerateRulesTransaction {
   description: string;
@@ -201,18 +198,13 @@ export async function generateRules(
       loadRecentAcceptedCorrections(db),
       tagVocabularyService.listVocabularyDescriptions(db)
     ),
-    model: resolveAiString(
+    model: resolveAiModel(
       db,
       RULE_GEN_MODEL_KEY,
       'FINANCE_CORRECTIONS_AI_MODEL',
       CORRECTIONS_DEFAULT_MODEL
     ),
-    maxTokens: resolveAiMaxTokens(
-      db,
-      RULE_GEN_MAX_TOKENS_KEY,
-      undefined,
-      GENERATE_RULES_MAX_TOKENS_DEFAULT
-    ),
+    maxTokens: GENERATE_RULES_MAX_TOKENS,
     operation: 'generate-rules',
   });
   if (!text) return [];

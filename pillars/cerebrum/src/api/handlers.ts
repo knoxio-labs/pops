@@ -50,15 +50,14 @@ export interface CerebrumApiDeps {
    */
   ingestLlm?: IngestLlm;
   /**
-   * LLM port driving ego chat + streaming + history summarisation. Optional —
-   * defaults to an Anthropic-backed client (`ANTHROPIC_API_KEY`,
-   * `claude-sonnet-4-6` / `CEREBRUM_EGO_MODEL`). Tests inject an offline fake.
+   * LLM port driving ego chat + streaming. Optional — defaults to an
+   * Anthropic-backed client (`ANTHROPIC_API_KEY`, `claude-sonnet-5-5` /
+   * `CEREBRUM_EGO_MODEL`). Tests inject an offline fake.
    */
   egoLlm?: EgoLlm;
   /**
-   * Contradiction detector for the auditor worker. Optional — defaults to an
-   * Anthropic-backed haiku client. Tests inject an offline fake (or omit it to
-   * get the noop path).
+   * Contradiction detector for the auditor worker. Optional — omitted means the
+   * auditor runs no contradiction pass. Tests inject an offline fake.
    */
   auditorContradictionDetector?: ContradictionDetector;
   /**
@@ -106,12 +105,12 @@ export interface CerebrumApiDeps {
   /**
    * LLM port driving the `emit` document-generation pipeline. Optional —
    * defaults to an Anthropic-backed client (`ANTHROPIC_API_KEY`,
-   * `claude-sonnet-4-6` / `CEREBRUM_EMIT_MODEL`). Tests inject an offline fake.
+   * `claude-sonnet-5-5` / `CEREBRUM_EMIT_MODEL`). Tests inject an offline fake.
    */
   emitLlm?: GenerationLlm;
   /**
    * One-shot LLM port driving `query.ask`. Optional — defaults to an
-   * Anthropic-backed client (`ANTHROPIC_API_KEY`, `claude-sonnet-4-6` /
+   * Anthropic-backed client (`ANTHROPIC_API_KEY`, `claude-sonnet-5-5` /
    * `CEREBRUM_QUERY_MODEL`). Tests inject an offline fake.
    */
   queryLlm?: QueryLlm;

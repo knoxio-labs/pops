@@ -12,7 +12,7 @@ import { findPurchaseBySourceOrderId } from '../../db/index.js';
 import { firstPhotoCapture, resolveCapture } from '../../ingest/receipt/capture.js';
 import { shapeReceiptDraft } from '../../ingest/receipt/draft.js';
 import { RECEIPT_SOURCE_ID } from '../../ingest/receipt/purchase.js';
-import { readReceipt } from '../../ingest/receipt/read-receipt.js';
+import { causeOf, isNoReading, readReceipt } from '../../ingest/receipt/read-receipt.js';
 import { receiptKeyFromUris } from '../../ingest/receipt/store.js';
 import {
   createMerchantResolver,
@@ -87,11 +87,12 @@ export function makeReceiptDraftHandlers(
 
       const outcome = await readReceipt(vision, parts);
 
-      if (outcome.kind === 'unreadable') {
+      if (isNoReading(outcome)) {
         return okExtract({
           kind: 'unreadable',
           receiptUris: receiptUris(stored),
           reason: outcome.reason,
+          ...causeOf(outcome),
         });
       }
 

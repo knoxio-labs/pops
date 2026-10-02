@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { aiProviders, openAiDb, type OpenedAiDb } from '../../db/index.js';
+import { openAiDb, type OpenedAiDb } from '../../db/index.js';
 import { createAiApiApp } from '../app.js';
 import { makeClient } from './test-utils.js';
 
@@ -25,8 +25,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.unstubAllEnvs();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   aiDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
 });
@@ -87,26 +87,6 @@ describe('ai-providers — upsert / list / get', () => {
 });
 
 describe('ai-providers — healthCheck', () => {
-  it.each([
-    { id: 'claude', type: 'cloud' },
-    { id: 'anthropic', type: 'anthropic' },
-  ])('checks the Anthropic API for the $id provider row', async ({ id, type }) => {
-    const now = new Date().toISOString();
-    aiDb.db
-      .insert(aiProviders)
-      .values({ id, name: 'Anthropic', type, createdAt: now, updatedAt: now })
-      .run();
-    vi.stubEnv('ANTHROPIC_API_KEY', 'test-placeholder');
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(null, { status: 200 }));
-
-    const result = await client().aiProviders.healthCheck(id);
-
-    expect(result.status).toBe('active');
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe('https://api.anthropic.com/v1/models');
-  });
-
   it('records active status when the provider responds ok', async () => {
     await client().aiProviders.upsert({
       id: 'ollama',
@@ -140,6 +120,26 @@ describe('ai-providers — healthCheck', () => {
 
     const provider = await client().aiProviders.get('ollama');
     expect(provider?.status).toBe('error');
+  });
+
+  it('probes the Anthropic models endpoint for an anthropic provider id', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'test-key');
+    await client().aiProviders.upsert({ id: 'anthropic', name: 'Anthropic', type: 'cloud' });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 200 }));
+
+    const result = await client().aiProviders.healthCheck('anthropic');
+    expect(result.status).toBe('active');
+    expect(result.error).toBeUndefined();
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toBe('https://api.anthropic.com/v1/models');
+  });
+
+  it('still rejects a cloud provider with an unrecognised id', async () => {
+    await client().aiProviders.upsert({ id: 'mystery', name: 'Mystery', type: 'cloud' });
+    const result = await client().aiProviders.healthCheck('mystery');
+    expect(result.status).toBe('error');
+    expect(result.error).toBe('Unknown provider type: cloud');
   });
 
   it('returns error for an unknown provider without touching the network', async () => {

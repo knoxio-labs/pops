@@ -24,6 +24,7 @@ import {
   AI_CATEGORIZER_MAX_TOKENS_KEY,
   AI_CATEGORIZER_MODEL_KEY,
   AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
+  FINANCE_AI_MODEL_OPTIONS,
   RULE_GEN_MAX_TOKENS_KEY,
   RULE_GEN_MODEL_KEY,
 } from '../../contract/settings/ai-settings-keys.js';
@@ -86,6 +87,24 @@ export function resolveAiString(
 ): string {
   const fromEnv = envVar !== undefined ? process.env[envVar] : undefined;
   return storedOverride(db, settingKey) ?? fromEnv ?? fallback;
+}
+
+/**
+ * {@link resolveAiString} for a model setting. A stored id outside
+ * `FINANCE_AI_MODEL_OPTIONS` (a free-text value saved before the setting became
+ * a select) is ignored, because the settings form cannot display it and a
+ * model the request builder does not know can answer every call with a 400.
+ */
+export function resolveAiModel(
+  db: FinanceDb,
+  settingKey: string,
+  envVar: string | undefined,
+  fallback: string
+): string {
+  const stored = storedOverride(db, settingKey);
+  const offered = FINANCE_AI_MODEL_OPTIONS.some((option) => option.value === stored);
+  const fromEnv = envVar !== undefined ? process.env[envVar] : undefined;
+  return (offered ? stored : undefined) ?? fromEnv ?? fallback;
 }
 
 /**

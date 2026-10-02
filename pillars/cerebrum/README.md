@@ -29,8 +29,9 @@ polyglot + FE consumers. The contract (`src/contract/rest.ts`, zod) is the
 single source of truth; OpenAPI and api-types are generated projections,
 drift-checked in CI.
 
-`ego` is co-located here (it has no contract of its own); its settings nest
-under cerebrum, so the pillar exports both `cerebrumManifest` and `egoManifest`.
+`ego` is co-located here (it has no contract of its own), so the pillar exports
+both `cerebrumManifest` and `egoManifest`. Ego declares no settings: its model
+is `CEREBRUM_EGO_MODEL` and its tuning is constants in `src/api/modules/ego`.
 
 All REST failures use the ADR-054 envelope from `@pops/types`:
 `{ code, message, requestId, retryable, details? }`. Codes are dotted lowercase

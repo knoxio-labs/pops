@@ -190,6 +190,14 @@ export const ReceiptOutcomeSchema = z.discriminatedUnion('kind', [
     kind: z.literal('unreadable'),
     receiptUris: z.array(PopsUriSchema).min(1),
     reason: z.string(),
+    /**
+     * Absent when the model answered and nothing usable could be made of it.
+     * Present when the call itself ended without an answer: `truncated` (cut
+     * off at the token ceiling), `refused` (the model declined) or
+     * `rejected` (the API refused the request, so the same upload fails
+     * again). A client that ignores it still sees an unreadable receipt.
+     */
+    cause: z.enum(['truncated', 'refused', 'rejected']).optional(),
   }),
 ]);
 
@@ -245,6 +253,14 @@ export const ExtractReceiptOutcomeSchema = z.discriminatedUnion('kind', [
     kind: z.literal('unreadable'),
     receiptUris: z.array(PopsUriSchema).min(1),
     reason: z.string(),
+    /**
+     * Absent when the model answered and nothing usable could be made of it.
+     * Present when the call itself ended without an answer: `truncated` (cut
+     * off at the token ceiling), `refused` (the model declined) or
+     * `rejected` (the API refused the request, so the same upload fails
+     * again). A client that ignores it still sees an unreadable receipt.
+     */
+    cause: z.enum(['truncated', 'refused', 'rejected']).optional(),
   }),
 ]);
 

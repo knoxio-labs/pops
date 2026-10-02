@@ -3,10 +3,10 @@
  * served via the shared `@pops/pillar-settings` contract factory
  * (ADR-037).
  *
- * Cerebrum owns its `cerebrum.*` and `ego.*` keys in its own DB. The `:key` enum
- * is derived from cerebrum's OWN manifests
- * (`deriveKeySet([cerebrumManifest, egoManifest])`), NOT the central settings
- * enum — the manifests are the single key authority for this pillar. The factory
+ * Cerebrum owns its `cerebrum.*` keys in its own DB. The `:key` enum is derived
+ * from cerebrum's OWN manifest (`deriveKeySet([cerebrumManifest])`), NOT the
+ * central settings enum — the manifest is the single key authority for this
+ * pillar. The factory
  * mounts the byte-identical federated surface every pillar serves
  * (`list`/`get`/`getMany`/`set`/`setMany`/`resetKey`/`reset`/`ensure`).
  *

@@ -14,6 +14,9 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { setBulk } from '@pops/pillar-settings/service';
+
+import { RULE_GEN_MAX_TOKENS_KEY } from '../../../../contract/settings/ai-settings-keys.js';
 import {
   openFinanceDb,
   transactionCorrections,
@@ -28,7 +31,7 @@ import {
   type AcceptedCorrectionExample,
 } from '../ai-analyze.js';
 import { buildGeneratePrompt } from '../ai-generate-rules.js';
-import { __setClaudeCompleterForTests } from '../ai-runtime.js';
+import { __setClaudeCompleterForTests, type ClaudeRequest } from '../ai-runtime.js';
 
 let tmpDir: string;
 let opened: OpenedFinanceDb;
@@ -225,5 +228,31 @@ describe('analyzeCorrection — pattern verification', () => {
     });
 
     expect(result?.pattern).toBe('woolworths');
+  });
+});
+
+describe('analyzeCorrection — finance.ruleGen.maxTokens is a ceiling', () => {
+  afterEach(() => {
+    __setClaudeCompleterForTests(null);
+  });
+
+  async function capturedMaxTokens(saved: string): Promise<number | undefined> {
+    let captured: ClaudeRequest | null = null;
+    __setClaudeCompleterForTests((req) => {
+      captured = req;
+      return Promise.resolve(null);
+    });
+    setBulk(db, [{ key: RULE_GEN_MAX_TOKENS_KEY, value: saved }]);
+    invalidateAiSettingsCache();
+    await analyzeCorrection(db, { description: 'X', entityName: 'Y', amount: -1 });
+    return (captured as ClaudeRequest | null)?.maxTokens;
+  }
+
+  it('lowers the cap below the compiled 200', async () => {
+    expect(await capturedMaxTokens('100')).toBe(100);
+  });
+
+  it('does not raise the cap above the compiled 200', async () => {
+    expect(await capturedMaxTokens('1500')).toBe(200);
   });
 });
