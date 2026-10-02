@@ -21,7 +21,6 @@ import { getDefaultNudgeThresholds } from '../modules/nudges/types.js';
 import { AnthropicQueryLlm, AnthropicQueryStreamLlm } from '../modules/query/llm.js';
 import { HybridSearchService } from '../modules/retrieval/hybrid-search.js';
 import { getEmbeddingsQueue } from '../modules/thalamus/queue.js';
-import { AnthropicContradictionDetector } from '../modules/workers/llm.js';
 import { makeDebriefHandlers } from './debrief-handlers.js';
 import { makeEgoHandlers } from './ego-handlers.js';
 import { makeEmbeddingsHandlers } from './embeddings-handlers.js';
@@ -113,8 +112,7 @@ export function makeCerebrumRestHandlers(
       ...base,
       engramRoot: deps.engramRoot,
       templates: deps.templateRegistry,
-      contradictionDetector:
-        deps.auditorContradictionDetector ?? new AnthropicContradictionDetector(),
+      contradictionDetector: deps.auditorContradictionDetector,
     }),
     embeddings: makeEmbeddingsHandlers(db),
     debrief: makeDebriefHandlers(db),

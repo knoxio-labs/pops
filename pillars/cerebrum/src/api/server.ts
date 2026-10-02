@@ -39,7 +39,6 @@ import { createPeerClients } from './modules/retrieval/peer-clients.js';
 import { TemplateRegistry } from './modules/templates/registry.js';
 import { startThalamusWatcher, stopThalamusWatcher } from './modules/thalamus/instance.js';
 import { closeCerebrumEmbeddingsQueue, getEmbeddingsQueue } from './modules/thalamus/queue.js';
-import { AnthropicContradictionDetector } from './modules/workers/llm.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -85,7 +84,6 @@ const app = createCerebrumApiApp({
   reflexService,
   ingestLlm: new AnthropicIngestLlm(),
   egoLlm: new AnthropicEgoLlm(),
-  auditorContradictionDetector: new AnthropicContradictionDetector(),
   curationQueue: getCurationQueue,
   embeddingsQueue: getEmbeddingsQueue,
   version,
