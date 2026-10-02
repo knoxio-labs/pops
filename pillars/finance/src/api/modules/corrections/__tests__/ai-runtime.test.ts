@@ -131,3 +131,72 @@ describe('defaultCompleter — non-rate-limit API failure', () => {
     ).rejects.toMatchObject({ name: 'ClaudeCompletionError', code: 'API_ERROR' });
   });
 });
+
+describe('defaultCompleter — model-specific request shape', () => {
+  const request = { prompt: 'p', maxTokens: 200, operation: 'analyze-correction' };
+
+  it('sends Haiku the exact cap it was given, no temperature and no output_config', async () => {
+    createMock.mockResolvedValue(textResponse('ok'));
+    await getClaudeCompleter()({ ...request, model: 'claude-haiku-4-5-20251001' });
+    expect(createMock.mock.calls[0]?.[0]).toEqual({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: 'p' }],
+    });
+  });
+
+  it('sends Sonnet 5.5 low effort and a max_tokens floor above a 200 cap', async () => {
+    createMock.mockResolvedValue(textResponse('ok'));
+    await getClaudeCompleter()({ ...request, model: 'claude-sonnet-5-5' });
+    const sent = createMock.mock.calls[0]?.[0];
+    expect(sent.output_config).toEqual({ effort: 'low' });
+    expect(sent.max_tokens).toBe(2000);
+    expect(sent).not.toHaveProperty('temperature');
+  });
+
+  it('keeps a cap already above the floor', async () => {
+    createMock.mockResolvedValue(textResponse('ok'));
+    await getClaudeCompleter()({ ...request, maxTokens: 4000, model: 'claude-opus-5-5' });
+    expect(createMock.mock.calls[0]?.[0].max_tokens).toBe(4000);
+  });
+
+  it('returns the text block that follows a leading thinking block', async () => {
+    createMock.mockResolvedValue({
+      content: [
+        { type: 'thinking', thinking: 'hmm', signature: 's' },
+        { type: 'text', text: '{"matchType":"exact"}' },
+      ],
+      usage: { input_tokens: 1, output_tokens: 1 },
+    });
+    const out = await getClaudeCompleter()({ ...request, model: 'claude-sonnet-5-5' });
+    expect(out).toBe('{"matchType":"exact"}');
+  });
+
+  it('returns null when the reply holds no text block', async () => {
+    createMock.mockResolvedValue({
+      content: [{ type: 'thinking', thinking: 'hmm', signature: 's' }],
+      usage: { input_tokens: 1, output_tokens: 1 },
+    });
+    expect(await getClaudeCompleter()({ ...request, model: 'claude-sonnet-5-5' })).toBeNull();
+  });
+});
+
+describe('defaultCompleter — client timeout', () => {
+  it('constructs the client with retries off and a 60s timeout', async () => {
+    const ctor = vi.fn();
+    vi.resetModules();
+    vi.doMock('@anthropic-ai/sdk', () => ({
+      default: class {
+        messages = { create: createMock };
+        constructor(opts: unknown) {
+          ctor(opts);
+        }
+      },
+    }));
+    createMock.mockResolvedValue(textResponse('ok'));
+    const fresh = await import('../ai-runtime.js');
+    await fresh.getClaudeCompleter()({ prompt: 'p', maxTokens: 100, operation: 'x' });
+    expect(ctor).toHaveBeenCalledWith({ apiKey: 'sk-test', maxRetries: 0, timeout: 60_000 });
+    vi.doUnmock('@anthropic-ai/sdk');
+  });
+});
