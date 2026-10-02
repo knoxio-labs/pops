@@ -198,8 +198,16 @@ describe('applying the rest of the journal to a populated ai database', () => {
     expect(count('ai_inference_log')).toBe(2);
     expect(count('ai_alert_rules')).toBe(1);
     expect(count('ai_alerts')).toBe(2);
-    expect(count('ai_model_pricing')).toBe(1);
+    expect(count('ai_model_pricing')).toBe(7);
     expect(count('ai_budgets')).toBe(1);
+  });
+
+  it('keeps a pre-existing price row unchanged when the pricing seed runs over it', () => {
+    expect(
+      rows<{ input_cost_per_mtok: number; output_cost_per_mtok: number; context_window: number }>(
+        `SELECT input_cost_per_mtok, output_cost_per_mtok, context_window FROM ai_model_pricing WHERE provider_id = 'anthropic' AND model_id = 'claude-sonnet-5'`
+      )
+    ).toEqual([{ input_cost_per_mtok: 3, output_cost_per_mtok: 15, context_window: 1000000 }]);
   });
 
   it('leaves the pre-migration snapshot behind only if it failed', () => {

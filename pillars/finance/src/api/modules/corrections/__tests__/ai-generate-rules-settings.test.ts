@@ -73,17 +73,17 @@ describe('generateRules — model/max-tokens resolution (POPS-2589)', () => {
     expect(captured?.model).toBe('env-model');
   });
 
-  it('prefers the stored setting over both the env var and the compiled default', async () => {
+  it('prefers the stored setting over both the env var and the compiled default, and ignores a saved max-tokens of 100', async () => {
     process.env['FINANCE_CORRECTIONS_AI_MODEL'] = 'env-model';
     setBulk(db, [
-      { key: RULE_GEN_MODEL_KEY, value: 'setting-model' },
-      { key: RULE_GEN_MAX_TOKENS_KEY, value: '512' },
+      { key: RULE_GEN_MODEL_KEY, value: 'claude-opus-5-5' },
+      { key: RULE_GEN_MAX_TOKENS_KEY, value: '100' },
     ]);
     invalidateAiSettingsCache();
 
     await generateRules(db, oneTransaction());
 
-    expect(captured?.model).toBe('setting-model');
-    expect(captured?.maxTokens).toBe(512);
+    expect(captured?.model).toBe('claude-opus-5-5');
+    expect(captured?.maxTokens).toBe(2000);
   });
 });

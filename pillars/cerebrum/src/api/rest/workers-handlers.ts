@@ -41,8 +41,8 @@ export interface WorkersHandlerDeps {
   templates: TemplateRegistry;
   peers: PeerClients;
   embeddingClient?: EmbeddingClient;
-  /** LLM-backed contradiction detector for the auditor (fake in tests). */
-  contradictionDetector: ContradictionDetector;
+  /** Contradiction detector for the auditor; omitted means no contradiction pass. */
+  contradictionDetector?: ContradictionDetector;
 }
 
 function toOrphanWire(engram: Engram): OrphanEngramWire {

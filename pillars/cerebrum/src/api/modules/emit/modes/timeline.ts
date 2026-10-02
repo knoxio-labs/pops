@@ -59,6 +59,7 @@ export function buildTimelineDocument(
       scopeCoverage,
       mode: 'timeline',
       truncated: false,
+      outputTruncated: false,
     },
   };
 }

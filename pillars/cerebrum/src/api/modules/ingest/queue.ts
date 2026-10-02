@@ -23,6 +23,8 @@ export const CURATION_QUEUE_NAME = 'pops-curation';
 export interface ClassifyEngramJobData {
   type: 'classifyEngram';
   engramId: string;
+  /** Skip the worker's idempotency guard and re-enrich even when the body hash is unchanged. */
+  force?: boolean;
 }
 
 const ATTEMPTS = 3;

@@ -5,6 +5,8 @@ import {
   engramLinks,
   engramScopes,
   engramTags,
+  pruneEngramSearchDocs,
+  upsertEngramSearchDoc,
   type CerebrumDb,
 } from '../../../../db/index.js';
 import { countWords, deriveTitle, parseEngramFile } from '../file.js';
@@ -12,6 +14,8 @@ import { absolutePath, dedupe, listEngramFiles, sha256, splitCustomFields } from
 
 interface IndexEntry {
   row: typeof engramIndex.$inferInsert;
+  body: string;
+  bodyHash: string;
   scopes: string[];
   tags: string[];
   links: string[];
@@ -29,6 +33,7 @@ function buildEntryFromFile(root: string, relPath: string): IndexEntry | null {
   }
   const { frontmatter, body } = parsed;
   const { customFields } = splitCustomFields(frontmatter);
+  const bodyHash = sha256(body);
 
   return {
     row: {
@@ -42,10 +47,12 @@ function buildEntryFromFile(root: string, relPath: string): IndexEntry | null {
       modifiedAt: frontmatter.modified,
       title: deriveTitle(body),
       contentHash: sha256(content),
-      bodyHash: sha256(body),
+      bodyHash,
       wordCount: countWords(body),
       customFields: Object.keys(customFields).length > 0 ? JSON.stringify(customFields) : null,
     },
+    body,
+    bodyHash,
     scopes: dedupe(frontmatter.scopes),
     tags: dedupe(frontmatter.tags ?? []),
     links: dedupe(frontmatter.links ?? []),
@@ -61,6 +68,12 @@ function persistEntries(db: CerebrumDb, entries: IndexEntry[]): void {
 
     for (const entry of entries) {
       tx.insert(engramIndex).values(entry.row).run();
+      upsertEngramSearchDoc(tx, {
+        engramId: entry.row.id,
+        title: entry.row.title,
+        body: entry.body,
+        bodyHash: entry.bodyHash,
+      });
       if (entry.scopes.length > 0) {
         tx.insert(engramScopes)
           .values(entry.scopes.map((scope) => ({ engramId: entry.row.id, scope })))
@@ -77,6 +90,7 @@ function persistEntries(db: CerebrumDb, entries: IndexEntry[]): void {
           .run();
       }
     }
+    pruneEngramSearchDocs(tx);
   });
 }
 

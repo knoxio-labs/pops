@@ -15,9 +15,9 @@
  *   - A miss (either no entry or an expired one) triggers a full
  *     SELECT-all refresh; the refresh re-stamps every populated key, so
  *     subsequent unrelated lookups within the TTL window remain hits.
- *   - On DB error the lookup returns the configured fallback price —
- *     pricing data is best-effort because the inference call itself is
- *     more important than precise cost attribution.
+ *   - An unknown key, or a DB error with a cold cache, yields `null`.
+ *     Callers record the cost as missing rather than guessing a price —
+ *     pricing is best-effort, but a fabricated price is worse than none.
  */
 import { aiModelPricing } from '../schema.js';
 
@@ -33,9 +33,9 @@ export interface ModelPrice {
 export interface PricingCache {
   /**
    * Resolve `(input, output)` cost-per-Mtok for the given provider + model pair.
-   * Returns the configured fallback on cache miss + DB failure or on an unknown key.
+   * Returns `null` for an unknown key, or on DB failure with a cold cache.
    */
-  lookup(provider: string, model: string): ModelPrice;
+  lookup(provider: string, model: string): ModelPrice | null;
   /** Drop every cached entry; the next lookup forces a DB refresh. */
   clear(): void;
 }
@@ -47,7 +47,6 @@ interface PricingEntry {
 }
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
-const DEFAULT_FALLBACK: ModelPrice = { input: 1.0, output: 5.0 };
 
 /**
  * Build a process-local pricing lookup bound to the given ai pillar DB
@@ -58,18 +57,14 @@ const DEFAULT_FALLBACK: ModelPrice = { input: 1.0, output: 5.0 };
  *   handle is used for every refresh against this cache.
  * @param options.ttlMs - Cache freshness window in milliseconds.
  *   Defaults to 5 minutes.
- * @param options.fallback - Returned when the cache is empty AND a
- *   refresh fails OR the requested key is unknown. Defaults to
- *   `{ input: 1.0, output: 5.0 }`.
  * @param options.now - Optional clock override; tests use this to drive
  *   the TTL deterministically. Defaults to `Date.now`.
  */
 export function createPricingCache(
   db: AiDb,
-  options: { ttlMs?: number; fallback?: ModelPrice; now?: () => number } = {}
+  options: { ttlMs?: number; now?: () => number } = {}
 ): PricingCache {
   const ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
-  const fallback = options.fallback ?? DEFAULT_FALLBACK;
   const now = options.now ?? Date.now;
   const cache = new Map<string, PricingEntry>();
 
@@ -93,7 +88,7 @@ export function createPricingCache(
   }
 
   return {
-    lookup(provider: string, model: string): ModelPrice {
+    lookup(provider: string, model: string): ModelPrice | null {
       const key = `${provider}:${model}`;
       const cached = cache.get(key);
       const currentNow = now();
@@ -107,7 +102,7 @@ export function createPricingCache(
       } catch {
         // pricing lookup is best-effort
       }
-      return fallback;
+      return null;
     },
     clear(): void {
       cache.clear();

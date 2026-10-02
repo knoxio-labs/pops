@@ -105,7 +105,7 @@ const engramGet: ToolDef = {
 const cerebrumSearch: ToolDef = {
   name: 'cerebrum.search',
   description:
-    'Search the Cerebrum knowledge base using hybrid semantic + structured search. Returns ranked results with titles, scores, scopes, and content snippets.',
+    'Search the Cerebrum knowledge base. The default hybrid mode ranks engrams by keyword match (BM25) fused with embedding similarity, and by keyword match alone when no embeddings are configured. Returns ranked results with titles, scores, scopes, and content snippets.',
   inputSchema: {
     type: 'object',
     properties: {

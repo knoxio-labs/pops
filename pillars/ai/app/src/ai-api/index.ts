@@ -118,6 +118,8 @@ export type {
   AiObservabilityGetStatsResponse,
   AiObservabilityGetStatsResponses,
   AiPricingLookupData,
+  AiPricingLookupError,
+  AiPricingLookupErrors,
   AiPricingLookupResponse,
   AiPricingLookupResponses,
   AiProvidersGetData,

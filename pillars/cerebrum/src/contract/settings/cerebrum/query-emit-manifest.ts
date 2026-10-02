@@ -22,7 +22,7 @@ export const queryGroup: SettingsGroup = {
       label: 'Relevance Threshold',
       type: 'number',
       default: '0.3',
-      description: 'Minimum relevance score for retrieved sources (0-1).',
+      description: 'Minimum cosine similarity for retrieved sources (0-1).',
       validation: { min: 0, max: 1 },
     },
     {
@@ -54,8 +54,8 @@ export const emitGroup: SettingsGroup = {
       key: 'cerebrum.emit.relevanceThreshold',
       label: 'Relevance Threshold',
       type: 'number',
-      default: '0.2',
-      description: 'Minimum relevance score for emit retrieval (0-1).',
+      default: '0.35',
+      description: 'Minimum cosine similarity for emit retrieval (0-1).',
       validation: { min: 0, max: 1 },
     },
     {

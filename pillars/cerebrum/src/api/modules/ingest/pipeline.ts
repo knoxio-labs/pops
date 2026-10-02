@@ -13,6 +13,7 @@
  * job.
  */
 import { ScopeRuleEngine } from '../engrams/scope-rules.js';
+import { listScopes } from '../engrams/scopes.js';
 import { EngramService } from '../engrams/service.js';
 import { CortexClassifier } from './classifier.js';
 import { CortexEntityExtractor } from './entity-extractor.js';
@@ -24,7 +25,7 @@ import {
   mergeReferencedDates,
 } from './pipeline-helpers.js';
 import { enqueueClassify, runPipelineStages, type IngestServiceDeps } from './pipeline-stages.js';
-import { createScopeInferenceService } from './scope-inference.js';
+import { createScopeInferenceService, topScopesByCount } from './scope-inference.js';
 
 import type { EngramSource } from '../engrams/schema.js';
 import type {
@@ -190,7 +191,9 @@ export class IngestService {
     knownScopes?: string[];
   }): Promise<ScopeInferenceResult> {
     const svc = createScopeInferenceService(this.scopeRuleEngine.getConfig(), this.deps.llm);
-    return svc.infer(input);
+    const vocabulary =
+      input.knownScopes === undefined ? topScopesByCount(listScopes(this.deps.db)) : undefined;
+    return svc.infer({ ...input, vocabulary });
   }
 
   /** Read the engram (404s on miss) — exposed so handlers can pre-check existence. */
@@ -200,11 +203,11 @@ export class IngestService {
 
   /**
    * Re-enqueue the `classifyEngram` job for an engram. The engram must already
-   * exist (verified here, 404s otherwise). Returns `false` when the queue is
-   * unavailable (no Redis).
+   * exist (verified here, 404s otherwise). The job is forced past the
+   * idempotency guard. Returns `false` when the queue is unavailable (no Redis).
    */
   async retryEnrichment(engramId: string): Promise<boolean> {
     this.engramService().read(engramId);
-    return enqueueClassify(this.deps.curationQueue, engramId);
+    return enqueueClassify(this.deps.curationQueue, engramId, { force: true });
   }
 }

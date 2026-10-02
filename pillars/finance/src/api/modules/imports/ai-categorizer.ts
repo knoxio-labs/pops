@@ -72,8 +72,8 @@ import type {
 } from './ai-categorizer-types.js';
 import type { TagsOnlyBatchResult, TagsOnlyInput } from './ai-tags-only-api.js';
 
-function usageFrom(inputTokens: number, outputTokens: number): AiCallUsage {
-  return { inputTokens, outputTokens, costUsd: computeCostUsd(inputTokens, outputTokens) };
+function usageFrom(model: string, inputTokens: number, outputTokens: number): AiCallUsage {
+  return { inputTokens, outputTokens, costUsd: computeCostUsd(model, inputTokens, outputTokens) };
 }
 
 /** The API key, or an `AiCategorizationError` the callers already degrade to an uncertain row. */
@@ -124,11 +124,12 @@ export async function categorizeWithAi(
 ): Promise<AiCallResult> {
   if (!isAiCategorizerEnabled()) return { result: null };
 
+  const model = getModel(hints.db);
   const response = await callApiOrThrow({
     client: createCategorizerClient(requireApiKey()),
     input,
     sanitizedDescription: input.description.trim().slice(0, 100),
-    model: getModel(hints.db),
+    model,
     maxTokens: getMaxTokens(hints.db),
     knownTags,
     knownEntityNames: hints.knownEntityNames ?? [],
@@ -143,7 +144,7 @@ export async function categorizeWithAi(
       ...buildEntryFromText(response.text, knownTags),
       promptVersion: PROMPT_VERSION_CATEGORIZE,
     },
-    usage: usageFrom(response.inputTokens, response.outputTokens),
+    usage: usageFrom(model, response.inputTokens, response.outputTokens),
   };
 }
 
@@ -165,10 +166,11 @@ export async function categorizeBatchWithAi(
   if (inputs.length === 0) return { results: [] };
   if (!isAiCategorizerEnabled()) return { results: inputs.map(() => null) };
 
+  const model = getModel(hints.db);
   const response = await callBatchApiOrThrow({
     client: createCategorizerClient(requireApiKey()),
     inputs,
-    model: getModel(hints.db),
+    model,
     maxTokens: getBatchMaxTokens(inputs.length),
     knownTags,
     knownEntityNames: hints.knownEntityNames ?? [],
@@ -182,7 +184,7 @@ export async function categorizeBatchWithAi(
     results: parseBatchEntries(response.text, inputs.length, knownTags).map((entry) =>
       entry === null ? null : { ...entry, promptVersion: PROMPT_VERSION_CATEGORIZE_BATCH }
     ),
-    usage: usageFrom(response.inputTokens, response.outputTokens),
+    usage: usageFrom(model, response.inputTokens, response.outputTokens),
   };
 }
 
@@ -205,10 +207,11 @@ export async function tagsOnlyBatchWithAi(
   if (inputs.length === 0) return { results: [] };
   if (!isAiCategorizerEnabled()) return { results: inputs.map(() => null) };
 
+  const model = getModel(hints.db);
   const response = await callTagsOnlyApiOrThrow({
     client: createCategorizerClient(requireApiKey()),
     inputs,
-    model: getModel(hints.db),
+    model,
     maxTokens: getTagsOnlyMaxTokens(inputs.length),
     knownTags,
     ...(hints.tagDescriptions === undefined ? {} : { tagDescriptions: hints.tagDescriptions }),
@@ -221,6 +224,6 @@ export async function tagsOnlyBatchWithAi(
     results: parseTagsOnlyEntries(response.text, inputs.length, knownTags).map((entry) =>
       entry === null ? null : { ...entry, promptVersion: PROMPT_VERSION_TAGS_ONLY }
     ),
-    usage: usageFrom(response.inputTokens, response.outputTokens),
+    usage: usageFrom(model, response.inputTokens, response.outputTokens),
   };
 }
