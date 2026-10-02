@@ -14,15 +14,20 @@
  *     unavailable → the hit is dropped (returns `null`), matching the
  *     monolith's behaviour for an unresolvable domain row.
  *
+ * An engram hit is kept only if it satisfies every {@link RetrievalFilters}
+ * field, checked with the same SQL conditions the structured listing uses, so
+ * a filter constrains the candidate set identically on both paths. Cross-pillar
+ * hits carry no engram metadata and are not filtered by the engram-only fields.
+ *
  * The `to*Text` formatters fold the fetched fields into a single `text`
  * preview string so the assembled context window has a human-readable body for
  * cross-pillar sources (which carry no `content_preview` of their own beyond
  * the embedded chunk).
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { engramIndex, engramScopes } from '../../../db/index.js';
-import { isSecretScope, type ResolvedMetadata } from './semantic-search-helpers.js';
+import { buildStructuredConditions } from './structured-query-conditions.js';
 
 import type { CerebrumDb } from '../../../db/index.js';
 import type {
@@ -32,6 +37,7 @@ import type {
   MediaTvShowRow,
   PeerClients,
 } from './peer-clients.js';
+import type { ResolvedMetadata } from './semantic-search-helpers.js';
 import type { RetrievalFilters } from './types.js';
 
 function joinNonEmpty(parts: (string | null | undefined)[]): string {
@@ -110,40 +116,16 @@ async function resolveCrossPillarMetadata(
   return resolver ? resolver(peers, sourceId) : null;
 }
 
-interface EngramRow {
-  type: string;
-  source: string;
-  status: string;
-  title: string;
-  createdAt: string;
-  modifiedAt: string;
-  wordCount: number;
-}
-
-function matchesScopes(scopes: string[], scopeFilters: string[]): boolean {
-  return scopes.some((s) => scopeFilters.some((f) => s === f || s.startsWith(f + '.')));
-}
-
-function passesArrayFilter(value: string, allowed: string[] | undefined): boolean {
-  if (!allowed || allowed.length === 0) return true;
-  return allowed.includes(value);
-}
-
-function passesEngramFilters(row: EngramRow, scopes: string[], filters: RetrievalFilters): boolean {
-  if (row.status === 'orphaned') return false;
-  if (!passesArrayFilter(row.type, filters.types)) return false;
-  if (!passesArrayFilter(row.status, filters.status)) return false;
-  if (!filters.includeSecret && scopes.some(isSecretScope)) return false;
-  if (filters.scopes?.length && !matchesScopes(scopes, filters.scopes)) return false;
-  return true;
-}
-
 function resolveEngramMetadata(
   db: CerebrumDb,
   sourceId: string,
   filters: RetrievalFilters
 ): ResolvedMetadata | null {
-  const rows = db.select().from(engramIndex).where(eq(engramIndex.id, sourceId)).all();
+  const rows = db
+    .select()
+    .from(engramIndex)
+    .where(and(eq(engramIndex.id, sourceId), ...buildStructuredConditions(filters)))
+    .all();
   const row = rows[0];
   if (!row) return null;
 
@@ -153,8 +135,6 @@ function resolveEngramMetadata(
     .where(eq(engramScopes.engramId, sourceId))
     .all()
     .map((s) => s.scope);
-
-  if (!passesEngramFilters(row, scopes, filters)) return null;
 
   return {
     title: row.title,

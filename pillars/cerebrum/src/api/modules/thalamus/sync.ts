@@ -12,7 +12,12 @@ import { join } from 'node:path';
 
 import { eq } from 'drizzle-orm';
 
-import { type CerebrumDb, engramIndex } from '../../../db/index.js';
+import {
+  type CerebrumDb,
+  deleteEngramSearchDoc,
+  engramIndex,
+  upsertEngramSearchDoc,
+} from '../../../db/index.js';
 import { countWords, deriveTitle, parseEngramFile } from '../engrams/file.js';
 import { syncEngramLinks, syncEngramScopes, syncEngramTags } from './sync-junctions.js';
 
@@ -176,6 +181,12 @@ export class FrontmatterSyncService {
 
     this.db.transaction((tx) => {
       upsertIndexRow(tx, indexValues);
+      upsertEngramSearchDoc(tx, {
+        engramId: frontmatter.id,
+        title: indexValues.title,
+        body,
+        bodyHash: indexValues.bodyHash,
+      });
       syncEngramScopes(tx, frontmatter.id, dedupe(frontmatter.scopes));
       syncEngramTags(tx, frontmatter.id, dedupe(frontmatter.tags ?? []));
       syncEngramLinks(tx, frontmatter.id, dedupe(frontmatter.links ?? []));
@@ -196,12 +207,16 @@ export class FrontmatterSyncService {
    * Mark an indexed engram as orphaned (file was deleted from disk).
    */
   markOrphaned(relPath: string): void {
-    const rows = this.db
-      .update(engramIndex)
-      .set({ status: 'orphaned' })
-      .where(eq(engramIndex.filePath, relPath))
-      .returning({ id: engramIndex.id })
-      .all();
+    const rows = this.db.transaction((tx) => {
+      const orphaned = tx
+        .update(engramIndex)
+        .set({ status: 'orphaned' })
+        .where(eq(engramIndex.filePath, relPath))
+        .returning({ id: engramIndex.id })
+        .all();
+      for (const { id } of orphaned) deleteEngramSearchDoc(tx, id);
+      return orphaned;
+    });
 
     if (rows.length > 0) {
       console.warn(
