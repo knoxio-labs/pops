@@ -20,6 +20,7 @@ import {
   purchasesTelemetryDeps,
 } from '../../api/ai-telemetry-deps.js';
 import { resolveAnthropicApiKey } from '../../api/anthropic-key.js';
+import { normaliseForVision } from './normalise-for-vision.js';
 import { extractionPrompt, isImageMediaType } from './vision.js';
 
 import type { ReceiptPart, ReceiptVision, VisionStop } from './vision.js';
@@ -110,6 +111,7 @@ export function createAnthropicVision(): ReceiptVision | null {
 
   return {
     async read(parts: readonly ReceiptPart[]): Promise<string | null | VisionStop> {
+      const forModel = await normaliseForVision(parts);
       try {
         return await callWithLogging(
           {
@@ -134,10 +136,10 @@ export function createAnthropicVision(): ReceiptVision | null {
                     // top to bottom, and the prompt is what tells it how the
                     // shapes it was given can mislead it.
                     content: [
-                      ...parts.map(toContentBlock),
+                      ...forModel.map(toContentBlock),
                       {
                         type: 'text' as const,
-                        text: extractionPrompt(parts.map((part) => part.mediaType)),
+                        text: extractionPrompt(forModel.map((part) => part.mediaType)),
                       },
                     ],
                   },

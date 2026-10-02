@@ -7,6 +7,7 @@
  * before rethrowing.
  */
 import { BadRequestError } from '@anthropic-ai/sdk';
+import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createMock = vi.hoisted(() => vi.fn());
@@ -313,5 +314,28 @@ describe('read', () => {
     expect(result).toMatchObject({ stopped: 'rejected' });
     const record = await captured.nextReport();
     expect(record.status).toBe('error');
+  });
+
+  it('sends the normalised copy of an image, upright and inside the size limits', async () => {
+    captureReports();
+    createMock.mockResolvedValue(anthropicMessage('x'));
+    const wide = await sharp({
+      create: { width: 3000, height: 1000, channels: 3, background: '#888' },
+    })
+      .jpeg()
+      .withMetadata({ orientation: 6 })
+      .toBuffer();
+
+    await createAnthropicVision()?.read([
+      { mediaType: 'image/jpeg', dataBase64: wide.toString('base64') },
+    ]);
+
+    const [request] = createMock.mock.calls[0] as [
+      { messages: { content: { source: { data: string; media_type: string } }[] }[] },
+    ];
+    const sent = request.messages[0]!.content[0]!.source;
+    expect(sent.media_type).toBe('image/jpeg');
+    const meta = await sharp(Buffer.from(sent.data, 'base64')).metadata();
+    expect(meta.height).toBeGreaterThan(meta.width ?? 0);
   });
 });
