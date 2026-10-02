@@ -14,17 +14,30 @@ import { shutdownPillar, type ClosableServer } from '../shutdown.js';
 
 import type { BootstrapLogger } from '../logger.js';
 
-function recordingLogger(): { logger: BootstrapLogger; errors: string[]; warns: string[] } {
+function recordingLogger(): {
+  logger: BootstrapLogger;
+  errors: string[];
+  warns: string[];
+  infos: Array<{ message: string; meta?: Record<string, unknown> }>;
+  warningDetails: Array<{ message: string; meta?: Record<string, unknown> }>;
+} {
   const errors: string[] = [];
   const warns: string[] = [];
+  const infos: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+  const warningDetails: Array<{ message: string; meta?: Record<string, unknown> }> = [];
   return {
     logger: {
-      info: () => undefined,
-      warn: (msg) => warns.push(msg),
+      info: (message, meta) => infos.push({ message, ...(meta === undefined ? {} : { meta }) }),
+      warn: (message, meta) => {
+        warns.push(message);
+        warningDetails.push({ message, ...(meta === undefined ? {} : { meta }) });
+      },
       error: (msg) => errors.push(msg),
     },
     errors,
     warns,
+    infos,
+    warningDetails,
   };
 }
 
@@ -65,6 +78,7 @@ describe('shutdownPillar', () => {
         },
       },
       closeDb: () => void order.push('db'),
+      logger: recordingLogger().logger,
     });
 
     expect(order).toEqual(['drain', 'deregister', 'server', 'db']);
@@ -84,6 +98,55 @@ describe('shutdownPillar', () => {
 
     expect(closeDb).toHaveBeenCalledTimes(1);
     expect(errors).toEqual(['[design-api] shutdown step failed; continuing']);
+  });
+
+  it('continues to server and database cleanup after a step times out', async () => {
+    vi.useFakeTimers();
+    try {
+      const order: string[] = [];
+      const closeDb = vi.fn(() => order.push('db'));
+      const { logger, warns, warningDetails, infos } = recordingLogger();
+      const shutdown = shutdownPillar({
+        label: 'cerebrum-api',
+        steps: [
+          { name: 'stalled-redis-close', run: () => new Promise<void>(() => undefined) },
+          { name: 'remaining-step', run: () => void order.push('remaining-step') },
+        ],
+        server: {
+          close(callback) {
+            order.push('server');
+            callback?.();
+          },
+        },
+        closeDb,
+        logger,
+      });
+
+      await vi.advanceTimersByTimeAsync(5_000);
+      await shutdown;
+
+      expect(order).toEqual(['remaining-step', 'server', 'db']);
+      expect(closeDb).toHaveBeenCalledOnce();
+      expect(warns).toContain('[cerebrum-api] shutdown step timed out; continuing');
+      expect(warningDetails).toEqual([
+        {
+          message: '[cerebrum-api] shutdown step timed out; continuing',
+          meta: {
+            step: 'stalled-redis-close',
+            timeoutMs: 5_000,
+            durationMs: 5_000,
+          },
+        },
+      ]);
+      expect(infos).toEqual([
+        {
+          message: '[cerebrum-api] shutdown step completed',
+          meta: { step: 'remaining-step', durationMs: expect.any(Number) },
+        },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('runs the remaining steps after one fails', async () => {
