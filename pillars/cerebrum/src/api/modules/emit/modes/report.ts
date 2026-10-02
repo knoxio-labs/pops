@@ -54,6 +54,7 @@ export function buildReportDocument(
       scopeCoverage,
       mode: 'report',
       truncated: false,
+      outputTruncated: false,
     },
   };
 }

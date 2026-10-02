@@ -10,7 +10,12 @@
 import { CitationParser } from '../query/citation-parser.js';
 import { ContextAssemblyService } from '../retrieval/context-assembly.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
-import { toSourceCitations } from './helpers.js';
+import {
+  REFUSED_OUTLINE,
+  REFUSED_RESULT,
+  toSourceCitations,
+  withOutputTruncated,
+} from './helpers.js';
 import { buildReportDocument, checkReportSources } from './modes/report.js';
 import { buildEmptySummary, buildSummaryDocument, capSummaryResults } from './modes/summary.js';
 import { buildTimelineDocument, sortChronologically } from './modes/timeline.js';
@@ -89,10 +94,12 @@ export class GenerationService {
     });
 
     const prompt = buildReportPrompt(assembled.context, audienceScope);
-    const llmOutput = await this.deps.llm.generate(prompt, query);
-    const { cleanedAnswer, citations } = this.citationParser.parse(llmOutput, filtered);
+    const output = await this.deps.llm.generate(prompt, query);
+    if (output.kind === 'refused') return REFUSED_RESULT;
+    const { cleanedAnswer, citations } = this.citationParser.parse(output.text, filtered);
 
-    return { document: buildReportDocument(cleanedAnswer, citations, audienceScope, filtered) };
+    const document = buildReportDocument(cleanedAnswer, citations, audienceScope, filtered);
+    return { document: withOutputTruncated(document, output.outputTruncated) };
   }
 
   /** Generate a summary digest over a date range. */
@@ -118,18 +125,18 @@ export class GenerationService {
     });
 
     const prompt = buildSummaryPrompt(assembled.context, effectiveDateRange, audienceScope);
-    const llmOutput = await this.deps.llm.generate(prompt, query);
-    const { cleanedAnswer } = this.citationParser.parse(llmOutput, capped);
+    const output = await this.deps.llm.generate(prompt, query);
+    if (output.kind === 'refused') return REFUSED_RESULT;
+    const { cleanedAnswer } = this.citationParser.parse(output.text, capped);
 
-    return {
-      document: buildSummaryDocument({
-        llmOutput: cleanedAnswer,
-        results: capped,
-        dateRange: effectiveDateRange,
-        audienceScope,
-        truncated,
-      }),
-    };
+    const document = buildSummaryDocument({
+      llmOutput: cleanedAnswer,
+      results: capped,
+      dateRange: effectiveDateRange,
+      audienceScope,
+      truncated,
+    });
+    return { document: withOutputTruncated(document, output.outputTruncated) };
   }
 
   /** Generate a chronological timeline from dated engrams. */
@@ -154,10 +161,12 @@ export class GenerationService {
     });
 
     const prompt = buildTimelinePrompt(assembled.context, audienceScope, request.groupBy);
-    const llmOutput = await this.deps.llm.generate(prompt, query);
-    const { cleanedAnswer } = this.citationParser.parse(llmOutput, sorted);
+    const output = await this.deps.llm.generate(prompt, query);
+    if (output.kind === 'refused') return REFUSED_RESULT;
+    const { cleanedAnswer } = this.citationParser.parse(output.text, sorted);
 
-    return { document: buildTimelineDocument(cleanedAnswer, sorted, audienceScope) };
+    const document = buildTimelineDocument(cleanedAnswer, sorted, audienceScope);
+    return { document: withOutputTruncated(document, output.outputTruncated) };
   }
 
   /** Preview: returns sources and a generated outline without full generation. */
@@ -179,8 +188,8 @@ export class GenerationService {
       tokenBudget: EMIT_TOKEN_BUDGET,
       includeMetadata: true,
     });
-    const outline = await this.deps.llm.generate(buildOutlinePrompt(assembled.context), query);
-    return { sources, outline };
+    const output = await this.deps.llm.generate(buildOutlinePrompt(assembled.context), query);
+    return { sources, outline: output.kind === 'refused' ? REFUSED_OUTLINE : output.text };
   }
 
   /** Run hybrid search against the in-pillar retrieval slice. */

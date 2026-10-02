@@ -678,6 +678,7 @@ export type EmitGenerateResponses = {
           to: string;
         } | null;
         mode: 'report' | 'summary' | 'timeline';
+        outputTruncated: boolean;
         scopeCoverage: Array<string>;
         sourceCount: number;
         truncated: boolean;
@@ -795,6 +796,7 @@ export type EmitGenerateReportResponses = {
           to: string;
         } | null;
         mode: 'report' | 'summary' | 'timeline';
+        outputTruncated: boolean;
         scopeCoverage: Array<string>;
         sourceCount: number;
         truncated: boolean;
@@ -864,6 +866,7 @@ export type EmitGenerateSummaryResponses = {
           to: string;
         } | null;
         mode: 'report' | 'summary' | 'timeline';
+        outputTruncated: boolean;
         scopeCoverage: Array<string>;
         sourceCount: number;
         truncated: boolean;
@@ -935,6 +938,7 @@ export type EmitGenerateTimelineResponses = {
           to: string;
         } | null;
         mode: 'report' | 'summary' | 'timeline';
+        outputTruncated: boolean;
         scopeCoverage: Array<string>;
         sourceCount: number;
         truncated: boolean;
@@ -4212,16 +4216,7 @@ export type SettingsGetData = {
       | 'cerebrum.glia.demotionWindowDays'
       | 'cerebrum.mcp.queryMaxSources'
       | 'cerebrum.mcp.searchSnippetLength'
-      | 'cerebrum.mcp.searchDefaultLimit'
-      | 'ego.defaultModel'
-      | 'ego.maxHistory'
-      | 'ego.maxRetrieval'
-      | 'ego.tokenBudget'
-      | 'ego.relevanceThreshold'
-      | 'ego.chat.maxTokens'
-      | 'ego.chat.temperature'
-      | 'ego.summary.maxTokens'
-      | 'ego.summary.temperature';
+      | 'cerebrum.mcp.searchDefaultLimit';
   };
   query?: never;
   url: '/settings/{key}';
@@ -4303,16 +4298,7 @@ export type SettingsSetData = {
       | 'cerebrum.glia.demotionWindowDays'
       | 'cerebrum.mcp.queryMaxSources'
       | 'cerebrum.mcp.searchSnippetLength'
-      | 'cerebrum.mcp.searchDefaultLimit'
-      | 'ego.defaultModel'
-      | 'ego.maxHistory'
-      | 'ego.maxRetrieval'
-      | 'ego.tokenBudget'
-      | 'ego.relevanceThreshold'
-      | 'ego.chat.maxTokens'
-      | 'ego.chat.temperature'
-      | 'ego.summary.maxTokens'
-      | 'ego.summary.temperature';
+      | 'cerebrum.mcp.searchDefaultLimit';
   };
   query?: never;
   url: '/settings/{key}';
@@ -4395,16 +4381,7 @@ export type SettingsEnsureData = {
       | 'cerebrum.glia.demotionWindowDays'
       | 'cerebrum.mcp.queryMaxSources'
       | 'cerebrum.mcp.searchSnippetLength'
-      | 'cerebrum.mcp.searchDefaultLimit'
-      | 'ego.defaultModel'
-      | 'ego.maxHistory'
-      | 'ego.maxRetrieval'
-      | 'ego.tokenBudget'
-      | 'ego.relevanceThreshold'
-      | 'ego.chat.maxTokens'
-      | 'ego.chat.temperature'
-      | 'ego.summary.maxTokens'
-      | 'ego.summary.temperature';
+      | 'cerebrum.mcp.searchDefaultLimit';
   };
   query?: never;
   url: '/settings/{key}/ensure';
@@ -4486,16 +4463,7 @@ export type SettingsResetKeyData = {
       | 'cerebrum.glia.demotionWindowDays'
       | 'cerebrum.mcp.queryMaxSources'
       | 'cerebrum.mcp.searchSnippetLength'
-      | 'cerebrum.mcp.searchDefaultLimit'
-      | 'ego.defaultModel'
-      | 'ego.maxHistory'
-      | 'ego.maxRetrieval'
-      | 'ego.tokenBudget'
-      | 'ego.relevanceThreshold'
-      | 'ego.chat.maxTokens'
-      | 'ego.chat.temperature'
-      | 'ego.summary.maxTokens'
-      | 'ego.summary.temperature';
+      | 'cerebrum.mcp.searchDefaultLimit';
   };
   query?: never;
   url: '/settings/{key}/reset';

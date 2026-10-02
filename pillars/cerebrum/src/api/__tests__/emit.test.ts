@@ -211,6 +211,55 @@ describe('POST /emit/generate', () => {
   });
 });
 
+describe('emit model outcomes', () => {
+  const refusingLlm: GenerationLlm = { generate: () => Promise.resolve({ kind: 'refused' }) };
+  const cutOffLlm: GenerationLlm = {
+    generate: () =>
+      Promise.resolve({ kind: 'text', text: '# Cut off\n\nhalf a sent', outputTruncated: true }),
+  };
+
+  function seedTwo(): void {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0001_x', title: 'X', scopes: ['work'] });
+    seedEngram(cerebrumDb, { id: 'eng_20260102_0002_y', title: 'Y', scopes: ['work'] });
+  }
+
+  it('returns a refusal as a notice with no document, for every mode', async () => {
+    seedTwo();
+    const emit = client(refusingLlm).emit;
+    const dateRange = { from: '2026-01-01', to: '2026-12-31' };
+
+    const results = [
+      await emit.generateReport({ query: 'topic' }),
+      await emit.generateSummary({ dateRange }),
+      await emit.generateTimeline({ query: 'topic' }),
+    ];
+    for (const result of results) {
+      expect(result.document).toBeNull();
+      expect(result.notice).toBe('The model declined to generate this document');
+    }
+  });
+
+  it('says so in the outline when the model refuses a preview', async () => {
+    seedTwo();
+    const result = await client(refusingLlm).emit.preview({ mode: 'report', query: 'topic' });
+    expect(result.sources.length).toBe(2);
+    expect(result.outline).toBe('The model declined to generate an outline for these sources.');
+  });
+
+  it('surfaces an output cut off at the token cap as metadata.outputTruncated', async () => {
+    seedTwo();
+    const { document } = await client(cutOffLlm).emit.generateReport({ query: 'topic' });
+    expect(document?.metadata.outputTruncated).toBe(true);
+    expect(document?.metadata.truncated).toBe(false);
+  });
+
+  it('leaves metadata.outputTruncated false for a complete document', async () => {
+    seedTwo();
+    const { document } = await client().emit.generateReport({ query: 'topic' });
+    expect(document?.metadata.outputTruncated).toBe(false);
+  });
+});
+
 describe('POST /emit/preview', () => {
   it('returns sources + an outline without full synthesis', async () => {
     seedEngram(cerebrumDb, { id: 'eng_20260101_0001_x', title: 'X', scopes: ['work'] });

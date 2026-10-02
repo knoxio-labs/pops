@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { cerebrumManifest, egoManifest } from '../settings/index.js';
+import { cerebrumManifest } from '../settings/index.js';
+import { cerebrumKeyDefaults } from '../settings/key-defaults.js';
 
 describe('cerebrum-contract settings manifests', () => {
   it('exposes cerebrumManifest with id "cerebrum"', () => {
@@ -8,8 +9,8 @@ describe('cerebrum-contract settings manifests', () => {
     expect(cerebrumManifest.groups.length).toBeGreaterThan(0);
   });
 
-  it('exposes egoManifest with id "ego"', () => {
-    expect(egoManifest.id).toBe('ego');
-    expect(egoManifest.groups.length).toBeGreaterThan(0);
+  it('declares no ego.* key: nothing in the pillar reads one', () => {
+    const egoKeys = [...cerebrumKeyDefaults.keys].filter((key) => key.startsWith('ego.'));
+    expect(egoKeys).toEqual([]);
   });
 });
