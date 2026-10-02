@@ -4,8 +4,8 @@
  *
  * It is built from what varies between answers: how many of the model's
  * citations resolved to a retrieved source, how those sources were matched, and
- * whether the model said it could not answer. The fused retrieval score is not
- * an input, because RRF bounds it far below any useful cut.
+ * whether the model said it could not answer. The retrieval score is not an
+ * input: every hit that reaches the model has already cleared the cosine floor.
  */
 import { INSUFFICIENT_INFORMATION_PHRASE } from './prompts.js';
 

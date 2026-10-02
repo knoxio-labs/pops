@@ -445,20 +445,23 @@ describe('POST /retrieval/search — hybrid', () => {
   });
 });
 
-describe('POST /retrieval/search — semantic score', () => {
-  it('reports cosine similarity as the score and keeps the L2 distance beside it', async () => {
-    seedEngram(cerebrumDb, { id: 'eng_20260101_0000_half', title: 'Half' });
-    seedEngramVector(cerebrumDb, 'eng_20260101_0000_half', unitVectorAtCosine(0.5, 1));
+describe('POST /retrieval/search — score', () => {
+  it.each(['semantic', 'hybrid'] as const)(
+    'reports cosine similarity as the %s score and keeps the L2 distance beside it',
+    async (mode) => {
+      seedEngram(cerebrumDb, { id: 'eng_20260101_0000_half', title: 'Half' });
+      seedEngramVector(cerebrumDb, 'eng_20260101_0000_half', unitVectorAtCosine(0.5, 1));
 
-    const res = await client({ embeddingClient: anchorEmbeddingClient() }).retrieval.search({
-      mode: 'semantic',
-      query: 'q',
-    });
+      const res = await client({ embeddingClient: anchorEmbeddingClient() }).retrieval.search({
+        mode,
+        query: 'q',
+      });
 
-    expect(res.results).toHaveLength(1);
-    expect(res.results[0]?.score).toBeCloseTo(0.5, 5);
-    expect(res.results[0]?.distance).toBeCloseTo(1, 5);
-  });
+      expect(res.results).toHaveLength(1);
+      expect(res.results[0]?.score).toBeCloseTo(0.5, 5);
+      expect(res.results[0]?.distance).toBeCloseTo(1, 5);
+    }
+  );
 });
 
 describe('POST /retrieval/similar', () => {

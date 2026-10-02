@@ -18,20 +18,19 @@ pointing `EMBEDDING_MODEL` at one that does not silently shifts every threshold.
 
 `score` on a result depends on the path that produced it:
 
-| Path             | `score`                                        |
-| ---------------- | ---------------------------------------------- |
-| `semanticSearch` | cosine similarity to the query                 |
-| `similar`        | cosine similarity to the given engram          |
-| `hybrid`         | fused RRF score: an ordering, not a similarity |
-| `structuredOnly` | always 1                                       |
+| Path             | `score`                               |
+| ---------------- | ------------------------------------- |
+| `semanticSearch` | cosine similarity to the query        |
+| `similar`        | cosine similarity to the given engram |
+| `hybrid`         | cosine similarity to the query        |
+| `structuredOnly` | always 1                              |
 
-`distance` is the raw L2 value and survives fusion.
+`distance` is the raw L2 value.
 
 ## Hybrid has one leg
 
-`hybrid` rank-fuses a list of legs with RRF, and the list holds the semantic
-leg alone. There is no lexical leg: nothing matches the words of a query
-against engram text (POPS-5345). So with no embedding client, no sqlite-vec, or
+`hybrid` runs the semantic leg alone and fuses nothing. There is no lexical
+leg: nothing matches the words of a query against engram text (POPS-5345). So with no embedding client, no sqlite-vec, or
 a failing provider, `hybrid` returns an empty list, and every caller treats
 that as "nothing found" rather than falling back to something else.
 

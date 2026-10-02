@@ -1,11 +1,11 @@
 /**
- * HybridSearchService — rank-fuses the retrieval legs with reciprocal rank
- * fusion (RRF, k=60) and backs the `search` / `context` / `similar` handlers.
+ * HybridSearchService — query-ranked retrieval behind the `search` / `context`
+ * / `similar` handlers and the query, emit and ego services.
  *
- * The semantic leg is the only leg. {@link StructuredQueryService} lists
- * engrams by filter, newest first; it never sees the query text, so it is not a
- * relevance signal and stays out of fusion. Filters constrain the candidate set
- * instead.
+ * The semantic leg is the only leg, so nothing is fused and a hit's `score` is
+ * its cosine similarity. {@link StructuredQueryService} lists engrams by
+ * filter, newest first; it never sees the query text, so it is not a relevance
+ * signal. Filters constrain the candidate set instead.
  *
  * The semantic leg is best-effort. A missing embedding client, a
  * vec-unavailable database, or a provider error all collapse it to an empty
@@ -19,46 +19,10 @@ import { StructuredQueryService } from './structured-query.js';
 
 import type { RetrievalFilters, RetrievalResult } from './types.js';
 
-const RRF_K = 60;
 const DEFAULT_LIMIT = 20;
 
 function isSecretScope(scope: string): boolean {
   return scope.split('.').includes('secret');
-}
-
-/**
- * Merge ranked legs with RRF, best first. A hit several legs agree on has its
- * metadata merged and is marked `both`.
- */
-function reciprocalRankFusion(legs: RetrievalResult[][], limit: number): RetrievalResult[] {
-  const scores = new Map<string, { score: number; result: RetrievalResult; inBoth: boolean }>();
-
-  for (const leg of legs) {
-    for (const [i, r] of leg.entries()) {
-      const key = `${r.sourceType}:${r.sourceId}`;
-      const contribution = 1 / (RRF_K + i + 1);
-      const existing = scores.get(key);
-      if (existing) {
-        existing.score += contribution;
-        existing.inBoth = true;
-        existing.result = {
-          ...existing.result,
-          metadata: { ...existing.result.metadata, ...r.metadata },
-        };
-      } else {
-        scores.set(key, { score: contribution, result: r, inBoth: false });
-      }
-    }
-  }
-
-  return [...scores.values()]
-    .toSorted((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map(({ score, result, inBoth }) => ({
-      ...result,
-      score,
-      matchType: inBoth ? ('both' as const) : result.matchType,
-    }));
 }
 
 export class HybridSearchService {
@@ -70,18 +34,14 @@ export class HybridSearchService {
     this.structuredSvc = new StructuredQueryService(deps.db);
   }
 
-  /**
-   * Rank `query` against the corpus. `score` on each hit is the fused RRF
-   * score, which orders hits and is not a similarity; `distance` still carries
-   * the semantic leg's L2 distance.
-   */
+  /** Rank `query` against the corpus; `score` on each hit is its cosine similarity to `query`. */
   async hybrid(
     query: string,
     filters: RetrievalFilters = {},
     limit = DEFAULT_LIMIT,
     minCosine = DEFAULT_SEARCH_MIN_COSINE
   ): Promise<RetrievalResult[]> {
-    const semanticResults = await this.semanticSvc
+    const results = await this.semanticSvc
       .search(query, filters, limit, minCosine)
       .catch((error: unknown) => {
         console.warn(
@@ -92,16 +52,14 @@ export class HybridSearchService {
         return [] as RetrievalResult[];
       });
 
-    const merged = reciprocalRankFusion([semanticResults], limit);
-
     if (!filters.includeSecret) {
-      return merged.filter((r) => {
+      return results.filter((r) => {
         const scopes = (r.metadata['scopes'] as string[] | undefined) ?? [];
         return !scopes.some(isSecretScope);
       });
     }
 
-    return merged;
+    return results;
   }
 
   /** Semantic leg alone; `score` on each hit is its cosine similarity to `query`. */
