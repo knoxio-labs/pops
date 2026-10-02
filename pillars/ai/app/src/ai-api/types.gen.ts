@@ -731,6 +731,23 @@ export type AiPricingLookupData = {
   url: '/ai-pricing/{provider}/{model}';
 };
 
+export type AiPricingLookupErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+};
+
+export type AiPricingLookupError = AiPricingLookupErrors[keyof AiPricingLookupErrors];
+
 export type AiPricingLookupResponses = {
   /**
    * 200

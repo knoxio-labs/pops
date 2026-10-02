@@ -49,6 +49,24 @@ describe('httpLookupPricing', () => {
     expect(await httpLookupPricing('http://ai-api:3008', fetchImpl)('x', 'y')).toBeNull();
   });
 
+  it('returns null when the legacy provider route has no price for the missing model', async () => {
+    const fetchImpl = vi.fn<FetchImpl>((input) => {
+      if (String(input).includes('/ai-pricing/'))
+        return Promise.resolve(new Response(null, { status: 404 }));
+      return Promise.resolve(
+        json([
+          {
+            id: 'anthropic',
+            models: [{ modelId: 'known-model', inputCostPerMtok: 1, outputCostPerMtok: 5 }],
+          },
+        ])
+      );
+    });
+    const lookup = httpLookupPricing('http://ai-api:3008', fetchImpl);
+
+    expect(await lookup('anthropic', 'unknown-model')).toBeNull();
+  });
+
   it('returns null and never throws on a network error', async () => {
     const fetchImpl = vi.fn<FetchImpl>(() => Promise.reject(new Error('ECONNREFUSED')));
     expect(await httpLookupPricing('http://ai-api:3008', fetchImpl)('x', 'y')).toBeNull();
