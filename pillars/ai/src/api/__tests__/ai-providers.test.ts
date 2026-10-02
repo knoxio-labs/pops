@@ -26,6 +26,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   aiDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
 });
@@ -119,6 +120,26 @@ describe('ai-providers — healthCheck', () => {
 
     const provider = await client().aiProviders.get('ollama');
     expect(provider?.status).toBe('error');
+  });
+
+  it('probes the Anthropic models endpoint for an anthropic provider id', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'test-key');
+    await client().aiProviders.upsert({ id: 'anthropic', name: 'Anthropic', type: 'cloud' });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 200 }));
+
+    const result = await client().aiProviders.healthCheck('anthropic');
+    expect(result.status).toBe('active');
+    expect(result.error).toBeUndefined();
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toBe('https://api.anthropic.com/v1/models');
+  });
+
+  it('still rejects a cloud provider with an unrecognised id', async () => {
+    await client().aiProviders.upsert({ id: 'mystery', name: 'Mystery', type: 'cloud' });
+    const result = await client().aiProviders.healthCheck('mystery');
+    expect(result.status).toBe('error');
+    expect(result.error).toBe('Unknown provider type: cloud');
   });
 
   it('returns error for an unknown provider without touching the network', async () => {

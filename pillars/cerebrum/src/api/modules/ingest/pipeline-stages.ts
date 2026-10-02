@@ -111,11 +111,13 @@ export async function runPipelineStages(
 /**
  * Enqueue a `classifyEngram` curation job. Returns `false` (soft signal) when
  * the queue is unavailable (no Redis) or the enqueue throws — the engram has
- * already been written, so enrichment is best-effort.
+ * already been written, so enrichment is best-effort. `force` makes the worker
+ * skip its idempotency guard.
  */
 export async function enqueueClassify(
   queueAccessor: CurationQueueAccessor,
-  engramId: string
+  engramId: string,
+  options: { force?: boolean } = {}
 ): Promise<boolean> {
   const queue = queueAccessor();
   if (queue === null) {
@@ -125,7 +127,11 @@ export async function enqueueClassify(
     return false;
   }
   try {
-    await queue.add('classifyEngram', { type: 'classifyEngram', engramId });
+    await queue.add('classifyEngram', {
+      type: 'classifyEngram',
+      engramId,
+      ...(options.force === true ? { force: true } : {}),
+    });
     return true;
   } catch (err) {
     console.warn(

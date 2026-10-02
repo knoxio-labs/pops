@@ -22,6 +22,15 @@ export interface ClassificationResult {
   suggestedTags: string[];
 }
 
+/** Classifier result plus the signals the curation worker needs to decide what to persist. */
+export interface ClassificationOutcome {
+  classification: ClassificationResult;
+  /** The LLM returned nothing or an unparseable response; the result is a placeholder, not a verdict. */
+  degraded: boolean;
+  /** The model answered and its confidence cleared the threshold. */
+  accepted: boolean;
+}
+
 export type EntityType = 'person' | 'project' | 'date' | 'topic' | 'organisation';
 
 export interface ExtractedEntity {
@@ -40,12 +49,24 @@ export interface EntityExtractionResult {
   referencedDates: string[];
 }
 
+/** Entity-extraction result plus whether the LLM stage failed. */
+export interface EntityExtractionOutcome {
+  extraction: EntityExtractionResult;
+  degraded: boolean;
+}
+
 export type ScopeSource = 'explicit' | 'rules' | 'llm' | 'fallback';
 
 export interface ScopeInferenceResult {
   scopes: string[];
   source: ScopeSource;
   confidence: number;
+}
+
+/** Scope-inference result plus whether the LLM tier was needed and failed. */
+export interface ScopeInferenceOutcome {
+  inference: ScopeInferenceResult;
+  degraded: boolean;
 }
 
 export interface IngestResult {
