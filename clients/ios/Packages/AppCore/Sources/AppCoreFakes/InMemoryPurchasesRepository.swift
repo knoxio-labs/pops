@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// A ``PurchasesRepository`` backed by an array, with server-shaped paging and failures.
 public actor InMemoryPurchasesRepository: PurchasesRepository {
