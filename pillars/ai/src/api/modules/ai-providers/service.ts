@@ -179,7 +179,11 @@ export async function runHealthCheck(
         signal: AbortSignal.timeout(5000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    } else if (provider.id === 'claude') {
+    } else if (
+      provider.type === 'anthropic' ||
+      provider.id === 'anthropic' ||
+      provider.id === 'claude'
+    ) {
       const apiKey = getAnthropicApiKey();
       if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
       const res = await fetch('https://api.anthropic.com/v1/models', {

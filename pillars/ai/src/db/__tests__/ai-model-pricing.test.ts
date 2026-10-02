@@ -4,7 +4,7 @@
  * than from the pillar migration so the cache contract is exercised in
  * isolation from the rest of the baseline schema.
  *
- * Cache-hit + cache-miss + TTL invalidation + DB-error fallback are
+ * Cache-hit + cache-miss + TTL invalidation + DB-error propagation are
  * driven via the `now` injection point so the test is deterministic
  * without sleeping.
  */
@@ -40,10 +40,10 @@ function freshDb(): { db: AiDb; raw: Database.Database } {
   return { db: drizzle(raw), raw };
 }
 
-function seedClaude(db: AiDb): void {
+function seedAnthropic(db: AiDb): void {
   db.insert(aiModelPricing)
     .values({
-      providerId: 'claude',
+      providerId: 'anthropic',
       modelId: 'sonnet-4-5',
       displayName: 'Claude Sonnet 4.5',
       inputCostPerMtok: 3.0,
@@ -65,78 +65,72 @@ describe('createPricingCache', () => {
 
   describe('lookup', () => {
     it('returns the persisted cost-per-Mtok pair on first call (cache miss -> DB refresh)', () => {
-      seedClaude(db);
+      seedAnthropic(db);
       const cache = createPricingCache(db);
-      expect(cache.lookup('claude', 'sonnet-4-5')).toEqual({ input: 3.0, output: 15.0 });
+      expect(cache.lookup('anthropic', 'sonnet-4-5')).toEqual({ input: 3.0, output: 15.0 });
     });
 
-    it('returns the fallback for unknown (provider, model) keys', () => {
-      seedClaude(db);
-      const cache = createPricingCache(db, { fallback: { input: 0.1, output: 0.2 } });
-      expect(cache.lookup('claude', 'unknown-model')).toEqual({ input: 0.1, output: 0.2 });
-    });
-
-    it('returns the default fallback when nothing matches and no override is supplied', () => {
-      seedClaude(db);
+    it('returns null for an unknown provider/model pair', () => {
+      seedAnthropic(db);
       const cache = createPricingCache(db);
-      expect(cache.lookup('claude', 'unknown-model')).toEqual({ input: 1.0, output: 5.0 });
+      expect(cache.lookup('anthropic', 'unknown-model')).toBeNull();
     });
 
     it('serves a cache hit without re-reading the DB while within the TTL window', () => {
-      seedClaude(db);
+      seedAnthropic(db);
       const selectSpy = vi.spyOn(db, 'select');
       const cache = createPricingCache(db, { ttlMs: 1_000, now: () => 1_000 });
-      expect(cache.lookup('claude', 'sonnet-4-5')).toEqual({ input: 3.0, output: 15.0 });
+      expect(cache.lookup('anthropic', 'sonnet-4-5')).toEqual({ input: 3.0, output: 15.0 });
       const callsAfterFirst = selectSpy.mock.calls.length;
-      expect(cache.lookup('claude', 'sonnet-4-5')).toEqual({ input: 3.0, output: 15.0 });
+      expect(cache.lookup('anthropic', 'sonnet-4-5')).toEqual({ input: 3.0, output: 15.0 });
       expect(selectSpy.mock.calls.length).toBe(callsAfterFirst);
     });
 
     it('treats an entry older than the TTL as a miss and re-reads the DB', () => {
-      seedClaude(db);
+      seedAnthropic(db);
       let now = 1_000;
       const cache = createPricingCache(db, { ttlMs: 1_000, now: () => now });
-      cache.lookup('claude', 'sonnet-4-5');
+      cache.lookup('anthropic', 'sonnet-4-5');
       const selectSpy = vi.spyOn(db, 'select');
 
       now = 1_500;
-      cache.lookup('claude', 'sonnet-4-5');
+      cache.lookup('anthropic', 'sonnet-4-5');
       expect(selectSpy).not.toHaveBeenCalled();
 
       now = 2_500;
-      cache.lookup('claude', 'sonnet-4-5');
+      cache.lookup('anthropic', 'sonnet-4-5');
       expect(selectSpy).toHaveBeenCalledTimes(1);
     });
 
     it('picks up pricing edits on the next miss after the TTL expires', () => {
-      seedClaude(db);
+      seedAnthropic(db);
       let now = 0;
       const cache = createPricingCache(db, { ttlMs: 1_000, now: () => now });
-      expect(cache.lookup('claude', 'sonnet-4-5').input).toBe(3.0);
+      expect(cache.lookup('anthropic', 'sonnet-4-5')?.input).toBe(3.0);
 
       raw.exec(`UPDATE ai_model_pricing SET input_cost_per_mtok = 4.0`);
 
       now = 5_000;
-      expect(cache.lookup('claude', 'sonnet-4-5').input).toBe(4.0);
+      expect(cache.lookup('anthropic', 'sonnet-4-5')?.input).toBe(4.0);
     });
 
-    it('falls back when the DB refresh throws and the cache is cold', () => {
-      const cache = createPricingCache(db, { fallback: { input: 9, output: 99 } });
+    it('propagates a database refresh error', () => {
+      const cache = createPricingCache(db);
       vi.spyOn(db, 'select').mockImplementationOnce(() => {
         throw new Error('boom');
       });
-      expect(cache.lookup('claude', 'sonnet-4-5')).toEqual({ input: 9, output: 99 });
+      expect(() => cache.lookup('anthropic', 'sonnet-4-5')).toThrow('boom');
     });
   });
 
   describe('clear', () => {
     it('drops the cache so the next lookup triggers a DB refresh', () => {
-      seedClaude(db);
+      seedAnthropic(db);
       const cache = createPricingCache(db, { ttlMs: 60_000 });
-      cache.lookup('claude', 'sonnet-4-5');
+      cache.lookup('anthropic', 'sonnet-4-5');
       cache.clear();
       const selectSpy = vi.spyOn(db, 'select');
-      cache.lookup('claude', 'sonnet-4-5');
+      cache.lookup('anthropic', 'sonnet-4-5');
       expect(selectSpy).toHaveBeenCalledTimes(1);
     });
   });

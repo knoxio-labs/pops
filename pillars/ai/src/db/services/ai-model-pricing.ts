@@ -15,9 +15,7 @@
  *   - A miss (either no entry or an expired one) triggers a full
  *     SELECT-all refresh; the refresh re-stamps every populated key, so
  *     subsequent unrelated lookups within the TTL window remain hits.
- *   - On DB error the lookup returns the configured fallback price —
- *     pricing data is best-effort because the inference call itself is
- *     more important than precise cost attribution.
+ *   - A lookup miss returns null. Database errors propagate to the caller.
  */
 import { aiModelPricing } from '../schema.js';
 
@@ -31,11 +29,8 @@ export interface ModelPrice {
 
 /** Public API of a pricing cache returned from {@link createPricingCache}. */
 export interface PricingCache {
-  /**
-   * Resolve `(input, output)` cost-per-Mtok for the given provider + model pair.
-   * Returns the configured fallback on cache miss + DB failure or on an unknown key.
-   */
-  lookup(provider: string, model: string): ModelPrice;
+  /** Resolve cost-per-Mtok or return null when unknown; database read errors propagate. */
+  lookup(provider: string, model: string): ModelPrice | null;
   /** Drop every cached entry; the next lookup forces a DB refresh. */
   clear(): void;
 }
@@ -47,29 +42,24 @@ interface PricingEntry {
 }
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
-const DEFAULT_FALLBACK: ModelPrice = { input: 1.0, output: 5.0 };
-
 /**
  * Build a process-local pricing lookup bound to the given ai pillar DB
  * handle. Each call to `lookup(provider, model)` either hits the cache
  * or refreshes the entire pricing table from SQLite.
+ * Returns null for an unconfigured pair; database read errors propagate.
  *
  * @param db - ai pillar drizzle handle. Captured by closure; the same
  *   handle is used for every refresh against this cache.
  * @param options.ttlMs - Cache freshness window in milliseconds.
  *   Defaults to 5 minutes.
- * @param options.fallback - Returned when the cache is empty AND a
- *   refresh fails OR the requested key is unknown. Defaults to
- *   `{ input: 1.0, output: 5.0 }`.
  * @param options.now - Optional clock override; tests use this to drive
  *   the TTL deterministically. Defaults to `Date.now`.
  */
 export function createPricingCache(
   db: AiDb,
-  options: { ttlMs?: number; fallback?: ModelPrice; now?: () => number } = {}
+  options: { ttlMs?: number; now?: () => number } = {}
 ): PricingCache {
   const ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
-  const fallback = options.fallback ?? DEFAULT_FALLBACK;
   const now = options.now ?? Date.now;
   const cache = new Map<string, PricingEntry>();
 
@@ -93,21 +83,17 @@ export function createPricingCache(
   }
 
   return {
-    lookup(provider: string, model: string): ModelPrice {
+    lookup(provider: string, model: string): ModelPrice | null {
       const key = `${provider}:${model}`;
       const cached = cache.get(key);
       const currentNow = now();
       if (cached && currentNow - cached.cachedAt < ttlMs) {
         return { input: cached.inputCostPerMtok, output: cached.outputCostPerMtok };
       }
-      try {
-        refresh(currentNow);
-        const entry = cache.get(key);
-        if (entry) return { input: entry.inputCostPerMtok, output: entry.outputCostPerMtok };
-      } catch {
-        // pricing lookup is best-effort
-      }
-      return fallback;
+      refresh(currentNow);
+      const entry = cache.get(key);
+      if (entry) return { input: entry.inputCostPerMtok, output: entry.outputCostPerMtok };
+      return null;
     },
     clear(): void {
       cache.clear();
