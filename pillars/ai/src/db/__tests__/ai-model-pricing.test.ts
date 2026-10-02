@@ -70,16 +70,16 @@ describe('createPricingCache', () => {
       expect(cache.lookup('claude', 'sonnet-4-5')).toEqual({ input: 3.0, output: 15.0 });
     });
 
-    it('returns the fallback for unknown (provider, model) keys', () => {
-      seedClaude(db);
-      const cache = createPricingCache(db, { fallback: { input: 0.1, output: 0.2 } });
-      expect(cache.lookup('claude', 'unknown-model')).toEqual({ input: 0.1, output: 0.2 });
-    });
-
-    it('returns the default fallback when nothing matches and no override is supplied', () => {
+    it('returns null for an unknown (provider, model) key', () => {
       seedClaude(db);
       const cache = createPricingCache(db);
-      expect(cache.lookup('claude', 'unknown-model')).toEqual({ input: 1.0, output: 5.0 });
+      expect(cache.lookup('claude', 'unknown-model')).toBeNull();
+    });
+
+    it('returns null for a known model under a different provider', () => {
+      seedClaude(db);
+      const cache = createPricingCache(db);
+      expect(cache.lookup('anthropic', 'sonnet-4-5')).toBeNull();
     });
 
     it('serves a cache hit without re-reading the DB while within the TTL window', () => {
@@ -112,20 +112,20 @@ describe('createPricingCache', () => {
       seedClaude(db);
       let now = 0;
       const cache = createPricingCache(db, { ttlMs: 1_000, now: () => now });
-      expect(cache.lookup('claude', 'sonnet-4-5').input).toBe(3.0);
+      expect(cache.lookup('claude', 'sonnet-4-5')?.input).toBe(3.0);
 
       raw.exec(`UPDATE ai_model_pricing SET input_cost_per_mtok = 4.0`);
 
       now = 5_000;
-      expect(cache.lookup('claude', 'sonnet-4-5').input).toBe(4.0);
+      expect(cache.lookup('claude', 'sonnet-4-5')?.input).toBe(4.0);
     });
 
-    it('falls back when the DB refresh throws and the cache is cold', () => {
-      const cache = createPricingCache(db, { fallback: { input: 9, output: 99 } });
+    it('returns null when the DB refresh throws and the cache is cold', () => {
+      const cache = createPricingCache(db);
       vi.spyOn(db, 'select').mockImplementationOnce(() => {
         throw new Error('boom');
       });
-      expect(cache.lookup('claude', 'sonnet-4-5')).toEqual({ input: 9, output: 99 });
+      expect(cache.lookup('claude', 'sonnet-4-5')).toBeNull();
     });
   });
 

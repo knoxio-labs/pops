@@ -49,6 +49,7 @@ import type {
   AiObservabilityGetStatsData,
   AiObservabilityGetStatsResponses,
   AiPricingLookupData,
+  AiPricingLookupErrors,
   AiPricingLookupResponses,
   AiProvidersGetData,
   AiProvidersGetResponses,
@@ -380,8 +381,8 @@ export const aiObservabilityGetStats = <ThrowOnError extends boolean = false>(
  */
 export const aiPricingLookup = <ThrowOnError extends boolean = false>(
   options: Options<AiPricingLookupData, ThrowOnError>
-): RequestResult<AiPricingLookupResponses, unknown, ThrowOnError> =>
-  (options.client ?? client).get<AiPricingLookupResponses, unknown, ThrowOnError>({
+): RequestResult<AiPricingLookupResponses, AiPricingLookupErrors, ThrowOnError> =>
+  (options.client ?? client).get<AiPricingLookupResponses, AiPricingLookupErrors, ThrowOnError>({
     url: '/ai-pricing/{provider}/{model}',
     ...options,
   });

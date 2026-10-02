@@ -19,6 +19,12 @@ export {
 } from './report-sink.js';
 export { httpLookupPricing } from './pricing-http.js';
 export {
+  messageText,
+  samplingParams,
+  supportsEffort,
+  supportsSamplingParams,
+} from './model-params.js';
+export {
   ledgerReportFailedMessage,
   resolveLedgerCredential,
   resolveSecret,
