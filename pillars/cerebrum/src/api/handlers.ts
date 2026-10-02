@@ -56,9 +56,8 @@ export interface CerebrumApiDeps {
    */
   egoLlm?: EgoLlm;
   /**
-   * Contradiction detector for the auditor worker. Optional — defaults to an
-   * Anthropic-backed haiku client. Tests inject an offline fake (or omit it to
-   * get the noop path).
+   * Contradiction detector for the auditor worker. Optional — omitted means the
+   * auditor runs no contradiction pass. Tests inject an offline fake.
    */
   auditorContradictionDetector?: ContradictionDetector;
   /**
