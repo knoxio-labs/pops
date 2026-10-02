@@ -21,6 +21,8 @@ import {
  */
 import type { SettingsManifest } from '@pops/types';
 
+const MODEL_SELECT_OPTIONS = FINANCE_AI_MODEL_OPTIONS.map(({ value, label }) => ({ value, label }));
+
 export const financeManifest: SettingsManifest = {
   id: 'finance',
   title: 'Finance',
@@ -37,7 +39,7 @@ export const financeManifest: SettingsManifest = {
           label: 'Categorizer Model',
           type: 'select',
           default: FINANCE_AI_MODEL_DEFAULT,
-          options: [...FINANCE_AI_MODEL_OPTIONS],
+          options: MODEL_SELECT_OPTIONS,
           description:
             'Anthropic model used for categorisation. Sonnet 5.5 and Opus 5.5 are sent no sampling parameters and a low effort setting, with a 2000 token floor so thinking cannot use up the reply. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
         },
@@ -73,7 +75,7 @@ export const financeManifest: SettingsManifest = {
           label: 'Rule Generation Model',
           type: 'select',
           default: FINANCE_AI_MODEL_DEFAULT,
-          options: [...FINANCE_AI_MODEL_OPTIONS],
+          options: MODEL_SELECT_OPTIONS,
           description:
             'Anthropic model used when your manual corrections are analysed for a repeatable rule. Runs once per analysis rather than once per row, so a larger model here is far cheaper than on the categorizer.',
         },

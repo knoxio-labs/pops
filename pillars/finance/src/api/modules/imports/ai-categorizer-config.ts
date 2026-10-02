@@ -18,6 +18,7 @@ import {
   AI_CATEGORIZER_MAX_TOKENS_KEY,
   AI_CATEGORIZER_MODEL_KEY,
   AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
+  FINANCE_AI_MODEL_OPTIONS,
 } from '../../../contract/settings/ai-settings-keys.js';
 import { resolveAiMaxTokens, resolveAiModel, resolveAiPercent } from '../ai-settings-resolver.js';
 
@@ -26,9 +27,6 @@ import type { FinanceDb } from '../../../db/index.js';
 /** Default categorizer model, overridable via `finance.aiCategorizer.model` then `FINANCE_AI_CATEGORIZER_MODEL`. */
 export const CATEGORIZER_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 const DEFAULT_MAX_TOKENS = 200;
-// Claude Haiku pricing (USD per 1M tokens) for the cost estimate.
-const INPUT_COST_PER_M = 1.0;
-const OUTPUT_COST_PER_M = 5.0;
 /** Client-side request timeout (ms) — the SDK default (10min) is far too long for a single-row/batch categorization call (CF078/#3670). */
 const CLIENT_TIMEOUT_MS = 30_000;
 
@@ -119,9 +117,18 @@ export function getTagsOnlyMaxTokens(rowCount: number): number {
   return Number.isNaN(parsed) ? TAGS_ONLY_TOKENS_PER_ROW * rowCount : parsed;
 }
 
-export function computeCostUsd(inputTokens: number, outputTokens: number): number {
+/**
+ * The import run's cost estimate for one call. A model outside the settings
+ * list (an env override) is estimated at the default model's rates; the ai
+ * pillar's ledger is the cost of record.
+ */
+export function computeCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const rates =
+    FINANCE_AI_MODEL_OPTIONS.find((option) => option.value === model) ??
+    FINANCE_AI_MODEL_OPTIONS[0];
   return (
-    (inputTokens / 1_000_000) * INPUT_COST_PER_M + (outputTokens / 1_000_000) * OUTPUT_COST_PER_M
+    (inputTokens / 1_000_000) * rates.inputCostPerMtok +
+    (outputTokens / 1_000_000) * rates.outputCostPerMtok
   );
 }
 
