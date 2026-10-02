@@ -1,10 +1,3 @@
-/**
- * Tests for the AI Configuration settings manifest.
- *
- * Issue #2463 — the global ai.model dropdown previously offered a single
- * snapshot-id option, leaking the deprecated `claude-haiku-4-5-20251001`
- * id and giving users no choice. These tests guard against regression.
- */
 import { describe, expect, it } from 'vitest';
 
 import { aiConfigManifest } from '../settings/ai-manifest.js';
@@ -12,33 +5,21 @@ import { aiConfigManifest } from '../settings/ai-manifest.js';
 import type { SettingsField, SettingsGroup } from '@pops/types';
 
 describe('aiConfigManifest', () => {
-  function findField(key: string): SettingsField | undefined {
-    return aiConfigManifest.groups
-      .flatMap((g: SettingsGroup) => g.fields)
-      .find((f: SettingsField) => f.key === key);
-  }
+  const fields = aiConfigManifest.groups.flatMap((g: SettingsGroup) => g.fields);
 
-  it('exposes the model field with family-aliased options', () => {
-    const field = findField('ai.model');
-    expect(field).toBeDefined();
-    expect(field?.type).toBe('select');
-    expect(field?.options).toEqual([
-      { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
-      { value: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
-      { value: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
+  it('declares only the budget and retention keys', () => {
+    expect(fields.map((f: SettingsField) => f.key)).toEqual([
+      'ai.monthlyTokenBudget',
+      'ai.budgetExceededFallback',
+      'ai.logRetentionDays',
     ]);
   });
 
-  it('uses the haiku family alias as the default (not the snapshot id)', () => {
-    const field = findField('ai.model');
-    expect(field?.default).toBe('claude-haiku-4-5');
-  });
-
-  it('does not expose any deprecated snapshot ids in the option list', () => {
-    const field = findField('ai.model');
-    const values = (field?.options ?? []).map((o: { value: string }) => o.value);
-    for (const value of values) {
-      expect(value, `option value ${value} should not be a snapshot id`).not.toMatch(/-\d{8}$/);
+  it('offers no model selector or per-pipeline model override', () => {
+    for (const field of fields) {
+      expect(field.key).not.toMatch(/^ai\.model/);
     }
+    expect(aiConfigManifest.groups.map((g: SettingsGroup) => g.id)).not.toContain('model');
+    expect(aiConfigManifest.groups.map((g: SettingsGroup) => g.id)).not.toContain('modelOverrides');
   });
 });

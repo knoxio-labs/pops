@@ -39,11 +39,13 @@ describe('ai pillar settings RU+reset', () => {
     const res = await requestOn(app).get('/settings');
     expect(res.status).toBe(200);
     const rows = res.body.data as { key: string; value: string }[];
-    expect(rows).toContainEqual({ key: 'ai.model', value: 'claude-haiku-4-5' });
+    expect(rows).toContainEqual({ key: 'ai.budgetExceededFallback', value: 'skip' });
+    expect(rows).toContainEqual({ key: 'ai.logRetentionDays', value: '90' });
+    expect(rows.map((r) => r.key).filter((k) => k.startsWith('ai.model'))).toEqual([]);
   });
 
   it('get returns null for an unset key (no default at the single-key read)', async () => {
-    const res = await requestOn(app).get('/settings/ai.model');
+    const res = await requestOn(app).get('/settings/ai.budgetExceededFallback');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: null });
   });
@@ -59,10 +61,15 @@ describe('ai pillar settings RU+reset', () => {
   });
 
   it('resets a key back to its manifest default', async () => {
-    await requestOn(app).put('/settings/ai.model').send({ value: 'claude-opus-4-8' });
-    const reset = await requestOn(app).post('/settings/ai.model/reset').send({});
+    await requestOn(app).put('/settings/ai.budgetExceededFallback').send({ value: 'alert' });
+    const reset = await requestOn(app).post('/settings/ai.budgetExceededFallback/reset').send({});
     expect(reset.status).toBe(200);
-    expect(reset.body.data).toEqual({ key: 'ai.model', value: 'claude-haiku-4-5' });
+    expect(reset.body.data).toEqual({ key: 'ai.budgetExceededFallback', value: 'skip' });
+  });
+
+  it('rejects the removed ai.model keys at the contract boundary', async () => {
+    expect((await requestOn(app).get('/settings/ai.model')).status).toBe(400);
+    expect((await requestOn(app).get('/settings/ai.modelOverrides.query')).status).toBe(400);
   });
 
   it('rejects a key outside the declared ai.* set at the contract boundary', async () => {
