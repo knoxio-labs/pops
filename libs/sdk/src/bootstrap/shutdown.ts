@@ -15,19 +15,21 @@ export interface ClosableServer {
 }
 
 /**
- * One asynchronous thing a pillar must settle before it stops serving —
- * deregistering from the registry, draining a scheduler, closing a queue.
- * `name` only ever appears in the log line for a step that failed.
+ * One asynchronous thing a pillar attempts before it stops serving, such as
+ * deregistering from the registry, draining a scheduler, or closing a queue.
+ * A step may time out without its underlying operation being cancelled.
  */
 export interface ShutdownStep {
   name: string;
+  /** The task is not cancelled if the shutdown timeout expires. */
   run: () => Promise<unknown> | unknown;
 }
 
+/** Options for the bounded shutdown sequence of a pillar process. */
 export interface ShutdownPillarOptions {
   /** Pillar process label, without brackets — e.g. `media-api`. */
   label: string;
-  /** Run in order. A step that fails is logged and the rest still run. */
+  /** Run in order. A step is allowed 5 seconds before shutdown continues. */
   steps: readonly ShutdownStep[];
   server: ClosableServer;
   /** Closes the pillar's database, once the last request has been answered. */
@@ -48,6 +50,56 @@ export interface ShutdownPillarOptions {
  * to the limit.
  */
 export const DEFAULT_DRAIN_GRACE_MS = 5_000;
+
+const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
+
+type ShutdownStepOutcome =
+  | { kind: 'completed' }
+  | { kind: 'rejected'; error: unknown }
+  | { kind: 'timed-out' };
+
+async function runShutdownStep(
+  step: ShutdownStep,
+  logger: BootstrapLogger,
+  prefix: string
+): Promise<void> {
+  const startedAt = Date.now();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const outcome = await Promise.race<ShutdownStepOutcome>([
+    Promise.resolve()
+      .then(() => step.run())
+      .then(
+        () => ({ kind: 'completed' as const }),
+        (error: unknown) => ({ kind: 'rejected' as const, error })
+      ),
+    new Promise<ShutdownStepOutcome>((resolve) => {
+      timeout = setTimeout(() => resolve({ kind: 'timed-out' }), SHUTDOWN_STEP_TIMEOUT_MS);
+    }),
+  ]);
+
+  if (timeout !== undefined) clearTimeout(timeout);
+  const durationMs = Date.now() - startedAt;
+
+  if (outcome.kind === 'timed-out') {
+    logger.warn(`${prefix} shutdown step timed out; continuing`, {
+      step: step.name,
+      timeoutMs: SHUTDOWN_STEP_TIMEOUT_MS,
+      durationMs,
+    });
+    return;
+  }
+
+  if (outcome.kind === 'rejected') {
+    logger.error(`${prefix} shutdown step failed; continuing`, {
+      step: step.name,
+      err: errSummary(outcome.error),
+      durationMs,
+    });
+    return;
+  }
+
+  logger.info(`${prefix} shutdown step completed`, { step: step.name, durationMs });
+}
 
 /**
  * Stop serving: refuse new connections, then give whatever is still mid-response
@@ -98,9 +150,9 @@ async function stopServing(
 }
 
 /**
- * Runs a pillar's shutdown sequence and then closes it down: every step
- * settles, then the HTTP server stops accepting and drains, then the database
- * closes.
+ * Runs a pillar's shutdown sequence and then closes it down: each step runs
+ * for at most five seconds, then the HTTP server stops accepting and drains,
+ * then the database closes.
  *
  * No step can abort the sequence. A rejected deregister — the ordinary case
  * when the whole stack comes down together and the registry went first — used
@@ -117,14 +169,7 @@ export async function shutdownPillar(options: ShutdownPillarOptions): Promise<vo
   const prefix = `[${options.label}]`;
 
   for (const step of options.steps) {
-    try {
-      await step.run();
-    } catch (err: unknown) {
-      logger.error(`${prefix} shutdown step failed; continuing`, {
-        step: step.name,
-        err: errSummary(err),
-      });
-    }
+    await runShutdownStep(step, logger, prefix);
   }
 
   await stopServing(options.server, options.drainGraceMs ?? DEFAULT_DRAIN_GRACE_MS, logger, prefix);
