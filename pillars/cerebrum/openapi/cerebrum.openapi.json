@@ -1711,6 +1711,9 @@
                               "enum": ["report", "summary", "timeline"],
                               "type": "string"
                             },
+                            "outputTruncated": {
+                              "type": "boolean"
+                            },
                             "scopeCoverage": {
                               "items": {
                                 "type": "string"
@@ -1731,7 +1734,8 @@
                             "dateRange",
                             "scopeCoverage",
                             "mode",
-                            "truncated"
+                            "truncated",
+                            "outputTruncated"
                           ],
                           "type": "object"
                         },
@@ -2052,6 +2056,9 @@
                               "enum": ["report", "summary", "timeline"],
                               "type": "string"
                             },
+                            "outputTruncated": {
+                              "type": "boolean"
+                            },
                             "scopeCoverage": {
                               "items": {
                                 "type": "string"
@@ -2072,7 +2079,8 @@
                             "dateRange",
                             "scopeCoverage",
                             "mode",
-                            "truncated"
+                            "truncated",
+                            "outputTruncated"
                           ],
                           "type": "object"
                         },
@@ -2267,6 +2275,9 @@
                               "enum": ["report", "summary", "timeline"],
                               "type": "string"
                             },
+                            "outputTruncated": {
+                              "type": "boolean"
+                            },
                             "scopeCoverage": {
                               "items": {
                                 "type": "string"
@@ -2287,7 +2298,8 @@
                             "dateRange",
                             "scopeCoverage",
                             "mode",
-                            "truncated"
+                            "truncated",
+                            "outputTruncated"
                           ],
                           "type": "object"
                         },
@@ -2485,6 +2497,9 @@
                               "enum": ["report", "summary", "timeline"],
                               "type": "string"
                             },
+                            "outputTruncated": {
+                              "type": "boolean"
+                            },
                             "scopeCoverage": {
                               "items": {
                                 "type": "string"
@@ -2505,7 +2520,8 @@
                             "dateRange",
                             "scopeCoverage",
                             "mode",
-                            "truncated"
+                            "truncated",
+                            "outputTruncated"
                           ],
                           "type": "object"
                         },
@@ -10865,16 +10881,7 @@
                 "cerebrum.glia.demotionWindowDays",
                 "cerebrum.mcp.queryMaxSources",
                 "cerebrum.mcp.searchSnippetLength",
-                "cerebrum.mcp.searchDefaultLimit",
-                "ego.defaultModel",
-                "ego.maxHistory",
-                "ego.maxRetrieval",
-                "ego.tokenBudget",
-                "ego.relevanceThreshold",
-                "ego.chat.maxTokens",
-                "ego.chat.temperature",
-                "ego.summary.maxTokens",
-                "ego.summary.temperature"
+                "cerebrum.mcp.searchDefaultLimit"
               ],
               "type": "string"
             }
@@ -10988,16 +10995,7 @@
                 "cerebrum.glia.demotionWindowDays",
                 "cerebrum.mcp.queryMaxSources",
                 "cerebrum.mcp.searchSnippetLength",
-                "cerebrum.mcp.searchDefaultLimit",
-                "ego.defaultModel",
-                "ego.maxHistory",
-                "ego.maxRetrieval",
-                "ego.tokenBudget",
-                "ego.relevanceThreshold",
-                "ego.chat.maxTokens",
-                "ego.chat.temperature",
-                "ego.summary.maxTokens",
-                "ego.summary.temperature"
+                "cerebrum.mcp.searchDefaultLimit"
               ],
               "type": "string"
             }
@@ -11132,16 +11130,7 @@
                 "cerebrum.glia.demotionWindowDays",
                 "cerebrum.mcp.queryMaxSources",
                 "cerebrum.mcp.searchSnippetLength",
-                "cerebrum.mcp.searchDefaultLimit",
-                "ego.defaultModel",
-                "ego.maxHistory",
-                "ego.maxRetrieval",
-                "ego.tokenBudget",
-                "ego.relevanceThreshold",
-                "ego.chat.maxTokens",
-                "ego.chat.temperature",
-                "ego.summary.maxTokens",
-                "ego.summary.temperature"
+                "cerebrum.mcp.searchDefaultLimit"
               ],
               "type": "string"
             }
@@ -11273,16 +11262,7 @@
                 "cerebrum.glia.demotionWindowDays",
                 "cerebrum.mcp.queryMaxSources",
                 "cerebrum.mcp.searchSnippetLength",
-                "cerebrum.mcp.searchDefaultLimit",
-                "ego.defaultModel",
-                "ego.maxHistory",
-                "ego.maxRetrieval",
-                "ego.tokenBudget",
-                "ego.relevanceThreshold",
-                "ego.chat.maxTokens",
-                "ego.chat.temperature",
-                "ego.summary.maxTokens",
-                "ego.summary.temperature"
+                "cerebrum.mcp.searchDefaultLimit"
               ],
               "type": "string"
             }
