@@ -43,9 +43,7 @@ name: Purchases home opens both archive scopes and a full detail
 - tapOn: 'Corner Store.*'
 - assertVisible:
     id: 'purchase-detail'
-- assertVisible:
-    id: 'purchase-detail'
-    text: 'Awaiting a bank match'
+- assertVisible: 'Awaiting a bank match'
 - assertVisible:
     id: 'purchase-detail'
     text: 'Items'
