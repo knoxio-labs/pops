@@ -286,6 +286,7 @@ export type EgoChatData = {
     appContext?: {
       app: string;
       entityId?: string;
+      entityTitle?: string;
       entityType?: string;
       route?: string;
     };
