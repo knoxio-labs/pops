@@ -31,6 +31,7 @@ import { createMerchantResolver } from '../../contacts/merchant.js';
 import { createDocumentLookup, createInventoryItemLookup } from '../../cron/pillar-lookup.js';
 import { createFinanceClient, type FinanceRouter } from '../../finance/client.js';
 import { createInventoryAssetCreator } from '../../inventory/client.js';
+import { createTagsClient } from '../../tags/client.js';
 import { __resetOutboundCredentialReports } from '../outbound.js';
 import { configurePurchasesServerSdk } from '../sdk-config.js';
 import { SERVICE_ACCOUNT_KEY_ENV, SERVICE_ACCOUNT_KEY_FILE_ENV } from '../service-account.js';
@@ -38,11 +39,11 @@ import { SERVICE_ACCOUNT_KEY_ENV, SERVICE_ACCOUNT_KEY_FILE_ENV } from '../servic
 const SERVICE_ACCOUNT_KEY = 'pops_sa_TESTTEST.testsecret_not_a_real_key_000000';
 
 /** Every pillar purchases calls, all answered by the one test server. */
-const CALLEES = ['contacts', 'documents', 'finance', 'inventory'] as const;
+const CALLEES = ['contacts', 'documents', 'finance', 'inventory', 'tags'] as const;
 
 /**
- * The narrowest document that still lets the SDK resolve all four
- * operations. A vendored copy of each producer's real spec would fail this
+ * The narrowest document that still lets the SDK resolve every caller
+ * operation. A vendored copy of each producer's real spec would fail this
  * suite on any unrelated change to them; agreement with the real contracts is
  * `scripts/ci/check-cross-pillar-expectations.mjs`'s job, and this fixture's
  * job is the transport.
@@ -92,6 +93,15 @@ const OPENAPI = {
       get: {
         operationId: 'paperless.get',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+    '/tags': {
+      get: {
+        operationId: 'tags.list',
+        parameters: [
+          { name: 'includeArchived', in: 'query', required: false, schema: { type: 'string' } },
+        ],
         responses: { '200': { description: 'ok' } },
       },
     },
@@ -160,6 +170,19 @@ function okBody(pathname: string): unknown {
   }
   if (pathname === '/entities') return { data: [{ id: 'contacts-1', name: 'Bunnings' }] };
   if (pathname === '/items') return { data: { id: 'inv-1' }, message: 'created' };
+  if (pathname === '/tags') {
+    return {
+      tags: [
+        {
+          id: '00000000-0000-4000-8000-000000000001',
+          facet: 'trip',
+          name: 'Japan trip',
+          archived: false,
+          mergedIntoId: null,
+        },
+      ],
+    };
+  }
   return { id: 'abc' };
 }
 
@@ -232,7 +255,7 @@ const OFFER = {
   kindConfirmed: true,
 } as const;
 
-/** The five legs, each named by the pillar it calls and the path it hits. */
+/** The six legs, each named by the pillar it calls and the path it hits. */
 const LEGS: readonly {
   readonly label: string;
   readonly path: string;
@@ -258,6 +281,11 @@ const LEGS: readonly {
     label: 'receipt ingest resolving a merchant against contacts',
     path: '/entities',
     call: () => createMerchantResolver().resolve('Bunnings Warehouse'),
+  },
+  {
+    label: 'the shared tag vocabulary refresh',
+    path: '/tags',
+    call: () => createTagsClient().fetchAll(),
   },
   {
     // The only leg that writes. An anonymous create would be admitted today
@@ -374,6 +402,13 @@ describe('a callee that rejects the credential', () => {
       expect.stringContaining("contacts rejected this pillar's service-account credential")
     );
   });
+
+  it('reports a tags credential refusal separately from an unavailable pillar', async () => {
+    await expect(createTagsClient().fetchAll()).resolves.toEqual({ kind: 'unauthorized' });
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.stringContaining("tags rejected this pillar's service-account credential")
+    );
+  });
 });
 
 /**
@@ -410,5 +445,9 @@ describe('a process with no service-account key', () => {
       kind: 'unauthorized',
       reason: 'no-credential',
     });
+  });
+
+  it('reports no-credential from the tags client', async () => {
+    await expect(createTagsClient().fetchAll()).resolves.toEqual({ kind: 'no-credential' });
   });
 });
