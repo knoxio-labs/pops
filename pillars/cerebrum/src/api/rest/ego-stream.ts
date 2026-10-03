@@ -30,7 +30,7 @@ import { buildEgoEngine } from './ego-engine.js';
 
 import type { Conversation, Message } from '../modules/ego/persistence.js';
 import type { AppContext, ChatStreamPreparation } from '../modules/ego/types.js';
-import type { EgoHandlerDeps } from './ego-handlers.js';
+import type { EgoHandlerDeps } from './ego-engine.js';
 
 function setSseHeaders(res: Response): void {
   res.setHeader('Content-Type', 'text/event-stream');

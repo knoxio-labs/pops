@@ -7,7 +7,27 @@
 import { ConversationEngine } from '../modules/ego/engine.js';
 import { EngramService } from '../modules/engrams/service.js';
 
-import type { EgoHandlerDeps } from './ego-handlers.js';
+import type BetterSqlite3 from 'better-sqlite3';
+
+import type { CerebrumDb } from '../../db/index.js';
+import type { EgoLlm } from '../modules/ego/llm.js';
+import type { EgoTools } from '../modules/ego/toolbox.js';
+import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
+import type { PeerClients } from '../modules/retrieval/peer-clients.js';
+import type { TemplateRegistry } from '../modules/templates/registry.js';
+
+/** Dependencies shared by Ego's contract and streaming route handlers. */
+export interface EgoHandlerDeps {
+  db: CerebrumDb;
+  raw: BetterSqlite3.Database;
+  vecAvailable: boolean;
+  engramRoot: string;
+  templates: TemplateRegistry;
+  llm: EgoLlm;
+  tools?: EgoTools;
+  peers: PeerClients;
+  embeddingClient?: EmbeddingClient;
+}
 
 /** Build the conversation engine from the dependencies shared by both routes. */
 export function buildEgoEngine(deps: EgoHandlerDeps): ConversationEngine {

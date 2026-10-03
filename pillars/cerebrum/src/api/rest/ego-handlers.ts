@@ -13,7 +13,6 @@
 import { initServer } from '@ts-rest/express';
 
 import { cerebrumEgoContract } from '../../contract/rest-ego.js';
-import { type CerebrumDb } from '../../db/index.js';
 import { EgoActionStore } from '../modules/ego/actions-store.js';
 import {
   persistAssistantError,
@@ -26,28 +25,12 @@ import { NotFoundError } from '../shared/errors.js';
 import { buildEgoEngine } from './ego-engine.js';
 import { runHttp } from './error-mapping.js';
 
-import type BetterSqlite3 from 'better-sqlite3';
-
-import type { EgoLlm } from '../modules/ego/llm.js';
-import type { EgoTools } from '../modules/ego/toolbox.js';
 import type { AppContext } from '../modules/ego/types.js';
-import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
-import type { PeerClients } from '../modules/retrieval/peer-clients.js';
-import type { TemplateRegistry } from '../modules/templates/registry.js';
+import type { EgoHandlerDeps } from './ego-engine.js';
+
+export type { EgoHandlerDeps } from './ego-engine.js';
 
 const server: ReturnType<typeof initServer> = initServer();
-
-export interface EgoHandlerDeps {
-  db: CerebrumDb;
-  raw: BetterSqlite3.Database;
-  vecAvailable: boolean;
-  engramRoot: string;
-  templates: TemplateRegistry;
-  llm: EgoLlm;
-  tools?: EgoTools;
-  peers: PeerClients;
-  embeddingClient?: EmbeddingClient;
-}
 
 export function makeEgoHandlers(
   deps: EgoHandlerDeps
