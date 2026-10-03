@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Set env before any imports so startup code doesn't throw
@@ -25,6 +29,18 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
     handleRequest = vi.fn();
   },
 }));
+
+vi.mock('dotenv', () => ({ config: vi.fn() }));
+
+const { mockListen } = vi.hoisted(() => ({ mockListen: vi.fn() }));
+
+vi.mock('express', () => {
+  const express = Object.assign(
+    vi.fn(() => ({ use: vi.fn(), post: vi.fn(), get: vi.fn(), listen: mockListen })),
+    { json: vi.fn(() => vi.fn()) }
+  );
+  return { default: express };
+});
 
 const mockToolHandler = vi.fn().mockResolvedValue({
   content: [{ type: 'text', text: '{"ok":true}' }],
@@ -242,4 +258,41 @@ describe('createMcpServer — CallTool structured logging (CF087)', () => {
     );
     errorSpy.mockRestore();
   });
+});
+
+describe('inbound token startup validation', () => {
+  it.each(['missing', 'empty'])(
+    'rejects a %s configured token file before listening',
+    async (kind) => {
+      const dir = mkdtempSync(join(tmpdir(), 'mcp-inbound-token-startup-'));
+      const tokenFile = join(dir, 'token');
+      if (kind === 'empty') writeFileSync(tokenFile, '  \n');
+      const configuredPath = kind === 'missing' ? join(dir, 'missing-token') : tokenFile;
+      const previousEnv = {
+        nodeEnv: process.env['NODE_ENV'],
+        tokenFile: process.env['MCP_INBOUND_TOKEN_FILE'],
+        token: process.env['MCP_INBOUND_TOKEN'],
+      };
+
+      try {
+        vi.resetModules();
+        mockListen.mockClear();
+        process.env['NODE_ENV'] = 'production';
+        process.env['MCP_INBOUND_TOKEN_FILE'] = configuredPath;
+        process.env['MCP_INBOUND_TOKEN'] = 'test-fallback-token';
+
+        await expect(import('./index.js')).rejects.toThrow(/MCP_INBOUND_TOKEN_FILE/);
+        expect(mockListen).not.toHaveBeenCalled();
+      } finally {
+        if (previousEnv.nodeEnv === undefined) delete process.env['NODE_ENV'];
+        else process.env['NODE_ENV'] = previousEnv.nodeEnv;
+        if (previousEnv.tokenFile === undefined) delete process.env['MCP_INBOUND_TOKEN_FILE'];
+        else process.env['MCP_INBOUND_TOKEN_FILE'] = previousEnv.tokenFile;
+        if (previousEnv.token === undefined) delete process.env['MCP_INBOUND_TOKEN'];
+        else process.env['MCP_INBOUND_TOKEN'] = previousEnv.token;
+        vi.resetModules();
+        rmSync(dir, { force: true, recursive: true });
+      }
+    }
+  );
 });
