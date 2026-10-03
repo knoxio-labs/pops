@@ -34,6 +34,31 @@ internal struct EgoThreadModelStreamTests {
         #expect(model.conversationId == nil)
     }
 
+    @Test("events from a stale stream cannot mutate the active turn")
+    func ignoresStaleStreamEvents() async {
+        let activeStream = EgoThreadModelStreamControl()
+        let repository = ControlledEgoRepository(streamControl: activeStream)
+        let model = EgoThreadModelFixtures.model(repository: repository)
+        model.draft = "current turn"
+        model.send()
+
+        let staleStream = AsyncThrowingStream<EgoStreamEvent, any Error> { continuation in
+            continuation.yield(
+                .done(
+                    conversationId: "stale-conversation", messageId: "stale-assistant",
+                    parts: [.text("stale")]))
+            continuation.finish()
+        }
+        await model.consume(staleStream, streamID: UUID())
+
+        #expect(model.messages.count == 1)
+        #expect(model.messages[0].plainText == "current turn")
+        #expect(model.turn?.phase == .streaming)
+        #expect(model.conversationId == nil)
+        model.cancel()
+        activeStream.finish()
+    }
+
     @Test("a failed event retains partial output and its retryability")
     func failedEventPreservesPartialTurn() async {
         let stream = EgoThreadModelStreamControl()

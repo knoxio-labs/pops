@@ -112,7 +112,7 @@ extension EgoThreadModel {
         }
     }
 
-    private func consume(
+    func consume(
         _ stream: AsyncThrowingStream<EgoStreamEvent, any Error>,
         streamID: UUID
     ) async {
