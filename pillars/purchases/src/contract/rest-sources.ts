@@ -24,7 +24,7 @@ export const purchasesSourceContract = c.router({
     method: 'GET',
     path: '/sources/:id',
     pathParams: z.object({ id: z.string() }),
-    responses: { 200: PurchaseSourceSchema, 404: ErrorBodySchema },
+    responses: { 200: PurchaseSourceSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Get a single purchase source',
   },
   upsert: {
@@ -42,6 +42,7 @@ export const purchasesSourceContract = c.router({
     body: z.object({}).optional(),
     responses: {
       200: OkSchema,
+      400: ErrorBodySchema,
       404: ErrorBodySchema,
       // Purchases still reference this source; deleting it would orphan
       // them, so the foreign key refuses.
