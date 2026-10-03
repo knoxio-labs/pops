@@ -198,7 +198,9 @@ export class ConversationEngine {
     scopes: string[],
     appContext?: AppContext
   ): { systemPrompt: string; contextBlock: string } {
-    const systemPrompt = buildEgoSystemPrompt(scopes, appContext);
+    const systemPrompt = buildEgoSystemPrompt(scopes, appContext, {
+      tools: this.toolbox !== undefined,
+    });
     let contextBlock = '';
     if (retrievalResults.length > 0) {
       const assembled = this.assembler.assemble({
