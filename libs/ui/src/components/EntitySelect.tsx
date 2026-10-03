@@ -2,6 +2,7 @@ import { ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 
 import { cn } from '../lib/utils';
+import { defaultFilter, normalizeForSearch } from '../primitives/command';
 import {
   Command,
   CommandEmpty,
@@ -76,6 +77,13 @@ function useEntitySelectState(entities: EntityOption[], onCreate?: (name: string
   };
 }
 
+function filterEntity(value: string, search: string, keywords?: string[]): number {
+  const normalizedSearch = normalizeForSearch(search);
+  if (!normalizedSearch) return 1;
+  if (keywords?.some((keyword) => normalizeForSearch(keyword) === normalizedSearch)) return 2;
+  return defaultFilter(value, search);
+}
+
 function EntityPickerList({
   props,
   state,
@@ -85,7 +93,7 @@ function EntityPickerList({
 }) {
   const { entities, value, onChange, onCreate, onClear, clearLabel = 'No entity' } = props;
   return (
-    <Command>
+    <Command filter={filterEntity}>
       <CommandInput
         placeholder={props.searchPlaceholder ?? 'Search entities...'}
         value={state.query}
@@ -107,6 +115,7 @@ function EntityPickerList({
             <CommandItem
               key={entity.id}
               value={`${entity.name} ${(entity.aliases ?? []).join(' ')} ${entity.type ?? ''}`}
+              keywords={[entity.name, ...(entity.aliases ?? [])]}
               onSelect={() => {
                 onChange?.(entity.id, entity.name);
                 state.close();
