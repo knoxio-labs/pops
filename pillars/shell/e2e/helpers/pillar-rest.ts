@@ -88,7 +88,7 @@ const NUDGES_SEARCH_URL = /\/cerebrum-api\/nudges\/search$/;
  * instead of soft-failing to the fallback path.
  *
  * Deliberately narrower than every proxy path the shell's dev server carries:
- * `/api`, `/api/ego`, `/media/images`, and `/inventory/documents`
+ * `/api`, `/media/images`, and `/inventory/documents`
  * (`vite.config.ts`) are real proxies too, but no spec in this suite routes
  * or exercises them today, so widening the pattern to cover them would be
  * asserting about traffic nothing here produces. Anchoring to the first path
