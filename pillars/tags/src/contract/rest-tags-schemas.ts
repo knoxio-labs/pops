@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
+import { SHARED_TAG_FACETS } from './facets.js';
+
 const UuidSchema = z.string().uuid();
 const IsoTimestampSchema = z.iso.datetime();
+const SharedTagFacetSchema = z.enum(SHARED_TAG_FACETS);
 
 function isCalendarDate(value: string): boolean {
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -44,7 +47,7 @@ export const TagWindowSchema = z
 /** One complete vocabulary entry returned by the tags pillar. */
 export const TagSchema = z.object({
   id: UuidSchema,
-  facet: z.string().min(1),
+  facet: SharedTagFacetSchema,
   name: TagNameSchema,
   parentId: UuidSchema.nullable(),
   description: z.string().nullable(),
@@ -58,7 +61,7 @@ export const TagSchema = z.object({
 
 /** Body accepted when a new shared vocabulary entry is created. */
 export const CreateTagBody = z.object({
-  facet: z.string().min(1),
+  facet: SharedTagFacetSchema,
   name: TagNameSchema,
   parentId: UuidSchema.nullable().optional(),
   description: z.string().nullable().optional(),
@@ -75,7 +78,7 @@ export const UpdateTagBody = z.object({
 
 /** Filters accepted by the tag-list route. */
 export const ListTagsQuery = z.object({
-  facet: z.string().min(1).optional(),
+  facet: SharedTagFacetSchema.optional(),
   includeArchived: z.enum(['true', 'false']).optional(),
   updatedSince: IsoTimestampSchema.optional(),
 });

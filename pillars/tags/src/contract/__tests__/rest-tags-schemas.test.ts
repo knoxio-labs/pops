@@ -1,11 +1,15 @@
+import { PopsError } from '@pops/pillar-express';
 import { describe, expect, it } from 'vitest';
 
+import { tagsErrors } from '../../api/errors.js';
 import {
   CreateTagBody,
   ExpandTagsBody,
+  ListTagsQuery,
   TagSchema,
   UpdateTagBody,
 } from '../rest-tags-schemas.js';
+import { SHARED_TAG_FACETS } from '../facets.js';
 import { tagsVocabularyContract } from '../rest-tags.js';
 
 const validTag = {
@@ -28,6 +32,16 @@ describe('shared tag contract schemas', () => {
   it('rejects an empty or whitespace-only tag name on create and update', () => {
     expect(CreateTagBody.safeParse({ facet: 'trip', name: '' }).success).toBe(false);
     expect(UpdateTagBody.safeParse({ name: '   ' }).success).toBe(false);
+  });
+
+  it('accepts the shared facets and rejects unknown facet values', () => {
+    for (const facet of SHARED_TAG_FACETS) {
+      expect(CreateTagBody.safeParse({ facet, name: 'Shared tag' }).success).toBe(true);
+      expect(ListTagsQuery.safeParse({ facet }).success).toBe(true);
+    }
+
+    expect(CreateTagBody.safeParse({ facet: 'unknown', name: 'Shared tag' }).success).toBe(false);
+    expect(TagSchema.safeParse({ ...validTag, facet: 'unknown' }).success).toBe(false);
   });
 
   it('rejects malformed and impossible calendar dates', () => {
@@ -90,5 +104,29 @@ describe('shared tag contract schemas', () => {
     expect(routes.every(({ summary }) => typeof summary === 'string' && summary.trim().length > 0)).toBe(
       true
     );
+  });
+
+  it('registers the six vocabulary error codes with their HTTP statuses', () => {
+    const cases = [
+      [tagsErrors.not_found, 'tags.tag.not_found', 404],
+      [tagsErrors.name_conflict, 'tags.tag.name_conflict', 409],
+      [tagsErrors.unknown_facet, 'tags.tag.unknown_facet', 422],
+      [tagsErrors.parent_invalid, 'tags.tag.parent_invalid', 422],
+      [tagsErrors.merge_invalid, 'tags.tag.merge_invalid', 422],
+      [tagsErrors.window_invalid, 'tags.tag.window_invalid', 422],
+    ] as const;
+
+    const observed = cases.map(([raise]) => {
+      try {
+        raise();
+      } catch (error) {
+        if (error instanceof PopsError) return { code: error.code, status: error.status };
+        throw error;
+      }
+
+      throw new Error('Expected the registered error helper to throw');
+    });
+
+    expect(observed).toEqual(cases.map(([, code, status]) => ({ code, status })));
   });
 });
