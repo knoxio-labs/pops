@@ -286,6 +286,7 @@ export type EgoChatData = {
     appContext?: {
       app: string;
       entityId?: string;
+      entityTitle?: string;
       entityType?: string;
       route?: string;
     };
@@ -677,6 +678,7 @@ export type EmitGenerateResponses = {
           to: string;
         } | null;
         mode: 'report' | 'summary' | 'timeline';
+        outputTruncated: boolean;
         scopeCoverage: Array<string>;
         sourceCount: number;
         truncated: boolean;
@@ -794,6 +796,7 @@ export type EmitGenerateReportResponses = {
           to: string;
         } | null;
         mode: 'report' | 'summary' | 'timeline';
+        outputTruncated: boolean;
         scopeCoverage: Array<string>;
         sourceCount: number;
         truncated: boolean;
@@ -863,6 +866,7 @@ export type EmitGenerateSummaryResponses = {
           to: string;
         } | null;
         mode: 'report' | 'summary' | 'timeline';
+        outputTruncated: boolean;
         scopeCoverage: Array<string>;
         sourceCount: number;
         truncated: boolean;
@@ -934,6 +938,7 @@ export type EmitGenerateTimelineResponses = {
           to: string;
         } | null;
         mode: 'report' | 'summary' | 'timeline';
+        outputTruncated: boolean;
         scopeCoverage: Array<string>;
         sourceCount: number;
         truncated: boolean;
@@ -3697,7 +3702,10 @@ export type RetrievalSearchData = {
     mode: 'semantic' | 'structured' | 'hybrid';
     offset: number;
     query?: string;
-    threshold: number;
+    /**
+     * Minimum cosine similarity a semantic hit must reach. Omit for the server default.
+     */
+    threshold?: number;
   };
   path?: never;
   query?: never;
@@ -3725,7 +3733,7 @@ export type RetrievalSearchResponses = {
     results: Array<{
       contentPreview: string;
       distance?: number;
-      matchType: 'semantic' | 'structured' | 'both';
+      matchType: 'semantic' | 'lexical' | 'structured' | 'both';
       metadata: {
         [key: string]: unknown;
       };
@@ -3761,7 +3769,10 @@ export type RetrievalSimilarData = {
       types?: Array<string>;
     };
     limit: number;
-    threshold: number;
+    /**
+     * Minimum cosine similarity a semantic hit must reach. Omit for the server default.
+     */
+    threshold?: number;
   };
   path?: never;
   query?: never;
@@ -3785,7 +3796,7 @@ export type RetrievalSimilarResponses = {
     results: Array<{
       contentPreview: string;
       distance?: number;
-      matchType: 'semantic' | 'structured' | 'both';
+      matchType: 'semantic' | 'lexical' | 'structured' | 'both';
       metadata: {
         [key: string]: unknown;
       };
@@ -4211,16 +4222,7 @@ export type SettingsGetData = {
       | 'cerebrum.glia.demotionWindowDays'
       | 'cerebrum.mcp.queryMaxSources'
       | 'cerebrum.mcp.searchSnippetLength'
-      | 'cerebrum.mcp.searchDefaultLimit'
-      | 'ego.defaultModel'
-      | 'ego.maxHistory'
-      | 'ego.maxRetrieval'
-      | 'ego.tokenBudget'
-      | 'ego.relevanceThreshold'
-      | 'ego.chat.maxTokens'
-      | 'ego.chat.temperature'
-      | 'ego.summary.maxTokens'
-      | 'ego.summary.temperature';
+      | 'cerebrum.mcp.searchDefaultLimit';
   };
   query?: never;
   url: '/settings/{key}';
@@ -4302,16 +4304,7 @@ export type SettingsSetData = {
       | 'cerebrum.glia.demotionWindowDays'
       | 'cerebrum.mcp.queryMaxSources'
       | 'cerebrum.mcp.searchSnippetLength'
-      | 'cerebrum.mcp.searchDefaultLimit'
-      | 'ego.defaultModel'
-      | 'ego.maxHistory'
-      | 'ego.maxRetrieval'
-      | 'ego.tokenBudget'
-      | 'ego.relevanceThreshold'
-      | 'ego.chat.maxTokens'
-      | 'ego.chat.temperature'
-      | 'ego.summary.maxTokens'
-      | 'ego.summary.temperature';
+      | 'cerebrum.mcp.searchDefaultLimit';
   };
   query?: never;
   url: '/settings/{key}';
@@ -4394,16 +4387,7 @@ export type SettingsEnsureData = {
       | 'cerebrum.glia.demotionWindowDays'
       | 'cerebrum.mcp.queryMaxSources'
       | 'cerebrum.mcp.searchSnippetLength'
-      | 'cerebrum.mcp.searchDefaultLimit'
-      | 'ego.defaultModel'
-      | 'ego.maxHistory'
-      | 'ego.maxRetrieval'
-      | 'ego.tokenBudget'
-      | 'ego.relevanceThreshold'
-      | 'ego.chat.maxTokens'
-      | 'ego.chat.temperature'
-      | 'ego.summary.maxTokens'
-      | 'ego.summary.temperature';
+      | 'cerebrum.mcp.searchDefaultLimit';
   };
   query?: never;
   url: '/settings/{key}/ensure';
@@ -4485,16 +4469,7 @@ export type SettingsResetKeyData = {
       | 'cerebrum.glia.demotionWindowDays'
       | 'cerebrum.mcp.queryMaxSources'
       | 'cerebrum.mcp.searchSnippetLength'
-      | 'cerebrum.mcp.searchDefaultLimit'
-      | 'ego.defaultModel'
-      | 'ego.maxHistory'
-      | 'ego.maxRetrieval'
-      | 'ego.tokenBudget'
-      | 'ego.relevanceThreshold'
-      | 'ego.chat.maxTokens'
-      | 'ego.chat.temperature'
-      | 'ego.summary.maxTokens'
-      | 'ego.summary.temperature';
+      | 'cerebrum.mcp.searchDefaultLimit';
   };
   query?: never;
   url: '/settings/{key}/reset';

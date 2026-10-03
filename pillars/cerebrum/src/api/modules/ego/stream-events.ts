@@ -1,3 +1,5 @@
+import { isRefusal } from '../llm-request.js';
+
 import type { MessageStream } from '@anthropic-ai/sdk/lib/MessageStream';
 
 /**
@@ -11,9 +13,14 @@ import type { EgoStreamEvent } from './llm.js';
 export const EGO_STREAM_ERROR_MSG =
   'I encountered an error while generating a response. Please try again.';
 
+/** Display-safe text emitted when the model declines the request. */
+export const EGO_REFUSAL_MSG = "I can't help with that request. The model declined to answer it.";
+
 /**
  * Drains an Anthropic {@link MessageStream} into the ego event shape: a `token`
  * event per text delta, then a terminal `done` carrying the final token usage.
+ * A refusal is only known from the final message, so {@link EGO_REFUSAL_MSG}
+ * is emitted as a closing token after whatever partial text already streamed.
  * A mid-stream processing error degrades to a fallback `done` (tokens 0) rather
  * than throwing, preserving the engine's display-safe contract; the telemetry
  * wrapper reads usage from whichever `done` event terminates the stream.
@@ -30,6 +37,11 @@ export async function* egoStreamEvents(
       }
     }
     const finalMessage = await messageStream.finalMessage();
+    if (isRefusal(finalMessage, 'cerebrum-ego')) {
+      const notice = fullText.length > 0 ? `\n\n${EGO_REFUSAL_MSG}` : EGO_REFUSAL_MSG;
+      fullText += notice;
+      yield { type: 'token', text: notice };
+    }
     yield {
       type: 'done',
       fullText,

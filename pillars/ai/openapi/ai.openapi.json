@@ -1976,16 +1976,6 @@
             },
             "description": "200"
           },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "400"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -1995,16 +1985,6 @@
               }
             },
             "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "409"
           }
         },
         "summary": "Resolve per-Mtok USD pricing { input, output } for a provider/model",
@@ -4371,19 +4351,7 @@
             "name": "key",
             "required": true,
             "schema": {
-              "enum": [
-                "ai.model",
-                "ai.modelOverrides.query",
-                "ai.modelOverrides.emit",
-                "ai.modelOverrides.classifier",
-                "ai.modelOverrides.entityExtractor",
-                "ai.modelOverrides.scopeInference",
-                "ai.modelOverrides.auditorContradiction",
-                "ai.modelOverrides.patternContradiction",
-                "ai.monthlyTokenBudget",
-                "ai.budgetExceededFallback",
-                "ai.logRetentionDays"
-              ],
+              "enum": ["ai.monthlyTokenBudget", "ai.budgetExceededFallback", "ai.logRetentionDays"],
               "type": "string"
             }
           }
@@ -4469,19 +4437,7 @@
             "name": "key",
             "required": true,
             "schema": {
-              "enum": [
-                "ai.model",
-                "ai.modelOverrides.query",
-                "ai.modelOverrides.emit",
-                "ai.modelOverrides.classifier",
-                "ai.modelOverrides.entityExtractor",
-                "ai.modelOverrides.scopeInference",
-                "ai.modelOverrides.auditorContradiction",
-                "ai.modelOverrides.patternContradiction",
-                "ai.monthlyTokenBudget",
-                "ai.budgetExceededFallback",
-                "ai.logRetentionDays"
-              ],
+              "enum": ["ai.monthlyTokenBudget", "ai.budgetExceededFallback", "ai.logRetentionDays"],
               "type": "string"
             }
           }
@@ -4588,19 +4544,7 @@
             "name": "key",
             "required": true,
             "schema": {
-              "enum": [
-                "ai.model",
-                "ai.modelOverrides.query",
-                "ai.modelOverrides.emit",
-                "ai.modelOverrides.classifier",
-                "ai.modelOverrides.entityExtractor",
-                "ai.modelOverrides.scopeInference",
-                "ai.modelOverrides.auditorContradiction",
-                "ai.modelOverrides.patternContradiction",
-                "ai.monthlyTokenBudget",
-                "ai.budgetExceededFallback",
-                "ai.logRetentionDays"
-              ],
+              "enum": ["ai.monthlyTokenBudget", "ai.budgetExceededFallback", "ai.logRetentionDays"],
               "type": "string"
             }
           }
@@ -4704,19 +4648,7 @@
             "name": "key",
             "required": true,
             "schema": {
-              "enum": [
-                "ai.model",
-                "ai.modelOverrides.query",
-                "ai.modelOverrides.emit",
-                "ai.modelOverrides.classifier",
-                "ai.modelOverrides.entityExtractor",
-                "ai.modelOverrides.scopeInference",
-                "ai.modelOverrides.auditorContradiction",
-                "ai.modelOverrides.patternContradiction",
-                "ai.monthlyTokenBudget",
-                "ai.budgetExceededFallback",
-                "ai.logRetentionDays"
-              ],
+              "enum": ["ai.monthlyTokenBudget", "ai.budgetExceededFallback", "ai.logRetentionDays"],
               "type": "string"
             }
           }

@@ -27,12 +27,8 @@ export const INVENTORY_SERVICE_ACCOUNT_NAME = 'inventory';
  * stays a readable record of what inventory reaches rather than a wildcard
  * nobody can audit. Scopes match by dot prefix.
  *
- * - `ai.codes.rank` — ranking `codes/suggest`'s deterministic candidates,
- *   `../ai/client.ts`. The `ai` pillar has no candidate-ranking route today
- *   (POPS-4081's report says so); the scope name is proposed here so the
- *   grant and this pillar's call are ready the day that route exists,
- *   matching the pattern finance's `service-account.ts` documents for a
- *   producer that has not yet started enforcing scopes.
+ * - `ai.codes.rank` — ranking `codes/suggest`'s deterministic candidates
+ *   through `../ai/client.ts` (#4926).
  * - `finance.transactions.get` — checking populated purchase transaction
  *   URIs in `../cron/reconcile-cross-pillar.ts`.
  */

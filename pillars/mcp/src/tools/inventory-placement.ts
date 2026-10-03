@@ -1,3 +1,4 @@
+import { itemMutationResult } from './inventory-item-mutation-result.js';
 import { sendItemMutation, withCurrentRevision } from './inventory-sync-client.js';
 /**
  * Placement tools: move an item to a location, store it inside a container,
@@ -5,7 +6,7 @@ import { sendItemMutation, withCurrentRevision } from './inventory-sync-client.j
  * protocol (Inventory ADR-002), reading the item's current revision first so
  * the write carries a `baseRevision` the server can check.
  */
-import { mapCallResult, reqStr, toolError } from './utils.js';
+import { reqStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
 
@@ -25,7 +26,8 @@ const itemsMove: ToolDef = {
     if (!id) return toolError('Missing required field: id');
     const locationId = reqStr(args, 'locationId');
     if (!locationId) return toolError('Missing required field: locationId');
-    return mapCallResult(
+    return itemMutationResult(
+      id,
       await withCurrentRevision(id, (baseRevision) =>
         sendItemMutation({
           entityId: id,
@@ -54,7 +56,8 @@ const itemsStore: ToolDef = {
     if (!id) return toolError('Missing required field: id');
     const containerId = reqStr(args, 'containerId');
     if (!containerId) return toolError('Missing required field: containerId');
-    return mapCallResult(
+    return itemMutationResult(
+      id,
       await withCurrentRevision(id, (baseRevision) =>
         sendItemMutation({
           entityId: id,
@@ -78,7 +81,8 @@ const itemsPickUp: ToolDef = {
   handler: async (args) => {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
-    return mapCallResult(
+    return itemMutationResult(
+      id,
       await withCurrentRevision(id, (baseRevision) =>
         sendItemMutation({
           entityId: id,

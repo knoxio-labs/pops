@@ -5,18 +5,19 @@
  * baked into code:
  *   EMBEDDING_API_URL    — base URL (default https://api.openai.com/v1)
  *   EMBEDDING_API_KEY    — API key (required for real embedding; absent → no
- *                          embedder, semantic search degrades to BM25-only)
+ *                          embedder, semantic and hybrid search return nothing)
  *   EMBEDDING_MODEL      — model name (default text-embedding-3-small)
- *   EMBEDDING_DIMENSIONS — vector dimensions (default 1536, matches the
- *                          `embeddings_vec` virtual table)
+ *   EMBEDDING_DIMENSIONS — vector dimensions (default 1536; the
+ *                          `embeddings_vec` virtual table is sized from it)
  *
  * The retrieval handlers receive an {@link EmbeddingClient} via
  * `CerebrumApiDeps.embeddingClient`. The real default is constructed from env
  * in `server.ts`; when `EMBEDDING_API_KEY` is unset the default is `undefined`
- * so semantic search short-circuits to no semantic results (and hybrid falls
- * back to BM25). Tests inject a fake to exercise the embed path without a live
- * provider.
+ * so semantic search short-circuits to no results, and hybrid with it. Tests
+ * inject a fake to exercise the embed path without a live provider.
  */
+import { resolveEmbeddingDimensions } from '../../../db/index.js';
+
 type EmbeddingProvider = 'openai' | 'voyage';
 
 export interface EmbeddingClient {
@@ -42,7 +43,7 @@ function readEmbeddingConfig(): EmbeddingConfig {
     apiUrl,
     apiKey: process.env['EMBEDDING_API_KEY'] ?? '',
     model: process.env['EMBEDDING_MODEL'] ?? 'text-embedding-3-small',
-    dimensions: Number.parseInt(process.env['EMBEDDING_DIMENSIONS'] ?? '1536', 10),
+    dimensions: resolveEmbeddingDimensions(),
     provider: detectProvider(apiUrl),
   };
 }
@@ -98,8 +99,8 @@ export function createHttpEmbeddingClient(
 
 /**
  * Construct the env-driven embedding client, or `undefined` when no
- * `EMBEDDING_API_KEY` is configured. A missing client makes semantic search
- * degrade to no semantic results (hybrid falls back to BM25-only).
+ * `EMBEDDING_API_KEY` is configured. A missing client makes semantic and
+ * hybrid search return no results.
  */
 export function resolveEmbeddingClientFromEnv(): EmbeddingClient | undefined {
   const config = readEmbeddingConfig();

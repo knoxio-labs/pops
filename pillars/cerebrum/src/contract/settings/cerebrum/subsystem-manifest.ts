@@ -13,7 +13,7 @@ export const nudgesGroup: SettingsGroup = {
       label: 'Consolidation Similarity',
       type: 'number',
       default: '0.85',
-      description: 'Minimum Thalamus similarity to propose consolidation.',
+      description: 'Minimum cosine similarity to propose consolidation.',
       validation: { min: 0, max: 1 },
     },
     {

@@ -1,3 +1,9 @@
+import {
+  TAGGED_ATTACH_OPERATION_ID,
+  TAGGED_DETACH_OPERATION_ID,
+  TAGGED_LIST_OPERATION_ID,
+} from '@pops/types';
+
 import { ManifestPayloadSchema, type ManifestPayload } from './schema.js';
 
 import type { ZodError } from 'zod';
@@ -28,6 +34,7 @@ export function validateManifestPayload(input: unknown): ValidationResult {
     ...checkContractTagMatchesVersion(parsed.data),
     ...checkAiToolAllowedUriTypesAreDeclared(parsed.data),
     ...checkSearchAdapterProceduresAreDeclared(parsed.data),
+    ...checkTagCarrierProceduresAreDeclared(parsed.data),
     ...checkUiPillarDeclaresStylesheet(parsed.data),
   ];
 
@@ -145,6 +152,37 @@ export function checkSearchAdapterProceduresAreDeclared(
       schemaPath: path,
     });
   });
+  return issues;
+}
+
+/**
+ * A manifest that advertises shared tag carriers must declare their fixed
+ * query and mutation operations so callers can rely on the wire convention.
+ */
+export function checkTagCarrierProceduresAreDeclared(payload: ManifestPayload): ValidationIssue[] {
+  if (!payload.tags) return [];
+
+  const required = [
+    { suffix: TAGGED_LIST_OPERATION_ID, routeGroup: 'queries' },
+    { suffix: TAGGED_ATTACH_OPERATION_ID, routeGroup: 'mutations' },
+    { suffix: TAGGED_DETACH_OPERATION_ID, routeGroup: 'mutations' },
+  ] as const;
+  const issues: ValidationIssue[] = [];
+
+  for (const { suffix, routeGroup } of required) {
+    const operationId = `${payload.pillar}.${suffix}`;
+    const declaredRoutes = payload.routes[routeGroup];
+    if (declaredRoutes.includes(operationId)) continue;
+
+    const path = ['routes', routeGroup] as const;
+    issues.push({
+      field: pathToDotted(path),
+      reason: `must include '${operationId}' when tags is declared`,
+      got: declaredRoutes,
+      schemaPath: path,
+    });
+  }
+
   return issues;
 }
 

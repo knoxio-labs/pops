@@ -36,6 +36,7 @@ export function buildEmptySummary(dateRange: DateRange, audienceScope: string): 
       scopeCoverage: [],
       mode: 'summary',
       truncated: false,
+      outputTruncated: false,
     },
   };
 }
@@ -99,6 +100,7 @@ export function buildSummaryDocument(params: BuildSummaryParams): GeneratedDocum
       scopeCoverage,
       mode: 'summary',
       truncated,
+      outputTruncated: false,
     },
   };
 }

@@ -75,7 +75,7 @@ describe('@pops/module-registry exports', () => {
     expect(ids).toContain('media.rotation');
     expect(ids).toContain('media.operational');
     expect(ids).toContain('cerebrum');
-    expect(ids).toContain('ego');
+    expect(ids).not.toContain('ego');
     expect(ids).toContain('ai.config');
     expect(ids).toContain('core.operational');
     for (const m of aggregated) {

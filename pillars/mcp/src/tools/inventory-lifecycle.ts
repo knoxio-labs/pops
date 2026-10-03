@@ -1,3 +1,4 @@
+import { itemMutationResult } from './inventory-item-mutation-result.js';
 import { sendItemMutation, withCurrentRevision } from './inventory-sync-client.js';
 /**
  * Container tools (open/close, mark full) and lifecycle tools (discard,
@@ -6,7 +7,7 @@ import { sendItemMutation, withCurrentRevision } from './inventory-sync-client.j
  * current revision first, same as the placement ops; `item.restoreDeleted`
  * checks its own precondition and takes none.
  */
-import { mapCallResult, optBool, optStr, reqStr, toolError } from './utils.js';
+import { optBool, optStr, reqStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
 
@@ -22,7 +23,8 @@ function setAccessTool(name: string, access: 'open' | 'closed'): ToolDef {
     handler: async (args) => {
       const id = reqStr(args, 'id');
       if (!id) return toolError('Missing required field: id');
-      return mapCallResult(
+      return itemMutationResult(
+        id,
         await withCurrentRevision(id, (baseRevision) =>
           sendItemMutation({ entityId: id, op: 'item.setAccess', args: { access }, baseRevision })
         )
@@ -47,7 +49,8 @@ const itemsSetFull: ToolDef = {
     if (!id) return toolError('Missing required field: id');
     const full = optBool(args, 'full');
     if (full === undefined) return toolError('Missing required field: full');
-    return mapCallResult(
+    return itemMutationResult(
+      id,
       await withCurrentRevision(id, (baseRevision) =>
         sendItemMutation({ entityId: id, op: 'item.setFull', args: { full }, baseRevision })
       )
@@ -70,7 +73,8 @@ const itemsDiscard: ToolDef = {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
     const reason = optStr(args, 'reason');
-    return mapCallResult(
+    return itemMutationResult(
+      id,
       await withCurrentRevision(id, (baseRevision) =>
         sendItemMutation({
           entityId: id,
@@ -95,7 +99,8 @@ const itemsRestore: ToolDef = {
   handler: async (args) => {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
-    return mapCallResult(
+    return itemMutationResult(
+      id,
       await sendItemMutation({
         entityId: id,
         op: 'item.restoreDeleted',

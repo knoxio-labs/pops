@@ -12,13 +12,15 @@
  *   EMBEDDING_API_URL    — base URL (default https://api.openai.com/v1)
  *   EMBEDDING_API_KEY    — API key (required for real embedding)
  *   EMBEDDING_MODEL      — model name (default text-embedding-3-small)
- *   EMBEDDING_DIMENSIONS — vector dimensions (default 1536, matches the
- *                          `embeddings_vec` virtual table)
+ *   EMBEDDING_DIMENSIONS — vector dimensions (default 1536; the
+ *                          `embeddings_vec` virtual table is sized from it)
  *
  * `getEmbedding` takes the config + an injected `fetchImpl` so tests drive it
  * without a live provider; the handler injects an {@link EmbeddingPort} so it
  * never touches the network in unit tests.
  */
+import { resolveEmbeddingDimensions } from '../db/index.js';
+
 export type EmbeddingProvider = 'openai' | 'voyage';
 
 export type EmbeddingInputType = 'query' | 'document';
@@ -43,7 +45,7 @@ export function getEmbeddingConfig(env: NodeJS.ProcessEnv = process.env): Embedd
     apiUrl,
     apiKey: env['EMBEDDING_API_KEY'] ?? '',
     model: env['EMBEDDING_MODEL'] ?? 'text-embedding-3-small',
-    dimensions: Number.parseInt(env['EMBEDDING_DIMENSIONS'] ?? '1536', 10),
+    dimensions: resolveEmbeddingDimensions(env),
     provider: detectProvider(apiUrl),
   };
 }

@@ -45,6 +45,23 @@ export type { AiToolDescriptor, AiToolHandler, AiToolResult } from './ai-tool.js
 export type { MigrationDescriptor } from './migration.js';
 export type { SearchAdapterDescriptor } from './search-adapter.js';
 export type { IngestSourceDescriptor } from './ingest-source.js';
+export {
+  TAGGED_ATTACH_OPERATION_ID,
+  TAGGED_DETACH_OPERATION_ID,
+  TAGGED_LIST_OPERATION_ID,
+  TagAssignmentResponseSchema,
+  TagCarrierManifestSchema,
+  TaggedQueryRequestSchema,
+  TaggedQueryResponseSchema,
+  TaggedThingSchema,
+} from './tag-carrier.js';
+export type {
+  TagAssignmentResponse,
+  TagCarrierManifest,
+  TaggedQueryRequest,
+  TaggedQueryResponse,
+  TaggedThing,
+} from './tag-carrier.js';
 export { ErrorBodySchema } from './error-envelope.js';
 export type { ErrorBody } from './error-envelope.js';
 export {

@@ -31,7 +31,15 @@ export function formatAppContextBlock(appContext?: AppContext): string {
     parts.push(`Current route: ${appContext.route}`);
   }
   if (appContext.entityId && appContext.entityType) {
-    parts.push(`Viewing ${appContext.entityType}: ${appContext.entityId}`);
+    const label = appContext.entityTitle
+      ? `${appContext.entityTitle} (${appContext.entityId})`
+      : appContext.entityId;
+    parts.push(`Viewing ${appContext.entityType}: ${label}`);
+    if (appContext.entityType !== 'engram') {
+      parts.push(
+        `You can see only the title and id of this ${appContext.entityType}, not its contents. Do not guess at details it does not carry.`
+      );
+    }
   }
 
   return `\n\nCurrent app context:\n${parts.join('\n')}`;
@@ -58,16 +66,4 @@ Active scopes for this conversation: ${scopeList}${contextBlock}
 
 When referencing engrams, always cite them by ID in square brackets: [eng_YYYYMMDD_HHmm_slug]
 If the available context doesn't contain enough information, say so explicitly rather than guessing.`;
-}
-
-/**
- * Build a summarisation prompt for compressing older conversation history.
- *
- * @param messages - Formatted message block to summarise.
- */
-export function buildSummarisationPrompt(messages: string): string {
-  return `Summarise this conversation so far in 2-3 sentences. Focus on the key topics discussed, decisions made, and any engrams referenced. Be concise.
-
-Conversation:
-${messages}`;
 }

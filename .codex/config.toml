@@ -1,0 +1,9 @@
+[mcp_servers.design-feedback]
+command = "node"
+args = ["scripts/design-feedback-mcp.mjs"]
+
+[mcp_servers.huly-agents-knoxiolabs]
+url = "https://projects-mcp.knoxiolabs.com/mcp"
+bearer_token_env_var = "HULY_MCP_BEARER"
+http_headers = { "x-huly-url" = "https://projects.knoxiolabs.com", "x-huly-workspace" = "knoxiolabs" }
+env_http_headers = { "x-huly-token" = "HULY_AGENTS_TOKEN" }
