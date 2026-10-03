@@ -44,3 +44,28 @@ public func parsePopsURI(_ uri: String) -> PopsURI? {
 
     return PopsURI(pillar: pillar, type: type, id: id)
 }
+
+/// Parses the ADR-012 object URI `pops:<domain>/<type>/<id>`: the `pops:`
+/// prefix followed by exactly three non-empty `/`-separated segments. The
+/// result reuses `PopsURI`, with `domain` in `pillar`.
+///
+/// Two grammars coexist. `parsePopsURI` reads the ADR-042 label form
+/// `pops://<pillar>/<type>/<id>` and stays with the QR scanner and the `pops`
+/// URL scheme. This function reads the colon form Ego entity parts and
+/// navigate frames carry. Neither accepts the other's shape, and an id here
+/// may not contain `/`.
+public func parseObjectURI(_ uri: String) -> PopsURI? {
+    let scheme = "pops:"
+    guard uri.hasPrefix(scheme) else { return nil }
+
+    let segments = uri.dropFirst(scheme.count)
+        .split(separator: "/", omittingEmptySubsequences: false)
+    guard segments.count == 3 else { return nil }
+
+    let domain = String(segments[0])
+    let type = String(segments[1])
+    let id = String(segments[2])
+    guard !domain.isEmpty, !type.isEmpty, !id.isEmpty else { return nil }
+
+    return PopsURI(pillar: domain, type: type, id: id)
+}
