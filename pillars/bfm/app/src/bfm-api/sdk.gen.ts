@@ -36,6 +36,12 @@ import type {
   MobileContactsSearchMerchantsData,
   MobileContactsSearchMerchantsErrors,
   MobileContactsSearchMerchantsResponses,
+  MobileEgoGetConversationData,
+  MobileEgoGetConversationErrors,
+  MobileEgoGetConversationResponses,
+  MobileEgoListConversationsData,
+  MobileEgoListConversationsErrors,
+  MobileEgoListConversationsResponses,
   MobileFinanceGetAccountData,
   MobileFinanceGetAccountErrors,
   MobileFinanceGetAccountResponses,
@@ -318,6 +324,34 @@ export const mobileContactsCreateMerchantAddress = <ThrowOnError extends boolean
       ...options.headers,
     },
   });
+
+/**
+ * One page of Ego conversations for the mobile client
+ */
+export const mobileEgoListConversations = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileEgoListConversationsData, ThrowOnError>
+): RequestResult<
+  MobileEgoListConversationsResponses,
+  MobileEgoListConversationsErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    MobileEgoListConversationsResponses,
+    MobileEgoListConversationsErrors,
+    ThrowOnError
+  >({ url: '/mobile/ego/conversations', ...options });
+
+/**
+ * Read one Ego conversation with its messages and parts
+ */
+export const mobileEgoGetConversation = <ThrowOnError extends boolean = false>(
+  options: Options<MobileEgoGetConversationData, ThrowOnError>
+): RequestResult<MobileEgoGetConversationResponses, MobileEgoGetConversationErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileEgoGetConversationResponses,
+    MobileEgoGetConversationErrors,
+    ThrowOnError
+  >({ url: '/mobile/ego/conversations/{id}', ...options });
 
 /**
  * One cursor-paginated account page after search and filters

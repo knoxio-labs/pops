@@ -15,6 +15,7 @@ import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
 import { createMobileBarcodeClient, type MobileBarcodeClient } from '../barcode/client.js';
 import { createMobileContactsClient } from '../contacts/client.js';
+import { createMobileEgoClient } from '../ego/client.js';
 import { createMobileFinanceClient } from '../finance/client.js';
 import { createMobileInventoryClient } from '../inventory/client.js';
 import { createMobileInventoryMediaClient } from '../inventory/media-client.js';
@@ -34,6 +35,7 @@ import type { ReceiptRateLimitOptions } from '../auth/receipt-rate-limit.js';
 import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { RefreshRateLimitOptions } from '../auth/refresh-rate-limit.js';
 import type { MobileContactsClient } from '../contacts/client.js';
+import type { MobileEgoClient } from '../ego/client.js';
 import type { MobileFinanceClient } from '../finance/client.js';
 import type { MobileInventoryClient } from '../inventory/client.js';
 import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
@@ -123,6 +125,8 @@ export interface TestAppOptions {
   contacts?: MobileContactsClient;
   /** Where the `/mobile/barcode/*` route gets its lookup outcome. */
   barcode?: MobileBarcodeClient;
+  /** Where the `/mobile/ego/*` routes get conversations and threads. */
+  ego?: MobileEgoClient;
   /** Captures privacy-safe barcode relay events. */
   barcodeLogger?: MobileBarcodeRelayLogger;
   /**
@@ -154,7 +158,7 @@ export interface TestAppOptions {
 
 const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
   throw new Error(
-    `[bfm-test] this test called ${pillarId} without supplying a fake — pass \`finance\` or \`purchases\` to createTestApp`
+    `[bfm-test] this test called ${pillarId} without supplying a fake — pass the client to createTestApp`
   );
 };
 
@@ -211,7 +215,7 @@ function clientDeps(
   options: TestAppOptions
 ): Pick<
   BfmApiDeps,
-  'finance' | 'purchases' | 'contacts' | 'barcode' | 'inventory' | 'inventoryMedia'
+  'finance' | 'purchases' | 'contacts' | 'barcode' | 'ego' | 'inventory' | 'inventoryMedia'
 > {
   return {
     finance:
@@ -223,6 +227,7 @@ function clientDeps(
       options.contacts ?? createMobileContactsClient(createPillarGateway(unreachableHandleFactory)),
     barcode:
       options.barcode ?? createMobileBarcodeClient(createPillarGateway(unreachableHandleFactory)),
+    ego: options.ego ?? createMobileEgoClient(createPillarGateway(unreachableHandleFactory)),
     inventory:
       options.inventory ??
       createMobileInventoryClient(createPillarGateway(unreachableHandleFactory)),

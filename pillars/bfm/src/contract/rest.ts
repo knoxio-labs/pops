@@ -54,6 +54,7 @@ import {
 import { bfmDeviceContract } from './rest-device.js';
 import { mobileBarcodeContract } from './rest-mobile-barcode.js';
 import { mobileContactsContract } from './rest-mobile-contacts.js';
+import { mobileEgoContract } from './rest-mobile-ego.js';
 import { mobileFinanceContract } from './rest-mobile-finance.js';
 import { mobileInventoryContract } from './rest-mobile-inventory.js';
 import { mobilePurchasesSearchRoutes } from './rest-mobile-purchases-search.js';
@@ -282,6 +283,7 @@ export const bfmContract = c.router(
     operator: bfmOperatorContract,
     mobile: mobileContract,
     mobileContacts: mobileContactsContract,
+    mobileEgo: mobileEgoContract,
     mobileBarcode: mobileBarcodeContract,
     mobileFinance: mobileFinanceContract,
     mobileInventory: mobileInventoryContract,
