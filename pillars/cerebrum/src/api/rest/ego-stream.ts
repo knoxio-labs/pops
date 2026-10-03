@@ -4,7 +4,10 @@
  * `POST /ego/chat/stream` — accepts the same body as `ego.chat` but returns a
  * `text/event-stream`:
  *   data: {"type":"token","text":"..."}
- *   data: {"type":"done","conversationId":"...","citations":[...],...}
+ *   data: {"type":"tool"|"part"|"navigate",...}
+ *   data: {"type":"done"|"error",...}
+ *
+ * Every frame is defined by `src/contract/rest-ego-stream.ts`.
  *
  * ts-rest cannot model SSE, so this is mounted as a plain Express route in
  * `app.ts` BEFORE `createExpressEndpoints`. The user turn is persisted before
@@ -27,22 +30,11 @@ import {
 } from '../modules/ego/chat-helpers.js';
 import { ConversationPersistence } from '../modules/ego/persistence.js';
 import { buildEgoEngine } from './ego-engine.js';
+import { setSseHeaders, streamError, writeSseEvent } from './ego-stream-frames.js';
 
 import type { Conversation, Message } from '../modules/ego/persistence.js';
 import type { AppContext, ChatStreamPreparation } from '../modules/ego/types.js';
 import type { EgoHandlerDeps } from './ego-engine.js';
-
-function setSseHeaders(res: Response): void {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-}
-
-function writeSseEvent(res: Response, data: Record<string, unknown>): void {
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
-}
 
 interface PipeStreamParams {
   req: Request;
@@ -65,6 +57,12 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
 
     if (event.type === 'token') {
       writeSseEvent(res, { type: 'token', text: event.text });
+    } else if (event.type === 'tool') {
+      writeSseEvent(res, { type: 'tool', name: event.name, status: event.status });
+    } else if (event.type === 'part') {
+      writeSseEvent(res, { type: 'part', part: event.part });
+    } else if (event.type === 'navigate') {
+      writeSseEvent(res, { type: 'navigate', uri: event.uri });
     } else if (event.type === 'done') {
       const assistantMsg = persistStreamResults({
         persistence,
@@ -85,7 +83,7 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
         type: 'done',
         conversationId: conversation.id,
         messageId: assistantMsg.id,
-        parts: assistantMsg.parts,
+        parts: event.parts,
         citations: event.citations,
         tokensIn: event.tokensIn,
         tokensOut: event.tokensOut,
@@ -99,26 +97,6 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
 interface ResolvedTurn {
   conversation: Conversation;
   history: Message[];
-}
-
-function streamError(err: unknown, requestId: string | undefined): Record<string, unknown> {
-  if (err instanceof PopsError) {
-    return {
-      type: 'error',
-      code: err.code,
-      message: err.message,
-      requestId,
-      retryable: err.retryable,
-    };
-  }
-  console.error('[cerebrum] ego stream failure', { requestId, error: err });
-  return {
-    type: 'error',
-    code: 'cerebrum.internal.failure',
-    message: 'The service could not complete the request.',
-    requestId,
-    retryable: false,
-  };
 }
 
 /**
