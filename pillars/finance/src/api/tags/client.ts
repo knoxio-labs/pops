@@ -10,13 +10,13 @@ import {
 import { credentialled, NO_CREDENTIAL_REASON } from '../pillars/outbound.js';
 import { SharedTagSchema, TagsListResponseSchema } from './wire.js';
 
-import type { CreateSharedTagInput, SharedTag, TagsListQuery, TagsListResponse } from './wire.js';
+import type { CreateSharedTagInput, SharedTag, TagsListQuery } from './wire.js';
 
 /** The subset of the tags contract this Finance client calls. */
 export type TagsRouter = {
   tags: {
-    list: (input: TagsListQuery) => Promise<TagsListResponse>;
-    create: (input: CreateSharedTagInput) => Promise<SharedTag>;
+    list: (input: TagsListQuery) => Promise<unknown>;
+    create: (input: CreateSharedTagInput) => Promise<unknown>;
   };
 };
 

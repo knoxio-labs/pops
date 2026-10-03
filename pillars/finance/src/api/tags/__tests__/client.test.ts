@@ -9,7 +9,7 @@ import {
 
 import { createTagsClient, type TagsRouter } from '../client.js';
 
-import type { CreateSharedTagInput, SharedTag, TagsListQuery, TagsListResponse } from '../wire.js';
+import type { CreateSharedTagInput, SharedTag, TagsListQuery } from '../wire.js';
 
 const TAG: SharedTag = {
   id: 'f93f4e8d-72c5-4be6-b68e-9fd1d39d9aa4',
@@ -45,8 +45,8 @@ const callDynamic: CallDynamicFn = () => {
 };
 
 interface StubOperations {
-  list: (input: TagsListQuery) => Promise<CallResult<TagsListResponse>>;
-  create: (input: CreateSharedTagInput) => Promise<CallResult<SharedTag>>;
+  list: (input: TagsListQuery) => Promise<CallResult<unknown>>;
+  create: (input: CreateSharedTagInput) => Promise<CallResult<unknown>>;
 }
 
 function unexpected(operation: string): never {
@@ -93,7 +93,7 @@ describe('createTagsClient.list', () => {
   });
 
   it('reports a malformed response as contract-mismatch instead of an empty list', async () => {
-    const list = vi.fn(async () => ok({ tags: 'not-an-array' } as unknown as TagsListResponse));
+    const list = vi.fn(async () => ok({ tags: 'not-an-array' }));
     const client = createTagsClient(() => stubHandle({ list }));
 
     const result = await client.list();
@@ -124,7 +124,7 @@ describe('createTagsClient.create', () => {
   });
 
   it('reports a malformed created tag as contract-mismatch', async () => {
-    const create = vi.fn(async () => ok({ id: 'bad' } as unknown as SharedTag));
+    const create = vi.fn(async () => ok({ id: 'bad' }));
     const client = createTagsClient(() => stubHandle({ create }));
 
     await expect(client.create({ facet: 'trip', name: 'Weekend away' })).resolves.toMatchObject({
