@@ -29,6 +29,30 @@ export function buildRetrievalFilters(scopes: string[]): RetrievalFilters {
   return filters;
 }
 
+/** Render assistant message parts as compact context for the next model turn. */
+export function renderMessageForModel(message: Message): string {
+  const renderedParts: string[] = [];
+
+  for (const part of message.parts ?? []) {
+    switch (part.type) {
+      case 'text':
+        break;
+      case 'entity':
+        renderedParts.push(`[shown: ${part.title} (${part.uri})]`);
+        break;
+      case 'actions':
+        for (const action of part.actions) {
+          renderedParts.push(`[action ${action.tool} "${action.summary}": ${action.status}]`);
+        }
+        break;
+    }
+  }
+
+  if (renderedParts.length === 0) return message.content;
+  const partsText = renderedParts.join('\n');
+  return message.content ? `${message.content}\n\n${partsText}` : partsText;
+}
+
 /**
  * Build the LLM message array: the most recent `maxHistoryMessages` user/
  * assistant turns, then the current message (with the retrieved-knowledge
@@ -45,8 +69,14 @@ export function buildLlmMessages(
 
   for (const msg of recentHistory) {
     if (msg.role === 'user' || msg.role === 'assistant') {
-      messages.push({ role: msg.role, content: msg.content });
+      const content = msg.role === 'assistant' ? renderMessageForModel(msg) : msg.content;
+      if (!content.trim()) continue;
+      messages.push({ role: msg.role, content });
     }
+  }
+
+  while (messages.length > 0 && messages[0]?.role !== 'user') {
+    messages.shift();
   }
 
   const userContent = contextBlock
