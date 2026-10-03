@@ -6,6 +6,7 @@ import {
   callUnavailable,
   mockPillarContacts,
   mockPillarFinance,
+  parseResult,
   pillarMockGetter,
 } from './test-helpers.js';
 
@@ -48,6 +49,28 @@ describe('finance.transactions.list', () => {
     expect(transactions.list).toHaveBeenCalledWith(
       expect.objectContaining({ startDate: '2025-01-01', endDate: '2025-12-31', type: 'refund' })
     );
+  });
+
+  it('adds an object URI to each transaction and preserves pagination', async () => {
+    const rows = [
+      { id: 'tx_1', description: 'Lunch' },
+      { id: 'tx_2', description: 'Train' },
+    ];
+    const pagination = { total: 2, limit: 50, offset: 0, hasMore: false };
+    transactions.list.mockResolvedValueOnce(callOk({ data: rows, pagination }));
+
+    const result = parseResult(await tool.handler({})) as {
+      data: Array<Record<string, unknown>>;
+      pagination: typeof pagination;
+    };
+
+    expect(result).toEqual({
+      data: [
+        { ...rows[0], uri: 'pops:finance/transaction/tx_1' },
+        { ...rows[1], uri: 'pops:finance/transaction/tx_2' },
+      ],
+      pagination,
+    });
   });
 
   it('forwards the account filter as accountId, which is what finance.transactions.list (GET /transactions) actually reads (POPS-3579)', async () => {
@@ -128,6 +151,18 @@ describe('finance.entities.list', () => {
     expect((call as Record<string, unknown>)['type']).toBe('company');
   });
 
+  it('does not add an object URI to contacts entities', async () => {
+    const entity = { id: 'ent_1', name: 'Woolworths' };
+    entities.list.mockResolvedValueOnce(
+      callOk({ data: [entity], pagination: { total: 1, limit: 50, offset: 0, hasMore: false } })
+    );
+
+    const result = parseResult(await tool.handler({})) as { data: Array<Record<string, unknown>> };
+
+    expect(result.data[0]).toEqual(entity);
+    expect(result.data[0]).not.toHaveProperty('uri');
+  });
+
   it('returns isError on unavailable', async () => {
     entities.list.mockResolvedValueOnce(callUnavailable('contacts'));
     const result = await tool.handler({});
@@ -166,6 +201,28 @@ describe('finance.budgets.list', () => {
     );
   });
 
+  it('adds an object URI to each budget and preserves pagination', async () => {
+    const rows = [
+      { id: 'budget_1', name: 'Rent' },
+      { id: 'budget_2', name: 'Food' },
+    ];
+    const pagination = { total: 2, limit: 50, offset: 0, hasMore: false };
+    budgets.list.mockResolvedValueOnce(callOk({ data: rows, pagination }));
+
+    const result = parseResult(await tool.handler({})) as {
+      data: Array<Record<string, unknown>>;
+      pagination: typeof pagination;
+    };
+
+    expect(result).toEqual({
+      data: [
+        { ...rows[0], uri: 'pops:finance/budget/budget_1' },
+        { ...rows[1], uri: 'pops:finance/budget/budget_2' },
+      ],
+      pagination,
+    });
+  });
+
   it("ignores lowercase period values, which do not match finance's stored casing", async () => {
     await tool.handler({ period: 'monthly' });
     const call = budgets.list.mock.lastCall?.[0];
@@ -200,6 +257,17 @@ describe('finance.transactions.get', () => {
     expect(transactions.get).toHaveBeenCalledWith({ id: 'txn_1' });
   });
 
+  it('adds an object URI to the transaction result', async () => {
+    const transaction = { id: 'tx_1', description: 'Lunch' };
+    transactions.get.mockResolvedValueOnce(callOk({ data: transaction }));
+
+    const result = parseResult(await tool.handler({ id: 'tx_1' }));
+
+    expect(result).toEqual({
+      data: { ...transaction, uri: 'pops:finance/transaction/tx_1' },
+    });
+  });
+
   it('errors on missing id without calling the pillar', async () => {
     const result = await tool.handler({});
     expect(result.isError).toBe(true);
@@ -219,6 +287,15 @@ describe('finance.budgets.get', () => {
   it('calls budgets.get with the id', async () => {
     await tool.handler({ id: 'budget_1' });
     expect(budgets.get).toHaveBeenCalledWith({ id: 'budget_1' });
+  });
+
+  it('adds an object URI to the budget result', async () => {
+    const budget = { id: 'budget_1', name: 'Rent' };
+    budgets.get.mockResolvedValueOnce(callOk({ data: budget }));
+
+    const result = parseResult(await tool.handler({ id: 'budget_1' }));
+
+    expect(result).toEqual({ data: { ...budget, uri: 'pops:finance/budget/budget_1' } });
   });
 
   it('errors on missing id without calling the pillar', async () => {
@@ -359,6 +436,29 @@ describe('finance.search', () => {
       filters: [{ field: 'entityId', operator: 'contains', value: 'ent_1' }],
     });
     expect(search.search).toHaveBeenCalledWith({ query: { text: 'groceries' } });
+  });
+
+  it('normalises transaction and budget hit URIs and removes unsupported hit URIs', async () => {
+    search.search.mockResolvedValueOnce(
+      callOk({
+        hits: [
+          { uri: 'pops:finance/transaction/tx_1', data: { id: 'tx_1' } },
+          { uri: '/budgets/9', data: { id: 9 } },
+          { uri: '/finance/wishlist', data: { id: 'wish_1' } },
+        ],
+      })
+    );
+
+    const result = parseResult(await tool.handler({ text: 'lunch' })) as {
+      hits: Array<Record<string, unknown>>;
+    };
+
+    expect(result.hits).toEqual([
+      { uri: 'pops:finance/transaction/tx_1', data: { id: 'tx_1' } },
+      { uri: 'pops:finance/budget/9', data: { id: 9 } },
+      { data: { id: 'wish_1' } },
+    ]);
+    expect(result.hits[2]).not.toHaveProperty('uri');
   });
 
   it('errors on missing text without calling the pillar', async () => {

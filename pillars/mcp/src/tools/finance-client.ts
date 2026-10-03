@@ -178,6 +178,7 @@ export type FinancePillarShape = {
   };
   accounts: {
     list: (input: AccountListInput) => unknown;
+    get: (input: { id: string }) => unknown;
   };
   checkpoints: {
     list: (input: { id: string }) => unknown;
