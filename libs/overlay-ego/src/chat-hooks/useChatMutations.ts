@@ -31,6 +31,7 @@ function buildOptimisticMessage(conversationId: string, content: string) {
     content,
     citations: null,
     toolCalls: null,
+    parts: null,
     tokensIn: null,
     tokensOut: null,
     createdAt: new Date().toISOString(),
