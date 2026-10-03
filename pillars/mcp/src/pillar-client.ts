@@ -37,6 +37,7 @@ const PILLAR_API_URL_ENV_VARS: Readonly<Record<string, string>> = {
   cerebrum: 'POPS_CEREBRUM_API_URL',
   contacts: 'POPS_CONTACTS_API_URL',
   purchases: 'POPS_PURCHASES_API_URL',
+  tags: 'POPS_TAGS_API_URL',
 };
 
 /**

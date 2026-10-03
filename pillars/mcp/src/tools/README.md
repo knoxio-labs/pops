@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 70 tools; a new adapter that breaks one is a bug even
+These hold across all 77 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -75,6 +75,9 @@ though nothing enforces it mechanically.
   holds a caller presenting an `X-API-Key` to that key's scopes, and MCP always
   presents one. Without `purchases.purchase`, `purchases.analytics` and
   `purchases.search` on the MCP service account, all five tools return `403`.
+- `tags.tags.*` manages the shared tag vocabulary under the
+  `tags.tags` service-account scope. These tools do not attach or detach
+  tags on Finance or Purchases records.
 - `inventory.catalogue.*` completes the persisted type-catalogue authoring
   workflow without database access. The MCP service account needs
   `inventory.types.read` for catalogue and audit reads, and
