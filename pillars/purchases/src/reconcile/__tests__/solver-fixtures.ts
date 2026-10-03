@@ -26,6 +26,7 @@ export function charge(overrides: Partial<SolvableCharge> = {}): SolvableCharge 
     currency: 'AUD',
     role: 'capture',
     orderedAt: '2026-03-04T00:00:00Z',
+    shippedAt: null,
     descriptorPattern: null,
     settlementWindowDays: null,
     paymentHint: null,

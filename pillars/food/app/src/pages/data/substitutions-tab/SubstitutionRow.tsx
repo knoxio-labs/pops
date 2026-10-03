@@ -99,7 +99,7 @@ function RatioCell({
       value={edit.ratio}
       onChange={(e) => setEdit({ ...edit, ratio: e.target.value })}
       inputMode="decimal"
-      className="h-7 text-xs"
+      className="h-7 text-base md:text-xs"
     />
   );
 }
@@ -122,7 +122,7 @@ function TagsCell({
       aria-label={t('data.substitutions.table.tagsAria', { id: row.id })}
       value={edit.contextTags}
       onChange={(e) => setEdit({ ...edit, contextTags: e.target.value })}
-      className="h-7 text-xs"
+      className="h-7 text-base md:text-xs"
     />
   );
 }

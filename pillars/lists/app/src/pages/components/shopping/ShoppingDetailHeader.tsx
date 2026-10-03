@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ListDetailHeader } from '../../detail/ListDetailHeader.js';
@@ -35,6 +36,10 @@ export function ShoppingDetailHeader(props: ShoppingDetailHeaderProps) {
   const total = props.items.length;
   const checked = props.items.filter((row) => row.checked === 1).length;
   const hasChecked = checked > 0;
+  const uncheckAllLabel = t('shopping.header.uncheckAll.button');
+  const uncheckAllReason = t('shopping.header.uncheckAll.empty');
+  const clearCheckedLabel = t('shopping.header.clearChecked.button');
+  const clearCheckedReason = t('shopping.header.clearChecked.empty');
 
   return (
     <div className="space-y-3">
@@ -52,28 +57,55 @@ export function ShoppingDetailHeader(props: ShoppingDetailHeaderProps) {
         <div className="sm:hidden">
           <ShoppingSortDropdown mode={props.sortMode} onChange={props.onSortChange} compact />
         </div>
-        <button
-          type="button"
+        <HeaderAction
+          label={uncheckAllLabel}
+          reason={uncheckAllReason}
+          disabled={!hasChecked}
           onClick={props.onUncheckAll}
+        />
+        <HeaderAction
+          label={clearCheckedLabel}
+          reason={clearCheckedReason}
           disabled={!hasChecked}
-          title={hasChecked ? '' : t('shopping.header.uncheckAll.empty')}
-          className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {t('shopping.header.uncheckAll.button')}
-        </button>
-        <button
-          type="button"
           onClick={props.onClearChecked}
-          disabled={!hasChecked}
-          title={hasChecked ? '' : t('shopping.header.clearChecked.empty')}
-          className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {t('shopping.header.clearChecked.button')}
-        </button>
+        />
         <span className="ml-auto text-xs text-muted-foreground" data-testid="shopping-caption">
           {t('shopping.header.caption', { total, checked })}
         </span>
       </div>
+    </div>
+  );
+}
+
+function HeaderAction({
+  label,
+  reason,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  reason: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const reasonId = useId();
+  return (
+    <div className="inline-flex flex-col items-start">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-describedby={disabled ? reasonId : undefined}
+        title={disabled ? reason : ''}
+        className="min-h-11 rounded-md border px-3 py-1.5 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0"
+      >
+        {label}
+      </button>
+      {disabled ? (
+        <span id={reasonId} className="text-xs text-muted-foreground sm:sr-only">
+          {reason}
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -5,16 +5,16 @@ import type { ReportEntry } from '../../inventory-web/useReportEntries.js';
 /** How soon a warranty ends. */
 export type WarrantyTier = 'soon' | 'quarter' | 'later' | 'expired';
 
+/** Inventory locale keys for the warranty tier headings. */
+export const WARRANTY_TIER_LABEL_KEYS = {
+  soon: 'section.warrantySoon',
+  quarter: 'section.warrantyQuarter',
+  later: 'section.warrantyLater',
+  expired: 'section.expired',
+} satisfies Record<WarrantyTier, string>;
+
 /** The warranty tiers in their display order. */
 export const WARRANTY_TIERS: readonly WarrantyTier[] = ['soon', 'quarter', 'later', 'expired'];
-
-/** The display label for each warranty tier. */
-export const WARRANTY_TIER_LABELS: Readonly<Record<WarrantyTier, string>> = {
-  soon: 'Next 30 days',
-  quarter: '31 to 90 days',
-  later: 'Later',
-  expired: 'Expired',
-};
 
 /** The empty-state copy for each warranty tier. */
 export const WARRANTY_TIER_EMPTY: Readonly<Record<WarrantyTier, string>> = {

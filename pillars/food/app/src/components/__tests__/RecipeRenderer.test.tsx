@@ -159,6 +159,13 @@ describe('RecipeRenderer detail layout', () => {
     expect(screen.queryByTestId('recipe-servings')).toBeNull();
   });
 
+  it('reveals version status when the version chip is activated', async () => {
+    render(<RecipeRenderer recipeVersion={makeRecipeData()} />);
+    const trigger = screen.getByRole('button', { name: 'v1' });
+    await userEvent.setup().click(trigger);
+    expect(screen.getByText(/Status: current; compiled/)).toBeVisible();
+  });
+
   it('renders the hero image when path is set and swaps to placeholder on error', async () => {
     const data = makeRecipeData();
     render(<RecipeRenderer recipeVersion={data} />);

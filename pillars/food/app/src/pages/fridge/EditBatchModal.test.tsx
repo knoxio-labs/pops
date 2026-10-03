@@ -62,6 +62,7 @@ describe('EditBatchModal', () => {
 
     const expires = await screen.findByLabelText(/^expires$/i);
     expect(expires).toHaveAttribute('lang', 'en-AU');
+    expect(expires).toHaveClass('text-base', 'md:text-sm');
     await waitFor(() => expect(expires).toHaveValue('2026-06-20'));
   });
 

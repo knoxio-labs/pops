@@ -114,6 +114,32 @@ describe('listSolvableCharges', () => {
     expect(purchaseIds).toContain(woolworthsOrderId);
   });
 
+  it('reads only the shipment linked to each charge', () => {
+    const purchaseId = createPurchase(opened.db, {
+      source: 'amazon',
+      sourceOrderId: 'amazon-shipment-charge',
+      ingestMethod: 'export',
+      orderedAt: '2026-06-24T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 2000,
+      checksum: 'amazon:shipment-charge',
+      shipments: [
+        { ref: 'early', shippedAt: '2026-07-02T00:00:00Z' },
+        { ref: 'late', shippedAt: '2026-07-10T00:00:00Z' },
+      ],
+      charges: [{ amountCents: 1000, shipmentRef: 'late' }, { amountCents: 1000 }],
+    });
+
+    const charges = listSolvableCharges(opened.db).filter(
+      (charge) => charge.purchaseId === purchaseId
+    );
+
+    expect(charges.map(({ position, shippedAt }) => ({ position, shippedAt }))).toEqual([
+      { position: 0, shippedAt: '2026-07-10T00:00:00Z' },
+      { position: 1, shippedAt: null },
+    ]);
+  });
+
   it('scope.source restricts to that source alone', () => {
     const purchaseIds = listSolvableCharges(opened.db, { source: 'woolworths' }).map(
       (charge) => charge.purchaseId

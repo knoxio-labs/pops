@@ -3,11 +3,11 @@
  *
  * Read-only list of all prep states (seeded + user-added) plus an Add
  * button. The delete affordance is deliberately omitted — recipe_lines
- * reference prep_states and cascade analysis is deferred. The UI surfaces
- * this via a disabled delete button with a Tooltip explaining "not in v1".
+ * reference prep_states and cascade analysis is deferred. Each disabled
+ * Delete action includes the reason inline.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -62,7 +62,7 @@ export function PrepStatesTabContent() {
           </h2>
           <p className="text-muted-foreground text-sm">{t('data.prepStates.description')}</p>
         </div>
-        <Button onClick={() => setAddOpen(true)} size="sm">
+        <Button onClick={() => setAddOpen(true)} size="sm" className="min-h-11">
           {t('data.prepStates.toolbar.add')}
         </Button>
       </header>
@@ -113,6 +113,8 @@ function PrepStatesTable({ rows }: { rows: readonly PrepStateRowShape[] }) {
 
 function DisabledDeleteButton() {
   const { t } = useTranslation('food');
+  const reasonId = useId();
+  const reason = t('data.prepStates.deleteDisabledTooltip');
   // Tooltip-on-focus has to work for keyboard users, so the button stays
   // focusable but reports its disabled state via `aria-disabled` and a
   // suppressed click handler. A `disabled` HTML button can't receive
@@ -120,24 +122,29 @@ function DisabledDeleteButton() {
   // (Copilot review on PR #2724).
   return (
     <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            size="sm"
-            variant="ghost"
-            aria-disabled="true"
-            aria-label={t('data.prepStates.deleteDisabledAria')}
-            className="cursor-not-allowed opacity-50"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            {t('data.prepStates.row.delete')}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('data.prepStates.deleteDisabledTooltip')}</TooltipContent>
-      </Tooltip>
+      <div className="flex flex-col items-end gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-disabled="true"
+              aria-describedby={reasonId}
+              className="min-h-11 cursor-not-allowed opacity-50"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              {t('data.prepStates.row.delete')}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{reason}</TooltipContent>
+        </Tooltip>
+        <span id={reasonId} className="max-w-56 text-left text-xs text-muted-foreground">
+          {reason}
+        </span>
+      </div>
     </TooltipProvider>
   );
 }

@@ -2,7 +2,7 @@
  * The settlement window: which transaction dates may settle which order.
  *
  * Stage 0 of the ladder, and the place two different notions of "date"
- * meet. `purchases.orderedAt` is a full ISO instant; a finance transaction
+ * meet. An order or shipment date is a full ISO instant; a finance transaction
  * carries a date-only `YYYY-MM-DD`. Comparing them needs an explicit rule,
  * because the obvious implementations disagree at the edges by a day — and
  * a day is a meaningful fraction of a 14–21 day window.
@@ -29,8 +29,8 @@ const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
 
 /**
  * The UTC calendar date of an ISO instant. Returns null for a value that
- * does not parse, so a malformed `orderedAt` produces no window rather than
- * a window around the epoch.
+ * does not parse, so a malformed anchor produces no window rather than a
+ * window around the epoch.
  */
 export function calendarDateOf(isoInstant: string): CalendarDate | null {
   const parsed = new Date(isoInstant);
@@ -46,17 +46,14 @@ export interface SettlementWindow {
 }
 
 /**
- * The window around an order, `windowDays` either side of its UTC date.
+ * The window around an anchor instant, `windowDays` either side of its UTC date.
  *
  * Symmetric on purpose: a card is charged after the order as a rule, but a
  * pre-authorisation lands before it, and a receipt captured at the till can
  * be dated a day ahead of the statement entry that settles it.
  */
-export function settlementWindowFor(
-  orderedAt: string,
-  windowDays: number
-): SettlementWindow | null {
-  const anchor = calendarDateOf(orderedAt);
+export function settlementWindowFor(anchorAt: string, windowDays: number): SettlementWindow | null {
+  const anchor = calendarDateOf(anchorAt);
   if (anchor === null) return null;
 
   const anchorMs = Date.parse(`${anchor}T00:00:00Z`);

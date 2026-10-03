@@ -200,11 +200,18 @@ async function resolveCardAccounts(
 
 /** The settlement window each row contributes to the candidate fetch. */
 function windowsFor(
-  rows: readonly { orderedAt: string; settlementWindowDays?: number | null }[],
+  rows: readonly {
+    orderedAt: string;
+    shippedAt?: string | null;
+    settlementWindowDays?: number | null;
+  }[],
   defaultWindowDays: number
 ): SettlementWindow[] {
   return rows.flatMap((row) => {
-    const each = settlementWindowFor(row.orderedAt, row.settlementWindowDays ?? defaultWindowDays);
+    const each = settlementWindowFor(
+      row.shippedAt ?? row.orderedAt,
+      row.settlementWindowDays ?? defaultWindowDays
+    );
     return each === null ? [] : [each];
   });
 }

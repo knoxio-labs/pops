@@ -113,6 +113,7 @@ describe('EngramDetailPage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /edit/i }));
     expect(screen.getByLabelText('Body')).toBeInTheDocument();
+    expect(screen.getByLabelText('Body')).toHaveClass('text-base', 'md:text-sm');
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 

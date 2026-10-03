@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from '../primitives/dialog';
 import { Skeleton } from '../primitives/skeleton';
+import { Button } from './Button';
 import { TextInput } from './TextInput';
 
 /** Props for a modal that searches a bounded set of selectable results. */
@@ -32,6 +33,10 @@ export interface SearchPickerDialogProps<T> {
   minCharsMessage?: string;
   maxResultsHeight?: string;
   emptyMessage?: string;
+  /** Message shown when the current query fails instead of reporting no results. */
+  errorMessage?: string;
+  /** Retries the current query after an error. */
+  onRetry?: () => void;
 }
 
 interface ResultsBodyProps<T> {
@@ -43,6 +48,8 @@ interface ResultsBodyProps<T> {
   renderResult: (item: T) => React.ReactNode;
   getResultKey: (item: T) => string | number;
   emptyMessage: string;
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
 function ResultsBody<T>({
@@ -54,6 +61,8 @@ function ResultsBody<T>({
   renderResult,
   getResultKey,
   emptyMessage,
+  errorMessage,
+  onRetry,
 }: ResultsBodyProps<T>) {
   if (search.length < minChars) {
     return <p className="text-sm text-muted-foreground py-4 text-center">{minCharsMessage}</p>;
@@ -64,6 +73,18 @@ function ResultsBody<T>({
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
+  if (errorMessage) {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-3 py-4 text-center">
+        <p className="text-sm text-destructive">{errorMessage}</p>
+        {onRetry && (
+          <Button type="button" variant="outline" className="min-h-11" onClick={onRetry}>
+            Try again
+          </Button>
+        )}
       </div>
     );
   }
@@ -98,6 +119,8 @@ export function SearchPickerDialog<T>({
   minCharsMessage = `Type at least ${String(minChars)} characters to search`,
   maxResultsHeight = 'max-h-64',
   emptyMessage = 'No results found',
+  errorMessage,
+  onRetry,
 }: SearchPickerDialogProps<T>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,6 +153,8 @@ export function SearchPickerDialog<T>({
             renderResult={renderResult}
             getResultKey={getResultKey}
             emptyMessage={emptyMessage}
+            errorMessage={errorMessage}
+            onRetry={onRetry}
           />
         </div>
       </DialogContent>

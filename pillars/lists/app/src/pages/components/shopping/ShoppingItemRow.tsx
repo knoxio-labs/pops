@@ -62,7 +62,13 @@ export function ShoppingItemRow(props: ShoppingItemRowProps): React.ReactElement
     >
       <DragHandle attributes={attributes} listeners={listeners} disabled={props.isDragDisabled} />
       <RowCheckbox row={props.row} isChecked={isChecked} onToggleChecked={props.onToggleChecked} />
-      <ShoppingRowBody row={props.row} isChecked={isChecked} edit={edit} onLabelKey={onLabelKey} />
+      <ShoppingRowBody
+        row={props.row}
+        isChecked={isChecked}
+        isDragDisabled={props.isDragDisabled}
+        edit={edit}
+        onLabelKey={onLabelKey}
+      />
       <RowTrailing
         canMoveUp={props.canMoveUp}
         canMoveDown={props.canMoveDown}
@@ -93,7 +99,7 @@ function DragHandle({
       className={`flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-foreground ${
         disabled ? 'cursor-not-allowed opacity-40' : 'cursor-grab'
       }`}
-      aria-label={t('shopping.item.dragHandle')}
+      aria-label={disabled ? t('shopping.item.dragDisabled') : t('shopping.item.dragHandle')}
       title={disabled ? t('shopping.item.dragDisabled') : t('shopping.item.dragHandle')}
       disabled={disabled}
       {...attributes}

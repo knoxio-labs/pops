@@ -23,9 +23,9 @@ export const INVENTORY_SERVICE_ACCOUNT_NAME = 'inventory';
 /**
  * What the account is granted, and nothing more.
  *
- * One entry per outbound leg this pillar actually has, so the list stays a
- * readable record of what inventory calls rather than a wildcard nobody can
- * audit. Scopes match by dot prefix.
+ * One entry per outbound operation this pillar actually calls, so the list
+ * stays a readable record of what inventory reaches rather than a wildcard
+ * nobody can audit. Scopes match by dot prefix.
  *
  * - `ai.codes.rank` — ranking `codes/suggest`'s deterministic candidates,
  *   `../ai/client.ts`. The `ai` pillar has no candidate-ranking route today
@@ -33,8 +33,13 @@ export const INVENTORY_SERVICE_ACCOUNT_NAME = 'inventory';
  *   grant and this pillar's call are ready the day that route exists,
  *   matching the pattern finance's `service-account.ts` documents for a
  *   producer that has not yet started enforcing scopes.
+ * - `finance.transactions.get` — checking populated purchase transaction
+ *   URIs in `../cron/reconcile-cross-pillar.ts`.
  */
-export const INVENTORY_SERVICE_ACCOUNT_SCOPES: readonly string[] = ['ai.codes.rank'];
+export const INVENTORY_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
+  'ai.codes.rank',
+  'finance.transactions.get',
+];
 
 /** Local-dev source: the key inline in the environment. */
 export const SERVICE_ACCOUNT_KEY_ENV = 'POPS_INTERNAL_API_KEY';

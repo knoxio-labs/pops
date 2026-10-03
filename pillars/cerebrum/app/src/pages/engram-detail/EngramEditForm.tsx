@@ -80,7 +80,7 @@ function BodyField({ value, onChange }: { value: string; onChange: (next: string
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
         rows={20}
-        className="font-mono text-sm"
+        className="font-mono text-base md:text-sm"
         aria-label={t('engrams.edit.body')}
       />
       <p className="mt-1 text-xs text-muted-foreground">{t('engrams.edit.autosaveHint')}</p>

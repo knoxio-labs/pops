@@ -123,7 +123,11 @@ describe('WeightsSection', () => {
     seedWeights([row({ id: 4, seeded: true })]);
     render(withClient(<WeightsSection />));
     const r = await screen.findByTestId('weight-row-4');
-    expect(within(r).getByRole('button', { name: /reseed to restore/i })).toBeDisabled();
+    const deleteButton = within(r).getByRole('button', { name: /^delete$/i });
+    expect(deleteButton).toBeDisabled();
+    const reason = within(r).getByText(/seeded weight; reseed to restore/i);
+    expect(reason).toBeVisible();
+    expect(deleteButton).toHaveAttribute('aria-describedby', reason.id);
   });
 
   it('passes the ingredient filter into the listWeights query input', async () => {

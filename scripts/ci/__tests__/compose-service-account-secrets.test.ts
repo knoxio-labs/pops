@@ -20,11 +20,24 @@ import { ComposeFileSchema } from '../compose-schema.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
-const compose = ComposeFileSchema.parse(
+const productionCompose = ComposeFileSchema.parse(
   load(readFileSync(join(repoRoot, 'infra', 'docker-compose.yml'), 'utf8'))
+);
+const devCompose = ComposeFileSchema.parse(
+  load(readFileSync(join(repoRoot, 'infra', 'docker-compose.dev.yml'), 'utf8'))
 );
 
 const FILE_SECRETS = [
+  {
+    service: 'inventory-api',
+    variable: 'POPS_INTERNAL_API_KEY_FILE',
+    secret: 'pops_inventory_api_key',
+  },
+  {
+    service: 'pops-orchestrator',
+    variable: 'POPS_INTERNAL_API_KEY_FILE',
+    secret: 'pops_orchestrator_api_key',
+  },
   {
     service: 'finance-api',
     variable: 'POPS_INTERNAL_API_KEY_FILE',
@@ -41,7 +54,7 @@ const FILE_SECRETS = [
   { service: 'cerebrum-api', variable: 'ANTHROPIC_API_KEY_FILE', secret: 'claude_api_key' },
 ];
 
-function mountedSecrets(service: string): string[] {
+function mountedSecrets(compose: typeof productionCompose, service: string): string[] {
   return (compose.services[service]?.secrets ?? []).map((entry) =>
     typeof entry === 'string' ? entry : entry.source
   );
@@ -51,10 +64,26 @@ describe('credential files mounted in infra/docker-compose.yml', () => {
   it.each(FILE_SECRETS)(
     '$service reads $variable from the mounted $secret',
     ({ service, variable, secret }) => {
-      expect(compose.services[service], `${service} must be declared`).toBeDefined();
-      expect(mountedSecrets(service)).toContain(secret);
-      expect(compose.services[service]?.environment?.[variable]).toBe(`/run/secrets/${secret}`);
-      expect(Object.keys(compose.secrets ?? {})).toContain(secret);
+      expect(productionCompose.services[service], `${service} must be declared`).toBeDefined();
+      expect(mountedSecrets(productionCompose, service)).toContain(secret);
+      expect(productionCompose.services[service]?.environment?.[variable]).toBe(
+        `/run/secrets/${secret}`
+      );
+      expect(Object.keys(productionCompose.secrets ?? {})).toContain(secret);
     }
   );
+});
+
+describe('local service-account credentials in infra/docker-compose.dev.yml', () => {
+  it('passes through the optional inventory key', () => {
+    expect(devCompose.services['inventory-api']?.environment?.POPS_INTERNAL_API_KEY).toBe(
+      '${POPS_INTERNAL_API_KEY:-}'
+    );
+  });
+
+  it('passes through the optional orchestrator key', () => {
+    expect(devCompose.services['pops-orchestrator']?.environment?.POPS_INTERNAL_API_KEY).toBe(
+      '${POPS_ORCHESTRATOR_API_KEY:-}'
+    );
+  });
 });

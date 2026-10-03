@@ -64,7 +64,7 @@ function SlotNameCell(props: {
     // same exception inventory's location-tree rename carries (POPS-3201).
     return (
       <input
-        className="flex-1 border rounded px-1 text-sm"
+        className="flex-1 border rounded px-1 text-base md:text-sm"
         value={props.name}
         onChange={(e) => props.setName(e.target.value)}
         onBlur={props.onCommit}

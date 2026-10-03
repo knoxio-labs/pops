@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Checkbox, TextInput } from '@pops/ui';
 
 import { ListItemMenu } from './ListItemMenu.js';
+import { ListItemSubline } from './ListItemSubline.js';
 
 import type { ListItemRow as ItemRow } from './types.js';
 
@@ -131,7 +132,6 @@ function RowBody({
     }
   };
   const labelText = formatLabel(row, t);
-  const subline = formatSubline(row, t);
 
   return (
     <div className="min-w-0 flex-1">
@@ -160,11 +160,7 @@ function RowBody({
           {labelText}
         </button>
       )}
-      {subline !== null ? (
-        <p className="truncate text-xs text-muted-foreground" title={subline}>
-          {subline}
-        </p>
-      ) : null}
+      <ListItemSubline row={row} />
     </div>
   );
 }
@@ -183,17 +179,4 @@ function qtyUnitPrefix(row: ItemRow): string {
 
 function formatQty(qty: number) {
   return Number.isInteger(qty) ? String(qty) : qty.toFixed(2).replace(/\.?0+$/, '');
-}
-
-function formatSubline(row: ItemRow, t: (key: string) => string) {
-  const noteSummary = row.notes !== null && row.notes.length > 0 ? truncate(row.notes, 80) : null;
-  if (row.refKind !== 'free') {
-    const refLabel = t(`detail.item.ref.${row.refKind}`);
-    return noteSummary !== null ? `${refLabel} · ${noteSummary}` : refLabel;
-  }
-  return noteSummary;
-}
-
-function truncate(text: string, max: number) {
-  return text.length > max ? `${text.slice(0, max)}…` : text;
 }

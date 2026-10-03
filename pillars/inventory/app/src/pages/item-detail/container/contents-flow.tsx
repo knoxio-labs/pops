@@ -110,7 +110,7 @@ export function ContentsFilter({
         placeholder="Filter"
         value={query}
         onChange={(event) => onQuery(event.target.value)}
-        className="h-9 pl-8 text-sm"
+        className="h-9 pl-8 text-base md:text-sm"
       />
     </div>
   );

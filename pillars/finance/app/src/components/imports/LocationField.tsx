@@ -1,14 +1,35 @@
 import { Info, MapPin } from 'lucide-react';
 
-import { Badge } from '@pops/ui';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@pops/ui';
+import {
+  Badge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@pops/ui';
 
 import { extractLocationDetails } from '../../lib/transaction-utils';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
+import type { LocationDetails } from '../../lib/transaction-utils';
+
 interface LocationFieldProps {
   transaction: ProcessedTransaction;
+}
+
+function LocationDetailsContent({ details }: { details: LocationDetails }) {
+  return (
+    <>
+      <p className="text-xs">{details.extractedFrom}</p>
+      {details.confidence && (
+        <p className="text-xs text-muted-foreground mt-1">Confidence: {details.confidence}</p>
+      )}
+    </>
+  );
 }
 
 /**
@@ -38,21 +59,29 @@ export function LocationField({ transaction }: LocationFieldProps) {
       )}
 
       {details.extractedFrom && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="w-4 h-4 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{details.extractedFrom}</p>
-              {details.confidence && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Confidence: {details.confidence}
-                </p>
-              )}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Popover>
+          <TooltipProvider>
+            <Tooltip>
+              <PopoverTrigger asChild>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Location details: ${details.extractedFrom}${details.confidence ? `. Confidence: ${details.confidence}` : ''}`}
+                    className="relative inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring before:absolute before:-inset-3.5 before:content-['']"
+                  >
+                    <Info className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+              </PopoverTrigger>
+              <TooltipContent>
+                <LocationDetailsContent details={details} />
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <PopoverContent className="w-72 p-3" align="start">
+            <LocationDetailsContent details={details} />
+          </PopoverContent>
+        </Popover>
       )}
     </div>
   );

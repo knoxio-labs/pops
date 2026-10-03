@@ -5,8 +5,9 @@
  */
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ChevronDown } from 'lucide-react';
 
-import { Badge } from '@pops/ui';
+import { Badge, Button, Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
 import type { ReactElement } from 'react';
 
@@ -45,27 +46,79 @@ export function PlanEntryRow({ entry, onEdit }: PlanEntryRowProps): ReactElement
     >
       <span
         data-draghandle="true"
-        className={`cursor-grab text-muted-foreground ${locked ? 'opacity-30 cursor-not-allowed' : ''}`}
+        className={`inline-flex min-h-11 min-w-11 items-center justify-center cursor-grab text-muted-foreground ${
+          locked ? 'opacity-30 cursor-not-allowed' : ''
+        }`}
         title={locked ? 'Cooked entries cannot be moved' : 'Drag to reorder'}
         {...attributes}
         {...listeners}
       >
         ⋮⋮
       </span>
-      <span className="flex-1 truncate" title={entry.recipeTitle}>
-        {title}
-      </span>
+      <EntryTitle entry={entry} title={title} />
       {entry.plannedServings > 1 && (
         <Badge variant="outline" data-testid={`servings-badge-${entry.id}`}>
           ×{entry.plannedServings}
         </Badge>
       )}
-      {locked && (
-        <Badge variant="secondary" data-testid={`cooked-chip-${entry.id}`}>
-          cooked
-        </Badge>
-      )}
+      {locked && <CookedEntryBadge entryId={entry.id} />}
     </div>
+  );
+}
+
+function EntryTitle({ entry, title }: { entry: WirePlanEntryRow; title: string }): ReactElement {
+  if (title === entry.recipeTitle) {
+    return (
+      <span className="min-w-0 flex-1 truncate" title={entry.recipeTitle}>
+        {title}
+      </span>
+    );
+  }
+  return (
+    <Collapsible className="min-w-0 flex-1" onClick={(event) => event.stopPropagation()}>
+      <CollapsibleTrigger asChild>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="min-h-11 min-w-0 w-full justify-between gap-1 px-1"
+          aria-label={entry.recipeTitle}
+          title={entry.recipeTitle}
+        >
+          <span className="min-w-0 flex-1 truncate">{title}</span>
+          <ChevronDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <p className="break-words py-1 text-xs">{entry.recipeTitle}</p>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function CookedEntryBadge({ entryId }: { entryId: number }): ReactElement {
+  const moveReason = 'Cooked entries cannot be moved';
+  return (
+    <Collapsible className="shrink-0" onClick={(event) => event.stopPropagation()}>
+      <CollapsibleTrigger asChild>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="min-h-11 gap-1 px-1"
+          title={moveReason}
+          aria-label={`cooked: ${moveReason}`}
+        >
+          <Badge variant="secondary" data-testid={`cooked-chip-${entryId}`}>
+            cooked
+          </Badge>
+          <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <p className="max-w-48 text-xs text-muted-foreground">{moveReason}</p>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

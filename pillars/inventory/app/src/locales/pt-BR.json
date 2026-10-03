@@ -60,7 +60,9 @@
   "section.active": "Ativas",
   "section.expired": "Expiradas",
   "section.warrantyTracking": "Rastreamento de Garantias",
-  "section.criticalUnder30Days": "Crítico — Menos de 30 Dias",
+  "section.warrantySoon": "Próximos 30 dias",
+  "section.warrantyQuarter": "31 a 90 dias",
+  "section.warrantyLater": "Mais de 90 dias",
 
   "action.connect": "Conectar",
   "action.disconnect": "Desconectar",

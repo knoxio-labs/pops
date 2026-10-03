@@ -48,7 +48,7 @@ function BodyEditor({
         onKeyDown={onKeyDown}
         placeholder={t('ingest.bodyPlaceholder')}
         rows={8}
-        className="min-h-[200px] font-mono text-sm"
+        className="min-h-[200px] font-mono text-base md:text-sm"
         aria-label={t('ingest.body')}
       />
     </div>
