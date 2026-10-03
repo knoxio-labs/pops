@@ -18,6 +18,7 @@ import {
   InvalidIngestPayloadError,
   listPurchases,
   purchaseCapture,
+  purchaseItemSharedTags,
   purchases,
   upsertSource,
 } from '../index.js';
@@ -569,6 +570,40 @@ describe('ingest idempotency', () => {
 });
 
 describe('cascades', () => {
+  it('takes shared-tag assignments with a deleted line item', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'shared-tag-cascade',
+        sourceOrderId: 'shared-tag-cascade',
+        items: [{ ref: 'line', name: 'Mug', unitPriceCents: 100, lineTotalCents: 100 }],
+      })
+    );
+    const item = opened.raw
+      .prepare('SELECT id FROM purchase_items WHERE purchase_id = ?')
+      .get(id) as { id: string };
+    opened.db
+      .insert(purchaseItemSharedTags)
+      .values({ itemId: item.id, tagId: '550e8400-e29b-41d4-a716-446655440000' })
+      .run();
+
+    opened.raw.prepare('DELETE FROM purchase_items WHERE id = ?').run(item.id);
+
+    const count = (
+      opened.raw
+        .prepare('SELECT count(*) AS n FROM purchase_item_shared_tags WHERE item_id = ?')
+        .get(item.id) as { n: number }
+    ).n;
+    expect(count).toBe(0);
+    expect(
+      (
+        opened.raw.prepare('SELECT count(*) AS n FROM purchases WHERE id = ?').get(id) as {
+          n: number;
+        }
+      ).n
+    ).toBe(1);
+  });
+
   it('takes the whole graph with the order', () => {
     const id = createPurchase(opened.db, coffeeOrder());
     opened.raw.prepare('DELETE FROM purchases WHERE id = ?').run(id);
