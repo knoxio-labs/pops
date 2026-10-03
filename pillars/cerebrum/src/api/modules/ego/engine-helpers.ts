@@ -12,7 +12,7 @@ import type { EngineConfig, Message } from './types.js';
 const DEFAULT_MAX_HISTORY = 20;
 const DEFAULT_MAX_RETRIEVAL = 5;
 const DEFAULT_TOKEN_BUDGET = 4096;
-const DEFAULT_RELEVANCE_THRESHOLD = 0.3;
+const DEFAULT_MIN_COSINE = 0.3;
 
 function isSecretScope(scope: string): boolean {
   return scope.split('.').includes('secret');
@@ -27,16 +27,6 @@ export function buildRetrievalFilters(scopes: string[]): RetrievalFilters {
     filters.includeSecret = true;
   }
   return filters;
-}
-
-function roleLabel(role: string): string {
-  if (role === 'user') return 'User';
-  if (role === 'assistant') return 'Assistant';
-  return 'System';
-}
-
-export function formatHistoryForContext(messages: Message[]): string {
-  return messages.map((m) => `${roleLabel(m.role)}: ${m.content}`).join('\n\n');
 }
 
 /**
@@ -71,6 +61,6 @@ export function buildDefaultConfig(config?: Partial<EngineConfig>): EngineConfig
     maxHistoryMessages: config?.maxHistoryMessages ?? DEFAULT_MAX_HISTORY,
     maxRetrievalResults: config?.maxRetrievalResults ?? DEFAULT_MAX_RETRIEVAL,
     tokenBudget: config?.tokenBudget ?? DEFAULT_TOKEN_BUDGET,
-    relevanceThreshold: config?.relevanceThreshold ?? DEFAULT_RELEVANCE_THRESHOLD,
+    minCosine: config?.minCosine ?? DEFAULT_MIN_COSINE,
   };
 }

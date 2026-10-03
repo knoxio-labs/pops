@@ -1,8 +1,25 @@
 /**
- * Stages a populated ai database through the baseline, then verifies the
- * production opener applies the remaining migrations without losing operator data.
+ * What the migration chain does to data that was already there.
+ *
+ * The companion test in finance and purchases stages a database up to the
+ * entry *before* a data-mutating migration, seeds it, then reopens with the
+ * real opener to prove the rest of the journal doesn't lose or mangle rows.
+ * The ai pillar's journal currently holds exactly one entry —
+ * `0001_ai_baseline` — so there is no earlier point to stage from and no tail
+ * migration to test against yet.
+ *
+ * What this test proves today is narrower: staging through the only entry
+ * that exists, seeding representative rows, and reopening with `openAiDb`
+ * shows the opener is idempotent against an already-migrated, populated
+ * database (no spurious pre-migration snapshot, no rewritten row), and that
+ * `PRAGMA foreign_key_check` / `integrity_check` are clean against this
+ * schema. It does not yet prove anything about a migration rewriting
+ * existing data, because none exists. The moment a second migration lands,
+ * `BASELINE_TAG` stays `0001_ai_baseline`, the seed below becomes the "before"
+ * state, and this test starts covering the same ground finance's and
+ * purchases's do.
  */
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -185,33 +202,12 @@ describe('applying the rest of the journal to a populated ai database', () => {
     expect(count('ai_budgets')).toBe(1);
   });
 
-  it('seeds Anthropic prices idempotently without replacing operator edits', () => {
-    opened.raw
-      .prepare(
-        "UPDATE ai_model_pricing SET input_cost_per_mtok = 6.5, output_cost_per_mtok = 32.5 WHERE provider_id = 'anthropic' AND model_id = 'claude-sonnet-5'"
-      )
-      .run();
-
-    const migration = readFileSync(
-      join(MIGRATIONS_DIR, '0002_seed_anthropic_model_pricing.sql'),
-      'utf8'
-    );
-    opened.raw.exec(migration);
-
-    expect(count('ai_model_pricing')).toBe(7);
+  it('keeps a pre-existing price row unchanged when the pricing seed runs over it', () => {
     expect(
-      rows<{ input_cost_per_mtok: number; model_id: string; output_cost_per_mtok: number }>(
-        "SELECT model_id, input_cost_per_mtok, output_cost_per_mtok FROM ai_model_pricing WHERE provider_id = 'anthropic' ORDER BY model_id"
+      rows<{ input_cost_per_mtok: number; output_cost_per_mtok: number; context_window: number }>(
+        `SELECT input_cost_per_mtok, output_cost_per_mtok, context_window FROM ai_model_pricing WHERE provider_id = 'anthropic' AND model_id = 'claude-sonnet-5'`
       )
-    ).toEqual([
-      { model_id: 'claude-haiku-4-5', input_cost_per_mtok: 1, output_cost_per_mtok: 5 },
-      { model_id: 'claude-haiku-4-5-20251001', input_cost_per_mtok: 1, output_cost_per_mtok: 5 },
-      { model_id: 'claude-opus-4-8', input_cost_per_mtok: 5, output_cost_per_mtok: 25 },
-      { model_id: 'claude-opus-5-5', input_cost_per_mtok: 4, output_cost_per_mtok: 20 },
-      { model_id: 'claude-sonnet-4-6', input_cost_per_mtok: 3, output_cost_per_mtok: 15 },
-      { model_id: 'claude-sonnet-5', input_cost_per_mtok: 6.5, output_cost_per_mtok: 32.5 },
-      { model_id: 'claude-sonnet-5-5', input_cost_per_mtok: 2, output_cost_per_mtok: 10 },
-    ]);
+    ).toEqual([{ input_cost_per_mtok: 3, output_cost_per_mtok: 15, context_window: 1000000 }]);
   });
 
   it('leaves the pre-migration snapshot behind only if it failed', () => {

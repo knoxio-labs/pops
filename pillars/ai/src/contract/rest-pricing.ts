@@ -1,12 +1,12 @@
 /**
  * `ai-pricing.*` sub-router — cross-pillar pricing read.
  *
- * `GET /ai-pricing/:provider/:model` returns the configured per-million-token USD pair
+ * `GET /ai-pricing/:provider/:model` returns the per-million-token USD pair
  * `{ input, output }` already shaped as the `@pops/ai-telemetry` `PricingEntry`,
  * so cross-pillar callers do NOT re-derive it from `inputCostPerMtok` /
  * `outputCostPerMtok`. Public-readable (NOT internal) — the telemetry wrapper's
- * `httpLookupPricing` fetches it before `computeCostUsd`. A provider/model pair
- * without configured pricing returns 404.
+ * `httpLookupPricing` fetches it before `computeCostUsd`. Backed by the moved
+ * `createPricingCache(db).lookup()`; an unpriced pair answers 404.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -30,7 +30,7 @@ export const aiPricingContract = c.router({
     method: 'GET',
     path: '/ai-pricing/:provider/:model',
     pathParams: PricingParams,
-    responses: { 200: PricingEntrySchema, ...ERR_RESPONSES },
+    responses: { 200: PricingEntrySchema, 404: ERR_RESPONSES[404] },
     summary: 'Resolve per-Mtok USD pricing { input, output } for a provider/model',
   },
 });

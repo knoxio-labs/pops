@@ -13,7 +13,7 @@ import {
   CEREBRUM_NUDGE_INDICATOR_SLOT,
   CEREBRUM_PAGES,
 } from '../../contract/pages.js';
-import { cerebrumManifest, egoManifest } from '../../contract/settings/index.js';
+import { cerebrumManifest } from '../../contract/settings/index.js';
 import { buildCerebrumCapabilityReporter, buildCerebrumManifest } from '../manifest.js';
 
 describe('buildCerebrumManifest', () => {
@@ -23,9 +23,9 @@ describe('buildCerebrumManifest', () => {
     expect(result.success).toBe(true);
   });
 
-  it('declares the cerebrum + ego settings manifests under settings.manifests', () => {
+  it('declares only the cerebrum settings manifest under settings.manifests', () => {
     const payload = buildCerebrumManifest('1.2.3');
-    expect(payload.settings).toEqual({ manifests: [cerebrumManifest, egoManifest] });
+    expect(payload.settings).toEqual({ manifests: [cerebrumManifest] });
   });
 
   it('threads the version through the contract block', () => {

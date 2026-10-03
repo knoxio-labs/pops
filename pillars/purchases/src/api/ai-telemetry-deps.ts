@@ -23,8 +23,7 @@ import {
   type CallWithLoggingDeps,
   createEnvReportSink,
   httpLookupPricing,
-  type LookupPricingFn,
-  type PricingEntry,
+  memoizePricing,
 } from '@pops/ai-telemetry';
 
 import {
@@ -37,21 +36,6 @@ export const PURCHASES_DOMAIN = 'purchases';
 export const ANTHROPIC_PROVIDER = 'anthropic';
 
 const DEFAULT_AI_API_URL = 'http://ai-api:3008';
-
-function memoizePricing(lookup: LookupPricingFn): LookupPricingFn {
-  const cache = new Map<string, Promise<PricingEntry | null>>();
-  return (provider, model) => {
-    const key = `${provider} ${model}`;
-    let entry = cache.get(key);
-    if (entry === undefined) {
-      // A miss is cached too, so an unpriced model does not re-hit the ai
-      // pillar on every single receipt.
-      entry = lookup(provider, model);
-      cache.set(key, entry);
-    }
-    return entry;
-  };
-}
 
 let cached: CallWithLoggingDeps | undefined;
 let override: CallWithLoggingDeps | undefined;

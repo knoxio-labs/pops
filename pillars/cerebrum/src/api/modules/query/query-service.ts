@@ -13,16 +13,17 @@
 import { ContextAssemblyService } from '../retrieval/context-assembly.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
 import { CitationParser } from './citation-parser.js';
+import { computeConfidence } from './confidence.js';
 import { buildQuerySystemPrompt } from './prompts.js';
 import { streamQueryAnswer } from './query-stream.js';
 import { QueryScopeInferencer } from './scope-inferencer.js';
+import { sourceTypesForDomains } from './types.js';
 
 import type { SemanticSearchDeps } from '../retrieval/semantic-search.js';
 import type { RetrievalFilters, RetrievalResult } from '../retrieval/types.js';
 import type { QueryLlm, QueryStreamLlm } from './llm.js';
 import type { QueryStreamEvent } from './query-stream.js';
 import type {
-  ConfidenceLevel,
   QueryDomain,
   QueryRequest,
   QueryResponse,
@@ -31,7 +32,7 @@ import type {
 } from './types.js';
 
 const QUERY_MAX_SOURCES = 10;
-const QUERY_RELEVANCE_THRESHOLD = 0.3;
+const QUERY_MIN_COSINE = 0.3;
 const QUERY_TOKEN_BUDGET = 4096;
 const EXCERPT_MAX_LENGTH = 200;
 
@@ -42,14 +43,6 @@ export interface QueryServiceDeps extends SemanticSearchDeps {
   llm: QueryLlm;
   streamLlm: QueryStreamLlm;
 }
-
-/** Map domain names to retrieval sourceType values. */
-const DOMAIN_MAP: Record<QueryDomain, string> = {
-  engrams: 'engram',
-  transactions: 'transaction',
-  media: 'media',
-  inventory: 'inventory',
-};
 
 type PreparedQuery =
   | { kind: 'no-results'; scopes: string[] }
@@ -74,14 +67,6 @@ async function* emitNoResultsStream(scopes: string[]): AsyncGenerator<QueryStrea
   };
 }
 
-function computeConfidence(sources: SourceCitation[]): ConfidenceLevel {
-  if (sources.length === 0) return 'low';
-  const topScore = sources[0]?.relevance ?? 0;
-  if (topScore > 0.8) return 'high';
-  if (topScore >= 0.5) return 'medium';
-  return 'low';
-}
-
 function buildRetrievalFilters(
   scopes: string[],
   includeSecret: boolean,
@@ -90,7 +75,7 @@ function buildRetrievalFilters(
   const filters: RetrievalFilters = {};
   if (scopes.length > 0) filters.scopes = scopes;
   if (includeSecret) filters.includeSecret = true;
-  if (domains && domains.length > 0) filters.sourceTypes = domains.map((d) => DOMAIN_MAP[d]);
+  if (domains && domains.length > 0) filters.sourceTypes = sourceTypesForDomains(domains);
   return filters;
 }
 
@@ -127,7 +112,7 @@ export class QueryService {
     const llmAnswer = await this.deps.llm.complete(prepared.systemPrompt, prepared.question);
     const { cleanedAnswer, citations } = this.citationParser.parse(llmAnswer, prepared.results);
 
-    const confidence = citations.length === 0 ? 'low' : computeConfidence(citations);
+    const confidence = computeConfidence(cleanedAnswer, citations, prepared.results);
 
     return { answer: cleanedAnswer, sources: citations, scopes: prepared.scopes, confidence };
   }
@@ -159,12 +144,7 @@ export class QueryService {
 
     const scopeResult = this.inferencer.infer(question, undefined, request.scopes, includeSecret);
     const filters = buildRetrievalFilters(scopeResult.scopes, includeSecret, request.domains);
-    const results = await this.search.hybrid(
-      question,
-      filters,
-      maxSources,
-      QUERY_RELEVANCE_THRESHOLD
-    );
+    const results = await this.search.hybrid(question, filters, maxSources, QUERY_MIN_COSINE);
 
     if (results.length === 0) {
       return { kind: 'no-results', scopes: scopeResult.scopes };
@@ -199,7 +179,7 @@ export class QueryService {
 
     const scopeResult = this.inferencer.infer(trimmed, undefined, scopes, secret);
     const filters = buildRetrievalFilters(scopeResult.scopes, secret);
-    const results = await this.search.hybrid(trimmed, filters, limit, QUERY_RELEVANCE_THRESHOLD);
+    const results = await this.search.hybrid(trimmed, filters, limit, QUERY_MIN_COSINE);
 
     const sources: SourceCitation[] = results.map((r) => ({
       id: r.sourceId,
@@ -229,7 +209,7 @@ export class QueryService {
       retrievalPlan: {
         filters,
         maxSources: QUERY_MAX_SOURCES,
-        threshold: QUERY_RELEVANCE_THRESHOLD,
+        threshold: QUERY_MIN_COSINE,
       },
       secretNotice,
     };

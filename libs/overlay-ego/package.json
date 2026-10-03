@@ -16,6 +16,7 @@
     "generate:ego-client": "openapi-ts && oxfmt --write src/ego-api"
   },
   "dependencies": {
+    "@pops/navigation": "workspace:*",
     "@pops/types": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.102.8",

@@ -75,7 +75,8 @@ ai_entity_cache.json
 # content today; if that changes, un-ignore the specific path the way
 # `.claude/skills/` is, rather than dropping the rule.
 .agents/
-.codex/
+.codex/*
+!.codex/config.toml
 
 # Logs
 *.log

@@ -25,11 +25,21 @@ export {
 } from './open-cerebrum-db.js';
 
 export {
+  DEFAULT_EMBEDDING_DIMENSIONS,
   ensureEmbeddingsVecTable,
   isVecAvailable,
+  resolveEmbeddingDimensions,
   tryLoadVecExtension,
+  type EnsureEmbeddingsVecResult,
   type VecLoaderLogger,
 } from './vec-loader.js';
+
+export {
+  deleteEngramSearchDoc,
+  pruneEngramSearchDocs,
+  upsertEngramSearchDoc,
+  type EngramSearchDoc,
+} from './services/engram-search-docs.js';
 
 export * as nudgeLogService from './services/nudge-log.js';
 export * as engramsService from './services/engrams.js';

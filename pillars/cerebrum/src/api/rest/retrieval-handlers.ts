@@ -148,7 +148,7 @@ export function makeRetrievalHandlers(
         const assembler = new ContextAssemblyService();
         const filters: RetrievalFilters = body.filters ?? {};
 
-        const results = await svc.hybrid(body.query, filters, body.maxResults, 0.8);
+        const results = await svc.hybrid(body.query, filters, body.maxResults);
         const output = assembler.assemble({
           query: body.query,
           results,

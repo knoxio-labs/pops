@@ -6,6 +6,8 @@
  * `embeddings.id == embeddings_vec.rowid` holds here, so the kNN JOIN on
  * `e.id = ev.rowid` is exact (no rowid≠id backfill caveat).
  */
+import { l2ToCosine } from './cosine.js';
+
 import type BetterSqlite3 from 'better-sqlite3';
 
 import type { RetrievalFilters, RetrievalResult } from './types.js';
@@ -66,7 +68,7 @@ export function makeRetrievalResult(row: VectorRow, metadata: ResolvedMetadata):
     sourceId: row.source_id,
     title: metadata.title,
     contentPreview: row.content_preview.slice(0, 200),
-    score: Math.max(0, 1 - row.distance),
+    score: l2ToCosine(row.distance),
     distance: row.distance,
     matchType: 'semantic',
     metadata: {
@@ -103,8 +105,4 @@ export function vecUnavailableError(): Error {
   return Object.assign(new Error('Vector features unavailable: sqlite-vec extension not loaded'), {
     code: 'VEC_UNAVAILABLE',
   });
-}
-
-export function isSecretScope(scope: string): boolean {
-  return scope.split('.').includes('secret');
 }

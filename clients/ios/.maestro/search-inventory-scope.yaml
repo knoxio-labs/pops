@@ -71,15 +71,18 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - tapOn: 'Create'
 - assertVisible: ${output.inventory.run} Garage, Place
 
-# Open Search, scope to Inventory, and ask for the suffix. Submitting is what
-# records a recent, which the later restore step depends on — `pressKey:
-# Enter` rather than tapping the keyboard's own return key, whose label is
-# the Simulator's system locale and not this app's English copy.
+# Open Search, scope to Inventory, and ask for the suffix. Locations has its
+# own Search control, so the tab-bar Search item is the second match. Submitting
+# is what records a recent, which the later restore step depends on —
+# `pressKey: Enter` rather than tapping the keyboard's own return key, whose
+# label is the Simulator's system locale and not this app's English copy.
 #
 # "Inventory" names both the scope chip and the tab bar's own Inventory tab;
 # the chip is the first match once the screen has settled, which the prompt
 # assertion below waits for before the tap disambiguates by index.
-- tapOn: 'Search'
+- tapOn:
+    text: 'Search'
+    index: 1
 - assertVisible: 'Items, places, purchases'
 - tapOn:
     text: 'Inventory'
@@ -198,7 +201,10 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - inputText: ${output.inventory.run} Waiting
 - assertVisible: ${output.inventory.run} Waiting
 - tapOn: 'Create'
-- tapOn: 'Search'
+# Items has its own Search field, so tab-bar Search is again the second match.
+- tapOn:
+    text: 'Search'
+    index: 1
 - tapOn: 'Clear search'
 - tapOn: 'Items, containers, places'
 - inputText: ${output.inventory.run} Waiting

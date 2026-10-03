@@ -11,14 +11,9 @@ import { ContextAssemblyService } from '../retrieval/context-assembly.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
 import { CitationParser } from './citation-parser.js';
 import { biasScopes, loadViewedEngram } from './context-helpers.js';
-import {
-  buildDefaultConfig,
-  buildLlmMessages,
-  buildRetrievalFilters,
-  formatHistoryForContext,
-} from './engine-helpers.js';
+import { buildDefaultConfig, buildLlmMessages, buildRetrievalFilters } from './engine-helpers.js';
 import { generateStreamEvents } from './engine-stream.js';
-import { buildEgoSystemPrompt, buildSummarisationPrompt } from './prompts.js';
+import { buildEgoSystemPrompt } from './prompts.js';
 import { ConversationScopeNegotiator } from './scope-negotiator.js';
 
 import type { EngramService } from '../engrams/service.js';
@@ -31,7 +26,6 @@ import type {
   ChatResult,
   ChatStreamPreparation,
   EngineConfig,
-  Message,
   ScopeNegotiation,
 } from './types.js';
 
@@ -103,13 +97,6 @@ export class ConversationEngine {
       })),
       scopeNegotiation: ctx.negotiation,
     };
-  }
-
-  /** Summarise older conversation messages into a condensed block. */
-  async summariseHistory(messages: Message[]): Promise<string> {
-    const formatted = formatHistoryForContext(messages);
-    const prompt = buildSummarisationPrompt(formatted);
-    return this.llm.summarise(prompt, messages.length);
   }
 
   private async assembleContext(params: ChatParams): Promise<{
@@ -187,7 +174,7 @@ export class ConversationEngine {
         query,
         filters,
         this.config.maxRetrievalResults,
-        this.config.relevanceThreshold
+        this.config.minCosine
       );
     } catch (err) {
       console.warn(

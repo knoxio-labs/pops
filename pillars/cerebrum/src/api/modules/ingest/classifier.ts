@@ -8,7 +8,7 @@
  */
 import { type IngestLlm } from './llm.js';
 
-import type { ClassificationResult } from './types.js';
+import type { ClassificationOutcome, ClassificationResult } from './types.js';
 
 const OPERATION = 'cerebrum.classify';
 const FALLBACK_TYPE = 'capture';
@@ -96,6 +96,15 @@ export class CortexClassifier {
   }
 
   async classify(body: string, title?: string): Promise<ClassificationResult> {
+    return (await this.classifyWithStatus(body, title)).classification;
+  }
+
+  /**
+   * Classify and report whether the result is trustworthy. `degraded` means the
+   * LLM returned nothing or garbage; `accepted` means it answered with
+   * confidence at or above the threshold. Low confidence is neither.
+   */
+  async classifyWithStatus(body: string, title?: string): Promise<ClassificationOutcome> {
     const text = await this.llm.complete({
       operation: OPERATION,
       model: this.llm.modelFor('classifier'),
@@ -103,9 +112,7 @@ export class CortexClassifier {
       maxTokens: MAX_TOKENS,
     });
 
-    if (text === null) {
-      return { type: FALLBACK_TYPE, confidence: 0, template: null, suggestedTags: [] };
-    }
+    if (text === null) return degradedOutcome();
 
     let parsed: LlmClassifyResponse;
     try {
@@ -114,15 +121,27 @@ export class CortexClassifier {
       console.warn(
         `[CortexClassifier] parse failed — falling back to capture: ${err instanceof Error ? err.message : String(err)}`
       );
-      return { type: FALLBACK_TYPE, confidence: 0, template: null, suggestedTags: [] };
+      return degradedOutcome();
     }
 
     const passed = parsed.confidence >= this.confidenceThreshold;
     return {
-      type: passed ? parsed.type : FALLBACK_TYPE,
-      confidence: parsed.confidence,
-      template: passed ? parsed.template : null,
-      suggestedTags: parsed.suggestedTags,
+      classification: {
+        type: passed ? parsed.type : FALLBACK_TYPE,
+        confidence: parsed.confidence,
+        template: passed ? parsed.template : null,
+        suggestedTags: parsed.suggestedTags,
+      },
+      degraded: false,
+      accepted: passed,
     };
   }
+}
+
+function degradedOutcome(): ClassificationOutcome {
+  return {
+    classification: { type: FALLBACK_TYPE, confidence: 0, template: null, suggestedTags: [] },
+    degraded: true,
+    accepted: false,
+  };
 }

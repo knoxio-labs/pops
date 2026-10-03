@@ -17,16 +17,18 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, messageText } from '@pops/ai-telemetry';
 import { getBulk, setBulk } from '@pops/pillar-settings/service';
 
 import { type FinanceDb } from '../../../db/index.js';
+import { thinkingBudgetParams } from '../ai-model-request.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 
 /** Default model for the corrections AI cluster, overridable via `FINANCE_CORRECTIONS_AI_MODEL`. */
 export const CORRECTIONS_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 const DEFAULT_MODEL = CORRECTIONS_DEFAULT_MODEL;
+const CLIENT_TIMEOUT_MS = 60_000;
 
 export interface ClaudeRequest {
   prompt: string;
@@ -75,7 +77,7 @@ function resolveModel(): string {
 const defaultCompleter: ClaudeCompleter = async (req) => {
   const apiKey = resolveApiKey();
   if (!apiKey) return null;
-  const client = new Anthropic({ apiKey, maxRetries: 0 });
+  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: CLIENT_TIMEOUT_MS });
   const model = req.model ?? resolveModel();
   try {
     const response = await callWithLogging(
@@ -89,7 +91,7 @@ const defaultCompleter: ClaudeCompleter = async (req) => {
             () =>
               client.messages.create({
                 model,
-                max_tokens: req.maxTokens,
+                ...thinkingBudgetParams(model, req.maxTokens),
                 messages: [{ role: 'user', content: req.prompt }],
               }),
             req.operation
@@ -105,8 +107,8 @@ const defaultCompleter: ClaudeCompleter = async (req) => {
       },
       financeTelemetryDeps()
     );
-    const block = response.content[0];
-    return block?.type === 'text' ? block.text : null;
+    const text = messageText(response.content);
+    return text === '' ? null : text;
   } catch (error) {
     const isRateLimit =
       error instanceof Error && 'status' in error && (error as { status: number }).status === 429;

@@ -3,7 +3,7 @@
  */
 import type { SourceCitation } from '../query/types.js';
 import type { RetrievalResult } from '../retrieval/types.js';
-import type { DateRange } from './types.js';
+import type { DateRange, GeneratedDocument, GenerationResult } from './types.js';
 
 const EXCERPT_MAX_LENGTH = 200;
 
@@ -47,6 +47,23 @@ export function toSourceCitations(results: RetrievalResult[]): SourceCitation[] 
     relevance: r.score,
     scope: extractPrimaryScope(r),
   }));
+}
+
+/** Result returned when the model declines to synthesise the document. */
+export const REFUSED_RESULT: GenerationResult = {
+  document: null,
+  notice: 'The model declined to generate this document',
+};
+
+/** Outline text returned by a preview when the model declines to write one. */
+export const REFUSED_OUTLINE = 'The model declined to generate an outline for these sources.';
+
+/** Stamp a built document with whether the model's output was cut off. */
+export function withOutputTruncated(
+  document: GeneratedDocument,
+  outputTruncated: boolean
+): GeneratedDocument {
+  return { ...document, metadata: { ...document.metadata, outputTruncated } };
 }
 
 /** Extract title from LLM output (first H1 line) or return fallback. */

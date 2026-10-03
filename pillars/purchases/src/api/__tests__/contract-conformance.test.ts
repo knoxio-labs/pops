@@ -787,6 +787,28 @@ describe('the OpenAPI projection describes what is actually served', () => {
     }
   });
 
+  it('declares a 400 response for every route with request validation', () => {
+    const routes: AppRoute[] = [];
+    const walk = (node: AppRoute | AppRouter): void => {
+      if (isAppRoute(node)) {
+        routes.push(node);
+        return;
+      }
+      for (const child of Object.values(node)) walk(child);
+    };
+    walk(purchasesContract);
+
+    for (const route of routes) {
+      const validatesRequest =
+        ('query' in route && route.query !== undefined) ||
+        ('body' in route && route.body !== undefined) ||
+        ('pathParams' in route && route.pathParams !== undefined);
+      if (validatesRequest) {
+        expect(route.responses, `${route.method} ${route.path}`).toHaveProperty('400');
+      }
+    }
+  });
+
   it('gives every operation a unique id, which client generators key on', async () => {
     const spec = (await requestOn(app).get('/openapi')).body as {
       paths: Record<string, Record<string, { operationId?: string }>>;

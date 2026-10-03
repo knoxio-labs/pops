@@ -190,6 +190,21 @@ that decides whether a reading may be believed is pure and tested against
 fixtures. **No test reaches a real API** — one that costs money and needs a
 network is one that gets skipped.
 
+The model is `claude-sonnet-5-5` (`PURCHASES_RECEIPT_MODEL` overrides it).
+It rejects `temperature`, `thinking: disabled` and a forced `tool_choice`
+with a 400, and thinks adaptively, with the thinking counted against
+`max_tokens`; so the call sends `max_tokens: 16_000` and
+`output_config: { effort: 'medium' }` and nothing else of the kind. The text
+is every `text` block joined, and `stop_reason` is read first: `max_tokens`
+and `refusal` never reach the parser.
+
+**The model is sent a normalised copy of each image**
+(`normalise-for-vision.ts`): rotated upright from EXIF, fitted inside a long
+edge of 2576 px and 4784 28-px patches (2000 px a side past 20 images), and
+re-encoded only when that changed it or its base64 is near 10 MB. JPEG stays
+JPEG, PNG and WebP stay lossless, a GIF becomes a PNG. The stored original,
+the dedup key and the EXIF capture reading all use the bytes as uploaded.
+
 The prompt is **composed from the shapes actually uploaded**, not switched
 on one of them. Each kind contributes what is specific to how it misleads a
 reader, and nothing else:
@@ -213,8 +228,11 @@ purchase carrying both as evidence, not a conflict to refuse.
 | `read`         | the model read it and the arithmetic agrees; admissible as fact |
 | `needs-review` | read, but the figures disagree; a real purchase needing a human |
 | `unreadable`   | nothing usable came back — **not** a receipt with no items      |
+| `truncated`    | the answer hit `max_tokens`; nothing was parsed                 |
+| `refused`      | the model declined (`stop_reason: refusal`); nothing was parsed |
+| `rejected`     | the API answered 400 about the request; it will fail again      |
 
-Those last two are deliberately distinct: "retry later" and "photograph it
+`unreadable` and `needs-review` are deliberately distinct: "retry later" and "photograph it
 again" are different actions, and a transport failure is not a statement
 about the receipt.
 
@@ -287,6 +305,10 @@ three outcomes would lose the distinction the whole feature rests on:
 | `created`      | the reading agreed with the receipt                  | yes                                 |
 | `needs-review` | read, but the figures disagree with the stated total | no; the upload is kept and returned |
 | `unreadable`   | nothing usable came back                             | no; the upload is kept              |
+
+`truncated`, `refused` and `rejected` reach the wire as `unreadable` with a
+`cause` of the same name, so a client that predates `cause` still reads an
+unreadable receipt. `rejected` is not worth a retry or a re-photograph.
 
 Two refusals happen before a model call is spent: `503`
 (`purchases.receipt.vision_unavailable`) when no model is configured, and

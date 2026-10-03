@@ -33,7 +33,7 @@ const TEMPLATES_DIR = join(
   'templates',
   'defaults'
 );
-// The `embeddings_vec` virtual table is fixed at 1536 dims by `openCerebrumDb`,
+// `openCerebrumDb` sizes the `embeddings_vec` virtual table at 1536 dims by default,
 // so the fake embedder must emit 1536-length vectors or the insert is rejected.
 const DIMENSIONS = 1536;
 

@@ -1,6 +1,4 @@
 import AppCore
-import AppCoreFakes
-import Foundation
 import Testing
 
 @testable import FeatureInventory

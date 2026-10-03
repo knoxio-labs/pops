@@ -70,7 +70,12 @@ export class LinkerWorker extends WorkerBase {
     const ctx: LinkEvalContext = { allEngrams, phase, proposedPairs };
     for (const candidate of candidates) {
       processed++;
-      const similar = await this.searchService.similar(candidate.id, { status: ['active'] });
+      const similar = await this.searchService.similar(
+        candidate.id,
+        { status: ['active'] },
+        undefined,
+        this.config.similarityThreshold
+      );
       const result = this.evaluateSimilarResults(candidate, similar, ctx);
       actions.push(...result.actions);
       skipped += result.skipped;

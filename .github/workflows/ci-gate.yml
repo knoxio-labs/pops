@@ -67,6 +67,7 @@ jobs:
             ];
             const cancellationOnly = ["Promotion Quality"];
             const passing = new Set(["success", "skipped"]);
+            const retryInstruction = "Re-run any required workflow for this PR or push a new commit to retry CI Gate.";
 
             // Mirrors each gated workflow's OWN `pull_request.paths` trigger —
             // "Quality" carries none and is deliberately absent here, since it
@@ -262,6 +263,7 @@ jobs:
             let pullRequests = triggeringRun.pull_requests || [];
             let pullRequest = null;
             let changedFiles = null;
+            let diffReadFailure = null;
             if (triggeringEvent === "pull_request") {
               if (pullRequests.length === 0) {
                 const associated = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
@@ -285,16 +287,28 @@ jobs:
                 core.info("Ignoring a closed or superseded pull request head.");
                 return;
               }
-              try {
-                const files = await github.paginate(github.rest.pulls.listFiles, {
-                  ...context.repo,
-                  pull_number: pullRequest.number,
-                  per_page: 100,
-                });
-                changedFiles = files.length < 3000 ? files.map((file) => file.filename) : null;
-              } catch (error) {
-                core.warning(`Could not list changed files: ${error instanceof Error ? error.message : String(error)}`);
+              const retryDelays = [1000, 2000];
+              let files = null;
+              for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+                try {
+                  files = await github.paginate(github.rest.pulls.listFiles, {
+                    ...context.repo,
+                    pull_number: pullRequest.number,
+                    per_page: 100,
+                  });
+                  break;
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : String(error);
+                  const retryDelay = retryDelays[attempt];
+                  core.warning(`Could not list changed files on attempt ${attempt + 1}: ${message}`);
+                  if (retryDelay === undefined) {
+                    diffReadFailure = "The pull request diff could not be read after 3 attempts.";
+                    break;
+                  }
+                  await new Promise((resolve) => setTimeout(resolve, retryDelay));
+                }
               }
+              if (files !== null) changedFiles = files.length < 3000 ? files.map((file) => file.filename) : null;
             }
 
             const workflows = await github.paginate(github.rest.actions.listRepoWorkflows, {
@@ -371,31 +385,37 @@ jobs:
             const lines = [];
             const failed = [];
             const pending = [];
-            for (const name of gated) {
-              const run = latest.get(name);
-              if (!run) {
-                const expected = triggeringEvent === "merge_group" ? true
-                  : triggeringEvent === "pull_request" ? matchesPathFilter(name, changedFiles) : false;
-                if (expected === false) {
-                  lines.push(`  - ${name}: (did not run — path-filtered, treated as pass)`);
+            if (diffReadFailure) {
+              failed.push(diffReadFailure);
+              lines.push(`  - Pull request diff: ${diffReadFailure}`);
+              lines.push(`  - ${retryInstruction}`);
+            } else {
+              for (const name of gated) {
+                const run = latest.get(name);
+                if (!run) {
+                  const expected = triggeringEvent === "merge_group" ? true
+                    : triggeringEvent === "pull_request" ? matchesPathFilter(name, changedFiles) : false;
+                  if (expected === false) {
+                    lines.push(`  - ${name}: (did not run — path-filtered, treated as pass)`);
+                    continue;
+                  }
+                  // expected === true (its filter matches this diff, or it has
+                  // none) or === null (the diff couldn't be determined) — either
+                  // way this is NOT a confirmed path-filter exclusion, so it
+                  // cannot count as a pass.
+                  pending.push(name);
+                  lines.push(`  - ${name}: (no run registered yet for this commit — treated as pending, not pass)`);
                   continue;
                 }
-                // expected === true (its filter matches this diff, or it has
-                // none) or === null (the diff couldn't be determined) — either
-                // way this is NOT a confirmed path-filter exclusion, so it
-                // cannot count as a pass.
-                pending.push(name);
-                lines.push(`  - ${name}: (no run registered yet for this commit — treated as pending, not pass)`);
-                continue;
+                if (run.status !== "completed") {
+                  pending.push(name);
+                  lines.push(`  - ${name}: ${run.status} (not yet completed)`);
+                  continue;
+                }
+                const c = run.conclusion;
+                lines.push(`  - ${name}: ${c}`);
+                if (!passing.has(c)) failed.push(`${name} (${c ?? "missing conclusion"})`);
               }
-              if (run.status !== "completed") {
-                pending.push(name);
-                lines.push(`  - ${name}: ${run.status} (not yet completed)`);
-                continue;
-              }
-              const c = run.conclusion;
-              lines.push(`  - ${name}: ${c}`);
-              if (!passing.has(c)) failed.push(`${name} (${c ?? "missing conclusion"})`);
             }
 
             core.info("Gated workflow states at this commit:");
@@ -403,7 +423,9 @@ jobs:
 
             const settled = failed.length > 0 || pending.length === 0;
 
-            const verdict = failed.length > 0
+            const verdict = diffReadFailure
+              ? `Quality gate FAILED — ${diffReadFailure} ${retryInstruction}`
+              : failed.length > 0
               ? `Quality gate FAILED — ${failed.length} gated workflow(s) did not pass: ${failed.join(", ")}`
               : pending.length > 0
                 ? `Quality gate PENDING — no failure yet; still in flight: ${pending.join(", ")}`

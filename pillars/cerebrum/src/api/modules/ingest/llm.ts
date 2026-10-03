@@ -18,7 +18,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
 
 import {
   ANTHROPIC_PROVIDER,
@@ -126,7 +126,7 @@ export class AnthropicIngestLlm implements IngestLlm {
                 client.messages.create({
                   model: req.model,
                   max_tokens: req.maxTokens,
-                  temperature: 0,
+                  ...samplingParams(req.model, 0),
                   messages: [{ role: 'user', content: req.prompt }],
                 }),
               req.operation
@@ -142,8 +142,7 @@ export class AnthropicIngestLlm implements IngestLlm {
         },
         cerebrumTelemetryDeps()
       );
-      const first = response.content[0];
-      return first?.type === 'text' ? first.text : '';
+      return messageText(response.content);
     } catch (err) {
       console.warn(
         `[cerebrum-ingest] ${req.operation} failed: ${err instanceof Error ? err.message : String(err)}`

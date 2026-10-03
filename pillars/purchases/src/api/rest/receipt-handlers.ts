@@ -19,7 +19,7 @@
  */
 import { firstPhotoCapture, resolveCapture } from '../../ingest/receipt/capture.js';
 import { receiptToPurchase } from '../../ingest/receipt/purchase.js';
-import { readReceipt } from '../../ingest/receipt/read-receipt.js';
+import { causeOf, isNoReading, readReceipt } from '../../ingest/receipt/read-receipt.js';
 import {
   createMerchantResolver,
   nameMerchant,
@@ -82,8 +82,13 @@ export function makeReceiptHandlers(
 
       const outcome = await readReceipt(vision, parts);
 
-      if (outcome.kind === 'unreadable') {
-        return ok({ kind: 'unreadable', receiptUris: receiptUris(stored), reason: outcome.reason });
+      if (isNoReading(outcome)) {
+        return ok({
+          kind: 'unreadable',
+          receiptUris: receiptUris(stored),
+          reason: outcome.reason,
+          ...causeOf(outcome),
+        });
       }
 
       if (outcome.kind === 'needs-review') {

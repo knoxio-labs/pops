@@ -64,6 +64,18 @@ describe('AppContextProvider', () => {
       expect(screen.getByTestId('app')).toHaveTextContent('ai');
     });
 
+    it.each([
+      ['/food', 'food'],
+      ['/food/recipes', 'food'],
+      ['/cerebrum', 'cerebrum'],
+      ['/cerebrum/memories/abc', 'cerebrum'],
+      ['/purchases', 'purchases'],
+      ['/purchases/abc', 'purchases'],
+    ])('detects %s as the %s app', (path, app) => {
+      renderAt(path, <ContextDisplay />);
+      expect(screen.getByTestId('app')).toHaveTextContent(app);
+    });
+
     it('returns null app for an unmatched path', () => {
       renderAt('/unknown', <ContextDisplay />);
       expect(screen.getByTestId('app')).toHaveTextContent('null');

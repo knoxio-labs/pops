@@ -16,6 +16,7 @@ export interface AppContext {
   route?: string;
   entityId?: string;
   entityType?: string;
+  entityTitle?: string;
 }
 
 /** Scope negotiation outcome included in ChatResult. */
@@ -85,5 +86,6 @@ export interface EngineConfig {
   maxHistoryMessages: number;
   maxRetrievalResults: number;
   tokenBudget: number;
-  relevanceThreshold: number;
+  /** Minimum cosine similarity a retrieved engram must reach to enter the context. */
+  minCosine: number;
 }

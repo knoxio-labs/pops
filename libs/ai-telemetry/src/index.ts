@@ -11,6 +11,7 @@ export type {
 } from './types.js';
 export { callWithLogging, computeCostUsd } from './call-with-logging.js';
 export { callWithLoggingStream } from './call-with-logging-stream.js';
+export { memoizePricing } from './pricing.js';
 export {
   AiUsageRecordRefusedError,
   createEnvReportSink,
@@ -18,6 +19,12 @@ export {
   type ReportSinkConfig,
 } from './report-sink.js';
 export { httpLookupPricing } from './pricing-http.js';
+export {
+  messageText,
+  samplingParams,
+  supportsEffort,
+  supportsSamplingParams,
+} from './model-params.js';
 export {
   ledgerReportFailedMessage,
   resolveLedgerCredential,

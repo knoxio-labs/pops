@@ -27,12 +27,19 @@ import { errorBodySchema } from './rest-schemas.js';
 
 const c = initContract();
 
+const minCosineSchema = z
+  .number()
+  .min(0)
+  .max(1)
+  .optional()
+  .describe('Minimum cosine similarity a semantic hit must reach. Omit for the server default.');
+
 const searchBody = z.object({
   query: z.string().optional(),
   mode: retrievalModeSchema.default('hybrid'),
   filters: retrievalFiltersSchema.optional(),
   limit: z.number().int().positive().max(100).default(20),
-  threshold: z.number().min(0).max(2).default(0.8),
+  threshold: minCosineSchema,
   offset: z.number().int().min(0).default(0),
 });
 
@@ -47,7 +54,7 @@ const contextBody = z.object({
 const similarBody = z.object({
   engramId: z.string(),
   limit: z.number().int().positive().max(100).default(20),
-  threshold: z.number().min(0).max(2).default(0.8),
+  threshold: minCosineSchema,
   filters: retrievalFiltersSchema.optional(),
 });
 

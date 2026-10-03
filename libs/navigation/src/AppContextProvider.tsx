@@ -13,6 +13,9 @@ const APP_BASE_PATHS: Array<{ basePath: string; app: AppName }> = [
   { basePath: '/inventory', app: 'inventory' },
   { basePath: '/ai', app: 'ai' },
   { basePath: '/lists', app: 'lists' },
+  { basePath: '/food', app: 'food' },
+  { basePath: '/cerebrum', app: 'cerebrum' },
+  { basePath: '/purchases', app: 'purchases' },
 ];
 
 /**
