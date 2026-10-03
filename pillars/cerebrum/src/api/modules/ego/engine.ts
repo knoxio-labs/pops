@@ -11,7 +11,12 @@ import { ContextAssemblyService } from '../retrieval/context-assembly.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
 import { CitationParser } from './citation-parser.js';
 import { biasScopes, loadViewedEngram } from './context-helpers.js';
-import { buildDefaultConfig, buildLlmMessages, buildRetrievalFilters } from './engine-helpers.js';
+import {
+  buildDefaultConfig,
+  buildLlmMessages,
+  buildRetrievalFilters,
+  drainToDone,
+} from './engine-helpers.js';
 import { generateStreamEvents } from './engine-stream.js';
 import { buildEgoSystemPrompt } from './prompts.js';
 import { ConversationScopeNegotiator } from './scope-negotiator.js';
@@ -56,11 +61,10 @@ export class ConversationEngine {
   /** Process a user message and generate a response. */
   async chat(params: ChatParams): Promise<ChatResult> {
     const ctx = await this.assembleContext(params);
-    const llmResponse = await this.llm.chat(ctx.systemPrompt, ctx.llmMessages);
-    const { cleanedAnswer, citations } = this.citationParser.parse(
-      llmResponse.content,
-      ctx.allResults
+    const done = await drainToDone(
+      this.llm.stream({ system: ctx.systemPrompt, messages: ctx.llmMessages })
     );
+    const { cleanedAnswer, citations } = this.citationParser.parse(done.fullText, ctx.allResults);
     const responseContent = ctx.scopeNotice
       ? `${ctx.scopeNotice}\n\n${cleanedAnswer}`
       : cleanedAnswer;
@@ -69,8 +73,8 @@ export class ConversationEngine {
       response: {
         content: responseContent,
         citations: citations.map((c) => c.id),
-        tokensIn: llmResponse.tokensIn,
-        tokensOut: llmResponse.tokensOut,
+        tokensIn: done.tokensIn,
+        tokensOut: done.tokensOut,
       },
       retrievedEngrams: ctx.allResults.map((r) => ({
         engramId: r.sourceId,

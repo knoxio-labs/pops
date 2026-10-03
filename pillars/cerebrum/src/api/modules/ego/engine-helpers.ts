@@ -6,7 +6,7 @@
  * constants below (overridable per-construction via `Partial<EngineConfig>`).
  */
 import type { RetrievalFilters } from '../retrieval/types.js';
-import type { EgoChatMessage } from './llm.js';
+import type { EgoChatMessage, EgoStreamDone, EgoStreamEvent } from './llm.js';
 import type { EngineConfig, Message } from './types.js';
 
 const DEFAULT_MAX_HISTORY = 20;
@@ -63,4 +63,14 @@ export function buildDefaultConfig(config?: Partial<EngineConfig>): EngineConfig
     tokenBudget: config?.tokenBudget ?? DEFAULT_TOKEN_BUDGET,
     minCosine: config?.minCosine ?? DEFAULT_MIN_COSINE,
   };
+}
+
+/** Drains a model turn and returns its terminal `done` event; the streamed tokens are not needed. */
+export async function drainToDone(events: AsyncIterable<EgoStreamEvent>): Promise<EgoStreamDone> {
+  let done: EgoStreamDone | undefined;
+  for await (const event of events) {
+    if (event.type === 'done') done = event;
+  }
+  if (done === undefined) throw new Error('ego stream ended without a done event');
+  return done;
 }

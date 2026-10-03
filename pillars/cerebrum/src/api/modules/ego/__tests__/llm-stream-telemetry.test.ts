@@ -29,18 +29,31 @@ interface TextDelta {
   delta: { type: 'text_delta'; text: string };
 }
 
+interface FinalMessage {
+  content: { type: 'text'; text: string }[];
+  stop_reason: 'end_turn';
+  stop_details: null;
+  usage: { input_tokens: number; output_tokens: number };
+}
+
 /** A fake Anthropic MessageStream: async-iterable deltas + a final usage record. */
 function fakeMessageStream(
   deltas: string[],
   usage: { input_tokens: number; output_tokens: number }
-): AsyncIterable<TextDelta> & { finalMessage: () => Promise<{ usage: typeof usage }> } {
+): AsyncIterable<TextDelta> & { finalMessage: () => Promise<FinalMessage> } {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<TextDelta> {
       for (const text of deltas) {
         yield { type: 'content_block_delta', delta: { type: 'text_delta', text } };
       }
     },
-    finalMessage: () => Promise.resolve({ usage }),
+    finalMessage: () =>
+      Promise.resolve({
+        content: [{ type: 'text', text: deltas.join('') }],
+        stop_reason: 'end_turn',
+        stop_details: null,
+        usage,
+      }),
   };
 }
 
@@ -89,16 +102,25 @@ describe('AnthropicEgoLlm.stream — telemetry', () => {
     );
 
     const events = [];
-    for await (const event of new AnthropicEgoLlm().stream('sys', [
-      { role: 'user', content: 'hi' },
-    ])) {
+    for await (const event of new AnthropicEgoLlm().stream({
+      system: 'sys',
+      messages: [{ role: 'user', content: 'hi' }],
+    })) {
       events.push(event);
     }
 
     expect(events).toEqual([
       { type: 'token', text: 'Hello' },
       { type: 'token', text: ', world' },
-      { type: 'done', fullText: 'Hello, world', tokensIn: 12, tokensOut: 7 },
+      {
+        type: 'done',
+        fullText: 'Hello, world',
+        tokensIn: 12,
+        tokensOut: 7,
+        assistantContent: [{ type: 'text', text: 'Hello, world' }],
+        toolUses: [],
+        stopReason: 'end',
+      },
     ]);
 
     const record = await captured.nextReport();
@@ -121,9 +143,10 @@ describe('AnthropicEgoLlm.stream — telemetry', () => {
     });
 
     const events = [];
-    for await (const event of new AnthropicEgoLlm().stream('sys', [
-      { role: 'user', content: 'hi' },
-    ])) {
+    for await (const event of new AnthropicEgoLlm().stream({
+      system: 'sys',
+      messages: [{ role: 'user', content: 'hi' }],
+    })) {
       events.push(event);
     }
 

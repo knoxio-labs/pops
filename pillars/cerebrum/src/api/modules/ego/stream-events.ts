@@ -1,13 +1,14 @@
 import { isRefusal } from '../llm-request.js';
 
 import type { MessageStream } from '@anthropic-ai/sdk/lib/MessageStream';
+import type { ContentBlock } from '@anthropic-ai/sdk/resources/messages/messages';
 
 /**
  * Adapts an Anthropic {@link MessageStream} into the ego SSE event shape. Kept
  * in its own module so the ego LLM port stays focused on the {@link EgoLlm}
  * implementation; this is the generator the telemetry wrapper drives.
  */
-import type { EgoStreamEvent } from './llm.js';
+import type { EgoStreamDone, EgoStreamEvent, EgoToolUse } from './llm.js';
 
 /** Display-safe text emitted when stream processing fails mid-flight. */
 export const EGO_STREAM_ERROR_MSG =
@@ -15,6 +16,30 @@ export const EGO_STREAM_ERROR_MSG =
 
 /** Display-safe text emitted when the model declines the request. */
 export const EGO_REFUSAL_MSG = "I can't help with that request. The model declined to answer it.";
+
+function finalStopReason(stopReason: string | null): EgoStreamDone['stopReason'] {
+  if (stopReason === 'tool_use' || stopReason === 'refusal' || stopReason === 'max_tokens') {
+    return stopReason;
+  }
+  return 'end';
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function collectToolUses(content: ContentBlock[]): EgoToolUse[] {
+  const toolUses: EgoToolUse[] = [];
+  for (const block of content) {
+    if (block.type !== 'tool_use') continue;
+    if (isPlainObject(block.input)) {
+      toolUses.push({ id: block.id, name: block.name, input: block.input });
+    } else {
+      console.warn(`[cerebrum-ego] skipped tool call ${block.name}: input is not an object`);
+    }
+  }
+  return toolUses;
+}
 
 /**
  * Drains an Anthropic {@link MessageStream} into the ego event shape: a `token`
@@ -26,7 +51,7 @@ export const EGO_REFUSAL_MSG = "I can't help with that request. The model declin
  * wrapper reads usage from whichever `done` event terminates the stream.
  */
 export async function* egoStreamEvents(
-  messageStream: MessageStream
+  messageStream: MessageStream<unknown>
 ): AsyncGenerator<EgoStreamEvent> {
   let fullText = '';
   try {
@@ -37,16 +62,21 @@ export async function* egoStreamEvents(
       }
     }
     const finalMessage = await messageStream.finalMessage();
-    if (isRefusal(finalMessage, 'cerebrum-ego')) {
+    const refused = isRefusal(finalMessage, 'cerebrum-ego');
+    if (refused) {
       const notice = fullText.length > 0 ? `\n\n${EGO_REFUSAL_MSG}` : EGO_REFUSAL_MSG;
       fullText += notice;
       yield { type: 'token', text: notice };
     }
+    const stopReason = finalStopReason(finalMessage.stop_reason);
     yield {
       type: 'done',
       fullText,
       tokensIn: finalMessage.usage.input_tokens,
       tokensOut: finalMessage.usage.output_tokens,
+      assistantContent: refused ? [{ type: 'text', text: fullText }] : finalMessage.content,
+      toolUses: stopReason === 'tool_use' ? collectToolUses(finalMessage.content) : [],
+      stopReason,
     };
   } catch (err) {
     console.warn(
@@ -56,6 +86,14 @@ export async function* egoStreamEvents(
       yield { type: 'token', text: EGO_STREAM_ERROR_MSG };
       fullText = EGO_STREAM_ERROR_MSG;
     }
-    yield { type: 'done', fullText, tokensIn: 0, tokensOut: 0 };
+    yield {
+      type: 'done',
+      fullText,
+      tokensIn: 0,
+      tokensOut: 0,
+      assistantContent: [{ type: 'text', text: fullText }],
+      toolUses: [],
+      stopReason: 'end',
+    };
   }
 }
