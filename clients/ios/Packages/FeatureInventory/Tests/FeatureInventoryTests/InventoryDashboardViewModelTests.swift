@@ -103,9 +103,10 @@ internal struct InventoryDashboardViewModelTests {
             locations: Self.home,
             events: [
                 Fixture.event(1, .created, on: "drill"),
-                Fixture.event(2, .accessChanged, on: "linen", after: ["access": .choice("closed")]),
-                Fixture.event(3, .unrecognised("put_back"), on: "drill", undoable: false),
-                Fixture.event(4, .locationRenamed, on: "office", entityKind: .location),
+                Fixture.event(2, .closed, on: "linen"),
+                Fixture.event(3, .putBack, on: "drill", undoable: false),
+                Fixture.event(
+                    4, .edited, on: "office", entityKind: .location, fields: ["name"]),
             ])
         let model = InventoryDashboardViewModel(store: store)
         let (task, loaded) = await model.startAndAwaitFirstAnswer()
