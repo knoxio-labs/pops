@@ -39,10 +39,14 @@ describe('main-typecheck workflow', () => {
       requiredMapping(step, `jobs.typecheck.steps[${index}]`)
     );
     const setup = steps.find((step) => step.uses === './.github/actions/setup-mise');
+    const install = steps.find((step) => step.run === 'pnpm install --frozen-lockfile');
     const typecheck = steps.find((step) => step.run === 'mise typecheck');
 
     expect(setup).toBeDefined();
+    expect(install).toBeDefined();
     expect(typecheck).toBeDefined();
+    expect(steps.indexOf(install!)).toBe(steps.indexOf(setup!) + 1);
+    expect(steps.indexOf(typecheck!)).toBe(steps.indexOf(install!) + 1);
     expect(job['continue-on-error']).toBeUndefined();
     expect(typecheck?.['continue-on-error']).toBeUndefined();
   });
