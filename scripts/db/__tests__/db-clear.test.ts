@@ -6,6 +6,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  openInventoryDb,
+  type OpenedInventoryDb,
+} from '../../../pillars/inventory/src/db/open-inventory-db.js';
+import {
   defaultPillarDbPath,
   discoverPillarIdsWithDatabases,
   parseDbClearArgv,
@@ -34,6 +38,32 @@ function makePillar(id: string, options: { withDb?: boolean } = {}): string {
     db.close();
   }
   return dbPath;
+}
+
+function readValue(database: OpenedInventoryDb, key: string): string {
+  const row = database.raw.prepare('SELECT value FROM sync_meta WHERE key = ?').get(key);
+  if (
+    typeof row !== 'object' ||
+    row === null ||
+    !('value' in row) ||
+    typeof row['value'] !== 'string'
+  ) {
+    throw new Error(`missing inventory sync metadata: ${key}`);
+  }
+  return row['value'];
+}
+
+function readCount(database: OpenedInventoryDb, query: string): number {
+  const row = database.raw.prepare(query).get();
+  if (
+    typeof row !== 'object' ||
+    row === null ||
+    !('count' in row) ||
+    typeof row['count'] !== 'number'
+  ) {
+    throw new Error('expected a numeric count');
+  }
+  return row['count'];
 }
 
 beforeEach(() => {
@@ -90,16 +120,74 @@ describe('parseDbClearArgv', () => {
 
 describe('runDbClear', () => {
   it('clears rows and keeps the migration journal', () => {
-    makePillar('inventory', { withDb: true });
-    const result = runDbClear({ pillarId: 'inventory', repoRoot: root, env: {}, log });
+    makePillar('finance', { withDb: true });
+    const result = runDbClear({ pillarId: 'finance', repoRoot: root, env: {}, log });
 
     expect(result.skipped).toBe(false);
     expect(result.cleared).toEqual([{ table: 'items', deleted: 2 }]);
 
-    const db = new DatabaseSync(defaultPillarDbPath(root, 'inventory'));
+    const db = new DatabaseSync(defaultPillarDbPath(root, 'finance'));
     expect(db.prepare('SELECT COUNT(*) AS c FROM items').get()).toEqual({ c: 0 });
     expect(db.prepare('SELECT COUNT(*) AS c FROM __drizzle_migrations').get()).toEqual({ c: 1 });
     db.close();
+  });
+
+  it('clears inventory and boots with a fresh sync epoch and its schema triggers restored', () => {
+    const dbPath = makePillar('inventory');
+    const initial = openInventoryDb(dbPath);
+    let initialEpoch = '';
+    let migrationCount = 0;
+    let triggerCount = 0;
+    try {
+      initial.raw
+        .prepare(
+          `INSERT INTO events (
+            entity_kind, entity_id, kind, fields, before, after, entity_revision, actor_kind, server_time
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          'location',
+          'clear-test',
+          'created',
+          '[]',
+          '{}',
+          '{}',
+          1,
+          'service',
+          new Date().toISOString()
+        );
+      initialEpoch = readValue(initial, 'epoch');
+      migrationCount = readCount(initial, 'SELECT COUNT(*) AS count FROM __drizzle_migrations');
+      triggerCount = readCount(
+        initial,
+        "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger'"
+      );
+      expect(readCount(initial, 'SELECT COUNT(*) AS count FROM events')).toBeGreaterThan(0);
+      expect(readCount(initial, 'SELECT COUNT(*) AS count FROM catalogue_events')).toBeGreaterThan(
+        0
+      );
+    } finally {
+      initial.raw.close();
+    }
+
+    const result = runDbClear({ pillarId: 'inventory', repoRoot: root, env: {}, log });
+    expect(result.skipped).toBe(false);
+
+    const reopened = openInventoryDb(dbPath);
+    try {
+      expect(readValue(reopened, 'epoch')).not.toBe(initialEpoch);
+      expect(readValue(reopened, 'min_protocol')).toBe('1');
+      expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM events')).toBe(0);
+      expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM catalogue_events')).toBe(0);
+      expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM __drizzle_migrations')).toBe(
+        migrationCount
+      );
+      expect(
+        readCount(reopened, "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger'")
+      ).toBe(triggerCount);
+    } finally {
+      reopened.raw.close();
+    }
   });
 
   it('skips a pillar whose database has never been created', () => {
