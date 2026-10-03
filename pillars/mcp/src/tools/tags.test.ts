@@ -72,6 +72,105 @@ describe('the shared tag tools', () => {
     expect(getPillar).not.toHaveBeenCalled();
   });
 
+  it.each([
+    {
+      toolName: 'tags.tags.list',
+      args: { facet: 'book' },
+      message: 'Invalid field: facet must be trip, hobby, or project.',
+    },
+    {
+      toolName: 'tags.tags.list',
+      args: { facet: 1 },
+      message: 'Invalid field: facet must be a string.',
+    },
+    {
+      toolName: 'tags.tags.create',
+      args: { facet: 'book', name: 'Library' },
+      message: 'Invalid field: facet must be trip, hobby, or project.',
+    },
+    {
+      toolName: 'tags.tags.list',
+      args: { includeArchived: true },
+      message: 'Invalid field: includeArchived must be a string.',
+    },
+    {
+      toolName: 'tags.tags.list',
+      args: { includeArchived: 'sometimes' },
+      message: 'Invalid field: includeArchived must be true or false.',
+    },
+    {
+      toolName: 'tags.tags.list',
+      args: { updatedSince: 1 },
+      message: 'Invalid field: updatedSince must be a string.',
+    },
+    {
+      toolName: 'tags.tags.create',
+      args: { facet: 'trip', name: 'Japan trip', parentId: 1 },
+      message: 'Invalid field: parentId must be a string or null.',
+    },
+    {
+      toolName: 'tags.tags.create',
+      args: { facet: 'trip', name: 'Japan trip', description: false },
+      message: 'Invalid field: description must be a string or null.',
+    },
+    {
+      toolName: 'tags.tags.create',
+      args: { facet: 'trip', name: 'Japan trip', window: 'soon' },
+      message: 'Invalid field: window must be an object or null.',
+    },
+    {
+      toolName: 'tags.tags.create',
+      args: {
+        facet: 'trip',
+        name: 'Japan trip',
+        window: { start: '2026-10-01', end: 1, region: null },
+      },
+      message: 'Invalid field: window must be an object or null.',
+    },
+    {
+      toolName: 'tags.tags.update',
+      args: { id: 'tag_1', name: '   ' },
+      message: 'Invalid field: name must be non-empty.',
+    },
+    {
+      toolName: 'tags.tags.update',
+      args: { id: 'tag_1', name: 1 },
+      message: 'Invalid field: name must be non-empty.',
+    },
+    {
+      toolName: 'tags.tags.update',
+      args: { id: 'tag_1', parentId: 1 },
+      message: 'Invalid field: parentId must be a string or null.',
+    },
+    {
+      toolName: 'tags.tags.update',
+      args: { id: 'tag_1', description: false },
+      message: 'Invalid field: description must be a string or null.',
+    },
+    {
+      toolName: 'tags.tags.update',
+      args: { id: 'tag_1', window: 'soon' },
+      message: 'Invalid field: window must be an object or null.',
+    },
+    {
+      toolName: 'tags.tags.update',
+      args: {
+        id: 'tag_1',
+        window: { start: null, end: '2026-10-03', region: 1 },
+      },
+      message: 'Invalid field: window must be an object or null.',
+    },
+  ])(
+    'rejects invalid input for $toolName before calling the pillar',
+    async ({ toolName, args, message }) => {
+      const result = await tool(toolName).handler(args);
+
+      expect(result.isError).toBe(true);
+      expect(extractText(result)).toContain(message);
+      expect(getPillar).not.toHaveBeenCalled();
+    }
+  );
+
   it('forwards the list filters as flat query fields', async () => {
     await tool('tags.tags.list').handler({
       facet: 'trip',
