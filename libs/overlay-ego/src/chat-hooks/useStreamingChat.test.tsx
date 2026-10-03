@@ -117,6 +117,30 @@ describe('useStreamingChat request body', () => {
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 
+  it('sends purchase app context with an entity on the purchase detail route', async () => {
+    const { result } = renderHook(() => useStreamingChat(), {
+      wrapper: wrapperAt('/purchases/PO-123', {
+        uri: 'pops:purchases/purchase/PO-123',
+        type: 'purchase',
+        title: 'January purchase',
+      }),
+    });
+    act(() => result.current.stream({ conversationId: null, message: 'hi' }, callbacks));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    expect(lastRequestBody(fetchMock)).toEqual({
+      message: 'hi',
+      appContext: {
+        app: 'purchases',
+        route: '/purchases/PO-123',
+        entityType: 'purchase',
+        entityId: 'PO-123',
+        entityTitle: 'January purchase',
+      },
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
   it('omits appContext when the shell provides none', async () => {
     const { result } = renderHook(() => useStreamingChat(), { wrapper: wrapperAt('/') });
     act(() => result.current.stream({ conversationId: 'c1', message: 'hi' }, callbacks));
