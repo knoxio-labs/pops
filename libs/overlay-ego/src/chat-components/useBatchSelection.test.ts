@@ -51,6 +51,27 @@ describe('buildDecision', () => {
         .alwaysAllow
     ).toEqual(['tool-a', 'tool-b']);
   });
+
+  it('preserves resolved outcomes while deciding the remaining pending actions', () => {
+    const mixedActions: BatchAction[] = [
+      { actionId: 'p1', tool: 'tool-pending', summary: 'Pending', status: 'pending' },
+      { actionId: 'c1', tool: 'tool-confirmed', summary: 'Confirmed', status: 'confirmed' },
+      { actionId: 'e1', tool: 'tool-executed', summary: 'Executed', status: 'executed' },
+      { actionId: 'r1', tool: 'tool-rejected', summary: 'Rejected', status: 'rejected' },
+      { actionId: 'f1', tool: 'tool-failed', summary: 'Failed', status: 'failed' },
+    ];
+
+    expect(buildDecision(mixedActions, new Set(['p1']), new Set())).toEqual({
+      approve: ['p1', 'c1', 'e1', 'f1'],
+      reject: ['r1'],
+      alwaysAllow: [],
+    });
+    expect(buildDecision(mixedActions, new Set(), new Set())).toEqual({
+      approve: ['c1', 'e1', 'f1'],
+      reject: ['p1', 'r1'],
+      alwaysAllow: [],
+    });
+  });
 });
 
 describe('useBatchSelection', () => {

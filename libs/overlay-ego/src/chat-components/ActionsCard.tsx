@@ -84,11 +84,7 @@ function DecisionControls({ part, decisions, selection, deciding }: DecisionCont
 
   const rejectAll = () => {
     if (deciding) return;
-    void decisions.decide(part.batchId, {
-      approve: [],
-      reject: part.actions.map((action) => action.actionId),
-      alwaysAllow: [],
-    });
+    void decisions.decide(part.batchId, buildDecision(part.actions, new Set(), new Set()));
   };
 
   return (

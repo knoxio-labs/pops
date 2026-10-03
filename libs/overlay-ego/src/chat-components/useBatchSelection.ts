@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { ActionsPart, BatchAction } from '../chat-hooks/message-parts';
+import type { ActionStatus, ActionsPart, BatchAction } from '../chat-hooks/message-parts';
 import type { BatchDecision } from '../chat-hooks/useBatchDecision';
 
 interface BatchSelectionState {
@@ -23,9 +23,13 @@ function selectionForPart(part: ActionsPart, stored: BatchSelectionState): Batch
   return stored.batchId === part.batchId ? stored : initialSelection(part);
 }
 
+function hasApprovedOutcome(status: ActionStatus): boolean {
+  return status === 'confirmed' || status === 'executed' || status === 'failed';
+}
+
 /**
- * Builds a batch decision in action order. Ticked action ids are approved, the rest are
- * rejected, and an allowed tool is included only when one of its actions is ticked.
+ * Builds a complete decision in action order. Checked pending actions are approved, unchecked
+ * pending actions are rejected, and resolved actions keep their existing approval outcome.
  */
 export function buildDecision(
   actions: BatchAction[],
@@ -34,15 +38,23 @@ export function buildDecision(
 ): BatchDecision {
   const tools = Array.from(new Set(actions.map((action) => action.tool)));
   const tickedTools = new Set(
-    actions.filter((action) => ticked.has(action.actionId)).map((action) => action.tool)
+    actions
+      .filter((action) => action.status === 'pending' && ticked.has(action.actionId))
+      .map((action) => action.tool)
   );
 
   return {
     approve: actions
-      .filter((action) => ticked.has(action.actionId))
+      .filter((action) =>
+        action.status === 'pending'
+          ? ticked.has(action.actionId)
+          : hasApprovedOutcome(action.status)
+      )
       .map((action) => action.actionId),
     reject: actions
-      .filter((action) => !ticked.has(action.actionId))
+      .filter((action) =>
+        action.status === 'pending' ? !ticked.has(action.actionId) : action.status === 'rejected'
+      )
       .map((action) => action.actionId),
     alwaysAllow: tools.filter((tool) => alwaysAllow.has(tool) && tickedTools.has(tool)),
   };

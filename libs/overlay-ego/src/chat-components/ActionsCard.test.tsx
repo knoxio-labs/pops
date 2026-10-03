@@ -141,7 +141,9 @@ describe('ActionsCard', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('shows controls only for pending rows in a mixed batch', () => {
+  it('shows controls only for pending rows in a mixed batch', async () => {
+    const decisionApi = decisions();
+    const user = userEvent.setup();
     render(
       <ActionsCard
         part={part([
@@ -158,13 +160,50 @@ describe('ActionsCard', () => {
             status: 'executed',
           },
         ])}
-        decisions={decisions()}
+        decisions={decisionApi}
       />
     );
 
     expect(screen.getByRole('checkbox', { name: 'Pending move' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Finished budget' })).not.toBeInTheDocument();
     expect(screen.getByText('Done')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Approve (1)' }));
+    expect(decisionApi.decide).toHaveBeenCalledWith('batch-1', {
+      approve: ['a1', 'a2'],
+      reject: [],
+      alwaysAllow: [],
+    });
+  });
+
+  it('rejects pending actions without changing resolved outcomes in a mixed batch', async () => {
+    const user = userEvent.setup();
+    const decisionApi = decisions();
+    render(
+      <ActionsCard
+        part={part([
+          { actionId: 'p1', tool: 'tool.pending', summary: 'Pending action', status: 'pending' },
+          {
+            actionId: 'c1',
+            tool: 'tool.confirmed',
+            summary: 'Confirmed action',
+            status: 'confirmed',
+          },
+          { actionId: 'r1', tool: 'tool.rejected', summary: 'Rejected action', status: 'rejected' },
+          { actionId: 'e1', tool: 'tool.executed', summary: 'Executed action', status: 'executed' },
+          { actionId: 'f1', tool: 'tool.failed', summary: 'Failed action', status: 'failed' },
+        ])}
+        decisions={decisionApi}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Reject all' }));
+
+    expect(decisionApi.decide).toHaveBeenCalledWith('batch-1', {
+      approve: ['c1', 'e1', 'f1'],
+      reject: ['p1', 'r1'],
+      alwaysAllow: [],
+    });
   });
 
   it('locks buttons and checkboxes while a decision for this batch is pending', async () => {
