@@ -9,7 +9,7 @@
  */
 import { ContextAssemblyService } from '../retrieval/context-assembly.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
-import { CitationParser } from './citation-parser.js';
+import { generateActionId, generateBatchId } from './actions-store.js';
 import { biasScopes, loadViewedEngram } from './context-helpers.js';
 import {
   buildDefaultConfig,
@@ -24,7 +24,9 @@ import { ConversationScopeNegotiator } from './scope-negotiator.js';
 import type { EngramService } from '../engrams/service.js';
 import type { SemanticSearchDeps } from '../retrieval/semantic-search.js';
 import type { RetrievalResult } from '../retrieval/types.js';
+import type { GatewayCaller } from './gateway/gateway-client.js';
 import type { EgoChatMessage, EgoLlm } from './llm.js';
+import type { EgoToolbox } from './toolbox.js';
 import type {
   AppContext,
   ChatParams,
@@ -39,48 +41,57 @@ export interface EngineDeps {
   /** Retrieval deps used to build a per-call HybridSearchService. */
   search: SemanticSearchDeps;
   engramService: EngramService;
+  /** Optional tool definitions and dispatcher; absent means no tool loop. */
+  toolbox?: EgoToolbox;
+  /** Optional gateway used only for conversation-allowed writes. */
+  gateway?: GatewayCaller;
+  /** Action id factory, defaulting to the shared Ego action store generator. */
+  newActionId?: () => string;
+  /** Batch id factory, defaulting to the shared Ego action store generator. */
+  newBatchId?: () => string;
   config?: Partial<EngineConfig>;
 }
 
 export class ConversationEngine {
   private readonly config: EngineConfig;
-  private readonly citationParser = new CitationParser();
   private readonly assembler = new ContextAssemblyService();
   private readonly scopeNegotiator = new ConversationScopeNegotiator();
   private readonly llm: EgoLlm;
   private readonly search: SemanticSearchDeps;
   private readonly engramService: EngramService;
+  private readonly toolbox?: EgoToolbox;
+  private readonly gateway?: GatewayCaller;
+  private readonly newActionId: () => string;
+  private readonly newBatchId: () => string;
 
   constructor(deps: EngineDeps) {
     this.config = buildDefaultConfig(deps.config);
     this.llm = deps.llm;
     this.search = deps.search;
     this.engramService = deps.engramService;
+    this.toolbox = deps.toolbox;
+    this.gateway = deps.gateway;
+    this.newActionId = deps.newActionId ?? generateActionId;
+    this.newBatchId = deps.newBatchId ?? generateBatchId;
   }
 
   /** Process a user message and generate a response. */
   async chat(params: ChatParams): Promise<ChatResult> {
-    const ctx = await this.assembleContext(params);
-    const done = await drainToDone(
-      this.llm.stream({ system: ctx.systemPrompt, messages: ctx.llmMessages })
-    );
-    const { cleanedAnswer, citations } = this.citationParser.parse(done.fullText, ctx.allResults);
-    const responseContent = ctx.scopeNotice
-      ? `${ctx.scopeNotice}\n\n${cleanedAnswer}`
-      : cleanedAnswer;
+    const preparation = await this.prepareStream(params);
+    const done = await drainToDone(preparation.stream);
 
     return {
       response: {
-        content: responseContent,
-        citations: citations.map((c) => c.id),
+        content: done.content,
+        citations: done.citations,
         tokensIn: done.tokensIn,
         tokensOut: done.tokensOut,
+        parts: done.parts,
+        batch: done.batch,
+        autoExecuted: done.autoExecuted,
       },
-      retrievedEngrams: ctx.allResults.map((r) => ({
-        engramId: r.sourceId,
-        relevanceScore: r.score,
-      })),
-      scopeNegotiation: ctx.negotiation,
+      retrievedEngrams: preparation.retrievedEngrams,
+      scopeNegotiation: preparation.scopeNegotiation,
     };
   }
 
@@ -94,6 +105,13 @@ export class ConversationEngine {
         llmMessages: ctx.llmMessages,
         scopeNotice: ctx.scopeNotice,
         allResults: ctx.allResults,
+        newActionId: this.newActionId,
+        newBatchId: this.newBatchId,
+        allowedTools: new Set(params.allowedTools ?? []),
+        ...(this.toolbox === undefined ? {} : { toolbox: this.toolbox }),
+        ...(this.gateway === undefined
+          ? {}
+          : { runWrite: this.gateway.callTool.bind(this.gateway) }),
       }),
       retrievedEngrams: ctx.allResults.map((r) => ({
         engramId: r.sourceId,
