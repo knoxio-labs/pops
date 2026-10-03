@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { fakePillarHandle } from '@pops/pillar-sdk/testing';
+
 import { createTagsClient, type TagsRouter } from '../client.js';
 
 import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
@@ -17,7 +19,7 @@ function handleReturning(result: CallResult<unknown>): {
   list: ReturnType<typeof vi.fn>;
 } {
   const list = vi.fn(async () => result);
-  const handle = { tags: { list } } as unknown as PillarHandle<TagsRouter>;
+  const handle = fakePillarHandle<TagsRouter>('tags', { tags: { list } });
   return { handle, list };
 }
 
@@ -67,9 +69,10 @@ describe('createTagsClient', () => {
   });
 
   it('reports a thrown request as unavailable', async () => {
-    const handle = {
-      tags: { list: vi.fn(async () => Promise.reject(new Error('offline'))) },
-    } as unknown as PillarHandle<TagsRouter>;
+    const list = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    const handle = fakePillarHandle<TagsRouter>('tags', { tags: { list } });
 
     await expect(createTagsClient(() => handle).fetchAll()).resolves.toEqual({
       kind: 'unavailable',

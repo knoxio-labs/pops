@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { fakePillarHandle } from '@pops/pillar-sdk/testing';
+
 import { openTempDb } from '../../../db/__tests__/helpers.js';
 import { sharedTagCache } from '../../../db/schema.js';
 import { isKnownSharedTag, replaceSharedTagCache } from '../../../db/services/shared-tag-cache.js';
 import { createTagsClient, type SharedTagFetch, type TagsRouter } from '../../tags/client.js';
 import { startSharedTagCacheRefreshWorker } from '../refresh-shared-tags.js';
-
-import type { PillarHandle } from '@pops/pillar-sdk/server';
 
 import type { OpenedPurchasesDb } from '../../../db/index.js';
 import type { SharedTagCacheRefreshHandle } from '../refresh-shared-tags.js';
@@ -174,14 +174,14 @@ describe('the shared tag cache refresh worker', () => {
       '2026-10-02T00:00:00.000Z'
     );
     const before = cacheRows();
-    const malformedHandle = {
+    const malformedHandle = fakePillarHandle<TagsRouter>('tags', {
       tags: {
         list: async () => ({
           kind: 'ok',
           value: { tags: [{ ...tag(TAG_B, ''), archived: false }] },
         }),
       },
-    } as unknown as PillarHandle<TagsRouter>;
+    });
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const worker = startWorker(() => createTagsClient(() => malformedHandle).fetchAll());
 
