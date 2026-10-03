@@ -10,9 +10,10 @@
  * shape a caller parses and the shape the OpenAPI document promises cannot
  * drift apart.
  *
- * The one exception to "the contract describes everything" is the `/mobile`
+ * The first exception to "the contract describes everything" is the `/mobile`
  * perimeter below, which is Express middleware because it must answer paths
- * the contract does not declare. See `auth/README.md`.
+ * the contract does not declare. The second is the Ego event stream: ts-rest
+ * cannot describe its server-sent-event response. See `auth/README.md`.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -31,6 +32,7 @@ import {
 } from '../contract/rest-mobile-inventory.js';
 import { MOBILE_UPLOAD_MAX_BYTES } from '../contract/rest-schemas.js';
 import { bfmContract } from '../contract/rest.js';
+import { createEgoRateLimit, type EgoRateLimitOptions } from './auth/ego-rate-limit.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
 import { createPairingRateLimit, type PairingRateLimitOptions } from './auth/pairing-rate-limit.js';
 import { createReceiptRateLimit, type ReceiptRateLimitOptions } from './auth/receipt-rate-limit.js';
@@ -43,6 +45,7 @@ import { createPairingServiceAccountMiddleware } from './middleware/service-acco
 import { createMobileNoStore } from './mobile-no-store.js';
 import {
   CHALLENGE_PATH,
+  MOBILE_EGO_CHAT_STREAM_PATH,
   MOBILE_INVENTORY_LEDGER_PATH,
   MOBILE_INVENTORY_MEDIA_UPLOAD_PATH,
   MOBILE_INVENTORY_MUTATIONS_PATH,
@@ -54,10 +57,13 @@ import {
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
 import { createInventoryProtocolErrorHandler } from './rest/inventory-protocol-error.js';
 import { createJsonBodyErrorHandler } from './rest/json-body-error.js';
+import { makeMobileEgoStreamRouter } from './rest/mobile-ego-stream.js';
 import { createPayloadTooLargeErrorHandler } from './rest/payload-too-large.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
 
 import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
+
+import type { EgoStreamClient } from './ego/stream-client.js';
 
 /**
  * The committed OpenAPI projection, served verbatim at `GET /openapi` so the
@@ -97,6 +103,12 @@ export interface BfmApiDeps extends BfmRestHandlerDeps {
   refreshRateLimit?: RefreshRateLimitOptions;
   /** Same, for the receipt upload's own budget. See {@link MOBILE_RECEIPT_UPLOAD_PATH}. */
   receiptRateLimit?: ReceiptRateLimitOptions;
+  /** Stream client for the raw Ego SSE route. */
+  egoStream: EgoStreamClient;
+  /** Same, for the Ego stream's own budget. */
+  egoRateLimit?: EgoRateLimitOptions;
+  /** Keep-alive interval for an idle Ego stream. */
+  egoHeartbeatMs?: number;
 }
 
 export interface CreateBfmApiAppOptions {
@@ -160,6 +172,10 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // `requireDevice` so a caller past its budget costs a map lookup, not an
   // HMAC verification.
   app.use(MOBILE_RECEIPT_UPLOAD_PATH, createReceiptRateLimit(deps.receiptRateLimit).handler);
+
+  // A chat turn may spend model tokens and tool calls, so its independent
+  // budget runs before requireDevice just like the receipt budget does.
+  app.use(MOBILE_EGO_CHAT_STREAM_PATH, createEgoRateLimit(deps.egoRateLimit).handler);
 
   // Then the guard, still ahead of the body parser. It reads headers only, so
   // an unauthenticated caller never gets bfm to parse a request body — which
@@ -228,6 +244,10 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  // Raw SSE cannot be represented by ts-rest, so mount the one stream route
+  // after JSON error handling and before the contract endpoints.
+  app.use(makeMobileEgoStreamRouter(deps));
 
   // Only the pairing-code route is in this gate's contract. It runs before the
   // human identity resolver so a verified machine principal can reach the

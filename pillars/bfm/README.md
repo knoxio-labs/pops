@@ -39,6 +39,7 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/ego/conversations`                   | One page of Ego conversations, optionally searched.                                                                                              |
 | `GET /mobile/ego/conversations/:id`               | One stored Ego conversation with its messages and parts.                                                                                         |
 | `POST /mobile/ego/action-batches/:batchId/decide` | Records an action-batch decision; the phone then resumes the existing chat stream.                                                               |
+| `POST /mobile/ego/chat/stream`                    | Relays Ego's SSE stream; omitted from OpenAPI because ts-rest cannot describe event streams, and read by iOS outside the generated client.       |
 | `GET /mobile/finance/transactions`                | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
 | `GET /mobile/finance/accounts`                    | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
 | `GET /mobile/finance/transactions/:id`            | The fuller record behind one row, for the detail screen.                                                                                         |
