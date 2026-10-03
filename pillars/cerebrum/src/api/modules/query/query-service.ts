@@ -17,6 +17,7 @@ import { computeConfidence } from './confidence.js';
 import { buildQuerySystemPrompt } from './prompts.js';
 import { streamQueryAnswer } from './query-stream.js';
 import { QueryScopeInferencer } from './scope-inferencer.js';
+import { sourceTypesForDomains } from './types.js';
 
 import type { SemanticSearchDeps } from '../retrieval/semantic-search.js';
 import type { RetrievalFilters, RetrievalResult } from '../retrieval/types.js';
@@ -42,14 +43,6 @@ export interface QueryServiceDeps extends SemanticSearchDeps {
   llm: QueryLlm;
   streamLlm: QueryStreamLlm;
 }
-
-/** Map domain names to retrieval sourceType values. */
-const DOMAIN_MAP: Record<QueryDomain, string> = {
-  engrams: 'engram',
-  transactions: 'transaction',
-  media: 'media',
-  inventory: 'inventory',
-};
 
 type PreparedQuery =
   | { kind: 'no-results'; scopes: string[] }
@@ -82,7 +75,7 @@ function buildRetrievalFilters(
   const filters: RetrievalFilters = {};
   if (scopes.length > 0) filters.scopes = scopes;
   if (includeSecret) filters.includeSecret = true;
-  if (domains && domains.length > 0) filters.sourceTypes = domains.map((d) => DOMAIN_MAP[d]);
+  if (domains && domains.length > 0) filters.sourceTypes = sourceTypesForDomains(domains);
   return filters;
 }
 
