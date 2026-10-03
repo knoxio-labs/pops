@@ -9,7 +9,8 @@
  *
  * The SSE streaming endpoint (`POST /ego/chat/stream`) is NOT part of this
  * ts-rest contract — it is mounted as a plain Express route in `app.ts` before
- * `createExpressEndpoints` (ts-rest cannot model `text/event-stream`).
+ * `createExpressEndpoints` (ts-rest cannot model `text/event-stream`). Its request
+ * body and frames are defined in `rest-ego-stream.ts`.
  *
  * The wire schemas live in the pure `rest-ego-schemas.ts` module so the contract
  * and the lifted handlers share one source of truth.
