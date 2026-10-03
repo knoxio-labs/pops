@@ -105,6 +105,21 @@ describe('tags vocabulary HTTP routes', () => {
     expect(read.body).toEqual(first.body);
   });
 
+  it('filters archived tags and applies the updatedSince query', async () => {
+    const app = appFor();
+    const active = await createTag(app, 'Active stop');
+    const archived = await createTag(app, 'Archived stop');
+    await api(app).post(`/tags/${archived.id}/archive`).send({}).expect(200);
+
+    const activeOnly = await api(app).get('/tags?includeArchived=false').expect(200);
+    expect(activeOnly.body.tags.map((tag: Tag) => tag.id)).toEqual([active.id]);
+
+    const afterAllTags = await api(app)
+      .get('/tags?updatedSince=9999-01-01T00:00:00.000Z')
+      .expect(200);
+    expect(afterAllTags.body).toEqual({ tags: [] });
+  });
+
   it('updates a tag and reports a case-insensitive name conflict', async () => {
     const app = appFor();
     const parent = await createTag(app, 'Brazil');
@@ -140,6 +155,17 @@ describe('tags vocabulary HTTP routes', () => {
 
     const unarchived = await api(app).post(`/tags/${tag.id}/unarchive`).send({}).expect(200);
     expect(unarchived.body).toMatchObject({ archived: false, archivedAt: null });
+  });
+
+  it('returns a conflict when unarchiving a tag whose active name is taken', async () => {
+    const app = appFor();
+    const archived = await createTag(app, 'Shared name');
+    await api(app).post(`/tags/${archived.id}/archive`).send({}).expect(200);
+    await api(app).post('/tags').send({ facet: 'trip', name: 'shared NAME' }).expect(201);
+
+    const conflict = await api(app).post(`/tags/${archived.id}/unarchive`).send({}).expect(409);
+    expectErrorEnvelope(conflict);
+    expect(conflict.body.code).toBe('tags.tag.name_conflict');
   });
 
   it('merges a tag and expands a parent to its children and merged identity', async () => {
@@ -187,12 +213,43 @@ describe('tags vocabulary HTTP routes', () => {
     }
   });
 
+  it('maps invalid parents and merges to 422 domain-error envelopes', async () => {
+    const app = appFor();
+    const missingParentId = '00000000-0000-4000-8000-000000000004';
+    const invalidParent = await api(app)
+      .post('/tags')
+      .send({ facet: 'trip', name: 'Orphan', parentId: missingParentId })
+      .expect(422);
+    expectErrorEnvelope(invalidParent);
+    expect(invalidParent.body.code).toBe('tags.tag.parent_invalid');
+
+    const source = await createTag(app, 'Trip source');
+    const target = await api(app)
+      .post('/tags')
+      .send({ facet: 'hobby', name: 'Hobby target' })
+      .expect(201);
+    const invalidMerge = await api(app)
+      .post(`/tags/${source.id}/merge`)
+      .send({ intoId: target.body.id })
+      .expect(422);
+    expectErrorEnvelope(invalidMerge);
+    expect(invalidMerge.body.code).toBe('tags.tag.merge_invalid');
+  });
+
   it('returns 400 ADR-054 envelopes for an unknown facet and malformed body', async () => {
     const app = appFor();
     const unknownFacet = await api(app).get('/tags?facet=meal').expect(400);
     const malformedBody = await api(app).post('/tags').send({ facet: 'trip' }).expect(400);
+    const invalidWindow = await api(app)
+      .post('/tags')
+      .send({
+        facet: 'trip',
+        name: 'Invalid window',
+        window: { start: null, end: null, region: 'BR' },
+      })
+      .expect(400);
 
-    for (const response of [unknownFacet, malformedBody]) {
+    for (const response of [unknownFacet, malformedBody, invalidWindow]) {
       expectErrorEnvelope(response);
       expect(response.body.code).toBe('tags.request.invalid');
       expect(response.body.retryable).toBe(false);
