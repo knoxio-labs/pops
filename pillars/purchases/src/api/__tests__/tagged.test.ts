@@ -125,6 +125,15 @@ describe('Purchases tagged routes', () => {
     });
   });
 
+  it('rejects a malformed continuation cursor', async () => {
+    const response = await requestOn(app())
+      .post('/tagged/query')
+      .send({ tagIds: [TAG_A], limit: 10, cursor: 'not-a-cursor' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('purchases.request.invalid_cursor');
+  });
+
   it('attaches and detaches idempotently while returning the full current tag set', async () => {
     seedSharedTags(TAG_A, TAG_B);
     const transport = requestOn(app());
@@ -146,18 +155,25 @@ describe('Purchases tagged routes', () => {
 
   it('returns 404 when an assignment names an unknown purchase item', async () => {
     seedSharedTags(TAG_A);
+    const transport = requestOn(app());
 
-    const response = await requestOn(app()).put(assignmentPath('missing-item', TAG_A));
+    const response = await transport.put(assignmentPath('missing-item', TAG_A));
+    const detach = await transport.delete(assignmentPath('missing-item', TAG_A));
 
     expect(response.status).toBe(404);
     expect(response.body.code).toBe('purchases.resource.not_found');
+    expect(detach.status).toBe(404);
+    expect(detach.body.code).toBe('purchases.resource.not_found');
   });
 
   it('returns 400 when an assignment names an uncached shared tag', async () => {
     const response = await requestOn(app()).put(assignmentPath(itemId, 'uncached-tag'));
+    const detach = await requestOn(app()).delete(assignmentPath(itemId, 'uncached-tag'));
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe('purchases.shared_tag.unknown_shared_tag');
+    expect(detach.status).toBe(400);
+    expect(detach.body.code).toBe('purchases.shared_tag.unknown_shared_tag');
   });
 
   it('rejects a query with more than 500 tag ids before searching', async () => {
