@@ -2,6 +2,104 @@ import Foundation
 
 @testable import BFMClient
 
+internal final class EgoURLSessionByteSourceScenario: NSObject, @unchecked Sendable {
+    private static let requestPropertyKey = "EgoURLSessionByteSourceScenario"
+
+    internal let body: Data
+    internal let finishes: Bool
+    internal let cancellation = EgoURLSessionByteSourceCancellation()
+
+    internal init(body: Data, finishes: Bool) {
+        self.body = body
+        self.finishes = finishes
+    }
+
+    internal func request(for url: URL) -> URLRequest {
+        let request = NSMutableURLRequest(url: url)
+        URLProtocol.setProperty(self, forKey: Self.requestPropertyKey, in: request)
+        return request as URLRequest
+    }
+
+    internal static func from(_ request: URLRequest) -> EgoURLSessionByteSourceScenario? {
+        URLProtocol.property(forKey: requestPropertyKey, in: request)
+            as? EgoURLSessionByteSourceScenario
+    }
+}
+
+internal actor EgoURLSessionByteSourceCancellation {
+    private let events: AsyncStream<Void>
+    private let continuation: AsyncStream<Void>.Continuation
+    private var hasCancelled = false
+
+    internal init() {
+        let pair = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        events = pair.stream
+        continuation = pair.continuation
+    }
+
+    internal func recordCancellation() {
+        guard !hasCancelled else {
+            return
+        }
+        hasCancelled = true
+        continuation.yield(())
+        continuation.finish()
+    }
+
+    internal func waitForCancellation() async {
+        for await _ in events {
+            return
+        }
+    }
+}
+
+internal class EgoURLSessionByteSourceURLProtocol: URLProtocol, @unchecked Sendable {
+    override class func canInit(with request: URLRequest) -> Bool {
+        EgoURLSessionByteSourceScenario.from(request) != nil
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        guard let client,
+            let url = request.url,
+            let scenario = EgoURLSessionByteSourceScenario.from(request),
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: [
+                    "Content-Length": scenario.finishes ? String(scenario.body.count) : "1048576",
+                    "Content-Type": "application/octet-stream",
+                ]
+            )
+        else {
+            client?.urlProtocol(
+                self,
+                didFailWithError: URLError(.badServerResponse)
+            )
+            return
+        }
+
+        client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client.urlProtocol(self, didLoad: scenario.body)
+        if scenario.finishes {
+            client.urlProtocolDidFinishLoading(self)
+        }
+    }
+
+    override func stopLoading() {
+        guard let scenario = EgoURLSessionByteSourceScenario.from(request) else {
+            return
+        }
+        Task {
+            await scenario.cancellation.recordCancellation()
+        }
+    }
+}
+
 internal actor ScriptedBFMByteSource: BFMByteSource {
     internal struct Reply: Sendable {
         internal let statusCode: Int
