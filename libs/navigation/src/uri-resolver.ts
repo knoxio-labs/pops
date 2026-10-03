@@ -42,15 +42,25 @@ function stringField(data: SearchHitData, field: string): string | null {
  * hit's `data`, where the purchases search adapter already puts it, because a
  * line is meaningless without its order. A hit that arrives without one does
  * not resolve: sending it to some other order would be worse than not moving.
+ * Finance account URIs use the mounted `/finance/accounts/:id` route instead
+ * of a type-derived singular path.
+ * Finance transaction URIs select a row from `/finance/transactions` through
+ * its `transaction` query parameter because no transaction detail route exists.
+ * Finance budget URIs open `/finance/budgets` because no per-budget detail route
+ * exists.
+ * Inventory location URIs use the mounted `/inventory/locations/:id` route
+ * instead of a type-derived singular path.
  */
 const URI_ROUTE_MAP: Record<string, RouteRule> = {
   'media/movie': '/media/movies',
   'media/tv-show': '/media/tv',
   'cerebrum/engram': '/cerebrum/engrams',
-  'finance/transaction': '/finance/transactions',
+  'finance/account': '/finance/accounts',
+  'finance/transaction': (id) => `/finance/transactions?transaction=${encodeURIComponent(id)}`,
   'finance/entity': '/finance/entities',
-  'finance/budget': '/finance/budgets',
+  'finance/budget': () => '/finance/budgets',
   'inventory/item': '/inventory/items',
+  'inventory/location': '/inventory/locations',
   'contacts/contact': '/contacts',
   'purchases/purchase': '/purchases',
   'purchases/purchase-item': (itemId, data) => {
