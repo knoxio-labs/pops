@@ -78,6 +78,7 @@ describe('PILLARS', () => {
       'bfm',
       'barcode',
       'design',
+      'tags',
     ]);
   });
 
