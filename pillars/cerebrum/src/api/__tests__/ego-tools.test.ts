@@ -7,7 +7,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
+import { egoMessagePartsSchema } from '../../contract/rest-ego-parts.js';
 import {
   egoActionBatchesService,
   egoActionsService,
@@ -48,25 +50,29 @@ function client(llm: EgoLlm, egoTools?: EgoTools) {
   return makeClient(createCerebrumApiApp(deps));
 }
 
-function parseSseFrames(raw: string): Array<Record<string, unknown>> {
+function parseSseFrames(raw: string): unknown[] {
   return raw
     .split('\n\n')
     .map((block) => block.replace(/^data: /, '').trim())
     .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line) as Record<string, unknown>);
+    .map((line): unknown => JSON.parse(line));
 }
 
-interface DoneFrame {
-  type: 'done';
-  conversationId: string;
-  messageId: string;
-  parts: EgoMessagePart[];
-}
+const doneFrameSchema = z.object({
+  type: z.literal('done'),
+  conversationId: z.string(),
+  messageId: z.string(),
+  parts: egoMessagePartsSchema,
+});
+
+type DoneFrame = z.infer<typeof doneFrameSchema>;
 
 function doneFrame(raw: string): DoneFrame {
-  const frame = parseSseFrames(raw).find((item) => item['type'] === 'done');
-  if (!frame) throw new Error('Ego stream did not emit a done frame.');
-  return frame as unknown as DoneFrame;
+  const parsed = parseSseFrames(raw)
+    .map((frame) => doneFrameSchema.safeParse(frame))
+    .find((result) => result.success);
+  if (!parsed?.success) throw new Error('Ego stream did not emit a valid done frame.');
+  return parsed.data;
 }
 
 function actionsPart(parts: EgoMessagePart[] | null | undefined): EgoActionsPart {
