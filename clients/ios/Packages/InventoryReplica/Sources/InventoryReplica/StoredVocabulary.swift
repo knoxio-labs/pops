@@ -43,7 +43,8 @@ extension InventoryEventKind {
         "created", "edited", "type_changed", "field_values_changed", "override_set",
         "override_cleared", "code_set", "moved", "picked_up", "put_back", "stored", "opened",
         "closed", "sealed", "unpacked", "lifecycle_changed", "quantity_changed", "split_from",
-        "split_into", "photo_added", "photo_removed", "deleted", "restored", "reverted", "migrated",
+        "split_into", "photo_added", "photo_removed", "deleted", "restored",
+        "reverted", "migrated",
     ]
 
     private static let storageValues: [InventoryEventKind: String] = Dictionary(
