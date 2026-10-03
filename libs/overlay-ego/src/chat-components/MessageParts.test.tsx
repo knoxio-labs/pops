@@ -42,6 +42,12 @@ function renderParts(parts: MessagePart[], batchDecision: BatchDecisionApi | nul
   );
 }
 
+function unknownPart(): MessagePart {
+  const part: MessagePart = { type: 'text', text: 'ignored by the renderer' };
+  Object.defineProperty(part, 'type', { value: 'chart' });
+  return part;
+}
+
 function expectDocumentOrder(elements: HTMLElement[]) {
   for (let index = 0; index < elements.length - 1; index += 1) {
     const current = elements[index];
@@ -129,8 +135,7 @@ describe('MessageParts', () => {
   });
 
   it('shows a fallback for a part type unknown to this renderer', () => {
-    const unknownPart = { type: 'chart', points: [1, 2, 3] } as unknown as MessagePart;
-    renderParts([unknownPart]);
+    renderParts([unknownPart()]);
 
     expect(screen.getByRole('note')).toHaveTextContent('Unsupported message part');
   });
