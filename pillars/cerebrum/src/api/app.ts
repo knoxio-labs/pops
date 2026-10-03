@@ -83,8 +83,15 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
     res.json(openapiDocument);
   });
 
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
+
   // The ego SSE route (`text/event-stream`) can't be modelled in ts-rest, so it
-  // mounts as a plain Express route BEFORE createExpressEndpoints.
+  // mounts as a plain Express route AFTER the scope gate, which scopes it as a
+  // declared raw route, and BEFORE createExpressEndpoints.
   app.use(
     makeEgoStreamRouter({
       db: deps.cerebrumDb.db,
@@ -111,12 +118,6 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
       llm: deps.queryLlm ?? new AnthropicQueryLlm(),
       streamLlm: deps.queryStreamLlm ?? new AnthropicQueryStreamLlm(),
     })
-  );
-
-  app.use(
-    createServiceAccountScopeMiddleware(
-      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
-    )
   );
 
   createExpressEndpoints(cerebrumContract, makeCerebrumRestHandlers(deps), app, {
