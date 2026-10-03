@@ -243,7 +243,7 @@ describe('shared tag hierarchy and updates', () => {
     expect(getTag(opened.db, tag.id)?.name).toBe('Archived then restored');
   });
 
-  it('refuses to unarchive a tag that was merged into another identity', () => {
+  it('a merged tag cannot be unarchived', () => {
     const source = createTag('Merged source');
     const target = createTag('Merge target');
     mergeTag(opened.db, source.id, target.id);
