@@ -1,6 +1,6 @@
 import type { EgoActionsPart, EgoMessagePart } from '../../../contract/rest-ego-parts.js';
 import type { EgoMessage, EgoLlm, EgoStreamDone, EgoToolUse, EgoTurnRequest } from './llm.js';
-import type { LoopEvent, LoopToolResult, ProposedAction } from './tool-loop.js';
+import type { LoopEvent, LoopToolResult, ProposedAction } from './tool-loop-types.js';
 import type { EgoToolDefinition, EgoToolbox, ToolOutcome } from './toolbox.js';
 
 interface ToolCallOutput {
