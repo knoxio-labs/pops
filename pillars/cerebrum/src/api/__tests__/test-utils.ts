@@ -29,6 +29,8 @@ import type {
   ConversationWire,
   EgoChatBodyWire,
   EgoChatResponseWire,
+  EgoDecisionBodyWire,
+  EgoDecisionResultWire,
   GetActiveContextResponseWire,
 } from '../../contract/rest-ego-schemas.js';
 import type { EmbeddingsStatusWire } from '../../contract/rest-embeddings.js';
@@ -767,6 +769,8 @@ export function makeClient(app: Express) {
     },
     ego: {
       chat: (body: EgoChatBodyWire) => send<EgoChatResponseWire>(r.post('/ego/chat').send(body)),
+      decideActionBatch: (batchId: string, body: EgoDecisionBodyWire) =>
+        send<EgoDecisionResultWire>(r.post(`/ego/action-batches/${batchId}/decide`).send(body)),
       createConversation: (body: { model: string; title?: string; scopes?: string[] }) =>
         send<{ conversation: ConversationWire }>(r.post('/ego/conversations').send(body)),
       listConversations: (body: { limit?: number; offset?: number; search?: string } = {}) =>

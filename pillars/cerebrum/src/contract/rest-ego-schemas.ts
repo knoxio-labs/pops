@@ -9,7 +9,7 @@
  */
 import { z } from 'zod';
 
-import { egoMessagePartsSchema, egoUriSchema } from './rest-ego-parts.js';
+import { egoActionStatusSchema, egoMessagePartsSchema, egoUriSchema } from './rest-ego-parts.js';
 
 export const egoAppContextSchema = z.object({
   app: z.string(),
@@ -48,6 +48,44 @@ export const conversationMessageWire = z.object({
   createdAt: z.string(),
 });
 export type ConversationMessageWire = z.infer<typeof conversationMessageWire>;
+
+export const egoActionWire = z.object({
+  id: z.string(),
+  batchId: z.string(),
+  conversationId: z.string(),
+  messageId: z.string(),
+  tool: z.string(),
+  summary: z.string(),
+  status: egoActionStatusSchema,
+  result: z.string().nullable(),
+  createdAt: z.string(),
+  resolvedAt: z.string().nullable(),
+});
+export type EgoActionWire = z.infer<typeof egoActionWire>;
+
+export const egoBatchWire = z.object({
+  id: z.string(),
+  conversationId: z.string(),
+  messageId: z.string(),
+  status: z.enum(['pending', 'decided', 'continued', 'auto']),
+  actions: z.array(egoActionWire),
+  createdAt: z.string(),
+  decidedAt: z.string().nullable(),
+});
+export type EgoBatchWire = z.infer<typeof egoBatchWire>;
+
+export const egoDecisionBodySchema = z.object({
+  approve: z.array(z.string().min(1)),
+  reject: z.array(z.string().min(1)),
+  alwaysAllow: z.array(z.string().min(1)),
+});
+export type EgoDecisionBodyWire = z.infer<typeof egoDecisionBodySchema>;
+
+export const egoDecisionResultSchema = z.object({
+  batch: egoBatchWire,
+  updatedMessage: conversationMessageWire.nullable(),
+});
+export type EgoDecisionResultWire = z.infer<typeof egoDecisionResultSchema>;
 
 export const scopeNegotiationWire = z.object({
   scopes: z.array(z.string()),

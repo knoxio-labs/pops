@@ -24,6 +24,8 @@ import {
   createConversationBodySchema,
   egoChatBodySchema,
   egoChatResponseSchema,
+  egoDecisionBodySchema,
+  egoDecisionResultSchema,
   getActiveContextResponseSchema,
   listConversationsBodySchema,
   scopeNegotiationWire,
@@ -42,6 +44,25 @@ export const cerebrumEgoContract = c.router({
     responses: {
       200: egoChatResponseSchema,
       400: errorBodySchema,
+    },
+  },
+  /**
+   * Records a batch decision without calling tools. Approved writes run and the
+   * model continues when `/ego/chat/stream` resumes with `resumeBatchId`; the
+   * next stream request settles a decided batch that was not resumed.
+   */
+  decideActionBatch: {
+    method: 'POST',
+    path: '/ego/action-batches/:batchId/decide',
+    summary: 'Record an Ego action batch decision.',
+    pathParams: z.object({ batchId: z.string().min(1) }),
+    body: egoDecisionBodySchema,
+    responses: {
+      200: egoDecisionResultSchema,
+      400: errorBodySchema,
+      404: errorBodySchema,
+      409: errorBodySchema,
+      503: errorBodySchema,
     },
   },
   createConversation: {
