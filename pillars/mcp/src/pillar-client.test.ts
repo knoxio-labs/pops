@@ -93,6 +93,7 @@ describe('getPillar — base-URL resolution', () => {
     'POPS_MEDIA_API_URL',
     'POPS_CEREBRUM_API_URL',
     'POPS_CONTACTS_API_URL',
+    'POPS_TAGS_API_URL',
   ] as const;
 
   beforeEach(() => {
@@ -121,6 +122,16 @@ describe('getPillar — base-URL resolution', () => {
 
     expect(configureServerSdk).toHaveBeenCalledWith(
       expect.objectContaining({ internalBaseUrls: { inventory: 'http://localhost:4102' } })
+    );
+  });
+
+  it('resolves the tags API URL override', () => {
+    process.env['POPS_TAGS_API_URL'] = 'http://localhost:4017';
+
+    getPillar('tags');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.objectContaining({ internalBaseUrls: { tags: 'http://localhost:4017' } })
     );
   });
 
