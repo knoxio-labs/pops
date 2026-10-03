@@ -1,7 +1,7 @@
 /**
  * Low-level SSE streaming hook for ego chat (PRD-087 US-01 AC #6).
  *
- * Fetches from the /api/ego/chat/stream SSE endpoint and processes
+ * Fetches from the /cerebrum-api/ego/chat/stream SSE endpoint and processes
  * the event stream, updating state as tokens arrive.
  */
 import { useCallback, useRef, useState } from 'react';
@@ -10,13 +10,16 @@ import { useEgoAppContext } from './useEgoAppContext';
 
 import type { RetrievedEngram } from './types';
 
-/** SSE token event from /api/ego/chat/stream. */
+/** Shell proxy path to cerebrum's POST /ego/chat/stream endpoint. */
+export const EGO_STREAM_URL = '/cerebrum-api/ego/chat/stream';
+
+/** SSE token event from /cerebrum-api/ego/chat/stream. */
 interface SseTokenEvent {
   type: 'token';
   text: string;
 }
 
-/** SSE done event from /api/ego/chat/stream. */
+/** SSE done event from /cerebrum-api/ego/chat/stream. */
 interface SseDoneEvent {
   type: 'done';
   conversationId: string;
@@ -27,7 +30,7 @@ interface SseDoneEvent {
   retrievedEngrams: RetrievedEngram[];
 }
 
-/** SSE error event from /api/ego/chat/stream. */
+/** SSE error event from /cerebrum-api/ego/chat/stream. */
 interface SseErrorEvent {
   type: 'error';
   message: string;
@@ -128,7 +131,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      fetch('/api/ego/chat/stream', {
+      fetch(EGO_STREAM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
