@@ -33,7 +33,7 @@ export async function* generateStreamEvents(
     yield { type: 'token', text: `${scopeNotice}\n\n` };
   }
 
-  for await (const event of llm.stream(systemPrompt, llmMessages)) {
+  for await (const event of llm.stream({ system: systemPrompt, messages: llmMessages })) {
     if (event.type === 'token') {
       yield { type: 'token', text: event.text };
     } else {
