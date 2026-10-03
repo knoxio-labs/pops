@@ -192,6 +192,7 @@ export function insertMessage(db: CerebrumDb, row: InsertMessageRow): Message {
     content: row.content,
     citations: row.citations != null ? JSON.stringify(row.citations) : null,
     toolCalls: row.toolCalls != null ? JSON.stringify(row.toolCalls) : null,
+    parts: null,
     tokensIn: row.tokensIn,
     tokensOut: row.tokensOut,
     createdAt: row.createdAt,
