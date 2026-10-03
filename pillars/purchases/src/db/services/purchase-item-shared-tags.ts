@@ -8,7 +8,7 @@
 import { and, asc, desc, eq, gt, inArray, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { purchaseItems, purchaseItemSharedTags, sharedTagCache } from '../schema.js';
+import { purchaseItems, purchaseItemSharedTags, purchases, sharedTagCache } from '../schema.js';
 import { nowIso, type PurchasesDb } from './internal.js';
 
 import type { SQL } from 'drizzle-orm';
@@ -40,6 +40,7 @@ export class UnknownSharedTagIdError extends Error {
 /** One item in the requested shared-tag set, reported once with its matches. */
 export interface SharedTaggedItem {
   readonly item: PurchaseItemRow;
+  readonly orderedAt: string;
   readonly tagIds: readonly string[];
 }
 
@@ -84,9 +85,10 @@ export function listItemsBySharedTagIds(
   if (tagIds.length === 0) return { rows: [], nextCursor: null };
 
   const candidates = db
-    .selectDistinct({ item: purchaseItems })
+    .selectDistinct({ item: purchaseItems, orderedAt: purchases.orderedAt })
     .from(purchaseItemSharedTags)
     .innerJoin(purchaseItems, eq(purchaseItems.id, purchaseItemSharedTags.itemId))
+    .innerJoin(purchases, eq(purchases.id, purchaseItems.purchaseId))
     .where(
       and(
         inArray(purchaseItemSharedTags.tagId, tagIds),
@@ -104,12 +106,7 @@ export function listItemsBySharedTagIds(
   const assignments = db
     .select({ itemId: purchaseItemSharedTags.itemId, tagId: purchaseItemSharedTags.tagId })
     .from(purchaseItemSharedTags)
-    .where(
-      and(
-        inArray(purchaseItemSharedTags.itemId, itemIds),
-        inArray(purchaseItemSharedTags.tagId, tagIds)
-      )
-    )
+    .where(inArray(purchaseItemSharedTags.itemId, itemIds))
     .all();
   const matchedTagIdsByItem = new Map<string, Set<string>>();
   for (const assignment of assignments) {
@@ -118,8 +115,9 @@ export function listItemsBySharedTagIds(
     matchedTagIdsByItem.set(assignment.itemId, matches);
   }
 
-  const rows = page.map(({ item }) => ({
+  const rows = page.map(({ item, orderedAt }) => ({
     item,
+    orderedAt,
     tagIds: tagIds.filter((tagId) => matchedTagIdsByItem.get(item.id)?.has(tagId) ?? false),
   }));
   const last = page.at(-1)?.item;
@@ -238,3 +236,5 @@ function afterSharedTagItemCursor(cursor: SharedTagItemCursor): SQL | undefined 
     )
   );
 }
+
+export { hasSharedTagId, listSharedTagIdsForItem } from './purchase-item-shared-tag-state.js';

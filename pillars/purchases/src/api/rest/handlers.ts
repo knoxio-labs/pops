@@ -17,6 +17,7 @@ import { makeReceiptHandlers } from './receipt-handlers.js';
 import { makeReconcileHandlers, type SweepTrigger } from './reconcile-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSourceHandlers } from './source-handlers.js';
+import { makeTaggedHandlers } from './tagged-handlers.js';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
@@ -62,5 +63,6 @@ export function makePurchasesRestHandlers(deps: {
     ),
     search: makeSearchHandlers(deps.purchasesDb.db),
     source: makeSourceHandlers(deps.purchasesDb.db),
+    tagged: makeTaggedHandlers(deps.purchasesDb.db),
   });
 }
