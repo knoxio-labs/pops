@@ -29,9 +29,10 @@ function done(events: LoopEvent[]): Extract<LoopEvent, { type: 'done' }> {
 
 function ids() {
   let next = 0;
+  let nextBatch = 0;
   return {
     newActionId: () => 'action-' + ++next,
-    newBatchId: () => 'batch-1',
+    newBatchId: () => 'batch-' + ++nextBatch,
   };
 }
 
@@ -51,7 +52,12 @@ describe('runToolLoop', () => {
 
     expect(requests).toHaveLength(1);
     expect(requests[0]).not.toHaveProperty('tools');
-    expect(done(events)).toMatchObject({ parts: [], batch: null, fullText: 'answer' });
+    expect(done(events)).toMatchObject({
+      parts: [],
+      batch: null,
+      autoExecuted: [],
+      fullText: 'answer',
+    });
   });
 
   it('runs a read before continuing the model turn with one result message', async () => {
@@ -360,5 +366,279 @@ describe('runToolLoop', () => {
     });
 
     expect(done(events)).toMatchObject({ tokensIn: 3, tokensOut: 3, fullText: 'answer' });
+  });
+
+  it('runs an allowed write, records its result, and continues the model turn', async () => {
+    const tool = 'finance.transactions.create';
+    const toolUse: EgoToolUse = { id: 'w1', name: tool, input: { amount: 12 } };
+    const { llm, requests } = scriptedLlm([{ toolUses: [toolUse] }, { text: 'Created it.' }]);
+    const { toolbox, calls } = fakeToolbox(
+      {
+        [tool]: (args) => ({ kind: 'write', tool, args, summary: 'Create transaction' }),
+      },
+      { writes: [tool] }
+    );
+    const runWriteCalls: Array<{ tool: string; args: Record<string, unknown> }> = [];
+    const events = await collectLoop({
+      llm,
+      toolbox,
+      system: 'sys',
+      messages: [userMessage('create it')],
+      allowedTools: new Set([tool]),
+      runWrite: async (name, args) => {
+        runWriteCalls.push({ tool: name, args });
+        return { text: 'Created transaction 12', isError: false };
+      },
+      ...ids(),
+    });
+
+    expect(runWriteCalls).toEqual([{ tool, args: { amount: 12 } }]);
+    expect(calls).toEqual([{ name: tool, input: { amount: 12 } }]);
+    expect(events.filter((event) => event.type === 'tool')).toEqual([
+      { type: 'tool', name: tool, status: 'started' },
+      { type: 'tool', name: tool, status: 'finished' },
+    ]);
+    expect(events.filter((event) => event.type === 'part')).toEqual([
+      {
+        type: 'part',
+        part: {
+          type: 'actions',
+          batchId: 'batch-1',
+          actions: [
+            {
+              actionId: 'action-1',
+              tool,
+              summary: 'Create transaction',
+              status: 'executed',
+            },
+          ],
+        },
+      },
+    ]);
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.messages.at(-1)).toEqual({
+      role: 'user',
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: 'w1',
+          content: 'Created transaction 12',
+          is_error: false,
+        },
+      ],
+    });
+    expect(done(events)).toMatchObject({
+      batch: null,
+      autoExecuted: [
+        {
+          batchId: 'batch-1',
+          actions: [
+            {
+              actionId: 'action-1',
+              toolUseId: 'w1',
+              tool,
+              args: { amount: 12 },
+              summary: 'Create transaction',
+              result: 'Created transaction 12',
+              isError: false,
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('records an errored allowed write as failed and continues', async () => {
+    const tool = 'finance.transactions.create';
+    const { llm, requests } = scriptedLlm([
+      { toolUses: [{ id: 'w1', name: tool, input: {} }] },
+      { text: 'I could not create it.' },
+    ]);
+    const { toolbox } = fakeToolbox(
+      { [tool]: (args) => ({ kind: 'write', tool, args, summary: 'Create transaction' }) },
+      { writes: [tool] }
+    );
+    const events = await collectLoop({
+      llm,
+      toolbox,
+      system: 'sys',
+      messages: [userMessage('create it')],
+      allowedTools: new Set([tool]),
+      runWrite: async () => ({ text: 'Validation failed', isError: true }),
+      ...ids(),
+    });
+
+    expect(events.filter((event) => event.type === 'tool')).toEqual([
+      { type: 'tool', name: tool, status: 'started' },
+      { type: 'tool', name: tool, status: 'failed' },
+    ]);
+    expect(events.filter((event) => event.type === 'part')).toMatchObject([
+      { part: { actions: [{ status: 'failed' }] } },
+    ]);
+    expect(requests[1]?.messages.at(-1)).toMatchObject({
+      role: 'user',
+      content: [{ tool_use_id: 'w1', content: 'Validation failed', is_error: true }],
+    });
+    expect(done(events).autoExecuted[0]?.actions[0]).toMatchObject({
+      result: 'Validation failed',
+      isError: true,
+    });
+  });
+
+  it('turns a rejected allowed write into an error result instead of throwing', async () => {
+    const tool = 'inventory.items.create';
+    const { llm, requests } = scriptedLlm([
+      { toolUses: [{ id: 'w1', name: tool, input: { name: 'Desk' } }] },
+      { text: 'The write failed.' },
+    ]);
+    const { toolbox } = fakeToolbox(
+      { [tool]: (args) => ({ kind: 'write', tool, args, summary: 'Add a desk' }) },
+      { writes: [tool] }
+    );
+    const events = await collectLoop({
+      llm,
+      toolbox,
+      system: 'sys',
+      messages: [userMessage('add a desk')],
+      allowedTools: new Set([tool]),
+      runWrite: async () => Promise.reject(new Error('Gateway unavailable')),
+      ...ids(),
+    });
+
+    expect(events.filter((event) => event.type === 'tool')).toEqual([
+      { type: 'tool', name: tool, status: 'started' },
+      { type: 'tool', name: tool, status: 'failed' },
+    ]);
+    expect(requests[1]?.messages.at(-1)).toMatchObject({
+      role: 'user',
+      content: [{ tool_use_id: 'w1', content: 'Gateway unavailable', is_error: true }],
+    });
+    expect(done(events).autoExecuted[0]?.actions[0]).toMatchObject({
+      result: 'Gateway unavailable',
+      isError: true,
+    });
+  });
+
+  it('runs only writes explicitly allowed by the conversation', async () => {
+    const tool = 'finance.transactions.create';
+    const { llm } = scriptedLlm([{ toolUses: [{ id: 'w1', name: tool, input: {} }] }]);
+    const { toolbox } = fakeToolbox(
+      { [tool]: (args) => ({ kind: 'write', tool, args, summary: 'Create transaction' }) },
+      { writes: [tool] }
+    );
+    let runCount = 0;
+    const events = await collectLoop({
+      llm,
+      toolbox,
+      system: 'sys',
+      messages: [userMessage('create it')],
+      allowedTools: new Set(['inventory.items.create']),
+      runWrite: async () => {
+        runCount += 1;
+        return { text: 'unexpected', isError: false };
+      },
+      ...ids(),
+    });
+
+    expect(runCount).toBe(0);
+    expect(done(events).batch?.actions).toMatchObject([{ tool, summary: 'Create transaction' }]);
+    expect(done(events).autoExecuted).toEqual([]);
+  });
+
+  it('emits the auto-executed part before a proposed part in a mixed turn', async () => {
+    const allowedTool = 'inventory.items.create';
+    const pendingTool = 'finance.transactions.create';
+    const { llm } = scriptedLlm([
+      {
+        toolUses: [
+          { id: 'w1', name: allowedTool, input: { name: 'Desk' } },
+          { id: 'w2', name: pendingTool, input: { amount: 12 } },
+        ],
+      },
+    ]);
+    const { toolbox } = fakeToolbox(
+      {
+        [allowedTool]: (args) => ({
+          kind: 'write',
+          tool: allowedTool,
+          args,
+          summary: 'Add a desk',
+        }),
+        [pendingTool]: (args) => ({
+          kind: 'write',
+          tool: pendingTool,
+          args,
+          summary: 'Create transaction',
+        }),
+      },
+      { writes: [allowedTool, pendingTool] }
+    );
+    const events = await collectLoop({
+      llm,
+      toolbox,
+      system: 'sys',
+      messages: [userMessage('add a desk and create a transaction')],
+      allowedTools: new Set([allowedTool]),
+      runWrite: async () => ({ text: 'Desk created', isError: false }),
+      ...ids(),
+    });
+
+    expect(events.filter((event) => event.type === 'part')).toEqual([
+      {
+        type: 'part',
+        part: {
+          type: 'actions',
+          batchId: 'batch-1',
+          actions: [
+            {
+              actionId: 'action-1',
+              tool: allowedTool,
+              summary: 'Add a desk',
+              status: 'executed',
+            },
+          ],
+        },
+      },
+      {
+        type: 'part',
+        part: {
+          type: 'actions',
+          batchId: 'batch-2',
+          actions: [
+            {
+              actionId: 'action-2',
+              tool: pendingTool,
+              summary: 'Create transaction',
+              status: 'pending',
+            },
+          ],
+        },
+      },
+    ]);
+    expect(done(events).batch?.state.results).toEqual([
+      { toolUseId: 'w1', content: 'Desk created', isError: false },
+      { toolUseId: 'w2', actionId: 'action-2' },
+    ]);
+    expect(done(events).autoExecuted.map(({ batchId }) => batchId)).toEqual(['batch-1']);
+  });
+
+  it('proposes an allowed tool when no runWrite callback is provided', async () => {
+    const tool = 'finance.transactions.create';
+    const { llm } = scriptedLlm([{ toolUses: [{ id: 'w1', name: tool, input: {} }] }]);
+    const { toolbox } = fakeToolbox(
+      { [tool]: (args) => ({ kind: 'write', tool, args, summary: 'Create transaction' }) },
+      { writes: [tool] }
+    );
+    const events = await collectLoop({
+      llm,
+      toolbox,
+      system: 'sys',
+      messages: [userMessage('create it')],
+      allowedTools: new Set([tool]),
+      ...ids(),
+    });
+
+    expect(done(events).batch?.actions).toMatchObject([{ tool, summary: 'Create transaction' }]);
+    expect(done(events).autoExecuted).toEqual([]);
   });
 });

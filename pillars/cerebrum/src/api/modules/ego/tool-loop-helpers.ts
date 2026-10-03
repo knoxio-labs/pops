@@ -1,15 +1,24 @@
+import { runAllowedWrite } from './tool-loop-write.js';
+
 import type { EgoActionsPart, EgoMessagePart } from '../../../contract/rest-ego-parts.js';
 import type { EgoMessage, EgoLlm, EgoStreamDone, EgoToolUse, EgoTurnRequest } from './llm.js';
-import type { LoopEvent, LoopToolResult, ProposedAction } from './tool-loop-types.js';
+import type {
+  AutoExecutedAction,
+  LoopEvent,
+  LoopToolResult,
+  ProposedAction,
+} from './tool-loop-types.js';
 import type { EgoToolDefinition, EgoToolbox, ToolOutcome } from './toolbox.js';
 
 interface ToolCallOutput {
   outcome: ToolOutcome;
   parts: EgoMessagePart[];
+  started: boolean;
 }
 
-interface ToolRoundOutput {
+export interface ToolRoundOutput {
   actions: ProposedAction[];
+  autoExecuted: AutoExecutedAction[];
   results: LoopToolResult[];
   parts: EgoMessagePart[];
 }
@@ -60,8 +69,13 @@ export async function* runToolRound(params: {
   definitions: EgoToolDefinition[];
   response: EgoStreamDone;
   newActionId: () => string;
+  allowedTools?: ReadonlySet<string>;
+  runWrite?: (
+    tool: string,
+    args: Record<string, unknown>
+  ) => Promise<{ text: string; isError: boolean }>;
 }): AsyncGenerator<LoopEvent, ToolRoundOutput> {
-  const output: ToolRoundOutput = { actions: [], results: [], parts: [] };
+  const output: ToolRoundOutput = { actions: [], autoExecuted: [], results: [], parts: [] };
   const handledIds = new Set<string>();
 
   for (const toolUse of params.response.toolUses) {
@@ -71,8 +85,19 @@ export async function* runToolRound(params: {
     output.parts.push(...call.parts);
     if (call.outcome.kind === 'write') {
       const action = toProposedAction(call.outcome, toolUse.id, params.newActionId());
-      output.actions.push(action);
-      output.results.push({ toolUseId: toolUse.id, actionId: action.actionId });
+      if (params.allowedTools?.has(action.tool) && params.runWrite !== undefined) {
+        const name = definition?.label ?? toolUse.name;
+        const result = yield* runAllowedWrite(params.runWrite, name, action, call.started);
+        output.autoExecuted.push({ ...action, result: result.text, isError: result.isError });
+        output.results.push({
+          toolUseId: toolUse.id,
+          content: result.text,
+          isError: result.isError,
+        });
+      } else {
+        output.actions.push(action);
+        output.results.push({ toolUseId: toolUse.id, actionId: action.actionId });
+      }
     } else {
       output.results.push({
         toolUseId: toolUse.id,
@@ -100,7 +125,8 @@ async function* runToolCall(
   toolUse: EgoToolUse
 ): AsyncGenerator<LoopEvent, ToolCallOutput> {
   const name = definition?.label ?? toolUse.name;
-  if (definition?.write !== true) yield { type: 'tool', name, status: 'started' };
+  const started = definition?.write !== true;
+  if (started) yield { type: 'tool', name, status: 'started' };
   const outcome = await dispatch(toolbox, toolUse);
   const parts = outcome.kind === 'result' ? (outcome.parts ?? []) : [];
   if (outcome.kind === 'result') {
@@ -108,7 +134,7 @@ async function* runToolCall(
     for (const part of parts) yield { type: 'part', part };
     if (outcome.navigate !== undefined) yield { type: 'navigate', uri: outcome.navigate };
   }
-  return { outcome, parts };
+  return { outcome, parts, started };
 }
 
 function toProposedAction(
