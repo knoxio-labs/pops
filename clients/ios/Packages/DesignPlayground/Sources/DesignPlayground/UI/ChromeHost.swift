@@ -39,7 +39,7 @@ internal struct ChromeHost<Content: View, Inspector: View>: View {
     let title: String
     /// What the sheet is presented over, when the surface supplies one.
     let backdrop: (@MainActor () -> AnyView)?
-    var sheetDetents: SheetDetents = .adjustable
+    var sheetDetents: SheetDetents = .large
     @ViewBuilder let content: Content
     /// Placed by the chrome rather than over it. A `.sheet` is a system
     /// presentation and renders above everything in the presenting view's
