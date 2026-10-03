@@ -35,6 +35,7 @@ const EXPECTED_PILLARS = [
   'media',
   'purchases',
   'registry',
+  'tags',
 ] as const;
 
 describe('collect-specs', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {

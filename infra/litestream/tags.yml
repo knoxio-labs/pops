@@ -1,0 +1,15 @@
+## Litestream replication config — shared tags pillar SQLite.
+##
+## The tags pillar owns its vocabulary and mounts `pops-tags-data` at
+## `/data/sqlite`; the matching sidecar in `infra/docker-compose.yml` mounts
+## this file and the same volume read-only. The replica target is supplied by
+## the deployment environment.
+
+dbs:
+  - path: /data/sqlite/tags.db
+    replicas:
+      - url: ${TAGS_LITESTREAM_REPLICA_URL}
+        sync-interval: 1s
+        retention: 24h
+        snapshot-interval: 1h
+        validation-interval: 12h

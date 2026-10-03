@@ -2,7 +2,7 @@
 /**
  * Committed OpenAPI spec drift guard.
  *
- * Twelve pillars declare `generate:openapi` (`tsx scripts/generate-openapi.ts`),
+ * Thirteen pillars declare `generate:openapi` (`tsx scripts/generate-openapi.ts`),
  * which calls the one shared projection every pillar uses —
  * `@pops/contract-openapi`'s `writePillarOpenApi` — to turn the pillar's
  * ts-rest contract into a byte-stable snapshot at the hardcoded path
@@ -34,8 +34,8 @@
  * `openapi-drift` job in `quality.yml` instead runs `pnpm build` once
  * (`tsc -b tsconfig.build.json`, the same whole-graph build `exports`
  * already runs on push to `main`) before invoking this script — measured at
- * ~23s cold in this repo, once, for all twelve pillars, which is cheaper
- * than working out and maintaining twelve separate minimal closures.
+ * ~23s cold in this repo, once, for all thirteen pillars, which is cheaper
+ * than working out and maintaining thirteen separate minimal closures.
  *
  * Discovery reads each `pillars/<id>/package.json` rather than a hardcoded
  * list: a unit counts when its `generate:openapi` script is exactly
@@ -192,6 +192,7 @@ export const EXPECTED_TARGETS = [
   '@pops/media',
   '@pops/purchases',
   '@pops/registry',
+  '@pops/tags',
 ];
 
 /**
