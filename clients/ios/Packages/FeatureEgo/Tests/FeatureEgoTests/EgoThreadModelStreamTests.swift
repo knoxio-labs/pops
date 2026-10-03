@@ -7,8 +7,8 @@ import Testing
 @MainActor
 @Suite("Ego thread model streaming")
 internal struct EgoThreadModelStreamTests {
-    @Test("cancel preserves partial text as a retryable stopped turn")
-    func cancelPreservesPartialTurn() async {
+    @Test("late events from a cancelled stream cannot finish the turn")
+    func ignoresLateEventsAfterCancel() async {
         let stream = EgoThreadModelStreamControl()
         let repository = ControlledEgoRepository(streamControl: stream)
         let model = EgoThreadModelFixtures.model(repository: repository)
@@ -19,10 +19,19 @@ internal struct EgoThreadModelStreamTests {
         await awaitObservedCondition { model.turn?.streamedText == "partial" }
 
         model.cancel()
+        stream.yield(
+            .done(
+                conversationId: "stale-conversation", messageId: "stale-assistant",
+                parts: [.text("stale")]))
+        stream.finish()
+        await awaitObservedCondition(deadline: .milliseconds(100)) {
+            model.messages.count > 1 || model.conversationId != nil
+        }
 
         #expect(model.turn?.streamedText == "partial")
         #expect(model.turn?.phase == .failed(message: "Stopped", retryable: true))
-        stream.finish()
+        #expect(model.messages.count == 1)
+        #expect(model.conversationId == nil)
     }
 
     @Test("a failed event retains partial output and its retryability")

@@ -62,7 +62,7 @@ extension EgoThreadModel {
 
     /// Retries the last user message after a failed turn without duplicating it.
     public func retry() {
-        guard let turn, case .failed = turn.phase,
+        guard let turn, case .failed(_, retryable: true) = turn.phase,
             let message = messages.last(where: { $0.role == .user })?.plainText
         else { return }
 
