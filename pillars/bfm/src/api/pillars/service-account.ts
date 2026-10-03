@@ -57,6 +57,7 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * in the same change or get a 403. A write scope is never inherited from a read
  * one (ADR-046) — `purchases.receipt` is listed because bfm posts receipts, and
  * it grants nothing else in that pillar.
+ * The `cerebrum.ego` grant also covers bfm's mobile Ego relay.
  *
  * The grant itself is a row in the registry DB rather than anything this repo
  * can set. Provisioning it is an operator step — the runbook is in the pillar
@@ -75,6 +76,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'inventory.codes',
   'inventory.media',
   'barcode.lookup',
+  'cerebrum.ego',
 ];
 
 /** Local-dev source: the key inline in the environment. */

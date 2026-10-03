@@ -121,6 +121,10 @@ export const MOBILE_CAPABILITIES = [
    * `purchases.write` is not implied by `purchases.read`.
    */
   'contacts.entities.write',
+  /** Stream Ego chat and read its conversations. */
+  'ego.chat',
+  /** Decide proposed-write batches and allow tools for the conversation. */
+  'ego.actions',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -217,6 +221,8 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    */
   'contacts.entities.read': [],
   'contacts.entities.write': [],
+  'ego.chat': ['cerebrum.ego'],
+  'ego.actions': ['cerebrum.ego'],
 };
 
 /**
