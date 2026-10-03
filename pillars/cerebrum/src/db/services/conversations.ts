@@ -192,7 +192,7 @@ export function insertMessage(db: CerebrumDb, row: InsertMessageRow): Message {
     content: row.content,
     citations: row.citations != null ? JSON.stringify(row.citations) : null,
     toolCalls: row.toolCalls != null ? JSON.stringify(row.toolCalls) : null,
-    parts: null,
+    parts: row.parts != null ? JSON.stringify(row.parts) : null,
     tokensIn: row.tokensIn,
     tokensOut: row.tokensOut,
     createdAt: row.createdAt,
@@ -205,6 +205,20 @@ export function insertMessage(db: CerebrumDb, row: InsertMessageRow): Message {
       .run();
   });
   return rowToMessage(values);
+}
+
+/**
+ * Replace the stored `parts` of a message. Returns whether a row changed;
+ * false means no message has that id.
+ */
+export function updateMessageParts(db: CerebrumDb, id: string, parts: unknown): boolean {
+  return (
+    db
+      .update(messages)
+      .set({ parts: JSON.stringify(parts) })
+      .where(eq(messages.id, id))
+      .run().changes > 0
+  );
 }
 
 /**

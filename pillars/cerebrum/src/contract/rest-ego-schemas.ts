@@ -9,6 +9,8 @@
  */
 import { z } from 'zod';
 
+import { egoMessagePartsSchema } from './rest-ego-parts.js';
+
 export const egoAppContextSchema = z.object({
   app: z.string(),
   route: z.string().optional(),
@@ -39,6 +41,7 @@ export const conversationMessageWire = z.object({
   content: z.string(),
   citations: z.unknown().nullable(),
   toolCalls: z.unknown().nullable(),
+  parts: egoMessagePartsSchema.nullable(),
   tokensIn: z.number().nullable(),
   tokensOut: z.number().nullable(),
   createdAt: z.string(),

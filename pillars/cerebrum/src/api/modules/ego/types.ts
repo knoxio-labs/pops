@@ -6,7 +6,7 @@
  * engine-level shapes (chat params, results, streaming events, scope
  * negotiation) the engine traffics in.
  */
-import type { Message } from '../../../db/index.js';
+import type { Message } from './persistence.js';
 
 export type { Message };
 
