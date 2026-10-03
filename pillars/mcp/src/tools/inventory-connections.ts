@@ -24,6 +24,7 @@ function connections(): PillarHandle<ConnectionsShape>['connections'] {
 
 const connectionsList: ToolDef = {
   name: 'inventory.connections.list',
+  readOnly: true,
   description:
     'List all connections for an inventory item (items linked to it in either direction).',
   inputSchema: {
@@ -49,6 +50,7 @@ const connectionsList: ToolDef = {
 
 const connectionsGraph: ToolDef = {
   name: 'inventory.connections.graph',
+  readOnly: true,
   description:
     'Get the connection graph for an item as nodes + edges. Useful for understanding what an item is connected to and how.',
   inputSchema: {
@@ -71,6 +73,7 @@ const connectionsGraph: ToolDef = {
 
 const connectionsConnect: ToolDef = {
   name: 'inventory.connections.connect',
+  readOnly: false,
   description:
     'Record a physical connection between two inventory items (e.g. a cable between devices). IDs may be passed in any order.',
   inputSchema: {
@@ -92,6 +95,7 @@ const connectionsConnect: ToolDef = {
 
 const connectionsDisconnect: ToolDef = {
   name: 'inventory.connections.disconnect',
+  readOnly: false,
   description:
     'Remove a physical connection between two inventory items. IDs may be passed in any order.',
   inputSchema: {

@@ -12,6 +12,7 @@ import type { ToolDef } from './tool-def.js';
 
 const itemsMove: ToolDef = {
   name: 'inventory.items.move',
+  readOnly: false,
   description: "Move an item to a location. Records the move in the item's history.",
   inputSchema: {
     type: 'object',
@@ -42,6 +43,7 @@ const itemsMove: ToolDef = {
 
 const itemsStore: ToolDef = {
   name: 'inventory.items.store',
+  readOnly: false,
   description: 'Store an item inside a container item (the container must already be a container).',
   inputSchema: {
     type: 'object',
@@ -72,6 +74,7 @@ const itemsStore: ToolDef = {
 
 const itemsPickUp: ToolDef = {
   name: 'inventory.items.pickUp',
+  readOnly: false,
   description: 'Pick an item up into hand, remembering where it came from.',
   inputSchema: {
     type: 'object',

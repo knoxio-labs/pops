@@ -30,6 +30,7 @@ import type { ToolDef } from './tool-def.js';
 
 const catalogueReadDraft: ToolDef = {
   name: 'inventory.catalogue.readDraft',
+  readOnly: true,
   description:
     'Read the current editable catalogue draft so an interrupted edit can resume. Its revision.draftVersion is the expectedDraftVersion for the next patch, preview, publish or abandon.',
   inputSchema: { type: 'object', properties: {} },
@@ -40,6 +41,7 @@ const catalogueReadDraft: ToolDef = {
 
 const catalogueCreateDraft: ToolDef = {
   name: 'inventory.catalogue.createDraft',
+  readOnly: false,
   description:
     'Read inventory.catalogue.get first, then create the one editable catalogue draft from that published revision. The draft starts at revision.draftVersion 1. Writes return compact revision metadata and changed IDs; pass include: "catalogue" for the full descriptor.',
   inputSchema: {
@@ -66,6 +68,7 @@ const catalogueCreateDraft: ToolDef = {
 
 const cataloguePatchDraft: ToolDef = {
   name: 'inventory.catalogue.patchDraft',
+  readOnly: false,
   description:
     'Read inventory.catalogue.readDraft first, then apply validated operations at its exact draft and base revisions, atomically, and preview publication compatibility. Refused with inventory.catalogue.draft_conflict when expectedDraftVersion is stale; the compact response carries the next revision.draftVersion and changed definition IDs. A subtype\'s items take its ancestors\' fields and capabilities. Create the parent, read its id from `changed`, then create the child in a second patch: ids are server-minted. Pass include: "catalogue" for the full response. Changing the parent of a published type is refused.',
   inputSchema: cataloguePatchDraftInputSchema,
@@ -89,6 +92,7 @@ const cataloguePatchDraft: ToolDef = {
 
 const cataloguePublishDraft: ToolDef = {
   name: 'inventory.catalogue.publishDraft',
+  readOnly: false,
   description:
     'Read inventory.catalogue.readDraft and previewDraft first, then publish that exact draft atomically, optionally with a named value migration. The response is a compact revision summary; pass include: "catalogue" for the full descriptor.',
   inputSchema: {
@@ -146,6 +150,7 @@ const cataloguePublishDraft: ToolDef = {
 
 const catalogueAbandonDraft: ToolDef = {
   name: 'inventory.catalogue.abandonDraft',
+  readOnly: false,
   description:
     'Read inventory.catalogue.readDraft first, then abandon that exact draft while retaining the attempt in audit history. The response is a compact revision summary; pass include: "catalogue" for the full descriptor.',
   inputSchema: {

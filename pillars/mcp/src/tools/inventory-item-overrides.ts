@@ -79,6 +79,7 @@ async function sendOverride(
 
 const itemsSetOverride: ToolDef = {
   name: 'inventory.items.setOverride',
+  readOnly: false,
   description:
     "Supersede a computed field with one explicit value until the override is cleared, whatever later happens to the fields its expression reads. Only a computed field with allowOverride accepts it. The value uses the field kind's stored-value shape from inventory.catalogue.get.",
   inputSchema: {
@@ -102,6 +103,7 @@ const itemsSetOverride: ToolDef = {
 
 const itemsClearOverride: ToolDef = {
   name: 'inventory.items.clearOverride',
+  readOnly: false,
   description:
     "Remove a computed field's override so the server evaluates its expression again on the next read. Clearing a field with no override changes nothing.",
   inputSchema: {

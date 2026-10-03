@@ -15,6 +15,7 @@ import type { ToolDef } from './tool-def.js';
 
 const catalogueGet: ToolDef = {
   name: 'inventory.catalogue.get',
+  readOnly: true,
   description: 'Read the current published inventory type catalogue or an exact revision.',
   inputSchema: {
     type: 'object',
@@ -41,6 +42,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 const catalogueGetType: ToolDef = {
   name: 'inventory.catalogue.getType',
+  readOnly: true,
   description:
     'Read one inventory type definition, by its stable id, exactly as the current published catalogue revision or an exact earlier one defined it. Older revisions keep the label, fields and archive state they had then. Answers inventory.catalogue.type_unknown when that revision does not define the type, and inventory.catalogue.revision_unknown when no such published revision exists.',
   inputSchema: {
@@ -75,6 +77,7 @@ const catalogueGetType: ToolDef = {
 
 const catalogueAudit: ToolDef = {
   name: 'inventory.catalogue.audit',
+  readOnly: true,
   description: 'Read inventory catalogue publication and abandonment history, newest first.',
   inputSchema: {
     type: 'object',

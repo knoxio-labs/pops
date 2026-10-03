@@ -5,6 +5,7 @@ import type { ToolDef } from './index.js';
 
 const fixturesList: ToolDef = {
   name: 'inventory.fixtures.list',
+  readOnly: true,
   description: 'List fixtures. Supports filtering by location ID or type, with pagination.',
   inputSchema: {
     type: 'object',
@@ -32,6 +33,7 @@ const fixturesList: ToolDef = {
 
 const fixturesGet: ToolDef = {
   name: 'inventory.fixtures.get',
+  readOnly: true,
   description: 'Get a single fixture by ID.',
   inputSchema: {
     type: 'object',
@@ -47,6 +49,7 @@ const fixturesGet: ToolDef = {
 
 const fixturesListForItem: ToolDef = {
   name: 'inventory.fixtures.listForItem',
+  readOnly: true,
   description: 'List all fixtures that an inventory item is connected to.',
   inputSchema: {
     type: 'object',
