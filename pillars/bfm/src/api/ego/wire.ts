@@ -71,10 +71,9 @@ export function toMobileConversationPage(page: UpstreamEgoPage): MobileEgoPage {
 export function toMobileMessage(message: UpstreamEgoMessage): MobileEgoMessage | undefined {
   if (message.role !== 'user' && message.role !== 'assistant') return undefined;
 
+  const knownParts = message.parts === undefined ? [] : filterKnownParts(message.parts);
   const parts =
-    message.parts !== undefined && message.parts.length > 0
-      ? filterKnownParts(message.parts)
-      : [{ type: 'text' as const, text: message.content }];
+    knownParts.length > 0 ? knownParts : [{ type: 'text' as const, text: message.content }];
 
   return {
     id: message.id,
