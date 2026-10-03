@@ -132,6 +132,24 @@ describe('shared transaction tag mutations', () => {
     expect(usageCount('contains:keep-this')).toBe(5);
   });
 
+  it('returns facet-conflict without changing tags or usage counts', () => {
+    // Model a stale shared mapping on the single-valued venue facet.
+    const incomingTag = 'venue:shared-conflict-incoming';
+    const existingTag = 'venue:shared-conflict-existing';
+    insertSharedTag('shared-venue-conflict-test', incomingTag, 4);
+    insertSharedTag('local-venue-conflict-test', existingTag, 2);
+    insertTransaction('facet-conflict-target', '2026-04-10', [existingTag]);
+
+    expect(attachSharedTag(db, 'facet-conflict-target', 'shared-venue-conflict-test')).toEqual({
+      kind: 'facet-conflict',
+      tagId: 'shared-venue-conflict-test',
+      facet: 'venue',
+    });
+    expect(storedTags('facet-conflict-target')).toEqual([existingTag]);
+    expect(usageCount(incomingTag)).toBe(4);
+    expect(usageCount(existingTag)).toBe(2);
+  });
+
   it('returns typed outcomes for a missing transaction and unknown shared tag', () => {
     insertTransaction('known-target', '2026-04-11', []);
     expect(attachSharedTag(db, 'missing-target', 'unknown-shared-tag')).toEqual({
