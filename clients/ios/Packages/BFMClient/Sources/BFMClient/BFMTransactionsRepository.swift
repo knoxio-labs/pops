@@ -156,8 +156,10 @@ extension BFMTransactionsRepository {
         // the time this runs — and the screen says the same thing about each.
         case .unauthorized, .forbidden:
             throw RepositoryError.unauthorized
-        case .tooManyRequests:
-            throw RepositoryError.transport("\(ListTransactions.id): rate limited")
+        case .tooManyRequests(let limited):
+            throw RepositoryError.rateLimited(
+                retryAfterSeconds: try limited.body.json.retryAfterSeconds
+            )
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code, operation: ListTransactions.id)
@@ -176,7 +178,11 @@ extension BFMTransactionsRepository {
     /// body — so it stays a transport failure rather than triggering a
     /// restart this app cannot justify.
     private static func failure(_ error: ClientError, operation: String) -> RepositoryError {
-        BFMRepositoryFailure.failure(error, operation: operation)
+        let runtime = PopsError.runtimeFailureDetails(from: error)
+        if runtime?.statusCode == 429 || error.response?.status.code == 429 {
+            return .rateLimited(retryAfterSeconds: runtime?.retryAfterSeconds)
+        }
+        return BFMRepositoryFailure.failure(error, operation: operation)
     }
 }
 
@@ -246,8 +252,10 @@ extension BFMTransactionsRepository {
             throw RepositoryError.transport("\(GetTransaction.id): invalid request")
         case .unauthorized, .forbidden:
             throw RepositoryError.unauthorized
-        case .tooManyRequests:
-            throw RepositoryError.transport("\(GetTransaction.id): rate limited")
+        case .tooManyRequests(let limited):
+            throw RepositoryError.rateLimited(
+                retryAfterSeconds: try limited.body.json.retryAfterSeconds
+            )
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code, operation: GetTransaction.id)

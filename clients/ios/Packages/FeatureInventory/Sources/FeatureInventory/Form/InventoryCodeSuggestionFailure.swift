@@ -17,6 +17,7 @@ internal enum InventoryCodeSuggestionFailure: String, Equatable {
     internal init(_ error: any Error) {
         switch error {
         case RepositoryError.unavailable: self = .unavailable
+        case RepositoryError.rateLimited: self = .transport
         case RepositoryError.unauthorized: self = .unauthorized
         case RepositoryError.contractMismatch: self = .contractMismatch
         case RepositoryError.conflict: self = .conflict

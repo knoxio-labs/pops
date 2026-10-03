@@ -32,7 +32,8 @@ extension InventoryItemFormModel {
         } catch {
             codeSuggestionFailure = InventoryCodeSuggestionFailure(error)
             switch error {
-            case RepositoryError.unavailable, RepositoryError.transport:
+            case RepositoryError.unavailable, RepositoryError.rateLimited,
+                RepositoryError.transport:
                 draft.code.assist = .offline
             default:
                 draft.code.assist = .unavailable

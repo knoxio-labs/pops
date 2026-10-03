@@ -16,6 +16,8 @@ internal struct TransactionsCopyTests {
     private static let everyFailure: [RepositoryError] = [
         .unavailable,
         .unauthorized,
+        .rateLimited(retryAfterSeconds: 30),
+        .rateLimited(retryAfterSeconds: nil),
         .contractMismatch,
         .conflict("already_saved"),
         .transport("URLError -1009"),
@@ -42,6 +44,22 @@ internal struct TransactionsCopyTests {
 
         #expect(outage != TransactionsCopy.empty)
         #expect(!outage.lowercased().contains("no transactions"))
+    }
+
+    @Test("rate-limit copy asks the reader to wait for the server's window")
+    func rateLimitAsksForWait() {
+        #expect(
+            TransactionsCopy.message(for: .rateLimited(retryAfterSeconds: 30))
+                == "Too many requests. Wait 30 seconds before trying again.")
+        #expect(
+            TransactionsCopy.message(for: .rateLimited(retryAfterSeconds: nil))
+                == "Too many requests. Wait a minute before trying again.")
+        #expect(
+            TransactionsCopy.retryTitle(for: .rateLimited(retryAfterSeconds: 30))
+                == "Wait 30 seconds, then retry")
+        #expect(
+            TransactionsCopy.retryTitle(for: .rateLimited(retryAfterSeconds: nil))
+                == "Wait a minute, then retry")
     }
 
     @Test("a structured gateway outage keeps the transaction outage explanation")
