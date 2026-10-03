@@ -67,6 +67,7 @@ describe('allTools', () => {
       'finance.wishlist.list',
       'finance.wishlist.get',
       'finance.accounts.list',
+      'finance.accounts.get',
       'finance.accounts.checkpoints',
       'finance.imports.getImportProgress',
       'finance.search',

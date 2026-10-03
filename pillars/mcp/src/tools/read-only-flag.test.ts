@@ -59,6 +59,7 @@ describe('ToolDef.readOnly', () => {
 
   it.each([
     'finance.transactions.list',
+    'finance.accounts.get',
     'media.library.list',
     'cerebrum.search',
     'purchases.search',
