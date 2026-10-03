@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import express from 'express';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,17 +11,46 @@ import type { AddressInfo } from 'node:net';
 import type { ErrorBody } from '@pops/types';
 
 const originalToken = process.env['MCP_INBOUND_TOKEN'];
+const originalTokenFile = process.env['MCP_INBOUND_TOKEN_FILE'];
+const temporaryDirectories = new Set<string>();
 
-function restoreToken(): void {
+function restoreAuthConfiguration(): void {
   if (originalToken === undefined) delete process.env['MCP_INBOUND_TOKEN'];
   else process.env['MCP_INBOUND_TOKEN'] = originalToken;
+
+  if (originalTokenFile === undefined) delete process.env['MCP_INBOUND_TOKEN_FILE'];
+  else process.env['MCP_INBOUND_TOKEN_FILE'] = originalTokenFile;
+
+  for (const directory of temporaryDirectories) {
+    rmSync(directory, { recursive: true, force: true });
+  }
+  temporaryDirectories.clear();
+}
+
+function secretFile(contents: string): string {
+  const directory = mkdtempSync(join(tmpdir(), 'pops-mcp-inbound-auth-'));
+  temporaryDirectories.add(directory);
+  const path = join(directory, 'inbound-token');
+  writeFileSync(path, contents);
+  return path;
+}
+
+function missingSecretFilePath(): string {
+  const directory = mkdtempSync(join(tmpdir(), 'pops-mcp-inbound-auth-missing-'));
+  temporaryDirectories.add(directory);
+  return join(directory, 'missing-token');
 }
 
 const { resolveInboundToken, evaluateInboundAuth, inboundAuth, __resetInboundAuthWarningForTests } =
   await import('./auth.js');
 
 describe('resolveInboundToken', () => {
-  afterEach(restoreToken);
+  beforeEach(() => {
+    delete process.env['MCP_INBOUND_TOKEN'];
+    delete process.env['MCP_INBOUND_TOKEN_FILE'];
+  });
+
+  afterEach(restoreAuthConfiguration);
 
   it('returns undefined when MCP_INBOUND_TOKEN is unset', () => {
     delete process.env['MCP_INBOUND_TOKEN'];
@@ -35,6 +68,37 @@ describe('resolveInboundToken', () => {
     process.env['MCP_INBOUND_TOKEN'] = '  sekret-token  ';
     expect(resolveInboundToken()).toBe('sekret-token');
   });
+
+  it('reads the token from the configured file', () => {
+    const path = secretFile('file-token');
+    expect(resolveInboundToken({ MCP_INBOUND_TOKEN_FILE: path })).toBe('file-token');
+  });
+
+  it('prefers the file over MCP_INBOUND_TOKEN', () => {
+    const path = secretFile('from-file');
+    expect(
+      resolveInboundToken({ MCP_INBOUND_TOKEN_FILE: path, MCP_INBOUND_TOKEN: 'from-env' })
+    ).toBe('from-file');
+  });
+
+  it('trims the trailing newline from a file token', () => {
+    const path = secretFile('file-token\r\n');
+    expect(resolveInboundToken({ MCP_INBOUND_TOKEN_FILE: path })).toBe('file-token');
+  });
+
+  it('throws for a missing configured file instead of falling back to the env token', () => {
+    const path = missingSecretFilePath();
+    expect(() =>
+      resolveInboundToken({ MCP_INBOUND_TOKEN_FILE: path, MCP_INBOUND_TOKEN: 'from-env' })
+    ).toThrow(/MCP_INBOUND_TOKEN_FILE/);
+  });
+
+  it('throws for an empty configured file instead of falling back to the env token', () => {
+    const path = secretFile(' \n');
+    expect(() =>
+      resolveInboundToken({ MCP_INBOUND_TOKEN_FILE: path, MCP_INBOUND_TOKEN: 'from-env' })
+    ).toThrow(/MCP_INBOUND_TOKEN_FILE/);
+  });
 });
 
 describe('evaluateInboundAuth — open mode (no token configured)', () => {
@@ -42,13 +106,14 @@ describe('evaluateInboundAuth — open mode (no token configured)', () => {
 
   beforeEach(() => {
     delete process.env['MCP_INBOUND_TOKEN'];
+    delete process.env['MCP_INBOUND_TOKEN_FILE'];
     __resetInboundAuthWarningForTests();
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
     warnSpy.mockRestore();
-    restoreToken();
+    restoreAuthConfiguration();
   });
 
   it('authorizes any caller and reports open mode', () => {
@@ -69,11 +134,12 @@ describe('evaluateInboundAuth — enforced mode (token configured)', () => {
   const token = 'correct-horse-battery-staple';
 
   beforeEach(() => {
+    delete process.env['MCP_INBOUND_TOKEN_FILE'];
     process.env['MCP_INBOUND_TOKEN'] = token;
     __resetInboundAuthWarningForTests();
   });
 
-  afterEach(restoreToken);
+  afterEach(restoreAuthConfiguration);
 
   it('rejects a request with no Authorization header', () => {
     expect(evaluateInboundAuth(undefined)).toEqual({
@@ -137,6 +203,7 @@ describe('inboundAuth middleware over HTTP', () => {
 
   beforeEach(async () => {
     __resetInboundAuthWarningForTests();
+    delete process.env['MCP_INBOUND_TOKEN_FILE'];
     await new Promise<void>((resolve) => {
       server = app.listen(0, '127.0.0.1', () => resolve());
     });
@@ -147,7 +214,7 @@ describe('inboundAuth middleware over HTTP', () => {
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
     });
-    restoreToken();
+    restoreAuthConfiguration();
   });
 
   it('returns 401 with WWW-Authenticate and does not reach the handler when the token is missing', async () => {
@@ -182,6 +249,24 @@ describe('inboundAuth middleware over HTTP', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { reached: boolean };
     expect(body.reached).toBe(true);
+  });
+
+  it('enforces a token read from the configured file', async () => {
+    const fileToken = 'file-backed-token';
+    process.env['MCP_INBOUND_TOKEN_FILE'] = secretFile(fileToken + '\n');
+    process.env['MCP_INBOUND_TOKEN'] = 'ignored-env-token';
+
+    const accepted = await fetch(baseUrl + '/mcp', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + fileToken },
+    });
+    const rejected = await fetch(baseUrl + '/mcp', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ignored-env-token' },
+    });
+
+    expect(accepted.status).toBe(200);
+    expect(rejected.status).toBe(401);
   });
 
   it('passes to the handler unauthenticated when no token is configured', async () => {
