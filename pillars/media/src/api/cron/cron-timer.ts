@@ -33,6 +33,41 @@ export function resolveArmDelayMs(cronExpression: string, fallbackMs: number): n
   }
 }
 
+/**
+ * A timer can fire a few milliseconds ahead of the occurrence it was armed
+ * for, which stamps that run just before the boundary. Without this margin
+ * such a run would read as having missed the occurrence it actually served.
+ */
+const EARLY_FIRE_TOLERANCE_MS = 60_000;
+
+/**
+ * Whether an occurrence of `cronExpression` has passed with no run since
+ * `lastRunMs` to serve it, so a process that was down at the scheduled time
+ * can catch up on boot instead of waiting a full period. `null` (never run) is
+ * always overdue. A blank or unparseable expression is judged against
+ * `fallbackMs`, matching {@link resolveArmDelayMs}.
+ */
+export function isRunOverdue(
+  cronExpression: string,
+  fallbackMs: number,
+  lastRunMs: number | null
+): boolean {
+  if (lastRunMs === null) return true;
+  const previousAt = previousOccurrenceMs(cronExpression);
+  return previousAt === null
+    ? Date.now() - lastRunMs >= fallbackMs
+    : lastRunMs < previousAt - EARLY_FIRE_TOLERANCE_MS;
+}
+
+function previousOccurrenceMs(cronExpression: string): number | null {
+  if (cronExpression.trim() === '') return null;
+  try {
+    return CronExpressionParser.parse(cronExpression).prev().getTime();
+  } catch {
+    return null;
+  }
+}
+
 /** A pending {@link scheduleAt} run, cancellable through every hop. */
 export interface ScheduledRun {
   cancel(): void;

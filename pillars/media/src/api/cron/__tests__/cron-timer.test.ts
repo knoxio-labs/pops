@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { MAX_TIMEOUT_MS, resolveArmDelayMs, scheduleAt } from '../cron-timer.js';
+import { isRunOverdue, MAX_TIMEOUT_MS, resolveArmDelayMs, scheduleAt } from '../cron-timer.js';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -84,5 +84,44 @@ describe('scheduleAt', () => {
     scheduleAt(Date.now() - 10_000, onDue);
     await vi.advanceTimersByTimeAsync(0);
     expect(onDue).toHaveBeenCalledOnce();
+  });
+});
+
+describe('isRunOverdue', () => {
+  /** Local-time constructor: the cron is evaluated in the process timezone. */
+  const local = (hour: number, minute = 0, day = 28): Date => new Date(2026, 7, day, hour, minute);
+
+  it('is overdue when nothing has ever run', () => {
+    expect(isRunOverdue('0 3 * * *', 60_000, null)).toBe(true);
+  });
+
+  it('is not overdue when the last run served the most recent occurrence', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(local(10));
+    expect(isRunOverdue('0 3 * * *', 60_000, local(3, 0).getTime() + 1_000)).toBe(false);
+    expect(isRunOverdue('0 3 * * *', 60_000, local(9, 30).getTime())).toBe(false);
+  });
+
+  it('is overdue when an occurrence passed after the last run', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(local(10));
+    expect(isRunOverdue('0 3 * * *', 60_000, local(22, 0, 27).getTime())).toBe(true);
+    expect(isRunOverdue('0 3 * * *', 60_000, local(2, 30).getTime())).toBe(true);
+  });
+
+  it('counts a run stamped just ahead of its occurrence as having served it', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(local(10));
+    expect(isRunOverdue('0 3 * * *', 60_000, local(3, 0).getTime() - 40)).toBe(false);
+  });
+
+  it('judges a blank or unparseable expression against the fallback interval', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T10:00:00Z'));
+    const now = Date.now();
+    for (const expression of ['', '   ', 'every third blue moon']) {
+      expect(isRunOverdue(expression, 60_000, now - 59_999)).toBe(false);
+      expect(isRunOverdue(expression, 60_000, now - 60_000)).toBe(true);
+    }
   });
 });
