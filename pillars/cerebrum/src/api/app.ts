@@ -100,6 +100,7 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
       engramRoot: deps.engramRoot,
       templates: deps.templateRegistry,
       llm: deps.egoLlm ?? new AnthropicEgoLlm(),
+      tools: deps.egoTools,
       peers: deps.peerClients,
       embeddingClient: deps.embeddingClient,
     })

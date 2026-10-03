@@ -12,6 +12,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedCerebrumDb } from '../db/index.js';
 import type { EgoLlm } from './modules/ego/llm.js';
+import type { EgoTools } from './modules/ego/toolbox.js';
 import type { GenerationLlm } from './modules/emit/llm.js';
 import type { IngestLlm } from './modules/ingest/llm.js';
 import type { CurationQueueAccessor } from './modules/ingest/pipeline.js';
@@ -55,6 +56,8 @@ export interface CerebrumApiDeps {
    * `CEREBRUM_EGO_MODEL`). Tests inject an offline fake.
    */
   egoLlm?: EgoLlm;
+  /** Optional Ego toolbox and gateway caller; absent means Ego runs without tools. */
+  egoTools?: EgoTools;
   /**
    * Contradiction detector for the auditor worker. Optional — omitted means the
    * auditor runs no contradiction pass. Tests inject an offline fake.

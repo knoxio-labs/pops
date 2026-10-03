@@ -13,65 +13,34 @@
 import { initServer } from '@ts-rest/express';
 
 import { cerebrumEgoContract } from '../../contract/rest-ego.js';
-import { type CerebrumDb } from '../../db/index.js';
+import { EgoActionStore } from '../modules/ego/actions-store.js';
 import {
   persistAssistantError,
   persistAssistantTurn,
   persistUserTurn,
   resolveConversation,
 } from '../modules/ego/chat-helpers.js';
-import { ConversationEngine } from '../modules/ego/engine.js';
 import { ConversationPersistence } from '../modules/ego/persistence.js';
-import { EngramService } from '../modules/engrams/service.js';
 import { NotFoundError } from '../shared/errors.js';
+import { buildEgoEngine } from './ego-engine.js';
 import { runHttp } from './error-mapping.js';
 
-import type BetterSqlite3 from 'better-sqlite3';
-
-import type { EgoLlm } from '../modules/ego/llm.js';
 import type { AppContext } from '../modules/ego/types.js';
-import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
-import type { PeerClients } from '../modules/retrieval/peer-clients.js';
-import type { TemplateRegistry } from '../modules/templates/registry.js';
+import type { EgoHandlerDeps } from './ego-engine.js';
+
+export type { EgoHandlerDeps } from './ego-engine.js';
 
 const server: ReturnType<typeof initServer> = initServer();
-
-export interface EgoHandlerDeps {
-  db: CerebrumDb;
-  raw: BetterSqlite3.Database;
-  vecAvailable: boolean;
-  engramRoot: string;
-  templates: TemplateRegistry;
-  llm: EgoLlm;
-  peers: PeerClients;
-  embeddingClient?: EmbeddingClient;
-}
 
 export function makeEgoHandlers(
   deps: EgoHandlerDeps
 ): ReturnType<typeof server.router<typeof cerebrumEgoContract>> {
   const persistence = (): ConversationPersistence => new ConversationPersistence({ db: deps.db });
 
-  const engine = (): ConversationEngine =>
-    new ConversationEngine({
-      llm: deps.llm,
-      search: {
-        db: deps.db,
-        raw: deps.raw,
-        vecAvailable: deps.vecAvailable,
-        peers: deps.peers,
-        embeddingClient: deps.embeddingClient,
-      },
-      engramService: new EngramService({
-        root: deps.engramRoot,
-        db: deps.db,
-        templates: deps.templates,
-      }),
-    });
-
   return server.router(cerebrumEgoContract, {
     chat: async ({ body }) => {
       const store = persistence();
+      const actions = new EgoActionStore({ db: deps.db });
       const scopes = body.scopes ?? [];
       const appContext: AppContext | undefined = body.appContext ?? undefined;
 
@@ -95,7 +64,7 @@ export function makeEgoHandlers(
 
       let result;
       try {
-        result = await engine().chat({
+        result = await buildEgoEngine(deps).chat({
           conversationId: conversation.id,
           message: body.message,
           history,
@@ -103,6 +72,7 @@ export function makeEgoHandlers(
           appContext: appContext ?? (conversation.appContext as AppContext | undefined),
           channel: body.channel ?? 'shell',
           knownScopes: body.knownScopes,
+          allowedTools: store.getAllowedTools(conversation.id),
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -112,6 +82,7 @@ export function makeEgoHandlers(
 
       const assistantMsg = persistAssistantTurn({
         persistence: store,
+        actions,
         conversationId: conversation.id,
         result,
       });

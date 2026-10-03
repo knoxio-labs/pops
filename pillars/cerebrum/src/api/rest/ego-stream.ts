@@ -18,19 +18,19 @@ import { Router, type Router as ExpressRouter, type Request, type Response } fro
 import { PopsError } from '@pops/pillar-express';
 
 import { egoChatBodySchema } from '../../contract/rest-ego-schemas.js';
+import { EgoActionStore } from '../modules/ego/actions-store.js';
 import {
   persistAssistantError,
   persistStreamResults,
   persistUserTurn,
   resolveConversation,
 } from '../modules/ego/chat-helpers.js';
-import { ConversationEngine } from '../modules/ego/engine.js';
 import { ConversationPersistence } from '../modules/ego/persistence.js';
-import { EngramService } from '../modules/engrams/service.js';
+import { buildEgoEngine } from './ego-engine.js';
 
 import type { Conversation, Message } from '../modules/ego/persistence.js';
 import type { AppContext, ChatStreamPreparation } from '../modules/ego/types.js';
-import type { EgoHandlerDeps } from './ego-handlers.js';
+import type { EgoHandlerDeps } from './ego-engine.js';
 
 function setSseHeaders(res: Response): void {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -48,12 +48,13 @@ interface PipeStreamParams {
   req: Request;
   res: Response;
   persistence: ConversationPersistence;
+  actions: EgoActionStore;
   preparation: ChatStreamPreparation;
   conversation: Conversation;
 }
 
 async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
-  const { req, res, persistence, preparation, conversation } = params;
+  const { req, res, persistence, actions, preparation, conversation } = params;
   let clientDisconnected = false;
   req.on('close', () => {
     clientDisconnected = true;
@@ -67,11 +68,15 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
     } else if (event.type === 'done') {
       const assistantMsg = persistStreamResults({
         persistence,
+        actions,
         conversationId: conversation.id,
         content: event.content,
         citations: event.citations,
         tokensIn: event.tokensIn,
         tokensOut: event.tokensOut,
+        parts: event.parts,
+        batch: event.batch,
+        autoExecuted: event.autoExecuted,
         retrievedEngrams: preparation.retrievedEngrams,
         scopeNegotiation: preparation.scopeNegotiation,
       });
@@ -80,6 +85,7 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
         type: 'done',
         conversationId: conversation.id,
         messageId: assistantMsg.id,
+        parts: assistantMsg.parts,
         citations: event.citations,
         tokensIn: event.tokensIn,
         tokensOut: event.tokensOut,
@@ -88,24 +94,6 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
       });
     }
   }
-}
-
-function buildEngine(deps: EgoHandlerDeps): ConversationEngine {
-  return new ConversationEngine({
-    llm: deps.llm,
-    search: {
-      db: deps.db,
-      raw: deps.raw,
-      vecAvailable: deps.vecAvailable,
-      peers: deps.peers,
-      embeddingClient: deps.embeddingClient,
-    },
-    engramService: new EngramService({
-      root: deps.engramRoot,
-      db: deps.db,
-      templates: deps.templates,
-    }),
-  });
 }
 
 interface ResolvedTurn {
@@ -199,6 +187,7 @@ async function handleStreamRequest(
   setSseHeaders(res);
 
   const persistence = new ConversationPersistence({ db: deps.db });
+  const actions = new EgoActionStore({ db: deps.db });
   const resolved = resolveAndPersistUserTurn({
     deps,
     persistence,
@@ -211,7 +200,7 @@ async function handleStreamRequest(
   const appContext: AppContext | undefined = input.appContext ?? undefined;
 
   try {
-    const preparation = await buildEngine(deps).prepareStream({
+    const preparation = await buildEgoEngine(deps).prepareStream({
       conversationId: conversation.id,
       message: input.message,
       history,
@@ -219,8 +208,9 @@ async function handleStreamRequest(
       appContext: appContext ?? (conversation.appContext as AppContext | undefined),
       channel: input.channel ?? 'shell',
       knownScopes: input.knownScopes,
+      allowedTools: persistence.getAllowedTools(conversation.id),
     });
-    await pipeStreamEvents({ req, res, persistence, preparation, conversation });
+    await pipeStreamEvents({ req, res, persistence, actions, preparation, conversation });
   } catch (err) {
     const failure = streamError(err, req.requestId);
     persistAssistantError(persistence, conversation.id, String(failure['message']));
