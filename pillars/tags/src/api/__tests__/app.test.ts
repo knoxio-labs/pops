@@ -66,12 +66,15 @@ describe('tags HTTP app', () => {
     await request(app).get('/tags').set('x-api-key', 'test-key').expect(200, { tags: [] });
   });
 
-  it('returns every row, including archived tags', async () => {
+  it('returns archived rows when requested', async () => {
     const app = appFor(authenticated);
     const timestamp = '2026-10-03T00:00:00.000Z';
     opened?.db.insert(tags).values({ facet: 'trip', name: 'Japan', archivedAt: timestamp }).run();
 
-    const response = await request(app).get('/tags').set('x-api-key', 'test-key').expect(200);
+    const response = await request(app)
+      .get('/tags?includeArchived=true')
+      .set('x-api-key', 'test-key')
+      .expect(200);
 
     expect(response.body.tags).toHaveLength(1);
     expect(response.body.tags[0]).toMatchObject({
