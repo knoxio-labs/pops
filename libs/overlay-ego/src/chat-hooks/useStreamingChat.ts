@@ -4,49 +4,19 @@
  * Fetches from the /cerebrum-api/ego/chat/stream SSE endpoint and processes
  * the event stream, updating state as tokens arrive.
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useReducer, useRef, useState } from 'react';
 
+import { parseStreamFrame } from './stream-frames';
+import { INITIAL_STREAM_STATE, reduceStreamFrame, STREAM_START_STATE } from './stream-reducer';
 import { useEgoAppContext } from './useEgoAppContext';
 
+import type { MessagePart } from './message-parts';
+import type { StreamFrame } from './stream-frames';
+import type { StreamState, ToolActivity } from './stream-reducer';
 import type { RetrievedEngram } from './types';
 
 /** Shell proxy path to cerebrum's POST /ego/chat/stream endpoint. */
 export const EGO_STREAM_URL = '/cerebrum-api/ego/chat/stream';
-
-/** SSE token event from /cerebrum-api/ego/chat/stream. */
-interface SseTokenEvent {
-  type: 'token';
-  text: string;
-}
-
-/** SSE done event from /cerebrum-api/ego/chat/stream. */
-interface SseDoneEvent {
-  type: 'done';
-  conversationId: string;
-  messageId: string;
-  citations: string[];
-  tokensIn: number;
-  tokensOut: number;
-  retrievedEngrams: RetrievedEngram[];
-}
-
-/** SSE error event from /cerebrum-api/ego/chat/stream. */
-interface SseErrorEvent {
-  type: 'error';
-  message: string;
-}
-
-type SseEvent = SseTokenEvent | SseDoneEvent | SseErrorEvent;
-
-/** Parse an SSE data line into a typed event object. */
-function parseSseEvent(line: string): SseEvent | null {
-  if (!line.startsWith('data: ')) return null;
-  try {
-    return JSON.parse(line.slice(6)) as SseEvent;
-  } catch {
-    return null;
-  }
-}
 
 interface StreamChatParams {
   conversationId: string | null;
@@ -56,13 +26,31 @@ interface StreamChatParams {
 interface StreamCallbacks {
   onConversation: (id: string) => void;
   onEngrams: (engrams: RetrievedEngram[]) => void;
-  onInvalidate: (conversationId: string) => void;
+  onInvalidate: (conversationId: string) => void | Promise<void>;
+  onNavigate?: (uri: string) => void;
 }
 
-/** Process the SSE response body, dispatching events to state setters. */
+type StreamAction = { type: 'start' } | { type: 'reset' } | { type: 'frame'; frame: StreamFrame };
+
+function streamReducer(state: StreamState, action: StreamAction): StreamState {
+  switch (action.type) {
+    case 'start':
+      return STREAM_START_STATE;
+    case 'reset':
+      return INITIAL_STREAM_STATE;
+    case 'frame':
+      return reduceStreamFrame(state, action.frame);
+    default: {
+      const unreachable: never = action;
+      return unreachable;
+    }
+  }
+}
+
+/** Process the SSE response body, dispatching frames to the stream reducer. */
 async function processStream(
   body: ReadableStream<Uint8Array>,
-  setContent: React.Dispatch<React.SetStateAction<string | null>>,
+  dispatch: React.Dispatch<StreamAction>,
   setError: React.Dispatch<React.SetStateAction<string | null>>,
   callbacks: StreamCallbacks
 ): Promise<void> {
@@ -82,19 +70,19 @@ async function processStream(
       const trimmed = line.trim();
       if (!trimmed) continue;
 
-      const event = parseSseEvent(trimmed);
-      if (!event) continue;
+      const frame = parseStreamFrame(trimmed);
+      if (!frame) continue;
 
-      if (event.type === 'token') {
-        setContent((prev) => (prev ?? '') + event.text);
-      } else if (event.type === 'done') {
-        callbacks.onConversation(event.conversationId);
-        callbacks.onEngrams(event.retrievedEngrams);
-        setContent(null);
-        callbacks.onInvalidate(event.conversationId);
-      } else if (event.type === 'error') {
-        setError(event.message);
-        setContent(null);
+      dispatch({ type: 'frame', frame });
+      if (frame.type === 'navigate') {
+        callbacks.onNavigate?.(frame.uri);
+      } else if (frame.type === 'done') {
+        callbacks.onConversation(frame.conversationId);
+        callbacks.onEngrams(frame.retrievedEngrams);
+        await callbacks.onInvalidate(frame.conversationId);
+        dispatch({ type: 'reset' });
+      } else if (frame.type === 'error') {
+        setError(frame.message);
       }
     }
   }
@@ -109,12 +97,16 @@ export interface UseStreamingChatReturn {
   error: string | null;
   /** Partial streaming content (null when not streaming). */
   streamingContent: string | null;
+  /** Tool calls and their latest lifecycle status from the active stream. */
+  toolActivity: ToolActivity[];
+  /** Message parts received from the active stream. */
+  streamParts: MessagePart[];
   /** Clear the error state. */
   clearError: () => void;
 }
 
 export function useStreamingChat(): UseStreamingChatReturn {
-  const [streamingContent, setStreamingContent] = useState<string | null>(null);
+  const [streamState, dispatchStream] = useReducer(streamReducer, INITIAL_STREAM_STATE);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -126,7 +118,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
 
       setIsStreaming(true);
       setError(null);
-      setStreamingContent('');
+      dispatchStream({ type: 'start' });
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -142,14 +134,14 @@ export function useStreamingChat(): UseStreamingChatReturn {
         signal: controller.signal,
       })
         .then(async (response) => {
-          if (!response.ok) throw new Error(`Stream request failed: ${response.status}`);
+          if (!response.ok) throw new Error('Stream request failed: ' + response.status);
           if (!response.body) throw new Error('Response body is null');
-          await processStream(response.body, setStreamingContent, setError, callbacks);
+          await processStream(response.body, dispatchStream, setError, callbacks);
         })
         .catch((err: unknown) => {
           if (err instanceof Error && err.name === 'AbortError') return;
           setError(err instanceof Error ? err.message : 'Stream failed');
-          setStreamingContent(null);
+          dispatchStream({ type: 'reset' });
         })
         .finally(() => {
           setIsStreaming(false);
@@ -161,5 +153,13 @@ export function useStreamingChat(): UseStreamingChatReturn {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { stream, isStreaming, error, streamingContent, clearError };
+  return {
+    stream,
+    isStreaming,
+    error,
+    streamingContent: streamState.content,
+    toolActivity: streamState.tools,
+    streamParts: streamState.parts,
+    clearError,
+  };
 }
