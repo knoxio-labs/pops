@@ -1,9 +1,11 @@
 import { getPillar } from '../pillar-client.js';
+import { mapRows, objectUri, withUri } from './uri.js';
 import { mapCallResult, toolError } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
 import type { ToolDef } from './index.js';
+import type { ObjectUriType, Row } from './uri.js';
 
 type EngramListInput = {
   search?: string;
@@ -33,6 +35,25 @@ type CerebrumShape = {
 
 function cerebrum(): PillarHandle<CerebrumShape> {
   return getPillar<CerebrumShape>('cerebrum');
+}
+
+const SEARCH_SOURCE_URI_TYPES: Record<string, ObjectUriType> = {
+  engram: 'cerebrum/engram',
+  transaction: 'finance/transaction',
+  movie: 'media/movie',
+  tv_show: 'media/tv-show',
+  inventory: 'inventory/item',
+};
+
+function hitUri(row: Row): Row {
+  const sourceType = row['sourceType'];
+  const sourceId = row['sourceId'];
+  if (typeof sourceType !== 'string' || typeof sourceId !== 'string' || sourceId.length === 0) {
+    return row;
+  }
+
+  const type = SEARCH_SOURCE_URI_TYPES[sourceType];
+  return type === undefined ? row : { ...row, uri: objectUri(type, sourceId) };
 }
 
 const engramsList: ToolDef = {
@@ -81,7 +102,9 @@ const engramsList: ToolDef = {
     if (typeof args['limit'] === 'number') input.limit = args['limit'];
     if (typeof args['offset'] === 'number') input.offset = args['offset'];
 
-    return mapCallResult(await cerebrum().engrams.list(input));
+    return mapCallResult(
+      mapRows(await cerebrum().engrams.list(input), 'engrams', withUri('cerebrum/engram'))
+    );
   },
 };
 
@@ -100,7 +123,13 @@ const engramGet: ToolDef = {
     if (typeof args['id'] !== 'string' || args['id'].length === 0) {
       return toolError('Invalid "id"');
     }
-    return mapCallResult(await cerebrum().engrams.get({ id: args['id'] }));
+    return mapCallResult(
+      mapRows(
+        await cerebrum().engrams.get({ id: args['id'] }),
+        'engram',
+        withUri('cerebrum/engram')
+      )
+    );
   },
 };
 
@@ -132,7 +161,7 @@ const cerebrumSearch: ToolDef = {
         : 'hybrid';
     const input: SearchInput = { query: args['query'], mode };
     if (typeof args['limit'] === 'number') input.limit = args['limit'];
-    return mapCallResult(await cerebrum().retrieval.search(input));
+    return mapCallResult(mapRows(await cerebrum().retrieval.search(input), 'results', hitUri));
   },
 };
 
