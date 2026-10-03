@@ -29,6 +29,7 @@ export const MOBILE_FEATURES: readonly MobileFeature[] = [
   { id: 'purchases', pillar: 'purchases' },
   { id: 'receipt-capture', pillar: 'purchases' },
   { id: 'inventory', pillar: 'inventory' },
+  { id: 'ego', pillar: 'cerebrum' },
 ];
 
 /**
