@@ -25,9 +25,12 @@ export {
 } from './open-cerebrum-db.js';
 
 export {
+  DEFAULT_EMBEDDING_DIMENSIONS,
   ensureEmbeddingsVecTable,
   isVecAvailable,
+  resolveEmbeddingDimensions,
   tryLoadVecExtension,
+  type EnsureEmbeddingsVecResult,
   type VecLoaderLogger,
 } from './vec-loader.js';
 

@@ -7,8 +7,8 @@
  *   EMBEDDING_API_KEY    — API key (required for real embedding; absent → no
  *                          embedder, semantic and hybrid search return nothing)
  *   EMBEDDING_MODEL      — model name (default text-embedding-3-small)
- *   EMBEDDING_DIMENSIONS — vector dimensions (default 1536, matches the
- *                          `embeddings_vec` virtual table)
+ *   EMBEDDING_DIMENSIONS — vector dimensions (default 1536; the
+ *                          `embeddings_vec` virtual table is sized from it)
  *
  * The retrieval handlers receive an {@link EmbeddingClient} via
  * `CerebrumApiDeps.embeddingClient`. The real default is constructed from env
@@ -16,6 +16,8 @@
  * so semantic search short-circuits to no results, and hybrid with it. Tests
  * inject a fake to exercise the embed path without a live provider.
  */
+import { resolveEmbeddingDimensions } from '../../../db/index.js';
+
 type EmbeddingProvider = 'openai' | 'voyage';
 
 export interface EmbeddingClient {
@@ -41,7 +43,7 @@ function readEmbeddingConfig(): EmbeddingConfig {
     apiUrl,
     apiKey: process.env['EMBEDDING_API_KEY'] ?? '',
     model: process.env['EMBEDDING_MODEL'] ?? 'text-embedding-3-small',
-    dimensions: Number.parseInt(process.env['EMBEDDING_DIMENSIONS'] ?? '1536', 10),
+    dimensions: resolveEmbeddingDimensions(),
     provider: detectProvider(apiUrl),
   };
 }
