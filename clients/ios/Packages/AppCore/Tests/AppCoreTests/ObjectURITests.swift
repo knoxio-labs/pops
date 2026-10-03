@@ -7,7 +7,10 @@ internal struct ObjectURITests {
     @Test(
         "accepts a well-formed object uri",
         arguments: [
-            ("pops:finance/transaction/1234", PopsURI(pillar: "finance", type: "transaction", id: "1234")),
+            (
+                "pops:finance/transaction/1234",
+                PopsURI(pillar: "finance", type: "transaction", id: "1234")
+            ),
             ("pops:inventory/item/18", PopsURI(pillar: "inventory", type: "item", id: "18")),
             ("pops:media/tv-show/42", PopsURI(pillar: "media", type: "tv-show", id: "42")),
         ])
