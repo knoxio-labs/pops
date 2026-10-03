@@ -4,29 +4,17 @@
  * credential attached, and the one failure fold (an auth fault, or anything
  * unrecognised) both routes map identically.
  */
-import {
-  DiscoveryCache,
-  HttpDiscoveryTransport,
-  type DiscoveryTransport,
-} from '@pops/pillar-sdk/client';
-import {
-  getServerSdkConfig,
-  InternalBaseUrlTransport,
-  SERVICE_ACCOUNT_HEADER,
-} from '@pops/pillar-sdk/server';
+import { SERVICE_ACCOUNT_HEADER } from '@pops/pillar-sdk/server';
 
+import { buildRawDiscovery } from '../pillars/raw-discovery.js';
 import { INVENTORY_PROTOCOL_HEADER, INVENTORY_SYNC_PROTOCOL_VERSION } from './handle-factory.js';
 import { gatewayMisconfigured, INVENTORY_MEDIA_PILLAR_ID, unavailable } from './media-outcomes.js';
 
 import type { GatewayFailure } from '../pillars/gateway.js';
+import type { RawDiscovery } from '../pillars/raw-discovery.js';
 
-/** Matches `libs/sdk/src/client/factory.ts`'s own default. */
-const DEFAULT_DISCOVERY_TTL_MS = 60_000;
-
-/** What a lookup needs to answer: enough to build a request, nothing else. */
-export interface InventoryMediaDiscovery {
-  lookup(pillarId: string): Promise<{ baseUrl: string } | undefined>;
-}
+/** Kept for existing media client consumers; new relays share `RawDiscovery`. */
+export type InventoryMediaDiscovery = RawDiscovery;
 
 /** Bundles the seams `send` needs, so passing them around is one parameter, not three. */
 export interface MediaClientContext {
@@ -35,23 +23,9 @@ export interface MediaClientContext {
   readonly apiKey: () => string | undefined;
 }
 
-/** Build the real discovery seam from the process's own server SDK config. */
+/** Build the real discovery seam through the shared raw discovery helper. */
 export function buildDiscovery(): InventoryMediaDiscovery {
-  const config = getServerSdkConfig();
-  const base: DiscoveryTransport = new HttpDiscoveryTransport(config.registry ?? {});
-  const overrides = config.internalBaseUrls ?? {};
-  const transport: DiscoveryTransport =
-    Object.keys(overrides).length === 0 ? base : new InternalBaseUrlTransport(base, overrides);
-  const cache = new DiscoveryCache({
-    transport,
-    ttlMs: config.cacheTtlMs ?? DEFAULT_DISCOVERY_TTL_MS,
-  });
-  return {
-    lookup: async (pillarId) => {
-      const entry = await cache.lookup(pillarId);
-      return entry === undefined ? undefined : { baseUrl: entry.baseUrl };
-    },
-  };
+  return buildRawDiscovery();
 }
 
 export interface RawResponse {
