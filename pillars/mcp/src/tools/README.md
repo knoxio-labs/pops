@@ -21,6 +21,10 @@ though nothing enforces it mechanically.
   round-trip.
 - **Pillar responses go through `mapCallResult`.** Every SDK failure kind
   becomes `isError: true` with a reason the model can read and act on.
+- **A non-applied inventory mutation is an error.** Every inventory tool that
+  sends a sync mutation returns its outcome through `itemMutationResult`:
+  `applied` is a normal result, while `rejected`, `conflict` and `deferred` set
+  `isError: true` and include the whole outcome in the text.
 - **Constrained args coerce, they do not reject.** An unrecognised `type`,
   `mode`, `period`, `active`, or `matchType` falls back to the documented
   default (or is dropped) rather than forwarding an unknown value downstream.
