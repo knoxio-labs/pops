@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { useParams } from 'react-router';
 
+import { useSetPageContext } from '@pops/navigation';
 import { Alert, Button, EmptyState, Skeleton } from '@pops/ui';
 
 import { AccountDetailHeader } from './account-detail/AccountDetailHeader';
@@ -40,6 +42,18 @@ function currencyFormat(
   return currency ?? { symbol: null, decimals: 2, kind: 'fiat' as const };
 }
 
+function useAccountPageContext(accountId: string, name: string | undefined): void {
+  const entity = useMemo(
+    () => ({
+      uri: `pops:finance/account/${accountId}`,
+      type: 'account',
+      title: name ?? '',
+    }),
+    [accountId, name]
+  );
+  useSetPageContext({ page: 'account-detail', pageType: 'drill-down', entity });
+}
+
 /**
  * `/accounts/:id` — the account dashboard (POPS-2805). Header, the balance
  * card and its twelve-month trend (POPS-2887), an empty module grid
@@ -50,6 +64,7 @@ export function AccountDetailPage() {
   const accountId = id ?? '';
   const state = useAccountDetailPage(accountId);
   const addTransaction = useAddTransactionDialog(accountId);
+  useAccountPageContext(accountId, state.account?.name);
 
   if (state.accounts.error) {
     return (

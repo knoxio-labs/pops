@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AppContextProvider, useAppContext } from '@pops/navigation';
+
 import { NO_BALANCE, NO_IMPORT_STATUS, NO_TRANSACTION_COUNT } from '../test-utils.js';
 import { AccountDetailPage } from './AccountDetailPage';
 
@@ -92,18 +94,32 @@ function transaction(overrides: Partial<Transaction>): Transaction {
   };
 }
 
+function PageContextProbe() {
+  return <output data-testid="page-context">{JSON.stringify(useAppContext())}</output>;
+}
+
 function renderDetail(
   accounts: Account[],
   id: string,
-  opts: { currencies?: Currency[]; transactions?: Transaction[] } = {}
+  opts: {
+    currencies?: Currency[];
+    transactions?: Transaction[];
+    withPageContext?: boolean;
+    accountsPending?: boolean;
+  } = {}
 ) {
-  accountsList.mockResolvedValue({
+  const accountResponse = {
     data: {
       data: accounts,
       pagination: { total: accounts.length, limit: 500, offset: 0, hasMore: false },
     },
     error: undefined,
-  });
+  };
+  accountsList.mockReturnValue(
+    opts.accountsPending
+      ? new Promise<typeof accountResponse>(() => {})
+      : Promise.resolve(accountResponse)
+  );
   currenciesList.mockResolvedValue({ data: { data: opts.currencies ?? [AUD] }, error: undefined });
   const transactions = opts.transactions ?? [];
   transactionsList.mockResolvedValue({
@@ -118,12 +134,18 @@ function renderDetail(
     error: undefined,
   });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const page = (
+    <>
+      <Routes>
+        <Route path="/finance/accounts/:id" element={<AccountDetailPage />} />
+      </Routes>
+      {opts.withPageContext ? <PageContextProbe /> : null}
+    </>
+  );
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[`/finance/accounts/${id}`]}>
-        <Routes>
-          <Route path="/finance/accounts/:id" element={<AccountDetailPage />} />
-        </Routes>
+        {opts.withPageContext ? <AppContextProvider>{page}</AppContextProvider> : page}
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -131,6 +153,35 @@ function renderDetail(
 
 describe('AccountDetailPage', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it('registers the loaded account as drill-down page context', async () => {
+    renderDetail([account({ id: 'a1', name: 'Everyday' })], 'a1', { withPageContext: true });
+    await screen.findByRole('heading', { name: 'Everyday' });
+
+    expect(JSON.parse(screen.getByTestId('page-context').textContent ?? '{}')).toMatchObject({
+      page: 'account-detail',
+      pageType: 'drill-down',
+      entity: {
+        uri: 'pops:finance/account/a1',
+        type: 'account',
+        title: 'Everyday',
+      },
+    });
+  });
+
+  it('registers the account URI while its query is pending', () => {
+    renderDetail([], 'a1', { withPageContext: true, accountsPending: true });
+
+    expect(JSON.parse(screen.getByTestId('page-context').textContent ?? '{}')).toMatchObject({
+      page: 'account-detail',
+      pageType: 'drill-down',
+      entity: {
+        uri: 'pops:finance/account/a1',
+        type: 'account',
+        title: '',
+      },
+    });
+  });
 
   it('shows an error panel with a retry when the accounts query fails', async () => {
     accountsList.mockRejectedValue(new Error('network down'));
