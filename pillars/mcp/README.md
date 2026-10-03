@@ -1,6 +1,6 @@
 # @pops/mcp
 
-MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, contacts, purchases, media, Cerebrum, and the BFM device-pairing issuer as tools that AI agents (Claude Desktop, Claude Code, any MCP client) call over the local network. Writes exist only for `inventory`; the finance, contacts, purchases, media, cerebrum, and pairing surfaces are read-only from the gateway's perspective. Each tool dispatches to the owning pillar over REST through `@pops/pillar-sdk`; the gateway owns no database and no business logic.
+MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, contacts, purchases, media, Cerebrum, and the BFM device-pairing issuer as tools that AI agents (Claude Desktop, Claude Code, any MCP client) call over the local network. Write-capable tools are limited to inventory mutations and BFM pairing-code issuance; finance, contacts, purchases, media, and cerebrum are read-only from the gateway's perspective. Each tool dispatches to the owning pillar over REST through `@pops/pillar-sdk`; the gateway owns no database and no business logic.
 
 - **Transport:** Streamable HTTP (`POST /mcp`), stateless — a fresh server + transport per request
 - **Port:** 3011 (configurable via `MCP_PORT`), listens on `0.0.0.0` inside the container; both compose files publish it on the host as `${MCP_BIND_ADDR:-0.0.0.0}:3011:3011`

@@ -34,6 +34,7 @@ function media(): PillarHandle<MediaShape> {
 
 const libraryList: ToolDef = {
   name: 'media.library.list',
+  readOnly: true,
   description:
     'List the media library (movies and TV shows). Filter by type, genre, or search query.',
   inputSchema: {
@@ -70,6 +71,7 @@ const libraryList: ToolDef = {
 
 const watchlistList: ToolDef = {
   name: 'media.watchlist.list',
+  readOnly: true,
   description: 'List the media watchlist (movies and TV shows queued to watch).',
   inputSchema: {
     type: 'object',

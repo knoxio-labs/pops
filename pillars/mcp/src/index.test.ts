@@ -45,6 +45,13 @@ vi.mock('./tools/index.js', () => ({
       handler: mockToolHandler,
       scope: 'inventory.types.manage',
     },
+    {
+      name: 'test.readonly',
+      description: 'Read-only tool for testing',
+      inputSchema: { type: 'object', properties: {} },
+      handler: mockToolHandler,
+      readOnly: true,
+    },
   ],
 }));
 
@@ -88,11 +95,24 @@ describe('createMcpServer — ListTools handler', () => {
     const response = (await handler({ params: {} })) as {
       tools: { name: string; description: string; inputSchema: unknown }[];
     };
-    expect(response.tools).toHaveLength(2);
+    expect(response.tools).toHaveLength(3);
     expect(response.tools[0]).toMatchObject({
       name: 'test.echo',
       description: 'Echo tool for testing',
       inputSchema: { type: 'object' },
+    });
+  });
+
+  it('advertises read-only hints for listed tools', async () => {
+    const handler = capturedHandlers.get(ListToolsRequestSchema)!;
+    const response = (await handler({ params: {} })) as {
+      tools: { name: string; annotations?: { readOnlyHint: boolean } }[];
+    };
+    expect(response.tools.find((tool) => tool.name === 'test.readonly')).toMatchObject({
+      annotations: { readOnlyHint: true },
+    });
+    expect(response.tools.find((tool) => tool.name === 'test.echo')).toMatchObject({
+      annotations: { readOnlyHint: false },
     });
   });
 

@@ -31,6 +31,11 @@ export function describeTool(t: ToolDef): string {
   return `${t.description} Requires service-account scope '${t.scope}'.`;
 }
 
+/** Advertise whether a listed tool never changes state in any pillar. */
+export function toolAnnotations(t: ToolDef): { readOnlyHint: boolean } {
+  return { readOnlyHint: t.readOnly === true };
+}
+
 /** Structured per-call operational log (CF087) — tool name, ok/error, and latency, so a production issue is visible without re-instrumenting. */
 function logToolCall(
   name: string,
@@ -54,6 +59,7 @@ export function createMcpServer(): Server {
       name: t.name,
       description: describeTool(t),
       inputSchema: t.inputSchema,
+      annotations: toolAnnotations(t),
     })),
   }));
 

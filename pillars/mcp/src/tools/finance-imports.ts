@@ -5,6 +5,7 @@ import type { ToolDef } from './tool-def.js';
 
 const importsGetProgress: ToolDef = {
   name: 'finance.imports.getImportProgress',
+  readOnly: true,
   description:
     'Poll an in-progress transaction import session for status (dedup + entity-matching progress). Returns null when the session is unknown or expired.',
   inputSchema: {

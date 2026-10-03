@@ -5,6 +5,7 @@ import type { ToolDef } from './tool-def.js';
 
 const correctionsList: ToolDef = {
   name: 'finance.corrections.list',
+  readOnly: true,
   description:
     'List learned transaction-correction rules (patterns applied to auto-fill entity/tags on import). Filter by minimum confidence or match type.',
   inputSchema: {
@@ -35,6 +36,7 @@ const correctionsList: ToolDef = {
 
 const tagRulesVocabulary: ToolDef = {
   name: 'finance.tagRules.vocabulary',
+  readOnly: true,
   description: 'List the user tag vocabulary — every tag ever applied to a transaction.',
   inputSchema: { type: 'object', properties: {} },
   handler: async () => {

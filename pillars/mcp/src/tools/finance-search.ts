@@ -33,6 +33,7 @@ function parseFilters(args: Record<string, unknown>): StructuredFilter[] | undef
 
 export const financeSearch: ToolDef = {
   name: 'finance.search',
+  readOnly: true,
   description:
     "Search the finance pillar's domains (transactions, budgets, wishlist) for a free-text query. Returns ranked hits across all three.",
   inputSchema: {

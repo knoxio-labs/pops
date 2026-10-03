@@ -22,4 +22,9 @@ export interface ToolDef {
    * naming the exact scope to grant, via `mapCallResult`'s `scope` parameter.
    */
   scope?: string;
+  /**
+   * `true` means the tool never changes state in any pillar; `false` or absent
+   * means it may. PIL-02 makes this field required.
+   */
+  readOnly?: boolean;
 }

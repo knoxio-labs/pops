@@ -64,6 +64,7 @@ function productLeaderboardInput(args: Record<string, unknown>): ProductLeaderbo
 /** Read-only merchant spend roll-up exposed through the assistant layer. */
 export const merchantSpend: ToolDef = {
   name: 'purchases.analytics.merchantSpend',
+  readOnly: true,
   description:
     'Spend per merchant and currency over a period, with the explained/unexplained split. Groups are keyed on merchant AND currency and there is no cross-currency total, because no such number exists. `residualCents` is spend nothing accounts for — report it rather than dropping it. Takes no limit: the period is the only bound.',
   inputSchema: {
@@ -81,6 +82,7 @@ export const merchantSpend: ToolDef = {
 /** Read-only product cadence and unit-price roll-up exposed to the assistant. */
 export const productLeaderboard: ToolDef = {
   name: 'purchases.analytics.productLeaderboard',
+  readOnly: true,
   description:
     'Show repeat purchases by product over a date range. Groups state whether identity comes from a SKU, a normalised printed name, a human product entry, or one unidentified line. Cadence counts distinct orders; unit-price history excludes allocated shipping. Use minOrderCount to require a minimum number of orders. The result has no page limit.',
   inputSchema: {
