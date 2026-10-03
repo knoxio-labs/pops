@@ -12,6 +12,8 @@ import { defaultSnapshotReader, type RegistrySnapshotReader } from '../pillars/r
 
 import type { PillarSnapshot } from '@pops/pillar-sdk/discovery';
 
+const MAX_TAGGED_QUERY_IDS = 500;
+
 interface ExpandedTagIds {
   ids: string[];
   unknownIds: string[];
@@ -62,6 +64,10 @@ export interface TagFederationOptions {
   readonly snapshotReader?: RegistrySnapshotReader;
   readonly onWarn?: (message: string, detail?: unknown) => void;
 }
+
+type TaggedCarrierOutcome =
+  | { readonly kind: 'result'; readonly pillarId: string; readonly result: CallResult<unknown> }
+  | { readonly kind: 'thrown'; readonly pillarId: string; readonly error: unknown };
 
 type PillarTagExpansionRouter = {
   tags: {
@@ -123,6 +129,46 @@ async function resolveTagCarriers(
   }
 }
 
+function buildFederationResponse(
+  outcomes: readonly TaggedCarrierOutcome[],
+  expansionWasBounded: boolean,
+  onWarn: (message: string, detail?: unknown) => void
+): TagFederationResponse {
+  const sections: TagFederationSection[] = [];
+  const pillars: TagFederationPillarStatus[] = [];
+
+  for (const outcome of outcomes) {
+    if (outcome.kind === 'thrown') {
+      onWarn('[orchestrator] tagged.list carrier ' + outcome.pillarId + ' threw', outcome.error);
+      pillars.push({ pillarId: outcome.pillarId, status: 'unavailable' });
+      continue;
+    }
+
+    const { pillarId, result } = outcome;
+    if (result.kind !== 'ok') {
+      const status = result.kind === 'unauthorized' ? 'unauthorized' : 'unavailable';
+      onWarn('[orchestrator] tagged.list carrier ' + pillarId + ' ' + result.kind, result);
+      pillars.push({ pillarId, status });
+      continue;
+    }
+
+    const parsed = TaggedQueryResponseSchema.safeParse(result.value);
+    if (!parsed.success) {
+      onWarn(
+        '[orchestrator] tagged.list carrier ' + pillarId + ' returned malformed data',
+        parsed.error
+      );
+      pillars.push({ pillarId, status: 'unavailable' });
+      continue;
+    }
+
+    sections.push({ pillarId, ...parsed.data });
+    pillars.push({ pillarId, status: expansionWasBounded ? 'unavailable' : 'ok' });
+  }
+
+  return { sections, pillars };
+}
+
 /**
  * Build the shared-tag federator. It expands requested tags once, resolves
  * healthy carriers from the live registry, and queries them concurrently.
@@ -141,12 +187,31 @@ export function createTagFederation(
     const expansion = await expand({ ids: [...request.tagIds] });
     if (expansion.kind !== 'ok') throw new PillarCallError('tags', expansion);
 
+    const expandedIds = expansion.value.ids;
+    const carrierIds = await resolveTagCarriers(snapshotReader, onWarn);
+
+    if (expandedIds.length === 0) {
+      return {
+        sections: carrierIds.map((pillarId) => ({ pillarId, items: [], nextCursor: null })),
+        pillars: carrierIds.map((pillarId) => ({ pillarId, status: 'ok' })),
+      };
+    }
+
+    const expansionWasBounded = expandedIds.length > MAX_TAGGED_QUERY_IDS;
+    if (expansionWasBounded) {
+      // Keep the carrier request schema-valid and expose the incomplete scope
+      // through its status instead of failing or claiming a complete result.
+      onWarn(
+        '[orchestrator] expanded tag query exceeds tagged.list limit; returning a bounded result',
+        { expandedIdCount: expandedIds.length, maxTagIds: MAX_TAGGED_QUERY_IDS }
+      );
+    }
+
     const query = TaggedQueryRequestSchema.parse({
-      tagIds: expansion.value.ids,
+      tagIds: expandedIds.slice(0, MAX_TAGGED_QUERY_IDS),
       ...(request.limit !== undefined ? { limit: request.limit } : {}),
       ...(request.cursor !== undefined ? { cursor: request.cursor } : {}),
     });
-    const carrierIds = await resolveTagCarriers(snapshotReader, onWarn);
     const outcomes = await Promise.all(
       carrierIds.map(async (pillarId) => {
         try {
@@ -156,40 +221,7 @@ export function createTagFederation(
         }
       })
     );
-
-    const sections: TagFederationSection[] = [];
-    const pillars: TagFederationPillarStatus[] = [];
-
-    for (const outcome of outcomes) {
-      if (outcome.kind === 'thrown') {
-        onWarn('[orchestrator] tagged.list carrier ' + outcome.pillarId + ' threw', outcome.error);
-        pillars.push({ pillarId: outcome.pillarId, status: 'unavailable' });
-        continue;
-      }
-
-      const { pillarId, result } = outcome;
-      if (result.kind !== 'ok') {
-        const status = result.kind === 'unauthorized' ? 'unauthorized' : 'unavailable';
-        onWarn('[orchestrator] tagged.list carrier ' + pillarId + ' ' + result.kind, result);
-        pillars.push({ pillarId, status });
-        continue;
-      }
-
-      const parsed = TaggedQueryResponseSchema.safeParse(result.value);
-      if (!parsed.success) {
-        onWarn(
-          '[orchestrator] tagged.list carrier ' + pillarId + ' returned malformed data',
-          parsed.error
-        );
-        pillars.push({ pillarId, status: 'unavailable' });
-        continue;
-      }
-
-      sections.push({ pillarId, ...parsed.data });
-      pillars.push({ pillarId, status: 'ok' });
-    }
-
-    return { sections, pillars };
+    return buildFederationResponse(outcomes, expansionWasBounded, onWarn);
   };
 }
 

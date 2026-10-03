@@ -212,6 +212,48 @@ describe('createTagFederation', () => {
     });
   });
 
+  it('returns empty sections when expansion contains only unknown requested ids', async () => {
+    const expand = vi.fn<TagExpansionInvoker>(async () => ({
+      kind: 'ok',
+      value: { ids: [], unknownIds: ['unknown-requested-id'] },
+    }));
+    const invoke = vi.fn<TaggedListInvoker>();
+    const source = federator([snapshot('finance')], invoke, { expand });
+
+    const result = await source({ tagIds: REQUESTED_TAG_IDS });
+
+    expect(result).toEqual({
+      sections: [{ pillarId: 'finance', items: [], nextCursor: null }],
+      pillars: [{ pillarId: 'finance', status: 'ok' }],
+    });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('bounds an oversized expansion and marks successful carrier results unavailable', async () => {
+    const expandedIds = Array.from({ length: 501 }, (_, index) => 'tag-' + index);
+    const onWarn = vi.fn();
+    const invoke = vi.fn<TaggedListInvoker>(async () => ok({ items: [], nextCursor: null }));
+    const source = federator([snapshot('finance')], invoke, {
+      expand: async () => expanded(expandedIds),
+      onWarn,
+    });
+
+    const result = await source({ tagIds: REQUESTED_TAG_IDS });
+
+    expect(invoke).toHaveBeenCalledWith('finance', {
+      tagIds: expandedIds.slice(0, 500),
+      limit: 200,
+    });
+    expect(result).toEqual({
+      sections: [{ pillarId: 'finance', items: [], nextCursor: null }],
+      pillars: [{ pillarId: 'finance', status: 'unavailable' }],
+    });
+    expect(onWarn).toHaveBeenCalledWith(expect.stringContaining('returning a bounded result'), {
+      expandedIdCount: 501,
+      maxTagIds: 500,
+    });
+  });
+
   it('preserves unauthorized carrier status', async () => {
     const invoke: TaggedListInvoker = async () => ({
       kind: 'unauthorized',
