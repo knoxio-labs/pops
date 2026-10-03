@@ -6,6 +6,7 @@ import {
   TagSchema,
   UpdateTagBody,
 } from '../rest-tags-schemas.js';
+import { tagsVocabularyContract } from '../rest-tags.js';
 
 const validTag = {
   id: '88bdb9c0-507e-4f36-a2bc-bbd28b129c06',
@@ -67,5 +68,27 @@ describe('shared tag contract schemas', () => {
 
   it('round-trips a complete tag with its date window', () => {
     expect(TagSchema.parse(validTag)).toEqual(validTag);
+  });
+
+  it('defines the eight unmounted vocabulary routes with summaries', () => {
+    const routes = Object.values(tagsVocabularyContract) as Array<{
+      method: string;
+      path: string;
+      summary?: string;
+    }>;
+
+    expect(routes.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      'GET /tags',
+      'GET /tags/:id',
+      'POST /tags',
+      'PATCH /tags/:id',
+      'POST /tags/:id/archive',
+      'POST /tags/:id/unarchive',
+      'POST /tags/:id/merge',
+      'POST /tags/expand',
+    ]);
+    expect(routes.every(({ summary }) => typeof summary === 'string' && summary.trim().length > 0)).toBe(
+      true
+    );
   });
 });
