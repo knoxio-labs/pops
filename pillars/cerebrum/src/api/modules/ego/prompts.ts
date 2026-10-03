@@ -30,6 +30,9 @@ export function formatAppContextBlock(appContext?: AppContext): string {
   if (appContext.route) {
     parts.push(`Current route: ${appContext.route}`);
   }
+  if (appContext.uri) {
+    parts.push(`Object URI: ${appContext.uri}`);
+  }
   if (appContext.entityId && appContext.entityType) {
     const label = appContext.entityTitle
       ? `${appContext.entityTitle} (${appContext.entityId})`

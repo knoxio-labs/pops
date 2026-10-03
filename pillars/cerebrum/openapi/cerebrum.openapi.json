@@ -776,6 +776,10 @@
                       },
                       "route": {
                         "type": "string"
+                      },
+                      "uri": {
+                        "pattern": "^pops:([a-z][a-z0-9-]*)\\/([a-z][a-z0-9-]*)\\/([^/\\s]+)$",
+                        "type": "string"
                       }
                     },
                     "required": ["app"],

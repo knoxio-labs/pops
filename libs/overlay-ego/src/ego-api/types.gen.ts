@@ -289,6 +289,7 @@ export type EgoChatData = {
       entityTitle?: string;
       entityType?: string;
       route?: string;
+      uri?: string;
     };
     channel?: 'shell' | 'moltbot' | 'mcp' | 'cli';
     conversationId?: string;
