@@ -23,15 +23,21 @@ public struct DesignSurface: Identifiable {
     /// a stand-in backdrop cannot answer whether that works. Surfaces that do
     /// not care get the stand-in.
     let backdrop: (@MainActor () -> AnyView)?
-    /// The heights the surface may take under ``Chrome/sheet``.
+    /// The heights the surface may take under ``Chrome/sheet``. Defaults to
+    /// full height; choose ``SheetDetents/adjustable`` when a medium opening
+    /// belongs to the design.
     public let sheetDetents: SheetDetents
 
+    /// Creates a surface with staged states and no custom sheet backdrop.
+    ///
+    /// Sheet surfaces default to full height. Use ``SheetDetents/adjustable``
+    /// when the medium detent is part of the design.
     public init(
         id: SurfaceID,
         title: String,
         synopsis: String? = nil,
         chrome: Chrome = .navigationLarge,
-        sheetDetents: SheetDetents = .adjustable,
+        sheetDetents: SheetDetents = .large,
         states: [DesignState]
     ) {
         self.id = id
@@ -43,12 +49,16 @@ public struct DesignSurface: Identifiable {
         self.backdrop = nil
     }
 
+    /// Creates a surface with staged states and a custom sheet backdrop.
+    ///
+    /// Sheet surfaces default to full height. Use ``SheetDetents/adjustable``
+    /// when the medium detent is part of the design.
     public init<Backdrop: View>(
         id: SurfaceID,
         title: String,
         synopsis: String? = nil,
         chrome: Chrome = .navigationLarge,
-        sheetDetents: SheetDetents = .adjustable,
+        sheetDetents: SheetDetents = .large,
         states: [DesignState],
         @ViewBuilder backdrop: @MainActor @escaping () -> Backdrop
     ) {
