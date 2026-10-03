@@ -1,6 +1,10 @@
 /** Handlers for the mobile Ego conversation list and read routes. */
 import { isGatewayOk } from '../pillars/gateway.js';
-import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
+import {
+  toCollectionUpstreamErrorResponse,
+  toEgoDecisionErrorResponse,
+  toUpstreamErrorResponse,
+} from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -33,6 +37,14 @@ export function makeMobileEgoHandlers(deps: MobileEgoHandlerDeps) {
       const outcome = await deps.ego.getConversation(params.id);
       if (!isGatewayOk(outcome)) {
         const error = toUpstreamErrorResponse(outcome);
+        return { status: error.status, body: error.body };
+      }
+      return { status: 200 as const, body: outcome.value };
+    },
+    decideActionBatch: async ({ params, body }: Req['decideActionBatch']) => {
+      const outcome = await deps.ego.decideBatch(params.batchId, body);
+      if (!isGatewayOk(outcome)) {
+        const error = toEgoDecisionErrorResponse(outcome);
         return { status: error.status, body: error.body };
       }
       return { status: 200 as const, body: outcome.value };
