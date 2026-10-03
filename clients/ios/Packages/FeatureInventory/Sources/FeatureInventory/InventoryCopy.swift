@@ -15,6 +15,8 @@ internal enum InventoryCopy {
         switch failure {
         case .unavailable, .transport:
             "Inventory could not be reached. Nothing changed; try again when you are online."
+        case .rateLimited:
+            "Too many requests. Wait before trying again. Nothing changed."
         case .unauthorized:
             "This phone is no longer signed in, so nothing changed."
         case .contractMismatch:

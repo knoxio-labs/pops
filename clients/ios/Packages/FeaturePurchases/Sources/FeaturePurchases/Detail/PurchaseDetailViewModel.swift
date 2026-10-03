@@ -12,6 +12,7 @@ internal enum PurchaseDetailFailure: Hashable, Sendable {
     internal init(_ error: Error) {
         switch error as? RepositoryError {
         case .transport: self = .offline
+        case .rateLimited: self = .offline
         case .unavailable: self = .unreachable
         case .unauthorized: self = .unauthorized
         case .contractMismatch, .conflict, .dependencyNotBound: self = .contractMismatch

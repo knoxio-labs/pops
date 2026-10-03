@@ -15,6 +15,7 @@ import SwiftUI
 /// have to be untitled again by whoever embeds it.
 public struct TransactionsListView: View {
     @State private var model: TransactionsListViewModel
+    @State private var pendingRetry: Task<Void, Never>?
     @Environment(\.errorPresenter) private var errorPresenter
 
     private let presentation: TransactionPresentation
@@ -32,6 +33,7 @@ public struct TransactionsListView: View {
             .popsMotion(PopsMotion.smooth, value: model.paging)
             .popsMotion(PopsMotion.smooth, value: model.isRefreshing)
             .task { await model.loadFirstPage() }
+            .onDisappear { pendingRetry?.cancel() }
             // Spoken, not merely drawn. VoiceOver does not move focus to a
             // banner that appears above the content or to a footer below it, so
             // without this a failed refresh reads as the gesture having done
@@ -66,10 +68,11 @@ public struct TransactionsListView: View {
         case .failed(let error):
             ErrorStateView(
                 message: TransactionsCopy.message(for: error),
-                retryTitle: TransactionsCopy.retry
+                retryTitle: TransactionsCopy.retryTitle(for: error)
             ) {
-                Task { await model.loadFirstPage() }
+                scheduleRetry(after: error) { await model.loadFirstPage() }
             }
+            .disabled(pendingRetry != nil)
             .transition(PopsMotion.row)
         case .empty, .loaded:
             scrollingContent.transition(PopsMotion.row)
@@ -168,8 +171,22 @@ extension TransactionsListView {
             Text(TransactionsCopy.loadMoreFailure(error))
                 .font(.popsBody)
                 .foregroundStyle(Color.popsDestructive)
-            PopsButton(TransactionsCopy.retry) { Task { await model.retryNextPage() } }
+            PopsButton(TransactionsCopy.retryTitle(for: error)) {
+                scheduleRetry(after: error) { await model.retryNextPage() }
+            }
+            .disabled(pendingRetry != nil)
         }
         .padding(.vertical, PopsSpacing.lg)
+    }
+
+    @MainActor
+    private func scheduleRetry(
+        after error: RepositoryError, action: @escaping @MainActor () async -> Void
+    ) {
+        guard pendingRetry == nil else { return }
+        pendingRetry = Task { @MainActor in
+            defer { pendingRetry = nil }
+            await TransactionsRetry.perform(after: error, retry: action)
+        }
     }
 }
