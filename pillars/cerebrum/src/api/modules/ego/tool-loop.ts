@@ -4,18 +4,20 @@ import {
   resultMessage,
   runToolRound,
   streamTurn,
-  toActionsPart,
 } from './tool-loop-helpers.js';
+import { emitToolRoundParts } from './tool-loop-round.js';
 import { MAX_TOOL_ROUNDS } from './tool-loop-types.js';
 
 import type { EgoMessagePart } from '../../../contract/rest-ego-parts.js';
 import type { EgoMessage, EgoLlm } from './llm.js';
-import type { LoopEvent, ProposedBatch } from './tool-loop-types.js';
+import type { AutoExecutedGroup, LoopEvent, ProposedBatch } from './tool-loop-types.js';
 import type { EgoToolbox } from './toolbox.js';
 
 /** Public tool-loop contracts and the 40-round runaway backstop. */
 export { MAX_TOOL_ROUNDS };
 export type {
+  AutoExecutedAction,
+  AutoExecutedGroup,
   LoopEvent,
   LoopToolResult,
   PausedLoopState,
@@ -24,8 +26,8 @@ export type {
 } from './tool-loop-types.js';
 
 /**
- * Alternate model turns with toolbox dispatch. Read calls run immediately;
- * writes are returned as a pending batch without another model call.
+ * Alternate model turns with toolbox dispatch. Reads and explicitly allowed
+ * writes run immediately; other writes are returned as a pending batch.
  */
 export async function* runToolLoop(params: {
   llm: EgoLlm;
@@ -35,6 +37,11 @@ export async function* runToolLoop(params: {
   newActionId: () => string;
   newBatchId: () => string;
   startRound?: number;
+  allowedTools?: ReadonlySet<string>;
+  runWrite?: (
+    tool: string,
+    args: Record<string, unknown>
+  ) => Promise<{ text: string; isError: boolean }>;
 }): AsyncGenerator<LoopEvent> {
   const definitions = (await params.toolbox?.definitions()) ?? [];
   const workingMessages = [...params.messages];
@@ -42,6 +49,7 @@ export async function* runToolLoop(params: {
   const parts: EgoMessagePart[] = [];
   let round = params.startRound ?? 0;
   let batch: ProposedBatch | null = null;
+  const autoExecuted: AutoExecutedGroup[] = [];
 
   while (true) {
     const forceNoTools = round >= MAX_TOOL_ROUNDS;
@@ -59,31 +67,41 @@ export async function* runToolLoop(params: {
       definitions,
       response,
       newActionId: params.newActionId,
+      allowedTools: params.allowedTools,
+      runWrite: params.runWrite,
     });
-    parts.push(...output.parts);
-
-    if (output.actions.length === 0) {
+    const roundParts = yield* emitToolRoundParts({
+      output,
+      system: params.system,
+      messages: workingMessages,
+      round,
+      newBatchId: params.newBatchId,
+    });
+    parts.push(...output.parts, ...roundParts.parts);
+    autoExecuted.push(...roundParts.autoExecuted);
+    if (roundParts.batch === null) {
       workingMessages.push(resultMessage(output.results));
       continue;
     }
-
-    const batchId = params.newBatchId();
-    const actionPart = toActionsPart(batchId, output.actions);
-    parts.push(actionPart);
-    yield { type: 'part', part: actionPart };
-    batch = {
-      batchId,
-      actions: output.actions,
-      state: { system: params.system, messages: workingMessages, round, results: output.results },
-    };
+    batch = roundParts.batch;
     break;
   }
 
-  yield {
+  yield toDoneEvent(totals, parts, batch, autoExecuted);
+}
+
+function toDoneEvent(
+  totals: { fullText: string; tokensIn: number; tokensOut: number },
+  parts: EgoMessagePart[],
+  batch: ProposedBatch | null,
+  autoExecuted: AutoExecutedGroup[]
+): Extract<LoopEvent, { type: 'done' }> {
+  return {
     type: 'done',
     fullText: totals.fullText,
     parts,
     batch,
+    autoExecuted,
     tokensIn: totals.tokensIn,
     tokensOut: totals.tokensOut,
   };

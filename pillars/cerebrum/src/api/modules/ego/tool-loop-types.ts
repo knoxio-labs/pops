@@ -13,6 +13,23 @@ export interface ProposedAction {
   summary: string;
 }
 
+/** A write allowed by this conversation and executed inside the tool loop. */
+export interface AutoExecutedAction {
+  actionId: string;
+  toolUseId: string;
+  tool: string;
+  args: Record<string, unknown>;
+  summary: string;
+  result: string;
+  isError: boolean;
+}
+
+/** One group of writes automatically executed during a model turn. */
+export interface AutoExecutedGroup {
+  batchId: string;
+  actions: AutoExecutedAction[];
+}
+
 /** A tool result, or a write proposal still waiting for the person's decision. */
 export type LoopToolResult =
   | { toolUseId: string; content: string; isError: boolean }
@@ -44,6 +61,7 @@ export type LoopEvent =
       fullText: string;
       parts: EgoMessagePart[];
       batch: ProposedBatch | null;
+      autoExecuted: AutoExecutedGroup[];
       tokensIn: number;
       tokensOut: number;
     };
