@@ -15,7 +15,15 @@ import type { PillarId } from '@pops/pillar-sdk';
  * a registry-discovered pillar can be the active app even though it is not a
  * built-in here (PRD-256 / PRD-243).
  */
-export type AppName = 'finance' | 'food' | 'lists' | 'media' | 'inventory' | 'ai' | 'cerebrum';
+export type AppName =
+  | 'finance'
+  | 'food'
+  | 'lists'
+  | 'media'
+  | 'inventory'
+  | 'ai'
+  | 'cerebrum'
+  | 'purchases';
 
 /**
  * Union of all valid Lucide icon names used across the POPS app rail and
