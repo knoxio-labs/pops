@@ -85,6 +85,13 @@
       "when": 1782604800000,
       "tag": "0059_ego_parts_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1782691200000,
+      "tag": "0060_ego_allowed_tools",
+      "breakpoints": true
     }
   ]
 }

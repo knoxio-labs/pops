@@ -11,6 +11,7 @@ import { egoMessagePartsSchema, type EgoMessagePart } from '../../../contract/re
  * `conversationsService.insertMessage`.
  */
 import {
+  conversationAllowedToolsService,
   conversationsService,
   MESSAGE_ROLES,
   type CerebrumDb,
@@ -171,6 +172,16 @@ export class ConversationPersistence {
   /** Replace the stored parts of a message; false when no message has that id. */
   updateMessageParts(messageId: string, parts: EgoMessagePart[]): boolean {
     return conversationsService.updateMessageParts(this.db, messageId, parts);
+  }
+
+  /** Read this conversation's allowed tool names; a missing conversation returns an empty list. */
+  getAllowedTools(conversationId: string): string[] {
+    return conversationAllowedToolsService.getAllowedTools(this.db, conversationId);
+  }
+
+  /** Merge tool names into this conversation's allow-list; return null when it is missing. */
+  addAllowedTools(conversationId: string, tools: readonly string[]): string[] | null {
+    return conversationAllowedToolsService.addAllowedTools(this.db, conversationId, tools);
   }
 
   upsertContext(conversationId: string, engramId: string, relevanceScore?: number): void {

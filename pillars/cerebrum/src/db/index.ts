@@ -45,6 +45,7 @@ export * as nudgeLogService from './services/nudge-log.js';
 export * as engramsService from './services/engrams.js';
 export * as gliaService from './services/glia.js';
 export * as conversationsService from './services/conversations.js';
+export * as conversationAllowedToolsService from './services/conversations-allowed-tools.js';
 export * as plexusService from './services/plexus.js';
 export * as egoActionsService from './services/ego-actions.js';
 
