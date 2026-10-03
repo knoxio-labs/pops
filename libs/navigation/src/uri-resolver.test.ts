@@ -13,6 +13,22 @@ describe('resolveUri', () => {
     });
   });
 
+  describe('cerebrum URIs', () => {
+    it('resolves an engram URI to the existing detail route', () => {
+      expect(resolveUri('pops:cerebrum/engram/eng_20260101_0000_x')).toBe(
+        '/cerebrum/engrams/eng_20260101_0000_x'
+      );
+    });
+
+    it('returns null for an unknown Cerebrum URI type', () => {
+      expect(resolveUri('pops:cerebrum/unknown/1')).toBeNull();
+    });
+
+    it('returns null for an engram URI with an empty ID', () => {
+      expect(resolveUri('pops:cerebrum/engram/')).toBeNull();
+    });
+  });
+
   describe('finance URIs', () => {
     it('resolves transaction URI', () => {
       expect(resolveUri('pops:finance/transaction/123')).toBe('/finance/transactions/123');
