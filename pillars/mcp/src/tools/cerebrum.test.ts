@@ -29,6 +29,19 @@ beforeEach(() => {
 describe('cerebrum.engrams.list', () => {
   const tool = cerebrumTools.find((t) => t.name === 'cerebrum.engrams.list')!;
 
+  it('adds an engram URI and preserves the list total', async () => {
+    engrams.list.mockResolvedValueOnce(callOk({ engrams: [{ id: 'eng_1' }], total: 1 }));
+
+    const result = await tool.handler({});
+    const parsed = parseResult(result) as {
+      engrams: Array<Record<string, unknown>>;
+      total: number;
+    };
+
+    expect(parsed.engrams[0]).toEqual({ id: 'eng_1', uri: 'pops:cerebrum/engram/eng_1' });
+    expect(parsed.total).toBe(1);
+  });
+
   it('passes scope and tag arrays correctly', async () => {
     await tool.handler({ scopes: ['work', 'personal'], tags: ['important'] });
     expect(engrams.list).toHaveBeenCalledWith(
@@ -63,6 +76,22 @@ describe('cerebrum.engrams.list', () => {
 
 describe('cerebrum.engrams.get', () => {
   const tool = cerebrumTools.find((t) => t.name === 'cerebrum.engrams.get')!;
+
+  it('adds a URI to the engram while preserving its body', async () => {
+    engrams.get.mockResolvedValueOnce(
+      callOk({ engram: { id: 'eng_1', title: 'Test' }, body: 'full engram body' })
+    );
+
+    const result = await tool.handler({ id: 'eng_1' });
+    const parsed = parseResult(result) as { engram: Record<string, unknown>; body: string };
+
+    expect(parsed.engram).toEqual({
+      id: 'eng_1',
+      title: 'Test',
+      uri: 'pops:cerebrum/engram/eng_1',
+    });
+    expect(parsed.body).toBe('full engram body');
+  });
 
   it('calls engrams.get with the id', async () => {
     const result = await tool.handler({ id: 'eng_1' });
@@ -99,6 +128,42 @@ describe('cerebrum.search', () => {
     );
   });
 
+  it('adds URIs for supported sources and preserves unsupported hits and metadata', async () => {
+    retrieval.search.mockResolvedValueOnce(
+      callOk({
+        results: [
+          { sourceType: 'engram', sourceId: 'eng_1' },
+          { sourceType: 'transaction', sourceId: 'txn_2' },
+          { sourceType: 'movie', sourceId: 'movie_3' },
+          { sourceType: 'tv_show', sourceId: 'show_4' },
+          { sourceType: 'inventory', sourceId: 'item_5' },
+          { sourceType: 'purchase', sourceId: 'purchase_6' },
+          { sourceType: 'engram' },
+        ],
+        meta: { nextCursor: 'cursor_7' },
+      })
+    );
+
+    const result = await tool.handler({ query: 'test' });
+    const parsed = parseResult(result) as {
+      results: Array<Record<string, unknown>>;
+      meta: unknown;
+    };
+
+    expect(parsed.results.map((hit) => hit['uri'])).toEqual([
+      'pops:cerebrum/engram/eng_1',
+      'pops:finance/transaction/txn_2',
+      'pops:media/movie/movie_3',
+      'pops:media/tv-show/show_4',
+      'pops:inventory/item/item_5',
+      undefined,
+      undefined,
+    ]);
+    expect(parsed.meta).toEqual({ nextCursor: 'cursor_7' });
+    expect(parsed.results[5]).toEqual({ sourceType: 'purchase', sourceId: 'purchase_6' });
+    expect(parsed.results[6]).toEqual({ sourceType: 'engram' });
+  });
+
   it('passes explicit mode', async () => {
     await tool.handler({ query: 'test', mode: 'semantic' });
     expect(retrieval.search).toHaveBeenCalledWith(expect.objectContaining({ mode: 'semantic' }));
@@ -111,6 +176,12 @@ describe('cerebrum.search', () => {
 
   it('returns isError for blank query', async () => {
     const result = await tool.handler({ query: '   ' });
+    expect(result.isError).toBe(true);
+  });
+
+  it('returns isError on unavailable', async () => {
+    retrieval.search.mockResolvedValueOnce(callUnavailable('cerebrum'));
+    const result = await tool.handler({ query: 'test' });
     expect(result.isError).toBe(true);
   });
 
