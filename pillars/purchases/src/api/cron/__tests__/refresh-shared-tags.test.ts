@@ -33,7 +33,10 @@ function cacheRows() {
 
 function startWorker(
   fetchAll: () => Promise<SharedTagFetch>,
-  options: { now?: () => Date; warn?: (...args: unknown[]) => void } = {}
+  options: {
+    now?: () => Date;
+    warn?: (message: string, context?: Record<string, unknown>) => void;
+  } = {}
 ) {
   const worker = startSharedTagCacheRefreshWorker({
     db: opened.db,
@@ -43,7 +46,7 @@ function startWorker(
       ? {}
       : {
           logger: {
-            warn: options.warn as (message: string, context?: Record<string, unknown>) => void,
+            warn: options.warn,
           },
         }),
     ...(options.now === undefined ? {} : { now: options.now }),
@@ -64,9 +67,31 @@ afterEach(async () => {
   }
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('the shared tag cache refresh worker', () => {
+  it('runs another refresh on the interval and cancels the next tick on stop', async () => {
+    vi.useFakeTimers();
+    const fetchAll = vi.fn<() => Promise<SharedTagFetch>>().mockResolvedValue({
+      kind: 'ok',
+      tags: [],
+    });
+    const worker = startSharedTagCacheRefreshWorker({
+      db: opened.db,
+      client: { fetchAll },
+      intervalMs: 1_000,
+    });
+    workers.push(worker);
+
+    await worker.runOnce();
+    await vi.advanceTimersByTimeAsync(1_000);
+    worker.stop();
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(fetchAll).toHaveBeenCalledTimes(2);
+  });
+
   it('fills the cache from one complete vocabulary response', async () => {
     const fetchedAt = '2026-10-03T00:00:00.000Z';
     const worker = startWorker(
@@ -190,5 +215,23 @@ describe('the shared tag cache refresh worker', () => {
       reason: 'contract-mismatch',
     });
     expect(cacheRows()).toEqual(before);
+  });
+
+  it.each([
+    ['Error', new Error('tags request crashed'), 'tags request crashed'],
+    ['non-Error', 'tags request failed', 'tags request failed'],
+  ])('logs a thrown %s from the refresh trigger', async (_label, thrown, message) => {
+    const warn = vi.fn();
+    const worker = startWorker(
+      async () => {
+        throw thrown;
+      },
+      { warn }
+    );
+
+    await expect(worker.runOnce()).rejects.toEqual(thrown);
+    expect(warn).toHaveBeenCalledWith('purchases shared tag cache refresh failed', {
+      error: message,
+    });
   });
 });
