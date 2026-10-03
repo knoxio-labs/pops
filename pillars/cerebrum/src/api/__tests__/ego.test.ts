@@ -150,7 +150,10 @@ describe('ego chat', () => {
     expect(conv.messages.map((m) => m.role)).toEqual(['user', 'assistant']);
     expect(conv.messages[0]?.content).toBe('hi there');
     expect(conv.messages.every((m) => 'parts' in m)).toBe(true);
-    expect(conv.messages.map((m) => m.parts)).toEqual([null, null]);
+    expect(conv.messages.map((m) => m.parts)).toEqual([
+      null,
+      [{ type: 'text', text: 'Hello from the fake LLM.' }],
+    ]);
     // First user message auto-titles the conversation.
     expect(conv.conversation.title).toBe('hi there');
   });

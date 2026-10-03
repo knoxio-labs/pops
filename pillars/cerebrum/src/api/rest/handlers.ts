@@ -107,6 +107,7 @@ export function makeCerebrumRestHandlers(
       engramRoot: deps.engramRoot,
       templates: deps.templateRegistry,
       llm: deps.egoLlm ?? new AnthropicEgoLlm(),
+      tools: deps.egoTools,
     }),
     workers: makeWorkersHandlers({
       ...base,
