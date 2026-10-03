@@ -30,8 +30,24 @@ describe('resolveUri', () => {
   });
 
   describe('finance URIs', () => {
-    it('resolves transaction URI', () => {
-      expect(resolveUri('pops:finance/transaction/123')).toBe('/finance/transactions/123');
+    it('resolves an account URI to the existing detail route', () => {
+      expect(resolveUri('pops:finance/account/a1')).toBe('/finance/accounts/a1');
+    });
+
+    it('returns null for an account URI with an empty ID', () => {
+      expect(resolveUri('pops:finance/account/')).toBeNull();
+    });
+
+    it('resolves transaction URI through the list selection query', () => {
+      expect(resolveUri('pops:finance/transaction/123')).toBe(
+        '/finance/transactions?transaction=123'
+      );
+    });
+
+    it('encodes transaction IDs for the query parameter', () => {
+      expect(resolveUri('pops:finance/transaction/a b')).toBe(
+        '/finance/transactions?transaction=a%20b'
+      );
     });
 
     it('still resolves the legacy entity URI during the rolling deploy', () => {
@@ -41,8 +57,8 @@ describe('resolveUri', () => {
       expect(resolveUri('pops:finance/entity/5')).toBe('/finance/entities/5');
     });
 
-    it('resolves budget URI', () => {
-      expect(resolveUri('pops:finance/budget/8')).toBe('/finance/budgets/8');
+    it('resolves a budget URI to the list because there is no detail route', () => {
+      expect(resolveUri('pops:finance/budget/8')).toBe('/finance/budgets');
     });
   });
 
@@ -83,6 +99,10 @@ describe('resolveUri', () => {
   describe('inventory URIs', () => {
     it('resolves item URI', () => {
       expect(resolveUri('pops:inventory/item/99')).toBe('/inventory/items/99');
+    });
+
+    it('resolves a location URI to the existing detail route', () => {
+      expect(resolveUri('pops:inventory/location/l9')).toBe('/inventory/locations/l9');
     });
   });
 
