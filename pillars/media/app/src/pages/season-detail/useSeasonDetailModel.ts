@@ -111,16 +111,16 @@ function computeIsSeasonWatched(
   return seasonProgress.watched >= seasonProgress.total && seasonProgress.total > 0;
 }
 
-function useSeasonPageContext(showId: number, seasonNum: number, showName: string) {
-  const seasonEntity = useMemo(
+function useSeasonPageContext(showId: number, showName: string) {
+  const tvShowEntity = useMemo(
     () => ({
-      uri: `pops:media/tv/${showId}/season/${seasonNum}`,
-      type: 'season' as const,
+      uri: `pops:media/tv-show/${showId}`,
+      type: 'tv-show' as const,
       title: showName,
     }),
-    [showId, seasonNum, showName]
+    [showId, showName]
   );
-  useSetPageContext({ page: 'season-detail', pageType: 'drill-down', entity: seasonEntity });
+  useSetPageContext({ page: 'season-detail', pageType: 'drill-down', entity: tvShowEntity });
 }
 
 function useSeasonInteractions({
@@ -170,7 +170,7 @@ export function useSeasonDetailModel(showId: number, seasonNum: number) {
     watchHistoryQuery,
   });
 
-  useSeasonPageContext(showId, seasonNum, showQuery.data?.data?.name ?? '');
+  useSeasonPageContext(showId, showQuery.data?.data?.name ?? '');
 
   return {
     showLoading: showQuery.isLoading,

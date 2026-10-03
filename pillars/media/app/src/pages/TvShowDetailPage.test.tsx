@@ -4,6 +4,8 @@ import { createElement, type ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AppContextProvider, resolveUri, useAppContext } from '@pops/navigation';
+
 import { MediaApiError } from '../media-api-helpers.js';
 
 const {
@@ -102,18 +104,40 @@ function makeQueryClient() {
   });
 }
 
-function renderPage(showId = '1', queryClient = makeQueryClient()) {
+function PageContextProbe() {
+  const { page, entity } = useAppContext();
+  return (
+    <output
+      data-testid="page-context-probe"
+      data-page={page ?? ''}
+      data-entity-uri={entity?.uri ?? ''}
+      data-entity-type={entity?.type ?? ''}
+      data-entity-title={entity?.title ?? ''}
+    />
+  );
+}
+
+function renderPage(showId = '1', queryClient = makeQueryClient(), withAppContext = false) {
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client: queryClient }, children);
-  const view = render(
-    <MemoryRouter initialEntries={[`/media/tv/${showId}`]}>
+  const routes = (
+    <>
       <Routes>
         <Route path="/media/tv/:id" element={<TvShowDetailPage />} />
       </Routes>
-    </MemoryRouter>,
+      {withAppContext && <PageContextProbe />}
+    </>
+  );
+  const content = withAppContext ? <AppContextProvider>{routes}</AppContextProvider> : routes;
+  const view = render(
+    <MemoryRouter initialEntries={[`/media/tv/${showId}`]}>{content}</MemoryRouter>,
     { wrapper }
   );
   return { ...view, queryClient };
+}
+
+function renderPageWithAppContext(showId = '1', queryClient = makeQueryClient()) {
+  return renderPage(showId, queryClient, true);
 }
 
 function setupQueries(
@@ -137,6 +161,24 @@ beforeEach(() => {
     ok({ data: { logged: 16, skipped: 0 }, message: 'ok' })
   );
   arrUpdateSeasonMonitoringMock.mockResolvedValue(ok({ message: 'ok' }));
+});
+
+describe('TvShowDetailPage page context', () => {
+  it('registers the canonical TV show URI in app context', async () => {
+    setupQueries();
+    renderPageWithAppContext();
+
+    await screen.findByRole('heading', { name: 'Seasons' });
+    const probe = screen.getByTestId('page-context-probe');
+    await waitFor(() => expect(probe).toHaveAttribute('data-entity-title', 'Breaking Bad'));
+
+    const uri = probe.getAttribute('data-entity-uri') ?? '';
+    expect(probe).toHaveAttribute('data-page', 'tvshow-detail');
+    expect(uri).toBe('pops:media/tv-show/1');
+    expect(probe).toHaveAttribute('data-entity-type', 'tv-show');
+    expect(probe).toHaveAttribute('data-entity-title', 'Breaking Bad');
+    expect(resolveUri(uri)).toBe('/media/tv/1');
+  });
 });
 
 describe('TvShowDetailPage — season list', () => {
