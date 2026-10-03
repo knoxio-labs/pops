@@ -9,7 +9,8 @@
  *
  * The SSE streaming endpoint (`POST /ego/chat/stream`) is NOT part of this
  * ts-rest contract — it is mounted as a plain Express route in `app.ts` before
- * `createExpressEndpoints` (ts-rest cannot model `text/event-stream`).
+ * `createExpressEndpoints` (ts-rest cannot model `text/event-stream`). Its request
+ * body and frames are defined in `rest-ego-stream.ts`.
  *
  * The wire schemas live in the pure `rest-ego-schemas.ts` module so the contract
  * and the lifted handlers share one source of truth.
@@ -23,6 +24,8 @@ import {
   createConversationBodySchema,
   egoChatBodySchema,
   egoChatResponseSchema,
+  egoDecisionBodySchema,
+  egoDecisionResultSchema,
   getActiveContextResponseSchema,
   listConversationsBodySchema,
   scopeNegotiationWire,
@@ -41,6 +44,25 @@ export const cerebrumEgoContract = c.router({
     responses: {
       200: egoChatResponseSchema,
       400: errorBodySchema,
+    },
+  },
+  /**
+   * Records a batch decision without calling tools. Approved writes run and the
+   * model continues when `/ego/chat/stream` resumes with `resumeBatchId`; the
+   * next stream request settles a decided batch that was not resumed.
+   */
+  decideActionBatch: {
+    method: 'POST',
+    path: '/ego/action-batches/:batchId/decide',
+    summary: 'Record an Ego action batch decision.',
+    pathParams: z.object({ batchId: z.string().min(1) }),
+    body: egoDecisionBodySchema,
+    responses: {
+      200: egoDecisionResultSchema,
+      400: errorBodySchema,
+      404: errorBodySchema,
+      409: errorBodySchema,
+      503: errorBodySchema,
     },
   },
   createConversation: {

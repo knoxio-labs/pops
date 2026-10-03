@@ -1,3 +1,6 @@
+import { autoTitle, type ConversationPersistence } from './persistence.js';
+
+import type { EgoMessagePart } from '../../../contract/rest-ego-parts.js';
 /**
  * Shared chat orchestration helpers used by both the `ego.chat` handler and the
  * SSE streaming route.
@@ -5,9 +8,9 @@
  * Lifted from the monolith; the persistence + engine are passed in (no
  * singletons) so the handler factory wires them from the injected deps.
  */
-import { autoTitle, type ConversationPersistence } from './persistence.js';
-
+import type { EgoActionStore } from './actions-store.js';
 import type { Conversation, Message } from './persistence.js';
+import type { AutoExecutedGroup, ProposedBatch } from './tool-loop.js';
 import type { AppContext, ChatResult, ScopeNegotiation } from './types.js';
 
 /**
@@ -25,7 +28,8 @@ export function appContextChanged(
     stored.route !== incoming.route ||
     stored.entityId !== incoming.entityId ||
     stored.entityType !== incoming.entityType ||
-    stored.entityTitle !== incoming.entityTitle
+    stored.entityTitle !== incoming.entityTitle ||
+    stored.uri !== incoming.uri
   );
 }
 
@@ -52,13 +56,72 @@ export function persistUserTurn(params: PersistUserTurnParams): Message {
 
 export interface PersistAssistantTurnParams {
   persistence: ConversationPersistence;
+  actions: EgoActionStore;
   conversationId: string;
   result: ChatResult;
 }
 
+function persistProposedBatch(
+  actions: EgoActionStore,
+  conversationId: string,
+  messageId: string,
+  batch: ProposedBatch
+): void {
+  actions.createBatch({
+    id: batch.batchId,
+    conversationId,
+    messageId,
+    loopState: batch.state,
+  });
+  batch.actions.forEach((action, position) =>
+    actions.create({
+      id: action.actionId,
+      batchId: batch.batchId,
+      conversationId,
+      messageId,
+      toolUseId: action.toolUseId,
+      position,
+      tool: action.tool,
+      args: action.args,
+      summary: action.summary,
+    })
+  );
+}
+
+function persistAutoExecutedGroups(
+  actions: EgoActionStore,
+  conversationId: string,
+  messageId: string,
+  groups: AutoExecutedGroup[]
+): void {
+  for (const group of groups) {
+    actions.createBatch({
+      id: group.batchId,
+      conversationId,
+      messageId,
+      status: 'auto',
+    });
+    group.actions.forEach((action, position) =>
+      actions.create({
+        id: action.actionId,
+        batchId: group.batchId,
+        conversationId,
+        messageId,
+        toolUseId: action.toolUseId,
+        position,
+        tool: action.tool,
+        args: action.args,
+        summary: action.summary,
+        status: action.isError ? 'failed' : 'executed',
+        result: action.result,
+      })
+    );
+  }
+}
+
 /** Persist the assistant turn after the engine returns: scopes, message, engram context. */
 export function persistAssistantTurn(params: PersistAssistantTurnParams): Message {
-  const { persistence, conversationId, result } = params;
+  const { persistence, actions, conversationId, result } = params;
 
   if (result.scopeNegotiation?.changed) {
     persistence.updateScopes(conversationId, result.scopeNegotiation.scopes);
@@ -68,9 +131,15 @@ export function persistAssistantTurn(params: PersistAssistantTurnParams): Messag
     role: 'assistant',
     content: result.response.content,
     citations: result.response.citations,
+    parts: result.response.parts,
     tokensIn: result.response.tokensIn,
     tokensOut: result.response.tokensOut,
   });
+
+  if (result.response.batch !== null) {
+    persistProposedBatch(actions, conversationId, assistantMsg.id, result.response.batch);
+  }
+  persistAutoExecutedGroups(actions, conversationId, assistantMsg.id, result.response.autoExecuted);
 
   for (const { engramId, relevanceScore } of result.retrievedEngrams) {
     persistence.upsertContext(conversationId, engramId, relevanceScore);
@@ -117,11 +186,15 @@ export function resolveConversation(params: ResolveConversationParams): Conversa
 
 export interface PersistStreamParams {
   persistence: ConversationPersistence;
+  actions: EgoActionStore;
   conversationId: string;
   content: string;
   citations: string[];
   tokensIn: number;
   tokensOut: number;
+  parts: EgoMessagePart[];
+  batch: ProposedBatch | null;
+  autoExecuted: AutoExecutedGroup[];
   retrievedEngrams: Array<{ engramId: string; relevanceScore: number }>;
   scopeNegotiation: ScopeNegotiation;
 }
@@ -130,6 +203,7 @@ export interface PersistStreamParams {
 export function persistStreamResults(params: PersistStreamParams): Message {
   return persistAssistantTurn({
     persistence: params.persistence,
+    actions: params.actions,
     conversationId: params.conversationId,
     result: {
       response: {
@@ -137,6 +211,9 @@ export function persistStreamResults(params: PersistStreamParams): Message {
         citations: params.citations,
         tokensIn: params.tokensIn,
         tokensOut: params.tokensOut,
+        parts: params.parts,
+        batch: params.batch,
+        autoExecuted: params.autoExecuted,
       },
       retrievedEngrams: params.retrievedEngrams,
       scopeNegotiation: params.scopeNegotiation,

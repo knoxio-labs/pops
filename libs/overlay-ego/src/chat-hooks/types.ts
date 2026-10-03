@@ -1,6 +1,7 @@
 /**
  * Types for the chat page view model and components.
  */
+import type { MessagePart } from './message-parts';
 
 /** A conversation summary as displayed in the sidebar list. */
 export interface ConversationSummary {
@@ -16,6 +17,8 @@ export interface ChatMessage {
   role: string;
   content: string;
   citations: string[] | null;
+  /** Parsed rich content parts; null represents a legacy message without stored parts. */
+  parts: MessagePart[] | null;
   createdAt: string;
 }
 
@@ -23,6 +26,15 @@ export interface ChatMessage {
 export interface RetrievedEngram {
   engramId: string;
   relevanceScore: number;
+}
+
+/** Lifecycle states emitted for a tool call during a streamed turn. */
+export type ToolStatus = 'started' | 'finished' | 'failed';
+
+/** A tool and its latest lifecycle status in one streamed reply. */
+export interface ToolActivity {
+  name: string;
+  status: ToolStatus;
 }
 
 /** The public interface exposed by useChatPageModel. */
@@ -65,4 +77,8 @@ export interface ChatPageModel {
   retrievedEngrams: RetrievedEngram[];
   /** Partial streaming content being received (null when not streaming). */
   streamingContent: string | null;
+  /** Tool activity from the current stream. */
+  toolActivity: ToolActivity[];
+  /** Rich content parts received in the current stream. */
+  streamParts: MessagePart[];
 }

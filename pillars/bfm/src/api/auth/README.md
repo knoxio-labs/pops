@@ -186,6 +186,13 @@ against a page of transaction rows; the receipt route costs something the
 mobile perimeter was never sized to protect against, so it gets a tighter
 budget of its own rather than a share of the wider one (POPS-1989).
 
+`POST /mobile/ego/chat/stream` is the second route outside the OpenAPI
+projection: ts-rest cannot describe its server-sent-event response. It still
+passes through `require-device.ts` and the `ego.chat` gate listed in
+`UNCONTRACTED_MOBILE_ROUTES`, plus its own `ego-rate-limit.ts` budget ahead of
+device verification. The iOS app reads this stream outside the generated BFM
+client.
+
 The counters are process-local, which is exact for one container and wrong for
 two — POPS-1474 tracks that, with the trigger pinned to whichever change first
 adds a replica.

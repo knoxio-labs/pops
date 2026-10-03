@@ -11,11 +11,14 @@ export const LEGACY_SONNET_MODEL = 'claude-sonnet-4-6';
 
 const USAGE = { input_tokens: 20, output_tokens: 9 };
 
-type Block = { type: 'text'; text: string } | { type: 'thinking'; thinking: string };
+type Block =
+  | { type: 'text'; text: string }
+  | { type: 'thinking'; thinking: string; signature: string }
+  | { type: 'tool_use'; id: string; name: string; input: unknown };
 
 interface FakeMessage {
   content: Block[];
-  stop_reason: 'end_turn' | 'max_tokens' | 'refusal';
+  stop_reason: 'end_turn' | 'max_tokens' | 'refusal' | 'tool_use';
   stop_details: { type: 'refusal'; category: string; explanation: string | null } | null;
   usage: typeof USAGE;
 }
@@ -34,10 +37,27 @@ export function textMessage(text: string): FakeMessage {
 export function thinkingThenTextMessage(text: string): FakeMessage {
   return {
     content: [
-      { type: 'thinking', thinking: 'weighing the sources' },
+      { type: 'thinking', thinking: 'weighing the sources', signature: 'sig' },
       { type: 'text', text },
     ],
     stop_reason: 'end_turn',
+    stop_details: null,
+    usage: USAGE,
+  };
+}
+
+/** A response that reasons, says something, then calls each of `toolUses`. */
+export function toolUseMessage(
+  text: string,
+  toolUses: { id: string; name: string; input: unknown }[]
+): FakeMessage {
+  return {
+    content: [
+      { type: 'thinking', thinking: 'deciding which tool to call', signature: 'sig' },
+      { type: 'text', text },
+      ...toolUses.map((use) => ({ type: 'tool_use' as const, ...use })),
+    ],
+    stop_reason: 'tool_use',
     stop_details: null,
     usage: USAGE,
   };

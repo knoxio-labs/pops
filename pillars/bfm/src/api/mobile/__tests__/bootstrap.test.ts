@@ -71,11 +71,12 @@ describe('a federation that is entirely healthy', () => {
 
     const payload = await buildMobileBootstrap(
       device,
-      depsFor(db, healthyFleet('finance', 'food'))
+      depsFor(db, healthyFleet('finance', 'food', 'cerebrum'))
     );
 
     expect(payload.registry.source).toBe('fresh');
     expect(payload.pillars).toEqual([
+      { id: 'cerebrum', reachability: 'healthy' },
       { id: 'finance', reachability: 'healthy' },
       { id: 'food', reachability: 'healthy' },
     ]);
@@ -85,6 +86,7 @@ describe('a federation that is entirely healthy', () => {
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'healthy' },
     ]);
   });
 
@@ -152,6 +154,7 @@ describe('a federation that is half-broken', () => {
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'unavailable' },
     ]);
   });
 
@@ -172,6 +175,7 @@ describe('a federation that is half-broken', () => {
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'unavailable' },
     ]);
   });
 
@@ -197,6 +201,7 @@ describe('a federation that is half-broken', () => {
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'unavailable' },
     ]);
   });
 
@@ -214,6 +219,7 @@ describe('a federation that is half-broken', () => {
       { id: 'purchases', reachability: 'healthy' },
       { id: 'receipt-capture', reachability: 'healthy' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'unavailable' },
     ]);
   });
 
@@ -234,6 +240,7 @@ describe('a federation that is half-broken', () => {
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'unavailable' },
     ]);
   });
 });
@@ -257,6 +264,7 @@ describe('a registry serving something less than the truth', () => {
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'unavailable' },
     ]);
   });
 
@@ -280,6 +288,7 @@ describe('a registry serving something less than the truth', () => {
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'unavailable' },
     ]);
   });
 

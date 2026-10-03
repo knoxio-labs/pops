@@ -85,6 +85,7 @@ const ROUTES: readonly RouteExpectation[] = [
     method: 'get',
     rename: { includeArchived: 'archived' },
   },
+  { toolName: 'finance.accounts.get', path: '/accounts/{id}', method: 'get' },
   {
     toolName: 'finance.accounts.checkpoints',
     path: '/accounts/{id}/checkpoints',

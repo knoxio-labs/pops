@@ -147,6 +147,22 @@ export function toPurchaseUpdateErrorResponse(
   return toUpstreamErrorResponse(failure);
 }
 
+/** The statuses `POST /mobile/ego/action-batches/:batchId/decide` can answer. */
+export type EgoDecisionErrorStatus = UpstreamErrorStatus | 409;
+
+export interface EgoDecisionErrorResponse {
+  readonly status: EgoDecisionErrorStatus;
+  readonly body: MobileUpstreamError;
+}
+
+/** Preserve a producer conflict for a mobile Ego batch decision. */
+export function toEgoDecisionErrorResponse(failure: GatewayFailure): EgoDecisionErrorResponse {
+  if (failure.kind === 'conflict') {
+    return { status: 409, body: relayBody(failure, 'contract_mismatch') };
+  }
+  return toUpstreamErrorResponse(failure);
+}
+
 /** The subset a collection route can answer; a collection has no resource-level 404. */
 export type CollectionUpstreamErrorStatus = Exclude<UpstreamErrorStatus, 404>;
 

@@ -56,6 +56,21 @@ describe('formatAppContextBlock', () => {
     expect(block).toContain('Viewing item: abc');
   });
 
+  it('includes the object URI after the route when set', () => {
+    const block = formatAppContextBlock({
+      app: 'finance',
+      route: '/finance/transactions/tx_1',
+      uri: 'pops:finance/transaction/tx_1',
+    });
+    expect(block.indexOf('Current route: /finance/transactions/tx_1')).toBeLessThan(
+      block.indexOf('Object URI: pops:finance/transaction/tx_1')
+    );
+  });
+
+  it('omits the object URI when it is absent', () => {
+    expect(formatAppContextBlock({ app: 'finance' })).not.toContain('Object URI:');
+  });
+
   it('carries the block into the system prompt', () => {
     const prompt = buildEgoSystemPrompt([], {
       app: 'inventory',
@@ -75,6 +90,17 @@ describe('egoAppContextSchema', () => {
   it('keeps entityTitle', () => {
     expect(egoAppContextSchema.parse({ app: 'finance', entityTitle: 'x' }).entityTitle).toBe('x');
   });
+
+  it('keeps a valid object URI', () => {
+    const uri = 'pops:finance/transaction/tx_1';
+    expect(egoAppContextSchema.parse({ app: 'finance', uri }).uri).toBe(uri);
+  });
+
+  it('rejects a URI that is not an ADR-012 object URI', () => {
+    expect(
+      egoAppContextSchema.safeParse({ app: 'finance', uri: 'finance/transaction/1' }).success
+    ).toBe(false);
+  });
 });
 
 describe('appContextChanged', () => {
@@ -84,6 +110,7 @@ describe('appContextChanged', () => {
     entityType: 'item',
     entityId: '42',
     entityTitle: 'Bosch drill',
+    uri: 'pops:inventory/item/42',
   };
 
   it('is false for an identical context', () => {
@@ -92,6 +119,10 @@ describe('appContextChanged', () => {
 
   it('is true when only the entity title changed', () => {
     expect(appContextChanged(stored, { ...stored, entityTitle: 'Bosch hammer drill' })).toBe(true);
+  });
+
+  it('is true when only the object URI changed', () => {
+    expect(appContextChanged(stored, { ...stored, uri: 'pops:inventory/item/43' })).toBe(true);
   });
 
   it('is true when a title appears on a context stored without one', () => {

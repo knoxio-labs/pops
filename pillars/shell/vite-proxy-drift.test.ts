@@ -45,4 +45,10 @@ describe('vite dev proxy / nginx prod proxy parity', () => {
     expect(vitePrefixes.has('contacts-api')).toBe(true);
     expect(vitePrefixes.has('ai-api')).toBe(true);
   });
+
+  it('does not proxy the retired /api/ego prefix', async () => {
+    const viteConfig = await readFile(VITE_CONFIG_PATH, 'utf8');
+
+    expect(viteConfig).not.toMatch(/['"]\/api\/ego['"]\s*:/);
+  });
 });

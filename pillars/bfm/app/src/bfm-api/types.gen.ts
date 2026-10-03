@@ -965,6 +965,402 @@ export type MobileContactsCreateMerchantAddressResponses = {
 export type MobileContactsCreateMerchantAddressResponse =
   MobileContactsCreateMerchantAddressResponses[keyof MobileContactsCreateMerchantAddressResponses];
 
+export type MobileEgoDecideActionBatchData = {
+  /**
+   * Body
+   */
+  body?: {
+    alwaysAllow: Array<string>;
+    approve: Array<string>;
+    reject: Array<string>;
+  };
+  path: {
+    batchId: string;
+  };
+  query?: never;
+  url: '/mobile/ego/action-batches/{batchId}/decide';
+};
+
+export type MobileEgoDecideActionBatchErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileEgoDecideActionBatchError =
+  MobileEgoDecideActionBatchErrors[keyof MobileEgoDecideActionBatchErrors];
+
+export type MobileEgoDecideActionBatchResponses = {
+  /**
+   * 200
+   */
+  200: {
+    batchId: string;
+  };
+};
+
+export type MobileEgoDecideActionBatchResponse =
+  MobileEgoDecideActionBatchResponses[keyof MobileEgoDecideActionBatchResponses];
+
+export type MobileEgoListConversationsData = {
+  body?: never;
+  path?: never;
+  query?: {
+    limit?: number;
+    offset?: number;
+    q?: string;
+  };
+  url: '/mobile/ego/conversations';
+};
+
+export type MobileEgoListConversationsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileEgoListConversationsError =
+  MobileEgoListConversationsErrors[keyof MobileEgoListConversationsErrors];
+
+export type MobileEgoListConversationsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    conversations: Array<{
+      createdAt: string;
+      id: string;
+      title: string | null;
+      updatedAt: string;
+    }>;
+    total: number;
+  };
+};
+
+export type MobileEgoListConversationsResponse =
+  MobileEgoListConversationsResponses[keyof MobileEgoListConversationsResponses];
+
+export type MobileEgoGetConversationData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/ego/conversations/{id}';
+};
+
+export type MobileEgoGetConversationErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileEgoGetConversationError =
+  MobileEgoGetConversationErrors[keyof MobileEgoGetConversationErrors];
+
+export type MobileEgoGetConversationResponses = {
+  /**
+   * 200
+   */
+  200: {
+    conversation: {
+      createdAt: string;
+      id: string;
+      title: string | null;
+      updatedAt: string;
+    };
+    messages: Array<{
+      createdAt: string;
+      id: string;
+      parts: Array<{
+        actions?: Array<{
+          actionId: string;
+          status: string;
+          summary: string;
+          tool: string;
+        }>;
+        batchId?: string;
+        subtitle?: string;
+        text?: string;
+        title?: string;
+        type: string;
+        uri?: string;
+      }>;
+      role: string;
+    }>;
+  };
+};
+
+export type MobileEgoGetConversationResponse =
+  MobileEgoGetConversationResponses[keyof MobileEgoGetConversationResponses];
+
 export type MobileFinanceListAccountsData = {
   body?: never;
   path?: never;

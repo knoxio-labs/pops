@@ -18,6 +18,11 @@ import { bfmContract } from '../contract/rest.js';
 export const MOBILE_PATH_PREFIX = '/mobile';
 
 /**
+ * The one mobile route outside the ts-rest contract: Ego's event stream.
+ */
+export const MOBILE_EGO_CHAT_STREAM_PATH = '/mobile/ego/chat/stream';
+
+/**
  * The one mobile route that carries a payload measured in megabytes, and
  * therefore the only one mounted with a body limit of its own.
  *

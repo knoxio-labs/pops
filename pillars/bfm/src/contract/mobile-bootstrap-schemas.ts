@@ -65,6 +65,7 @@ export const MOBILE_FEATURE_IDS = [
   'purchases',
   'receipt-capture',
   'inventory',
+  'ego',
 ] as const;
 
 export type KnownMobileFeatureId = (typeof MOBILE_FEATURE_IDS)[number];

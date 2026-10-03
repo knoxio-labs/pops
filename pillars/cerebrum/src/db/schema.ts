@@ -13,6 +13,8 @@
  *   - `conversations` / `messages` / `conversationContext` —
  *     chat-with-cerebrum sessions, append-only message stream, and the
  *     conversation → engram junction table.
+ *   - `egoActionBatches` / `egoActions` — batches of write actions Ego
+ *     proposed and the per-action rows awaiting the user's decision.
  *   - `plexusAdapters` / `plexusFilters` — external adapter registry +
  *     per-adapter ingestion filter rules.
  *   - `embeddings` — dense-vector metadata table (one row per content
@@ -33,7 +35,13 @@ export { embeddings } from './schema/core/embeddings.js';
 export { debriefResults } from './schema/debrief-results.js';
 export { debriefSessions } from './schema/debrief-sessions.js';
 export { debriefStatus } from './schema/debrief-status.js';
-export { conversationContext, conversations, messages } from './schema/ego.js';
+export {
+  conversationContext,
+  conversations,
+  egoActionBatches,
+  egoActions,
+  messages,
+} from './schema/ego.js';
 export { engramSearchDocs } from './schema/engram-search.js';
 export { engramIndex, engramLinks, engramScopes, engramTags } from './schema/engrams.js';
 export { gliaActions, gliaTrustState } from './schema/glia.js';

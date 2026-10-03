@@ -14,12 +14,14 @@ import { importsTools } from './finance-imports.js';
 import { searchTools } from './finance-search.js';
 import { summaryTools } from './finance-summary.js';
 import { wishlistTools } from './finance-wishlist.js';
+import { mapRows, withUri } from './uri.js';
 import { mapCallResult, reqStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
 
 const transactionsList: ToolDef = {
   name: 'finance.transactions.list',
+  readOnly: true,
   description:
     'List financial transactions. Filter by date range, entity, account, type, or free-text search.',
   inputSchema: {
@@ -55,12 +57,13 @@ const transactionsList: ToolDef = {
       limit: typeof args['limit'] === 'number' ? args['limit'] : undefined,
       offset: typeof args['offset'] === 'number' ? args['offset'] : undefined,
     });
-    return mapCallResult(result);
+    return mapCallResult(mapRows(result, 'data', withUri('finance/transaction')));
   },
 };
 
 const transactionsGet: ToolDef = {
   name: 'finance.transactions.get',
+  readOnly: true,
   description: 'Get a single financial transaction by ID.',
   inputSchema: {
     type: 'object',
@@ -70,12 +73,14 @@ const transactionsGet: ToolDef = {
   handler: async (args) => {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
-    return mapCallResult(await finance().transactions.get({ id }));
+    const result = await finance().transactions.get({ id });
+    return mapCallResult(mapRows(result, 'data', withUri('finance/transaction')));
   },
 };
 
 const entitiesList: ToolDef = {
   name: 'finance.entities.list',
+  readOnly: true,
   description:
     'List finance entities (merchants, businesses). Entities are matched to transactions during import.',
   inputSchema: {
@@ -102,6 +107,7 @@ const entitiesList: ToolDef = {
 
 const budgetsList: ToolDef = {
   name: 'finance.budgets.list',
+  readOnly: true,
   description: 'List budgets with current spend. Supports filtering by period and active state.',
   inputSchema: {
     type: 'object',
@@ -127,12 +133,13 @@ const budgetsList: ToolDef = {
       limit: typeof args['limit'] === 'number' ? args['limit'] : undefined,
       offset: typeof args['offset'] === 'number' ? args['offset'] : undefined,
     });
-    return mapCallResult(result);
+    return mapCallResult(mapRows(result, 'data', withUri('finance/budget')));
   },
 };
 
 const budgetsGet: ToolDef = {
   name: 'finance.budgets.get',
+  readOnly: true,
   description: 'Get a single budget by ID, including current spend and remaining amount.',
   inputSchema: {
     type: 'object',
@@ -142,7 +149,8 @@ const budgetsGet: ToolDef = {
   handler: async (args) => {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
-    return mapCallResult(await finance().budgets.get({ id }));
+    const result = await finance().budgets.get({ id });
+    return mapCallResult(mapRows(result, 'data', withUri('finance/budget')));
   },
 };
 

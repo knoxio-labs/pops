@@ -92,8 +92,8 @@ export function useTvShowDetailModel(showId: number) {
 
   const tvShowEntity = useMemo(
     () => ({
-      uri: `pops:media/tv/${showId}`,
-      type: 'tvshow' as const,
+      uri: `pops:media/tv-show/${showId}`,
+      type: 'tv-show' as const,
       title: queries.data?.data?.name ?? '',
     }),
     [showId, queries.data?.data?.name]

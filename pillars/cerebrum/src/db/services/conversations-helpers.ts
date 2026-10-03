@@ -38,6 +38,7 @@ export function rowToMessage(row: typeof messages.$inferSelect): Message {
     content: row.content,
     citations: parseJsonOrNull(row.citations),
     toolCalls: parseJsonOrNull(row.toolCalls),
+    parts: parseJsonTolerant(row.parts),
     tokensIn: row.tokensIn,
     tokensOut: row.tokensOut,
     createdAt: row.createdAt,
@@ -65,4 +66,13 @@ function parseScopes(value: string): string[] {
 function parseJsonOrNull(value: string | null): unknown | null {
   if (value == null) return null;
   return JSON.parse(value) as unknown;
+}
+
+function parseJsonTolerant(value: string | null): unknown | null {
+  if (value == null) return null;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
 }

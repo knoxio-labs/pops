@@ -31,6 +31,7 @@ function buildOptimisticMessage(conversationId: string, content: string) {
     content,
     citations: null,
     toolCalls: null,
+    parts: null,
     tokensIn: null,
     tokensOut: null,
     createdAt: new Date().toISOString(),
@@ -90,11 +91,13 @@ export function useChatMutations({
       {
         onConversation: setSelectedConversationId,
         onEngrams: setRetrievedEngrams,
-        onInvalidate: (conversationId) => {
-          void queryClient.invalidateQueries({ queryKey: ['ego', 'conversations', 'list'] });
-          void queryClient.invalidateQueries({
-            queryKey: ['ego', 'conversations', 'get', { id: conversationId }],
-          });
+        onInvalidate: async (conversationId) => {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['ego', 'conversations', 'list'] }),
+            queryClient.invalidateQueries({
+              queryKey: ['ego', 'conversations', 'get', { id: conversationId }],
+            }),
+          ]);
         },
       }
     );
@@ -111,5 +114,7 @@ export function useChatMutations({
     retrievedEngrams,
     clearEngrams,
     streamingContent: streaming.streamingContent,
+    toolActivity: streaming.toolActivity,
+    streamParts: streaming.streamParts,
   };
 }

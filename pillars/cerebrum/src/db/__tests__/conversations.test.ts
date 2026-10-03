@@ -1,7 +1,7 @@
 /**
  * Invariant tests for the conversations data-access service against an
- * in-memory SQLite seeded with the package-local conversations baseline
- * migration. Covers conversation CRUD + filters, message append + list
+ * in-memory SQLite seeded with the package-local Ego schema migrations.
+ * Covers conversation CRUD + filters, message append + list
  * + count helpers, context upsert + list + delete, and the FK cascade
  * from conversation deletion across messages + context.
  *
@@ -44,13 +44,20 @@ const CONVERSATIONS_MIGRATION = join(
   '../../../migrations/0052_conversations_baseline.sql'
 );
 
+const EGO_PARTS_MIGRATION = join(__dirname, '../../../migrations/0059_ego_parts_actions.sql');
+const EGO_ALLOWED_TOOLS_MIGRATION = join(
+  __dirname,
+  '../../../migrations/0060_ego_allowed_tools.sql'
+);
+
 function freshDb(): CerebrumDb {
   const raw = new Database(':memory:');
   raw.pragma('foreign_keys = ON');
-  const sql = readFileSync(CONVERSATIONS_MIGRATION, 'utf8');
-  for (const stmt of sql.split('--> statement-breakpoint')) {
-    const trimmed = stmt.trim();
-    if (trimmed.length > 0) raw.exec(trimmed);
+  for (const path of [CONVERSATIONS_MIGRATION, EGO_PARTS_MIGRATION, EGO_ALLOWED_TOOLS_MIGRATION]) {
+    for (const stmt of readFileSync(path, 'utf8').split('--> statement-breakpoint')) {
+      const trimmed = stmt.trim();
+      if (trimmed.length > 0) raw.exec(trimmed);
+    }
   }
   return drizzle(raw);
 }

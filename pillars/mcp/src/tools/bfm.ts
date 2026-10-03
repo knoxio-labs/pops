@@ -18,6 +18,7 @@ function bfm(): PillarHandle<BfmShape> {
 
 const issueDevicePairingCode: ToolDef = {
   name: 'bfm.devicePairing.issueCode',
+  readOnly: false,
   description:
     'Issue one short-lived, single-use device-pairing code for the iOS app. Returns only the code, pairing URL, and expiry; it never returns device credentials or lists devices.',
   inputSchema: {

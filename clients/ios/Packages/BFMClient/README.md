@@ -2,7 +2,7 @@
 
 The one way this app reaches the federation. Everything the phone knows about a pillar arrives through here, over HTTP, from the BFM.
 
-Four things live in this package: the Swift client **generated** from the BFM's OpenAPI snapshot, the hand-written façade that wraps it, `BuiltInBaseURL`, which answers where the BFM is for a Debug build, and the repositories that turn a contract response into the vocabulary `AppCore` declares.
+Five things live in this package: the Swift client **generated** from the BFM's OpenAPI snapshot, the hand-written façade that wraps it, `BuiltInBaseURL`, which answers where the BFM is for a Debug build, the repositories that turn a contract response into the vocabulary `AppCore` declares, and the decoder for Ego's streamed wire frames.
 
 Inventory mutation requests carry the catalogue revision stored with the
 queued edit. `BFMInventoryTransport` forwards that pin as its own wire field;
@@ -27,6 +27,10 @@ Drift between the two is caught by [`scripts/ci/check-vendored-contracts.mjs`](.
 Generating at build time was the alternative. Committed output is reviewable, makes the diff check trivial, and keeps `xcodebuild` off a plugin that needs the network.
 
 **The whole document is generated, including the `/operator/*` routes the phone will never call.** The generator's `filter` is include-only, so narrowing it means naming every phone-facing path in `openapi-generator-config.yaml` and keeping that list current — and the moment the list is what decides the client's contents, the diff gate stops proving the client tracks the contract and starts proving it tracks the list. The operator methods are `internal`, unreachable from any other module and unreferenced by the façade, so they are dead-stripped at link. Reconsider this when the operator surface grows enough that its churn is the reason a macOS CI job runs, not before.
+
+## The Ego event stream has a separate wire fixture
+
+Ego's SSE frames are hand-decoded because generated OpenAPI types do not describe the stream. `BFMEgoWire` maps known frames and parts into AppCore events, skips unknown additions, and reports malformed known frames as `contractMismatch`. The canonical fixture is `pillars/bfm/contracts/ego-wire-v1.json`; `clients/ios/Contracts/ego-wire-v1.json` is its byte-for-byte copy. The BFM schema test and this package's Swift test pin the same SHA-256 so changing only one copy fails.
 
 ## Why the generator is not a dependency of this package
 
@@ -63,6 +67,10 @@ Two things it does that the generated client does not:
 `URLError.timedOut` becomes `ios.net.timeout`; other URL transport failures become `ios.net.offline`. A successful response the generated client cannot decode becomes `ios.decode.failed`. These classifications use fixed messages and never retain a request body, typed input or header, so bearer and refresh tokens cannot enter an error value.
 
 It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's unauthenticated perimeter; `init(baseURL:middlewares:)` is how a caller hands it `Auth`'s `AuthenticatingMiddleware`, which is what a `/mobile/*` call needs. Nothing in this package knows which of the two it was given.
+
+## Ego byte transport
+
+The generated client does not expose response bytes as they arrive, so Ego's `POST /mobile/ego/chat/stream` uses `BFMEgoByteTransport`. It receives a `BFMStreamAuthorizer` and a `BFMByteSource`; it does not store credentials or own pairing. The default source reads with Foundation's `URLSession.bytes(for:)`, yields chunks of at most 4096 bytes, and cancels the request when its consumer stops. A token-bearing `401` refreshes once and retries once. A `403` revokes the device only when its body has the explicit `bfm.auth.device_revoked` or `device_revoked` code; capability refusals are not revocations. Rejected bodies are capped at 64 KiB and have the request's bearer tokens removed.
 
 ## The repositories
 

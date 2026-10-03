@@ -1,3 +1,4 @@
+import { egoMessagePartsSchema, type EgoMessagePart } from '../../../contract/rest-ego-parts.js';
 /**
  * Ego conversation persistence for the cerebrum pillar.
  *
@@ -10,16 +11,28 @@
  * `conversationsService.insertMessage`.
  */
 import {
+  conversationAllowedToolsService,
   conversationsService,
   MESSAGE_ROLES,
   type CerebrumDb,
   type Conversation,
   type ConversationContextEntry,
-  type Message,
+  type Message as DbMessage,
   type MessageRole,
 } from '../../../db/index.js';
 
-export type { Conversation, Message } from '../../../db/index.js';
+export type { Conversation } from '../../../db/index.js';
+
+/** A persisted message whose `parts` have been validated against the wire schema. */
+export type Message = Omit<DbMessage, 'parts'> & { parts: EgoMessagePart[] | null };
+
+function withValidParts(row: DbMessage): Message {
+  if (row.parts == null) return { ...row, parts: null };
+  const parsed = egoMessagePartsSchema.safeParse(row.parts);
+  if (parsed.success) return { ...row, parts: parsed.data };
+  console.warn(`ego: dropping malformed parts on message ${row.id}`);
+  return { ...row, parts: null };
+}
 
 const MARKDOWN_NOISE = /^#{1,6}\s+|[*_~`]+/g;
 
@@ -78,6 +91,7 @@ export interface AppendMessageInput {
   content: string;
   citations?: string[];
   toolCalls?: unknown[];
+  parts?: EgoMessagePart[];
   tokensIn?: number;
   tokensOut?: number;
 }
@@ -125,7 +139,10 @@ export class ConversationPersistence {
   getConversation(id: string): { conversation: Conversation; messages: Message[] } | null {
     const conversation = conversationsService.getConversation(this.db, id);
     if (!conversation) return null;
-    return { conversation, messages: conversationsService.listMessages(this.db, id) };
+    return {
+      conversation,
+      messages: conversationsService.listMessages(this.db, id).map(withValidParts),
+    };
   }
 
   deleteConversation(id: string): void {
@@ -143,12 +160,28 @@ export class ConversationPersistence {
       content: input.content,
       citations: input.citations ?? null,
       toolCalls: input.toolCalls ?? null,
+      parts: input.parts ?? null,
       tokensIn: input.tokensIn ?? null,
       tokensOut: input.tokensOut ?? null,
       createdAt: iso,
     });
     this.maybeAutoTitle(conversationId, input, iso);
-    return row;
+    return withValidParts(row);
+  }
+
+  /** Replace the stored parts of a message; false when no message has that id. */
+  updateMessageParts(messageId: string, parts: EgoMessagePart[]): boolean {
+    return conversationsService.updateMessageParts(this.db, messageId, parts);
+  }
+
+  /** Read this conversation's allowed tool names; a missing conversation returns an empty list. */
+  getAllowedTools(conversationId: string): string[] {
+    return conversationAllowedToolsService.getAllowedTools(this.db, conversationId);
+  }
+
+  /** Merge tool names into this conversation's allow-list; return null when it is missing. */
+  addAllowedTools(conversationId: string, tools: readonly string[]): string[] | null {
+    return conversationAllowedToolsService.addAllowedTools(this.db, conversationId, tools);
   }
 
   upsertContext(conversationId: string, engramId: string, relevanceScore?: number): void {
