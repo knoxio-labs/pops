@@ -16,11 +16,30 @@ import { purchasesProductContract } from './rest-products.js';
 import { purchasesPurchaseContract } from './rest-purchases.js';
 import { purchasesReceiptContract } from './rest-receipts.js';
 import { purchasesReconcileContract } from './rest-reconcile.js';
+import { ErrorBodySchema } from './rest-schemas.js';
 import { purchasesSearchContract } from './rest-search.js';
 import { purchasesSourceContract } from './rest-sources.js';
 import { purchasesTaggedContract } from './rest-tagged.js';
 
 const c = initContract();
+
+const purchasesTaggedApiContract = c.router({
+  list: purchasesTaggedContract.list,
+  attach: {
+    ...purchasesTaggedContract.attach,
+    responses: {
+      ...purchasesTaggedContract.attach.responses,
+      404: ErrorBodySchema,
+    },
+  },
+  detach: {
+    ...purchasesTaggedContract.detach,
+    responses: {
+      ...purchasesTaggedContract.detach.responses,
+      404: ErrorBodySchema,
+    },
+  },
+});
 
 export const purchasesContract = c.router(
   {
@@ -31,7 +50,7 @@ export const purchasesContract = c.router(
     reconcile: purchasesReconcileContract,
     search: purchasesSearchContract,
     source: purchasesSourceContract,
-    tagged: purchasesTaggedContract,
+    tagged: purchasesTaggedApiContract,
   },
   {
     pathPrefix: '',
