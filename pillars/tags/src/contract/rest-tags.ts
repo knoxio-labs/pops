@@ -1,6 +1,7 @@
 import { initContract } from '@ts-rest/core';
-import { ErrorBodySchema } from '@pops/types';
 import { z } from 'zod';
+
+import { ErrorBodySchema } from '@pops/types';
 
 import {
   CreateTagBody,

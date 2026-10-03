@@ -1,7 +1,9 @@
-import { PopsError } from '@pops/pillar-express';
 import { describe, expect, it } from 'vitest';
 
+import { PopsError } from '@pops/pillar-express';
+
 import { tagsErrors } from '../../api/errors.js';
+import { SHARED_TAG_FACETS } from '../facets.js';
 import {
   CreateTagBody,
   ExpandTagsBody,
@@ -9,7 +11,6 @@ import {
   TagSchema,
   UpdateTagBody,
 } from '../rest-tags-schemas.js';
-import { SHARED_TAG_FACETS } from '../facets.js';
 import { tagsVocabularyContract } from '../rest-tags.js';
 
 const validTag = {
@@ -75,9 +76,9 @@ describe('shared tag contract schemas', () => {
 
   it('requires between one and 500 ids when expanding tags', () => {
     expect(ExpandTagsBody.safeParse({ ids: [] }).success).toBe(false);
-    expect(ExpandTagsBody.safeParse({ ids: Array.from({ length: 501 }, () => tagId) }).success).toBe(
-      false
-    );
+    expect(
+      ExpandTagsBody.safeParse({ ids: Array.from({ length: 501 }, () => tagId) }).success
+    ).toBe(false);
   });
 
   it('round-trips a complete tag with its date window', () => {
@@ -101,9 +102,9 @@ describe('shared tag contract schemas', () => {
       'POST /tags/:id/merge',
       'POST /tags/expand',
     ]);
-    expect(routes.every(({ summary }) => typeof summary === 'string' && summary.trim().length > 0)).toBe(
-      true
-    );
+    expect(
+      routes.every(({ summary }) => typeof summary === 'string' && summary.trim().length > 0)
+    ).toBe(true);
   });
 
   it('registers the six vocabulary error codes with their HTTP statuses', () => {
