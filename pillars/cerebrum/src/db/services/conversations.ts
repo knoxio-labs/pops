@@ -114,7 +114,7 @@ export function insertConversation(db: CerebrumDb, row: InsertConversationRow): 
     updatedAt: row.updatedAt,
   };
   db.insert(conversations).values(values).run();
-  return rowToConversation(values);
+  return rowToConversation({ ...values, allowedTools: null });
 }
 
 /**

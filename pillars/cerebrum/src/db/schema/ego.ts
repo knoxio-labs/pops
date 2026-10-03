@@ -15,6 +15,7 @@ export const conversations = sqliteTable(
     activeScopes: text('active_scopes').notNull(),
     appContext: text('app_context'),
     model: text('model').notNull(),
+    allowedTools: text('allowed_tools'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
