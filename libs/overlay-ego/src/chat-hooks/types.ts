@@ -1,6 +1,8 @@
 /**
  * Types for the chat page view model and components.
  */
+import type { MessagePart } from './message-parts';
+import type { ToolActivity } from './stream-reducer';
 
 /** A conversation summary as displayed in the sidebar list. */
 export interface ConversationSummary {
@@ -16,6 +18,8 @@ export interface ChatMessage {
   role: string;
   content: string;
   citations: string[] | null;
+  /** Parsed rich content parts; null represents a legacy message without stored parts. */
+  parts: MessagePart[] | null;
   createdAt: string;
 }
 
@@ -65,4 +69,8 @@ export interface ChatPageModel {
   retrievedEngrams: RetrievedEngram[];
   /** Partial streaming content being received (null when not streaming). */
   streamingContent: string | null;
+  /** Tool activity from the current stream. */
+  toolActivity: ToolActivity[];
+  /** Rich content parts received in the current stream. */
+  streamParts: MessagePart[];
 }

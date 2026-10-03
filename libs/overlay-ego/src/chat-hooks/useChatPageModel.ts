@@ -58,5 +58,7 @@ export function useChatPageModel(): ChatPageModel {
     activeScopes: detail.activeScopes,
     retrievedEngrams: mutations.retrievedEngrams,
     streamingContent: mutations.streamingContent,
+    toolActivity: mutations.toolActivity,
+    streamParts: mutations.streamParts,
   };
 }
