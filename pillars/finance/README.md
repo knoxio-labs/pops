@@ -91,11 +91,11 @@ The mirror of the section above (POPS-2021). Finance has three outbound
 cross-pillar clients, all through `pillar()` from `@pops/pillar-sdk/server`,
 which attaches the pillar's service-account key as `X-API-Key`:
 
-| Leg                                        | Call                                               | Scope needed        | Where                           |
-| ------------------------------------------ | -------------------------------------------------- | ------------------- | ------------------------------- |
-| entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create` | `contacts.entities` | `src/api/contacts/client.ts`    |
-| owner-URI reconciliation cron              | `users.get`                                        | `registry.users`    | `src/api/cron/pillar-lookup.ts` |
-| shared tag vocabulary client               | `tags.list`, `tags.create`                         | `tags.tags`         | `src/api/tags/client.ts`        |
+| Leg                                        | Call                                                                     | Scope needed        | Where                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------ |
+| entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create`                       | `contacts.entities` | `src/api/contacts/client.ts`                                 |
+| owner-URI reconciliation cron              | `users.get`                                                              | `registry.users`    | `src/api/cron/pillar-lookup.ts`                              |
+| shared tag vocabulary and carrier sync     | `tags.list`, `tags.create`; one sync retry for an unknown carrier tag id | `tags.tags`         | `src/api/tags/client.ts`, `src/api/cron/sync-shared-tags.ts` |
 
 The grant is those three and nothing wider; `src/api/pillars/service-account.ts`
 is its source of truth and a test pins the list. Minting the account is an
@@ -138,18 +138,19 @@ provisioning remains an operator step.
 
 The contract (`src/contract/rest.ts`) composes these sub-routers:
 
-| Domain         | Surface                                                       |
-| -------------- | ------------------------------------------------------------- |
-| `transactions` | `/transactions`, `/transactions/:id`, `/transactions/restore` |
-| `budgets`      | `/budgets`, `/budgets/:id`                                    |
-| `wishlist`     | `/wishlist`, `/wishlist/:id`                                  |
-| `imports`      | CSV / Up Bank import + atomic commit                          |
-| `tagRules`     | tag rules + suggester                                         |
-| `corrections`  | AI-assisted correction proposals                              |
-| `entityUsage`  | read-only usage counts for `contacts` entities                |
-| `search`       | cross-domain search                                           |
-| `settings`     | per-pillar settings                                           |
-| `summary`      | `/summary` — spend for a window + the period before it        |
+| Domain         | Surface                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `transactions` | `/transactions`, `/transactions/:id`, `/transactions/restore`                |
+| `tagged`       | `POST /tagged/query`, `PUT/DELETE /tagged/transaction/:entityId/tags/:tagId` |
+| `budgets`      | `/budgets`, `/budgets/:id`                                                   |
+| `wishlist`     | `/wishlist`, `/wishlist/:id`                                                 |
+| `imports`      | CSV / Up Bank import + atomic commit                                         |
+| `tagRules`     | tag rules + suggester                                                        |
+| `corrections`  | AI-assisted correction proposals                                             |
+| `entityUsage`  | read-only usage counts for `contacts` entities                               |
+| `search`       | cross-domain search                                                          |
+| `settings`     | per-pillar settings                                                          |
+| `summary`      | `/summary` — spend for a window + the period before it                       |
 
 ## Layout
 

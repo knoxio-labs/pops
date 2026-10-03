@@ -10403,6 +10403,194 @@ export type TagRulesDisableResponses = {
 
 export type TagRulesDisableResponse = TagRulesDisableResponses[keyof TagRulesDisableResponses];
 
+export type TaggedListData = {
+  /**
+   * Body
+   */
+  body?: {
+    cursor?: string;
+    limit: number;
+    tagIds: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/tagged/query';
+};
+
+export type TaggedListErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TaggedListError = TaggedListErrors[keyof TaggedListErrors];
+
+export type TaggedListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    items: Array<{
+      amountCents: number | null;
+      date: string | null;
+      entityType: string;
+      tagIds: Array<string>;
+      title: string;
+      uri: string;
+    }>;
+    nextCursor: string | null;
+  };
+};
+
+export type TaggedListResponse = TaggedListResponses[keyof TaggedListResponses];
+
+export type TaggedDetachData = {
+  body?: never;
+  path: {
+    entityType: 'transaction';
+    entityId: string;
+    tagId: string;
+  };
+  query?: never;
+  url: '/tagged/{entityType}/{entityId}/tags/{tagId}';
+};
+
+export type TaggedDetachErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TaggedDetachError = TaggedDetachErrors[keyof TaggedDetachErrors];
+
+export type TaggedDetachResponses = {
+  /**
+   * 200
+   */
+  200: {
+    tagIds: Array<string>;
+  };
+};
+
+export type TaggedDetachResponse = TaggedDetachResponses[keyof TaggedDetachResponses];
+
+export type TaggedAttachData = {
+  body?: never;
+  path: {
+    entityType: 'transaction';
+    entityId: string;
+    tagId: string;
+  };
+  query?: never;
+  url: '/tagged/{entityType}/{entityId}/tags/{tagId}';
+};
+
+export type TaggedAttachErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TaggedAttachError = TaggedAttachErrors[keyof TaggedAttachErrors];
+
+export type TaggedAttachResponses = {
+  /**
+   * 200
+   */
+  200: {
+    tagIds: Array<string>;
+  };
+};
+
+export type TaggedAttachResponse = TaggedAttachResponses[keyof TaggedAttachResponses];
+
 export type TransactionsListData = {
   body?: never;
   path?: never;
