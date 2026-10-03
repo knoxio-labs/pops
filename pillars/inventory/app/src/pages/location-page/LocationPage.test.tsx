@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testin
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AppContextProvider, useAppContext } from '@pops/navigation';
+
 import { buildWorld } from '../../foundation/model/placement-model.js';
 import { InventoryApiError } from '../../inventory-api-helpers.js';
 import { LOCATIONS_TREE_QUERY_KEY } from '../../inventory-web/queryKeys.js';
@@ -138,16 +140,26 @@ function emptyVerbState(): ContentsVerbState {
   };
 }
 
-function renderPage(path = '/inventory/locations/garage'): QueryClient {
+function PageContextProbe(): ReactElement {
+  return <output data-testid="page-context">{JSON.stringify(useAppContext())}</output>;
+}
+
+function renderPage(path = '/inventory/locations/garage', withPageContext = false): QueryClient {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  const page = (
+    <>
+      <Routes>
+        <Route path="/inventory/locations/:id" element={<LocationPage />} />
+      </Routes>
+      {withPageContext ? <PageContextProbe /> : null}
+    </>
+  );
   render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/inventory/locations/:id" element={<LocationPage />} />
-        </Routes>
+        {withPageContext ? <AppContextProvider>{page}</AppContextProvider> : page}
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -183,6 +195,40 @@ describe('location page foundations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLoadedLocation();
+  });
+
+  it('registers the loaded location as drill-down page context', () => {
+    renderPage('/inventory/locations/garage', true);
+
+    expect(JSON.parse(screen.getByTestId('page-context').textContent ?? '{}')).toMatchObject({
+      page: 'location-detail',
+      pageType: 'drill-down',
+      entity: {
+        uri: 'pops:inventory/location/garage',
+        type: 'location',
+        title: 'Garage',
+      },
+    });
+  });
+
+  it('registers the location URI while route data is pending', () => {
+    mocks.useLocationModels.mockReturnValue({
+      locations: [],
+      status: 'pending',
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderPage('/inventory/locations/garage', true);
+
+    expect(JSON.parse(screen.getByTestId('page-context').textContent ?? '{}')).toMatchObject({
+      page: 'location-detail',
+      pageType: 'drill-down',
+      entity: {
+        uri: 'pops:inventory/location/garage',
+        type: 'location',
+        title: '',
+      },
+    });
   });
 
   it('maps URL tabs and chooses the first tab with content', () => {
