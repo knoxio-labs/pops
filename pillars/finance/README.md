@@ -87,32 +87,31 @@ than its traffic will see the `403` above (POPS-1551).
 
 ## Who it calls, and as whom
 
-The mirror of the section above (POPS-2021). finance makes two outbound
-cross-pillar calls, both through `pillar()` from `@pops/pillar-sdk/server`,
+The mirror of the section above (POPS-2021). Finance has three outbound
+cross-pillar clients, all through `pillar()` from `@pops/pillar-sdk/server`,
 which attaches the pillar's service-account key as `X-API-Key`:
 
 | Leg                                        | Call                                               | Scope needed        | Where                           |
 | ------------------------------------------ | -------------------------------------------------- | ------------------- | ------------------------------- |
 | entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create` | `contacts.entities` | `src/api/contacts/client.ts`    |
 | owner-URI reconciliation cron              | `users.get`                                        | `registry.users`    | `src/api/cron/pillar-lookup.ts` |
+| shared tag vocabulary client               | `tags.list`, `tags.create`                         | `tags.tags`         | `src/api/tags/client.ts`        |
 
-The grant is those two and nothing wider; `src/api/pillars/service-account.ts`
+The grant is those three and nothing wider; `src/api/pillars/service-account.ts`
 is its source of truth and a test pins the list. Minting the account is an
 operator step against the registry's `userOnly` admin surface — the same
 runbook as
 [`pillars/bfm/README.md`](../bfm/README.md#provisioning-the-service-account),
 with `"name":"finance"` and these scopes.
 
-**Neither producer enforces this today.** `registry`'s `users.get` handler
-reads no principal at all, and the `contacts` pillar (Rust) has no auth
-middleware whatsoever — so this pillar sending no credential has never 401'd.
-The grant is declared and the key is sent anyway: the day either producer
-starts enforcing (ADR-044-style), this pillar's calls keep working without a
-second migration, instead of silently going dark the way POPS-2021 found this
-exact pattern already had for purchases.
+**The tags producer enforces its grant.** `registry`'s `users.get` handler
+reads no principal, and the Rust `contacts` pillar has no auth middleware.
+Finance still sends the key to every leg so those producers can enforce their
+declared grants later without a second migration, instead of silently going
+dark the way POPS-2021 found this exact pattern already had for purchases.
 
 **`/server`, never `/client`.** The SDK exports two `pillar()` functions of
-the same name and shape; the `/client` one is unauthenticated. Both of these
+the same name and shape; the `/client` one is unauthenticated. The Finance
 clients did import it until POPS-2021.
 `src/api/pillars/__tests__/outbound-credential.test.ts` is what keeps the fix
 honest: it drives each leg through the real SDK against a real socket and
@@ -120,21 +119,20 @@ asserts the header on the wire, and keeps a `/client` control alongside that
 asserts the absence.
 
 **A refusal is loud, everywhere it can be.** Every leg here is written to
-survive its callee being down — the cron leaves the flag as it was, the
+survive its callee being down — the cron leaves the flag as it was, and the
 contacts reads substitute an empty set — so a `401`/`403` folded into
-`unavailable` would be swallowed by design. A refused credential is its own
-outcome instead: the cron counts `unauthorized` separately from `unavailable`
-in every tick, and the contacts client logs a distinct line naming the account
-rather than the pillar. A process holding no key at all reports
-`no-credential` (cron) or degrades exactly as an outage would (contacts
-reads), and never issues the call.
+`unavailable` would be swallowed by design. The cron reports `unauthorized`
+separately from `unavailable`, the contacts client logs a distinct refusal,
+and the tags client returns the SDK's `unauthorized` result instead of an
+empty list. A process holding no key at all reports `no-credential` from the
+cron and tags client, and never issues the call.
 
 **As of this writing finance has no service account provisioned** — no
 finance entry under `infra/secrets.example/` (compare `purchases`'s, which
 exists) and no `POPS_INTERNAL_API_KEY_FILE` in `infra/docker-compose.yml`'s
-`finance-api` service, unlike `purchases` (POPS-1967). Since neither producer
-enforces yet, this costs nothing today; provisioning is tracked separately as
-an operator step.
+`finance-api` service, unlike `purchases` (POPS-1967). Until provisioning,
+the tags client reports `no-credential` without making an anonymous call;
+provisioning remains an operator step.
 
 ## Domains
 

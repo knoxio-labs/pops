@@ -108,7 +108,11 @@ describe('the account grant', () => {
    * nothing under a sibling one.
    */
   it('names exactly the domains the outbound legs call', () => {
-    expect([...FINANCE_SERVICE_ACCOUNT_SCOPES]).toEqual(['contacts.entities', 'registry.users']);
+    expect([...FINANCE_SERVICE_ACCOUNT_SCOPES]).toEqual([
+      'contacts.entities',
+      'registry.users',
+      'tags.tags',
+    ]);
   });
 
   it('grants no whole-pillar or wildcard scope', () => {
