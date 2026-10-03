@@ -1,12 +1,15 @@
 /**
  * Store for the writes Ego proposes inside an action batch.
  */
-import { egoActionsService } from '../../../db/index.js';
+import { egoActionBatchesService, egoActionsService } from '../../../db/index.js';
 
 import type {
   CerebrumDb,
+  EgoActionBatchRow,
   EgoActionRow,
   EgoActionStatus,
+  EgoBatchStatus,
+  InsertEgoActionBatchRow,
   InsertEgoActionRow,
 } from '../../../db/index.js';
 
@@ -17,8 +20,16 @@ export function generateActionId(): string {
   return `act_${crypto.randomUUID()}`;
 }
 
+/** A new batch id: `bat_` followed by a random UUID. */
+export function generateBatchId(): string {
+  return `bat_${crypto.randomUUID()}`;
+}
+
 /** Fields accepted by {@link EgoActionStore.create}; timestamps are stamped by the store. */
 export type CreateEgoActionInput = Omit<InsertEgoActionRow, 'createdAt' | 'resolvedAt'>;
+
+/** Fields accepted by {@link EgoActionStore.createBatch}; timestamps are stamped by the store. */
+export type CreateEgoActionBatchInput = Omit<InsertEgoActionBatchRow, 'createdAt' | 'decidedAt'>;
 
 /** Dependencies of {@link EgoActionStore}. */
 export interface EgoActionStoreDeps {
@@ -49,6 +60,34 @@ export class EgoActionStore {
       status,
       createdAt: timestamp,
       resolvedAt: status === 'executed' || status === 'failed' ? timestamp : null,
+    });
+  }
+
+  /** Insert a batch, stamping `createdAt` and leaving `decidedAt` empty. */
+  createBatch(row: CreateEgoActionBatchInput): void {
+    egoActionBatchesService.insertBatch(this.db, {
+      ...row,
+      status: row.status ?? 'pending',
+      createdAt: this.now().toISOString(),
+      decidedAt: null,
+    });
+  }
+
+  getBatch(id: string): EgoActionBatchRow | null {
+    return egoActionBatchesService.getBatch(this.db, id);
+  }
+
+  listBatchesForConversation(conversationId: string): EgoActionBatchRow[] {
+    return egoActionBatchesService.listBatchesForConversation(this.db, conversationId);
+  }
+
+  /** Move a batch between statuses; true only when this call made the change. */
+  transitionBatch(id: string, from: EgoBatchStatus, to: EgoBatchStatus): boolean {
+    return egoActionBatchesService.transitionBatch(this.db, {
+      id,
+      from,
+      to,
+      ...(to === 'decided' ? { decidedAt: this.now().toISOString() } : {}),
     });
   }
 

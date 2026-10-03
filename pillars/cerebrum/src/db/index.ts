@@ -47,6 +47,7 @@ export * as gliaService from './services/glia.js';
 export * as conversationsService from './services/conversations.js';
 export * as plexusService from './services/plexus.js';
 export * as egoActionsService from './services/ego-actions.js';
+export * as egoActionBatchesService from './services/ego-action-batches.js';
 
 export type {
   Nudge,
@@ -98,6 +99,14 @@ export {
   type EgoActionStatus,
   type InsertEgoActionRow,
 } from './services/ego-actions-types.js';
+
+export {
+  EGO_BATCH_STATUSES,
+  EgoBatchTransitionError,
+  type EgoActionBatchRow,
+  type EgoBatchStatus,
+  type InsertEgoActionBatchRow,
+} from './services/ego-action-batches-types.js';
 
 export {
   MESSAGE_ROLES,
