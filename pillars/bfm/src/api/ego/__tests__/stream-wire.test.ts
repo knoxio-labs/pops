@@ -141,6 +141,25 @@ describe('readUpstreamFrame', () => {
       kind: 'frame',
       frame: { type: 'done', parts: [{ type: 'text', text: 'done' }] },
     });
+    expect(
+      readUpstreamFrame(
+        JSON.stringify({
+          type: 'done',
+          conversationId: 'c',
+          messageId: 'm',
+          parts: [{ type: 'future_part' }],
+        }),
+        'streamed reply'
+      )
+    ).toEqual({
+      kind: 'frame',
+      frame: {
+        type: 'done',
+        conversationId: 'c',
+        messageId: 'm',
+        parts: [{ type: 'text', text: 'streamed reply' }],
+      },
+    });
     expect(readUpstreamFrame(JSON.stringify({ type: 'error', message: 'failed' }), '')).toEqual({
       kind: 'frame',
       frame: { type: 'error', message: 'failed', retryable: false },

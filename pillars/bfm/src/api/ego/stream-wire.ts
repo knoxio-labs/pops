@@ -137,18 +137,18 @@ function mapFrame(frame: UpstreamEgoFrame, streamedText: string): FrameReading {
         ? { kind: 'skip' }
         : { kind: 'frame', frame: { type: 'part', part } };
     }
-    case 'done':
+    case 'done': {
+      const knownParts = filterKnownParts(frame.parts ?? []);
       return {
         kind: 'frame',
         frame: {
           type: 'done',
           conversationId: frame.conversationId,
           messageId: frame.messageId,
-          parts: frame.parts?.length
-            ? filterKnownParts(frame.parts)
-            : [{ type: 'text', text: streamedText }],
+          parts: knownParts.length > 0 ? knownParts : [{ type: 'text', text: streamedText }],
         },
       };
+    }
     case 'error':
       return {
         kind: 'frame',
