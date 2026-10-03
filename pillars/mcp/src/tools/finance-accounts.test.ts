@@ -97,6 +97,22 @@ describe('finance.accounts.list', () => {
     expect(parsed.data[0]?.balance.balanceCents).toBe(-213755);
   });
 
+  it('adds an account URI to each row and preserves pagination', async () => {
+    const pagination = { total: 1, limit: 50, offset: 0, hasMore: false };
+    accounts.list.mockResolvedValueOnce(callOk({ data: [AMEX_ACCOUNT], pagination }));
+
+    const result = parseResult(await tool.handler({})) as {
+      data: Array<Record<string, unknown>>;
+      pagination: typeof pagination;
+    };
+
+    expect(result.data[0]).toEqual({
+      ...AMEX_ACCOUNT,
+      uri: 'pops:finance/account/acc_amex',
+    });
+    expect(result.pagination).toEqual(pagination);
+  });
+
   it('returns isError on unavailable', async () => {
     accounts.list.mockResolvedValueOnce(callUnavailable('finance'));
     const result = await tool.handler({});
@@ -106,6 +122,47 @@ describe('finance.accounts.list', () => {
   it('returns isError on contract-mismatch', async () => {
     accounts.list.mockResolvedValueOnce(callContractMismatch('finance', '1.0.0', '2.0.0'));
     const result = await tool.handler({});
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe('finance.accounts.get', () => {
+  const tool = financeTools.find((t) => t.name === 'finance.accounts.get')!;
+
+  it('is explicitly read-only', () => {
+    expect(tool.readOnly).toBe(true);
+  });
+
+  it('calls accounts.get with the id and adds the account URI', async () => {
+    accounts.get.mockResolvedValueOnce(callOk({ data: AMEX_ACCOUNT }));
+
+    const result = parseResult(await tool.handler({ id: 'acc_amex' })) as {
+      data: Record<string, unknown>;
+    };
+
+    expect(accounts.get).toHaveBeenCalledWith({ id: 'acc_amex' });
+    expect(result.data).toEqual({ ...AMEX_ACCOUNT, uri: 'pops:finance/account/acc_amex' });
+  });
+
+  it.each([{}, { id: '' }])(
+    'errors on a missing or empty id without calling the pillar',
+    async (args) => {
+      const result = await tool.handler(args);
+
+      expect(result.isError).toBe(true);
+      expect(accounts.get).not.toHaveBeenCalled();
+    }
+  );
+
+  it('surfaces not-found as an MCP error', async () => {
+    accounts.get.mockResolvedValueOnce({
+      kind: 'not-found',
+      pillar: 'finance',
+      message: 'Account not found',
+    });
+
+    const result = await tool.handler({ id: 'acc_missing' });
+
     expect(result.isError).toBe(true);
   });
 });

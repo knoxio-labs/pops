@@ -1,4 +1,5 @@
 import { finance } from './finance-client.js';
+import { mapRows, withUri } from './uri.js';
 import { mapCallResult, optBool, optNum, reqStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -31,7 +32,24 @@ const accountsList: ToolDef = {
       limit: optNum(args, 'limit'),
       offset: optNum(args, 'offset'),
     });
-    return mapCallResult(result);
+    return mapCallResult(mapRows(result, 'data', withUri('finance/account')));
+  },
+};
+
+const accountsGet: ToolDef = {
+  name: 'finance.accounts.get',
+  readOnly: true,
+  description: `Get one account with its current balance. ${LEDGER_SIGN_NOTE}`,
+  inputSchema: {
+    type: 'object',
+    properties: { id: { type: 'string', description: 'Account ID' } },
+    required: ['id'],
+  },
+  handler: async (args) => {
+    const id = reqStr(args, 'id');
+    if (!id) return toolError('Missing required field: id');
+    const result = await finance().accounts.get({ id });
+    return mapCallResult(mapRows(result, 'data', withUri('finance/account')));
   },
 };
 
@@ -57,4 +75,4 @@ const accountsCheckpoints: ToolDef = {
   },
 };
 
-export const accountsTools: readonly ToolDef[] = [accountsList, accountsCheckpoints];
+export const accountsTools: readonly ToolDef[] = [accountsList, accountsGet, accountsCheckpoints];
