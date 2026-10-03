@@ -24,6 +24,20 @@ describe('computeCostUsd', () => {
   it('flags unknown pricing', () => {
     expect(computeCostUsd(10, 10, null)).toEqual({ costUsd: 0, missing: true });
   });
+
+  it('flags a zero/zero price as unknown', () => {
+    expect(computeCostUsd(10, 10, { input: 0, output: 0 })).toEqual({
+      costUsd: 0,
+      missing: true,
+    });
+  });
+
+  it('keeps a zero rate for only one direction as known pricing', () => {
+    expect(computeCostUsd(1_000_000, 1_000_000, { input: 0, output: 15 })).toEqual({
+      costUsd: 15,
+      missing: false,
+    });
+  });
 });
 
 describe('callWithLogging', () => {
