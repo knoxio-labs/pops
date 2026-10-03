@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { TagsServiceError } from '../../errors.js';
 import { openTagsDb, type OpenedTagsDb } from '../../index.js';
+import { tags } from '../../schema.js';
 import {
   archiveTag,
   createOrGetTag,
@@ -51,6 +52,50 @@ function expectServiceError(action: () => unknown, code: TagsServiceError['code'
   expect(caught).toMatchObject({ code });
 }
 
+function makeRacingReadDb(): typeof opened.db {
+  let raceInserted = false;
+  const wrapQuery = <T extends object>(query: T): T =>
+    new Proxy(query, {
+      get(target, property) {
+        const member = Reflect.get(target, property, target);
+        if (typeof member !== 'function') return member;
+
+        return (...args: unknown[]) => {
+          const result = member.apply(target, args);
+          if (property === 'get') {
+            if (!raceInserted) {
+              raceInserted = true;
+              opened.db
+                .insert(tags)
+                .values({
+                  facet: 'trip',
+                  name: 'Concurrent tag',
+                  parentId: null,
+                  description: null,
+                  windowStart: null,
+                  windowEnd: null,
+                  windowRegion: null,
+                })
+                .run();
+            }
+            return result;
+          }
+          return result !== null && typeof result === 'object' ? wrapQuery(result) : result;
+        };
+      },
+    });
+
+  return new Proxy(opened.db, {
+    get(target, property) {
+      const member = Reflect.get(target, property, target);
+      if (property === 'select' && typeof member === 'function') {
+        return (...args: unknown[]) => wrapQuery(member.apply(target, args) as object);
+      }
+      return typeof member === 'function' ? member.bind(target) : member;
+    },
+  }) as typeof opened.db;
+}
+
 describe('shared tag creation and listing', () => {
   it('returns the existing id for a case-insensitive duplicate create', () => {
     const first = createTag('Brazil trip', { description: 'Original' });
@@ -63,6 +108,16 @@ describe('shared tag creation and listing', () => {
 
   it('rejects facets outside the shared vocabulary', () => {
     expectServiceError(() => createTag('Unknown', {}, 'meal'), 'unknown_facet');
+  });
+
+  it('returns the concurrently created active tag after an insert race', () => {
+    const raced = createOrGetTag(makeRacingReadDb(), {
+      facet: 'trip',
+      name: 'Concurrent tag',
+    });
+
+    expect(raced.name).toBe('Concurrent tag');
+    expect(listTags(opened.db)).toHaveLength(1);
   });
 
   it('lists by facet, archive state, and inclusive updated-since time', () => {
@@ -155,6 +210,12 @@ describe('shared tag hierarchy and updates', () => {
     expect(updated.updatedAt).toMatch(/^\d{4}-\d\d-\d\dT/u);
   });
 
+  it('returns the current record for an empty update patch', () => {
+    const tag = createTag('Unchanged');
+
+    expect(updateTag(opened.db, tag.id, {})).toEqual(tag);
+  });
+
   it('rejects inverted windows and a region without a start date', () => {
     expectServiceError(
       () =>
@@ -180,6 +241,33 @@ describe('shared tag hierarchy and updates', () => {
 
     expect(unarchiveTag(opened.db, tag.id).archivedAt).toBeNull();
     expect(getTag(opened.db, tag.id)?.name).toBe('Archived then restored');
+  });
+
+  it('refuses to unarchive a tag that was merged into another identity', () => {
+    const source = createTag('Merged source');
+    const target = createTag('Merge target');
+    mergeTag(opened.db, source.id, target.id);
+
+    expectServiceError(() => unarchiveTag(opened.db, source.id), 'merge_invalid');
+  });
+
+  it('refuses to unarchive a tag when its active name is already taken', () => {
+    const archived = createTag('Duplicate name');
+    archiveTag(opened.db, archived.id);
+    createTag('Duplicate name');
+
+    expectServiceError(() => unarchiveTag(opened.db, archived.id), 'name_conflict');
+  });
+
+  it('returns not_found for mutations that reference unknown ids', () => {
+    const source = createTag('Existing source');
+    const target = createTag('Existing target');
+
+    expectServiceError(() => updateTag(opened.db, 'missing', { name: 'Missing' }), 'not_found');
+    expectServiceError(() => archiveTag(opened.db, 'missing'), 'not_found');
+    expectServiceError(() => unarchiveTag(opened.db, 'missing'), 'not_found');
+    expectServiceError(() => mergeTag(opened.db, 'missing', target.id), 'not_found');
+    expectServiceError(() => mergeTag(opened.db, source.id, 'missing'), 'not_found');
   });
 
   it('returns null for an unknown id', () => {
