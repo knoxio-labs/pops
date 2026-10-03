@@ -44,6 +44,9 @@
     "source.delete": "Deleting connector configuration is an operator administration action; MCP is read-only.",
     "source.get": "Connector configuration is operator administration data, not a purchase-answer surface.",
     "source.list": "Connector configuration is operator administration data, not a purchase-answer surface.",
-    "source.upsert": "Connector configuration writes remain in operator administration; MCP is read-only."
+    "source.upsert": "Connector configuration writes remain in operator administration; MCP is read-only.",
+    "tagged.attach": "Shared-tag assignments are managed through the carrier REST API and are not exposed as MCP tools.",
+    "tagged.detach": "Shared-tag assignments are managed through the carrier REST API and are not exposed as MCP tools.",
+    "tagged.list": "Shared-tag carrier lookup is managed through the shared-tag REST API and is not exposed as an MCP tool."
   }
 }

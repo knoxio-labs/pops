@@ -1,4 +1,4 @@
-/** Unmounted shared-tag carrier contract for purchases line items. */
+/** Shared-tag carrier contract for purchases line items. */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
@@ -31,7 +31,7 @@ export const purchasesTaggedContract = c.router({
     path: '/tagged/:entityType/:entityId/tags/:tagId',
     body: c.noBody(),
     pathParams: PurchaseItemTagParams,
-    responses: { 200: TagAssignmentResponseSchema, 400: ErrorBodySchema },
+    responses: { 200: TagAssignmentResponseSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Attach a shared tag to a purchase line item',
   },
   detach: {
@@ -39,7 +39,7 @@ export const purchasesTaggedContract = c.router({
     path: '/tagged/:entityType/:entityId/tags/:tagId',
     body: c.noBody(),
     pathParams: PurchaseItemTagParams,
-    responses: { 200: TagAssignmentResponseSchema, 400: ErrorBodySchema },
+    responses: { 200: TagAssignmentResponseSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Detach a shared tag from a purchase line item',
   },
 });

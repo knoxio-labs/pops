@@ -4,6 +4,7 @@ import { amazonOrder, openTempDb, seedAmazonSource } from '../../__tests__/helpe
 import { createPurchase, getPurchase } from '../../index.js';
 import { purchaseItemSharedTags, sharedTagCache } from '../../schema.js';
 import { confirmItemClassification } from '../purchase-item-mutations.js';
+import { hasSharedTagId, listSharedTagIdsForItem } from '../purchase-item-shared-tag-state.js';
 import {
   attachSharedTag,
   detachSharedTag,
@@ -94,10 +95,20 @@ describe('shared tags on purchase items', () => {
     });
 
     expect(
-      page?.rows.map(({ item, tagIds }) => ({ id: item.id, position: item.position, tagIds }))
+      page?.rows.map(({ item, orderedAt, tagIds }) => ({
+        id: item.id,
+        position: item.position,
+        orderedAt,
+        tagIds,
+      }))
     ).toEqual([
-      { id: firstId, position: 0, tagIds: [TAG_A, TAG_B] },
-      { id: secondId, position: 1, tagIds: [TAG_B] },
+      {
+        id: firstId,
+        position: 0,
+        orderedAt: '2026-02-02T01:41:21.000Z',
+        tagIds: [TAG_A, TAG_B],
+      },
+      { id: secondId, position: 1, orderedAt: '2026-02-02T01:41:21.000Z', tagIds: [TAG_B] },
     ]);
     expect(page?.nextCursor).toBeNull();
   });
@@ -171,6 +182,20 @@ describe('shared tags on purchase items', () => {
     expect(detachSharedTag(opened.db, itemId, TAG_A)).toBe(true);
     expect(detachSharedTag(opened.db, itemId, TAG_A)).toBe(false);
     expect(opened.db.select().from(purchaseItemSharedTags).all()).toEqual([]);
+  });
+
+  it('reads the current sorted assignment set and distinguishes missing items and cached tags', () => {
+    const { itemIds } = seedItems('shared-tags-current-set', 1);
+    const itemId = itemIds[0];
+    if (itemId === undefined) throw new Error('missing seeded item id');
+    seedSharedTags(TAG_A, TAG_B);
+    attachSharedTag(opened.db, itemId, TAG_B);
+    attachSharedTag(opened.db, itemId, TAG_A);
+
+    expect(listSharedTagIdsForItem(opened.db, itemId)).toEqual([TAG_A, TAG_B]);
+    expect(listSharedTagIdsForItem(opened.db, 'missing-item')).toBeNull();
+    expect(hasSharedTagId(opened.db, TAG_A)).toBe(true);
+    expect(hasSharedTagId(opened.db, 'uncached-tag')).toBe(false);
   });
 
   it('throws distinct typed errors for an unknown item and an uncached tag id', () => {

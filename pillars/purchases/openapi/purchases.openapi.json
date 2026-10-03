@@ -13021,6 +13021,271 @@
         "summary": "Register or update a purchase source",
         "tags": ["source"]
       }
+    },
+    "/tagged/query": {
+      "post": {
+        "operationId": "tagged.list",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "cursor": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "default": 200,
+                    "maximum": 500,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "tagIds": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 500,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["tagIds", "limit"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "date": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+                            "type": "string"
+                          },
+                          "tagIds": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "title": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "uri": {
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": ["uri", "entityType", "title", "tagIds", "date", "amountCents"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": ["items", "nextCursor"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "List purchase line items carrying any requested shared tag ids",
+        "tags": ["tagged"]
+      }
+    },
+    "/tagged/{entityType}/{entityId}/tags/{tagId}": {
+      "delete": {
+        "operationId": "tagged.detach",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entityType",
+            "required": true,
+            "schema": {
+              "enum": ["purchase-item"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entityId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tagId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "tagIds": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["tagIds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Detach a shared tag from a purchase line item",
+        "tags": ["tagged"]
+      },
+      "put": {
+        "operationId": "tagged.attach",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entityType",
+            "required": true,
+            "schema": {
+              "enum": ["purchase-item"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entityId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tagId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "tagIds": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["tagIds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Attach a shared tag to a purchase line item",
+        "tags": ["tagged"]
+      }
     }
   }
 }

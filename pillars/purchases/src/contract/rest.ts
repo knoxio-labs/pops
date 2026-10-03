@@ -18,6 +18,7 @@ import { purchasesReceiptContract } from './rest-receipts.js';
 import { purchasesReconcileContract } from './rest-reconcile.js';
 import { purchasesSearchContract } from './rest-search.js';
 import { purchasesSourceContract } from './rest-sources.js';
+import { purchasesTaggedContract } from './rest-tagged.js';
 
 const c = initContract();
 
@@ -30,6 +31,7 @@ export const purchasesContract = c.router(
     reconcile: purchasesReconcileContract,
     search: purchasesSearchContract,
     source: purchasesSourceContract,
+    tagged: purchasesTaggedContract,
   },
   {
     pathPrefix: '',
