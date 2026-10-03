@@ -62,6 +62,13 @@ describe('finance scope map', () => {
   it('covers the contract, so no route is gated by an empty table', () => {
     expect(financeScopeMap.routes.length).toBeGreaterThan(10);
     expect(financeScopeMap.routes.every((r) => r.scope.startsWith('finance.'))).toBe(true);
+    expect(financeScopeMap.routes.map((r) => r.scope)).toEqual(
+      expect.arrayContaining([
+        'finance.tagged.list',
+        'finance.tagged.attach',
+        'finance.tagged.detach',
+      ])
+    );
   });
 });
 

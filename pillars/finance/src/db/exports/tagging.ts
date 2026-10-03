@@ -13,6 +13,14 @@ export { type TagVocabularyRow, type TagVocabularySource } from '../services/tag
 export * as sharedTagLinksService from '../services/shared-tag-links.js';
 export type { SharedTagVocabularyRow, SharedTagLinkResult } from '../services/shared-tag-links.js';
 
+export * as transactionSharedTagsService from '../services/transaction-shared-tags.js';
+export type {
+  TransactionSharedTagCursor,
+  SharedTaggedTransaction,
+  SharedTaggedTransactionsPage,
+  SharedTagMutationResult,
+} from '../services/transaction-shared-tags.js';
+
 export * as aiTagSuggestionOutcomesService from '../services/ai-tag-suggestion-outcomes.js';
 
 export type {
