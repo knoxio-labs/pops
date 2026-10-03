@@ -80,12 +80,6 @@ if (interrupted.length > 0) {
 }
 
 const contacts = createContactsClient();
-const app = createFinanceApiApp({
-  financeDb,
-  version,
-  selfBaseUrl,
-  contacts,
-});
 
 const reconcileLogger = {
   info: (msg: string, meta?: Record<string, unknown>) =>
@@ -138,6 +132,14 @@ const sharedTagSyncHandle = startSyncSharedTagsWorker({
   db: financeDb.db,
   client: createTagsClient(),
   logger: reconcileLogger,
+});
+
+const app = createFinanceApiApp({
+  financeDb,
+  version,
+  selfBaseUrl,
+  contacts,
+  syncSharedTagsOnce: sharedTagSyncHandle.runOnce,
 });
 
 // Scheduled Up Bank sync (POPS-2921). Governed by the `finance.upSync.*`

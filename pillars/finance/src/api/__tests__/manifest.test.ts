@@ -19,9 +19,15 @@ import { buildFinanceManifest } from '../manifest.js';
 
 describe('buildFinanceManifest', () => {
   it('passes the SDK wire validator the registry bootstrap uses', () => {
-    const result = validateManifestPayload(buildFinanceManifest('0.1.0'));
+    const manifest = buildFinanceManifest('0.1.0');
+    const result = validateManifestPayload(manifest);
 
     expect(result.ok ? [] : result.issues).toEqual([]);
     expect(result.ok).toBe(true);
+    expect(manifest.tags).toEqual({ carriers: [{ entityType: 'transaction' }] });
+    expect(manifest.routes.queries).toContain('finance.tagged.list');
+    expect(manifest.routes.mutations).toEqual(
+      expect.arrayContaining(['finance.tagged.attach', 'finance.tagged.detach'])
+    );
   });
 });
