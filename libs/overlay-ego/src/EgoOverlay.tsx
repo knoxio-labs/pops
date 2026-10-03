@@ -1,6 +1,5 @@
-import { Settings, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useEffect } from 'react';
-import { Link } from 'react-router';
 
 import { Button, cn } from '@pops/ui';
 
@@ -31,17 +30,6 @@ function EgoOverlayPanel({ onClose }: { onClose: () => void }) {
       <div className="flex items-center justify-between border-b border-border/50 px-4 py-3 shrink-0 gap-2">
         <span className="text-sm font-semibold">Ego</span>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            asChild
-            className="min-h-[44px] min-w-[44px]"
-            aria-label="Open Ego settings"
-          >
-            <Link to="/settings/ego">
-              <Settings className="h-4 w-4" />
-            </Link>
-          </Button>
           <Button
             variant="ghost"
             size="icon"

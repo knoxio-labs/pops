@@ -314,7 +314,7 @@ describe('ChatPanel (overlay-ego)', () => {
 
     await user.click(await screen.findByText('Budget discussion'));
     const citationLink = await screen.findByText('eng_finance_001');
-    expect(citationLink.closest('a')).toHaveAttribute('href', '/cerebrum/eng_finance_001');
+    expect(citationLink.closest('a')).toHaveAttribute('href', '/cerebrum/engrams/eng_finance_001');
   });
 
   it('sends a message via the chat input', async () => {
