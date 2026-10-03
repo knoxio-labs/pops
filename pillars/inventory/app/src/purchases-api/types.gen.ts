@@ -335,6 +335,15 @@ export type PurchaseItemsByTagData = {
   url: '/items';
 };
 
+export type PurchaseItemsByTagErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type PurchaseItemsByTagError = PurchaseItemsByTagErrors[keyof PurchaseItemsByTagErrors];
+
 export type PurchaseItemsByTagResponses = {
   /**
    * 200
@@ -433,6 +442,15 @@ export type ProductListData = {
   url: '/products';
 };
 
+export type ProductListErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type ProductListError = ProductListErrors[keyof ProductListErrors];
+
 export type ProductListResponses = {
   /**
    * 200
@@ -473,6 +491,10 @@ export type ProductDeleteAliasData = {
 };
 
 export type ProductDeleteAliasErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 404
    */
@@ -551,6 +573,15 @@ export type ProductProposeData = {
   url: '/products/proposals';
 };
 
+export type ProductProposeErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type ProductProposeError = ProductProposeErrors[keyof ProductProposeErrors];
+
 export type ProductProposeResponses = {
   /**
    * 200
@@ -581,6 +612,10 @@ export type ProductDeleteData = {
 };
 
 export type ProductDeleteErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 404
    */
@@ -615,6 +650,10 @@ export type ProductRenameData = {
 };
 
 export type ProductRenameErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 404
    */
@@ -1370,6 +1409,10 @@ export type PurchaseDeleteData = {
 
 export type PurchaseDeleteErrors = {
   /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -1398,6 +1441,10 @@ export type PurchaseGetData = {
 };
 
 export type PurchaseGetErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 404
    */
@@ -1842,6 +1889,10 @@ export type PurchaseEraseCaptureLocationData = {
 
 export type PurchaseEraseCaptureLocationErrors = {
   /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -1878,6 +1929,10 @@ export type PurchaseAttachDocumentData = {
 };
 
 export type PurchaseAttachDocumentErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 404
    */
@@ -1919,6 +1974,16 @@ export type PurchaseListInventoryProposalsData = {
   query?: never;
   url: '/purchases/{id}/inventory-proposals';
 };
+
+export type PurchaseListInventoryProposalsErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type PurchaseListInventoryProposalsError =
+  PurchaseListInventoryProposalsErrors[keyof PurchaseListInventoryProposalsErrors];
 
 export type PurchaseListInventoryProposalsResponses = {
   /**
@@ -2416,6 +2481,7 @@ export type ReceiptUploadResponses = {
         receiptUris: Array<string>;
       }
     | {
+        cause?: 'truncated' | 'refused' | 'rejected';
         kind: 'unreadable';
         reason: string;
         receiptUris: Array<string>;
@@ -2884,6 +2950,7 @@ export type ReceiptExtractResponses = {
         reconciled: boolean;
       }
     | {
+        cause?: 'truncated' | 'refused' | 'rejected';
         kind: 'unreadable';
         reason: string;
         receiptUris: Array<string>;
@@ -2995,6 +3062,10 @@ export type ReconcileConfirmData = {
 
 export type ReconcileConfirmErrors = {
   /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -3022,6 +3093,15 @@ export type ReconcileLinksData = {
   };
   url: '/reconcile/links';
 };
+
+export type ReconcileLinksErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type ReconcileLinksError = ReconcileLinksErrors[keyof ReconcileLinksErrors];
 
 export type ReconcileLinksResponses = {
   /**
@@ -3114,6 +3194,15 @@ export type ReconcileLinksBatchData = {
   url: '/reconcile/links/batch';
 };
 
+export type ReconcileLinksBatchErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type ReconcileLinksBatchError = ReconcileLinksBatchErrors[keyof ReconcileLinksBatchErrors];
+
 export type ReconcileLinksBatchResponses = {
   /**
    * 200
@@ -3145,6 +3234,10 @@ export type ReconcileManualData = {
 };
 
 export type ReconcileManualErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 404
    */
@@ -3183,6 +3276,10 @@ export type ReconcileManualCandidatesData = {
 };
 
 export type ReconcileManualCandidatesErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 503
    */
@@ -3223,6 +3320,15 @@ export type ReconcileQueueData = {
   };
   url: '/reconcile/queue';
 };
+
+export type ReconcileQueueErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type ReconcileQueueError = ReconcileQueueErrors[keyof ReconcileQueueErrors];
 
 export type ReconcileQueueResponses = {
   /**
@@ -3273,6 +3379,10 @@ export type ReconcileRejectData = {
 
 export type ReconcileRejectErrors = {
   /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -3307,6 +3417,10 @@ export type ReconcileDeactivateRuleData = {
 
 export type ReconcileDeactivateRuleErrors = {
   /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -3340,6 +3454,10 @@ export type ReconcileSweepData = {
 };
 
 export type ReconcileSweepErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 503
    */
@@ -3383,6 +3501,10 @@ export type ReconcileUnlinkData = {
 };
 
 export type ReconcileUnlinkErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 404
    */
@@ -3508,6 +3630,10 @@ export type SourceDeleteData = {
 
 export type SourceDeleteErrors = {
   /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -3540,6 +3666,10 @@ export type SourceGetData = {
 };
 
 export type SourceGetErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
   /**
    * 404
    */

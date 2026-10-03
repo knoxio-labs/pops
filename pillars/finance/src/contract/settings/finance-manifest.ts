@@ -2,6 +2,8 @@ import {
   AI_CATEGORIZER_MAX_TOKENS_KEY,
   AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
   AI_CATEGORIZER_MODEL_KEY,
+  FINANCE_AI_MODEL_DEFAULT,
+  FINANCE_AI_MODEL_OPTIONS,
   RULE_GEN_MAX_TOKENS_KEY,
   RULE_GEN_MODEL_KEY,
 } from './ai-settings-keys.js';
@@ -19,6 +21,8 @@ import {
  */
 import type { SettingsManifest } from '@pops/types';
 
+const MODEL_SELECT_OPTIONS = FINANCE_AI_MODEL_OPTIONS.map(({ value, label }) => ({ value, label }));
+
 export const financeManifest: SettingsManifest = {
   id: 'finance',
   title: 'Finance',
@@ -33,10 +37,11 @@ export const financeManifest: SettingsManifest = {
         {
           key: AI_CATEGORIZER_MODEL_KEY,
           label: 'Categorizer Model',
-          type: 'text',
-          default: 'claude-haiku-4-5-20251001',
+          type: 'select',
+          default: FINANCE_AI_MODEL_DEFAULT,
+          options: MODEL_SELECT_OPTIONS,
           description:
-            'Anthropic model id, passed through verbatim. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
+            'Anthropic model used for categorisation. Sonnet 5.5 and Opus 5.5 are sent no sampling parameters and a low effort setting, with a 2000 token floor so thinking cannot use up the reply. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
         },
         {
           key: AI_CATEGORIZER_MAX_TOKENS_KEY,
@@ -68,10 +73,11 @@ export const financeManifest: SettingsManifest = {
         {
           key: RULE_GEN_MODEL_KEY,
           label: 'Rule Generation Model',
-          type: 'text',
-          default: 'claude-haiku-4-5-20251001',
+          type: 'select',
+          default: FINANCE_AI_MODEL_DEFAULT,
+          options: MODEL_SELECT_OPTIONS,
           description:
-            'Anthropic model id used when your manual corrections are analysed for a repeatable rule. Runs once per analysis rather than once per row, so a larger model here is far cheaper than on the categorizer.',
+            'Anthropic model used when your manual corrections are analysed for a repeatable rule. Runs once per analysis rather than once per row, so a larger model here is far cheaper than on the categorizer.',
         },
         {
           key: RULE_GEN_MAX_TOKENS_KEY,
@@ -79,12 +85,12 @@ export const financeManifest: SettingsManifest = {
           type: 'number',
           default: '200',
           description:
-            'Cap on the reply when the model proposes a rule from your corrections. A proposal is a match pattern and a target entity, so the bounds are the categorizer ones for the same reasons: under 50 the proposal is truncated and discarded, over 2000 you are paying for headroom a few lines of rule will never use.',
+            'Ceiling on the reply for the two short corrections calls: analysing a correction into a rule (200 tokens) and interpreting rejection feedback (250). Revising a change set and generating rules keep their own fixed 2000 and ignore this setting. Under 50 the reply is truncated and discarded; above 250 has no effect. Sonnet 5.5 and Opus 5.5 are always given at least 2000 so thinking cannot use up the reply.',
           validation: {
             min: 50,
-            max: 2000,
+            max: 250,
             message:
-              'Use 50-2000. Below 50 the proposal is truncated and discarded; above 2000 you only pay more for the same answer.',
+              'Use 50-250. Below 50 the reply is truncated and discarded; above 250 the setting has no effect.',
           },
         },
       ],

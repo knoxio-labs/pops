@@ -16,6 +16,7 @@ export {
   checkContractTagMatchesVersion,
   checkAiToolAllowedUriTypesAreDeclared,
   checkSearchAdapterProceduresAreDeclared,
+  checkTagCarrierProceduresAreDeclared,
   checkUiPillarDeclaresStylesheet,
   pathToDotted,
   type ValidationResult,

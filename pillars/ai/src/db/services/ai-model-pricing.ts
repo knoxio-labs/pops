@@ -15,7 +15,9 @@
  *   - A miss (either no entry or an expired one) triggers a full
  *     SELECT-all refresh; the refresh re-stamps every populated key, so
  *     subsequent unrelated lookups within the TTL window remain hits.
- *   - A lookup miss returns null. Database errors propagate to the caller.
+ *   - An unknown key, or a DB error with a cold cache, yields `null`.
+ *     Callers record the cost as missing rather than guessing a price —
+ *     pricing is best-effort, but a fabricated price is worse than none.
  */
 import { aiModelPricing } from '../schema.js';
 
@@ -29,7 +31,10 @@ export interface ModelPrice {
 
 /** Public API of a pricing cache returned from {@link createPricingCache}. */
 export interface PricingCache {
-  /** Resolve cost-per-Mtok or return null when unknown; database read errors propagate. */
+  /**
+   * Resolve `(input, output)` cost-per-Mtok for the given provider + model pair.
+   * Returns `null` for an unknown key, or on DB failure with a cold cache.
+   */
   lookup(provider: string, model: string): ModelPrice | null;
   /** Drop every cached entry; the next lookup forces a DB refresh. */
   clear(): void;
@@ -42,11 +47,11 @@ interface PricingEntry {
 }
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
+
 /**
  * Build a process-local pricing lookup bound to the given ai pillar DB
  * handle. Each call to `lookup(provider, model)` either hits the cache
  * or refreshes the entire pricing table from SQLite.
- * Returns null for an unconfigured pair; database read errors propagate.
  *
  * @param db - ai pillar drizzle handle. Captured by closure; the same
  *   handle is used for every refresh against this cache.
@@ -90,9 +95,13 @@ export function createPricingCache(
       if (cached && currentNow - cached.cachedAt < ttlMs) {
         return { input: cached.inputCostPerMtok, output: cached.outputCostPerMtok };
       }
-      refresh(currentNow);
-      const entry = cache.get(key);
-      if (entry) return { input: entry.inputCostPerMtok, output: entry.outputCostPerMtok };
+      try {
+        refresh(currentNow);
+        const entry = cache.get(key);
+        if (entry) return { input: entry.inputCostPerMtok, output: entry.outputCostPerMtok };
+      } catch {
+        // pricing lookup is best-effort
+      }
       return null;
     },
     clear(): void {

@@ -54,8 +54,16 @@ describe('inventory.items.move', () => {
         }),
       ],
     });
-    const parsed = parseResult(result) as { status: string };
-    expect(parsed.status).toBe('applied');
+    expect(parseResult(result)).toEqual({
+      itemId: 'item_1',
+      outcome: {
+        mutationId: 'mut_1',
+        status: 'applied',
+        revision: 4,
+        seq: 11,
+        converged: false,
+      },
+    });
     expect(result.isError).toBeUndefined();
   });
 
@@ -81,19 +89,18 @@ describe('inventory.items.move', () => {
     expect(inventory.sync.mutations).not.toHaveBeenCalled();
   });
 
-  it('surfaces a conflict outcome as data, not as isError', async () => {
+  it('returns a conflict outcome as an error result', async () => {
+    const outcome = {
+      mutationId: 'mut_1',
+      status: 'conflict',
+      kind: 'field',
+      field: 'placement',
+      mine: {},
+      theirs: {},
+    } as const;
     inventory.sync.mutations.mockResolvedValue(
       callOk({
-        outcomes: [
-          {
-            mutationId: 'mut_1',
-            status: 'conflict',
-            kind: 'field',
-            field: 'placement',
-            mine: {},
-            theirs: {},
-          },
-        ],
+        outcomes: [outcome],
         highWaterSeq: 11,
       })
     );
@@ -101,9 +108,8 @@ describe('inventory.items.move', () => {
       id: 'item_1',
       locationId: 'loc_1',
     });
-    expect(result.isError).toBeUndefined();
-    const parsed = parseResult(result) as { status: string };
-    expect(parsed.status).toBe('conflict');
+    expect(result.isError).toBe(true);
+    expect(parseResult(result)).toEqual({ itemId: 'item_1', outcome });
   });
 
   it('surfaces pillar unavailability as an MCP tool error', async () => {
@@ -124,6 +130,38 @@ describe('inventory.items.move', () => {
       locationId: 'loc_1',
     });
     expect(result.isError).toBe(true);
+  });
+
+  it.each([
+    ['inventory.items.move', { id: 'item_1', locationId: 'loc_1' }],
+    ['inventory.items.store', { id: 'item_1', containerId: 'box_1' }],
+    ['inventory.items.pickUp', { id: 'item_1' }],
+  ])('returns a rejected outcome from %s as an error result', async (name, args) => {
+    const outcome = {
+      mutationId: 'mut_1',
+      status: 'rejected',
+      reason: 'placement_invalid',
+      message: 'x',
+    } as const;
+    inventory.sync.mutations.mockResolvedValue(callOk({ outcomes: [outcome], highWaterSeq: 11 }));
+
+    const result = await tool(name).handler(args);
+
+    expect(result.isError).toBe(true);
+    expect(parseResult(result)).toEqual({ itemId: 'item_1', outcome });
+  });
+
+  it('returns a deferred outcome from move as an error result', async () => {
+    const outcome = { mutationId: 'mut_1', status: 'deferred', waitingOn: 'abc' } as const;
+    inventory.sync.mutations.mockResolvedValue(callOk({ outcomes: [outcome], highWaterSeq: 11 }));
+
+    const result = await tool('inventory.items.move').handler({
+      id: 'item_1',
+      locationId: 'loc_1',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(parseResult(result)).toEqual({ itemId: 'item_1', outcome });
   });
 });
 

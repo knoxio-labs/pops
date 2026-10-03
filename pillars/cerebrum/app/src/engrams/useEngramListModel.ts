@@ -5,8 +5,8 @@
  *   - `engramsList` (`POST /engrams/search`) for plain filter-only
  *     browsing, or
  *   - `retrievalSearch` (`POST /retrieval/search`, mode=hybrid) when a
- *     search query is entered, so the user gets semantic + structured
- *     matches.
+ *     search query is entered, so the user gets semantic matches
+ *     constrained by the filters.
  *
  * Pagination + filter state live here. The page component is a dumb
  * consumer of the returned shape.
@@ -77,7 +77,6 @@ function buildSearchInput(filters: EngramListFilters, offset: number, limit: num
     },
     limit,
     offset,
-    threshold: 0.8,
   };
 }
 

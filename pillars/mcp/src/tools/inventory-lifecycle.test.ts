@@ -66,6 +66,22 @@ describe('inventory.items.setFull', () => {
     });
   });
 
+  it('wraps an applied outcome as itemId and outcome', async () => {
+    const result = await tool('inventory.items.setFull').handler({ id: 'item_1', full: true });
+
+    expect(result.isError).toBeUndefined();
+    expect(parseResult(result)).toEqual({
+      itemId: 'item_1',
+      outcome: {
+        mutationId: 'mut_1',
+        status: 'applied',
+        revision: 6,
+        seq: 20,
+        converged: false,
+      },
+    });
+  });
+
   it('sends full: false (a literal false is not a missing field)', async () => {
     await tool('inventory.items.setFull').handler({ id: 'item_1', full: false });
     expect(inventory.sync.mutations).toHaveBeenCalledWith({
@@ -121,28 +137,31 @@ describe('inventory.items.restore', () => {
     });
   });
 
-  it('surfaces a rejected outcome (e.g. destroyed items cannot be restored) as data', async () => {
-    inventory.sync.mutations.mockResolvedValue(
-      callOk({
-        outcomes: [
-          {
-            mutationId: 'mut_1',
-            status: 'rejected',
-            reason: 'illegal_transition',
-            message: 'a destroyed item cannot be restored',
-          },
-        ],
-        highWaterSeq: 20,
-      })
-    );
-    const result = await tool('inventory.items.restore').handler({ id: 'item_1' });
-    expect(result.isError).toBeUndefined();
-    const parsed = parseResult(result) as { status: string };
-    expect(parsed.status).toBe('rejected');
-  });
-
   it('rejects a missing id', async () => {
     const result = await tool('inventory.items.restore').handler({});
     expect(result.isError).toBe(true);
+  });
+});
+
+describe('non-applied inventory sync mutation outcomes', () => {
+  it.each([
+    ['inventory.items.open', { id: 'item_1' }],
+    ['inventory.items.close', { id: 'item_1' }],
+    ['inventory.items.setFull', { id: 'item_1', full: true }],
+    ['inventory.items.discard', { id: 'item_1' }],
+    ['inventory.items.restore', { id: 'item_1' }],
+  ])('returns a rejected outcome from %s as an error result', async (name, args) => {
+    const outcome = {
+      mutationId: 'mut_1',
+      status: 'rejected',
+      reason: 'illegal_transition',
+      message: 'x',
+    } as const;
+    inventory.sync.mutations.mockResolvedValue(callOk({ outcomes: [outcome], highWaterSeq: 20 }));
+
+    const result = await tool(name).handler(args);
+
+    expect(result.isError).toBe(true);
+    expect(parseResult(result)).toEqual({ itemId: 'item_1', outcome });
   });
 });

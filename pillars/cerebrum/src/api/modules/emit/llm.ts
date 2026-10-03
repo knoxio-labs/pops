@@ -8,15 +8,19 @@
  * production and a canned fake in tests (tests MUST NOT reach a real API).
  *
  * Model is `DEFAULT_EMIT_MODEL` unless `CEREBRUM_EMIT_MODEL` overrides it;
- * max-tokens is a constant. Usage/cost is reported to the ai pillar via
- * `@pops/ai-telemetry` (`callWithLogging`, fire-and-forget); the 429 backoff
- * is {@link withRateLimitRetry}. A missing API key returns a placeholder
- * string rather than throwing; a transport error throws so the handler
- * surfaces a 500.
+ * max-tokens and effort are constants. The request is built per model
+ * (temperature only where it is still accepted, effort only where it is
+ * taken), so an override in either direction stays valid. Usage/cost is
+ * reported to the ai pillar via `@pops/ai-telemetry` (`callWithLogging`,
+ * fire-and-forget); the 429 backoff is {@link withRateLimitRetry}. A missing
+ * API key returns a placeholder string rather than throwing; a transport error
+ * throws so the handler surfaces a 500. A refusal and an output cut off at
+ * max-tokens are both reported on the {@link GenerationOutput}, never as an
+ * empty or silently short document.
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
 
 import {
   ANTHROPIC_PROVIDER,
@@ -25,10 +29,12 @@ import {
 } from '../ai-telemetry-deps.js';
 import { resolveAnthropicApiKey } from '../anthropic-key.js';
 import { withRateLimitRetry } from '../ingest/llm.js';
+import { effortParams, isOutputTruncated, isRefusal } from '../llm-request.js';
 
-export const DEFAULT_EMIT_MODEL = 'claude-sonnet-4-6';
+export const DEFAULT_EMIT_MODEL = 'claude-sonnet-5-5';
 const EMIT_OPERATION = 'emit.generate';
-const DEFAULT_MAX_TOKENS = 2048;
+const DEFAULT_MAX_TOKENS = 8000;
+const EMIT_EFFORT = 'medium';
 const UNAVAILABLE_MSG = '(Document generation unavailable — LLM API key not configured)';
 
 function emitModel(): string {
@@ -36,14 +42,23 @@ function emitModel(): string {
   return value !== undefined && value !== '' ? value : DEFAULT_EMIT_MODEL;
 }
 
+/**
+ * Outcome of one generation call: the synthesised text, flagged when the model
+ * ran out of output tokens before finishing it, or a refusal carrying no text.
+ */
+export type GenerationOutput =
+  | { kind: 'text'; text: string; outputTruncated: boolean }
+  | { kind: 'refused' };
+
 /** Capability the generation modes depend on. */
 export interface GenerationLlm {
   /**
    * Synthesise a document from a system prompt + user message. Returns a
-   * placeholder string when the model is unavailable (no API key); throws on
-   * a transport error so the caller surfaces a 500.
+   * placeholder text when the model is unavailable (no API key) and
+   * `refused` when the model declines; throws on a transport error so the
+   * caller surfaces a 500.
    */
-  generate(systemPrompt: string, userMessage: string): Promise<string>;
+  generate(systemPrompt: string, userMessage: string): Promise<GenerationOutput>;
 }
 
 /**
@@ -52,11 +67,11 @@ export interface GenerationLlm {
  * throwing at construction.
  */
 export class AnthropicGenerationLlm implements GenerationLlm {
-  async generate(systemPrompt: string, userMessage: string): Promise<string> {
+  async generate(systemPrompt: string, userMessage: string): Promise<GenerationOutput> {
     const apiKey = resolveAnthropicApiKey();
     if (apiKey === undefined) {
       console.warn('[cerebrum-emit] ANTHROPIC_API_KEY not set — cannot generate document');
-      return UNAVAILABLE_MSG;
+      return { kind: 'text', text: UNAVAILABLE_MSG, outputTruncated: false };
     }
 
     const client = new Anthropic({ apiKey, maxRetries: 0 });
@@ -74,7 +89,8 @@ export class AnthropicGenerationLlm implements GenerationLlm {
                 client.messages.create({
                   model,
                   max_tokens: DEFAULT_MAX_TOKENS,
-                  temperature: 0,
+                  ...samplingParams(model, 0),
+                  ...effortParams(model, EMIT_EFFORT),
                   system: systemPrompt,
                   messages: [{ role: 'user', content: userMessage }],
                 }),
@@ -91,8 +107,12 @@ export class AnthropicGenerationLlm implements GenerationLlm {
         },
         cerebrumTelemetryDeps()
       );
-      const first = response.content[0];
-      return first?.type === 'text' ? first.text : '';
+      if (isRefusal(response, 'cerebrum-emit')) return { kind: 'refused' };
+      return {
+        kind: 'text',
+        text: messageText(response.content),
+        outputTruncated: isOutputTruncated(response),
+      };
     } catch (err) {
       throw new Error(
         `Document generation failed: ${err instanceof Error ? err.message : String(err)}`,

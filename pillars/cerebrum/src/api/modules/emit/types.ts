@@ -49,7 +49,10 @@ export interface GenerationMetadata {
   dateRange: DateRange | null;
   scopeCoverage: string[];
   mode: GenerationMode;
+  /** The sources were capped before synthesis. */
   truncated: boolean;
+  /** The model hit its output-token cap, so the body ends mid-generation. */
+  outputTruncated: boolean;
 }
 
 /** Generated document — the output of the document generation pipeline. */

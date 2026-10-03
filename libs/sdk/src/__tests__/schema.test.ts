@@ -9,6 +9,29 @@ describe('ManifestPayloadSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts a tag carrier block with a kebab-case entity type', () => {
+    const result = ManifestPayloadSchema.safeParse({
+      ...validManifest(),
+      tags: { carriers: [{ entityType: 'purchase-item' }] },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an unknown key nested inside the tag carrier block', () => {
+    const result = ManifestPayloadSchema.safeParse({
+      ...validManifest(),
+      tags: { carriers: [{ entityType: 'purchase-item', extra: true }] },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some(
+          (issue) => issue.code === 'unrecognized_keys' && issue.keys.includes('extra')
+        )
+      ).toBe(true);
+    }
+  });
+
   it('defaults routes.subscriptions to an empty array when omitted', () => {
     const manifest = validManifest();
     const { subscriptions: _ignored, ...routes } = manifest.routes;

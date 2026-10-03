@@ -17,7 +17,7 @@ import {
 } from '../../../contract/settings/ai-settings-keys.js';
 import { type FinanceDb, transactionCorrections } from '../../../db/index.js';
 import { extractJsonFromReply } from '../ai-json.js';
-import { resolveAiMaxTokens, resolveAiString } from '../ai-settings-resolver.js';
+import { resolveAiMaxTokens, resolveAiModel } from '../ai-settings-resolver.js';
 import { CORRECTIONS_DEFAULT_MODEL, getClaudeCompleter } from './ai-runtime.js';
 import { type CorrectionAnalysis } from './ai-types.js';
 import { parseCorrectionTags } from './types.js';
@@ -133,16 +133,14 @@ export async function analyzeCorrection(
 ): Promise<CorrectionAnalysis | null> {
   const text = await getClaudeCompleter()({
     prompt: buildAnalyzePrompt(input, loadRecentAcceptedCorrections(db)),
-    model: resolveAiString(
+    model: resolveAiModel(
       db,
       RULE_GEN_MODEL_KEY,
       'FINANCE_CORRECTIONS_AI_MODEL',
       CORRECTIONS_DEFAULT_MODEL
     ),
-    maxTokens: resolveAiMaxTokens(
-      db,
-      RULE_GEN_MAX_TOKENS_KEY,
-      undefined,
+    maxTokens: Math.min(
+      resolveAiMaxTokens(db, RULE_GEN_MAX_TOKENS_KEY, undefined, ANALYZE_MAX_TOKENS_DEFAULT),
       ANALYZE_MAX_TOKENS_DEFAULT
     ),
     operation: 'analyze-correction',

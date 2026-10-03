@@ -15,8 +15,7 @@ import {
   type CallWithLoggingDeps,
   createEnvReportSink,
   httpLookupPricing,
-  type LookupPricingFn,
-  type PricingEntry,
+  memoizePricing,
 } from '@pops/ai-telemetry';
 
 import { ledgerReportFailedMessage, resolveLedgerCredential } from './ai-ledger-credential.js';
@@ -28,25 +27,6 @@ const DEFAULT_AI_API_URL = 'http://ai-api:3008';
 
 function resolveAiApiUrl(): string {
   return process.env['AI_API_URL'] ?? DEFAULT_AI_API_URL;
-}
-
-/**
- * Wraps a {@link LookupPricingFn} with a per-(provider, model) cache. Pricing
- * is effectively static for a process lifetime, so a single HTTP read per pair
- * is enough; a `null` miss is cached too so an unpriced model never re-hits the
- * ai pillar on every inference.
- */
-function memoizePricing(lookup: LookupPricingFn): LookupPricingFn {
-  const cache = new Map<string, Promise<PricingEntry | null>>();
-  return (provider, model) => {
-    const key = `${provider} ${model}`;
-    let entry = cache.get(key);
-    if (entry === undefined) {
-      entry = lookup(provider, model);
-      cache.set(key, entry);
-    }
-    return entry;
-  };
 }
 
 let cached: CallWithLoggingDeps | undefined;

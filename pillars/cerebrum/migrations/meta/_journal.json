@@ -71,6 +71,13 @@
       "when": 1782432000000,
       "tag": "0057_settings_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782518400000,
+      "tag": "0058_engram_search",
+      "breakpoints": true
     }
   ]
 }

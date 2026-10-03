@@ -309,6 +309,29 @@ describe('SearchInput — combobox ARIA and dismissal', () => {
     expect(screen.getByText('⌘K')).toBeInTheDocument();
   });
 
+  it('sends the detected app as context when federated search has no app dropdown', async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> =>
+        new Response(JSON.stringify({ sections: [makeSection()] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    renderSearchInput('/purchases/abc');
+
+    await act(async () => {
+      useSearchStore.getState().setQuery('matrix');
+    });
+    await screen.findByTestId('search-results-panel');
+
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      query: { text: 'matrix' },
+      context: { app: 'purchases', page: null },
+    });
+  });
+
   it('a dropdown registered after SearchInput mounted replaces the placeholder and cap without another render trigger', () => {
     renderSearchInput('/inventory');
     expect(screen.getByPlaceholderText('Search POPS...')).toBeInTheDocument();

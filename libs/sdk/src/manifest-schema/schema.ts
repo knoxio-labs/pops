@@ -7,6 +7,7 @@ import {
   PillarIdSchema,
   ProcedurePathSchema,
   SettingsKeySchema,
+  TagCarrierManifestSchema,
   type FeatureDescriptor,
 } from '@pops/types';
 
@@ -181,6 +182,7 @@ export const ManifestPayloadSchema = z
     captureOverlay: CaptureOverlayDescriptorSchema.optional(),
     topBarWidgets: z.array(TopBarWidgetDescriptorSchema).optional(),
     features: FEATURES.optional(),
+    tags: TagCarrierManifestSchema.optional(),
     healthcheck: HEALTHCHECK,
   })
   .strict();

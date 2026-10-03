@@ -1539,26 +1539,8 @@ export interface operations {
           };
         };
       };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
       /** @description 404 */
       404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description 409 */
-      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -2873,18 +2855,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        key:
-          | 'ai.model'
-          | 'ai.modelOverrides.query'
-          | 'ai.modelOverrides.emit'
-          | 'ai.modelOverrides.classifier'
-          | 'ai.modelOverrides.entityExtractor'
-          | 'ai.modelOverrides.scopeInference'
-          | 'ai.modelOverrides.auditorContradiction'
-          | 'ai.modelOverrides.patternContradiction'
-          | 'ai.monthlyTokenBudget'
-          | 'ai.budgetExceededFallback'
-          | 'ai.logRetentionDays';
+        key: 'ai.monthlyTokenBudget' | 'ai.budgetExceededFallback' | 'ai.logRetentionDays';
       };
       cookie?: never;
     };
@@ -2947,18 +2918,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        key:
-          | 'ai.model'
-          | 'ai.modelOverrides.query'
-          | 'ai.modelOverrides.emit'
-          | 'ai.modelOverrides.classifier'
-          | 'ai.modelOverrides.entityExtractor'
-          | 'ai.modelOverrides.scopeInference'
-          | 'ai.modelOverrides.auditorContradiction'
-          | 'ai.modelOverrides.patternContradiction'
-          | 'ai.monthlyTokenBudget'
-          | 'ai.budgetExceededFallback'
-          | 'ai.logRetentionDays';
+        key: 'ai.monthlyTokenBudget' | 'ai.budgetExceededFallback' | 'ai.logRetentionDays';
       };
       cookie?: never;
     };
@@ -3029,18 +2989,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        key:
-          | 'ai.model'
-          | 'ai.modelOverrides.query'
-          | 'ai.modelOverrides.emit'
-          | 'ai.modelOverrides.classifier'
-          | 'ai.modelOverrides.entityExtractor'
-          | 'ai.modelOverrides.scopeInference'
-          | 'ai.modelOverrides.auditorContradiction'
-          | 'ai.modelOverrides.patternContradiction'
-          | 'ai.monthlyTokenBudget'
-          | 'ai.budgetExceededFallback'
-          | 'ai.logRetentionDays';
+        key: 'ai.monthlyTokenBudget' | 'ai.budgetExceededFallback' | 'ai.logRetentionDays';
       };
       cookie?: never;
     };
@@ -3110,18 +3059,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        key:
-          | 'ai.model'
-          | 'ai.modelOverrides.query'
-          | 'ai.modelOverrides.emit'
-          | 'ai.modelOverrides.classifier'
-          | 'ai.modelOverrides.entityExtractor'
-          | 'ai.modelOverrides.scopeInference'
-          | 'ai.modelOverrides.auditorContradiction'
-          | 'ai.modelOverrides.patternContradiction'
-          | 'ai.monthlyTokenBudget'
-          | 'ai.budgetExceededFallback'
-          | 'ai.logRetentionDays';
+        key: 'ai.monthlyTokenBudget' | 'ai.budgetExceededFallback' | 'ai.logRetentionDays';
       };
       cookie?: never;
     };

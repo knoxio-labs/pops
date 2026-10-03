@@ -1421,6 +1421,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Page through lines carrying an item tag, newest first",
@@ -1607,6 +1617,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "The learned product dictionary: products and the printed wordings that resolve to them",
@@ -1656,6 +1676,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -1837,6 +1867,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints",
@@ -1886,6 +1926,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -2003,6 +2053,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -5063,6 +5123,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -5923,6 +5993,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -6961,6 +7041,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -7079,6 +7169,16 @@
               }
             },
             "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -7204,6 +7304,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Unanswered inventory offers derived from an order's durable lines",
@@ -8941,6 +9051,10 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "cause": {
+                          "enum": ["truncated", "refused", "rejected"],
+                          "type": "string"
+                        },
                         "kind": {
                           "enum": ["unreadable"],
                           "type": "string"
@@ -10903,6 +11017,10 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "cause": {
+                          "enum": ["truncated", "refused", "rejected"],
+                          "type": "string"
+                        },
                         "kind": {
                           "enum": ["unreadable"],
                           "type": "string"
@@ -11177,6 +11295,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -11551,6 +11679,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Orders linked to one finance transaction, confirmed or derived",
@@ -11632,6 +11770,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Which of these finance transactions an order explains, confirmed or derived",
@@ -11682,6 +11830,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -11797,6 +11955,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "503": {
             "content": {
@@ -12004,6 +12172,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Charges awaiting a decision, newest order first",
@@ -12054,6 +12232,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -12114,6 +12302,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -12219,6 +12417,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -12278,6 +12486,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -12572,6 +12790,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -12657,6 +12885,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {

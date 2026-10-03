@@ -31,8 +31,13 @@ import { setBulk } from '@pops/pillar-settings/service';
 
 import { openFinanceDb, type FinanceDb, type OpenedFinanceDb } from '../../../db/index.js';
 
-const { resolveAiMaxTokens, resolveAiPercent, resolveAiString, invalidateAiSettingsCache } =
-  await import('../ai-settings-resolver.js');
+const {
+  resolveAiMaxTokens,
+  resolveAiModel,
+  resolveAiPercent,
+  resolveAiString,
+  invalidateAiSettingsCache,
+} = await import('../ai-settings-resolver.js');
 
 const SETTING_KEY = 'finance.aiCategorizer.model';
 const MAX_TOKENS_KEY = 'finance.aiCategorizer.maxTokens';
@@ -197,5 +202,23 @@ describe('cache — keyed by database handle (POPS-2589)', () => {
       otherOpened.raw.close();
       rmSync(otherTmpDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('resolveAiModel — a saved value outside the select options', () => {
+  it('uses a stored value that is one of the options', () => {
+    setBulk(db, [{ key: SETTING_KEY, value: 'claude-sonnet-5-5' }]);
+    expect(resolveAiModel(db, SETTING_KEY, ENV_VAR, 'compiled-default')).toBe('claude-sonnet-5-5');
+  });
+
+  it('ignores a legacy free-text id and falls to the env var', () => {
+    process.env[ENV_VAR] = 'env-model';
+    setBulk(db, [{ key: SETTING_KEY, value: 'claude-3-opus-legacy' }]);
+    expect(resolveAiModel(db, SETTING_KEY, ENV_VAR, 'compiled-default')).toBe('env-model');
+  });
+
+  it('ignores a legacy free-text id and falls to the default when no env var is set', () => {
+    setBulk(db, [{ key: SETTING_KEY, value: 'claude-3-opus-legacy' }]);
+    expect(resolveAiModel(db, SETTING_KEY, undefined, 'compiled-default')).toBe('compiled-default');
   });
 });

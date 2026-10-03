@@ -8,7 +8,12 @@
  */
 import { type IngestLlm } from './llm.js';
 
-import type { EntityExtractionResult, EntityType, ExtractedEntity } from './types.js';
+import type {
+  EntityExtractionOutcome,
+  EntityExtractionResult,
+  EntityType,
+  ExtractedEntity,
+} from './types.js';
 
 const OPERATION = 'cerebrum.extract-entities';
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.7;
@@ -78,20 +83,21 @@ function parseEntity(item: unknown): LlmEntity | null {
   return { type: type as EntityType, value, normalised, confidence };
 }
 
-function parseResponse(text: string): LlmEntity[] {
+function parseResponse(text: string): LlmEntity[] | null {
   const trimmed = text.trim();
   const arrayStart = trimmed.indexOf('[');
   const arrayEnd = trimmed.lastIndexOf(']');
-  if (arrayStart === -1 || arrayEnd === -1) return [];
+  if (arrayStart === -1 || arrayEnd === -1) return null;
 
   try {
-    const raw = JSON.parse(trimmed.slice(arrayStart, arrayEnd + 1)) as unknown[];
-    return raw.flatMap((item) => {
+    const raw: unknown = JSON.parse(trimmed.slice(arrayStart, arrayEnd + 1));
+    if (!Array.isArray(raw)) return null;
+    return raw.flatMap((item: unknown) => {
       const entity = parseEntity(item);
       return entity ? [entity] : [];
     });
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -142,6 +148,15 @@ export class CortexEntityExtractor {
     existingTags: string[] = [],
     referenceDate?: string
   ): Promise<EntityExtractionResult> {
+    return (await this.extractWithStatus(body, existingTags, referenceDate)).extraction;
+  }
+
+  /** Like {@link extract}, but reports `degraded` when the LLM returned nothing or an unparseable response. */
+  async extractWithStatus(
+    body: string,
+    existingTags: string[] = [],
+    referenceDate?: string
+  ): Promise<EntityExtractionOutcome> {
     const refDate = referenceDate ?? new Date().toISOString().slice(0, 10);
     const text = await this.llm.complete({
       operation: OPERATION,
@@ -150,9 +165,11 @@ export class CortexEntityExtractor {
       maxTokens: MAX_TOKENS,
     });
 
-    if (text === null) return { entities: [], tags: [], referencedDates: [] };
+    const empty: EntityExtractionResult = { entities: [], tags: [], referencedDates: [] };
+    if (text === null) return { extraction: empty, degraded: true };
 
     const rawEntities = parseResponse(text);
+    if (rawEntities === null) return { extraction: empty, degraded: true };
     const aboveThreshold = rawEntities.filter((e) => e.confidence >= this.confidenceThreshold);
     const deduped = dedupeEntities(aboveThreshold, existingTags);
 
@@ -164,9 +181,12 @@ export class CortexEntityExtractor {
     }));
 
     return {
-      entities,
-      tags: deduped.map(toTag),
-      referencedDates: collectReferencedDates(deduped),
+      extraction: {
+        entities,
+        tags: deduped.map(toTag),
+        referencedDates: collectReferencedDates(deduped),
+      },
+      degraded: false,
     };
   }
 }

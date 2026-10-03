@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
@@ -40,19 +40,21 @@ afterEach(() => {
   rmSync(engramRoot, { recursive: true, force: true });
 });
 
+function appDeps(detector: ContradictionDetector | undefined) {
+  return {
+    cerebrumDb,
+    templateRegistry: makeTemplateRegistry(),
+    engramRoot,
+    reflexService: makeReflexService(cerebrumDb.db, join(tmpDir, 'reflexes.toml')),
+    auditorContradictionDetector: detector,
+    version: '0.0.1-test',
+    selfBaseUrl: 'http://localhost:3007',
+    peerClients: makeEmptyPeerClients(),
+  };
+}
+
 function client(detector: ContradictionDetector = makeFakeContradictionDetector()) {
-  return makeClient(
-    createCerebrumApiApp({
-      cerebrumDb,
-      templateRegistry: makeTemplateRegistry(),
-      engramRoot,
-      reflexService: makeReflexService(cerebrumDb.db, join(tmpDir, 'reflexes.toml')),
-      auditorContradictionDetector: detector,
-      version: '0.0.1-test',
-      selfBaseUrl: 'http://localhost:3007',
-      peerClients: makeEmptyPeerClients(),
-    })
-  );
+  return makeClient(createCerebrumApiApp(appDeps(detector)));
 }
 
 describe('workers run procedures', () => {
@@ -95,6 +97,41 @@ describe('workers run procedures', () => {
     expect(result.processed).toBe(1);
     expect(result.actions.length).toBeGreaterThan(0);
     expect(result.actions.every((a) => a.status === 'proposed')).toBe(true);
+  });
+});
+
+describe('runAuditor without an injected detector', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('makes no outbound LLM call and still returns quality and coverage actions', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'test-key-not-real');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const c = makeClient(createCerebrumApiApp(appDeps(undefined)));
+    for (const [title, tags] of [
+      ['Sparse one', ['shared-topic', 'solo-topic']],
+      ['Sparse two', ['shared-topic']],
+      ['Untagged', []],
+    ] as const) {
+      await c.engrams.create({
+        type: 'note',
+        title,
+        body: 'tiny',
+        scopes: ['personal.notes'],
+        tags: [...tags],
+      });
+    }
+
+    const result = await c.workers.runAuditor(true);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.processed).toBe(3);
+    const payloadTypes = result.actions.map((a) => a.payload.type);
+    expect(payloadTypes).toContain('low_quality');
+    expect(payloadTypes).toContain('gap');
+    expect(payloadTypes).not.toContain('contradiction');
   });
 });
 

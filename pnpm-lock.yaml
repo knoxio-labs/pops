@@ -233,6 +233,9 @@ importers:
 
   libs/overlay-ego:
     dependencies:
+      '@pops/navigation':
+        specifier: workspace:*
+        version: link:../navigation
       '@pops/types':
         specifier: workspace:*
         version: link:../types

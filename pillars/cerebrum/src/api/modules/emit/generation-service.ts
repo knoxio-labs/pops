@@ -10,7 +10,12 @@
 import { CitationParser } from '../query/citation-parser.js';
 import { ContextAssemblyService } from '../retrieval/context-assembly.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
-import { toSourceCitations } from './helpers.js';
+import {
+  REFUSED_OUTLINE,
+  REFUSED_RESULT,
+  toSourceCitations,
+  withOutputTruncated,
+} from './helpers.js';
 import { buildReportDocument, checkReportSources } from './modes/report.js';
 import { buildEmptySummary, buildSummaryDocument, capSummaryResults } from './modes/summary.js';
 import { buildTimelineDocument, sortChronologically } from './modes/timeline.js';
@@ -28,7 +33,7 @@ import type { GenerationLlm } from './llm.js';
 import type { GenerationRequest, GenerationResult, PreviewResult } from './types.js';
 
 const EMIT_TOKEN_BUDGET = 8192;
-const EMIT_RELEVANCE_THRESHOLD = 0.2;
+const EMIT_MIN_COSINE = 0.35;
 const EMIT_MAX_SOURCES = 20;
 
 /** Retrieval deps + the injected LLM port the generation pipeline consumes. */
@@ -74,7 +79,7 @@ export class GenerationService {
     const query = request.query ?? '';
     const includeSecret = request.includeSecret ?? false;
     const filters = buildFiltersFromRequest(request);
-    const results = await this.retrieve(query, filters);
+    const results = await this.retrieve(request.query, filters);
     const filtered = filterByScope(results, request.audienceScope, includeSecret);
 
     const insufficientCheck = checkReportSources(filtered);
@@ -89,10 +94,12 @@ export class GenerationService {
     });
 
     const prompt = buildReportPrompt(assembled.context, audienceScope);
-    const llmOutput = await this.deps.llm.generate(prompt, query);
-    const { cleanedAnswer, citations } = this.citationParser.parse(llmOutput, filtered);
+    const output = await this.deps.llm.generate(prompt, query);
+    if (output.kind === 'refused') return REFUSED_RESULT;
+    const { cleanedAnswer, citations } = this.citationParser.parse(output.text, filtered);
 
-    return { document: buildReportDocument(cleanedAnswer, citations, audienceScope, filtered) };
+    const document = buildReportDocument(cleanedAnswer, citations, audienceScope, filtered);
+    return { document: withOutputTruncated(document, output.outputTruncated) };
   }
 
   /** Generate a summary digest over a date range. */
@@ -100,7 +107,7 @@ export class GenerationService {
     const includeSecret = request.includeSecret ?? false;
     const query = request.query ?? 'summary of all content';
     const filters = buildFiltersFromRequest(request);
-    const results = await this.retrieve(query, filters);
+    const results = await this.retrieve(request.query, filters);
     const filtered = filterByScope(results, request.audienceScope, includeSecret);
     const audienceScope = request.audienceScope ?? computeDefaultAudienceScope(filtered);
     const effectiveDateRange = request.dateRange ?? { from: 'unknown', to: 'unknown' };
@@ -118,18 +125,18 @@ export class GenerationService {
     });
 
     const prompt = buildSummaryPrompt(assembled.context, effectiveDateRange, audienceScope);
-    const llmOutput = await this.deps.llm.generate(prompt, query);
-    const { cleanedAnswer } = this.citationParser.parse(llmOutput, capped);
+    const output = await this.deps.llm.generate(prompt, query);
+    if (output.kind === 'refused') return REFUSED_RESULT;
+    const { cleanedAnswer } = this.citationParser.parse(output.text, capped);
 
-    return {
-      document: buildSummaryDocument({
-        llmOutput: cleanedAnswer,
-        results: capped,
-        dateRange: effectiveDateRange,
-        audienceScope,
-        truncated,
-      }),
-    };
+    const document = buildSummaryDocument({
+      llmOutput: cleanedAnswer,
+      results: capped,
+      dateRange: effectiveDateRange,
+      audienceScope,
+      truncated,
+    });
+    return { document: withOutputTruncated(document, output.outputTruncated) };
   }
 
   /** Generate a chronological timeline from dated engrams. */
@@ -137,7 +144,7 @@ export class GenerationService {
     const includeSecret = request.includeSecret ?? false;
     const query = request.query ?? 'timeline of all events';
     const filters = buildFiltersFromRequest(request);
-    const results = await this.retrieve(query, filters);
+    const results = await this.retrieve(request.query, filters);
     const filtered = filterByScope(results, request.audienceScope, includeSecret);
     const audienceScope = request.audienceScope ?? computeDefaultAudienceScope(filtered);
 
@@ -154,10 +161,12 @@ export class GenerationService {
     });
 
     const prompt = buildTimelinePrompt(assembled.context, audienceScope, request.groupBy);
-    const llmOutput = await this.deps.llm.generate(prompt, query);
-    const { cleanedAnswer } = this.citationParser.parse(llmOutput, sorted);
+    const output = await this.deps.llm.generate(prompt, query);
+    if (output.kind === 'refused') return REFUSED_RESULT;
+    const { cleanedAnswer } = this.citationParser.parse(output.text, sorted);
 
-    return { document: buildTimelineDocument(cleanedAnswer, sorted, audienceScope) };
+    const document = buildTimelineDocument(cleanedAnswer, sorted, audienceScope);
+    return { document: withOutputTruncated(document, output.outputTruncated) };
   }
 
   /** Preview: returns sources and a generated outline without full generation. */
@@ -165,7 +174,7 @@ export class GenerationService {
     const query = request.query ?? 'preview';
     const includeSecret = request.includeSecret ?? false;
     const filters = buildFiltersFromRequest(request);
-    const results = await this.retrieve(query, filters);
+    const results = await this.retrieve(request.query, filters);
     const filtered = filterByScope(results, request.audienceScope, includeSecret);
     const sources = toSourceCitations(filtered);
 
@@ -179,12 +188,20 @@ export class GenerationService {
       tokenBudget: EMIT_TOKEN_BUDGET,
       includeMetadata: true,
     });
-    const outline = await this.deps.llm.generate(buildOutlinePrompt(assembled.context), query);
-    return { sources, outline };
+    const output = await this.deps.llm.generate(buildOutlinePrompt(assembled.context), query);
+    return { sources, outline: output.kind === 'refused' ? REFUSED_OUTLINE : output.text };
   }
 
-  /** Run hybrid search against the in-pillar retrieval slice. */
-  private async retrieve(query: string, filters: RetrievalFilters): Promise<RetrievalResult[]> {
-    return this.search.hybrid(query, filters, EMIT_MAX_SOURCES, EMIT_RELEVANCE_THRESHOLD);
+  /**
+   * A request with a topic is ranked against it. A request without one (a
+   * digest of a date range, a timeline of a scope) has nothing to rank against,
+   * so its sources are the engrams the filters select, newest first.
+   */
+  private async retrieve(
+    query: string | undefined,
+    filters: RetrievalFilters
+  ): Promise<RetrievalResult[]> {
+    if (query === undefined) return this.search.structuredOnly(filters, EMIT_MAX_SOURCES);
+    return this.search.hybrid(query, filters, EMIT_MAX_SOURCES, EMIT_MIN_COSINE);
   }
 }
