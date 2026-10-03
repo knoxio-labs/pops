@@ -40,10 +40,10 @@ extension InventoryEventKind {
     }
 
     static let storedWireValues: [String] = [
-        "created", "edited", "type_changed", "moved", "access_changed", "fullness_changed",
-        "lifecycle_changed", "quantity_changed", "split", "code_changed", "photo_attached",
-        "photo_removed", "photos_reordered", "deleted", "restored", "location_created",
-        "location_renamed", "location_moved", "location_deleted", "reverted", "migrated",
+        "created", "edited", "type_changed", "field_values_changed", "override_set",
+        "override_cleared", "code_set", "moved", "picked_up", "put_back", "stored", "opened",
+        "closed", "sealed", "unpacked", "lifecycle_changed", "quantity_changed", "split_from",
+        "split_into", "photo_added", "photo_removed", "deleted", "restored", "reverted", "migrated",
     ]
 
     private static let storageValues: [InventoryEventKind: String] = Dictionary(
