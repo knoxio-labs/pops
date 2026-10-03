@@ -14,6 +14,7 @@ import { importsTools } from './finance-imports.js';
 import { searchTools } from './finance-search.js';
 import { summaryTools } from './finance-summary.js';
 import { wishlistTools } from './finance-wishlist.js';
+import { mapRows, withUri } from './uri.js';
 import { mapCallResult, reqStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -56,7 +57,7 @@ const transactionsList: ToolDef = {
       limit: typeof args['limit'] === 'number' ? args['limit'] : undefined,
       offset: typeof args['offset'] === 'number' ? args['offset'] : undefined,
     });
-    return mapCallResult(result);
+    return mapCallResult(mapRows(result, 'data', withUri('finance/transaction')));
   },
 };
 
@@ -72,7 +73,8 @@ const transactionsGet: ToolDef = {
   handler: async (args) => {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
-    return mapCallResult(await finance().transactions.get({ id }));
+    const result = await finance().transactions.get({ id });
+    return mapCallResult(mapRows(result, 'data', withUri('finance/transaction')));
   },
 };
 
@@ -131,7 +133,7 @@ const budgetsList: ToolDef = {
       limit: typeof args['limit'] === 'number' ? args['limit'] : undefined,
       offset: typeof args['offset'] === 'number' ? args['offset'] : undefined,
     });
-    return mapCallResult(result);
+    return mapCallResult(mapRows(result, 'data', withUri('finance/budget')));
   },
 };
 
@@ -147,7 +149,8 @@ const budgetsGet: ToolDef = {
   handler: async (args) => {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
-    return mapCallResult(await finance().budgets.get({ id }));
+    const result = await finance().budgets.get({ id });
+    return mapCallResult(mapRows(result, 'data', withUri('finance/budget')));
   },
 };
 
