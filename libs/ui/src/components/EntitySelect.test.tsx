@@ -161,7 +161,7 @@ describe('EntitySelect — searching by alias', () => {
 });
 
 describe('EntitySelect — result ranking', () => {
-  it('orders matches by quality rather than list order', async () => {
+  it('ranks an exact entity name above a leading-word match', async () => {
     const entities: EntityOption[] = [
       { id: 'e1', name: 'Alternative Brewing', type: 'company' },
       { id: 'e2', name: 'Bunnings Warehouse', type: 'company' },
@@ -177,12 +177,28 @@ describe('EntitySelect — result ranking', () => {
     await userEvent.type(search, 'ing');
 
     expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      expect.stringContaining('ING Direct'),
       expect.stringContaining('Ing'),
+      expect.stringContaining('ING Direct'),
       expect.stringContaining('Ingo'),
       expect.stringContaining('Direct Ingredients'),
       expect.stringContaining('Alternative Brewing'),
       expect.stringContaining('Bunnings Warehouse'),
+    ]);
+  });
+
+  it('ranks an exact diacritic-normalized alias above a leading-word match', async () => {
+    const entities: EntityOption[] = [
+      { id: 'e1', name: 'Joao Industries', type: 'company' },
+      { id: 'e2', name: 'Cafe Town', type: 'company', aliases: ['João'] },
+    ];
+    render(<EntitySelect entities={entities} />);
+
+    const search = await openPicker();
+    await userEvent.type(search, 'joao');
+
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      expect.stringContaining('Cafe Town'),
+      expect.stringContaining('Joao Industries'),
     ]);
   });
 
