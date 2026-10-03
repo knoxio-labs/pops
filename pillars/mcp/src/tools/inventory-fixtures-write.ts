@@ -45,6 +45,7 @@ function buildFixturePatch(args: Record<string, unknown>): FixturePatch {
 
 const fixturesCreate: ToolDef = {
   name: 'inventory.fixtures.create',
+  readOnly: false,
   description:
     'Create a new fixture (a non-owned infrastructure object that items can be connected to).',
   inputSchema: {
@@ -79,6 +80,7 @@ const fixturesCreate: ToolDef = {
 
 const fixturesUpdate: ToolDef = {
   name: 'inventory.fixtures.update',
+  readOnly: false,
   description:
     'Update a fixture. Omit a field to leave it unchanged; pass null for locationId or notes to clear them.',
   inputSchema: {
@@ -103,6 +105,7 @@ const fixturesUpdate: ToolDef = {
 
 const fixturesDelete: ToolDef = {
   name: 'inventory.fixtures.delete',
+  readOnly: false,
   description: 'Delete a fixture. All item connections to this fixture are removed automatically.',
   inputSchema: {
     type: 'object',
@@ -118,6 +121,7 @@ const fixturesDelete: ToolDef = {
 
 const fixturesConnect: ToolDef = {
   name: 'inventory.fixtures.connect',
+  readOnly: false,
   description: 'Connect an inventory item to a fixture (e.g. a lamp plugged into an outlet).',
   inputSchema: {
     type: 'object',
@@ -138,6 +142,7 @@ const fixturesConnect: ToolDef = {
 
 const fixturesDisconnect: ToolDef = {
   name: 'inventory.fixtures.disconnect',
+  readOnly: false,
   description: 'Disconnect an inventory item from a fixture.',
   inputSchema: {
     type: 'object',

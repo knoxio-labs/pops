@@ -9,6 +9,7 @@ import type { ToolDef } from './tool-def.js';
 /** Optimistic, idempotent item tombstone command. */
 export const itemDeleteTool: ToolDef = {
   name: 'inventory.items.delete',
+  readOnly: false,
   description:
     'Delete an item at the revision returned by inventory.items.get. Supply mutationId and reuse it unchanged when retrying an uncertain call.',
   inputSchema: {

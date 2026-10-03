@@ -36,6 +36,9 @@ though nothing enforces it mechanically.
 - **Patch tools forward only keys present in the args.** `0` is a value, not an
   absence. The comment above the `copyNull*` / `copyOpt*` helpers in `utils.ts`
   says which one matches a column's nullability.
+- **Every tool declares `readOnly`.** The server lists it as the MCP
+  `readOnlyHint` annotation, so a tool that can change state in any pillar must
+  set it to `false`.
 - **A scoped tool declares it in `ToolDef.scope`.** `ListTools` appends it to
   the listed description (`describeTool` in `../index.ts`), and a call
   `mapCallResult`/`mapDraftCallResult` maps to `unauthorized` gets the scope

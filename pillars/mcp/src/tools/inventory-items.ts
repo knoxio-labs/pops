@@ -33,6 +33,7 @@ function placementKind(value: unknown): 'location' | 'container' | 'hand' | unde
 
 const itemsList: ToolDef = {
   name: 'inventory.items.list',
+  readOnly: true,
   description:
     'List protocol-2 inventory items with stable typeId, catalogueRevision, fieldValues (stored values and overrides) and computedValues (each computed field: state ok, overridden or unavailable with a reason, failedFieldId and missingInputs naming every input without a value, plus the dependencies and items it read). Read inventory.catalogue.get before interpreting field IDs.',
   inputSchema: {
@@ -64,6 +65,7 @@ const itemsList: ToolDef = {
 
 const itemGet: ToolDef = {
   name: 'inventory.items.get',
+  readOnly: true,
   description:
     'Get one protocol-2 item, including revision, stable typeId, catalogueRevision, fieldValues, computedValues (state ok, overridden or unavailable, with reason, failedFieldId, missingInputs, dependencies and traversedItemIds) and history. Read the matching catalogue revision before editing values; change a computed field only through inventory.items.setOverride and clearOverride.',
   inputSchema: {

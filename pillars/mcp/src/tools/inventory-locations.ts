@@ -65,6 +65,7 @@ function buildLocationPatch(args: Record<string, unknown>): LocationPatch {
 
 const locationTree: ToolDef = {
   name: 'inventory.locations.tree',
+  readOnly: true,
   description:
     'Get the full location hierarchy as a nested tree. Returns all locations with their children.',
   inputSchema: { type: 'object', properties: {} },
@@ -73,6 +74,7 @@ const locationTree: ToolDef = {
 
 const locationsList: ToolDef = {
   name: 'inventory.locations.list',
+  readOnly: true,
   description: 'List all locations as a flat array.',
   inputSchema: { type: 'object', properties: {} },
   handler: async () => mapCallResult(await locations().list()),
@@ -80,6 +82,7 @@ const locationsList: ToolDef = {
 
 const locationsCreate: ToolDef = {
   name: 'inventory.locations.create',
+  readOnly: false,
   description:
     'Create a new location. Use parentId to nest it under an existing location (omit or null for a root location). Returns the created location including its id.',
   inputSchema: {
@@ -108,6 +111,7 @@ const locationsCreate: ToolDef = {
 
 const locationsUpdate: ToolDef = {
   name: 'inventory.locations.update',
+  readOnly: false,
   description:
     'Update an existing location. Only provided fields are changed. Pass parentId: null to make a location a root node.',
   inputSchema: {
@@ -133,6 +137,7 @@ const locationsUpdate: ToolDef = {
 
 const locationsDelete: ToolDef = {
   name: 'inventory.locations.delete',
+  readOnly: false,
   description:
     'Delete a location. Without force, returns { requiresConfirmation: true, stats } when the location has children or items — re-call with force: true once the user confirms. Child locations are cascade-deleted; items become unlocated (not deleted).',
   inputSchema: {

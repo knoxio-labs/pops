@@ -37,6 +37,7 @@ function optionalOperations(args: Record<string, unknown>): Record<string, unkno
  */
 export const cataloguePreviewComputedField: ToolDef = {
   name: 'inventory.catalogue.previewComputedField',
+  readOnly: true,
   description:
     'Read inventory.catalogue.readDraft first, then evaluate one computed field of that draft on one item, optionally after unsaved operations, without writing anything. Name the field by fieldId, or by fieldKey when an operation creates it. Returns the value, or why it is unavailable as missingInputs (each input with no value, the item it was read on, and its reason), or the raw evaluation error code (e.g. division_by_zero), plus the dependencies read and the item names. Refused with inventory.catalogue.draft_conflict when expectedDraftVersion is stale, and with the save issue paths when the operations are invalid.',
   inputSchema: {
@@ -101,6 +102,7 @@ export const cataloguePreviewComputedField: ToolDef = {
  */
 export const cataloguePreviewComputedFieldOnPublished: ToolDef = {
   name: 'inventory.catalogue.previewComputedFieldOnPublished',
+  readOnly: true,
   description:
     'Evaluate one computed field against the published catalogue on one item, optionally after unsaved operations, without creating a draft and without writing anything. Name the field by fieldId, or by fieldKey when an operation creates it. Returns the value, or why it is unavailable as missingInputs (each input with no value, the item it was read on, and its reason), or the raw evaluation error code (e.g. division_by_zero), plus the dependencies read and the item names. Refused with inventory.catalogue.conflict when the published catalogue has moved since baseRevision was read.',
   inputSchema: {

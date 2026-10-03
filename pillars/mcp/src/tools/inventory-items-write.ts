@@ -27,6 +27,7 @@ const retryIdentityProperties = {
 
 const itemsCreate: ToolDef = {
   name: 'inventory.items.create',
+  readOnly: false,
   description:
     'Create a protocol-2 item. Read inventory.catalogue.get first, then send its current revision, stable type ID and complete stable field-value set. To create the item already overriding a computed field whose allowOverride is true, add that field with source "override" and exactly one value; any other field sent as an override is refused. Reuse mutationId and entityId together when retrying an uncertain call.',
   inputSchema: {
@@ -81,6 +82,7 @@ const itemsCreate: ToolDef = {
 
 const itemsUpdate: ToolDef = {
   name: 'inventory.items.update',
+  readOnly: false,
   description:
     'Edit an item at an observed item revision using the current catalogue revision. Read inventory.items.get and inventory.catalogue.get first. fieldValues is a stable field-ID patch; null clears an optional value. externalIds replaces the identifier list.',
   inputSchema: {
@@ -137,6 +139,7 @@ const itemsUpdate: ToolDef = {
 
 const itemsChangeType: ToolDef = {
   name: 'inventory.items.changeType',
+  readOnly: false,
   description:
     'Change an item to a stable type ID and replace all its field values. Read the item and current catalogue first; this is an optimistic-concurrency write.',
   inputSchema: {
