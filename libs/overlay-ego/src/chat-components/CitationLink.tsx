@@ -13,7 +13,7 @@ export interface CitationLinkProps {
 export function CitationLink({ engramId }: CitationLinkProps) {
   return (
     <Link
-      to={`/cerebrum/${engramId}`}
+      to={`/cerebrum/engrams/${engramId}`}
       className="inline-flex items-center gap-1 rounded-sm bg-app-accent/10 px-1.5 py-0.5 text-xs font-medium text-app-accent hover:bg-app-accent/20 transition-colors"
     >
       <span aria-hidden>📎</span>
