@@ -6,10 +6,6 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  openInventoryDb,
-  type OpenedInventoryDb,
-} from '../../../pillars/inventory/src/db/open-inventory-db.js';
-import {
   defaultPillarDbPath,
   discoverPillarIdsWithDatabases,
   parseDbClearArgv,
@@ -40,8 +36,32 @@ function makePillar(id: string, options: { withDb?: boolean } = {}): string {
   return dbPath;
 }
 
-function readValue(database: OpenedInventoryDb, key: string): string {
-  const row = database.raw.prepare('SELECT value FROM sync_meta WHERE key = ?').get(key);
+function makeInventoryDb(): string {
+  const dbPath = makePillar('inventory');
+  mkdirSync(join(root, 'pillars', 'inventory', 'data'), { recursive: true });
+  const db = new DatabaseSync(dbPath);
+  db.exec(`
+    CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY, hash TEXT);
+    INSERT INTO __drizzle_migrations (hash) VALUES ('head');
+    CREATE TABLE sync_meta ("key" TEXT PRIMARY KEY, value TEXT NOT NULL);
+    INSERT INTO sync_meta ("key", value) VALUES ('epoch', 'old-epoch'), ('min_protocol', '1');
+    CREATE TABLE events (id INTEGER PRIMARY KEY, kind TEXT NOT NULL);
+    INSERT INTO events (kind) VALUES ('created');
+    CREATE TRIGGER events_append_only BEFORE DELETE ON events
+      BEGIN SELECT RAISE(ABORT, 'events are append-only'); END;
+    CREATE TABLE catalogue_events (id INTEGER PRIMARY KEY, kind TEXT NOT NULL);
+    INSERT INTO catalogue_events (kind) VALUES ('created');
+    CREATE TRIGGER catalogue_events_append_only BEFORE DELETE ON catalogue_events
+      BEGIN SELECT RAISE(ABORT, 'catalogue events are append-only'); END;
+    CREATE VIRTUAL TABLE items_fts USING fts5(content);
+    INSERT INTO items_fts (content) VALUES ('inventory search row');
+  `);
+  db.close();
+  return dbPath;
+}
+
+function readValue(database: DatabaseSync, key: string): string {
+  const row = database.prepare('SELECT value FROM sync_meta WHERE key = ?').get(key);
   if (
     typeof row !== 'object' ||
     row === null ||
@@ -53,8 +73,8 @@ function readValue(database: OpenedInventoryDb, key: string): string {
   return row['value'];
 }
 
-function readCount(database: OpenedInventoryDb, query: string): number {
-  const row = database.raw.prepare(query).get();
+function readCount(database: DatabaseSync, query: string): number {
+  const row = database.prepare(query).get();
   if (
     typeof row !== 'object' ||
     row === null ||
@@ -132,62 +152,36 @@ describe('runDbClear', () => {
     db.close();
   });
 
-  it('clears inventory and boots with a fresh sync epoch and its schema triggers restored', () => {
-    const dbPath = makePillar('inventory');
-    const initial = openInventoryDb(dbPath);
-    let initialEpoch = '';
-    let migrationCount = 0;
-    let triggerCount = 0;
-    try {
-      initial.raw
-        .prepare(
-          `INSERT INTO events (
-            entity_kind, entity_id, kind, fields, before, after, entity_revision, actor_kind, server_time
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(
-          'location',
-          'clear-test',
-          'created',
-          '[]',
-          '{}',
-          '{}',
-          1,
-          'service',
-          new Date().toISOString()
-        );
-      initialEpoch = readValue(initial, 'epoch');
-      migrationCount = readCount(initial, 'SELECT COUNT(*) AS count FROM __drizzle_migrations');
-      triggerCount = readCount(
-        initial,
-        "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger'"
-      );
-      expect(readCount(initial, 'SELECT COUNT(*) AS count FROM events')).toBeGreaterThan(0);
-      expect(readCount(initial, 'SELECT COUNT(*) AS count FROM catalogue_events')).toBeGreaterThan(
-        0
-      );
-    } finally {
-      initial.raw.close();
-    }
+  it('clears inventory event and virtual tables and reopens with fresh sync metadata', () => {
+    const dbPath = makeInventoryDb();
+    const initial = new DatabaseSync(dbPath);
+    const initialEpoch = readValue(initial, 'epoch');
+    const migrationCount = readCount(initial, 'SELECT COUNT(*) AS count FROM __drizzle_migrations');
+    const triggerCount = readCount(
+      initial,
+      "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger'"
+    );
+    expect(readCount(initial, 'SELECT COUNT(*) AS count FROM events')).toBeGreaterThan(0);
+    expect(readCount(initial, 'SELECT COUNT(*) AS count FROM catalogue_events')).toBeGreaterThan(0);
+    expect(readCount(initial, 'SELECT COUNT(*) AS count FROM items_fts')).toBeGreaterThan(0);
+    initial.close();
 
     const result = runDbClear({ pillarId: 'inventory', repoRoot: root, env: {}, log });
     expect(result.skipped).toBe(false);
 
-    const reopened = openInventoryDb(dbPath);
-    try {
-      expect(readValue(reopened, 'epoch')).not.toBe(initialEpoch);
-      expect(readValue(reopened, 'min_protocol')).toBe('1');
-      expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM events')).toBe(0);
-      expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM catalogue_events')).toBe(0);
-      expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM __drizzle_migrations')).toBe(
-        migrationCount
-      );
-      expect(
-        readCount(reopened, "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger'")
-      ).toBe(triggerCount);
-    } finally {
-      reopened.raw.close();
-    }
+    const reopened = new DatabaseSync(dbPath);
+    expect(readValue(reopened, 'epoch')).not.toBe(initialEpoch);
+    expect(readValue(reopened, 'min_protocol')).toBe('1');
+    expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM events')).toBe(0);
+    expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM catalogue_events')).toBe(0);
+    expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM items_fts')).toBe(0);
+    expect(readCount(reopened, 'SELECT COUNT(*) AS count FROM __drizzle_migrations')).toBe(
+      migrationCount
+    );
+    expect(
+      readCount(reopened, "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger'")
+    ).toBe(triggerCount);
+    reopened.close();
   });
 
   it('skips a pillar whose database has never been created', () => {
