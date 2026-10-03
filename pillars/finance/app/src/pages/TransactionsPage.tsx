@@ -11,6 +11,7 @@ import { transactionsSuggestTags, transactionsUpdate } from '../finance-api/inde
 import { buildColumns, buildTransactionFilters, type Transaction } from './transactions/columns';
 import { usePurchaseLinkSummaries } from './transactions/purchase-link/usePurchaseLinkSummaries';
 import { TransactionDialogs } from './transactions/TransactionDialogs';
+import { useDeepLinkedTransaction } from './transactions/useDeepLinkedTransaction';
 import { useInitialAccountFilter } from './transactions/useInitialAccountFilter';
 import { useTransactionsPage } from './transactions/useTransactionsPage';
 
@@ -155,6 +156,7 @@ export function TransactionsPage() {
   const { t } = useTranslation('finance');
   useSetPageContext({ page: 'transactions' });
   const state = useTransactionsPage();
+  useDeepLinkedTransaction(state.handleEdit);
   const { description, setFilteredCount } = useSubtitle(t, state.query.data?.pagination.total); // prettier-ignore
   const [purchaseTx, setPurchaseTx] = useState<Transaction | null>(null);
   const purchaseLinks = usePurchaseLinkSummaries(state.query.data?.data);
