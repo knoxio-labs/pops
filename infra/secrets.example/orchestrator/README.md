@@ -9,9 +9,9 @@ sets `POPS_INTERNAL_API_KEY_FILE` to that path.
 
 Grant only the operations declared in
 [`pillars/orchestrator/src/service-account.ts`](../../../pillars/orchestrator/src/service-account.ts):
-`contacts.search.search` and `purchases.search.search`. Those are the current
-search-capable pillars. Add a matching scope when a new search-capable pillar
-is introduced.
+`contacts.search.search`, `purchases.search.search`, `tags.tags`,
+`finance.tagged`, and `purchases.tagged`. Add a matching scope when a new
+federated search or tag-facet operation is introduced.
 
 Development Compose maps the optional host variable
 `POPS_ORCHESTRATOR_API_KEY` to the process's `POPS_INTERNAL_API_KEY`.

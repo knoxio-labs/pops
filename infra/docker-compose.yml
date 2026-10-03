@@ -1122,6 +1122,8 @@ services:
     image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-orchestrator:${POPS_IMAGE_TAG:-main}
     container_name: pops-orchestrator
     restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
     networks:
       - frontend
       - backend

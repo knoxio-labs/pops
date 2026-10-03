@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BOOT_PLACEHOLDER_SECRETS,
+  bootPlaceholdersForDockerfile,
   collectStreams,
   dataMountsForDockerfile,
   forcesRevalidation,
@@ -34,6 +35,19 @@ const productionCompose = readFileSync(join(repoRoot, 'infra', 'docker-compose.y
 describe('boot placeholders', () => {
   it('includes the barcode user-agent contact required by the image', () => {
     expect(BOOT_PLACEHOLDER_SECRETS.BARCODE_USER_AGENT_CONTACT).toBe('ci-smoke@example.invalid');
+  });
+
+  it('smokes the orchestrator without its optional service-account credential', () => {
+    expect(bootPlaceholdersForDockerfile('pillars/orchestrator/Dockerfile')).not.toHaveProperty(
+      'POPS_INTERNAL_API_KEY'
+    );
+  });
+
+  it('keeps the boot placeholder for images that require a service-account credential', () => {
+    expect(bootPlaceholdersForDockerfile('pillars/finance/Dockerfile')).toHaveProperty(
+      'POPS_INTERNAL_API_KEY',
+      BOOT_PLACEHOLDER_SECRETS.POPS_INTERNAL_API_KEY
+    );
   });
 });
 
