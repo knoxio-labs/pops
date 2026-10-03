@@ -1,21 +1,12 @@
 import { initContract } from '@ts-rest/core';
 
-import { TagListResponseSchema } from './rest-schemas.js';
+import { tagsVocabularyContract } from './rest-tags.js';
 
 const c = initContract();
 
-const tagsRoutes = c.router({
-  list: {
-    method: 'GET',
-    path: '/tags',
-    responses: { 200: TagListResponseSchema },
-    summary: 'List the shared tag vocabulary',
-  },
-});
-
 /** The ts-rest contract for the tags pillar. */
 export const tagsContract = c.router(
-  { tags: tagsRoutes },
+  { tags: tagsVocabularyContract },
   { pathPrefix: '', strictStatusCodes: false }
 );
 

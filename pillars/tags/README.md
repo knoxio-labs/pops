@@ -1,8 +1,21 @@
 # Tags pillar
 
-`@pops/tags` owns the shared tag vocabulary and its structure. Assignments
-remain with the pillars that own the tagged records. The pillar stores tags in
-its own SQLite database and serves the vocabulary through `GET /tags`.
+`@pops/tags` owns the shared tag vocabulary and its hierarchy. It stores no
+assignments and does not index records from other pillars; each record-owning
+pillar manages its own tag assignments and searches its own records.
+
+The service provides these routes:
+
+- `GET /tags` lists tags, optionally filtered by facet, archive state, and
+  update time.
+- `GET /tags/:id` reads one tag.
+- `POST /tags` creates a tag or returns its existing active match.
+- `PATCH /tags/:id` updates a tag's name, parent, description, or date window.
+- `POST /tags/:id/archive` and `POST /tags/:id/unarchive` change archive state.
+- `POST /tags/:id/merge` merges one tag identity into another.
+- `POST /tags/expand` resolves merged identities and returns descendants.
+
+The vocabulary is stored in the tags pillar's own SQLite database.
 
 The route requires a service-account grant of `tags.tags`. `/health`,
 `/pillars`, and `/openapi` remain available for probes and discovery.
