@@ -6,11 +6,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { egoActionStatusSchema } from '../../../../contract/rest-ego-parts.js';
 import {
+  EgoBatchTransitionError,
   EGO_ACTION_STATUSES,
   openCerebrumDb,
   type OpenedCerebrumDb,
 } from '../../../../db/index.js';
-import { EgoActionStore, generateActionId } from '../actions-store.js';
+import { EgoActionStore, generateActionId, generateBatchId } from '../actions-store.js';
 
 import type { CreateEgoActionInput } from '../actions-store.js';
 
@@ -72,7 +73,57 @@ describe('generateActionId', () => {
   });
 });
 
+describe('generateBatchId', () => {
+  it('prefixes a UUID with bat_ and does not repeat', () => {
+    const id = generateBatchId();
+    expect(id).toMatch(/^bat_[0-9a-f-]{36}$/);
+    expect(generateBatchId()).not.toBe(id);
+  });
+});
+
 describe('EgoActionStore', () => {
+  it('creates a pending batch and lists it by conversation', () => {
+    store.createBatch({
+      id: 'batch-2',
+      conversationId: 'conv-1',
+      messageId: 'msg-1',
+      loopState: { round: 2 },
+    });
+    expect(store.getBatch('batch-2')).toEqual({
+      id: 'batch-2',
+      conversationId: 'conv-1',
+      messageId: 'msg-1',
+      status: 'pending',
+      loopState: { round: 2 },
+      createdAt: CLOCK.toISOString(),
+      decidedAt: null,
+    });
+    expect(store.listBatchesForConversation('conv-1').map(({ id }) => id)).toContain('batch-2');
+  });
+
+  it('stamps decidedAt from the clock when a batch is decided', () => {
+    store.createBatch({ id: 'batch-2', conversationId: 'conv-1', messageId: 'msg-1' });
+    expect(store.transitionBatch('batch-2', 'pending', 'decided')).toBe(true);
+    expect(store.getBatch('batch-2')).toMatchObject({
+      status: 'decided',
+      decidedAt: CLOCK.toISOString(),
+    });
+  });
+
+  it('keeps auto batches state-free and immutable', () => {
+    store.createBatch({
+      id: 'batch-2',
+      conversationId: 'conv-1',
+      messageId: 'msg-1',
+      status: 'auto',
+      loopState: { round: 2 },
+    });
+    expect(store.getBatch('batch-2')).toMatchObject({ status: 'auto', loopState: null });
+    expect(() => store.transitionBatch('batch-2', 'auto', 'decided')).toThrow(
+      EgoBatchTransitionError
+    );
+  });
+
   it('stamps createdAt from the clock and starts pending', () => {
     store.create(input('a1'));
     expect(store.get('a1')).toMatchObject({
