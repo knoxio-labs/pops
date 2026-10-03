@@ -843,6 +843,97 @@
                         "id": {
                           "type": "string"
                         },
+                        "parts": {
+                          "items": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["text"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "text"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "subtitle": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["entity"],
+                                    "type": "string"
+                                  },
+                                  "uri": {
+                                    "pattern": "^pops:([a-z][a-z0-9-]*)\\/([a-z][a-z0-9-]*)\\/([^/\\s]+)$",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "uri", "title"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "actions": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "actionId": {
+                                          "minLength": 1,
+                                          "type": "string"
+                                        },
+                                        "status": {
+                                          "enum": [
+                                            "pending",
+                                            "confirmed",
+                                            "rejected",
+                                            "executed",
+                                            "failed"
+                                          ],
+                                          "type": "string"
+                                        },
+                                        "summary": {
+                                          "type": "string"
+                                        },
+                                        "tool": {
+                                          "minLength": 1,
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["actionId", "tool", "summary", "status"],
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "type": "array"
+                                  },
+                                  "batchId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["actions"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "batchId", "actions"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "nullable": true,
+                          "type": "array"
+                        },
                         "role": {
                           "type": "string"
                         },
@@ -865,6 +956,7 @@
                         "content",
                         "citations",
                         "toolCalls",
+                        "parts",
                         "tokensIn",
                         "tokensOut",
                         "createdAt"
@@ -1281,6 +1373,97 @@
                           "id": {
                             "type": "string"
                           },
+                          "parts": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "text": {
+                                      "type": "string"
+                                    },
+                                    "type": {
+                                      "enum": ["text"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "text"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "subtitle": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "type": {
+                                      "enum": ["entity"],
+                                      "type": "string"
+                                    },
+                                    "uri": {
+                                      "pattern": "^pops:([a-z][a-z0-9-]*)\\/([a-z][a-z0-9-]*)\\/([^/\\s]+)$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "uri", "title"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "actions": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "actionId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          },
+                                          "status": {
+                                            "enum": [
+                                              "pending",
+                                              "confirmed",
+                                              "rejected",
+                                              "executed",
+                                              "failed"
+                                            ],
+                                            "type": "string"
+                                          },
+                                          "summary": {
+                                            "type": "string"
+                                          },
+                                          "tool": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["actionId", "tool", "summary", "status"],
+                                        "type": "object"
+                                      },
+                                      "minItems": 1,
+                                      "type": "array"
+                                    },
+                                    "batchId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "type": {
+                                      "enum": ["actions"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "batchId", "actions"],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "nullable": true,
+                            "type": "array"
+                          },
                           "role": {
                             "type": "string"
                           },
@@ -1303,6 +1486,7 @@
                           "content",
                           "citations",
                           "toolCalls",
+                          "parts",
                           "tokensIn",
                           "tokensOut",
                           "createdAt"

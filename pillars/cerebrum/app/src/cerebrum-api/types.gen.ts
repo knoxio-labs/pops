@@ -322,6 +322,28 @@ export type EgoChatResponses = {
       conversationId: string;
       createdAt: string;
       id: string;
+      parts: Array<
+        | {
+            text: string;
+            type: 'text';
+          }
+        | {
+            subtitle?: string;
+            title: string;
+            type: 'entity';
+            uri: string;
+          }
+        | {
+            actions: Array<{
+              actionId: string;
+              status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+              summary: string;
+              tool: string;
+            }>;
+            batchId: string;
+            type: 'actions';
+          }
+      > | null;
       role: string;
       tokensIn: number | null;
       tokensOut: number | null;
@@ -496,6 +518,28 @@ export type EgoGetConversationResponses = {
       conversationId: string;
       createdAt: string;
       id: string;
+      parts: Array<
+        | {
+            text: string;
+            type: 'text';
+          }
+        | {
+            subtitle?: string;
+            title: string;
+            type: 'entity';
+            uri: string;
+          }
+        | {
+            actions: Array<{
+              actionId: string;
+              status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+              summary: string;
+              tool: string;
+            }>;
+            batchId: string;
+            type: 'actions';
+          }
+      > | null;
       role: string;
       tokensIn: number | null;
       tokensOut: number | null;

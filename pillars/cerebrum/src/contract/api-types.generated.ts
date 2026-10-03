@@ -2058,6 +2058,34 @@ export interface operations {
               conversationId: string;
               createdAt: string;
               id: string;
+              parts:
+                | (
+                    | {
+                        text: string;
+                        /** @enum {string} */
+                        type: 'text';
+                      }
+                    | {
+                        subtitle?: string;
+                        title: string;
+                        /** @enum {string} */
+                        type: 'entity';
+                        uri: string;
+                      }
+                    | {
+                        actions: {
+                          actionId: string;
+                          /** @enum {string} */
+                          status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+                          summary: string;
+                          tool: string;
+                        }[];
+                        batchId: string;
+                        /** @enum {string} */
+                        type: 'actions';
+                      }
+                  )[]
+                | null;
               role: string;
               tokensIn: number | null;
               tokensOut: number | null;
@@ -2218,6 +2246,34 @@ export interface operations {
               conversationId: string;
               createdAt: string;
               id: string;
+              parts:
+                | (
+                    | {
+                        text: string;
+                        /** @enum {string} */
+                        type: 'text';
+                      }
+                    | {
+                        subtitle?: string;
+                        title: string;
+                        /** @enum {string} */
+                        type: 'entity';
+                        uri: string;
+                      }
+                    | {
+                        actions: {
+                          actionId: string;
+                          /** @enum {string} */
+                          status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+                          summary: string;
+                          tool: string;
+                        }[];
+                        batchId: string;
+                        /** @enum {string} */
+                        type: 'actions';
+                      }
+                  )[]
+                | null;
               role: string;
               tokensIn: number | null;
               tokensOut: number | null;

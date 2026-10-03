@@ -28,6 +28,7 @@ export interface Message {
   content: string;
   citations: unknown | null;
   toolCalls: unknown | null;
+  parts: unknown | null;
   tokensIn: number | null;
   tokensOut: number | null;
   createdAt: string;
@@ -68,6 +69,7 @@ export interface InsertMessageRow {
   content: string;
   citations: unknown | null;
   toolCalls: unknown | null;
+  parts?: unknown | null;
   tokensIn: number | null;
   tokensOut: number | null;
   createdAt: string;
