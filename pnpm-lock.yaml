@@ -2587,6 +2587,12 @@ importers:
       '@pops/types':
         specifier: workspace:*
         version: link:../../libs/types
+      '@ts-rest/core':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@types/node@24.13.3)
+      '@ts-rest/express':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.13.3))(express@5.2.1(supports-color@10.2.2))
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -2594,6 +2600,9 @@ importers:
         specifier: ^4.6.2
         version: 4.6.5
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/express':
         specifier: ^5.0.4
         version: 5.0.6

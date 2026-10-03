@@ -44,6 +44,7 @@ export interface TagFederationPillarStatus {
 
 /** Federated sections and the status of every carrier queried. */
 export interface TagFederationResponse {
+  readonly expandedTagIds: string[];
   readonly sections: TagFederationSection[];
   readonly pillars: TagFederationPillarStatus[];
 }
@@ -133,7 +134,7 @@ function buildFederationResponse(
   outcomes: readonly TaggedCarrierOutcome[],
   expansionWasBounded: boolean,
   onWarn: (message: string, detail?: unknown) => void
-): TagFederationResponse {
+): Omit<TagFederationResponse, 'expandedTagIds'> {
   const sections: TagFederationSection[] = [];
   const pillars: TagFederationPillarStatus[] = [];
 
@@ -192,6 +193,7 @@ export function createTagFederation(
 
     if (expandedIds.length === 0) {
       return {
+        expandedTagIds: expandedIds,
         sections: carrierIds.map((pillarId) => ({ pillarId, items: [], nextCursor: null })),
         pillars: carrierIds.map((pillarId) => ({ pillarId, status: 'ok' })),
       };
@@ -221,7 +223,10 @@ export function createTagFederation(
         }
       })
     );
-    return buildFederationResponse(outcomes, expansionWasBounded, onWarn);
+    return {
+      expandedTagIds: expandedIds,
+      ...buildFederationResponse(outcomes, expansionWasBounded, onWarn),
+    };
   };
 }
 

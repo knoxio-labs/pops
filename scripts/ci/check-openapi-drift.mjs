@@ -190,6 +190,7 @@ export const EXPECTED_TARGETS = [
   '@pops/inventory',
   '@pops/lists',
   '@pops/media',
+  '@pops/orchestrator',
   '@pops/purchases',
   '@pops/registry',
   '@pops/tags',
