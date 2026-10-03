@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppContextProvider, useSetPageContext } from '@pops/navigation';
 
 import { useEgoAppContext } from './useEgoAppContext';
-import { useStreamingChat } from './useStreamingChat';
+import { EGO_STREAM_URL, useStreamingChat } from './useStreamingChat';
 
 import type { ReactNode } from 'react';
 
@@ -93,6 +93,17 @@ describe('useStreamingChat request body', () => {
     vi.stubGlobal('fetch', fetchMock);
   });
   afterEach(() => vi.unstubAllGlobals());
+
+  it('posts the stream request through the cerebrum proxy path', async () => {
+    const { result } = renderHook(() => useStreamingChat(), { wrapper: wrapperAt('/') });
+    act(() => result.current.stream({ conversationId: null, message: 'hi' }, callbacks));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/cerebrum-api/ego/chat/stream');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(EGO_STREAM_URL);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'POST' });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
 
   it('sends appContext when the shell provides one', async () => {
     const { result } = renderHook(() => useStreamingChat(), {
