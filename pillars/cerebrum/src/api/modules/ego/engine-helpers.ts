@@ -7,7 +7,7 @@
  */
 import type { RetrievalFilters } from '../retrieval/types.js';
 import type { EgoChatMessage } from './llm.js';
-import type { EngineConfig, Message } from './types.js';
+import type { ChatResult, ChatStreamPreparation, EngineConfig, Message } from './types.js';
 
 const DEFAULT_MAX_HISTORY = 20;
 const DEFAULT_MAX_RETRIEVAL = 5;
@@ -105,4 +105,24 @@ export async function drainToDone<TEvent extends { type: string }>(
   }
   if (done === undefined) throw new Error('ego stream ended without a done event');
   return done;
+}
+
+/** Drain the engine stream into the non-streaming chat response shape. */
+export async function chatResultFromStream(
+  preparation: ChatStreamPreparation
+): Promise<ChatResult> {
+  const done = await drainToDone(preparation.stream);
+  return {
+    response: {
+      content: done.content,
+      citations: done.citations,
+      tokensIn: done.tokensIn,
+      tokensOut: done.tokensOut,
+      parts: done.parts,
+      batch: done.batch,
+      autoExecuted: done.autoExecuted,
+    },
+    retrievedEngrams: preparation.retrievedEngrams,
+    scopeNegotiation: preparation.scopeNegotiation,
+  };
 }

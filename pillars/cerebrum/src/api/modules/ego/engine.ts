@@ -15,7 +15,7 @@ import {
   buildDefaultConfig,
   buildLlmMessages,
   buildRetrievalFilters,
-  drainToDone,
+  chatResultFromStream,
 } from './engine-helpers.js';
 import { generateStreamEvents } from './engine-stream.js';
 import { buildEgoSystemPrompt } from './prompts.js';
@@ -77,22 +77,7 @@ export class ConversationEngine {
 
   /** Process a user message and generate a response. */
   async chat(params: ChatParams): Promise<ChatResult> {
-    const preparation = await this.prepareStream(params);
-    const done = await drainToDone(preparation.stream);
-
-    return {
-      response: {
-        content: done.content,
-        citations: done.citations,
-        tokensIn: done.tokensIn,
-        tokensOut: done.tokensOut,
-        parts: done.parts,
-        batch: done.batch,
-        autoExecuted: done.autoExecuted,
-      },
-      retrievedEngrams: preparation.retrievedEngrams,
-      scopeNegotiation: preparation.scopeNegotiation,
-    };
+    return chatResultFromStream(await this.prepareStream(params));
   }
 
   /** Prepare a streaming chat response. Returns metadata + an async event generator. */
