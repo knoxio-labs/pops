@@ -17,14 +17,20 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { readMigrationJournal } from '@pops/pillar-sdk/db';
 
+import {
+  listItemsByTag,
+  listTagVocabulary,
+  purchaseItemSharedTags,
+  sharedTagCache,
+} from '../index.js';
 import { MIGRATIONS_DIR, openSeededAtMigration } from './migration-harness.js';
 
 import type Database from 'better-sqlite3';
 
 import type { OpenedPurchasesDb } from '../index.js';
 
-/** The last entry before `0002_purchase_surcharge` adds `surcharge_cents`. */
-const BEFORE_ADDED_COLUMN = '0001_purchase_tags';
+/** The last entry before `0022_purchase_item_shared_tags`. */
+const BEFORE_SHARED_TAG_TABLES = '0021_purchase_item_priced_by_measure';
 
 /**
  * Seeded in the form the column now holds. One entry in the chain rewrites
@@ -46,12 +52,27 @@ const ITEMS: readonly SeededItem[] = [
 
 /** The evidence pointer, carrying the characters a rebuild is most likely to mangle. */
 const RAW_REF = "woolworths-export-2026-02.csv#row=41 'left at door'";
+const SHARED_TAG_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+interface SchemaObject {
+  readonly type: string;
+  readonly name: string;
+  readonly sql: string;
+}
 
 let opened: OpenedPurchasesDb;
 let dir: string;
 let cleanup: () => void;
+let schemaBefore: SchemaObject[];
 
 function seedThroughFirstMigration(raw: Database.Database): void {
+  schemaBefore = raw
+    .prepare(
+      `SELECT type, name, sql FROM sqlite_schema
+       WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%'
+       ORDER BY type, name`
+    )
+    .all() as SchemaObject[];
   raw.prepare(`INSERT INTO purchase_sources (id, label) VALUES ('woolworths', 'Woolworths')`).run();
   raw
     .prepare(
@@ -72,6 +93,12 @@ function seedThroughFirstMigration(raw: Database.Database): void {
   }
 
   raw.prepare(`INSERT INTO purchase_tags (purchase_id, tag) VALUES ('p-1', 'weekly-shop')`).run();
+  raw
+    .prepare(
+      `INSERT INTO purchase_item_tags (item_id, tag, created_at, confirmed_at)
+       VALUES ('i-milk', 'fruit', ?, ?)`
+    )
+    .run(ORDERED_AT, ORDERED_AT);
 }
 
 function rows<T>(sql: string): T[] {
@@ -80,7 +107,7 @@ function rows<T>(sql: string): T[] {
 
 beforeEach(() => {
   ({ opened, dir, cleanup } = openSeededAtMigration({
-    through: BEFORE_ADDED_COLUMN,
+    through: BEFORE_SHARED_TAG_TABLES,
     prefix: 'purchases-migration-safety-',
     seed: seedThroughFirstMigration,
   }));
@@ -152,8 +179,64 @@ describe('applying the rest of the journal to a populated purchases database', (
   });
 
   it('removes the pre-migration snapshot it took on the way through', () => {
-    // The reopen above had three entries pending against a file that already
-    // held rows, so the snapshot path really ran here.
+    // The reopen above had the shared-tag migration pending against a file
+    // that already held rows, so the snapshot path really ran here.
     expect(readdirSync(dir).filter((name) => name.includes('.pre-migration-'))).toEqual([]);
+  });
+
+  it('adds only the two new tables and their assignment index', () => {
+    const after = rows<SchemaObject>(
+      `SELECT type, name, sql FROM sqlite_schema
+       WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%'
+       ORDER BY type, name`
+    );
+    const afterByName = new Map(after.map((object) => [object.name, object]));
+    for (const object of schemaBefore) {
+      expect(afterByName.get(object.name), `${object.name} was changed by the migration`).toEqual(
+        object
+      );
+    }
+
+    const beforeNames = new Set(schemaBefore.map((object) => object.name));
+    const added = after
+      .filter((object) => !beforeNames.has(object.name))
+      .map((object) => object.name);
+    expect(added.toSorted()).toEqual(
+      [
+        'idx_purchase_item_shared_tags_tag',
+        'purchase_item_shared_tags',
+        'shared_tag_cache',
+      ].toSorted()
+    );
+  });
+
+  it('keeps existing product and order tag results separate from shared tag ids', () => {
+    opened.db
+      .insert(purchaseItemSharedTags)
+      .values({ itemId: 'i-milk', tagId: SHARED_TAG_ID })
+      .run();
+    opened.db
+      .insert(sharedTagCache)
+      .values({
+        tagId: SHARED_TAG_ID,
+        facet: 'trip',
+        name: 'Brazil 2026',
+        archived: false,
+        fetchedAt: ORDERED_AT,
+      })
+      .run();
+
+    expect(listTagVocabulary(opened.db)).toEqual([{ tag: 'fruit', count: 1 }]);
+    expect(listItemsByTag(opened.db, 'fruit').total).toBe(1);
+    expect(listItemsByTag(opened.db, SHARED_TAG_ID).total).toBe(0);
+    expect(rows(`SELECT purchase_id, tag FROM purchase_tags`)).toEqual([
+      { purchase_id: 'p-1', tag: 'weekly-shop' },
+    ]);
+    expect(rows(`SELECT item_id, tag FROM purchase_item_tags`)).toEqual([
+      { item_id: 'i-milk', tag: 'fruit' },
+    ]);
+    expect(rows(`SELECT item_id, tag_id, confirmed_at FROM purchase_item_shared_tags`)).toEqual([
+      { item_id: 'i-milk', tag_id: SHARED_TAG_ID, confirmed_at: null },
+    ]);
   });
 });
