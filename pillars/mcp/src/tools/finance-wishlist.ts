@@ -5,6 +5,7 @@ import type { ToolDef } from './tool-def.js';
 
 const wishlistList: ToolDef = {
   name: 'finance.wishlist.list',
+  readOnly: true,
   description: 'List wish-list items. Supports free-text search and priority filtering.',
   inputSchema: {
     type: 'object',
@@ -28,6 +29,7 @@ const wishlistList: ToolDef = {
 
 const wishlistGet: ToolDef = {
   name: 'finance.wishlist.get',
+  readOnly: true,
   description: 'Get a single wish-list item by ID.',
   inputSchema: {
     type: 'object',
