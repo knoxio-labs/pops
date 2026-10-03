@@ -1,10 +1,8 @@
 import { isRecord, parseMessagePart, parseMessageParts } from './message-parts';
 
 import type { MessagePart } from './message-parts';
-import type { RetrievedEngram } from './types';
-
-/** Progress of one tool call during a turn. */
-export type ToolStatus = 'started' | 'finished' | 'failed';
+import type { RetrievedEngram, ToolStatus } from './types';
+export type { ToolStatus } from './types';
 
 /** One server-sent frame of the Ego chat stream. */
 export type StreamFrame =

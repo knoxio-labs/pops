@@ -1,11 +1,7 @@
 import type { MessagePart } from './message-parts';
 import type { StreamFrame, ToolStatus } from './stream-frames';
-
-/** A tool and its latest lifecycle status in one streamed reply. */
-export interface ToolActivity {
-  name: string;
-  status: ToolStatus;
-}
+import type { ToolActivity } from './types';
+export type { ToolActivity } from './types';
 
 /** Accumulated content and activity for the current stream. */
 export interface StreamState {

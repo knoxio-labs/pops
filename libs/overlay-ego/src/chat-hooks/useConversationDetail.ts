@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 
 import { egoGetConversation } from '../ego-api';
 import { unwrap } from '../ego-api-helpers';
+import { parseMessageParts } from './message-parts';
 
 import type { ChatMessage } from './types';
 
@@ -30,6 +31,7 @@ export function useConversationDetail(conversationId: string | null) {
         role: m.role,
         content: m.content,
         citations: toCitations(m.citations),
+        parts: m.parts === null || m.parts === undefined ? null : parseMessageParts(m.parts),
         createdAt: m.createdAt,
       })),
     [query.data]
