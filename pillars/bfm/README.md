@@ -7,12 +7,13 @@ It listens on port **3014**.
 
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
-(ADR-035). Its mobile surfaces are the transaction list and detail under
-`/mobile/finance/*` and the purchase list, detail and receipt upload under
-`/mobile/purchases/*`, plus barcode metadata lookup under
-`/mobile/barcode/*`, behind the perimeter that guards them — and the whole path a
-phone takes to get behind that perimeter is here too: the operator surface that
-mints a pairing code, and the exchange that spends it for a device identity.
+(ADR-035). Its mobile surfaces include the Ego conversation list and thread
+under `/mobile/ego/*`, the transaction list and detail under
+`/mobile/finance/*`, the purchase list, detail and receipt upload under
+`/mobile/purchases/*`, and barcode metadata lookup under `/mobile/barcode/*`,
+behind the perimeter that guards them — and the whole path a phone takes to
+get behind that perimeter is here too: the operator surface that mints a
+pairing code, and the exchange that spends it for a device identity.
 See
 [The perimeter](#the-perimeter). `/health` is a pure liveness shape rather
 than a DB round-trip, which is deliberate for a container healthcheck and is
@@ -35,6 +36,8 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.                                                                          |
 | `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.                                                               |
 | `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.                                                                        |
+| `GET /mobile/ego/conversations`        | One page of Ego conversations, optionally searched.                                                                                              |
+| `GET /mobile/ego/conversations/:id`    | One stored Ego conversation with its messages and parts.                                                                                         |
 | `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
 | `GET /mobile/finance/accounts`         | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
 | `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                                                                         |

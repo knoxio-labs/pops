@@ -140,6 +140,8 @@ describe('GET /openapi', () => {
       '/mobile/contacts/merchants/search',
       '/mobile/contacts/merchants/{id}',
       '/mobile/contacts/merchants/{id}/addresses',
+      '/mobile/ego/conversations',
+      '/mobile/ego/conversations/{id}',
       '/mobile/finance/accounts',
       '/mobile/finance/accounts/{id}',
       '/mobile/finance/transactions',
@@ -177,6 +179,12 @@ describe('GET /openapi', () => {
     );
     expect(body.paths?.['/mobile/barcode/lookup/{code}']?.['get']?.operationId).toBe(
       'mobileBarcode.lookup'
+    );
+    expect(body.paths?.['/mobile/ego/conversations']?.['get']?.operationId).toBe(
+      'mobileEgo.listConversations'
+    );
+    expect(body.paths?.['/mobile/ego/conversations/{id}']?.['get']?.operationId).toBe(
+      'mobileEgo.getConversation'
     );
     expect(body.paths?.['/mobile/purchases/receipts']?.['post']?.operationId).toBe(
       'mobilePurchases.saveReceiptDraft'

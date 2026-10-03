@@ -68,6 +68,7 @@ import {
   startPruneCredentialsWorker,
   type PruneCredentialsWorkerHandle,
 } from './cron/prune-credentials.js';
+import { createMobileEgoClient } from './ego/client.js';
 import { createMobileFinanceClient } from './finance/client.js';
 import { createMobileInventoryClient } from './inventory/client.js';
 import { createInventoryPillarHandleFactory } from './inventory/handle-factory.js';
@@ -116,6 +117,7 @@ const finance = createMobileFinanceClient(gateway);
 const purchases = createMobilePurchasesClient(gateway);
 const contacts = createMobileContactsClient(gateway);
 const barcode = createMobileBarcodeClient(gateway);
+const ego = createMobileEgoClient(gateway);
 
 // Its own gateway, not the shared one above: this is the one leg that must
 // send an extra header on every call, and `extraHeaders` is scoped per
@@ -162,6 +164,7 @@ const app = createBfmApiApp(
     purchases,
     contacts,
     barcode,
+    ego,
     barcodeLogger: {
       info: (message, context) => {
         process.stdout.write(`${JSON.stringify({ scope: 'bfm-api', message, ...context })}\n`);
