@@ -59,6 +59,7 @@ export const purchasesPurchaseContract = c.router({
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: PurchaseDetailSchema,
+      400: ErrorBodySchema,
       404: ErrorBodySchema,
     },
     summary: 'Get an order with its deliveries, lines, charges, documents and accounting split',
@@ -146,6 +147,7 @@ export const purchasesPurchaseContract = c.router({
     body: AttachDocumentBodySchema,
     responses: {
       201: z.object({ document: PurchaseDocumentSchema }),
+      400: ErrorBodySchema,
       404: ErrorBodySchema,
       // The order already carries that URI. A re-run treats this as a skip.
       409: ErrorBodySchema,
@@ -157,7 +159,7 @@ export const purchasesPurchaseContract = c.router({
     path: '/purchases/:id',
     pathParams: z.object({ id: z.string() }),
     body: z.object({}).optional(),
-    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    responses: { 200: OkSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Hard-delete an order (everything hanging off it cascades)',
   },
   /**
@@ -179,7 +181,7 @@ export const purchasesPurchaseContract = c.router({
     path: '/purchases/:id/capture/location',
     pathParams: z.object({ id: z.string() }),
     body: z.object({}).optional(),
-    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    responses: { 200: OkSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: "Erase an order's stored capture location, keeping the order",
   },
   /**
@@ -211,7 +213,10 @@ export const purchasesPurchaseContract = c.router({
     method: 'GET',
     path: '/purchases/:id/inventory-proposals',
     pathParams: z.object({ id: z.string() }),
-    responses: { 200: z.object({ proposals: z.array(InventoryProposalSchema) }) },
+    responses: {
+      200: z.object({ proposals: z.array(InventoryProposalSchema) }),
+      400: ErrorBodySchema,
+    },
     summary: "Unanswered inventory offers derived from an order's durable lines",
   },
   /**
@@ -277,6 +282,7 @@ export const purchasesPurchaseContract = c.router({
     query: ListItemsByTagQuerySchema,
     responses: {
       200: z.object({ items: z.array(TaggedItemSchema), pagination: PaginationMetaSchema }),
+      400: ErrorBodySchema,
     },
     summary: 'Page through lines carrying an item tag, newest first',
   },
