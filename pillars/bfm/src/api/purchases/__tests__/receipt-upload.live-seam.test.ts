@@ -50,8 +50,8 @@
  * under bfm's own cap so a small, fast body clears bfm's front door and still
  * trips purchases' real `express.json()` limit. `libs/sdk/src/client/rest-call.ts`'s
  * `mapHttpFailure` gives an unmapped 4xx like 413 its own `refused` kind
- * (permanent, carrying the real status), which `toGatewayFailure` folds onto
- * the same `invalid-request` outcome `bad-request` gets, so bfm reports this
+ * (permanent, carrying the real status), which `toGatewayFailure` preserves
+ * as a distinct failure kind, so bfm reports this
  * as a `502 purchases.request.body_too_large` envelope with
  * `retryable: false` — distinct from the `503 gateway.upstream_unavailable,
  * retryable: true` a dead purchases process would produce. The test below

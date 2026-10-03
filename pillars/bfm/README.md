@@ -332,10 +332,12 @@ properties follow, and each is asserted in
 - **A degraded federation is a typed answer, never an empty page.** A list that
   answered `[]` while finance was down would be telling the user they have no
   transactions, which they cannot tell from the truth. `unavailable`,
-  `degraded` and `contract-mismatch` stay distinct all the way out —
-  `src/api/rest/upstream-error.ts` is the whole mapping and is total over the
-  gateway's failure kinds, so a new kind fails the build rather than falling
-  through to something plausible.
+  `degraded`, `contract-mismatch`, `refused` and `rate-limited` stay distinct
+  all the way out — `src/api/rest/upstream-error.ts` is the whole mapping and
+  is total over the gateway's failure kinds, so a new kind fails the build
+  rather than falling through to something plausible. A producer 429 remains
+  a retryable 503 for the mobile routes and carries its optional
+  `retryAfterSeconds` as a typed body field.
 
 ### Paging
 

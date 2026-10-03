@@ -5331,6 +5331,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/502/content/json/details`.
@@ -5417,27 +5419,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_createMerchant.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -5445,6 +5452,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -5465,6 +5473,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -5474,6 +5486,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -5531,6 +5544,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/503/content/json/details`.
@@ -5617,27 +5632,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/POST/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_createMerchant.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -5645,6 +5665,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -5665,6 +5686,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -5674,6 +5699,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -6502,6 +6528,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/502/content/json/details`.
@@ -6588,27 +6616,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_searchMerchants.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -6616,6 +6649,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -6636,6 +6670,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -6645,6 +6683,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -6702,6 +6741,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/503/content/json/details`.
@@ -6788,27 +6829,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/search/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_searchMerchants.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -6816,6 +6862,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -6836,6 +6883,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -6845,6 +6896,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -7535,6 +7587,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/404/content/json/details`.
@@ -7621,27 +7675,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_getMerchant.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -7649,6 +7708,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -7669,6 +7729,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -7678,6 +7742,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -7839,6 +7904,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/502/content/json/details`.
@@ -7925,27 +7992,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_getMerchant.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -7953,6 +8025,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -7973,6 +8046,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -7982,6 +8059,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -8039,6 +8117,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/503/content/json/details`.
@@ -8125,27 +8205,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_getMerchant.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -8153,6 +8238,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -8173,6 +8259,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -8182,6 +8272,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -8899,6 +8990,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/details`.
@@ -8985,27 +9078,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_getMerchantAddresses.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -9013,6 +9111,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -9033,6 +9132,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -9042,6 +9145,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -9203,6 +9307,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/details`.
@@ -9289,27 +9395,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_getMerchantAddresses.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -9317,6 +9428,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -9337,6 +9449,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -9346,6 +9462,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -9403,6 +9520,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/details`.
@@ -9489,27 +9608,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -9517,6 +9641,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -9537,6 +9662,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -9546,6 +9675,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -10270,6 +10400,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/details`.
@@ -10356,27 +10488,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_createMerchantAddress.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -10384,6 +10521,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -10404,6 +10542,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -10413,6 +10555,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -10574,6 +10717,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/details`.
@@ -10660,27 +10805,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_createMerchantAddress.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -10688,6 +10838,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -10708,6 +10859,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -10717,6 +10872,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -10774,6 +10930,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/details`.
@@ -10860,27 +11018,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -10888,6 +11051,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -10908,6 +11072,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -10917,6 +11085,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -11973,6 +12142,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/502/content/json/details`.
@@ -12059,27 +12230,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_listAccounts.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -12087,6 +12263,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -12107,6 +12284,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -12116,6 +12297,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -12173,6 +12355,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/503/content/json/details`.
@@ -12259,27 +12443,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_listAccounts.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -12287,6 +12476,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -12307,6 +12497,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -12316,6 +12510,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -13254,6 +13449,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/404/content/json/details`.
@@ -13340,27 +13537,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_getAccount.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -13368,6 +13570,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -13388,6 +13591,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -13397,6 +13604,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -13558,6 +13766,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/502/content/json/details`.
@@ -13644,27 +13854,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_getAccount.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -13672,6 +13887,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -13692,6 +13908,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -13701,6 +13921,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -13758,6 +13979,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/503/content/json/details`.
@@ -13844,27 +14067,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_getAccount.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -13872,6 +14100,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -13892,6 +14121,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -13901,6 +14134,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -14813,6 +15047,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/502/content/json/details`.
@@ -14899,27 +15135,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_listTransactions.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -14927,6 +15168,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -14947,6 +15189,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -14956,6 +15202,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -15013,6 +15260,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/503/content/json/details`.
@@ -15099,27 +15348,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_listTransactions.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -15127,6 +15381,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -15147,6 +15402,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -15156,6 +15415,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -15989,6 +16249,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/404/content/json/details`.
@@ -16075,27 +16337,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_getTransaction.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -16103,6 +16370,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -16123,6 +16391,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -16132,6 +16404,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -16293,6 +16566,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/502/content/json/details`.
@@ -16379,27 +16654,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_getTransaction.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -16407,6 +16687,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -16427,6 +16708,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -16436,6 +16721,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -16493,6 +16779,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/503/content/json/details`.
@@ -16579,27 +16867,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileFinance_getTransaction.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -16607,6 +16900,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -16627,6 +16921,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -16636,6 +16934,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -17552,6 +17851,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/502/content/json/details`.
@@ -17638,27 +17939,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_suggestCodes.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -17666,6 +17972,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -17686,6 +17993,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -17695,6 +18006,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -17752,6 +18064,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/503/content/json/details`.
@@ -17838,27 +18152,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/codes/suggest/POST/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_suggestCodes.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -17866,6 +18185,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -17886,6 +18206,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -17895,6 +18219,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -20392,6 +20717,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/502/content/json/details`.
@@ -20478,27 +20805,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_listItems.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -20506,6 +20838,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -20526,6 +20859,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -20535,6 +20872,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -20592,6 +20930,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/503/content/json/details`.
@@ -20678,27 +21018,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_listItems.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -20706,6 +21051,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -20726,6 +21072,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -20735,6 +21085,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -22316,6 +22667,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/404/content/json/details`.
@@ -22402,27 +22755,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_itemHistory.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -22430,6 +22788,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -22450,6 +22809,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -22459,6 +22822,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -22713,6 +23077,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/502/content/json/details`.
@@ -22799,27 +23165,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_itemHistory.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -22827,6 +23198,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -22847,6 +23219,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -22856,6 +23232,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -22913,6 +23290,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/503/content/json/details`.
@@ -22999,27 +23378,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/history/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_itemHistory.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -23027,6 +23411,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -23047,6 +23432,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -23056,6 +23445,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -23790,6 +24180,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/404/content/json/details`.
@@ -23876,27 +24268,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_getMedia.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -23904,6 +24301,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -23924,6 +24322,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -23933,6 +24335,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -24094,6 +24497,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/502/content/json/details`.
@@ -24180,27 +24585,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_getMedia.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -24208,6 +24618,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -24228,6 +24639,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -24237,6 +24652,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -24294,6 +24710,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/503/content/json/details`.
@@ -24380,27 +24798,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_getMedia.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -24408,6 +24831,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -24428,6 +24852,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -24437,6 +24865,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -25372,6 +25801,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/415/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/415/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/415/content/json/details`.
@@ -25458,27 +25889,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/415/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/415/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/415/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_putMedia.Output.UnsupportedMediaType.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -25486,6 +25922,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -25506,6 +25943,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -25515,6 +25956,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -25676,6 +26118,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/502/content/json/details`.
@@ -25762,27 +26206,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_putMedia.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -25790,6 +26239,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -25810,6 +26260,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -25819,6 +26273,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -25876,6 +26331,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/503/content/json/details`.
@@ -25962,27 +26419,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/media/{sha256}/PUT/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_putMedia.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -25990,6 +26452,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -26010,6 +26473,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -26019,6 +26486,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -27992,6 +28460,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/502/content/json/details`.
@@ -28078,27 +28548,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_mutations.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -28106,6 +28581,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -28126,6 +28602,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -28135,6 +28615,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -28192,6 +28673,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/503/content/json/details`.
@@ -28278,27 +28761,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_mutations.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -28306,6 +28794,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -28326,6 +28815,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -28335,6 +28828,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -31969,6 +32463,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/502/content/json/details`.
@@ -32055,27 +32551,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_changes.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -32083,6 +32584,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -32103,6 +32605,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -32112,6 +32618,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -32169,6 +32676,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/503/content/json/details`.
@@ -32255,27 +32764,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_changes.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -32283,6 +32797,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -32303,6 +32818,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -32312,6 +32831,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -34613,6 +35133,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/404/content/json/details`.
@@ -34699,27 +35221,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_item.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -34727,6 +35254,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -34747,6 +35275,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -34756,6 +35288,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -35010,6 +35543,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/502/content/json/details`.
@@ -35096,27 +35631,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_item.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -35124,6 +35664,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -35144,6 +35685,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -35153,6 +35698,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -35210,6 +35756,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/503/content/json/details`.
@@ -35296,27 +35844,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/items/{id}/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_item.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -35324,6 +35877,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -35344,6 +35898,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -35353,6 +35911,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -37487,6 +38046,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/details`.
@@ -37573,27 +38134,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_reportLedger.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -37601,6 +38167,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -37621,6 +38188,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -37630,6 +38201,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -37687,6 +38259,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/details`.
@@ -37773,27 +38347,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/ledger/POST/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_reportLedger.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -37801,6 +38380,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -37821,6 +38401,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -37830,6 +38414,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -40591,6 +41176,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/502/content/json/details`.
@@ -40677,27 +41264,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_snapshot.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -40705,6 +41297,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -40725,6 +41318,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -40734,6 +41331,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -40791,6 +41389,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/503/content/json/details`.
@@ -40877,27 +41477,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_snapshot.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -40905,6 +41510,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -40925,6 +41531,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -40934,6 +41544,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -42649,6 +43260,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/details`.
@@ -42735,27 +43348,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_catalogueRevision.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -42763,6 +43381,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -42783,6 +43402,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -42792,6 +43415,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -42849,6 +43473,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/details`.
@@ -42935,27 +43561,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -42963,6 +43594,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -42983,6 +43615,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -42992,6 +43628,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -44113,6 +44750,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/502/content/json/details`.
@@ -44199,27 +44838,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_catalogue.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -44227,6 +44871,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -44247,6 +44892,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -44256,6 +44905,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -44313,6 +44963,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/503/content/json/details`.
@@ -44399,27 +45051,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/types/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobileInventory_catalogue.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -44427,6 +45084,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -44447,6 +45105,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -44456,6 +45118,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -45563,6 +46226,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/502/content/json/details`.
@@ -45649,27 +46314,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_listPurchases.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -45677,6 +46347,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -45697,6 +46368,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -45706,6 +46381,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -45763,6 +46439,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/503/content/json/details`.
@@ -45849,27 +46527,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_listPurchases.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -45877,6 +46560,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -45897,6 +46581,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -45906,6 +46594,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -48006,6 +48695,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/502/content/json/details`.
@@ -48092,27 +48783,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_createManualPurchase.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -48120,6 +48816,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -48140,6 +48837,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -48149,6 +48850,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -48206,6 +48908,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/503/content/json/details`.
@@ -48292,27 +48996,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_createManualPurchase.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -48320,6 +49029,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -48340,6 +49050,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -48349,6 +49063,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -50504,6 +51219,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/details`.
@@ -50590,27 +51307,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_saveReceiptDraft.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -50618,6 +51340,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -50638,6 +51361,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -50647,6 +51374,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -50704,6 +51432,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/details`.
@@ -50790,27 +51520,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_saveReceiptDraft.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -50818,6 +51553,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -50838,6 +51574,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -50847,6 +51587,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -52557,6 +53298,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/502/content/json/details`.
@@ -52643,27 +53386,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_extractReceipt.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -52671,6 +53419,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -52691,6 +53440,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -52700,6 +53453,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -52757,6 +53511,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/503/content/json/details`.
@@ -52843,27 +53599,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_extractReceipt.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -52871,6 +53632,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -52891,6 +53653,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -52900,6 +53666,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -53612,6 +54379,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/404/content/json/details`.
@@ -53698,27 +54467,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getReceipt.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -53726,6 +54500,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -53746,6 +54521,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -53755,6 +54534,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -53916,6 +54696,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/502/content/json/details`.
@@ -54002,27 +54784,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getReceipt.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -54030,6 +54817,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -54050,6 +54838,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -54059,6 +54851,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -54116,6 +54909,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/503/content/json/details`.
@@ -54202,27 +54997,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getReceipt.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -54230,6 +55030,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -54250,6 +55051,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -54259,6 +55064,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -54971,6 +55777,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/404/content/json/details`.
@@ -55057,27 +55865,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getReceiptThumbnail.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -55085,6 +55898,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -55105,6 +55919,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -55114,6 +55932,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -55171,6 +55990,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/415/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/415/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/415/content/json/details`.
@@ -55257,27 +56078,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/415/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/415/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/415/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getReceiptThumbnail.Output.UnsupportedMediaType.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -55285,6 +56111,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -55305,6 +56132,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -55314,6 +56145,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -55475,6 +56307,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/502/content/json/details`.
@@ -55561,27 +56395,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getReceiptThumbnail.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -55589,6 +56428,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -55609,6 +56449,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -55618,6 +56462,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -55675,6 +56520,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/503/content/json/details`.
@@ -55761,27 +56608,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/{sha256}/thumbnail/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getReceiptThumbnail.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -55789,6 +56641,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -55809,6 +56662,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -55818,6 +56675,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -56984,6 +57842,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/502/content/json/details`.
@@ -57070,27 +57930,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_searchPurchases.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -57098,6 +57963,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -57118,6 +57984,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -57127,6 +57997,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -57184,6 +58055,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/503/content/json/details`.
@@ -57270,27 +58143,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_searchPurchases.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -57298,6 +58176,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -57318,6 +58197,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -57327,6 +58210,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -58351,6 +59235,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/details`.
@@ -58437,27 +59323,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getMonthSummary.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -58465,6 +59356,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -58485,6 +59377,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -58494,6 +59390,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -58551,6 +59448,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/details`.
@@ -58637,27 +59536,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -58665,6 +59569,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -58685,6 +59590,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -58694,6 +59603,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -59551,6 +60461,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/502/content/json/details`.
@@ -59637,27 +60549,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_purchaseTags.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -59665,6 +60582,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -59685,6 +60603,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -59694,6 +60616,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -59751,6 +60674,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/503/content/json/details`.
@@ -59837,27 +60762,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_purchaseTags.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -59865,6 +60795,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -59885,6 +60816,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -59894,6 +60829,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -61472,6 +62408,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/404/content/json/details`.
@@ -61558,27 +62496,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getPurchase.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -61586,6 +62529,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -61606,6 +62550,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -61615,6 +62563,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -61776,6 +62725,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/502/content/json/details`.
@@ -61862,27 +62813,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getPurchase.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -61890,6 +62846,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -61910,6 +62867,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -61919,6 +62880,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -61976,6 +62938,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/503/content/json/details`.
@@ -62062,27 +63026,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_getPurchase.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -62090,6 +63059,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -62110,6 +63080,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -62119,6 +63093,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -63905,6 +64880,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/404/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/404/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/404/content/json/details`.
@@ -63991,27 +64968,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/404/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/404/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/404/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_updatePurchase.Output.NotFound.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -64019,6 +65001,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -64039,6 +65022,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -64048,6 +65035,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -64105,6 +65093,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/409/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/409/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/409/content/json/details`.
@@ -64191,27 +65181,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/409/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/409/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/409/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_updatePurchase.Output.Conflict.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -64219,6 +65214,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -64239,6 +65235,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -64248,6 +65248,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -64409,6 +65410,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/502/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/502/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/502/content/json/details`.
@@ -64495,27 +65498,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/502/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/502/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/502/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_updatePurchase.Output.BadGateway.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -64523,6 +65531,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -64543,6 +65552,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -64552,6 +65565,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }
@@ -64609,6 +65623,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/503/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+                        ///
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/503/content/json/code`.
                         internal var code: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/503/content/json/details`.
@@ -64695,27 +65711,32 @@ internal enum Operations {
                         internal var message: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/503/content/json/requestId`.
                         internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/503/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/503/content/json/retryable`.
                         internal var retryable: Swift.Bool
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
-                        ///   - code:
+                        ///   - code: Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
                         ///   - details:
                         ///   - message:
                         ///   - requestId:
+                        ///   - retryAfterSeconds:
                         ///   - retryable:
                         internal init(
                             code: Swift.String,
                             details: Operations.MobilePurchases_updatePurchase.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
                             message: Swift.String,
                             requestId: Swift.String,
+                            retryAfterSeconds: Swift.Int? = nil,
                             retryable: Swift.Bool
                         ) {
                             self.code = code
                             self.details = details
                             self.message = message
                             self.requestId = requestId
+                            self.retryAfterSeconds = retryAfterSeconds
                             self.retryable = retryable
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -64723,6 +65744,7 @@ internal enum Operations {
                             case details
                             case message
                             case requestId
+                            case retryAfterSeconds
                             case retryable
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -64743,6 +65765,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .requestId
                             )
+                            self.retryAfterSeconds = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
                             self.retryable = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .retryable
@@ -64752,6 +65778,7 @@ internal enum Operations {
                                 "details",
                                 "message",
                                 "requestId",
+                                "retryAfterSeconds",
                                 "retryable"
                             ])
                         }

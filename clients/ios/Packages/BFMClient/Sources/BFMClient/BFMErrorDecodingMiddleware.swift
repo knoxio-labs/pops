@@ -41,7 +41,8 @@ internal struct BFMErrorDecodingMiddleware: ClientMiddleware {
                     kind: PopsError.kind(forHTTPStatus: response.status.code)
                 ),
                 statusCode: response.status.code,
-                retryAfterSeconds: envelope.retryAfterSeconds
+                retryAfterSeconds: envelope.retryAfterSeconds,
+                upstreamStatus: envelope.upstreamStatus
             )
         } catch let error as BFMRuntimePopsError {
             throw error
@@ -68,13 +69,18 @@ internal struct BFMRuntimePopsError: Error, Sendable {
     internal let popsError: PopsError
     internal let statusCode: Int
     internal let retryAfterSeconds: Int?
+    internal let upstreamStatus: Int?
 
     internal init(
-        _ popsError: PopsError, statusCode: Int, retryAfterSeconds: Int? = nil
+        _ popsError: PopsError,
+        statusCode: Int,
+        retryAfterSeconds: Int? = nil,
+        upstreamStatus: Int? = nil
     ) {
         self.popsError = popsError
         self.statusCode = statusCode
         self.retryAfterSeconds = retryAfterSeconds
+        self.upstreamStatus = upstreamStatus
     }
 }
 
@@ -85,6 +91,7 @@ private struct BFMErrorEnvelope: Decodable {
     let retryable: Bool
     let hasRetryable: Bool
     let retryAfterSeconds: Int?
+    let upstreamStatus: Int?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -98,6 +105,9 @@ private struct BFMErrorEnvelope: Decodable {
             retryable = false
         }
         retryAfterSeconds = try container.decodeIfPresent(Int.self, forKey: .retryAfterSeconds)
+        upstreamStatus =
+            (try? container.decode(UpstreamDetails.self, forKey: .details))?
+            .upstream?.status
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -106,6 +116,15 @@ private struct BFMErrorEnvelope: Decodable {
         case requestID = "requestId"
         case retryable
         case retryAfterSeconds
+        case details
+    }
+
+    private struct UpstreamDetails: Decodable {
+        let upstream: Upstream?
+    }
+
+    private struct Upstream: Decodable {
+        let status: Int
     }
 }
 
@@ -113,6 +132,7 @@ internal struct BFMRuntimeFailure: Sendable {
     internal let popsError: PopsError
     internal let statusCode: Int?
     internal let retryAfterSeconds: Int?
+    internal let upstreamStatus: Int?
 }
 
 extension PopsError {
@@ -139,14 +159,16 @@ extension PopsError {
             return BFMRuntimeFailure(
                 popsError: runtime.popsError,
                 statusCode: runtime.statusCode,
-                retryAfterSeconds: runtime.retryAfterSeconds
+                retryAfterSeconds: runtime.retryAfterSeconds,
+                upstreamStatus: runtime.upstreamStatus
             )
         }
         if let urlError = error.underlyingError as? URLError {
             return BFMRuntimeFailure(
                 popsError: urlError.code == .timedOut ? .timeout : .offline,
                 statusCode: error.response?.status.code,
-                retryAfterSeconds: nil
+                retryAfterSeconds: nil,
+                upstreamStatus: nil
             )
         }
         if error.response?.status.kind == .successful, error.underlyingError is DecodingError {
@@ -154,7 +176,8 @@ extension PopsError {
                 popsError: .decodeFailure(
                     requestID: BFMErrorDecodingMiddleware.requestID(from: error.response)),
                 statusCode: error.response?.status.code,
-                retryAfterSeconds: nil
+                retryAfterSeconds: nil,
+                upstreamStatus: nil
             )
         }
         return nil

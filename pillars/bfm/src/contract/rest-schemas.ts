@@ -227,9 +227,14 @@ export type MobileRequestError = z.infer<typeof MobileRequestErrorSchema>;
  * Producer ADR-054 envelopes retain their code, message, request id and retry
  * decision. BFM-originated transport and contract faults use registered
  * gateway/BFM codes. Every answer adds the failed pillar and its original HTTP
- * status under `details.upstream`.
+ * status under `details.upstream`. A rate-limited answer also carries the
+ * producer's optional positive `retryAfterSeconds` for typed mobile backoff.
  */
 export const MobileUpstreamErrorSchema = ErrorBodySchema.extend({
+  code: ErrorBodySchema.shape.code.describe(
+    'Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.'
+  ),
+  retryAfterSeconds: z.number().int().positive().optional(),
   details: z
     .object({
       upstream: z.object({

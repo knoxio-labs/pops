@@ -18,7 +18,12 @@ internal enum BFMRepositoryFailure {
     /// the reading that costs least when it is wrong.
     internal static func failure(_ error: ClientError, operation: String) -> RepositoryError {
         if let runtime = PopsError.runtimeFailureDetails(from: error) {
-            return repositoryError(for: runtime.popsError, statusCode: runtime.statusCode)
+            return repositoryError(
+                for: runtime.popsError,
+                statusCode: runtime.statusCode,
+                upstreamStatus: runtime.upstreamStatus,
+                retryAfterSeconds: runtime.retryAfterSeconds
+            )
         }
         switch error.response?.status.code {
         case 401, 403:
@@ -43,8 +48,14 @@ internal enum BFMRepositoryFailure {
     }
 
     internal static func repositoryError(
-        for popsError: PopsError, statusCode: Int?
+        for popsError: PopsError,
+        statusCode: Int?,
+        upstreamStatus: Int? = nil,
+        retryAfterSeconds: Int? = nil
     ) -> RepositoryError {
+        if popsError.code == "gateway.upstream_rate_limited" || upstreamStatus == 429 {
+            return .rateLimited(retryAfterSeconds: retryAfterSeconds)
+        }
         if statusCode == 409, !popsError.code.contains(".") {
             return .conflict(popsError.code)
         }
@@ -88,13 +99,12 @@ internal enum BFMRepositoryFailure {
     }
 
     /// The BFM's upstream vocabulary, collapsed onto what a screen can do
-    /// about it — but not past the three distinctions that matter.
+    /// about it while keeping producer rate limits actionable.
     ///
     /// `gateway.upstream_unavailable`, `gateway.upstream_contract_mismatch`,
-    /// and `gateway.upstream_conflict` must not converge. The first is "the pillar
-    /// behind this is not answering", worth retrying; the second is "it answered
-    /// something this build cannot read"; the third is a write collision that
-    /// preserves its wire reason because retrying the same input cannot work.
+    /// `gateway.upstream_refused`, `gateway.upstream_rate_limited` and
+    /// `gateway.upstream_conflict` remain distinct. Producer rate limits use
+    /// their original 429 and optional retry delay, though BFM answers 503.
     ///
     /// `gateway.upstream_misconfigured` joins the unavailable side rather than the
     /// mismatch one: a pillar whose configuration is wrong is not serving,
@@ -102,7 +112,15 @@ internal enum BFMRepositoryFailure {
     /// string because the generator emits one closed enum per status and
     /// every response carrying this code is a distinct type with an
     /// identical case.
-    internal static func upstreamFailure(_ code: String, operation: String) -> RepositoryError {
+    internal static func upstreamFailure(
+        _ code: String,
+        operation: String,
+        upstreamStatus: Int? = nil,
+        retryAfterSeconds: Int? = nil
+    ) -> RepositoryError {
+        if code == "gateway.upstream_rate_limited" || upstreamStatus == 429 {
+            return .rateLimited(retryAfterSeconds: retryAfterSeconds)
+        }
         switch code {
         case "gateway.upstream_unavailable", "gateway.upstream_degraded",
             "gateway.upstream_misconfigured", "upstream_unavailable", "upstream_degraded",

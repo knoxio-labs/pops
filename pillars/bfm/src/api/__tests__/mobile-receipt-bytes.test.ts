@@ -278,8 +278,8 @@ describe('the thumbnail', () => {
   });
 
   it('does not fold a non-415 producer refusal into 415', async () => {
-    // 413 and 422 share the SDK's `refused` bucket with 415. Only 415 says
-    // something about the resource; the rest are about the request bfm built.
+    // 413 and 422 share the SDK's `refused` bucket with 415. Only 415 carries
+    // the media-type meaning; another producer refusal stays identifiable.
     const { app, token } = open({
       thumbnail: { kind: 'refused', pillar: 'purchases', status: 422, message: 'unprocessable' },
     });
@@ -287,7 +287,11 @@ describe('the thumbnail', () => {
     const res = await get(app, token, thumb());
 
     expect(res.status).toBe(502);
-    expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
+    expect(res.body).toMatchObject({
+      code: 'gateway.upstream_refused',
+      retryable: false,
+      details: { upstream: { pillar: 'purchases', status: 422 } },
+    });
   });
 });
 
