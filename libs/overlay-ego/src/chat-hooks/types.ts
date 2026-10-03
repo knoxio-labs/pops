@@ -2,7 +2,6 @@
  * Types for the chat page view model and components.
  */
 import type { MessagePart } from './message-parts';
-import type { ToolActivity } from './stream-reducer';
 
 /** A conversation summary as displayed in the sidebar list. */
 export interface ConversationSummary {
@@ -27,6 +26,15 @@ export interface ChatMessage {
 export interface RetrievedEngram {
   engramId: string;
   relevanceScore: number;
+}
+
+/** Lifecycle states emitted for a tool call during a streamed turn. */
+export type ToolStatus = 'started' | 'finished' | 'failed';
+
+/** A tool and its latest lifecycle status in one streamed reply. */
+export interface ToolActivity {
+  name: string;
+  status: ToolStatus;
 }
 
 /** The public interface exposed by useChatPageModel. */
