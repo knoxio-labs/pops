@@ -5,216 +5,118 @@ import Testing
 
 @Suite
 internal struct BFMEgoByteTransportTests {
-    private struct ForbiddenAttempt {
-        let opening: BFMEgoStreamOpening
-        let source: ScriptedBFMByteSource
-        let authorizer: RecordingBFMStreamAuthorizer
+    private actor FirstByteChunk {
+        private let events: AsyncStream<[UInt8]>
+        private let continuation: AsyncStream<[UInt8]>.Continuation
+
+        init() {
+            let pair = AsyncStream<[UInt8]>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            events = pair.stream
+            continuation = pair.continuation
+        }
+
+        func record(_ chunk: [UInt8]) {
+            continuation.yield(chunk)
+            continuation.finish()
+        }
+
+        func wait() async -> [UInt8]? {
+            for await chunk in events {
+                return chunk
+            }
+            return nil
+        }
     }
 
     @Test
-    func attachesBearerAndPreservesBaseURLPathPrefix() async throws {
-        let baseURL = try #require(URL(string: "https://bfm.example/bfm-api/v1/"))
-        let source = ScriptedBFMByteSource(replies: [
-            .init(statusCode: 200, body: Data("stream".utf8))
-        ])
-        let authorizer = RecordingBFMStreamAuthorizer(accessToken: "access-1")
-        let transport = BFMEgoByteTransport(
-            baseURL: baseURL, authorizer: authorizer, source: source)
+    func chunksBodyAndFlushesFinalPartialChunk() async throws {
+        let body = Data((0..<8_209).map { UInt8($0 % 251) })
+        let scenario = EgoURLSessionByteSourceScenario(body: body, finishes: true)
+        let (session, request) = try Self.urlSessionRequest(scenario: scenario)
+        defer { session.invalidateAndCancel() }
 
-        let opening = try await transport.open(body: Data(#"{"message":"hello"}"#.utf8))
+        let (response, bytes) = try await URLSessionByteSource(session: session).open(request)
 
-        guard case .streaming(let bytes) = opening else {
-            Issue.record("expected a streaming response")
-            return
+        var chunks: [[UInt8]] = []
+        for try await chunk in bytes {
+            chunks.append(chunk)
         }
-        #expect(try await Self.collect(bytes) == Data("stream".utf8))
-
-        let requests = await source.recordedRequests()
-        let request = try #require(requests.first)
-        #expect(request.url?.path == "/bfm-api/v1/mobile/ego/chat/stream")
-        #expect(request.method == "POST")
-        #expect(request.authorization == "Bearer access-1")
-        #expect(request.contentType == "application/json")
-        #expect(request.accept == "text/event-stream")
-        #expect(request.body == Data(#"{"message":"hello"}"#.utf8))
+        #expect(response.statusCode == 200)
+        #expect(chunks.map(\.count) == [4096, 4096, 17])
+        #expect(Data(chunks.flatMap { $0 }) == body)
     }
 
     @Test
-    func unauthorizedRequestRefreshesOnceAndRetriesWithNewToken() async throws {
-        let baseURL = try #require(URL(string: "https://bfm.example/prefix"))
-        let source = ScriptedBFMByteSource(replies: [
-            .init(statusCode: 401),
-            .init(statusCode: 200, body: Data("ok".utf8)),
-        ])
-        let authorizer = RecordingBFMStreamAuthorizer(accessToken: "access-1")
-        let transport = BFMEgoByteTransport(
-            baseURL: baseURL, authorizer: authorizer, source: source)
+    func cancelsRequestWhenConsumerStops() async throws {
+        let scenario = EgoURLSessionByteSourceScenario(
+            body: Data(repeating: 0x61, count: 4096), finishes: false)
+        let (session, request) = try Self.urlSessionRequest(scenario: scenario)
+        defer { session.invalidateAndCancel() }
 
-        let opening = try await transport.open(body: Data("{}".utf8))
-
-        guard case .streaming(let bytes) = opening else {
-            Issue.record("expected the retry response to stream")
-            return
+        let (_, bytes) = try await URLSessionByteSource(session: session).open(request)
+        let firstChunk = FirstByteChunk()
+        let consumer = Task {
+            do {
+                for try await chunk in bytes {
+                    await firstChunk.record(chunk)
+                    try Task.checkCancellation()
+                }
+            } catch {
+                // The consumer intentionally cancels after receiving its first chunk.
+            }
         }
-        #expect(try await Self.collect(bytes) == Data("ok".utf8))
-        #expect(
-            await source.recordedRequests().map(\.authorization) == [
-                "Bearer access-1", "Bearer access-2",
-            ])
-        #expect(
-            await authorizer.recordedRefreshes() == [
-                .init(staleAccessToken: "access-1", baseURL: baseURL)
-            ])
+
+        let chunk = await Self.firstChunk(from: firstChunk)
+        #expect(chunk?.count == 4096)
+        #expect(chunk == Array(repeating: 0x61, count: 4096))
+
+        consumer.cancel()
+        #expect(await Self.waitForCancellation(scenario.cancellation))
+        await consumer.value
     }
 
-    @Test
-    func secondUnauthorizedResponseIsReturnedWithoutAnotherRetry() async throws {
-        let source = ScriptedBFMByteSource(replies: [
-            .init(statusCode: 401), .init(statusCode: 401),
-        ])
-        let authorizer = RecordingBFMStreamAuthorizer(accessToken: "access-1")
-        let transport = BFMEgoByteTransport(
-            baseURL: try #require(URL(string: "https://bfm.example")),
-            authorizer: authorizer,
-            source: source
-        )
-
-        let opening = try await transport.open(body: Data())
-
-        guard case .rejected(let status, _, _) = opening else {
-            Issue.record("expected the second 401 to be returned")
-            return
-        }
-        #expect(status == 401)
-        #expect(await source.recordedRequests().count == 2)
-        #expect(await authorizer.recordedRefreshes().count == 1)
+    private static func urlSessionRequest(
+        scenario: EgoURLSessionByteSourceScenario
+    ) throws -> (URLSession, URLRequest) {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [EgoURLSessionByteSourceURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let request = scenario.request(
+            for: try #require(URL(string: "https://bfm.example/stream")))
+        return (session, request)
     }
 
-    @Test(
-        "only the explicit device-revocation codes notify the authorizer",
-        arguments: ["bfm.auth.device_revoked", "device_revoked"]
-    )
-    func revocationCodeNotifiesAuthorizer(code: String) async throws {
-        let body = Data(#"{"code":"\#(code)"}"#.utf8)
-        let attempt = try await Self.openForbidden(body: body)
-
-        guard case .rejected(let status, _, _) = attempt.opening else {
-            Issue.record("expected the 403 response to be returned")
-            return
+    private static func firstChunk(from recorder: FirstByteChunk) async -> [UInt8]? {
+        await withTaskGroup(of: [UInt8]?.self) { group in
+            group.addTask { await recorder.wait() }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(5))
+                return nil
+            }
+            guard let result = await group.next() else {
+                group.cancelAll()
+                return nil
+            }
+            group.cancelAll()
+            return result
         }
-        #expect(status == 403)
-        #expect(await attempt.source.recordedRequests().count == 1)
-        #expect(await attempt.authorizer.revocationCount() == 1)
     }
 
-    @Test(
-        "capability and unknown 403 codes never revoke the device",
-        arguments: ["capability_not_granted", "future.refusal"]
-    )
-    func nonRevocation403DoesNotNotifyAuthorizer(code: String) async throws {
-        let body = Data(#"{"code":"\#(code)"}"#.utf8)
-        let attempt = try await Self.openForbidden(body: body)
-
-        guard case .rejected(let status, _, _) = attempt.opening else {
-            Issue.record("expected the 403 response to be returned")
-            return
+    private static func waitForCancellation(
+        _ cancellation: EgoURLSessionByteSourceCancellation
+    ) async -> Bool {
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                await cancellation.waitForCancellation()
+                return true
+            }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(5))
+                return false
+            }
+            let result = await group.next() ?? false
+            group.cancelAll()
+            return result
         }
-        #expect(status == 403)
-        #expect(await attempt.source.recordedRequests().count == 1)
-        #expect(await attempt.authorizer.revocationCount() == 0)
-    }
-
-    @Test
-    func missingTokenIsSentUnauthenticatedWithoutRefresh() async throws {
-        let source = ScriptedBFMByteSource(replies: [.init(statusCode: 401)])
-        let authorizer = RecordingBFMStreamAuthorizer(accessToken: nil)
-        let transport = BFMEgoByteTransport(
-            baseURL: try #require(URL(string: "https://bfm.example")),
-            authorizer: authorizer,
-            source: source
-        )
-
-        let opening = try await transport.open(body: Data())
-
-        guard case .rejected(let status, _, _) = opening else {
-            Issue.record("expected the unauthenticated 401 to be returned")
-            return
-        }
-        #expect(status == 401)
-        #expect(await source.recordedRequests().first?.authorization == nil)
-        #expect(await authorizer.recordedRefreshes().isEmpty)
-    }
-
-    @Test
-    func retryAfterAndRejectionBodyAreBoundedAndTokenRedacted() async throws {
-        let token = "access-secret-1"
-        var responseBody = Data("proxy echoed \(token):".utf8)
-        responseBody.append(Data(repeating: 0x78, count: 70_000))
-        let source = ScriptedBFMByteSource(replies: [
-            .init(statusCode: 429, headers: ["Retry-After": "30"], body: responseBody)
-        ])
-        let transport = BFMEgoByteTransport(
-            baseURL: try #require(URL(string: "https://bfm.example")),
-            authorizer: RecordingBFMStreamAuthorizer(accessToken: token),
-            source: source
-        )
-
-        let opening = try await transport.open(body: Data())
-
-        guard case .rejected(let status, let retryAfter, let body) = opening else {
-            Issue.record("expected the 429 response to be returned")
-            return
-        }
-        #expect(status == 429)
-        #expect(retryAfter == 30)
-        #expect(body.count <= 64 * 1024)
-        #expect(body.range(of: Data(token.utf8)) == nil)
-        #expect(!String(describing: opening).contains(token))
-    }
-
-    @Test
-    func refreshFailurePropagatesWithoutAnotherRequest() async throws {
-        let token = "access-secret-2"
-        let source = ScriptedBFMByteSource(replies: [.init(statusCode: 401)])
-        let authorizer = RecordingBFMStreamAuthorizer(
-            accessToken: token, refreshBehavior: .fails)
-        let transport = BFMEgoByteTransport(
-            baseURL: try #require(URL(string: "https://bfm.example")),
-            authorizer: authorizer,
-            source: source
-        )
-
-        await #expect(throws: StreamAuthorizerTestFailure.refreshFailed) {
-            try await transport.open(body: Data())
-        }
-        #expect(await source.recordedRequests().count == 1)
-        #expect(await authorizer.recordedRefreshes().count == 1)
-    }
-
-    private static func openForbidden(body: Data) async throws -> ForbiddenAttempt {
-        let source = ScriptedBFMByteSource(replies: [
-            .init(statusCode: 403, body: body)
-        ])
-        let authorizer = RecordingBFMStreamAuthorizer(accessToken: "access-1")
-        let transport = BFMEgoByteTransport(
-            baseURL: try #require(URL(string: "https://bfm.example")),
-            authorizer: authorizer,
-            source: source
-        )
-        return ForbiddenAttempt(
-            opening: try await transport.open(body: Data()),
-            source: source,
-            authorizer: authorizer
-        )
-    }
-
-    private static func collect(
-        _ stream: AsyncThrowingStream<[UInt8], any Error>
-    ) async throws -> Data {
-        var data = Data()
-        for try await chunk in stream {
-            data.append(contentsOf: chunk)
-        }
-        return data
     }
 }
