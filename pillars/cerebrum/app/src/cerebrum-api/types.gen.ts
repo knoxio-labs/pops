@@ -278,6 +278,108 @@ export type DebriefDismissResponses = {
 
 export type DebriefDismissResponse = DebriefDismissResponses[keyof DebriefDismissResponses];
 
+export type EgoDecideActionBatchData = {
+  /**
+   * Body
+   */
+  body?: {
+    alwaysAllow: Array<string>;
+    approve: Array<string>;
+    reject: Array<string>;
+  };
+  path: {
+    batchId: string;
+  };
+  query?: never;
+  url: '/ego/action-batches/{batchId}/decide';
+};
+
+export type EgoDecideActionBatchErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type EgoDecideActionBatchError =
+  EgoDecideActionBatchErrors[keyof EgoDecideActionBatchErrors];
+
+export type EgoDecideActionBatchResponses = {
+  /**
+   * 200
+   */
+  200: {
+    batch: {
+      actions: Array<{
+        batchId: string;
+        conversationId: string;
+        createdAt: string;
+        id: string;
+        messageId: string;
+        resolvedAt: string | null;
+        result: string | null;
+        status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+        summary: string;
+        tool: string;
+      }>;
+      conversationId: string;
+      createdAt: string;
+      decidedAt: string | null;
+      id: string;
+      messageId: string;
+      status: 'pending' | 'decided' | 'continued' | 'auto';
+    };
+    updatedMessage: {
+      citations: unknown;
+      content: string;
+      conversationId: string;
+      createdAt: string;
+      id: string;
+      parts: Array<
+        | {
+            text: string;
+            type: 'text';
+          }
+        | {
+            subtitle?: string;
+            title: string;
+            type: 'entity';
+            uri: string;
+          }
+        | {
+            actions: Array<{
+              actionId: string;
+              status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+              summary: string;
+              tool: string;
+            }>;
+            batchId: string;
+            type: 'actions';
+          }
+      > | null;
+      role: string;
+      tokensIn: number | null;
+      tokensOut: number | null;
+      toolCalls: unknown;
+    } | null;
+  };
+};
+
+export type EgoDecideActionBatchResponse =
+  EgoDecideActionBatchResponses[keyof EgoDecideActionBatchResponses];
+
 export type EgoChatData = {
   /**
    * Body

@@ -22,6 +22,7 @@ import {
 } from '../modules/ego/chat-helpers.js';
 import { ConversationPersistence } from '../modules/ego/persistence.js';
 import { NotFoundError } from '../shared/errors.js';
+import { makeEgoActionHandlers } from './ego-action-handlers.js';
 import { buildEgoEngine } from './ego-engine.js';
 import { runHttp } from './error-mapping.js';
 
@@ -38,6 +39,7 @@ export function makeEgoHandlers(
   const persistence = (): ConversationPersistence => new ConversationPersistence({ db: deps.db });
 
   return server.router(cerebrumEgoContract, {
+    ...makeEgoActionHandlers(deps),
     chat: async ({ body }) => {
       const store = persistence();
       const actions = new EgoActionStore({ db: deps.db });

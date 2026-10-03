@@ -20,6 +20,18 @@ export const cerebrumErrors = defineErrors('cerebrum', {
     message: 'The request conflicts with existing state.',
     retryable: false,
   },
+  gateway_unavailable: {
+    area: 'ego',
+    status: 503,
+    message: 'The tool gateway is not configured.',
+    retryable: true,
+  },
+  invalid_decision: {
+    area: 'ego',
+    status: 400,
+    message: 'The decision must approve or reject every action in the batch exactly once.',
+    retryable: false,
+  },
   failure: {
     area: 'internal',
     status: 500,

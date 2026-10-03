@@ -28,6 +28,9 @@ import type {
   EgoCreateConversationData,
   EgoCreateConversationErrors,
   EgoCreateConversationResponses,
+  EgoDecideActionBatchData,
+  EgoDecideActionBatchErrors,
+  EgoDecideActionBatchResponses,
   EgoDeleteConversationData,
   EgoDeleteConversationResponses,
   EgoGetActiveContextData,
@@ -410,6 +413,25 @@ export const debriefDismiss = <ThrowOnError extends boolean = false>(
 ): RequestResult<DebriefDismissResponses, DebriefDismissErrors, ThrowOnError> =>
   (options.client ?? client).post<DebriefDismissResponses, DebriefDismissErrors, ThrowOnError>({
     url: '/debrief/{sessionId}/dismiss',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Record an Ego action batch decision.
+ */
+export const egoDecideActionBatch = <ThrowOnError extends boolean = false>(
+  options: Options<EgoDecideActionBatchData, ThrowOnError>
+): RequestResult<EgoDecideActionBatchResponses, EgoDecideActionBatchErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    EgoDecideActionBatchResponses,
+    EgoDecideActionBatchErrors,
+    ThrowOnError
+  >({
+    url: '/ego/action-batches/{batchId}/decide',
     ...options,
     headers: {
       'Content-Type': 'application/json',
