@@ -79,10 +79,13 @@ describe('resolveServiceAccountKey', () => {
 });
 
 describe('the orchestrator account grant', () => {
-  it('lists only the current search operations', () => {
+  it('lists only the search and tag-facet operations needed for orchestration', () => {
     expect([...ORCHESTRATOR_SERVICE_ACCOUNT_SCOPES]).toEqual([
       'contacts.search.search',
       'purchases.search.search',
+      'tags.tags',
+      'finance.tagged',
+      'purchases.tagged',
     ]);
   });
 
