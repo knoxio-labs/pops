@@ -229,15 +229,19 @@ describe('a device asking for something its grant does not cover', () => {
     );
   });
 
-  it('lets a device with ego.chat reach the router for POST on the stream', async () => {
+  it('lets a device with ego.chat reach the mounted stream router', async () => {
     const app = open();
     const device = pairedDevice(app, [MOBILE_SESSION_CAPABILITY, 'ego.chat']);
 
     const res = await requestOn(app.app, (r) =>
-      r.post(MOBILE_EGO_CHAT_STREAM_PATH).set('Authorization', device.authorization)
+      r
+        .post(MOBILE_EGO_CHAT_STREAM_PATH)
+        .set('Authorization', device.authorization)
+        .send({ message: 'hello' })
     );
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(503);
+    expect(res.headers['content-type']).toContain('application/json');
   });
 
   it('does not apply the Ego stream capability to GET on the same path', async () => {
