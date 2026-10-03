@@ -16,6 +16,7 @@ public struct AppDependencies: Sendable {
     public let codeSuggestions: any InventoryCodeSuggestionService
     /// Product-fact lookup used by Inventory's barcode scan flow.
     public let barcodeLookup: any InventoryBarcodeLookupService
+    public let ego: any EgoRepository
 
     public init(
         transactions: any TransactionsRepository,
@@ -41,7 +42,10 @@ public struct AppDependencies: Sendable {
         // built before POPS-4920 receive the ordinary unavailable result until
         // their composition root binds the BFM transport.
         barcodeLookup: any InventoryBarcodeLookupService =
-            UnboundInventoryBarcodeLookupService()
+            UnboundInventoryBarcodeLookupService(),
+        // Ego is the newest seam; existing composition roots receive the
+        // failure-first implementation until the phone transport is wired.
+        ego: any EgoRepository = UnboundEgoRepository()
     ) {
         self.transactions = transactions
         self.pairing = pairing
@@ -53,6 +57,7 @@ public struct AppDependencies: Sendable {
         self.inventory = inventory
         self.codeSuggestions = codeSuggestions
         self.barcodeLookup = barcodeLookup
+        self.ego = ego
     }
 
     /// What the environment holds until something binds it. Every call fails
@@ -70,7 +75,8 @@ public struct AppDependencies: Sendable {
         accounts: UnboundAccountsRepository(),
         inventory: UnboundInventoryStore(),
         codeSuggestions: UnboundInventoryCodeSuggestionService(),
-        barcodeLookup: UnboundInventoryBarcodeLookupService()
+        barcodeLookup: UnboundInventoryBarcodeLookupService(),
+        ego: UnboundEgoRepository()
     )
 }
 
