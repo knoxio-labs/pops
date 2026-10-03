@@ -25,7 +25,8 @@ export function appContextChanged(
     stored.route !== incoming.route ||
     stored.entityId !== incoming.entityId ||
     stored.entityType !== incoming.entityType ||
-    stored.entityTitle !== incoming.entityTitle
+    stored.entityTitle !== incoming.entityTitle ||
+    stored.uri !== incoming.uri
   );
 }
 

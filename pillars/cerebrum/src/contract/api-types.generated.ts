@@ -2033,6 +2033,7 @@ export interface operations {
             entityTitle?: string;
             entityType?: string;
             route?: string;
+            uri?: string;
           };
           /** @enum {string} */
           channel?: 'shell' | 'moltbot' | 'mcp' | 'cli';

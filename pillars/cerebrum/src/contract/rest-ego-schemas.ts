@@ -9,7 +9,7 @@
  */
 import { z } from 'zod';
 
-import { egoMessagePartsSchema } from './rest-ego-parts.js';
+import { egoMessagePartsSchema, egoUriSchema } from './rest-ego-parts.js';
 
 export const egoAppContextSchema = z.object({
   app: z.string(),
@@ -17,6 +17,7 @@ export const egoAppContextSchema = z.object({
   entityId: z.string().optional(),
   entityType: z.string().optional(),
   entityTitle: z.string().optional(),
+  uri: egoUriSchema.optional(),
 });
 export type EgoAppContextWire = z.infer<typeof egoAppContextSchema>;
 
