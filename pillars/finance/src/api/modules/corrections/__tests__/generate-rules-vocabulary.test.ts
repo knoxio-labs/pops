@@ -34,8 +34,12 @@ CREATE TABLE tag_vocabulary (
   is_active integer DEFAULT 1 NOT NULL,
   usage_count integer DEFAULT 0 NOT NULL,
   created_at text DEFAULT (datetime('now')) NOT NULL,
-  description text
+  description text,
+  shared_tag_id text
 );
+CREATE UNIQUE INDEX idx_tag_vocabulary_shared_tag_id
+  ON tag_vocabulary (shared_tag_id)
+  WHERE shared_tag_id IS NOT NULL;
 CREATE TABLE transactions (
   id text PRIMARY KEY NOT NULL,
   description text NOT NULL,
