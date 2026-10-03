@@ -11,7 +11,7 @@ import { createPillarErrorHandlers } from '@pops/pillar-express';
 import { shutdownPillar, type ClosableServer } from '@pops/pillar-sdk/bootstrap';
 import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 
-import { inboundAuth } from './auth.js';
+import { inboundAuth, resolveInboundToken } from './auth.js';
 import { requireServiceAccountKey, resolveServiceAccountKey } from './service-account-key.js';
 import { allTools } from './tools/index.js';
 
@@ -204,6 +204,8 @@ export function installShutdownHandlers(
 // pillar, so a keyless process would bind the port, pass its healthcheck and
 // fail every call.
 if (process.env['NODE_ENV'] !== 'test') {
+  // Validate the token file's contents before binding; readability alone does not reject an empty file.
+  resolveInboundToken();
   // Before the key is resolved. `requireServiceAccountKey` is fatal when no
   // source yields a value, but a `*_FILE` variable naming a file this process
   // cannot open is not that case — the file source falls through to the
