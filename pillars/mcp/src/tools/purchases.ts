@@ -66,6 +66,7 @@ function purchases(): PillarHandle<PurchasesShape> {
 
 const ordersList: ToolDef = {
   name: 'purchases.orders.list',
+  readOnly: true,
   description:
     'List purchase orders, newest first. An order is what a merchant sold — distinct from the bank transaction that paid for it. Filter by source, settlement status or order date.',
   inputSchema: {
@@ -91,6 +92,7 @@ const ordersList: ToolDef = {
 
 const ordersGet: ToolDef = {
   name: 'purchases.orders.get',
+  readOnly: true,
   description:
     "Get one order with its deliveries, line items, charges, documents and accounting split. The split reports how much of the order's total a finance transaction backs (matched), how much is charged but not yet imported (awaitingImport), and how much nothing explains (residual).",
   inputSchema: {
@@ -107,6 +109,7 @@ const ordersGet: ToolDef = {
 
 const search: ToolDef = {
   name: 'purchases.search',
+  readOnly: true,
   description:
     'Search orders and line items by free text, with optional source, settlement status and inclusive order-date filters. Matches a merchant name or order id on the order side, and a product name or SKU on the line side — this is how to answer "which order had X in it". Every line-item hit carries the id of the order it belongs to.',
   inputSchema: {
@@ -132,6 +135,7 @@ const search: ToolDef = {
 
 const itemsByTag: ToolDef = {
   name: 'purchases.items.byTag',
+  readOnly: true,
   description:
     "Line items carrying a POPS item tag, across every order, newest first — one page at a time (max results, 1-500, default 200). The response's pagination.total is the true count for the tag; page with limit/offset to see the rest rather than reading the returned page as the whole set. Each hit reports the tag's own confirmedAt beside the line: null means a classification pass proposed the tag and it may be reconsidered, non-null means a human asserted it. Do not treat the two as the same evidence.",
   inputSchema: {

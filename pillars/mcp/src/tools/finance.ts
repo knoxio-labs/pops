@@ -20,6 +20,7 @@ import type { ToolDef } from './tool-def.js';
 
 const transactionsList: ToolDef = {
   name: 'finance.transactions.list',
+  readOnly: true,
   description:
     'List financial transactions. Filter by date range, entity, account, type, or free-text search.',
   inputSchema: {
@@ -61,6 +62,7 @@ const transactionsList: ToolDef = {
 
 const transactionsGet: ToolDef = {
   name: 'finance.transactions.get',
+  readOnly: true,
   description: 'Get a single financial transaction by ID.',
   inputSchema: {
     type: 'object',
@@ -76,6 +78,7 @@ const transactionsGet: ToolDef = {
 
 const entitiesList: ToolDef = {
   name: 'finance.entities.list',
+  readOnly: true,
   description:
     'List finance entities (merchants, businesses). Entities are matched to transactions during import.',
   inputSchema: {
@@ -102,6 +105,7 @@ const entitiesList: ToolDef = {
 
 const budgetsList: ToolDef = {
   name: 'finance.budgets.list',
+  readOnly: true,
   description: 'List budgets with current spend. Supports filtering by period and active state.',
   inputSchema: {
     type: 'object',
@@ -133,6 +137,7 @@ const budgetsList: ToolDef = {
 
 const budgetsGet: ToolDef = {
   name: 'finance.budgets.get',
+  readOnly: true,
   description: 'Get a single budget by ID, including current spend and remaining amount.',
   inputSchema: {
     type: 'object',

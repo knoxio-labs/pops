@@ -45,6 +45,13 @@ vi.mock('./tools/index.js', () => ({
       handler: mockToolHandler,
       scope: 'inventory.types.manage',
     },
+    {
+      name: 'test.readonly',
+      description: 'Read-only tool for testing',
+      inputSchema: { type: 'object', properties: {} },
+      handler: mockToolHandler,
+      readOnly: true,
+    },
   ],
 }));
 
@@ -88,7 +95,7 @@ describe('createMcpServer — ListTools handler', () => {
     const response = (await handler({ params: {} })) as {
       tools: { name: string; description: string; inputSchema: unknown }[];
     };
-    expect(response.tools).toHaveLength(2);
+    expect(response.tools).toHaveLength(3);
     expect(response.tools[0]).toMatchObject({
       name: 'test.echo',
       description: 'Echo tool for testing',
@@ -105,6 +112,24 @@ describe('createMcpServer — ListTools handler', () => {
     expect(scoped?.description).toBe(
       "Scoped tool for testing Requires service-account scope 'inventory.types.manage'."
     );
+  });
+});
+
+describe('createMcpServer — ListTools annotations', () => {
+  beforeEach(() => {
+    capturedHandlers.clear();
+    createMcpServer();
+  });
+
+  it('advertises readOnlyHint true only for a tool that sets readOnly', async () => {
+    const handler = capturedHandlers.get(ListToolsRequestSchema)!;
+    const response = (await handler({ params: {} })) as {
+      tools: { name: string; annotations?: unknown }[];
+    };
+    const byName = new Map(response.tools.map((t) => [t.name, t.annotations]));
+    expect(byName.get('test.readonly')).toEqual({ readOnlyHint: true });
+    expect(byName.get('test.echo')).toEqual({ readOnlyHint: false });
+    expect(byName.get('test.scoped')).toEqual({ readOnlyHint: false });
   });
 });
 

@@ -37,6 +37,7 @@ function cerebrum(): PillarHandle<CerebrumShape> {
 
 const engramsList: ToolDef = {
   name: 'cerebrum.engrams.list',
+  readOnly: true,
   description:
     'List engrams (knowledge notes) from the Cerebrum knowledge base. Filter by type, scopes, tags, status, or free-text search.',
   inputSchema: {
@@ -86,6 +87,7 @@ const engramsList: ToolDef = {
 
 const engramGet: ToolDef = {
   name: 'cerebrum.engrams.get',
+  readOnly: true,
   description: 'Read a single engram by ID. Returns full metadata and body content.',
   inputSchema: {
     type: 'object',
@@ -104,6 +106,7 @@ const engramGet: ToolDef = {
 
 const cerebrumSearch: ToolDef = {
   name: 'cerebrum.search',
+  readOnly: true,
   description:
     'Search the Cerebrum knowledge base. The default hybrid mode ranks engrams by keyword match (BM25) fused with embedding similarity, and by keyword match alone when no embeddings are configured. Returns ranked results with titles, scores, scopes, and content snippets.',
   inputSchema: {

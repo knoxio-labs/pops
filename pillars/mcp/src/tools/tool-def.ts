@@ -4,6 +4,11 @@ export interface ToolDef {
   name: string;
   description: string;
   inputSchema: Tool['inputSchema'];
+  /**
+   * `true` means the tool never changes state in any pillar; `false` or absent
+   * means it may. Advertised to MCP clients as the `readOnlyHint` annotation.
+   */
+  readOnly?: boolean;
   handler: (args: Record<string, unknown>) => Promise<CallToolResult>;
   /**
    * The dot-prefixed producer scope (see `hasScopeFor` in

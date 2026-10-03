@@ -9,6 +9,7 @@ const LEDGER_SIGN_NOTE =
 
 const accountsList: ToolDef = {
   name: 'finance.accounts.list',
+  readOnly: true,
   description:
     `List accounts with their current balance. ${LEDGER_SIGN_NOTE} Archived accounts ` +
     'are excluded by default; set includeArchived to see them too.',
@@ -36,6 +37,7 @@ const accountsList: ToolDef = {
 
 const accountsCheckpoints: ToolDef = {
   name: 'finance.accounts.checkpoints',
+  readOnly: true,
   description:
     "List an account's balance checkpoints, newest first — each a balance read off " +
     'something outside the ledger (a statement, a bank app, a hand count). ' +

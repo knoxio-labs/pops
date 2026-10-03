@@ -31,6 +31,14 @@ export function describeTool(t: ToolDef): string {
   return `${t.description} Requires service-account scope '${t.scope}'.`;
 }
 
+/**
+ * The MCP annotations advertised for a tool. `readOnlyHint` is true only when
+ * the tool explicitly sets `readOnly: true`; an unset flag is treated as a write.
+ */
+export function toolAnnotations(t: ToolDef): { readOnlyHint: boolean } {
+  return { readOnlyHint: t.readOnly === true };
+}
+
 /** Structured per-call operational log (CF087) — tool name, ok/error, and latency, so a production issue is visible without re-instrumenting. */
 function logToolCall(
   name: string,
@@ -54,6 +62,7 @@ export function createMcpServer(): Server {
       name: t.name,
       description: describeTool(t),
       inputSchema: t.inputSchema,
+      annotations: toolAnnotations(t),
     })),
   }));
 
