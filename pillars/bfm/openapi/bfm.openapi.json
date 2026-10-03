@@ -2593,6 +2593,413 @@
         "tags": ["mobileContacts"]
       }
     },
+    "/mobile/ego/action-batches/{batchId}/decide": {
+      "post": {
+        "operationId": "mobileEgo.decideActionBatch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batchId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "alwaysAllow": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "approve": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "reject": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": ["approve", "reject", "alwaysAllow"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "batchId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["batchId"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "bfm.request.invalid"],
+                      "type": "string"
+                    },
+                    "details": {},
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["bfm.auth.invalid_token"],
+                      "type": "string"
+                    },
+                    "details": {},
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["bfm.auth.device_revoked"],
+                          "type": "string"
+                        },
+                        "details": {},
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["code", "message", "requestId", "retryable"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Record a decision for a pending Ego action batch",
+        "tags": ["mobileEgo"]
+      }
+    },
     "/mobile/ego/conversations": {
       "get": {
         "operationId": "mobileEgo.listConversations",
