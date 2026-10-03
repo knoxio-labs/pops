@@ -46,6 +46,7 @@ function stringField(data: SearchHitData, field: string): string | null {
 const URI_ROUTE_MAP: Record<string, RouteRule> = {
   'media/movie': '/media/movies',
   'media/tv-show': '/media/tv',
+  'cerebrum/engram': '/cerebrum/engrams',
   'finance/transaction': '/finance/transactions',
   'finance/entity': '/finance/entities',
   'finance/budget': '/finance/budgets',
