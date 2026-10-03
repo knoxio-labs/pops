@@ -46,6 +46,7 @@ export * as engramsService from './services/engrams.js';
 export * as gliaService from './services/glia.js';
 export * as conversationsService from './services/conversations.js';
 export * as plexusService from './services/plexus.js';
+export * as egoActionsService from './services/ego-actions.js';
 
 export type {
   Nudge,
@@ -89,6 +90,14 @@ export {
   type UpdateTrustStatePatch,
   type UserDecision,
 } from './services/glia-types.js';
+
+export {
+  EGO_ACTION_STATUSES,
+  EgoActionTransitionError,
+  type EgoActionRow,
+  type EgoActionStatus,
+  type InsertEgoActionRow,
+} from './services/ego-actions-types.js';
 
 export {
   MESSAGE_ROLES,
