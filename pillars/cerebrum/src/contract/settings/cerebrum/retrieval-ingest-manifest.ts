@@ -20,8 +20,8 @@ export const retrievalGroup: SettingsGroup = {
       key: 'cerebrum.semantic.defaultThreshold',
       label: 'Semantic Default Threshold',
       type: 'number',
-      default: '0.8',
-      description: 'Default distance threshold for semantic search (0-1).',
+      default: '0.3',
+      description: 'Default minimum cosine similarity for semantic search (0-1).',
       validation: { min: 0, max: 1 },
     },
     {
@@ -52,8 +52,8 @@ export const retrievalGroup: SettingsGroup = {
       key: 'cerebrum.hybrid.defaultThreshold',
       label: 'Hybrid Default Threshold',
       type: 'number',
-      default: '0.8',
-      description: 'Default distance threshold for hybrid search (0-1).',
+      default: '0.3',
+      description: 'Default minimum cosine similarity for hybrid search (0-1).',
       validation: { min: 0, max: 1 },
     },
     {

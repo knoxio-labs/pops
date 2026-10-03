@@ -9791,13 +9791,13 @@
                     "type": "string"
                   },
                   "threshold": {
-                    "default": 0.8,
-                    "maximum": 2,
+                    "description": "Minimum cosine similarity a semantic hit must reach. Omit for the server default.",
+                    "maximum": 1,
                     "minimum": 0,
                     "type": "number"
                   }
                 },
-                "required": ["mode", "limit", "threshold", "offset"],
+                "required": ["mode", "limit", "offset"],
                 "type": "object"
               }
             }
@@ -9838,7 +9838,7 @@
                             "type": "number"
                           },
                           "matchType": {
-                            "enum": ["semantic", "structured", "both"],
+                            "enum": ["semantic", "lexical", "structured", "both"],
                             "type": "string"
                           },
                           "metadata": {
@@ -9970,13 +9970,13 @@
                     "type": "integer"
                   },
                   "threshold": {
-                    "default": 0.8,
-                    "maximum": 2,
+                    "description": "Minimum cosine similarity a semantic hit must reach. Omit for the server default.",
+                    "maximum": 1,
                     "minimum": 0,
                     "type": "number"
                   }
                 },
-                "required": ["engramId", "limit", "threshold"],
+                "required": ["engramId", "limit"],
                 "type": "object"
               }
             }
@@ -10001,7 +10001,7 @@
                             "type": "number"
                           },
                           "matchType": {
-                            "enum": ["semantic", "structured", "both"],
+                            "enum": ["semantic", "lexical", "structured", "both"],
                             "type": "string"
                           },
                           "metadata": {

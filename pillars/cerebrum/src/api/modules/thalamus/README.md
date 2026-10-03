@@ -20,15 +20,19 @@ the paths it syncs and orphans never reach the queue.
 
 ## Switches that gate the path
 
-A corpus can be completely indexed and still have zero semantic reach:
+A corpus can be completely indexed and still have zero semantic reach. Lexical
+retrieval does not depend on any of these: `sync.ts` and the engram handlers
+write the search text with the index row, and `search-index.ts` backfills at
+API boot (see `../retrieval/README.md`).
 
 - `EMBEDDING_API_KEY` — absent means the worker process never starts its
   embeddings worker, so any queued job sits unconsumed.
 - sqlite-vec (`../../../db/vec-loader.ts`) — a failed load leaves
   `vecAvailable` false and every k-NN call throws. `HybridSearchService.hybrid`
-  catches that, warns, and returns its BM25 leg alone, but `semanticSearch()`
-  and `similar()` propagate — and `similar()` is what the consolidator and
-  linker in `../workers` call, so those runs reject rather than degrade.
+  catches that, warns, and returns the lexical hits alone, but
+  `semanticSearch()` and `similar()` propagate — and `similar()` is what the
+  consolidator and linker in `../workers` call, so those runs reject rather
+  than degrade.
 - `CEREBRUM_INDEX_WATCH` and Redis gate the hops before that; the conditions
   are in the headers of `instance.ts`, `queue.ts` and `embedding-trigger.ts`.
 
@@ -40,4 +44,5 @@ on `POST /index/reindex-sources`.
 ## Deletes never delete
 
 A watched file disappearing marks its index row `status: orphaned`, and
-`reconcile` does the same for rows whose file is gone.
+`reconcile` does the same for rows whose file is gone. The row's search text is
+removed, so an orphaned engram is never a lexical hit.

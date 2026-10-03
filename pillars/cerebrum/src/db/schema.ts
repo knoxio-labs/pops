@@ -6,6 +6,8 @@
  *   - `nudgeLog` — reflex/nudge audit trail.
  *   - `engramIndex` / `engramScopes` / `engramTags` / `engramLinks` —
  *     atomic memory units + their graph edges.
+ *   - `engramSearchDocs` — title + body per engram, the content table behind
+ *     the `engram_fts` FTS5 index the lexical retrieval leg queries.
  *   - `gliaActions` / `gliaTrustState` — autonomous-action proposals +
  *     per-type trust graduation state (cerebrum ADR-004).
  *   - `conversations` / `messages` / `conversationContext` —
@@ -32,6 +34,7 @@ export { debriefResults } from './schema/debrief-results.js';
 export { debriefSessions } from './schema/debrief-sessions.js';
 export { debriefStatus } from './schema/debrief-status.js';
 export { conversationContext, conversations, messages } from './schema/ego.js';
+export { engramSearchDocs } from './schema/engram-search.js';
 export { engramIndex, engramLinks, engramScopes, engramTags } from './schema/engrams.js';
 export { gliaActions, gliaTrustState } from './schema/glia.js';
 export { nudgeLog } from './schema/nudge-log.js';

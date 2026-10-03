@@ -81,7 +81,12 @@ export class ConsolidatorWorker extends WorkerBase {
     }
 
     for (const engram of engrams) {
-      const similar = await this.searchService.similar(engram.id, { status: ['active'] });
+      const similar = await this.searchService.similar(
+        engram.id,
+        { status: ['active'] },
+        undefined,
+        this.config.similarityThreshold
+      );
       for (const result of similar) {
         if (result.sourceType !== 'engram') continue;
         if (result.score < this.config.similarityThreshold) continue;

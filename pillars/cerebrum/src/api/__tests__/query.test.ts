@@ -2,10 +2,11 @@
  * Integration tests for `cerebrum.query.*` + the `POST /query/stream` SSE route.
  *
  * Boots the app against a per-test temp cerebrum.db seeded with engram-index +
- * embeddings rows (the structured/BM25 leg returns sources without an embedding
- * provider). The one-shot LLM is an injected {@link makeFakeQueryLlm}; the SSE
- * route is driven with an injected {@link makeFakeQueryStreamLlm} yielding
- * canned tokens — no real Anthropic call is ever made.
+ * embeddings rows and real sqlite-vec vectors at a chosen cosine to the query,
+ * which a fake embedding client always embeds to the anchor vector. The
+ * one-shot LLM is an injected {@link makeFakeQueryLlm}; the SSE route is driven
+ * with an injected {@link makeFakeQueryStreamLlm} yielding canned tokens — no
+ * real Anthropic call is ever made.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -24,10 +25,12 @@ import {
   makeReflexService,
   makeTemplateRegistry,
 } from './test-utils.js';
+import { anchorEmbeddingClient, seedEngramVector, unitVectorAtCosine } from './vector-fixtures.js';
 
 import type { Express } from 'express';
 
 import type { QueryLlm, QueryStreamLlm } from '../modules/query/llm.js';
+import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
 
 let tmpDir: string;
 let engramRoot: string;
@@ -36,7 +39,8 @@ let cerebrumDb: OpenedCerebrumDb;
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'cerebrum-api-query-test-'));
   engramRoot = mkdtempSync(join(tmpdir(), 'cerebrum-api-query-root-'));
-  cerebrumDb = openCerebrumDb(join(tmpDir, 'cerebrum.db'), { loadVec: false });
+  cerebrumDb = openCerebrumDb(join(tmpDir, 'cerebrum.db'), { loadVec: true });
+  nextOffAxis = 1;
 });
 
 afterEach(() => {
@@ -45,7 +49,16 @@ afterEach(() => {
   rmSync(engramRoot, { recursive: true, force: true });
 });
 
-function seedEngram(db: OpenedCerebrumDb, id: string, title: string, scopes: string[]): void {
+let nextOffAxis = 1;
+
+/** Seed an engram whose vector sits at `cosine` to every query (default 0.5). */
+function seedEngram(
+  db: OpenedCerebrumDb,
+  id: string,
+  title: string,
+  scopes: string[],
+  cosine = 0.5
+): void {
   const raw = db.raw;
   const at = '2026-01-01T00:00:00.000Z';
   raw
@@ -65,11 +78,21 @@ function seedEngram(db: OpenedCerebrumDb, id: string, title: string, scopes: str
        VALUES ('engram', ?, 0, ?, ?, 'm', 1536, ?)`
     )
     .run(id, `hash-${id}`, `preview ${title}`, at);
+  seedEngramVector(db, id, unitVectorAtCosine(cosine, nextOffAxis));
+  nextOffAxis += 1;
 }
 
 interface AppDeps {
   llm?: QueryLlm;
   streamLlm?: QueryStreamLlm;
+  /** `null` boots the app with no embedding client at all. */
+  embeddingClient?: EmbeddingClient | null;
+}
+
+function failingQueryLlm(): QueryLlm {
+  return makeFakeQueryLlm(() => {
+    throw new Error('the LLM must not be called when nothing was retrieved');
+  });
 }
 
 function buildApp(deps: AppDeps = {}): Express {
@@ -81,6 +104,8 @@ function buildApp(deps: AppDeps = {}): Express {
     version: '0.0.1-test',
     selfBaseUrl: 'http://localhost:3007',
     peerClients: makeEmptyPeerClients(),
+    embeddingClient:
+      deps.embeddingClient === null ? undefined : (deps.embeddingClient ?? anchorEmbeddingClient()),
     queryLlm: deps.llm ?? makeFakeQueryLlm(),
     queryStreamLlm: deps.streamLlm ?? makeFakeQueryStreamLlm(),
   });
@@ -93,7 +118,7 @@ function client(deps: AppDeps = {}) {
 const { requestOn } = createTestTransport();
 
 describe('POST /query/ask', () => {
-  it('answers from retrieved sources and parses valid citations', async () => {
+  it('answers from a source at cosine 0.5 to the question and parses valid citations', async () => {
     seedEngram(cerebrumDb, 'eng_20260101_0001_db', 'DB choice', ['work']);
     const llm = makeFakeQueryLlm(() => 'We picked SQLite [eng_20260101_0001_db].');
 
@@ -124,6 +149,68 @@ describe('POST /query/ask', () => {
     expect(res.confidence).toBe('low');
     expect(res.sources).toEqual([]);
   });
+
+  it('answers no-info without calling the LLM when the only engrams in scope are unrelated', async () => {
+    seedEngram(cerebrumDb, 'eng_20260101_0001_recent', 'Recent but unrelated', ['work'], 0.1);
+
+    const res = await client({ llm: failingQueryLlm() }).query.ask({
+      question: 'which database?',
+      scopes: ['work'],
+    });
+
+    expect(res.answer).toBe("I don't have information about that.");
+    expect(res.sources).toEqual([]);
+    expect(res.confidence).toBe('low');
+  });
+
+  it('answers no-info without calling the LLM when no embedding client is configured', async () => {
+    seedEngram(cerebrumDb, 'eng_20260101_0001_db', 'DB choice', ['work'], 0.9);
+
+    const res = await client({ llm: failingQueryLlm(), embeddingClient: null }).query.ask({
+      question: 'which database?',
+      scopes: ['work'],
+    });
+
+    expect(res.answer).toBe("I don't have information about that.");
+    expect(res.sources).toEqual([]);
+  });
+
+  it('is highly confident in an answer citing two retrieved sources', async () => {
+    seedEngram(cerebrumDb, 'eng_20260101_0001_one', 'One', ['work']);
+    seedEngram(cerebrumDb, 'eng_20260101_0002_two', 'Two', ['work']);
+    const llm = makeFakeQueryLlm(
+      () => 'SQLite [eng_20260101_0001_one], confirmed [eng_20260101_0002_two].'
+    );
+
+    const res = await client({ llm }).query.ask({ question: 'which database?' });
+
+    expect(res.confidence).toBe('high');
+  });
+
+  it('is moderately confident in an answer citing one retrieved source', async () => {
+    seedEngram(cerebrumDb, 'eng_20260101_0001_one', 'One', ['work']);
+    seedEngram(cerebrumDb, 'eng_20260101_0002_two', 'Two', ['work']);
+    const llm = makeFakeQueryLlm(() => 'SQLite [eng_20260101_0001_one].');
+
+    const res = await client({ llm }).query.ask({ question: 'which database?' });
+
+    expect(res.confidence).toBe('medium');
+  });
+
+  it('has low confidence in an answer that says the context was not enough', async () => {
+    seedEngram(cerebrumDb, 'eng_20260101_0001_one', 'One', ['work']);
+    seedEngram(cerebrumDb, 'eng_20260101_0002_two', 'Two', ['work']);
+    const llm = makeFakeQueryLlm(
+      () =>
+        "I don't have enough information to answer that fully. " +
+        '[eng_20260101_0001_one] [eng_20260101_0002_two]'
+    );
+
+    const res = await client({ llm }).query.ask({ question: 'which database?' });
+
+    expect(res.sources).toHaveLength(2);
+    expect(res.confidence).toBe('low');
+  });
 });
 
 describe('POST /query/retrieve', () => {
@@ -131,6 +218,12 @@ describe('POST /query/retrieve', () => {
     seedEngram(cerebrumDb, 'eng_20260101_0001_a', 'Alpha', ['work']);
     const res = await client().query.retrieve({ question: 'alpha' });
     expect(res.sources.map((s) => s.id)).toEqual(['eng_20260101_0001_a']);
+  });
+
+  it('returns no sources when the only engram is unrelated to the question', async () => {
+    seedEngram(cerebrumDb, 'eng_20260101_0001_a', 'Alpha', ['work'], 0.1);
+    const res = await client().query.retrieve({ question: 'alpha' });
+    expect(res.sources).toEqual([]);
   });
 });
 
@@ -173,6 +266,39 @@ describe('POST /query/stream (SSE)', () => {
     expect((done['sources'] as Array<{ id: string }>).map((s) => s.id)).toEqual([
       'eng_20260101_0001_s',
     ]);
+    expect(done['confidence']).toBe('medium');
+  });
+
+  it('grades a streamed answer citing two sources as high confidence', async () => {
+    seedEngram(cerebrumDb, 'eng_20260101_0001_s', 'Streamed', ['work']);
+    seedEngram(cerebrumDb, 'eng_20260101_0002_t', 'Second', ['work']);
+    const streamLlm = makeFakeQueryStreamLlm([
+      'SQLite [eng_20260101_0001_s] ',
+      'wins [eng_20260101_0002_t].',
+    ]);
+
+    const res = await requestOn(buildApp({ streamLlm }))
+      .post('/query/stream')
+      .send({ question: 'which database?' });
+
+    const done = parseSseFrames(res.text).find((f) => f['type'] === 'done');
+    expect(done?.['confidence']).toBe('high');
+  });
+
+  it('streams the no-info answer when the only engram is unrelated to the question', async () => {
+    seedEngram(cerebrumDb, 'eng_20260101_0001_s', 'Unrelated', ['work'], 0.1);
+
+    const res = await requestOn(buildApp())
+      .post('/query/stream')
+      .send({ question: 'which database?' });
+
+    const frames = parseSseFrames(res.text);
+    const done = frames.find((f) => f['type'] === 'done');
+    expect(frames.filter((f) => f['type'] === 'token').map((f) => f['text'])).toEqual([
+      "I don't have information about that.",
+    ]);
+    expect(done?.['sources']).toEqual([]);
+    expect(done?.['confidence']).toBe('low');
   });
 
   it('emits a single-token no-info stream when nothing is retrieved', async () => {

@@ -2,7 +2,7 @@
  * ConsolidationDetector (see pillars/cerebrum/docs/prds/proactive-nudges).
  *
  * Scans the engram corpus for clusters of semantically similar engrams and
- * proposes merging them. Uses embedding similarity via the in-pillar
+ * proposes merging them. Uses cosine similarity via the in-pillar
  * {@link HybridSearchService.similar} to find candidates, then applies
  * scope-aware clustering so cross-scope engrams are never consolidated.
  */
@@ -26,13 +26,13 @@ async function findCluster(
   seed: EngramSummary,
   allEngrams: Map<string, EngramSummary>,
   searchService: HybridSearchService,
-  threshold: number
-): Promise<{ ids: string[]; avgScore: number }> {
-  const results = await searchService.similar(seed.id, {}, 50, threshold);
+  minCosine: number
+): Promise<{ ids: string[]; meanCosine: number }> {
+  const results = await searchService.similar(seed.id, {}, 50, minCosine);
 
   const clusterIds = new Set<string>([seed.id]);
-  let totalScore = 0;
-  let scoreCount = 0;
+  let totalCosine = 0;
+  let neighbourCount = 0;
 
   for (const result of results) {
     if (result.sourceType !== 'engram') continue;
@@ -42,17 +42,20 @@ async function findCluster(
     if (!shareScopeLevel(seed, candidate)) continue;
 
     clusterIds.add(result.sourceId);
-    totalScore += result.score;
-    scoreCount++;
+    totalCosine += result.score;
+    neighbourCount++;
   }
 
-  return { ids: [...clusterIds], avgScore: scoreCount > 0 ? totalScore / scoreCount : 0 };
+  return {
+    ids: [...clusterIds],
+    meanCosine: neighbourCount > 0 ? totalCosine / neighbourCount : 0,
+  };
 }
 
 function buildClusterBody(
   cluster: string[],
   allEngrams: Map<string, EngramSummary>,
-  avgScore: number
+  meanCosine: number
 ): string {
   const lines = cluster.map((id) => {
     const e = allEngrams.get(id);
@@ -60,7 +63,7 @@ function buildClusterBody(
   });
   return (
     `These ${cluster.length} engrams have high semantic overlap ` +
-    `(avg similarity: ${avgScore.toFixed(2)}). ` +
+    `(mean cosine similarity to the first: ${meanCosine.toFixed(2)}). ` +
     `Consider consolidating them into a single curated document.\n\n` +
     lines.join('\n')
   );
@@ -75,13 +78,13 @@ function buildClusterTitle(cluster: string[], allEngrams: Map<string, EngramSumm
 }
 
 function buildCandidate(
-  cluster: { ids: string[]; avgScore: number },
+  cluster: { ids: string[]; meanCosine: number },
   engramMap: Map<string, EngramSummary>
 ): NudgeCandidate {
   return {
     type: 'consolidation',
     title: buildClusterTitle(cluster.ids, engramMap),
-    body: buildClusterBody(cluster.ids, engramMap, cluster.avgScore),
+    body: buildClusterBody(cluster.ids, engramMap, cluster.meanCosine),
     engramIds: cluster.ids,
     priority: 'medium',
     expiresAt: null,
@@ -114,7 +117,7 @@ export class ConsolidationDetector {
     for (const engram of active) {
       if (assignedEngrams.has(engram.id)) continue;
 
-      let cluster: { ids: string[]; avgScore: number };
+      let cluster: { ids: string[]; meanCosine: number };
       try {
         cluster = await findCluster(
           engram,

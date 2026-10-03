@@ -5,6 +5,7 @@ import {
   engramLinks,
   engramScopes,
   engramTags,
+  upsertEngramSearchDoc,
   type CerebrumDb,
 } from '../../../../db/index.js';
 import { NotFoundError } from '../../../shared/errors.js';
@@ -59,6 +60,7 @@ export function upsertIndex(
         customFields: Object.keys(customFields).length > 0 ? JSON.stringify(customFields) : null,
       })
       .run();
+    upsertEngramSearchDoc(tx, { engramId: id, title, body, bodyHash });
 
     const scopes = dedupe(frontmatter.scopes);
     if (scopes.length > 0) {
