@@ -49,7 +49,7 @@ describe('ego wire fixture', () => {
       expect.arrayContaining(['text', 'entity', 'actions'])
     );
     expect(
-      fixture.frames.valid.map((f) => MobileEgoStreamFrameSchema.parse(f).type).sort()
+      fixture.frames.valid.map((f) => MobileEgoStreamFrameSchema.parse(f).type).toSorted()
     ).toEqual(['done', 'error', 'navigate', 'part', 'token', 'tool']);
   });
 });
