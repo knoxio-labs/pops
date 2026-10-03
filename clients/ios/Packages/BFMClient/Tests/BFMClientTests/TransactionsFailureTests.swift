@@ -77,6 +77,33 @@ internal struct TransactionsFailureTests {
         if !isTransport(expected) { #expect(actual == expected) }
     }
 
+    @Test("an upstream rate limit retains its typed retry delay")
+    func upstreamRateLimited() async {
+        let actual = await error(
+            status: .serviceUnavailable,
+            json: TransactionsWire.upstream(
+                code: "purchases.request.rate_limited",
+                upstreamStatus: 429,
+                retryAfterSeconds: 30
+            )
+        )
+
+        #expect(actual == .rateLimited(retryAfterSeconds: 30))
+    }
+
+    @Test("an upstream rate limit without Retry-After stays typed without inventing a delay")
+    func upstreamRateLimitedWithoutRetryDelay() async {
+        let actual = await error(
+            status: .serviceUnavailable,
+            json: TransactionsWire.upstream(
+                code: "gateway.upstream_rate_limited",
+                upstreamStatus: 429
+            )
+        )
+
+        #expect(actual == .rateLimited(retryAfterSeconds: nil))
+    }
+
     @Test("a rate limit stays distinct and carries its wait")
     func rateLimited() async {
         let actual = await error(status: .tooManyRequests, json: TransactionsWire.rateLimited)

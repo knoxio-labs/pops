@@ -164,8 +164,13 @@ extension BFMTransactionsRepository {
             throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code, operation: ListTransactions.id)
         case .serviceUnavailable(let upstream):
+            let body = try upstream.body.json
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code, operation: ListTransactions.id)
+                body.code,
+                operation: ListTransactions.id,
+                upstreamStatus: body.details.upstream.status,
+                retryAfterSeconds: body.retryAfterSeconds
+            )
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(ListTransactions.id): undocumented status \(statusCode)"
@@ -260,8 +265,13 @@ extension BFMTransactionsRepository {
             throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code, operation: GetTransaction.id)
         case .serviceUnavailable(let upstream):
+            let body = try upstream.body.json
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code, operation: GetTransaction.id)
+                body.code,
+                operation: GetTransaction.id,
+                upstreamStatus: body.details.upstream.status,
+                retryAfterSeconds: body.retryAfterSeconds
+            )
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(GetTransaction.id): undocumented status \(statusCode)"

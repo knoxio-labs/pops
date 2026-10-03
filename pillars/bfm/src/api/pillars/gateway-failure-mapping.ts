@@ -96,10 +96,11 @@ function mapRateLimited(
   target: string
 ): GatewayFailure {
   return {
-    kind: 'unavailable',
+    kind: 'rate-limited',
     pillar: target,
     status: 503,
     upstreamStatus: 429,
+    retryAfterSeconds: failure.retryAfterSeconds,
     detail: withRetryAfter(failure.retryAfterSeconds, failure.message),
     ...producerEnvelopeFields(failure),
   };
@@ -143,9 +144,9 @@ function mapRefused(
     };
   }
   return {
-    kind: 'invalid-request',
+    kind: 'refused',
     pillar: target,
-    status: 400,
+    status: 502,
     upstreamStatus: failure.status,
     detail: withUpstreamStatus(failure.status, failure.message),
     ...producerEnvelopeFields(failure),
@@ -156,6 +157,7 @@ function producerEnvelopeFields(failure: CallFailure): {
   readonly code?: string;
   readonly details?: Readonly<Record<string, unknown>>;
   readonly message?: string;
+  readonly retryAfterSeconds?: number;
   readonly requestId?: string;
   readonly retryable?: boolean;
 } {
@@ -164,6 +166,9 @@ function producerEnvelopeFields(failure: CallFailure): {
     ...(failure.code === undefined ? {} : { code: failure.code }),
     ...(failure.details === undefined ? {} : { details: failure.details }),
     ...(failure.message === undefined ? {} : { message: failure.message }),
+    ...(failure.kind !== 'rate-limited' || failure.retryAfterSeconds === undefined
+      ? {}
+      : { retryAfterSeconds: failure.retryAfterSeconds }),
     ...(failure.requestId === undefined ? {} : { requestId: failure.requestId }),
     ...(failure.retryable === undefined ? {} : { retryable: failure.retryable }),
   };

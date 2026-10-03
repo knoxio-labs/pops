@@ -14,6 +14,7 @@ import {
   MobileReceiptUploadBodySchema,
   MobileTransactionDetailSchema,
   MobileTransactionSchema,
+  MobileUpstreamErrorSchema,
 } from '../rest-schemas.js';
 
 const row = {
@@ -86,5 +87,35 @@ describe('MobileReceiptUploadBodySchema.parts', () => {
       parts: Array.from({ length: 20 }, () => part),
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('MobileUpstreamErrorSchema.retryAfterSeconds', () => {
+  const body = {
+    code: 'gateway.upstream_rate_limited',
+    message: 'Wait before retrying.',
+    requestId: 'request-1',
+    retryable: true,
+    details: { upstream: { pillar: 'finance', status: 429 } },
+  };
+
+  it('accepts a positive whole-second producer delay', () => {
+    expect(MobileUpstreamErrorSchema.safeParse({ ...body, retryAfterSeconds: 30 }).success).toBe(
+      true
+    );
+  });
+
+  it.each([0, 1.5, -1])('rejects invalid retry delay %s', (retryAfterSeconds) => {
+    expect(MobileUpstreamErrorSchema.safeParse({ ...body, retryAfterSeconds }).success).toBe(false);
+  });
+
+  it('continues to accept open producer codes without a retry delay', () => {
+    const result = MobileUpstreamErrorSchema.safeParse({
+      ...body,
+      code: 'purchases.request.body_too_large',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.retryAfterSeconds).toBeUndefined();
   });
 });

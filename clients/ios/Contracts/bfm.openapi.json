@@ -1202,6 +1202,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -1233,6 +1234,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -1252,6 +1259,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -1283,6 +1291,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -1497,6 +1511,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -1528,6 +1543,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -1547,6 +1568,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -1578,6 +1600,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -1744,6 +1772,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -1775,6 +1804,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -1821,6 +1856,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -1852,6 +1888,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -1871,6 +1913,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -1902,6 +1945,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -2078,6 +2127,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -2109,6 +2159,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -2155,6 +2211,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -2186,6 +2243,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -2205,6 +2268,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -2236,6 +2300,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -2418,6 +2488,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -2449,6 +2520,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -2495,6 +2572,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -2526,6 +2604,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -2545,6 +2629,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -2576,6 +2661,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -2903,6 +2994,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -2934,6 +3026,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -2953,6 +3051,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -2984,6 +3083,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -3244,6 +3349,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -3275,6 +3381,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -3321,6 +3433,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -3352,6 +3465,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -3371,6 +3490,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -3402,6 +3522,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -3659,6 +3785,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -3690,6 +3817,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -3709,6 +3842,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -3740,6 +3874,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -3973,6 +4113,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -4004,6 +4145,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -4050,6 +4197,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -4081,6 +4229,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -4100,6 +4254,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -4131,6 +4286,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -4363,6 +4524,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -4394,6 +4556,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -4413,6 +4581,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -4444,6 +4613,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -5372,6 +5547,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -5403,6 +5579,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -5422,6 +5604,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -5453,6 +5636,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -5876,6 +6065,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -5907,6 +6097,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -5974,6 +6170,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -6005,6 +6202,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -6024,6 +6227,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -6055,6 +6259,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -6238,6 +6448,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -6269,6 +6480,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -6315,6 +6532,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -6346,6 +6564,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -6365,6 +6589,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -6396,6 +6621,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -6630,6 +6861,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -6661,6 +6893,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -6707,6 +6945,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -6738,6 +6977,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -6757,6 +7002,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -6788,6 +7034,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -7356,6 +7608,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -7387,6 +7640,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -7406,6 +7665,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -7437,6 +7697,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -8624,6 +8890,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -8655,6 +8922,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -8674,6 +8947,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -8705,6 +8979,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -9486,6 +9766,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -9517,6 +9798,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -9584,6 +9871,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -9615,6 +9903,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -9634,6 +9928,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -9665,6 +9960,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -10255,6 +10556,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -10286,6 +10588,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -10305,6 +10613,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -10336,6 +10645,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -11275,6 +11590,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -11306,6 +11622,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -11325,6 +11647,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -11356,6 +11679,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -11912,6 +12241,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -11943,6 +12273,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -11962,6 +12298,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -11993,6 +12330,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -12282,6 +12625,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -12313,6 +12657,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -12332,6 +12682,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -12363,6 +12714,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -12674,6 +13031,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -12705,6 +13063,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -12724,6 +13088,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -12755,6 +13120,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -13472,6 +13843,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -13503,6 +13875,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -13522,6 +13900,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -13553,6 +13932,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -14289,6 +14674,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -14320,6 +14706,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -14339,6 +14731,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -14370,6 +14763,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -14922,6 +15321,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -14953,6 +15353,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -14972,6 +15378,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -15003,6 +15410,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -15177,6 +15590,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -15208,6 +15622,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -15254,6 +15674,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -15285,6 +15706,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -15304,6 +15731,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -15335,6 +15763,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -15509,6 +15943,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -15540,6 +15975,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -15559,6 +16000,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -15590,6 +16032,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -15636,6 +16084,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -15667,6 +16116,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -15686,6 +16141,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -15717,6 +16173,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -16091,6 +16553,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -16122,6 +16585,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -16141,6 +16610,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -16172,6 +16642,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -16464,6 +16940,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -16495,6 +16972,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -16514,6 +16997,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -16545,6 +17029,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -16777,6 +17267,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -16808,6 +17299,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -16827,6 +17324,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -16858,6 +17356,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -17367,6 +17871,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -17398,6 +17903,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -17444,6 +17955,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -17475,6 +17987,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -17494,6 +18012,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -17525,6 +18044,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -18117,6 +18642,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -18148,6 +18674,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -18167,6 +18699,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -18198,6 +18731,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -18244,6 +18783,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -18275,6 +18815,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"
@@ -18294,6 +18840,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
+                      "description": "Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.",
                       "minLength": 1,
                       "type": "string"
                     },
@@ -18325,6 +18872,12 @@
                     "requestId": {
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "retryable": {
                       "type": "boolean"

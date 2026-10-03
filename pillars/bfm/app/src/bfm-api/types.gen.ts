@@ -445,6 +445,9 @@ export type MobileContactsCreateMerchantErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -455,12 +458,16 @@ export type MobileContactsCreateMerchantErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -471,6 +478,7 @@ export type MobileContactsCreateMerchantErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -550,6 +558,9 @@ export type MobileContactsSearchMerchantsErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -560,12 +571,16 @@ export type MobileContactsSearchMerchantsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -576,6 +591,7 @@ export type MobileContactsSearchMerchantsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -648,6 +664,9 @@ export type MobileContactsGetMerchantErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -658,6 +677,7 @@ export type MobileContactsGetMerchantErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -672,6 +692,9 @@ export type MobileContactsGetMerchantErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -682,12 +705,16 @@ export type MobileContactsGetMerchantErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -698,6 +725,7 @@ export type MobileContactsGetMerchantErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -768,6 +796,9 @@ export type MobileContactsGetMerchantAddressesErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -778,6 +809,7 @@ export type MobileContactsGetMerchantAddressesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -792,6 +824,9 @@ export type MobileContactsGetMerchantAddressesErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -802,12 +837,16 @@ export type MobileContactsGetMerchantAddressesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -818,6 +857,7 @@ export type MobileContactsGetMerchantAddressesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -895,6 +935,9 @@ export type MobileContactsCreateMerchantAddressErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -905,6 +948,7 @@ export type MobileContactsCreateMerchantAddressErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -919,6 +963,9 @@ export type MobileContactsCreateMerchantAddressErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -929,12 +976,16 @@ export type MobileContactsCreateMerchantAddressErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -945,6 +996,7 @@ export type MobileContactsCreateMerchantAddressErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -1038,6 +1090,9 @@ export type MobileFinanceListAccountsErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1048,12 +1103,16 @@ export type MobileFinanceListAccountsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1064,6 +1123,7 @@ export type MobileFinanceListAccountsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -1152,6 +1212,9 @@ export type MobileFinanceGetAccountErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1162,6 +1225,7 @@ export type MobileFinanceGetAccountErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -1176,6 +1240,9 @@ export type MobileFinanceGetAccountErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1186,12 +1253,16 @@ export type MobileFinanceGetAccountErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1202,6 +1273,7 @@ export type MobileFinanceGetAccountErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -1302,6 +1374,9 @@ export type MobileFinanceListTransactionsErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1312,12 +1387,16 @@ export type MobileFinanceListTransactionsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1328,6 +1407,7 @@ export type MobileFinanceListTransactionsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -1407,6 +1487,9 @@ export type MobileFinanceGetTransactionErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1417,6 +1500,7 @@ export type MobileFinanceGetTransactionErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -1431,6 +1515,9 @@ export type MobileFinanceGetTransactionErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1441,12 +1528,16 @@ export type MobileFinanceGetTransactionErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1457,6 +1548,7 @@ export type MobileFinanceGetTransactionErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -1560,6 +1652,9 @@ export type MobileInventorySuggestCodesErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1570,12 +1665,16 @@ export type MobileInventorySuggestCodesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1586,6 +1685,7 @@ export type MobileInventorySuggestCodesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -1680,6 +1780,9 @@ export type MobileInventoryListItemsErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1690,12 +1793,16 @@ export type MobileInventoryListItemsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1706,6 +1813,7 @@ export type MobileInventoryListItemsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -1906,6 +2014,9 @@ export type MobileInventoryItemHistoryErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1916,6 +2027,7 @@ export type MobileInventoryItemHistoryErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -1937,6 +2049,9 @@ export type MobileInventoryItemHistoryErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1947,12 +2062,16 @@ export type MobileInventoryItemHistoryErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -1963,6 +2082,7 @@ export type MobileInventoryItemHistoryErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -2100,6 +2220,9 @@ export type MobileInventoryGetMediaErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2110,6 +2233,7 @@ export type MobileInventoryGetMediaErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -2124,6 +2248,9 @@ export type MobileInventoryGetMediaErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2134,12 +2261,16 @@ export type MobileInventoryGetMediaErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2150,6 +2281,7 @@ export type MobileInventoryGetMediaErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -2236,6 +2368,9 @@ export type MobileInventoryPutMediaErrors = {
    * 415
    */
   415: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2246,6 +2381,7 @@ export type MobileInventoryPutMediaErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -2260,6 +2396,9 @@ export type MobileInventoryPutMediaErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2270,12 +2409,16 @@ export type MobileInventoryPutMediaErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2286,6 +2429,7 @@ export type MobileInventoryPutMediaErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -2398,6 +2542,9 @@ export type MobileInventoryMutationsErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2408,12 +2555,16 @@ export type MobileInventoryMutationsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2424,6 +2575,7 @@ export type MobileInventoryMutationsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -2584,6 +2736,9 @@ export type MobileInventoryChangesErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2594,12 +2749,16 @@ export type MobileInventoryChangesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2610,6 +2769,7 @@ export type MobileInventoryChangesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -2889,6 +3049,9 @@ export type MobileInventoryItemErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2899,6 +3062,7 @@ export type MobileInventoryItemErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -2920,6 +3084,9 @@ export type MobileInventoryItemErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2930,12 +3097,16 @@ export type MobileInventoryItemErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -2946,6 +3117,7 @@ export type MobileInventoryItemErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -3267,6 +3439,9 @@ export type MobileInventoryReportLedgerErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3277,12 +3452,16 @@ export type MobileInventoryReportLedgerErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3293,6 +3472,7 @@ export type MobileInventoryReportLedgerErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -3385,6 +3565,9 @@ export type MobileInventorySnapshotErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3395,12 +3578,16 @@ export type MobileInventorySnapshotErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3411,6 +3598,7 @@ export type MobileInventorySnapshotErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -3633,6 +3821,9 @@ export type MobileInventoryCatalogueRevisionErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3643,12 +3834,16 @@ export type MobileInventoryCatalogueRevisionErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3659,6 +3854,7 @@ export type MobileInventoryCatalogueRevisionErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -3829,6 +4025,9 @@ export type MobileInventoryCatalogueErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3839,12 +4038,16 @@ export type MobileInventoryCatalogueErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3855,6 +4058,7 @@ export type MobileInventoryCatalogueErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -3956,6 +4160,9 @@ export type MobilePurchasesListPurchasesErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3966,12 +4173,16 @@ export type MobilePurchasesListPurchasesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -3982,6 +4193,7 @@ export type MobilePurchasesListPurchasesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -4120,6 +4332,9 @@ export type MobilePurchasesCreateManualPurchaseErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4130,12 +4345,16 @@ export type MobilePurchasesCreateManualPurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4146,6 +4365,7 @@ export type MobilePurchasesCreateManualPurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -4338,6 +4558,9 @@ export type MobilePurchasesSaveReceiptDraftErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4348,12 +4571,16 @@ export type MobilePurchasesSaveReceiptDraftErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4364,6 +4591,7 @@ export type MobilePurchasesSaveReceiptDraftErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -4543,6 +4771,9 @@ export type MobilePurchasesExtractReceiptErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4553,12 +4784,16 @@ export type MobilePurchasesExtractReceiptErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4569,6 +4804,7 @@ export type MobilePurchasesExtractReceiptErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -4691,6 +4927,9 @@ export type MobilePurchasesGetReceiptErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4701,6 +4940,7 @@ export type MobilePurchasesGetReceiptErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -4715,6 +4955,9 @@ export type MobilePurchasesGetReceiptErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4725,12 +4968,16 @@ export type MobilePurchasesGetReceiptErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4741,6 +4988,7 @@ export type MobilePurchasesGetReceiptErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -4813,6 +5061,9 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4823,12 +5074,16 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 415
    */
   415: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4839,6 +5094,7 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -4853,6 +5109,9 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4863,12 +5122,16 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4879,6 +5142,7 @@ export type MobilePurchasesGetReceiptThumbnailErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -4970,6 +5234,9 @@ export type MobilePurchasesSearchPurchasesErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4980,12 +5247,16 @@ export type MobilePurchasesSearchPurchasesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -4996,6 +5267,7 @@ export type MobilePurchasesSearchPurchasesErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -5102,6 +5374,9 @@ export type MobilePurchasesGetMonthSummaryErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5112,12 +5387,16 @@ export type MobilePurchasesGetMonthSummaryErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5128,6 +5407,7 @@ export type MobilePurchasesGetMonthSummaryErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -5227,6 +5507,9 @@ export type MobilePurchasesPurchaseTagsErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5237,12 +5520,16 @@ export type MobilePurchasesPurchaseTagsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5253,6 +5540,7 @@ export type MobilePurchasesPurchaseTagsErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -5327,6 +5615,9 @@ export type MobilePurchasesGetPurchaseErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5337,6 +5628,7 @@ export type MobilePurchasesGetPurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -5351,6 +5643,9 @@ export type MobilePurchasesGetPurchaseErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5361,12 +5656,16 @@ export type MobilePurchasesGetPurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5377,6 +5676,7 @@ export type MobilePurchasesGetPurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };
@@ -5540,6 +5840,9 @@ export type MobilePurchasesUpdatePurchaseErrors = {
    * 404
    */
   404: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5550,12 +5853,16 @@ export type MobilePurchasesUpdatePurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 409
    */
   409: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5566,6 +5873,7 @@ export type MobilePurchasesUpdatePurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
@@ -5580,6 +5888,9 @@ export type MobilePurchasesUpdatePurchaseErrors = {
    * 502
    */
   502: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5590,12 +5901,16 @@ export type MobilePurchasesUpdatePurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
   /**
    * 503
    */
   503: {
+    /**
+     * Producer error codes pass through. BFM-generated upstream codes include gateway.upstream_unavailable, gateway.upstream_refused, and gateway.upstream_rate_limited.
+     */
     code: string;
     details: {
       upstream: {
@@ -5606,6 +5921,7 @@ export type MobilePurchasesUpdatePurchaseErrors = {
     };
     message: string;
     requestId: string;
+    retryAfterSeconds?: number;
     retryable: boolean;
   };
 };

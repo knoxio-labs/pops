@@ -231,15 +231,8 @@ describe('every SDK failure kind is mapped', () => {
   });
 });
 
-/**
- * `refused` and `rate-limited` are the two SDK kinds that DELIBERATELY do
- * NOT get their own `GatewayFailure` kind (see `toGatewayFailure`'s header)
- * — a real, wire-visible regression test for POPS-2230's actual bar: a
- * producer's 413 must stop reading as `unavailable`, and a 429 must keep
- * its `Retry-After` instead of losing it silently.
- */
-describe('a producer refusal that is not one of the seven mapped kinds', () => {
-  it('a permanent refusal (SDK "refused", e.g. a 413) is NOT unavailable', () => {
+describe('producer refusals and rate limits', () => {
+  it('preserves a refused producer response as its own gateway kind', () => {
     const mapped = toGatewayFailure({
       kind: 'refused',
       pillar: 'purchases',
@@ -247,23 +240,16 @@ describe('a producer refusal that is not one of the seven mapped kinds', () => {
       message: 'request entity too large',
     });
 
-    expect(mapped.kind).not.toBe('unavailable');
-    expect(mapped.status).not.toBe(503);
-  });
-
-  it('carries the real upstream status through in detail, even though the kind folds', () => {
-    const mapped = toGatewayFailure({
+    expect(mapped).toMatchObject({
       kind: 'refused',
       pillar: 'purchases',
-      status: 413,
-      message: 'request entity too large',
+      status: 502,
+      upstreamStatus: 413,
+      detail: 'upstream answered 413: request entity too large',
     });
-
-    expect(mapped.detail).toContain('413');
-    expect(mapped.detail).toContain('request entity too large');
   });
 
-  it('a rate limit stays retryable, like unavailable, but is not silently indistinguishable in detail', () => {
+  it('preserves a rate limit kind and its typed retry delay', () => {
     const mapped = toGatewayFailure({
       kind: 'rate-limited',
       pillar: 'purchases',
@@ -271,8 +257,12 @@ describe('a producer refusal that is not one of the seven mapped kinds', () => {
       message: 'slow down',
     });
 
-    expect(mapped.kind).toBe('unavailable');
-    expect(mapped.status).toBe(503);
+    expect(mapped).toMatchObject({
+      kind: 'rate-limited',
+      status: 503,
+      upstreamStatus: 429,
+      retryAfterSeconds: 30,
+    });
     expect(mapped.detail).toContain('30');
     expect(mapped.detail).toContain('slow down');
   });
@@ -280,7 +270,8 @@ describe('a producer refusal that is not one of the seven mapped kinds', () => {
   it('a rate limit with no Retry-After still maps without throwing', () => {
     const mapped = toGatewayFailure({ kind: 'rate-limited', pillar: 'purchases' });
 
-    expect(mapped.kind).toBe('unavailable');
+    expect(mapped.kind).toBe('rate-limited');
+    expect(mapped.retryAfterSeconds).toBeUndefined();
     expect(mapped.detail).not.toContain('undefined');
   });
 });

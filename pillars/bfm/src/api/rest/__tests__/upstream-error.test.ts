@@ -27,6 +27,48 @@ describe('BFM-owned upstream failures', () => {
     });
   });
 
+  it('gives a producer refusal a distinct fallback code and original status', () => {
+    const mapped = toUpstreamErrorResponse({
+      kind: 'refused',
+      pillar: 'purchases',
+      status: 502,
+      upstreamStatus: 413,
+    });
+
+    expect(mapped).toEqual({
+      status: 502,
+      body: {
+        code: 'gateway.upstream_refused',
+        message: 'The upstream service refused the request.',
+        requestId: expect.any(String),
+        retryable: false,
+        details: { upstream: { pillar: 'purchases', status: 413 } },
+      },
+    });
+  });
+
+  it('gives a producer rate limit a distinct fallback code and typed retry delay', () => {
+    const mapped = toUpstreamErrorResponse({
+      kind: 'rate-limited',
+      pillar: 'purchases',
+      status: 503,
+      upstreamStatus: 429,
+      retryAfterSeconds: 30,
+    });
+
+    expect(mapped).toEqual({
+      status: 503,
+      body: {
+        code: 'gateway.upstream_rate_limited',
+        message: 'The upstream service is rate limited.',
+        requestId: expect.any(String),
+        retryable: true,
+        retryAfterSeconds: 30,
+        details: { upstream: { pillar: 'purchases', status: 429 } },
+      },
+    });
+  });
+
   it('uses the registered contract-mismatch code without leaking SDK diagnostics', () => {
     const mapped = toUpstreamErrorResponse({
       kind: 'contract-mismatch',
@@ -89,9 +131,9 @@ describe('producer envelopes', () => {
 
   it('preserves a producer refusal even when BFM maps its status for the mobile route', () => {
     const mapped = toUpstreamErrorResponse({
-      kind: 'invalid-request',
+      kind: 'refused',
       pillar: 'purchases',
-      status: 400,
+      status: 502,
       upstreamStatus: 422,
       code: 'purchases.receipt.inconsistent_total',
       message: 'The purchase totals are inconsistent.',
@@ -106,6 +148,32 @@ describe('producer envelopes', () => {
       requestId: 'producer-request-422',
       retryable: false,
       details: { upstream: { pillar: 'purchases', status: 422 } },
+    });
+  });
+
+  it('preserves a producer rate limit code and typed retry delay', () => {
+    const mapped = toUpstreamErrorResponse({
+      kind: 'rate-limited',
+      pillar: 'purchases',
+      status: 503,
+      upstreamStatus: 429,
+      code: 'purchases.request.rate_limited',
+      message: 'Wait before retrying.',
+      requestId: 'producer-request-429',
+      retryable: true,
+      retryAfterSeconds: 30,
+    });
+
+    expect(mapped).toEqual({
+      status: 503,
+      body: {
+        code: 'purchases.request.rate_limited',
+        message: 'Wait before retrying.',
+        requestId: 'producer-request-429',
+        retryable: true,
+        retryAfterSeconds: 30,
+        details: { upstream: { pillar: 'purchases', status: 429 } },
+      },
     });
   });
 

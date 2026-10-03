@@ -67,10 +67,21 @@ internal enum TransactionsWire {
         """
     }
 
-    internal static func upstream(code: String) -> String {
-        """
-        {"code":"\(code)","pillar":"finance","retryable":true,"message":"no"}
-        """
+    internal static func upstream(
+        code: String,
+        upstreamStatus: Int = 503,
+        retryAfterSeconds: Int? = nil
+    ) -> String {
+        let retryAfterField = retryAfterSeconds.map { ",\"retryAfterSeconds\":\($0)" } ?? ""
+        return """
+            {
+              "code": "\(code)",
+              "details": {"upstream": {"pillar": "finance", "status": \(upstreamStatus)}},
+              "retryable": true,
+              "message": "no",
+              "requestId": "request-1"\(retryAfterField)
+            }
+            """
     }
 
     internal static let rateLimited = """

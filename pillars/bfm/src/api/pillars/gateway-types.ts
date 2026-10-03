@@ -17,6 +17,8 @@ type GatewayFailureBase = {
   readonly requestId?: string;
   /** The producer's retry decision, preserved across the relay. */
   readonly retryable?: boolean;
+  /** The producer's retry delay, preserved as a typed mobile response field. */
+  readonly retryAfterSeconds?: number;
   /** The producer status before BFM maps it to a status declared by its mobile route. */
   readonly upstreamStatus?: number;
 };
@@ -33,6 +35,8 @@ export type GatewayFailure =
   | (GatewayFailureBase & { readonly kind: 'not-found'; readonly status: 404 })
   | (GatewayFailureBase & { readonly kind: 'conflict'; readonly status: 409 })
   | (GatewayFailureBase & { readonly kind: 'invalid-request'; readonly status: 400 })
+  | (GatewayFailureBase & { readonly kind: 'refused'; readonly status: 502 })
+  | (GatewayFailureBase & { readonly kind: 'rate-limited'; readonly status: 503 })
   /**
    * The producer answered, understood the request, and will not represent the
    * resource in the form asked for — a receipt that is a PDF rather than a

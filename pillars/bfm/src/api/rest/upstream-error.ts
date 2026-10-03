@@ -17,10 +17,17 @@ export interface UpstreamErrorResponse {
 
 interface Classification {
   readonly status: ClassifiedStatus;
-  readonly fallback: 'unavailable' | 'contract_mismatch' | 'misconfigured';
+  readonly fallback:
+    | 'unavailable'
+    | 'contract_mismatch'
+    | 'misconfigured'
+    | 'refused'
+    | 'rate_limited';
 }
 
 const GATEWAY_UPSTREAM_UNAVAILABLE_CODE = 'gateway.upstream_unavailable';
+const GATEWAY_UPSTREAM_REFUSED_CODE = 'gateway.upstream_refused';
+const GATEWAY_UPSTREAM_RATE_LIMITED_CODE = 'gateway.upstream_rate_limited';
 
 function classify(failure: GatewayFailure): Classification {
   switch (failure.kind) {
@@ -29,6 +36,10 @@ function classify(failure: GatewayFailure): Classification {
       return { status: 503, fallback: 'unavailable' };
     case 'gateway-misconfigured':
       return { status: 502, fallback: 'misconfigured' };
+    case 'refused':
+      return { status: 502, fallback: 'refused' };
+    case 'rate-limited':
+      return { status: 503, fallback: 'rate_limited' };
     case 'not-found':
       return { status: 404, fallback: 'contract_mismatch' };
     case 'unsupported-media':
@@ -69,6 +80,27 @@ function fallbackBody(
       details,
     };
   }
+  if (fallback === 'refused') {
+    return {
+      code: GATEWAY_UPSTREAM_REFUSED_CODE,
+      message: 'The upstream service refused the request.',
+      requestId: getRequestId() ?? mintRequestId(),
+      retryable: false,
+      details,
+    };
+  }
+  if (fallback === 'rate_limited') {
+    return {
+      code: GATEWAY_UPSTREAM_RATE_LIMITED_CODE,
+      message: failure.message ?? 'The upstream service is rate limited.',
+      requestId: getRequestId() ?? mintRequestId(),
+      retryable: true,
+      ...(failure.retryAfterSeconds === undefined
+        ? {}
+        : { retryAfterSeconds: failure.retryAfterSeconds }),
+      details,
+    };
+  }
   const envelope =
     fallback === 'contract_mismatch'
       ? bfmErrorBody('contract_mismatch')
@@ -87,6 +119,9 @@ function relayBody(
     message: failure.message ?? fallbackEnvelope.message,
     requestId: failure.requestId ?? fallbackEnvelope.requestId,
     retryable: failure.retryable ?? fallbackEnvelope.retryable,
+    ...(failure.retryAfterSeconds === undefined
+      ? {}
+      : { retryAfterSeconds: failure.retryAfterSeconds }),
     details: upstreamDetails(failure),
   };
 }
