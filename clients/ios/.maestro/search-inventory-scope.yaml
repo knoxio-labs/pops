@@ -201,7 +201,10 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - inputText: ${output.inventory.run} Waiting
 - assertVisible: ${output.inventory.run} Waiting
 - tapOn: 'Create'
-- tapOn: 'Search'
+# Items has its own Search field, so tab-bar Search is again the second match.
+- tapOn:
+    text: 'Search'
+    index: 1
 - tapOn: 'Clear search'
 - tapOn: 'Items, containers, places'
 - inputText: ${output.inventory.run} Waiting
