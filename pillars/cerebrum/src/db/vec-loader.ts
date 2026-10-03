@@ -58,19 +58,72 @@ export function tryLoadVecExtension(
   }
 }
 
+/** Vector width used when `EMBEDDING_DIMENSIONS` is unset (text-embedding-3-small). */
+export const DEFAULT_EMBEDDING_DIMENSIONS = 1536;
+
 /**
- * Idempotent creation of the `embeddings_vec` virtual table. Skipped
- * with a swallowed error when sqlite-vec hasn't been loaded — that path
- * is the right one for unit tests and any cerebrum-owned consumer that
- * doesn't need vector search. The dimension is fixed at 1536
- * (text-embedding-3-small) to match the shared baseline; changing it
- * requires a full re-embed.
+ * Resolve the embedding vector width from `EMBEDDING_DIMENSIONS`. Unset or
+ * blank falls back to {@link DEFAULT_EMBEDDING_DIMENSIONS}; anything that is
+ * not a positive integer throws. The `embeddings_vec` table and both embedding
+ * clients read the width through here so the stored vectors and the requested
+ * ones cannot disagree.
  */
-export function ensureEmbeddingsVecTable(raw: BetterSqlite3.Database): boolean {
+export function resolveEmbeddingDimensions(env: NodeJS.ProcessEnv = process.env): number {
+  const configured = env['EMBEDDING_DIMENSIONS']?.trim();
+  if (!configured) return DEFAULT_EMBEDDING_DIMENSIONS;
+  if (!/^[1-9]\d*$/.test(configured)) {
+    throw new Error(`EMBEDDING_DIMENSIONS must be a positive integer, got "${configured}"`);
+  }
+  return Number.parseInt(configured, 10);
+}
+
+export type EnsureEmbeddingsVecResult =
+  | { ok: true }
+  | { ok: false; reason: 'unavailable' }
+  | { ok: false; reason: 'dimension-mismatch'; existing: number; requested: number };
+
+function existingVecDimensions(raw: BetterSqlite3.Database): number | undefined {
+  const sql = raw
+    .prepare(`SELECT sql FROM sqlite_master WHERE name = 'embeddings_vec'`)
+    .pluck()
+    .get();
+  if (typeof sql !== 'string') return undefined;
+  const width = /float\[(\d+)\]/.exec(sql)?.[1];
+  return width === undefined ? undefined : Number.parseInt(width, 10);
+}
+
+function hasStoredVectors(raw: BetterSqlite3.Database): boolean {
+  return raw.prepare('SELECT 1 FROM embeddings_vec LIMIT 1').get() !== undefined;
+}
+
+/**
+ * Idempotent creation of the `embeddings_vec` virtual table at `dimensions`
+ * wide. Returns `unavailable` when sqlite-vec hasn't been loaded — the right
+ * path for unit tests and any cerebrum-owned consumer that doesn't need vector
+ * search.
+ *
+ * An existing table of a different width is recreated only while it holds no
+ * vectors. Once it holds any, the call reports `dimension-mismatch` and leaves
+ * the table alone: changing the width means re-embedding the corpus, which is
+ * not a decision to take at open time.
+ */
+export function ensureEmbeddingsVecTable(
+  raw: BetterSqlite3.Database,
+  dimensions: number
+): EnsureEmbeddingsVecResult {
   try {
-    raw.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS embeddings_vec USING vec0(vector float[1536])`);
-    return true;
+    const existing = existingVecDimensions(raw);
+    if (existing !== undefined && existing !== dimensions) {
+      if (hasStoredVectors(raw)) {
+        return { ok: false, reason: 'dimension-mismatch', existing, requested: dimensions };
+      }
+      raw.exec('DROP TABLE embeddings_vec');
+    }
+    raw.exec(
+      `CREATE VIRTUAL TABLE IF NOT EXISTS embeddings_vec USING vec0(vector float[${dimensions}])`
+    );
+    return { ok: true };
   } catch {
-    return false;
+    return { ok: false, reason: 'unavailable' };
   }
 }
