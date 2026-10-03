@@ -44,13 +44,16 @@ const CONVERSATIONS_MIGRATION = join(
   '../../../migrations/0052_conversations_baseline.sql'
 );
 
+const EGO_PARTS_MIGRATION = join(__dirname, '../../../migrations/0059_ego_parts_actions.sql');
+
 function freshDb(): CerebrumDb {
   const raw = new Database(':memory:');
   raw.pragma('foreign_keys = ON');
-  const sql = readFileSync(CONVERSATIONS_MIGRATION, 'utf8');
-  for (const stmt of sql.split('--> statement-breakpoint')) {
-    const trimmed = stmt.trim();
-    if (trimmed.length > 0) raw.exec(trimmed);
+  for (const path of [CONVERSATIONS_MIGRATION, EGO_PARTS_MIGRATION]) {
+    for (const stmt of readFileSync(path, 'utf8').split('--> statement-breakpoint')) {
+      const trimmed = stmt.trim();
+      if (trimmed.length > 0) raw.exec(trimmed);
+    }
   }
   return drizzle(raw);
 }
