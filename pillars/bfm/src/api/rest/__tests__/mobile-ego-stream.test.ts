@@ -1,4 +1,5 @@
-import { EventEmitter } from 'node:events';
+import { IncomingMessage, ServerResponse } from 'node:http';
+import { Socket } from 'node:net';
 
 import express from 'express';
 import { describe, expect, it, vi } from 'vitest';
@@ -7,7 +8,7 @@ import { requestOn } from '../../__tests__/test-http.js';
 import { MOBILE_EGO_CHAT_STREAM_PATH } from '../../paths.js';
 import { makeMobileEgoStreamRouter } from '../mobile-ego-stream.js';
 
-import type { NextFunction, Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
 import type {
   MobileEgoStreamFrame,
@@ -230,37 +231,42 @@ describe('POST /mobile/ego/chat/stream', () => {
       },
     };
     const router = makeMobileEgoStreamRouter({ egoStream });
-    const route = (
-      router as unknown as {
-        stack: Array<{ route?: { path?: string; stack?: Array<{ handle: unknown }> } }>;
-      }
-    ).stack.find((layer) => layer.route?.path === PATH)?.route;
-    const handler = route?.stack?.[0]?.handle;
-    if (typeof handler !== 'function') throw new Error('stream route handler was not registered');
-
-    const request = Object.assign(new EventEmitter(), {
+    const socket = new Socket();
+    const request = Object.assign(new IncomingMessage(socket), {
       body: MESSAGE_BODY,
       complete: true,
-    }) as unknown as Request & { complete: boolean };
-    const response = Object.assign(new EventEmitter(), {
-      writableEnded: false,
-      destroyed: false,
-      status: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis(),
-      setHeader: vi.fn(),
-      flushHeaders: vi.fn(),
-      write: vi.fn(),
-      end: vi.fn(),
-    }) as unknown as Response;
-    const handle = handler as (req: Request, res: Response, next: NextFunction) => Promise<void>;
-    const responsePromise = handle(request, response, vi.fn());
+      method: 'POST',
+      url: PATH,
+      originalUrl: PATH,
+      baseUrl: '',
+      params: {},
+      query: {},
+    }) as Request;
+    const response = Object.assign(
+      Object.create(express.response) as Response,
+      new ServerResponse(request),
+      {
+        locals: {},
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis(),
+        setHeader: vi.fn(),
+        flushHeaders: vi.fn(),
+        write: vi.fn(),
+        end: vi.fn(),
+      }
+    );
 
-    expect(signal).toBeDefined();
-    request.complete = false;
-    request.emit('close');
-    expect(signal?.aborted).toBe(true);
+    router(request, response, () => undefined);
+    try {
+      expect(signal).toBeDefined();
+      request.complete = false;
+      request.emit('close');
+      expect(signal?.aborted).toBe(true);
 
-    resolveOpen?.({ kind: 'ok', frames: fromFrames([]) });
-    await responsePromise;
+      resolveOpen?.({ kind: 'ok', frames: fromFrames([]) });
+      await pending;
+    } finally {
+      socket.destroy();
+    }
   });
 });
