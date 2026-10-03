@@ -10,6 +10,8 @@ import {
 import type { z } from 'zod';
 
 import type {
+  MobileEgoBatchDecisionBody,
+  MobileEgoBatchOutcome,
   MobileEgoConversationPageSchema,
   MobileEgoThreadSchema,
 } from '../../contract/mobile-ego-schemas.js';
@@ -28,10 +30,14 @@ type EgoRouter = {
       search?: string;
     }) => Promise<unknown>;
     getConversation: (input: { id: string }) => Promise<unknown>;
+    decideActionBatch: (input: {
+      params: { batchId: string };
+      body: MobileEgoBatchDecisionBody;
+    }) => Promise<unknown>;
   };
 };
 
-/** Read operations BFM exposes for a phone's Ego conversation list and thread. */
+/** Ego conversation and action-batch operations BFM exposes to the mobile client. */
 export interface MobileEgoClient {
   listConversations(input: {
     limit?: number;
@@ -39,6 +45,10 @@ export interface MobileEgoClient {
     search?: string;
   }): Promise<GatewayOutcome<MobileEgoConversationPage>>;
   getConversation(id: string): Promise<GatewayOutcome<MobileEgoThread>>;
+  decideBatch(
+    batchId: string,
+    decision: MobileEgoBatchDecisionBody
+  ): Promise<GatewayOutcome<MobileEgoBatchOutcome>>;
 }
 
 /** Create the mobile Ego read client over BFM's shared pillar gateway. */
@@ -46,6 +56,7 @@ export function createMobileEgoClient(gateway: PillarGateway): MobileEgoClient {
   return {
     listConversations: (input) => listConversations(gateway, input),
     getConversation: (id) => getConversation(gateway, id),
+    decideBatch: (batchId, decision) => decideBatch(gateway, batchId, decision),
   };
 }
 
@@ -81,4 +92,15 @@ async function getConversation(
     'ego.getConversation'
   );
   return isGatewayOk(parsed) ? { kind: 'ok', value: toMobileThread(parsed.value) } : parsed;
+}
+
+async function decideBatch(
+  gateway: PillarGateway,
+  batchId: string,
+  decision: MobileEgoBatchDecisionBody
+): Promise<GatewayOutcome<MobileEgoBatchOutcome>> {
+  const response = await gateway.call<EgoRouter, unknown>(EGO_PILLAR_ID, (handle) =>
+    handle.ego.decideActionBatch({ params: { batchId }, body: decision })
+  );
+  return isGatewayOk(response) ? { kind: 'ok', value: { batchId } } : response;
 }

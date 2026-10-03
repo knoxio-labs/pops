@@ -332,6 +332,16 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'bfm',
+    producer: 'cerebrum',
+    operationId: 'ego.decideActionBatch',
+    path: '/ego/action-batches/{batchId}/decide',
+    method: 'post',
+    query: [],
+    pathParams: ['batchId'],
+    usedBy: 'pillars/bfm/src/api/ego/client.ts',
+  },
+  {
+    consumer: 'bfm',
     producer: 'purchases',
     operationId: 'receipt.extract',
     path: '/receipts/extract',

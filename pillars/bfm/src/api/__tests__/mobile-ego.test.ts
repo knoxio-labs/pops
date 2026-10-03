@@ -47,6 +47,9 @@ function egoClient(overrides: Partial<MobileEgoClient> = {}): MobileEgoClient {
     getConversation:
       overrides.getConversation ??
       (() => Promise.resolve({ kind: 'unavailable', pillar: 'cerebrum', status: 503 })),
+    decideBatch:
+      overrides.decideBatch ??
+      (() => Promise.resolve({ kind: 'unavailable', pillar: 'cerebrum', status: 503 })),
   };
 }
 
@@ -76,6 +79,30 @@ describe('the mobile Ego conversation routes', () => {
       code: 'capability_not_granted',
       capability: 'ego.chat',
     });
+  });
+
+  it('requires ego.actions for decisions while ego.chat still allows conversation reads', async () => {
+    const { app, token } = openWith(
+      egoClient({
+        listConversations: () =>
+          Promise.resolve({ kind: 'ok', value: { conversations: [], total: 0 } }),
+      }),
+      ['ego.chat']
+    );
+    const denied = await requestOn(app, (r) =>
+      r
+        .post('/mobile/ego/action-batches/bat_test/decide')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ approve: [], reject: [], alwaysAllow: [] })
+    );
+    const read = await get(app, token, CONVERSATIONS_PATH);
+
+    expect(denied.status).toBe(403);
+    expect(denied.body).toMatchObject({
+      code: 'capability_not_granted',
+      capability: 'ego.actions',
+    });
+    expect(read.status).toBe(200);
   });
 
   it('maps q to the upstream search parameter and returns the conversation page', async () => {

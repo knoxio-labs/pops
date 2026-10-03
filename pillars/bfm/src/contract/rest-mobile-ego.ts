@@ -3,7 +3,12 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { requires } from './capabilities.js';
-import { MobileEgoConversationPageSchema, MobileEgoThreadSchema } from './mobile-ego-schemas.js';
+import {
+  MobileEgoBatchDecisionBodySchema,
+  MobileEgoBatchOutcomeSchema,
+  MobileEgoConversationPageSchema,
+  MobileEgoThreadSchema,
+} from './mobile-ego-schemas.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
@@ -46,6 +51,22 @@ export const mobileEgoContract = c.router({
     },
     summary: 'Read one Ego conversation with its messages and parts',
     metadata: requires('ego.chat'),
+  },
+  decideActionBatch: {
+    method: 'POST',
+    path: '/mobile/ego/action-batches/:batchId/decide',
+    pathParams: z.object({ batchId: z.string().min(1) }),
+    body: MobileEgoBatchDecisionBodySchema,
+    responses: {
+      200: MobileEgoBatchOutcomeSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      409: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'Record a decision for a pending Ego action batch',
+    metadata: requires('ego.actions'),
   },
 });
 

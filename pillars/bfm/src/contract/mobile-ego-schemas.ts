@@ -139,8 +139,12 @@ export const MobileEgoBatchDecisionBodySchema = z.object({
   alwaysAllow: NonEmptyIdsSchema,
 });
 
+export type MobileEgoBatchDecisionBody = z.infer<typeof MobileEgoBatchDecisionBodySchema>;
+
 /** Acknowledgement that a batch decision was recorded. */
 export const MobileEgoBatchOutcomeSchema = z.object({ batchId: z.string() });
+
+export type MobileEgoBatchOutcome = z.infer<typeof MobileEgoBatchOutcomeSchema>;
 
 /** Where in the app the user was when they sent the message. */
 export const MobileEgoAppContextSchema = z.object({

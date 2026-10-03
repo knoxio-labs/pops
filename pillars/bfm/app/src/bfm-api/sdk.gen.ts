@@ -36,6 +36,9 @@ import type {
   MobileContactsSearchMerchantsData,
   MobileContactsSearchMerchantsErrors,
   MobileContactsSearchMerchantsResponses,
+  MobileEgoDecideActionBatchData,
+  MobileEgoDecideActionBatchErrors,
+  MobileEgoDecideActionBatchResponses,
   MobileEgoGetConversationData,
   MobileEgoGetConversationErrors,
   MobileEgoGetConversationResponses,
@@ -318,6 +321,29 @@ export const mobileContactsCreateMerchantAddress = <ThrowOnError extends boolean
     ThrowOnError
   >({
     url: '/mobile/contacts/merchants/{id}/addresses',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Record a decision for a pending Ego action batch
+ */
+export const mobileEgoDecideActionBatch = <ThrowOnError extends boolean = false>(
+  options: Options<MobileEgoDecideActionBatchData, ThrowOnError>
+): RequestResult<
+  MobileEgoDecideActionBatchResponses,
+  MobileEgoDecideActionBatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    MobileEgoDecideActionBatchResponses,
+    MobileEgoDecideActionBatchErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/ego/action-batches/{batchId}/decide',
     ...options,
     headers: {
       'Content-Type': 'application/json',
