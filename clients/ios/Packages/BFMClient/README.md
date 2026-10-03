@@ -2,7 +2,7 @@
 
 The one way this app reaches the federation. Everything the phone knows about a pillar arrives through here, over HTTP, from the BFM.
 
-Four things live in this package: the Swift client **generated** from the BFM's OpenAPI snapshot, the hand-written façade that wraps it, `BuiltInBaseURL`, which answers where the BFM is for a Debug build, and the repositories that turn a contract response into the vocabulary `AppCore` declares.
+Five things live in this package: the Swift client **generated** from the BFM's OpenAPI snapshot, the hand-written façade that wraps it, `BuiltInBaseURL`, which answers where the BFM is for a Debug build, the repositories that turn a contract response into the vocabulary `AppCore` declares, and the decoder for Ego's streamed wire frames.
 
 Inventory mutation requests carry the catalogue revision stored with the
 queued edit. `BFMInventoryTransport` forwards that pin as its own wire field;
@@ -27,6 +27,10 @@ Drift between the two is caught by [`scripts/ci/check-vendored-contracts.mjs`](.
 Generating at build time was the alternative. Committed output is reviewable, makes the diff check trivial, and keeps `xcodebuild` off a plugin that needs the network.
 
 **The whole document is generated, including the `/operator/*` routes the phone will never call.** The generator's `filter` is include-only, so narrowing it means naming every phone-facing path in `openapi-generator-config.yaml` and keeping that list current — and the moment the list is what decides the client's contents, the diff gate stops proving the client tracks the contract and starts proving it tracks the list. The operator methods are `internal`, unreachable from any other module and unreferenced by the façade, so they are dead-stripped at link. Reconsider this when the operator surface grows enough that its churn is the reason a macOS CI job runs, not before.
+
+## The Ego event stream has a separate wire fixture
+
+Ego's SSE frames are hand-decoded because generated OpenAPI types do not describe the stream. `BFMEgoWire` maps known frames and parts into AppCore events, skips unknown additions, and reports malformed known frames as `contractMismatch`. The canonical fixture is `pillars/bfm/contracts/ego-wire-v1.json`; `clients/ios/Contracts/ego-wire-v1.json` is its byte-for-byte copy. The BFM schema test and this package's Swift test pin the same SHA-256 so changing only one copy fails.
 
 ## Why the generator is not a dependency of this package
 
