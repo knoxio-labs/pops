@@ -102,11 +102,10 @@ describe('resolveServiceAccountKey', () => {
 
 describe('the account grant', () => {
   /**
-   * One scope per outbound leg, and the legs are the four calls in
-   * `finance/client.ts`, `cron/pillar-lookup.ts` and `contacts/merchant.ts`.
-   * Scopes match by dot prefix, so each of these authorises exactly the
-   * operation named and nothing under a sibling domain — `finance.budgets`
-   * stays out of reach even though this account can read finance.
+   * One scope per producer resource this pillar reaches. The inventory scope
+   * covers its read and two writes; the tags scope is only the cache refresh.
+   * Scopes match by dot prefix, so `finance.budgets` stays out of reach even
+   * though this account can read finance.
    */
   it('names exactly the domains the outbound legs call', () => {
     expect([...PURCHASES_SERVICE_ACCOUNT_SCOPES]).toEqual([
@@ -114,6 +113,7 @@ describe('the account grant', () => {
       'documents.paperless',
       'finance.transactions',
       'inventory.items',
+      'tags.tags',
     ]);
   });
 
