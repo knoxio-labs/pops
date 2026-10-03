@@ -1,0 +1,198 @@
+{
+  "components": {
+    "schemas": {
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "details": {},
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "requestId", "retryable"],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "OpenAPI projection of the orchestrator's REST contract, including the cross-pillar tagged query.",
+    "title": "@pops/orchestrator",
+    "version": "0.1.0"
+  },
+  "openapi": "3.0.2",
+  "paths": {
+    "/tagged/query": {
+      "post": {
+        "operationId": "tagged.query",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "limit": {
+                    "default": 200,
+                    "maximum": 500,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "tagIds": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 500,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["tagIds"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "expandedTagIds": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "pillars": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": ["ok", "unavailable", "unauthorized"],
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "status"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "sections": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "items": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "date": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "entityType": {
+                                  "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+                                  "type": "string"
+                                },
+                                "tagIds": {
+                                  "items": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "title": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "uri",
+                                "entityType",
+                                "title",
+                                "tagIds",
+                                "date",
+                                "amountCents"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "nextCursor": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "pillar": {
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": ["pillar", "items", "nextCursor"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["expandedTagIds", "sections", "pillars"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "List all registered carrier items matching shared tag ids",
+        "tags": ["tagged"]
+      }
+    }
+  }
+}

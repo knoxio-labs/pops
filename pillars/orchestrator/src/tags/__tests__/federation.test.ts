@@ -110,6 +110,7 @@ describe('createTagFederation', () => {
       { pillarId: 'finance', status: 'ok' },
       { pillarId: 'purchases', status: 'ok' },
     ]);
+    expect(result.expandedTagIds).toEqual(EXPANDED_TAG_IDS);
     expect(invoke).toHaveBeenCalledTimes(2);
   });
 
@@ -194,7 +195,7 @@ describe('createTagFederation', () => {
     const result = await source({ tagIds: REQUESTED_TAG_IDS });
 
     expect(invoke).not.toHaveBeenCalled();
-    expect(result).toEqual({ sections: [], pillars: [] });
+    expect(result).toEqual({ expandedTagIds: EXPANDED_TAG_IDS, sections: [], pillars: [] });
   });
 
   it('sends the expanded ids rather than the requested ids to each carrier', async () => {
@@ -223,6 +224,7 @@ describe('createTagFederation', () => {
     const result = await source({ tagIds: REQUESTED_TAG_IDS });
 
     expect(result).toEqual({
+      expandedTagIds: [],
       sections: [{ pillarId: 'finance', items: [], nextCursor: null }],
       pillars: [{ pillarId: 'finance', status: 'ok' }],
     });
@@ -245,6 +247,7 @@ describe('createTagFederation', () => {
       limit: 200,
     });
     expect(result).toEqual({
+      expandedTagIds: expandedIds,
       sections: [{ pillarId: 'finance', items: [], nextCursor: null }],
       pillars: [{ pillarId: 'finance', status: 'unavailable' }],
     });

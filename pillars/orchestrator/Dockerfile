@@ -15,6 +15,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc
 # resolution to that subgraph; unrelated pillars never need to exist in
 # this image's build context.
 COPY pillars/orchestrator/package.json ./pillars/orchestrator/
+COPY libs/contract-openapi/package.json ./libs/contract-openapi/
 COPY libs/pillar-express/package.json ./libs/pillar-express/
 COPY libs/sdk/package.json ./libs/sdk/
 COPY libs/types/package.json ./libs/types/
@@ -23,6 +24,10 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     corepack enable && pnpm install --frozen-lockfile --filter "@pops/orchestrator..."
 
 # Phase 2: source for the transitive @pops/* deps + the app itself.
+# @pops/contract-openapi
+COPY libs/contract-openapi/src ./libs/contract-openapi/src
+COPY libs/contract-openapi/tsconfig.json ./libs/contract-openapi/tsconfig.json
+COPY libs/contract-openapi/tsconfig.build.json ./libs/contract-openapi/tsconfig.build.json
 # @pops/pillar-sdk
 COPY libs/sdk/src ./libs/sdk/src
 COPY libs/sdk/tsconfig.json ./libs/sdk/tsconfig.json
@@ -36,6 +41,8 @@ COPY libs/types/tsconfig.json ./libs/types/tsconfig.json
 COPY libs/types/tsconfig.build.json ./libs/types/tsconfig.build.json
 # @pops/orchestrator (the app itself)
 COPY pillars/orchestrator/src ./pillars/orchestrator/src
+COPY pillars/orchestrator/scripts ./pillars/orchestrator/scripts
+COPY pillars/orchestrator/openapi ./pillars/orchestrator/openapi
 COPY pillars/orchestrator/tsconfig.json ./pillars/orchestrator/tsconfig.json
 COPY pillars/orchestrator/tsconfig.build.json ./pillars/orchestrator/tsconfig.build.json
 
@@ -53,6 +60,7 @@ WORKDIR /app
 
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/orchestrator/dist ./dist
+COPY --from=builder --chown=node:node /app/pillars/orchestrator/openapi ./openapi
 
 ARG BUILD_VERSION=dev
 ENV BUILD_VERSION=$BUILD_VERSION
