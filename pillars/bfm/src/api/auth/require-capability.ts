@@ -10,12 +10,11 @@
  *
  * ## Where the answer comes from
  *
- * The route table is derived from `bfmContract`, not written out here. A
- * hand-maintained map of path to capability would be a second place to add a
- * route, and the failure mode of forgetting the second place is a route that
- * runs ungated — which is the whole thing this file exists to prevent. Reading
- * the contract means the declaration sits beside the path in one file and the
- * gate cannot disagree with it.
+ * The route table combines `bfmContract` with
+ * `UNCONTRACTED_MOBILE_ROUTES`, the explicit list for routes ts-rest cannot
+ * model. The Ego event stream is the one such route: declaring its method,
+ * path and capability here makes the exception visible while every other
+ * unmatched mobile path retains its existing fall-through behavior.
  *
  * ## When the grant is resolved
  *
@@ -45,7 +44,8 @@
  *
  * Express has already routed nothing at this point — the middleware is mounted
  * on the `/mobile` prefix, ahead of `createExpressEndpoints` — so the match is
- * made here, against the contract's own path patterns compiled to regexes.
+ * made here, against the route table's contract and explicit Express path
+ * patterns compiled to regexes.
  * Segment counts must agree and `:param` matches exactly one non-empty,
  * non-slash segment, so `/mobile/finance/transactions` and
  * `/mobile/finance/transactions/abc` are two different routes rather than one
@@ -57,7 +57,7 @@ import {
   type MobileCapability,
 } from '../../contract/capabilities.js';
 import { bfmContract } from '../../contract/rest.js';
-import { MOBILE_PATH_PREFIX } from '../paths.js';
+import { MOBILE_EGO_CHAT_STREAM_PATH, MOBILE_PATH_PREFIX } from '../paths.js';
 import { readDevice } from './require-device.js';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
@@ -69,6 +69,20 @@ interface ContractRoute {
   readonly path: string;
   readonly metadata?: unknown;
 }
+
+export interface UncontractedMobileRoute {
+  readonly method: string;
+  readonly path: string;
+  readonly capability: MobileCapability;
+}
+
+export const UNCONTRACTED_MOBILE_ROUTES: readonly UncontractedMobileRoute[] = [
+  {
+    method: 'POST',
+    path: MOBILE_EGO_CHAT_STREAM_PATH,
+    capability: 'ego.chat',
+  },
+];
 
 interface MobileRouteGate {
   readonly method: string;
@@ -154,9 +168,21 @@ function denied(capability: MobileCapability): MobileCapabilityDeniedError {
  *
  * @param contract Injectable so a test can drive the undeclared-route branch
  *   with a doctored contract. Production passes nothing and gets `bfmContract`.
+ * @param uncontracted Extra Express routes whose capability cannot live in the contract.
  */
-export function createRequireCapability(contract: unknown = bfmContract): RequestHandler {
-  const gates = buildMobileRouteGates(contract);
+export function createRequireCapability(
+  contract: unknown = bfmContract,
+  uncontracted: readonly UncontractedMobileRoute[] = UNCONTRACTED_MOBILE_ROUTES
+): RequestHandler {
+  const gates = [
+    ...buildMobileRouteGates(contract),
+    ...uncontracted.map(({ method, path, capability }) => ({
+      method: method.toUpperCase(),
+      path,
+      pattern: compilePath(path),
+      capability,
+    })),
+  ];
 
   return (req: Request, res: Response, next: NextFunction): void => {
     // `baseUrl` is the prefix this middleware is mounted on and `path` is what
