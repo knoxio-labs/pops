@@ -64,7 +64,7 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
 
     if (event.type === 'token') {
       writeSseEvent(res, { type: 'token', text: event.text });
-    } else {
+    } else if (event.type === 'done') {
       const assistantMsg = persistStreamResults({
         persistence,
         conversationId: conversation.id,
