@@ -131,7 +131,15 @@ describe('the granted scopes', () => {
       'inventory.codes',
       'inventory.media',
       'barcode.lookup',
+      'cerebrum.ego',
     ]);
+  });
+
+  it('backs both mobile Ego capabilities with the cerebrum Ego scope', () => {
+    expect(MOBILE_CAPABILITY_SCOPES['ego.chat']).toEqual(['cerebrum.ego']);
+    expect(MOBILE_CAPABILITY_SCOPES['ego.actions']).toEqual(['cerebrum.ego']);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'cerebrum.ego.getConversation')).toBe(true);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'cerebrum.engrams.list')).toBe(false);
   });
 
   it('can read the catalogue without managing drafts', () => {
