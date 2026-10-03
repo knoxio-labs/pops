@@ -56,8 +56,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
@@ -76,13 +76,13 @@ importers:
         version: 24.13.3
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/contract-openapi:
     dependencies:
@@ -101,13 +101,13 @@ importers:
         version: 24.13.3
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/date:
     devDependencies:
@@ -116,13 +116,13 @@ importers:
         version: 24.13.3
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/jobs:
     dependencies:
@@ -144,13 +144,13 @@ importers:
         version: 24.13.3
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/locales: {}
 
@@ -165,7 +165,7 @@ importers:
         version: 24.13.3
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       tsx:
         specifier: ^4.23.13
         version: 4.23.13
@@ -173,8 +173,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/navigation:
     dependencies:
@@ -205,7 +205,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -220,7 +220,7 @@ importers:
         version: 19.3.0(@types/react@19.3.0)
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -228,8 +228,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/overlay-ego:
     dependencies:
@@ -272,7 +272,7 @@ importers:
         version: 0.99.0(magicast@0.5.4)(typescript@6.0.3)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -290,7 +290,7 @@ importers:
         version: 19.3.0(@types/react@19.3.0)
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       i18next:
         specifier: ^26.4.2
         version: 26.4.2(typescript@6.0.3)
@@ -301,8 +301,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/pillar-express:
     dependencies:
@@ -333,7 +333,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -344,8 +344,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/sdk:
     dependencies:
@@ -367,7 +367,7 @@ importers:
         version: 5.102.8(react@19.3.0)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -385,7 +385,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -402,8 +402,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/settings:
     dependencies:
@@ -425,7 +425,7 @@ importers:
         version: 24.13.3
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       better-sqlite3:
         specifier: ^12.10.0
         version: 12.10.0
@@ -433,8 +433,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/types:
     dependencies:
@@ -447,13 +447,13 @@ importers:
         version: 24.13.3
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   libs/ui:
     dependencies:
@@ -604,7 +604,7 @@ importers:
         version: 4.3.3(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -625,7 +625,7 @@ importers:
         version: 19.3.0(@types/react@19.3.0)
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -645,8 +645,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/ai:
     dependencies:
@@ -722,7 +722,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -736,8 +736,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/ai/app:
     dependencies:
@@ -804,7 +804,7 @@ importers:
         version: 0.99.0(magicast@0.5.4)(typescript@6.0.3)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -825,7 +825,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -839,8 +839,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/barcode:
     dependencies:
@@ -962,7 +962,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       supertest:
         specifier: ^7.1.4
         version: 7.2.2(supports-color@10.2.2)
@@ -973,8 +973,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/bfm/app:
     dependencies:
@@ -1023,7 +1023,7 @@ importers:
         version: 0.99.0(magicast@0.5.4)(typescript@6.0.3)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1044,7 +1044,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -1058,8 +1058,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/cerebrum:
     dependencies:
@@ -1153,7 +1153,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -1167,8 +1167,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/cerebrum/app:
     dependencies:
@@ -1226,7 +1226,7 @@ importers:
         version: 0.99.0(magicast@0.5.4)(typescript@6.0.3)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1247,7 +1247,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       i18next:
         specifier: ^26.4.2
         version: 26.4.2(typescript@6.0.3)
@@ -1264,8 +1264,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/design:
     dependencies:
@@ -1383,7 +1383,7 @@ importers:
         version: link:../purchases
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1430,8 +1430,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/docs:
     devDependencies:
@@ -1445,8 +1445,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/documents:
     dependencies:
@@ -1489,7 +1489,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       supertest:
         specifier: ^7.1.4
         version: 7.2.2(supports-color@10.2.2)
@@ -1500,8 +1500,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/finance:
     dependencies:
@@ -1565,7 +1565,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -1579,8 +1579,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/finance/app:
     dependencies:
@@ -1680,7 +1680,7 @@ importers:
         version: 4.3.3(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1707,7 +1707,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       fake-indexeddb:
         specifier: ^6.2.5
         version: 6.2.5
@@ -1724,8 +1724,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/food:
     dependencies:
@@ -1807,7 +1807,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -1821,8 +1821,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/food/app:
     dependencies:
@@ -1934,7 +1934,7 @@ importers:
         version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.8.1)(react@19.3.0))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1958,7 +1958,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       axe-core:
         specifier: ^4.13.0
         version: 4.13.0
@@ -1978,8 +1978,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/inventory:
     dependencies:
@@ -2040,7 +2040,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -2054,8 +2054,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/inventory/app:
     dependencies:
@@ -2146,7 +2146,7 @@ importers:
         version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.8.1)(react@19.3.0))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2170,7 +2170,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       i18next:
         specifier: ^26.4.2
         version: 26.4.2(typescript@6.0.3)
@@ -2187,8 +2187,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/lists:
     dependencies:
@@ -2243,7 +2243,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -2257,8 +2257,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/lists/app:
     dependencies:
@@ -2319,7 +2319,7 @@ importers:
         version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.8.1)(react@19.3.0))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2340,7 +2340,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -2354,8 +2354,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/mcp:
     dependencies:
@@ -2391,8 +2391,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       zod:
         specifier: ^4.6.2
         version: 4.6.5
@@ -2456,7 +2456,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -2470,8 +2470,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/media/app:
     dependencies:
@@ -2538,7 +2538,7 @@ importers:
         version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.8.1)(react@19.3.0))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2559,7 +2559,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -2573,8 +2573,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/orchestrator:
     dependencies:
@@ -2605,7 +2605,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       supertest:
         specifier: ^7.1.4
         version: 7.2.2(supports-color@10.2.2)
@@ -2616,8 +2616,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/purchases:
     dependencies:
@@ -2687,7 +2687,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -2701,8 +2701,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/purchases/app:
     dependencies:
@@ -2751,7 +2751,7 @@ importers:
         version: 4.3.3(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2772,7 +2772,7 @@ importers:
         version: 6.1.1(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -2786,8 +2786,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/registry:
     dependencies:
@@ -2851,7 +2851,7 @@ importers:
         version: 7.2.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
-        version: 4.1.10(vitest@4.1.11)
+        version: 4.1.10(vitest@5.0.1)
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -2865,8 +2865,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   pillars/shell:
     dependencies:
@@ -2945,7 +2945,7 @@ importers:
         version: 5.102.8(@tanstack/react-query@5.102.8(react@19.3.0))(react@19.3.0)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2977,8 +2977,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       zod:
         specifier: ^4.6.2
         version: 4.6.5
@@ -5769,11 +5769,8 @@ packages:
   '@vitest/expect@3.2.4':
     resolution: {integrity: sha512-Io0yyORnB6sikFlt8QW5K7slY4OjqNX9jmJQ02QDda8lyM6B5oNgVWoSoKPac8/kgnCUzuHQKrSLtu/uOqqrig==}
 
-  '@vitest/expect@4.1.11':
-    resolution: {integrity: sha512-VX2x5vNJXET47KAFzwERI+KRMtTTCSWTfSMKsW7JsUsXV4psq++e3DvZpuTDOpHcxytiDs6p2nhVb2tVDiiUYw==}
-
-  '@vitest/mocker@4.1.11':
-    resolution: {integrity: sha512-2XJVD55d1o5AZous5CCGKS74g/riOj9odEt2bQpCVZeblHyHdnMeFl4jl0XjU21stf4mbjUkew2eXQZt65g5CQ==}
+  '@vitest/mocker@5.0.1':
+    resolution: {integrity: sha512-6K1DoBNAPGvuOcSsGA4D6x+5zEEff/KmOOP3uetT2TrGpVfI+HRHRnJJfKi5ib/g1vx8IYHQD8s0pbJz8WQI7Q==}
     peerDependencies:
       msw: ^2.4.9
       vite: ^6.0.0 || ^7.0.0 || ^8.0.0
@@ -5789,29 +5786,17 @@ packages:
   '@vitest/pretty-format@4.1.10':
     resolution: {integrity: sha512-W1HsjSH4MXQ9YfmmhLAoIYf1HRfekQCGngeIgcei6MP5QQGWUe0gkopdZQaVCFO+JDJMrAJGwa5pRpNpvy4P8Q==}
 
-  '@vitest/pretty-format@4.1.11':
-    resolution: {integrity: sha512-yiZzPbGTS9Sr/JpFl8zHrcIkAofNbFV6k21vIgQN/cY/oxZeXhJv5sc/MBJ5jFKWmWs+oJHw0UXLZjmf931+Vw==}
-
-  '@vitest/runner@4.1.11':
-    resolution: {integrity: sha512-LztvUgdwMNJMIkj3hQnnxiC2Xy1zNxq928W/xhjCLaNCzqTZOudjwbQf6v9IntZGPw132i2Lq2rgTRZHD3JHNw==}
-
-  '@vitest/snapshot@4.1.11':
-    resolution: {integrity: sha512-pN7ikn1ON7h8ee4gIAp4AzyK+zBtJPzVbqOgu5LCEh4VaJVbPQcgYQYJIMGQPXVeJJq1fnfazis7a5pFNPahog==}
-
   '@vitest/spy@3.2.4':
     resolution: {integrity: sha512-vAfasCOe6AIK70iP5UD11Ac4siNUNJ9i/9PZ3NKx07sG6sUxeag1LWdNrMWeKKYBLlzuK+Gn65Yd5nyL6ds+nw==}
 
-  '@vitest/spy@4.1.11':
-    resolution: {integrity: sha512-apNa/prQy2qCeywhnixOHPRCgGNhvg7T4Dapfl1GahLp/R+uhBm5cPyFoNVyqsNd2h1nJxL6BqqdIjiABL60YA==}
+  '@vitest/spy@5.0.1':
+    resolution: {integrity: sha512-rbto/mF/SGERxEgYOek7Xm6B9b+y+mVoo+f4b2LymYO8zM1b7uB5nHuhVMTP2hxdzgxvGiZYGxGIaMvL5y180Q==}
 
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
 
   '@vitest/utils@4.1.10':
     resolution: {integrity: sha512-fy9am/HWxbaGt/Sawrp90vt6Y6jQwf1RX77cz3uwoJwJVMli/e1IEwRPnMNJ7vKfPTwo0diXifkpPvwH9v7nGA==}
-
-  '@vitest/utils@4.1.11':
-    resolution: {integrity: sha512-zTCVGpyFsGWBhllOyKlTw/vnr6D9qxsfSDyfbyZmTyjHw5N/VuvzHpHoQjm2ZJzn4RJgx5w4r7V0er69CmLgPQ==}
 
   '@webcontainer/env@1.1.1':
     resolution: {integrity: sha512-6aN99yL695Hi9SuIk1oC88l9o0gmxL1nGWWQ/kNy81HigJ0FoaoTXpytCj6ItzgyCEwA9kF1wixsTuv5cjsgng==}
@@ -7608,6 +7593,9 @@ packages:
   magic-string@1.2.3:
     resolution: {integrity: sha512-Bpb0W2TbLKOZ7vJnOUnVRGq3WL2p+ISV29M6hYPL1AFCpyKZpdr5ytiXoTSSxRVhg8YW7f65+6gbG8WG6PCa/g==}
 
+  magic-string@1.4.1:
+    resolution: {integrity: sha512-8lyCu36ErXR0J9uaGKlKQoiLZKmtI63YGLE8G2o9jyRPdr4X47LusSOwgOJOzcVtp81fTAAjxR7BwKz682Jhow==}
+
   magicast@0.5.4:
     resolution: {integrity: sha512-llBEhWm1SacoRwgHUoQJYtwp4PBLF4faQi5TCpIGyGs9n4y5+juI0tDgyKIfpqxckRHaHzouUEph3THklWh03w==}
 
@@ -8806,11 +8794,16 @@ packages:
   tiny-invariant@1.3.3:
     resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
 
-  tinybench@2.9.0:
-    resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
+  tinybench@6.1.4:
+    resolution: {integrity: sha512-9APumHG7r4yOk4X4WlkmE71aZcv1gvin1czO3OQ1U9iJcFA5Ja/ygyb0vPOVHTthFozUYs8CLoLUlM8grb2lTQ==}
+    engines: {node: '>=20.0.0'}
 
   tinycolor2@1.6.0:
     resolution: {integrity: sha512-XPaBkWQJdsf3pLKJV9p4qN/S+fm2Oj8AIPo1BTUhg5oxkvm9+SVEGFdhyOz7tTdUTfvxMiAs4sp6/eZO2Ew+pw==}
+
+  tinyexec@1.3.0:
+    resolution: {integrity: sha512-QKAl9m8gWWGHV8jZcPeym6j+XULi6tOf1mT83WYJ4Lk2ytW/uwAWkrP0uFsdoYMdueVJ0qs26wZ+23xeB4ibNQ==}
+    engines: {node: '>=18'}
 
   tinyexec@1.3.1:
     resolution: {integrity: sha512-GCvB3aoys96IuDFBMcTB46JOR6mdMtAToqwiW8JlWhsoh1mhHi/xn9ss/Dg7N555GiJyEt2qzoG/NHCwM6h1EA==}
@@ -9075,23 +9068,23 @@ packages:
       yaml:
         optional: true
 
-  vitest@4.1.11:
-    resolution: {integrity: sha512-fhACrNXUidIbGSBr5FlbuBkO7VWC1ZyLl0DO4CU2DrQoAPxX84Ysxs+HeGQpii5lZWV1Q4gBZTTu49mF+A6Edw==}
-    engines: {node: ^20.0.0 || ^22.0.0 || >=24.0.0}
+  vitest@5.0.1:
+    resolution: {integrity: sha512-iA95lQbKEkvrtTkdAgnWbXfbipWiiWe/hDl2P5tMi6WFwD76G0NxXAGp/M9EOcYupeGJRr6wppMc7CoA41TQjg==}
+    engines: {node: ^22.12.0 || ^24.0.0 || >=26.0.0}
     hasBin: true
     peerDependencies:
       '@edge-runtime/vm': '*'
       '@opentelemetry/api': ^1.9.0
       '@types/node': ^24.13.3
-      '@vitest/browser-playwright': 4.1.11
-      '@vitest/browser-preview': 4.1.11
-      '@vitest/browser-webdriverio': 4.1.11
-      '@vitest/coverage-istanbul': 4.1.11
-      '@vitest/coverage-v8': 4.1.11
-      '@vitest/ui': 4.1.11
+      '@vitest/browser-playwright': 5.0.1
+      '@vitest/browser-preview': 5.0.1
+      '@vitest/browser-webdriverio': ^5.0.0-beta.5 || >=5.0.0
+      '@vitest/coverage-istanbul': 5.0.1
+      '@vitest/coverage-v8': 5.0.1
+      '@vitest/ui': 5.0.1
       happy-dom: '*'
       jsdom: '*'
-      vite: ^6.0.0 || ^7.0.0 || ^8.0.0
+      vite: ^6.4.0 || ^7.0.0 || ^8.0.0
     peerDependenciesMeta:
       '@edge-runtime/vm':
         optional: true
@@ -11419,7 +11412,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
 
-  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)':
+  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.1)':
     dependencies:
       '@adobe/css-tools': 4.5.0
       '@testing-library/dom': 10.4.1
@@ -11429,7 +11422,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+      vitest: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   '@testing-library/react@16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
@@ -11681,7 +11674,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
 
-  '@vitest/coverage-v8@4.1.10(vitest@4.1.11)':
+  '@vitest/coverage-v8@4.1.10(vitest@5.0.1)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.1.10
@@ -11693,7 +11686,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+      vitest: 5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
 
   '@vitest/expect@3.2.4':
     dependencies:
@@ -11703,20 +11696,12 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 2.0.0
 
-  '@vitest/expect@4.1.11':
+  '@vitest/mocker@5.0.1(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))':
     dependencies:
-      '@standard-schema/spec': 1.1.0
-      '@types/chai': 5.2.3
-      '@vitest/spy': 4.1.11
-      '@vitest/utils': 4.1.11
-      chai: 6.2.2
-      tinyrainbow: 3.1.1
-
-  '@vitest/mocker@4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))':
-    dependencies:
-      '@vitest/spy': 4.1.11
+      '@jridgewell/trace-mapping': 0.3.31
+      '@vitest/spy': 5.0.1
       estree-walker: 3.0.3
-      magic-string: 0.30.21
+      magic-string: 1.4.1
     optionalDependencies:
       msw: 2.14.6(@types/node@24.13.3)(typescript@6.0.3)
       vite: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
@@ -11729,27 +11714,11 @@ snapshots:
     dependencies:
       tinyrainbow: 3.1.1
 
-  '@vitest/pretty-format@4.1.11':
-    dependencies:
-      tinyrainbow: 3.1.1
-
-  '@vitest/runner@4.1.11':
-    dependencies:
-      '@vitest/utils': 4.1.11
-      pathe: 2.0.3
-
-  '@vitest/snapshot@4.1.11':
-    dependencies:
-      '@vitest/pretty-format': 4.1.11
-      '@vitest/utils': 4.1.11
-      magic-string: 0.30.21
-      pathe: 2.0.3
-
   '@vitest/spy@3.2.4':
     dependencies:
       tinyspy: 4.0.6
 
-  '@vitest/spy@4.1.11': {}
+  '@vitest/spy@5.0.1': {}
 
   '@vitest/utils@3.2.4':
     dependencies:
@@ -11760,12 +11729,6 @@ snapshots:
   '@vitest/utils@4.1.10':
     dependencies:
       '@vitest/pretty-format': 4.1.10
-      convert-source-map: 2.0.0
-      tinyrainbow: 3.1.1
-
-  '@vitest/utils@4.1.11':
-    dependencies:
-      '@vitest/pretty-format': 4.1.11
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.1
 
@@ -13351,6 +13314,10 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
 
+  magic-string@1.4.1:
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.6.0
+
   magicast@0.5.4:
     dependencies:
       '@babel/parser': 7.29.8
@@ -14894,9 +14861,11 @@ snapshots:
 
   tiny-invariant@1.3.3: {}
 
-  tinybench@2.9.0: {}
+  tinybench@6.1.4: {}
 
   tinycolor2@1.6.0: {}
+
+  tinyexec@1.3.0: {}
 
   tinyexec@1.3.1: {}
 
@@ -15126,31 +15095,25 @@ snapshots:
       tsx: 4.23.13
       yaml: 2.9.1
 
-  vitest@4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)):
+  vitest@5.0.1(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)):
     dependencies:
-      '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
-      '@vitest/pretty-format': 4.1.11
-      '@vitest/runner': 4.1.11
-      '@vitest/snapshot': 4.1.11
-      '@vitest/spy': 4.1.11
-      '@vitest/utils': 4.1.11
+      '@types/chai': 5.2.3
+      '@vitest/mocker': 5.0.1(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+      chai: 6.2.2
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
-      magic-string: 0.30.21
+      magic-string: 1.4.1
       obug: 2.2.1
-      pathe: 2.0.3
       picomatch: 4.0.7
       std-env: 4.2.0
-      tinybench: 2.9.0
-      tinyexec: 1.3.1
+      tinybench: 6.1.4
+      tinyexec: 1.3.0
       tinyglobby: 0.2.17
-      tinyrainbow: 3.1.1
       vite: 8.3.0(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.13.3
-      '@vitest/coverage-v8': 4.1.10(vitest@4.1.11)
+      '@vitest/coverage-v8': 4.1.10(vitest@5.0.1)
       jsdom: 30.0.1(@noble/hashes@1.8.0)
     transitivePeerDependencies:
       - msw
