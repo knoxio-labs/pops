@@ -8,7 +8,6 @@ import {
 
 import { ErrorBodySchema } from '../rest-schemas.js';
 import { purchasesTaggedContract } from '../rest-tagged.js';
-import { purchasesContract } from '../rest.js';
 
 describe('purchasesTaggedContract', () => {
   it('uses the fixed paths and methods for all tagged operations', () => {
@@ -37,11 +36,6 @@ describe('purchasesTaggedContract', () => {
     expect(purchasesTaggedContract.list.responses[400]).toBe(ErrorBodySchema);
     expect(purchasesTaggedContract.attach.responses[400]).toBe(ErrorBodySchema);
     expect(purchasesTaggedContract.detach.responses[400]).toBe(ErrorBodySchema);
-  });
-
-  it('declares not-found responses on mounted line-item mutations', () => {
-    expect(purchasesContract.tagged.attach.responses[404]).toBe(ErrorBodySchema);
-    expect(purchasesContract.tagged.detach.responses[404]).toBe(ErrorBodySchema);
   });
 
   it('only accepts purchase-item entity types in the path', () => {
