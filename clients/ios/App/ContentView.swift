@@ -66,14 +66,15 @@ internal struct ContentView: View {
     }
 
     internal var body: some View {
-        @Bindable var presentation = composition.entityPresentation
         features
             .safeAreaInset(edge: .top) { degradedBanner }
-            .sheet(item: $presentation.inventory) { entity in
-                InventoryEntityView(
-                    entity: entity, dependencies: dependencies,
-                    entityRouter: composition.entityRouter)
-            }
+            .modifier(
+                EntitySheets(
+                    presentation: composition.entityPresentation,
+                    dependencies: dependencies,
+                    entityRouter: composition.entityRouter
+                )
+            )
             .environment(
                 \.startRePairing,
                 RePairingAction { composition.session.send(.revoked(.credentialsRejected)) }

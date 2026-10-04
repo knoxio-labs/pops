@@ -1,8 +1,10 @@
 import AppCore
 import Auth
 import BFMClient
+import FeatureAccounts
 import FeatureInventory
 import FeaturePurchases
+import FeatureTransactions
 import InventoryReplica
 
 /// The composition root: the one place a protocol is bound to a concrete type,
@@ -43,10 +45,10 @@ internal final class AppComposition {
     /// One instance for the life of the process, held here rather than built
     /// where it is used, for the same reason ``router(for:)`` is: a fresh
     /// registry on every body evaluation would forget every feature's
-    /// registration between renders. Inventory's items and places are
-    /// registered in `init`; every other reference is the approved hand-off,
-    /// which is correct: a code this build cannot show should say so, not
-    /// silently do nothing.
+    /// registration between renders. Inventory items and locations,
+    /// transactions, accounts, and purchases are registered in `init`; every
+    /// other reference is the approved hand-off, which is correct: a code
+    /// this build cannot show should say so, not silently do nothing.
     internal let entityRouter: EntityRouter = EntityRouterRegistry()
 
     /// What a routed reference asked to open, for `ContentView` to present.
@@ -170,6 +172,21 @@ internal final class AppComposition {
         for type in InventoryEntity.types {
             entityRouter.register(pillar: InventoryEntity.pillar, type: type) { uri in
                 presentation.inventory = InventoryEntity(uri)
+            }
+        }
+        for type in TransactionEntity.types {
+            entityRouter.register(pillar: TransactionEntity.pillar, type: type) { uri in
+                presentation.transaction = TransactionEntity(uri)
+            }
+        }
+        for type in AccountEntity.types {
+            entityRouter.register(pillar: AccountEntity.pillar, type: type) { uri in
+                presentation.account = AccountEntity(uri)
+            }
+        }
+        for type in PurchaseEntity.types {
+            entityRouter.register(pillar: PurchaseEntity.pillar, type: type) { uri in
+                presentation.purchase = PurchaseEntity(uri)
             }
         }
     }
