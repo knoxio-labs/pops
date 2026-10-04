@@ -14,6 +14,8 @@ internal enum EgoThreadModelFailurePresentation {
             return ("Ego is unavailable. Try again.", true)
         case .unauthorized:
             return ("Your session needs attention before Ego can continue.", false)
+        case .rateLimited:
+            return (EgoConversationListPresentation.failureMessage(for: error), true)
         case .contractMismatch:
             return ("Ego returned a response this app can't read.", false)
         case .conflict:
