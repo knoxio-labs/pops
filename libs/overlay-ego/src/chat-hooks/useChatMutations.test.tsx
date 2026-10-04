@@ -1,5 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
+import { useEffect } from 'react';
+import { MemoryRouter, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createTestQueryClient } from '../test-utils';
@@ -21,9 +23,23 @@ vi.mock('./useStreamingChat', () => ({
 }));
 
 let queryClient: ReturnType<typeof createTestQueryClient>;
+let currentPath = '';
+
+function LocationProbe() {
+  const pathname = useLocation().pathname;
+  useEffect(() => {
+    currentPath = pathname;
+  }, [pathname]);
+  return null;
+}
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <MemoryRouter initialEntries={['/']}>
+      <LocationProbe />
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </MemoryRouter>
+  );
 }
 
 function deferred() {
@@ -50,6 +66,7 @@ function renderMutations() {
 beforeEach(() => {
   vi.clearAllMocks();
   queryClient = createTestQueryClient();
+  currentPath = '';
 });
 
 describe('useChatMutations streamed view-model data', () => {
@@ -58,6 +75,36 @@ describe('useChatMutations streamed view-model data', () => {
 
     expect(result.current.toolActivity).toEqual(streaming.toolActivity);
     expect(result.current.streamParts).toEqual(streaming.streamParts);
+  });
+
+  it('navigates resolved stream frames through the shared URI resolver', () => {
+    const { result } = renderMutations();
+
+    act(() => result.current.sendMessage());
+    const callbacks = streaming.stream.mock.calls[0]?.[1] as
+      | { onNavigate?: (uri: string) => void }
+      | undefined;
+    expect(callbacks?.onNavigate).toBeTypeOf('function');
+    if (!callbacks?.onNavigate) throw new Error('Stream navigation callback was not captured');
+
+    act(() => callbacks.onNavigate?.('pops:media/movie/42'));
+
+    expect(currentPath).toBe('/media/movies/42');
+  });
+
+  it('silently ignores an unresolvable stream navigation URI', () => {
+    const { result } = renderMutations();
+
+    act(() => result.current.sendMessage());
+    const callbacks = streaming.stream.mock.calls[0]?.[1] as
+      | { onNavigate?: (uri: string) => void }
+      | undefined;
+    expect(callbacks?.onNavigate).toBeTypeOf('function');
+    if (!callbacks?.onNavigate) throw new Error('Stream navigation callback was not captured');
+
+    act(() => callbacks.onNavigate?.('pops:nope/x/1'));
+
+    expect(currentPath).toBe('/');
   });
 
   it('awaits both conversation invalidations after sending a message', async () => {

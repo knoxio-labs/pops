@@ -44,6 +44,10 @@ vi.mock('react-router', async () => {
   };
 });
 
+vi.mock('@pops/navigation', () => ({
+  useSearchResultNavigation: () => ({ navigateTo: vi.fn() }),
+}));
+
 // ── UI mock ──────────────────────────────────────────────────────────
 
 vi.mock('@pops/ui', async () => {
