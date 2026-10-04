@@ -265,6 +265,56 @@ describe('inventory item MCP tools — real HTTP boundary', () => {
     expect(computedFor(afterClear, doubledFieldId)).toMatchObject({ state: 'ok', values: [30] });
   });
 
+  it('writes, patches and clears provenance so items.get reads it back', async () => {
+    const itemId = randomUUID();
+    const created = ok(
+      await itemsCreate.handler({
+        itemName: 'Seam gadget bought',
+        entityId: itemId,
+        catalogueRevision,
+        typeId,
+        fieldValues: [{ fieldId: priceFieldId, values: [10] }],
+        provenance: {
+          merchant: 'Seam Merchant',
+          price: 39.95,
+          purchasedOn: '2026-09-20',
+          transactionUri: 'pops://finance/transaction/txn-seam-1',
+        },
+      })
+    );
+    let revision = (created['outcome'] as { revision: number }).revision;
+
+    expect(itemOf(ok(await itemsGet.handler({ id: itemId })))['provenance']).toEqual({
+      merchant: 'Seam Merchant',
+      price: 39.95,
+      purchasedOn: '2026-09-20',
+      warrantyExpires: null,
+      transactionUri: 'pops://finance/transaction/txn-seam-1',
+    });
+
+    const patched = ok(
+      await itemsUpdate.handler({
+        id: itemId,
+        revision,
+        catalogueRevision,
+        provenance: { transactionUri: 'pops://finance/transaction/txn-seam-2', price: null },
+      })
+    );
+    revision = (patched['outcome'] as { revision: number }).revision;
+
+    expect(itemOf(ok(await itemsGet.handler({ id: itemId })))['provenance']).toEqual({
+      merchant: 'Seam Merchant',
+      price: null,
+      purchasedOn: '2026-09-20',
+      warrantyExpires: null,
+      transactionUri: 'pops://finance/transaction/txn-seam-2',
+    });
+
+    ok(await itemsUpdate.handler({ id: itemId, revision, catalogueRevision, provenance: null }));
+
+    expect(itemOf(ok(await itemsGet.handler({ id: itemId })))['provenance']).toBeNull();
+  });
+
   it('validates a value set without mutating the item it was checked against', async () => {
     const itemId = randomUUID();
     const created = ok(
