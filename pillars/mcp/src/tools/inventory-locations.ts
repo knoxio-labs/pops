@@ -1,4 +1,5 @@
 import { getPillar } from '../pillar-client.js';
+import { mapRows, withUri } from './uri.js';
 import { copyOptStr, mapCallResult, nullStr, optBool, optNum, reqStr, toolError } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
@@ -36,6 +37,7 @@ type InventoryShape = {
   locations: {
     tree: () => { data: LocationTreeNode[] };
     list: () => { data: Location[]; total: number };
+    get: (input: { id: string }) => { data: Location };
     create: (input: { name: string; parentId?: string | null; sortOrder?: number }) => {
       data: Location;
       message: string;
@@ -72,12 +74,31 @@ const locationTree: ToolDef = {
   handler: async () => mapCallResult(await locations().tree()),
 };
 
+const locationsGet: ToolDef = {
+  name: 'inventory.locations.get',
+  readOnly: true,
+  description: 'Get one location by ID.',
+  inputSchema: {
+    type: 'object',
+    properties: { id: { type: 'string', description: 'Location ID' } },
+    required: ['id'],
+  },
+  handler: async (args) => {
+    const id = reqStr(args, 'id');
+    if (!id) return toolError('Missing required field: id');
+    return mapCallResult(
+      mapRows(await locations().get({ id }), 'data', withUri('inventory/location'))
+    );
+  },
+};
+
 const locationsList: ToolDef = {
   name: 'inventory.locations.list',
   readOnly: true,
   description: 'List all locations as a flat array.',
   inputSchema: { type: 'object', properties: {} },
-  handler: async () => mapCallResult(await locations().list()),
+  handler: async () =>
+    mapCallResult(mapRows(await locations().list(), 'data', withUri('inventory/location'))),
 };
 
 const locationsCreate: ToolDef = {
@@ -160,6 +181,7 @@ const locationsDelete: ToolDef = {
 
 export const locationTools: readonly ToolDef[] = [
   locationTree,
+  locationsGet,
   locationsList,
   locationsCreate,
   locationsUpdate,

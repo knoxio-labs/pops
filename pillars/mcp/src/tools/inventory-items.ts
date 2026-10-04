@@ -2,6 +2,7 @@ import { getPillar } from '../pillar-client.js';
 import { itemDeleteTool } from './inventory-item-delete.js';
 import { itemOverrideTools } from './inventory-item-overrides.js';
 import { itemWriteTools } from './inventory-items-write.js';
+import { mapRows, withUri } from './uri.js';
 import { mapCallResult, optBool, optNum, optStr, reqStr, toolError } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
@@ -51,15 +52,19 @@ const itemsList: ToolDef = {
   },
   handler: async (args) =>
     mapCallResult(
-      await items().list({
-        cursor: optStr(args, 'cursor'),
-        limit: optNum(args, 'limit'),
-        typeKey: optStr(args, 'typeKey'),
-        placementKind: placementKind(args['placementKind']),
-        locationId: optStr(args, 'locationId'),
-        containingItemId: optStr(args, 'containingItemId'),
-        includeInactive: optBool(args, 'includeInactive'),
-      })
+      mapRows(
+        await items().list({
+          cursor: optStr(args, 'cursor'),
+          limit: optNum(args, 'limit'),
+          typeKey: optStr(args, 'typeKey'),
+          placementKind: placementKind(args['placementKind']),
+          locationId: optStr(args, 'locationId'),
+          containingItemId: optStr(args, 'containingItemId'),
+          includeInactive: optBool(args, 'includeInactive'),
+        }),
+        'items',
+        withUri('inventory/item')
+      )
     ),
 };
 
@@ -82,11 +87,15 @@ const itemGet: ToolDef = {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
     return mapCallResult(
-      await items().get({
-        id,
-        historyCursor: optStr(args, 'historyCursor'),
-        historyLimit: optNum(args, 'historyLimit'),
-      })
+      mapRows(
+        await items().get({
+          id,
+          historyCursor: optStr(args, 'historyCursor'),
+          historyLimit: optNum(args, 'historyLimit'),
+        }),
+        'item',
+        withUri('inventory/item')
+      )
     );
   },
 };
