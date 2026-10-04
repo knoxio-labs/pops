@@ -31,7 +31,11 @@ export interface EgoToolbox {
 }
 
 /** Expose only read tools and reject dispatches for tools outside that list. */
-export function readOnlyToolbox(box: EgoToolbox): EgoToolbox {
+export function readOnlyToolbox(box: EgoToolbox): EgoToolbox;
+export function readOnlyToolbox(box: undefined): undefined;
+export function readOnlyToolbox(box: EgoToolbox | undefined): EgoToolbox | undefined;
+export function readOnlyToolbox(box: EgoToolbox | undefined): EgoToolbox | undefined {
+  if (box === undefined) return undefined;
   const readOnly: EgoToolbox = {
     async definitions() {
       return (await box.definitions()).filter((definition) => definition.write !== true);

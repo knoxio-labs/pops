@@ -77,19 +77,11 @@ export class ConversationEngine {
 
   /** Process a user message and generate a response. */
   async chat(params: ChatParams): Promise<ChatResult> {
-    const toolbox = this.toolbox === undefined ? undefined : readOnlyToolbox(this.toolbox);
-    return chatResultFromStream(await this.prepareStreamWithToolbox(params, toolbox));
+    return chatResultFromStream(await this.prepareStream(params, readOnlyToolbox(this.toolbox)));
   }
 
   /** Prepare a streaming chat response. Returns metadata + an async event generator. */
-  async prepareStream(params: ChatParams): Promise<ChatStreamPreparation> {
-    return this.prepareStreamWithToolbox(params, this.toolbox);
-  }
-
-  private async prepareStreamWithToolbox(
-    params: ChatParams,
-    toolbox?: EgoToolbox
-  ): Promise<ChatStreamPreparation> {
+  async prepareStream(params: ChatParams, toolbox = this.toolbox): Promise<ChatStreamPreparation> {
     const ctx = await this.assembleContext(params);
     return {
       stream: generateStreamEvents({
