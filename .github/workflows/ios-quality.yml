@@ -279,7 +279,7 @@ jobs:
     # 66m47s for 1,584 in the current promotion run.
     # The full job limit also covers host/simulator tests and Release/UI validation;
     # these measurements are not a duration guarantee.
-    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 150 || 100 }}
+    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 165 || 100 }}
     defaults:
       run:
         working-directory: clients/ios

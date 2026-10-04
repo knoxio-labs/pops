@@ -67,11 +67,13 @@ public struct ScriptedEgoResumeChatCall: Hashable, Sendable {
     }
 }
 
-/// A deterministic Ego repository with scripted streams and observable calls.
+/// A deterministic Ego repository with scripted reads, streams, and observable calls.
 public actor ScriptedEgoRepository: EgoRepository {
     private var chatScripts: [ScriptedEgoChatScript]
     private let threadRows: [String: EgoThread]
     private let conversationRows: [EgoConversation]
+    private var conversationResults: [Result<[EgoConversation], RepositoryError>]
+    private let conversationGate: (@Sendable () async -> Void)?
     private let configuredDecisionError: (any Error)?
     private let decideGate: (@Sendable () async -> Void)?
 
@@ -88,20 +90,26 @@ public actor ScriptedEgoRepository: EgoRepository {
     /// Method names in the order the fake received them.
     public private(set) var callLog: [String] = []
 
-    /// Creates a fake from scripted streams and conversation fixtures.
+    /// Creates a fake from scripted streams, conversation results, and fixtures.
     ///
-    /// `resumeChat` and `streamChat` consume the same script queue. The optional
-    /// gate is awaited inside `decideBatch` before it returns.
+    /// `resumeChat` and `streamChat` consume the same script queue. Conversation
+    /// results are consumed in order before falling back to `conversations`;
+    /// their optional gate is awaited after the query has been recorded.
+    /// The decision gate is awaited inside `decideBatch` before it returns.
     public init(
         chatScripts: [ScriptedEgoChatScript] = [],
         threads: [String: EgoThread] = [:],
         conversations: [EgoConversation] = [],
+        conversationResults: [Result<[EgoConversation], RepositoryError>] = [],
+        conversationGate: (@Sendable () async -> Void)? = nil,
         decideBatchError: (any Error)? = nil,
         decideGate: (@Sendable () async -> Void)? = nil
     ) {
         self.chatScripts = chatScripts
         self.threadRows = threads
         self.conversationRows = conversations
+        self.conversationResults = conversationResults
+        self.conversationGate = conversationGate
         self.configuredDecisionError = decideBatchError
         self.decideGate = decideGate
     }
@@ -126,6 +134,11 @@ public actor ScriptedEgoRepository: EgoRepository {
         conversationQueries.append(
             ScriptedEgoConversationQuery(limit: limit, offset: offset, query: query))
         callLog.append("conversations")
+        let result = conversationResults.isEmpty ? nil : conversationResults.removeFirst()
+        await conversationGate?()
+        if let result {
+            return try result.get()
+        }
         return conversationRows
     }
 

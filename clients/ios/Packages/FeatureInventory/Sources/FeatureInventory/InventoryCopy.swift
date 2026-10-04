@@ -15,6 +15,8 @@ internal enum InventoryCopy {
         switch failure {
         case .unavailable, .transport:
             "Inventory could not be reached. Nothing changed; try again when you are online."
+        case .rateLimited:
+            "Too many requests. Wait before trying again. Nothing changed."
         case .unauthorized:
             "This phone is no longer signed in, so nothing changed."
         case .contractMismatch:
@@ -57,6 +59,29 @@ internal enum InventoryCopy {
     }
 
     internal static let cameraAccessOff = "Camera access is off"
+
+    /// Store here's scanner, waiting for a code.
+    internal static func scanToStore(in target: String) -> String {
+        "Scan to store in \(target)"
+    }
+
+    internal static func stored(in target: String) -> String {
+        "Stored in \(target)"
+    }
+
+    internal static func alreadyStored(in target: String) -> String {
+        "Already in \(target)"
+    }
+
+    /// A scanned item Store here refuses: the target itself, a container the
+    /// target sits inside, or an item that is no longer active.
+    internal static func cannotStore(in target: String) -> String {
+        "Can't be stored in \(target)"
+    }
+
+    /// A scanned `pops://` reference to a place, or to another pillar's
+    /// record, where only an item can be stored.
+    internal static let notAnItem = "Not an item"
 
     internal static let photoStorageFull =
         "This phone is nearly out of storage, so the photo was not kept."

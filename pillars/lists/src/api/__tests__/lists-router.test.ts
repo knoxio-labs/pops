@@ -152,9 +152,11 @@ function makeClient(app: Express): {
       unit?: string | null;
       notes?: string | null;
       onConflict?: 'merge-additive' | 'replace' | 'skip';
+      labelFromQty?: { prefix: string; suffix: string; maxFractionDigits: number };
+      notesMerge?: { separator: string; maxLength: number };
     }) => Promise<
       | { outcome: 'inserted'; itemId: number; position: number }
-      | { outcome: 'merged'; itemId: number }
+      | { outcome: 'merged'; itemId: number; qty: number | null }
       | { outcome: 'skipped'; itemId: number }
     >;
   };
@@ -747,7 +749,8 @@ describe('lists REST surface', () => {
         unit: 'g',
         notes: 'Soup',
       });
-      expect(merged.outcome).toBe('merged');
+      if (merged.outcome !== 'merged') throw new Error('the existing row should be merged');
+      expect(merged.qty).toBe(350);
       const row = raw
         .prepare(`SELECT qty, unit, notes, label FROM list_items WHERE list_id = ? AND ref_id = ?`)
         .get(listId, 42) as { qty: number; unit: string; notes: string; label: string };
@@ -757,6 +760,129 @@ describe('lists REST surface', () => {
         notes: 'Risotto Verde\nSoup',
         label: 'tomato 350g',
       });
+    });
+
+    it('rebuilds the label from the cumulative quantity in the merge transaction', async () => {
+      const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
+      await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: '1.25 count Eggs',
+        qty: 1.25,
+        unit: 'count',
+      });
+
+      const merged = await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: '2.38 count Eggs',
+        qty: 2.375,
+        unit: 'count',
+        labelFromQty: { prefix: '', suffix: ' count Eggs', maxFractionDigits: 2 },
+      });
+
+      expect(merged).toMatchObject({ outcome: 'merged', qty: 3.625 });
+      const row = raw
+        .prepare(`SELECT qty, label FROM list_items WHERE list_id = ? AND ref_id = ?`)
+        .get(listId, 42) as { qty: number; label: string };
+      expect(row).toEqual({ qty: 3.625, label: '3.63 count Eggs' });
+    });
+
+    it('formats bounded notes and reports the cumulative quantity', async () => {
+      const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
+      await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: 'tomato 1g',
+        qty: 1,
+        unit: 'g',
+        notes: 'Old 🍎',
+      });
+      await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: 'tomato 2g',
+        qty: 2,
+        unit: 'g',
+        notes: 'New 🍐',
+        notesMerge: { separator: '; ', maxLength: 500 },
+      });
+
+      const merged = await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: 'tomato 4g',
+        qty: 4,
+        unit: 'g',
+        notes: 'Newest 🥕',
+        notesMerge: { separator: '; ', maxLength: 9 },
+      });
+
+      expect(merged).toMatchObject({ outcome: 'merged', qty: 7 });
+      const row = raw
+        .prepare(`SELECT notes FROM list_items WHERE list_id = ? AND ref_id = ?`)
+        .get(listId, 42) as { notes: string };
+      expect(row.notes).toBe('…Newest 🥕');
+      expect(Array.from(row.notes)).toHaveLength(9);
+    });
+
+    it('uses the truncation marker when only one code point fits', async () => {
+      const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
+      await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: 'tomato 1g',
+        notes: 'Old',
+      });
+
+      await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: 'tomato 1g',
+        notes: 'New',
+        notesMerge: { separator: '; ', maxLength: 1 },
+      });
+
+      const row = raw
+        .prepare(`SELECT notes FROM list_items WHERE list_id = ? AND ref_id = ?`)
+        .get(listId, 42) as { notes: string };
+      expect(row.notes).toBe('…');
+    });
+
+    it('rejects a nonpositive notesMerge maximum at the contract boundary', async () => {
+      const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
+      const res = await requestOn(buildApp(raw, db))
+        .post(`/lists/${listId}/items/upsert-by-ref`)
+        .send({
+          refKind: 'ingredient',
+          refId: 42,
+          label: 'tomato 1g',
+          notes: 'New',
+          notesMerge: { separator: '; ', maxLength: 0 },
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects label quantity precision above the contract limit', async () => {
+      const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
+      const res = await requestOn(buildApp(raw, db))
+        .post(`/lists/${listId}/items/upsert-by-ref`)
+        .send({
+          refKind: 'ingredient',
+          refId: 42,
+          label: 'tomato 1g',
+          labelFromQty: { prefix: '', suffix: ' g tomato', maxFractionDigits: 11 },
+        });
+
+      expect(res.status).toBe(400);
     });
 
     it('replace mode overwrites qty, unit, notes, label wholesale', async () => {

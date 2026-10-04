@@ -33,6 +33,7 @@ import type {
   EgoDecisionResultWire,
   GetActiveContextResponseWire,
 } from '../../contract/rest-ego-schemas.js';
+import type { EgoStreamBody } from '../../contract/rest-ego-stream.js';
 import type { EmbeddingsStatusWire } from '../../contract/rest-embeddings.js';
 import type {
   EmitSourceCitationWire,
@@ -787,7 +788,7 @@ export function makeClient(app: Express) {
         send<{ scopes: string[] }>(r.post(`/ego/conversations/${id}/scopes`).send({ scopes })),
       getActiveContext: (id: string) =>
         send<GetActiveContextResponseWire>(r.get(`/ego/conversations/${id}/context`)),
-      stream: (body: EgoChatBodyWire) => r.post('/ego/chat/stream').send(body),
+      stream: (body: EgoStreamBody) => r.post('/ego/chat/stream').send(body),
     },
     workers: {
       runPruner: (dryRun?: boolean) =>

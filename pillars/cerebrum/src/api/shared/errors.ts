@@ -26,6 +26,18 @@ export const cerebrumErrors = defineErrors('cerebrum', {
     message: 'The tool gateway is not configured.',
     retryable: true,
   },
+  batch_not_resumable: {
+    area: 'ego',
+    status: 400,
+    message: 'This action batch can no longer be continued.',
+    retryable: false,
+  },
+  batch_state_invalid: {
+    area: 'ego',
+    status: 500,
+    message: 'The paused turn could not be restored.',
+    retryable: false,
+  },
   invalid_decision: {
     area: 'ego',
     status: 400,

@@ -21,6 +21,7 @@ export function useChatPageModel(): ChatPageModel {
     selectedConversationId,
     setSelectedConversationId,
     inputValue,
+    messages: detail.messages,
     setInputValue,
   });
 
@@ -48,6 +49,7 @@ export function useChatPageModel(): ChatPageModel {
     inputValue,
     setInputValue,
     sendMessage: mutations.sendMessage,
+    batchDecisions: mutations.batchDecisions,
     isSending: mutations.isSending,
     sendError: mutations.sendError,
     startNewConversation,

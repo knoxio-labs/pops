@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 
 import type { AppContextEntity } from '@pops/navigation';
 
+import type { ActionsPart } from './message-parts';
 import type { StreamFrame } from './stream-frames';
 import type { UseStreamingChatReturn } from './useStreamingChat';
 
@@ -156,7 +157,8 @@ describe('useStreamingChat request body', () => {
     });
     act(() => result.current.stream({ conversationId: null, message: 'hi' }, callbacks));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(lastRequestBody(fetchMock)).toEqual({
+    const body = lastRequestBody(fetchMock);
+    expect(body).toEqual({
       message: 'hi',
       appContext: {
         app: 'inventory',
@@ -167,6 +169,7 @@ describe('useStreamingChat request body', () => {
         entityTitle: 'Bosch drill',
       },
     });
+    expect('resumeBatchId' in body).toBe(false);
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 
@@ -202,6 +205,22 @@ describe('useStreamingChat request body', () => {
     const body = lastRequestBody(fetchMock);
     expect(body).toEqual({ conversationId: 'c1', message: 'hi' });
     expect('appContext' in body).toBe(false);
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it('sends only the conversation and batch identifiers when resuming a turn', async () => {
+    const { result } = renderHook(() => useStreamingChat(), {
+      wrapper: wrapperAt('/inventory/items/abc', {
+        uri: 'pops:inventory/item/abc',
+        type: 'item',
+        title: 'Bosch drill',
+      }),
+    });
+    act(() => result.current.stream({ conversationId: 'c1', resumeBatchId: 'b1' }, callbacks));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(EGO_STREAM_URL);
+    expect(lastRequestBody(fetchMock)).toEqual({ conversationId: 'c1', resumeBatchId: 'b1' });
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 });
@@ -351,6 +370,131 @@ describe('useStreamingChat stream frames', () => {
     expect(result.current.streamParts).toEqual([]);
   });
 
+  it('processes resumed token and done frames and waits for invalidation', async () => {
+    const controlled = createControlledResponse();
+    let resolveInvalidation!: () => void;
+    const invalidation = new Promise<void>((resolve) => {
+      resolveInvalidation = resolve;
+    });
+    const streamCallbacks = makeCallbacks({ onInvalidate: vi.fn(() => invalidation) });
+    fetchMock.mockResolvedValue(controlled.response);
+    const { result } = renderHook(() => useStreamingChat(), { wrapper: wrapperAt('/') });
+
+    act(() =>
+      result.current.stream({ conversationId: 'c1', resumeBatchId: 'b1' }, streamCallbacks)
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      controlled.send({ type: 'token', text: 'The turn continued.' });
+      controlled.send({
+        type: 'done',
+        conversationId: 'c1',
+        messageId: 'm1',
+        retrievedEngrams: [],
+        parts: [],
+      });
+    });
+
+    await waitFor(() => expect(streamCallbacks.onInvalidate).toHaveBeenCalledWith('c1'));
+    expect(streamCallbacks.onConversation).toHaveBeenCalledWith('c1');
+    expect(streamCallbacks.onEngrams).toHaveBeenCalledWith([]);
+    expect(result.current.streamingContent).toBe('The turn continued.');
+    expect(result.current.isStreaming).toBe(true);
+
+    act(() => controlled.close());
+    await act(async () => {
+      resolveInvalidation();
+      await invalidation;
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.streamingContent).toBeNull();
+  });
+
+  it('keeps resumed tool and action frames visible until invalidation resolves', async () => {
+    const controlled = createControlledResponse();
+    let resolveInvalidation!: () => void;
+    const invalidation = new Promise<void>((resolve) => {
+      resolveInvalidation = resolve;
+    });
+    const streamCallbacks = makeCallbacks({ onInvalidate: vi.fn(() => invalidation) });
+    const firstActionPart: ActionsPart = {
+      type: 'actions',
+      batchId: 'b1',
+      actions: [
+        {
+          actionId: 'a1',
+          tool: 'finance.transactions.create',
+          summary: 'Create a transaction',
+          status: 'executed',
+        },
+        {
+          actionId: 'a2',
+          tool: 'inventory.items.create',
+          summary: 'Create a desk lamp',
+          status: 'confirmed',
+        },
+      ],
+    };
+    const actionPart: ActionsPart = {
+      ...firstActionPart,
+      actions: firstActionPart.actions.map((action) => ({
+        ...action,
+        status: 'executed' as const,
+      })),
+    };
+    fetchMock.mockResolvedValue(controlled.response);
+    const { result } = renderHook(() => useStreamingChat(), { wrapper: wrapperAt('/') });
+
+    act(() =>
+      result.current.stream({ conversationId: 'c1', resumeBatchId: 'b1' }, streamCallbacks)
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      controlled.send({
+        type: 'tool',
+        name: 'finance.transactions.create',
+        status: 'started',
+      });
+      controlled.send({
+        type: 'tool',
+        name: 'finance.transactions.create',
+        status: 'finished',
+      });
+      controlled.send({ type: 'part', part: firstActionPart });
+      controlled.send({ type: 'tool', name: 'inventory.items.create', status: 'started' });
+      controlled.send({ type: 'tool', name: 'inventory.items.create', status: 'finished' });
+      controlled.send({ type: 'part', part: actionPart });
+      controlled.send({ type: 'token', text: 'Saved both items.' });
+      controlled.send({
+        type: 'done',
+        conversationId: 'c1',
+        messageId: 'm1',
+        retrievedEngrams: [],
+        parts: [],
+      });
+    });
+
+    await waitFor(() => expect(streamCallbacks.onInvalidate).toHaveBeenCalledWith('c1'));
+    expect(result.current.toolActivity).toEqual([
+      { name: 'finance.transactions.create', status: 'finished' },
+      { name: 'inventory.items.create', status: 'finished' },
+    ]);
+    expect(result.current.streamParts).toEqual([firstActionPart, actionPart]);
+    expect(result.current.streamingContent).toBe('Saved both items.');
+
+    act(() => controlled.close());
+    await act(async () => {
+      resolveInvalidation();
+      await invalidation;
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.toolActivity).toEqual([]);
+    expect(result.current.streamParts).toEqual([]);
+    expect(result.current.streamingContent).toBeNull();
+  });
+
   it('sets an error and clears stream state for an error frame', async () => {
     const controlled = createControlledResponse();
     fetchMock.mockResolvedValue(controlled.response);
@@ -365,6 +509,33 @@ describe('useStreamingChat stream frames', () => {
     await waitFor(() => {
       expect(result.current.isStreaming).toBe(false);
       expect(result.current.error).toBe('Gateway unavailable');
+    });
+    expect(result.current.streamingContent).toBeNull();
+    expect(result.current.toolActivity).toEqual([]);
+    expect(result.current.streamParts).toEqual([]);
+  });
+
+  it('shows the server error when a resumed batch can no longer be continued', async () => {
+    const controlled = createControlledResponse();
+    fetchMock.mockResolvedValue(controlled.response);
+    const { result } = renderHook(() => useStreamingChat(), { wrapper: wrapperAt('/') });
+
+    act(() =>
+      result.current.stream({ conversationId: 'c1', resumeBatchId: 'b1' }, makeCallbacks())
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      controlled.send({
+        type: 'error',
+        message: 'This action batch can no longer be continued.',
+      });
+      controlled.close();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.error).toBe('This action batch can no longer be continued.');
     });
     expect(result.current.streamingContent).toBeNull();
     expect(result.current.toolActivity).toEqual([]);

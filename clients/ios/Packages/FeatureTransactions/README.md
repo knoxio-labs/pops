@@ -59,10 +59,12 @@ Three decisions, and all of them were made on purpose:
 - **A page fetch that fails mid-scroll keeps the rows and reports the failure underneath them**, with a retry that resumes from the cursor that failed rather than restarting the list. Discarding a screenful because the eleventh page failed costs the reader everything they had and re-costs every page already fetched.
 - **A failed refresh keeps the rows and reports the failure above them.** A refresh is an offer to re-check, not a demand; answering a failed one by deleting what somebody was reading punishes the gesture and tells them nothing they could not have been told beside it.
 - **A detail fetch that fails over a seeded row keeps the row and reports the failure above it.** What is on screen came off the list and is true; it is simply not the whole record. Only a failure with _nothing_ on screen becomes the screen.
+- **A rate-limited request asks the reader to wait.** Its retry control waits for `retryAfterSeconds` before making another request; when an intermediary does not provide a readable delay, it uses the same one-minute guidance as device pairing.
+- **A response this app cannot decode and an unbound dependency do not offer retry.** Repeating either request leaves the app version or composition root unchanged, so both screens use `NonRetryableErrorStateView`; `TransactionsCopyTests` pins the update-app message to the no-retry mapping.
 
 None of them leaves a half-screen looking whole — the footer or the banner is always there saying so, and all of them are announced to VoiceOver rather than only drawn, because VoiceOver does not move focus to content that appears above or below what was just touched. Each of the three clears its failure _before_ re-requesting, so a retry that fails identically is still a `nil -> error` transition and still gets announced; without that, a second identical failure is silence for anyone who cannot see the banner.
 
-The one retry that is _not_ offered is an automatic one. The footer that provoked a failed fetch is still on screen afterwards, so an appearance-triggered retry would keep firing against a server that has already said no. Retrying the tail is a button.
+An automatic retry is not offered. The footer that provoked a failed fetch is still on screen afterwards, so an appearance-triggered retry would keep firing against a server that has already said no. Retrying the tail is a button, and a rate-limited button schedules its request only after the server's wait window.
 
 ## Amounts and dates
 

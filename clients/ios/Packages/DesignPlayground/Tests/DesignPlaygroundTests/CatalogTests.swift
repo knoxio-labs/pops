@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 
 @testable import DesignPlayground
@@ -27,6 +28,18 @@ internal struct CatalogTests {
             Set(ids).count == ids.count,
             "two surfaces share an id, so a comment anchored to one could resolve to the other"
         )
+    }
+
+    @Test("A sheet defaults to full height")
+    func sheetDefaultsToLarge() {
+        let surface = DesignSurface(
+            id: SurfaceID(area: "test", slug: "sheet-default"),
+            title: "Sheet",
+            chrome: .sheet,
+            states: []
+        )
+
+        #expect(surface.sheetDetents.detents == [.large])
     }
 
     @Test("A surface's own state ids are unique")

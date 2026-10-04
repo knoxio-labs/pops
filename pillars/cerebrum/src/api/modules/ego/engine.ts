@@ -139,12 +139,10 @@ export class ConversationEngine {
       appContext
     );
     const scopeNotice = this.buildScopeNotice(negotiation);
-    const llmMessages = buildLlmMessages(
-      history,
-      message,
-      contextBlock,
-      this.config.maxHistoryMessages
-    );
+    const llmMessages = buildLlmMessages(history, message, contextBlock, {
+      maxHistoryMessages: this.config.maxHistoryMessages,
+      settled: params.settled,
+    });
     return { negotiation, allResults, systemPrompt, scopeNotice, llmMessages };
   }
 

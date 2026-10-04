@@ -18,10 +18,18 @@ import type { RetrievedEngram } from './types';
 /** Shell proxy path to cerebrum's POST /ego/chat/stream endpoint. */
 export const EGO_STREAM_URL = '/cerebrum-api/ego/chat/stream';
 
-interface StreamChatParams {
-  conversationId: string | null;
-  message: string;
-}
+export type StreamChatParams =
+  | {
+      /** Start a new turn or add a message to an existing conversation. */
+      conversationId: string | null;
+      message: string;
+    }
+  | {
+      /** Conversation containing the decided action batch to resume. */
+      conversationId: string;
+      /** Decided action batch to continue through the stream. */
+      resumeBatchId: string;
+    };
 
 interface StreamCallbacks {
   onConversation: (id: string) => void;
@@ -89,7 +97,17 @@ async function processStream(
 }
 
 export interface UseStreamingChatReturn {
-  /** Start streaming a message to the SSE endpoint. */
+  /**
+   * Start a new message turn or resume a paused turn through the SSE endpoint.
+   *
+   * A failed resume is not retried by this hook. The server persists each write
+   * result; if an accepted continuation is interrupted, a later recovery marks
+   * actions still `confirmed` as failed with an interruption result instead of
+   * replaying them. A client error does not prove whether a write ran, so this hook
+   * never automatically replays a resume. A request that never reaches the server
+   * leaves the batch unchanged. A resume stream emits `tool` and `part` frames for
+   * approved writes before any token.
+   */
   stream: (params: StreamChatParams, callbacks: StreamCallbacks) => void;
   /** Whether a stream is currently active. */
   isStreaming: boolean;
@@ -123,14 +141,19 @@ export function useStreamingChat(): UseStreamingChatReturn {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const body =
+        'message' in params
+          ? {
+              conversationId: params.conversationId ?? undefined,
+              message: params.message,
+              appContext,
+            }
+          : { conversationId: params.conversationId, resumeBatchId: params.resumeBatchId };
+
       fetch(EGO_STREAM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: params.conversationId ?? undefined,
-          message: params.message,
-          appContext,
-        }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       })
         .then(async (response) => {

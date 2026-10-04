@@ -386,6 +386,8 @@ services:
     volumes:
       - sqlite-data:/data/sqlite
       - cerebrum-engrams-data:/data/cerebrum/engrams
+    secrets:
+      - mcp_inbound_token
     environment:
       NODE_ENV: production
       PORT: '3007'
@@ -394,6 +396,10 @@ services:
       CEREBRUM_SQLITE_PATH: /data/sqlite/cerebrum.db
       CEREBRUM_ENGRAMS_DIR: /data/cerebrum/engrams
       CEREBRUM_SELF_BASE_URL: http://cerebrum-api:3007
+      # Empty URL keeps the optional gateway client disabled. Both peers read
+      # the same host-provisioned inbound bearer from a mounted Docker secret.
+      CEREBRUM_EGO_MCP_URL: ${CEREBRUM_EGO_MCP_URL:-}
+      CEREBRUM_EGO_MCP_TOKEN_FILE: /run/secrets/mcp_inbound_token
       # AI telemetry sink — read FIRST so it never collides with the
       # self-pointing POPS_API_URL cerebrum sets elsewhere.
       AI_API_URL: http://ai-api:3008
@@ -943,6 +949,7 @@ services:
       - backend
     secrets:
       - pops_mcp_api_key
+      - mcp_inbound_token
     environment:
       NODE_ENV: production
       # pops-mcp reaches every pillar through the REST pillar SDK (per-pillar
@@ -950,6 +957,9 @@ services:
       # POPS_API_URL tRPC client was removed in the 02 decommission.
       POPS_API_KEY_FILE: /run/secrets/pops_mcp_api_key
       MCP_PORT: '3011'
+      # This inbound bearer is distinct from pops_mcp_api_key, which MCP uses
+      # to make authenticated outbound calls to other pillars.
+      MCP_INBOUND_TOKEN_FILE: /run/secrets/mcp_inbound_token
     ports:
       - '${MCP_BIND_ADDR:-0.0.0.0}:3011:3011'
     depends_on:
@@ -1159,6 +1169,8 @@ secrets:
     file: ../secrets/pops_api_key
   pops_mcp_api_key:
     file: ../secrets/pops_mcp_api_key
+  mcp_inbound_token:
+    file: ../secrets/mcp_inbound_token
   tmdb_api_key:
     file: ../secrets/tmdb_api_key
   thetvdb_api_key:

@@ -30,8 +30,10 @@ single source of truth; OpenAPI and api-types are generated projections,
 drift-checked in CI.
 
 `ego` is co-located here (it has no contract of its own), so the pillar exports
-both `cerebrumManifest` and `egoManifest`. Ego declares no settings: its model
-is `CEREBRUM_EGO_MODEL` and its tuning is constants in `src/api/modules/ego`.
+both `cerebrumManifest` and `egoManifest`. Ego's model is `CEREBRUM_EGO_MODEL`
+and its tuning is constants in `src/api/modules/ego`. Gateway tools use
+`CEREBRUM_EGO_MCP_URL` and a token from `CEREBRUM_EGO_MCP_TOKEN_FILE` or
+`CEREBRUM_EGO_MCP_TOKEN`. Ego runs without tools when the URL or token is missing.
 
 All REST failures use the ADR-054 envelope from `@pops/types`:
 `{ code, message, requestId, retryable, details? }`. Codes are dotted lowercase

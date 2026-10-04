@@ -34,6 +34,8 @@ const expectedWrites = [
   'inventory.locations.create',
   'inventory.locations.update',
   'inventory.locations.delete',
+  'media.watchlist.add',
+  'purchases.inventoryProposals.accept',
 ];
 
 describe('ToolDef.readOnly', () => {
@@ -44,9 +46,8 @@ describe('ToolDef.readOnly', () => {
     expect(unset).toEqual([]);
   });
 
-  it('flags exactly the inventory and bfm writes as not read-only', () => {
+  it('flags exactly the declared writes as not read-only', () => {
     const writes = allTools
-      .filter((tool) => tool.name.startsWith('inventory.') || tool.name.startsWith('bfm.'))
       .filter((tool) => tool.readOnly === false)
       .map((tool) => tool.name)
       .toSorted();
@@ -57,12 +58,17 @@ describe('ToolDef.readOnly', () => {
     expect(byName.get('bfm.devicePairing.issueCode')?.readOnly).toBe(false);
   });
 
+  it('marks media.watchlist.add as a write', () => {
+    expect(byName.get('media.watchlist.add')?.readOnly).toBe(false);
+  });
+
   it.each([
     'finance.transactions.list',
     'finance.accounts.get',
     'media.library.list',
     'cerebrum.search',
     'purchases.search',
+    'purchases.inventoryProposals.list',
   ])('marks %s as read-only', (name) => {
     expect(byName.get(name)?.readOnly).toBe(true);
   });

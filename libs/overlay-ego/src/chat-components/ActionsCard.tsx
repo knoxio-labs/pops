@@ -128,6 +128,11 @@ export function ActionsCard({ part, decisions }: ActionsCardProps) {
   const canDecide =
     decisions !== null && part.actions.some((action) => action.status === 'pending');
   const deciding = decisions?.decidingBatchId === part.batchId;
+  const continueBatch = decisions?.continueBatch;
+  const canContinue =
+    continueBatch !== undefined &&
+    decisions?.continuableBatchId === part.batchId &&
+    !part.actions.some((action) => action.status === 'pending');
 
   return (
     <section
@@ -147,6 +152,16 @@ export function ActionsCard({ part, decisions }: ActionsCardProps) {
           />
         ))}
       </ul>
+      {canContinue && continueBatch && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            This decision was recorded but the actions have not finished.
+          </p>
+          <Button disabled={deciding} onClick={() => continueBatch(part.batchId)}>
+            Continue
+          </Button>
+        </div>
+      )}
       {canDecide && decisions && (
         <DecisionControls
           part={part}
