@@ -31,6 +31,13 @@ export interface NotesMergeOptions {
   maxLength: number;
 }
 
+/** Formats the cumulative quantity into an upserted item's label. */
+export interface LabelFromQtyOptions {
+  prefix: string;
+  suffix: string;
+  maxFractionDigits: number;
+}
+
 /** Request shape for atomic upsert-by-reference operations in the lists pillar. */
 export interface UpsertByRefBody {
   refKind: UpsertRefKind;
@@ -40,6 +47,7 @@ export interface UpsertByRefBody {
   unit?: string | null;
   notes?: string | null;
   onConflict?: UpsertConflictMode;
+  labelFromQty?: LabelFromQtyOptions;
   /** Formatting policy applied to notes when this upsert writes the row. */
   notesMerge?: NotesMergeOptions;
 }
@@ -64,8 +72,6 @@ export interface ListsClient {
   getList(id: number): Promise<ListHeader | null>;
   createShoppingList(name: string): Promise<number>;
   upsertByRef(listId: number, body: UpsertByRefBody): Promise<UpsertByRefResult>;
-  /** Updates a field on an existing lists-owned row. */
-  updateItem(itemId: number, body: { label: string }): Promise<void>;
   addItem(listId: number, body: AddItemBody): Promise<void>;
   /** Distinct shopping-list ids whose item notes contain `notesContains`. */
   searchShoppingListIdsByNotes(notesContains: string): Promise<number[]>;
@@ -88,7 +94,6 @@ export type ListsRouter = {
   };
   items: {
     add: (input: { listId: number } & AddItemBody) => Promise<{ id: number; position: number }>;
-    update: (input: { id: number; label: string }) => Promise<{ ok: true }>;
     upsertByRef: (input: { listId: number } & UpsertByRefBody) => Promise<UpsertByRefResult>;
     search: (input: {
       kind: string;
@@ -150,10 +155,6 @@ export function createListsClient(
         'items.upsertByRef',
         await handleFactory().items.upsertByRef({ listId, ...body })
       );
-    },
-
-    async updateItem(itemId, body) {
-      unwrap('items.update', await handleFactory().items.update({ id: itemId, ...body }));
     },
 
     async addItem(listId, body) {

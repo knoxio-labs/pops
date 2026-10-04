@@ -992,6 +992,12 @@ export interface operations {
       content: {
         'application/json': {
           label: string;
+          /** @description When merging additively, formats the cumulative quantity into the label in the same transaction. */
+          labelFromQty?: {
+            maxFractionDigits: number;
+            prefix: string;
+            suffix: string;
+          };
           notes?: string | null;
           /** @description Optional note formatting and size limit for this upsert. */
           notesMerge?: {

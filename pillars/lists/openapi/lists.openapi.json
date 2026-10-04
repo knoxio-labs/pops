@@ -1493,6 +1493,25 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "labelFromQty": {
+                    "additionalProperties": false,
+                    "description": "When merging additively, formats the cumulative quantity into the label in the same transaction.",
+                    "properties": {
+                      "maxFractionDigits": {
+                        "maximum": 10,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "prefix": {
+                        "type": "string"
+                      },
+                      "suffix": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["prefix", "suffix", "maxFractionDigits"],
+                    "type": "object"
+                  },
                   "notes": {
                     "nullable": true,
                     "type": "string"

@@ -32,7 +32,6 @@ const DSL = `@recipe(slug="grilled-cheese", title="Grilled Cheese", servings=1)
 interface StubState {
   created: { name: string }[];
   upserts: { listId: number; body: UpsertByRefBody }[];
-  updates: { itemId: number; label: string }[];
   itemsByRef: Map<string, { id: number; qty: number | null; label: string }>;
   lists: Map<number, ListHeader>;
 }
@@ -57,7 +56,11 @@ function makeStubClient(state: StubState): ListsClient {
           existing.qty === null && (body.qty ?? null) === null
             ? null
             : (existing.qty ?? 0) + (body.qty ?? 0);
-        existing.label = body.label;
+        const options = body.labelFromQty;
+        const scale = 10 ** (options?.maxFractionDigits ?? 0);
+        const formattedQty = Math.round((existing.qty ?? 0) * scale) / scale;
+        existing.label =
+          options === undefined ? body.label : `${options.prefix}${formattedQty}${options.suffix}`;
         return Promise.resolve({
           outcome: 'merged' as const,
           itemId: existing.id,
@@ -72,13 +75,6 @@ function makeStubClient(state: StubState): ListsClient {
         itemId: inserted.id,
         position: state.itemsByRef.size - 1,
       });
-    },
-    updateItem: (itemId, body) => {
-      state.updates.push({ itemId, label: body.label });
-      for (const item of state.itemsByRef.values()) {
-        if (item.id === itemId) item.label = body.label;
-      }
-      return Promise.resolve();
     },
     addItem: () => Promise.resolve(),
     searchShoppingListIdsByNotes: () => Promise.resolve([]),
@@ -103,7 +99,7 @@ function client(): ReturnType<typeof makeClient> {
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'food-api-send-to-list-test-'));
   foodDb = openFoodDb(join(tmpDir, 'food.db'));
-  state = { created: [], upserts: [], updates: [], itemsByRef: new Map(), lists: new Map() };
+  state = { created: [], upserts: [], itemsByRef: new Map(), lists: new Map() };
   createIngredient(foodDb.db, { name: 'Bread', slug: 'bread', defaultUnit: 'count' });
   createIngredient(foodDb.db, { name: 'Butter', slug: 'butter', defaultUnit: 'g' });
   createIngredient(foodDb.db, { name: 'Cheddar', slug: 'cheddar', defaultUnit: 'g' });
@@ -158,10 +154,12 @@ describe('send-to-list REST', () => {
       state.upserts
         .slice(upsertCount)
         .every(
-          ({ body }) => body.notesMerge?.separator === '; ' && body.notesMerge.maxLength === 500
+          ({ body }) =>
+            body.notesMerge?.separator === '; ' &&
+            body.notesMerge.maxLength === 500 &&
+            body.labelFromQty?.maxFractionDigits === 2
         )
     ).toBe(true);
-    expect(state.updates).toHaveLength(itemCount);
 
     for (const item of state.itemsByRef.values()) {
       if (item.qty === null) throw new Error('food mergeable items have a cumulative quantity');

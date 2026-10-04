@@ -44,7 +44,7 @@ const callDynamic: CallDynamicFn = () => {
 };
 
 type Impl<K extends 'get' | 'create'> = ListsRouter['list'][K];
-type ItemsImpl<K extends 'add' | 'update' | 'upsertByRef' | 'search'> = ListsRouter['items'][K];
+type ItemsImpl<K extends 'add' | 'upsertByRef' | 'search'> = ListsRouter['items'][K];
 
 interface StubImpls {
   get?: (
@@ -56,9 +56,6 @@ interface StubImpls {
   add?: (
     input: Parameters<ItemsImpl<'add'>>[0]
   ) => Promise<CallResult<Awaited<ReturnType<ItemsImpl<'add'>>>>>;
-  update?: (
-    input: Parameters<ItemsImpl<'update'>>[0]
-  ) => Promise<CallResult<Awaited<ReturnType<ItemsImpl<'update'>>>>>;
   upsertByRef?: (
     input: Parameters<ItemsImpl<'upsertByRef'>>[0]
   ) => Promise<CallResult<Awaited<ReturnType<ItemsImpl<'upsertByRef'>>>>>;
@@ -79,7 +76,6 @@ function stubHandle(impls: StubImpls): PillarHandle<ListsRouter> {
     },
     items: {
       add: proc(impls.add ?? (() => unexpected('items.add'))),
-      update: proc(impls.update ?? (() => unexpected('items.update'))),
       upsertByRef: proc(impls.upsertByRef ?? (() => unexpected('items.upsertByRef'))),
       search: proc(impls.search ?? (() => unexpected('items.search'))),
     },
@@ -175,6 +171,7 @@ describe('createListsClient.upsertByRef', () => {
         qty: 6,
         unit: 'ea',
         onConflict: 'merge-additive',
+        labelFromQty: { prefix: '', suffix: ' count Eggs', maxFractionDigits: 2 },
       })
     ).resolves.toEqual({ outcome: 'merged', itemId: 3, qty: 10 });
     expect(seen).toEqual([
@@ -186,6 +183,7 @@ describe('createListsClient.upsertByRef', () => {
         qty: 6,
         unit: 'ea',
         onConflict: 'merge-additive',
+        labelFromQty: { prefix: '', suffix: ' count Eggs', maxFractionDigits: 2 },
       },
     ]);
   });
@@ -198,33 +196,6 @@ describe('createListsClient.upsertByRef', () => {
     await expect(
       client.upsertByRef(7, { refKind: 'custom', refId: 1, label: 'Eggs' })
     ).rejects.toThrow(/items\.upsertByRef failed \(not-found\)/u);
-  });
-});
-
-describe('createListsClient.updateItem', () => {
-  it('flattens the item id with the patch body', async () => {
-    const seen: unknown[] = [];
-    const client = createListsClient(() =>
-      stubHandle({
-        update: async (input) => {
-          seen.push(input);
-          return ok({ ok: true });
-        },
-      })
-    );
-
-    await expect(client.updateItem(3, { label: '5 count Eggs' })).resolves.toBeUndefined();
-    expect(seen).toEqual([{ id: 3, label: '5 count Eggs' }]);
-  });
-
-  it('aborts when lists rejects the label update', async () => {
-    const client = createListsClient(() =>
-      stubHandle({ update: async () => ({ kind: 'unavailable', pillar: 'lists' }) })
-    );
-
-    await expect(client.updateItem(3, { label: '5 count Eggs' })).rejects.toBeInstanceOf(
-      ListsCallError
-    );
   });
 });
 

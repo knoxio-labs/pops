@@ -152,6 +152,7 @@ function makeClient(app: Express): {
       unit?: string | null;
       notes?: string | null;
       onConflict?: 'merge-additive' | 'replace' | 'skip';
+      labelFromQty?: { prefix: string; suffix: string; maxFractionDigits: number };
       notesMerge?: { separator: string; maxLength: number };
     }) => Promise<
       | { outcome: 'inserted'; itemId: number; position: number }
@@ -761,6 +762,34 @@ describe('lists REST surface', () => {
       });
     });
 
+    it('rebuilds the label from the cumulative quantity in the merge transaction', async () => {
+      const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
+      await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: '1.25 count Eggs',
+        qty: 1.25,
+        unit: 'count',
+      });
+
+      const merged = await client.items.upsertByRef({
+        listId,
+        refKind: 'ingredient',
+        refId: 42,
+        label: '2.38 count Eggs',
+        qty: 2.375,
+        unit: 'count',
+        labelFromQty: { prefix: '', suffix: ' count Eggs', maxFractionDigits: 2 },
+      });
+
+      expect(merged).toMatchObject({ outcome: 'merged', qty: 3.625 });
+      const row = raw
+        .prepare(`SELECT qty, label FROM list_items WHERE list_id = ? AND ref_id = ?`)
+        .get(listId, 42) as { qty: number; label: string };
+      expect(row).toEqual({ qty: 3.625, label: '3.63 count Eggs' });
+    });
+
     it('formats bounded notes and reports the cumulative quantity', async () => {
       const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
       await client.items.upsertByRef({
@@ -837,6 +866,20 @@ describe('lists REST surface', () => {
           label: 'tomato 1g',
           notes: 'New',
           notesMerge: { separator: '; ', maxLength: 0 },
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects label quantity precision above the contract limit', async () => {
+      const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
+      const res = await requestOn(buildApp(raw, db))
+        .post(`/lists/${listId}/items/upsert-by-ref`)
+        .send({
+          refKind: 'ingredient',
+          refId: 42,
+          label: 'tomato 1g',
+          labelFromQty: { prefix: '', suffix: ' g tomato', maxFractionDigits: 11 },
         });
 
       expect(res.status).toBe(400);

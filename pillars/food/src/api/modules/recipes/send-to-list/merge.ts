@@ -2,19 +2,20 @@
  * Per-item merge / insert for the send loop, over the lists REST API.
  *
  * Mergeable (ingredient/variant) items go through `upsert-by-ref` with
- * `onConflict='merge-additive'` — the lists pillar atomically sums qty and
- * bounds note growth; food uses the returned quantity to rebuild the label.
+ * `onConflict='merge-additive'` — the lists pillar atomically sums qty,
+ * rebuilds the label, and bounds note growth.
  * Unconverted ("free") lines always insert fresh because they have no ref.
  */
+import { composeLabel } from './compose-label.js';
 import { type ListsClient } from './lists-client.js';
-import { relabelAfterMerge, type SendItem } from './send-items.js';
+import { type SendItem } from './send-items.js';
 
 /** Result of writing one recipe line to a shopping list. */
 export interface MergeOutcome {
   kind: 'merged' | 'inserted';
 }
 
-/** Upserts one send item and repairs its label from the cumulative quantity after a merge. */
+/** Upserts one send item, with merged labels rebuilt in the lists transaction. */
 export async function processItem(
   client: ListsClient,
   listId: number,
@@ -31,15 +32,10 @@ export async function processItem(
       unit: item.preview.unit,
       notes,
       onConflict: 'merge-additive',
+      labelFromQty: quantityLabel(item),
       notesMerge: { separator: '; ', maxLength: 500 },
     });
-    if (res.outcome === 'merged') {
-      if (res.qty !== null) {
-        await client.updateItem(res.itemId, { label: relabelAfterMerge(item, res.qty) });
-      }
-      return { kind: 'merged' };
-    }
-    return { kind: 'inserted' };
+    return { kind: res.outcome === 'merged' ? 'merged' : 'inserted' };
   }
   await client.addItem(listId, {
     label: item.preview.label,
@@ -50,6 +46,21 @@ export async function processItem(
     notes,
   });
   return { kind: 'inserted' };
+}
+
+function quantityLabel(item: SendItem): {
+  prefix: string;
+  suffix: string;
+  maxFractionDigits: number;
+} {
+  const suffix = composeLabel({
+    qty: '',
+    unit: item.preview.unit ?? '',
+    ingredientName: item.ingredientName,
+    variantName: item.variantName,
+    prepLabel: item.prepLabel,
+  });
+  return { prefix: '', suffix: ` ${suffix}`, maxFractionDigits: 2 };
 }
 
 /**

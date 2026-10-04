@@ -766,18 +766,6 @@ export const EXPECTATIONS = [
   {
     consumer: 'food',
     producer: 'lists',
-    operationId: 'items.update',
-    path: '/items/{id}',
-    method: 'patch',
-    query: [],
-    pathParams: ['id'],
-    // Food rebuilds a merged shopping-item label from the quantity returned
-    // by upsert-by-ref and patches that label onto the lists-owned row.
-    usedBy: 'pillars/food/src/api/modules/recipes/send-to-list/lists-client.ts',
-  },
-  {
-    consumer: 'food',
-    producer: 'lists',
     operationId: 'items.add',
     path: '/lists/{listId}/items',
     method: 'post',

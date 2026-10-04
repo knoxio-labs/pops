@@ -615,6 +615,14 @@ export type ItemsUpsertByRefData = {
    */
   body?: {
     label: string;
+    /**
+     * When merging additively, formats the cumulative quantity into the label in the same transaction.
+     */
+    labelFromQty?: {
+      maxFractionDigits: number;
+      prefix: string;
+      suffix: string;
+    };
     notes?: string | null;
     /**
      * Optional note formatting and size limit for this upsert.

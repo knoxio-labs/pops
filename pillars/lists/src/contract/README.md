@@ -27,9 +27,10 @@ Two conventions to know before reading the route files:
   `../db/services/list-items.ts`), so no REST call can set it.
 
 `POST /lists/:listId/items/upsert-by-ref` returns the cumulative quantity for a
-merged row. Callers can pass `notesMerge` with a separator and maximum Unicode
-code-point length; when the limit is exceeded, the oldest text is dropped
-first and marked with `…`.
+merged row. Callers can pass `labelFromQty` to build the merged label from that
+quantity in the same transaction. `notesMerge` sets a separator and maximum
+Unicode code-point length; when the limit is exceeded, the oldest text is
+dropped first and marked with `…`.
 
 ## The vestigial entity surface
 

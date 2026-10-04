@@ -32,6 +32,16 @@ export interface NotesMergeOptions {
   maxLength: number;
 }
 
+/** Controls how a cumulative quantity is rendered in a merged item's label. */
+export interface LabelFromQtyOptions {
+  /** Text placed before the formatted quantity. */
+  prefix: string;
+  /** Text placed after the formatted quantity. */
+  suffix: string;
+  /** Maximum number of fractional digits shown. */
+  maxFractionDigits: number;
+}
+
 /** Input accepted by the atomic merge-or-insert operation. */
 export interface UpsertItemByRefInput {
   listId: number;
@@ -42,6 +52,7 @@ export interface UpsertItemByRefInput {
   unit?: string | null;
   notes?: string | null;
   onConflict?: UpsertConflictMode;
+  labelFromQty?: LabelFromQtyOptions;
   notesMerge?: NotesMergeOptions;
 }
 
@@ -126,9 +137,13 @@ function replacedValues(input: UpsertItemByRefInput): MergedValues {
 }
 
 function additiveValues(existing: ListItemRow, input: UpsertItemByRefInput): MergedValues {
+  const qty = sumQuantity(existing.qty, input.qty ?? null);
   return {
-    label: input.label,
-    qty: sumQuantity(existing.qty, input.qty ?? null),
+    label:
+      qty === null || input.labelFromQty === undefined
+        ? input.label
+        : labelFromQty(qty, input.labelFromQty),
+    qty,
     unit: existing.unit ?? input.unit ?? null,
     notes: mergeNotes(existing.notes, input.notes ?? null, input.notesMerge),
   };
@@ -137,6 +152,12 @@ function additiveValues(existing: ListItemRow, input: UpsertItemByRefInput): Mer
 function sumQuantity(existing: number | null, addition: number | null): number | null {
   if (existing === null && addition === null) return null;
   return (existing ?? 0) + (addition ?? 0);
+}
+
+function labelFromQty(qty: number, options: LabelFromQtyOptions): string {
+  const scale = 10 ** options.maxFractionDigits;
+  const roundedQty = Math.round(qty * scale) / scale;
+  return `${options.prefix}${roundedQty}${options.suffix}`;
 }
 
 function writeNotes(notes: string | null, options?: NotesMergeOptions): string | null {

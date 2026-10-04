@@ -34,6 +34,14 @@ export const NotesMergeOptionsSchema = z
   })
   .describe('Optional formatting and size limit for notes written by an upsert.');
 
+export const LabelFromQtyOptionsSchema = z
+  .object({
+    prefix: z.string(),
+    suffix: z.string(),
+    maxFractionDigits: z.number().int().min(0).max(10),
+  })
+  .describe('Optional formatting for labels rebuilt from the cumulative quantity on merge.');
+
 export const UpsertByRefBodySchema = z.object({
   refKind: NON_FREE_REF_KIND_ENUM,
   refId: z.number().int().positive(),
@@ -42,6 +50,9 @@ export const UpsertByRefBodySchema = z.object({
   unit: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   onConflict: UPSERT_CONFLICT_MODE_ENUM.optional(),
+  labelFromQty: LabelFromQtyOptionsSchema.optional().describe(
+    'When merging additively, formats the cumulative quantity into the label in the same transaction.'
+  ),
   notesMerge: NotesMergeOptionsSchema.optional().describe(
     'Optional note formatting and size limit for this upsert.'
   ),
