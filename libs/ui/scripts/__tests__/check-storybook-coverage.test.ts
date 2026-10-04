@@ -4,7 +4,12 @@ import { dirname, resolve } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { checkAliasCoverage, readAliases, run } from '../check-storybook-coverage.mjs';
+import {
+  checkAliasCoverage,
+  checkMonorepoAliases,
+  readAliases,
+  run,
+} from '../check-storybook-coverage.mjs';
 import {
   checkStoryCoverage,
   collectStoriedModules,
@@ -322,6 +327,20 @@ describe('checkAliasCoverage', () => {
     const errors = checkAliasCoverage([], []);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('no frontend @pops/app-* package was discovered');
+  });
+
+  it('skips cross-pillar alias coverage only when EX-2 has no pillars tree', () => {
+    const extractedRoot = makeTree({});
+    const extracted = checkMonorepoAliases(resolve(extractedRoot, 'pillars'), []);
+    expect(extracted).toEqual({ applicable: false, packages: [], errors: [] });
+
+    const monorepoRoot = makeTree({});
+    const pillarsDir = resolve(monorepoRoot, 'pillars');
+    mkdirSync(pillarsDir);
+    const monorepo = checkMonorepoAliases(pillarsDir, []);
+    expect(monorepo.applicable).toBe(true);
+    expect(monorepo.errors).toHaveLength(1);
+    expect(monorepo.errors[0]).toContain('no frontend @pops/app-* package was discovered');
   });
 });
 
