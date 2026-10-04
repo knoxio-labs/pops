@@ -72,4 +72,12 @@ describe('the cross-order questions each index exists to answer', () => {
     expect(plan).toContain('idx_purchase_item_tags_tag');
     expect(plan).not.toContain('SCAN purchase_item_tags');
   });
+
+  it('searches rather than scans for every line carrying a shared tag id', () => {
+    const plan = planFor(
+      `SELECT item_id FROM purchase_item_shared_tags WHERE tag_id = 'shared-tag-id'`
+    );
+    expect(plan).toContain('idx_purchase_item_shared_tags_tag');
+    expect(plan).not.toContain('SCAN purchase_item_shared_tags');
+  });
 });

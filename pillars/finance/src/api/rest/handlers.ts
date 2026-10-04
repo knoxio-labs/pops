@@ -26,6 +26,7 @@ import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
 import { makeSummaryHandlers } from './summary-handlers.js';
 import { makeTagRulesHandlers } from './tag-rules-handlers.js';
+import { makeTaggedHandlers } from './tagged-handlers.js';
 import { makeTransactionsHandlers } from './transactions-handlers.js';
 import { makeWishlistHandlers } from './wishlist-handlers.js';
 
@@ -34,6 +35,7 @@ const server: ReturnType<typeof initServer> = initServer();
 export function makeFinanceRestHandlers(deps: {
   financeDb: OpenedFinanceDb;
   contacts: ContactsClient;
+  syncSharedTagsOnce?: () => Promise<unknown>;
 }): ReturnType<typeof server.router<typeof financeContract>> {
   const db = deps.financeDb.db;
   return server.router(financeContract, {
@@ -46,6 +48,7 @@ export function makeFinanceRestHandlers(deps: {
     giftCardDetails: makeGiftCardDetailsHandlers(db),
     loan: makeLoanHandlers(db),
     transactions: makeTransactionsHandlers(db, deps.contacts),
+    tagged: makeTaggedHandlers(db, deps.syncSharedTagsOnce),
     tagRules: makeTagRulesHandlers(db),
     corrections: makeCorrectionsHandlers(db),
     entityUsage: makeEntityUsageHandlers(db, deps.contacts),

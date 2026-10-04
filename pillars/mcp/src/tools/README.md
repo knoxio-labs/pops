@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 70 tools; a new adapter that breaks one is a bug even
+These hold across all 82 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -51,12 +51,17 @@ though nothing enforces it mechanically.
 
 - `finance.entities.list` dispatches to the **`contacts`** pillar, which owns
   the entity table. Finance only owns the transaction usage rollup.
+- `tags.things.list` calls the orchestrator's `tagged.query` route. Inspect its
+  response's `pillars` status list before treating the returned sections as
+  complete; unavailable or unauthorized carrier statuses can mean partial results.
 - `finance.accounts.checkpoints` calls the finance pillar's `checkpoints.list`
   operation (`GET /accounts/:id/checkpoints`), not `accounts.*` — checkpoints
   and accounts are separate contract sub-routers even though the tool name
   groups them under `accounts` for discoverability.
 - The `finance.*` family is read-only on purpose: no create/update/delete tool
   is wired, and `finance.test.ts` asserts no mutation-shaped name ever appears.
+  The separate `tags.assignments.attach` and `.detach` tools change only shared
+  tag assignments on Finance transactions, under the `finance.tagged` scope.
 - `finance.summary.get` is the tool to reach for on any "where did the money
   go" question. It is one call to an aggregation the finance pillar already
   did, and the alternative — paging `finance.transactions.list` and adding it
@@ -65,9 +70,10 @@ though nothing enforces it mechanically.
   endpoint returns every breakdown for a window in one response, so splitting
   it per axis would be several calls for data already fetched, and would make
   the mcp package mirror the response shape it currently never has to know.
-- The `purchases.*` family is read-only with one exception, asserted in
-  `purchases.test.ts`. Every other write on that pillar is an ingest (which
-  needs a checksum only an adapter can compute) or a classification decision —
+- The `purchases.*` family is read-only for a sharper reason, asserted the same
+  way in `purchases.test.ts`. Its ordinary purchase writes are ingestion
+  (which needs a checksum only an adapter can compute) or classification
+  decisions —
   and `PATCH /purchases/:id/items/:itemId` is the single place a machine
   proposal becomes a human assertion. A tool that could call it would erase the
   distinction `kindConfirmedAt` exists to hold.
@@ -85,7 +91,15 @@ though nothing enforces it mechanically.
 - `purchases.*` needs a grant. That pillar admits an uncredentialled caller but
   holds a caller presenting an `X-API-Key` to that key's scopes, and MCP always
   presents one. Without `purchases.purchase`, `purchases.analytics` and
-  `purchases.search` on the MCP service account, every tool returns `403`.
+  `purchases.search` on the MCP service account, every tool in the family
+  returns `403`.
+- `tags.tags.*` manages the shared tag vocabulary under the
+  `tags.tags` service-account scope. These tools do not attach or detach
+  tags on Finance or Purchases records.
+- `tags.assignments.attach` and `.detach` attach or detach one shared tag on a
+  Finance transaction or Purchases line item. The selected `pillar` determines
+  the required `<pillar>.tagged` scope; these tools do not change the tag
+  vocabulary or any other carrier fields.
 - `inventory.catalogue.*` completes the persisted type-catalogue authoring
   workflow without database access. The MCP service account needs
   `inventory.types.read` for catalogue and audit reads, and
@@ -124,7 +138,7 @@ though nothing enforces it mechanically.
 
 ## Not here
 
-No tools exist for `ai`, `food`, `lists`, `registry`, `orchestrator`, or
-`documents` — those pillars are unreachable through MCP until an adapter is
-added. There is also no cross-pillar orchestration: one tool call is one
-pillar call, and nothing is retained between calls.
+No tools exist for `ai`, `food`, `lists`, `registry`, or `documents` — those
+pillars are unreachable through MCP until an adapter is added. The one
+cross-pillar query, `tags.things.list`, makes a single call to the orchestrator,
+which fans out to registered tag carriers and reports each carrier's status.

@@ -8,7 +8,16 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { parseStoredTags } from '../tag-facets.js';
+import { parseStoredTags, SHARED_TAG_FACETS, TAG_FACET_KINDS } from '../tag-facets.js';
+
+describe('shared tag facets', () => {
+  it('keeps the shared facets open for human-created vocabulary values', () => {
+    expect(SHARED_TAG_FACETS).toEqual(['trip', 'hobby', 'project']);
+    for (const facet of SHARED_TAG_FACETS) {
+      expect(TAG_FACET_KINDS[facet]).toBe('open');
+    }
+  });
+});
 
 describe('parseStoredTags', () => {
   it('parses a stored array', () => {

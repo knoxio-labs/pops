@@ -3,8 +3,18 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 73 tools', () => {
-    expect(allTools).toHaveLength(73);
+  it('exports exactly 82 tools', () => {
+    expect(allTools).toHaveLength(82);
+  });
+
+  it('registers cross-pillar shared tag lookup', () => {
+    expect(allTools.some((tool) => tool.name === 'tags.things.list')).toBe(true);
+  });
+
+  it('registers shared tag assignment tools', () => {
+    const names = new Set(allTools.map((tool) => tool.name));
+    expect(names.has('tags.assignments.attach')).toBe(true);
+    expect(names.has('tags.assignments.detach')).toBe(true);
   });
 
   it('registers the purchases product leaderboard', () => {
@@ -90,6 +100,20 @@ describe('allTools', () => {
       'purchases.analytics.merchantSpend',
     ]) {
       expect(names.has(required), `missing tool: ${required}`).toBe(true);
+    }
+  });
+
+  it('includes all shared tag vocabulary tools', () => {
+    const names = new Set(allTools.map((t) => t.name));
+    for (const required of [
+      'tags.tags.list',
+      'tags.tags.get',
+      'tags.tags.create',
+      'tags.tags.update',
+      'tags.tags.archive',
+      'tags.tags.merge',
+    ]) {
+      expect(names.has(required), 'missing tool: ' + required).toBe(true);
     }
   });
 

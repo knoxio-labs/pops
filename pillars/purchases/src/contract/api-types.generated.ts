@@ -622,6 +622,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/tagged/query': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** List purchase line items carrying any requested shared tag ids */
+    post: operations['tagged.list'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/tagged/{entityType}/{entityId}/tags/{tagId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Attach a shared tag to a purchase line item */
+    put: operations['tagged.attach'];
+    post?: never;
+    /** Detach a shared tag from a purchase line item */
+    delete: operations['tagged.detach'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4937,6 +4972,143 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'tagged.list': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          cursor?: string;
+          /** @default 200 */
+          limit: number;
+          tagIds: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            items: {
+              amountCents: number | null;
+              date: string | null;
+              entityType: string;
+              tagIds: string[];
+              title: string;
+              uri: string;
+            }[];
+            nextCursor: string | null;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'tagged.attach': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entityType: 'purchase-item';
+        entityId: string;
+        tagId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            tagIds: string[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'tagged.detach': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entityType: 'purchase-item';
+        entityId: string;
+        tagId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            tagIds: string[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
         headers: {
           [name: string]: unknown;
         };
