@@ -124,6 +124,7 @@ export const mockPillarInventory = {
     locations: {
       tree: vi.fn().mockResolvedValue(callOk({ data: [{ ...LOC, children: [] }] })),
       list: vi.fn().mockResolvedValue(callOk({ data: [LOC], total: 1 })),
+      get: vi.fn().mockResolvedValue(callOk({ data: LOC })),
       create: vi.fn().mockResolvedValue(callOk({ data: LOC2, message: 'Location created' })),
       update: vi.fn().mockResolvedValue(callOk({ data: LOC, message: 'Location updated' })),
       delete: vi.fn().mockResolvedValue(callOk({ message: 'Location deleted' })),

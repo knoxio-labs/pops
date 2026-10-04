@@ -55,8 +55,9 @@ describe('inventory.locations.tree', () => {
   it('calls tree and unwraps CallResult', async () => {
     const result = await tool('inventory.locations.tree').handler({});
     expect(locations.tree).toHaveBeenCalled();
-    const parsed = parseResult(result) as { data: { id: string }[] };
-    expect(parsed.data[0]).toMatchObject({ id: 'loc_1' });
+    expect(parseResult(result)).toEqual({
+      data: [{ id: 'loc_1', name: 'Living Room', parentId: null, sortOrder: 0, children: [] }],
+    });
     expect(result.isError).toBeUndefined();
   });
 
@@ -74,10 +75,56 @@ describe('inventory.locations.tree', () => {
 });
 
 describe('inventory.locations.list', () => {
-  it('calls list', async () => {
+  it('adds a stable URI to each location and preserves the count', async () => {
     const result = await tool('inventory.locations.list').handler({});
     expect(locations.list).toHaveBeenCalled();
     expect(result.isError).toBeUndefined();
+    expect(parseResult(result)).toEqual({
+      data: [
+        {
+          id: 'loc_1',
+          name: 'Living Room',
+          parentId: null,
+          sortOrder: 0,
+          uri: 'pops:inventory/location/loc_1',
+        },
+      ],
+      total: 1,
+    });
+  });
+});
+
+describe('inventory.locations.get', () => {
+  it('gets a location by ID, adds its stable URI, and is read-only', async () => {
+    const result = await tool('inventory.locations.get').handler({ id: 'loc_1' });
+
+    expect(locations.get).toHaveBeenCalledWith({ id: 'loc_1' });
+    expect(tool('inventory.locations.get').readOnly).toBe(true);
+    expect(result.isError).toBeUndefined();
+    expect(parseResult(result)).toEqual({
+      data: {
+        id: 'loc_1',
+        name: 'Living Room',
+        parentId: null,
+        sortOrder: 0,
+        uri: 'pops:inventory/location/loc_1',
+      },
+    });
+  });
+
+  it('requires a non-empty ID', async () => {
+    const result = await tool('inventory.locations.get').handler({ id: '' });
+
+    expect(result.isError).toBe(true);
+    expect(locations.get).not.toHaveBeenCalled();
+  });
+
+  it('surfaces pillar failures', async () => {
+    locations.get.mockResolvedValueOnce(callUnavailable('inventory'));
+    expect((await tool('inventory.locations.get').handler({ id: 'loc_1' })).isError).toBe(true);
+
+    locations.get.mockResolvedValueOnce(callContractMismatch('inventory', '1.0.0', '2.0.0'));
+    expect((await tool('inventory.locations.get').handler({ id: 'loc_1' })).isError).toBe(true);
   });
 });
 
