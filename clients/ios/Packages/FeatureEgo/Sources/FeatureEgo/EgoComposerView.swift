@@ -18,10 +18,11 @@ internal struct EgoComposerView: View {
         return false
     }
 
-    private var isActionDisabled: Bool {
-        guard !isStreaming else { return false }
-        return !isSendAvailable
-            || model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    private var actionState: EgoComposerActionState {
+        EgoComposerActionState(
+            isStreaming: isStreaming,
+            isSendAvailable: isSendAvailable,
+            draft: model.draft)
     }
 
     var body: some View {
@@ -36,19 +37,22 @@ internal struct EgoComposerView: View {
                 .accessibilityIdentifier(EgoComposerAccessibility.input)
 
             Button(action: submit) {
-                Image(systemName: isStreaming ? "stop.fill" : "arrow.up")
+                Image(systemName: actionState.action == .stop ? "stop.fill" : "arrow.up")
                     .font(.popsSubheadline.weight(.semibold))
-                    .foregroundStyle(isStreaming ? Color.popsDestructive : Color.popsBackground)
+                    .foregroundStyle(
+                        actionState.action == .stop
+                            ? Color.popsDestructive
+                            : Color.popsBackground)
                     .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
                     .background(
-                        isStreaming ? Color.popsSurface : Color.popsAccent,
+                        actionState.action == .stop ? Color.popsSurface : Color.popsAccent,
                         in: Circle()
                     )
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
-            .disabled(isActionDisabled)
-            .accessibilityLabel(isStreaming ? "Stop response" : "Send message")
+            .disabled(actionState.isDisabled)
+            .accessibilityLabel(actionState.action == .stop ? "Stop response" : "Send message")
             .accessibilityIdentifier(EgoComposerAccessibility.action)
         }
         .padding(.horizontal, PopsSpacing.md)
@@ -62,11 +66,29 @@ internal struct EgoComposerView: View {
     }
 
     private func submit() {
-        if isStreaming {
+        switch actionState.action {
+        case .stop:
             model.cancel()
-        } else {
+        case .send:
             model.send()
         }
+    }
+}
+
+internal struct EgoComposerActionState: Equatable {
+    internal enum Action: Equatable {
+        case send
+        case stop
+    }
+
+    internal let action: Action
+    internal let isDisabled: Bool
+
+    internal init(isStreaming: Bool, isSendAvailable: Bool, draft: String) {
+        action = isStreaming ? .stop : .send
+        isDisabled =
+            !isStreaming
+            && (!isSendAvailable || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 }
 

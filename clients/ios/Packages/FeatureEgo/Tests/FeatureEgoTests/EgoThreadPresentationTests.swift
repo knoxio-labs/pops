@@ -19,9 +19,9 @@ internal struct EgoThreadPresentationTests {
 
         #expect(
             EgoThreadRow.rows(messages: [message], turn: nil, notices: []) == [
-                .text(messageId: "message-1", role: .assistant, text: "Before entity"),
+                .text(messageId: "message-1", index: 0, role: .assistant, text: "Before entity"),
                 .entity(messageId: "message-1", index: 2, part: entity),
-                .text(messageId: "message-1", role: .assistant, text: "After"),
+                .text(messageId: "message-1", index: 3, role: .assistant, text: "After"),
                 .actions(messageId: "message-1", index: 4, part: batch),
             ])
     }
@@ -39,7 +39,7 @@ internal struct EgoThreadPresentationTests {
 
         #expect(
             EgoThreadRow.rows(messages: messages, turn: turn, notices: []) == [
-                .text(messageId: "message-1", role: .assistant, text: "Earlier"),
+                .text(messageId: "message-1", index: 0, role: .assistant, text: "Earlier"),
                 .tool(tool),
                 .entity(messageId: "streaming-turn", index: 1, part: entity),
                 .actions(messageId: "streaming-turn", index: 2, part: batch),
@@ -57,7 +57,7 @@ internal struct EgoThreadPresentationTests {
 
         #expect(
             EgoThreadRow.rows(messages: [], turn: turn, notices: []) == [
-                .text(messageId: "failed-turn", role: .assistant, text: "Partial answer"),
+                .text(messageId: "failed-turn", index: 0, role: .assistant, text: "Partial answer"),
                 .failure(message: "Connection lost", retryable: true),
             ])
     }
@@ -78,7 +78,7 @@ internal struct EgoThreadPresentationTests {
         let message = makeMessage("message-1", [.text("Saved")])
         #expect(
             EgoThreadRow.rows(messages: [message], turn: nil, notices: []) == [
-                .text(messageId: "message-1", role: .assistant, text: "Saved")
+                .text(messageId: "message-1", index: 0, role: .assistant, text: "Saved")
             ])
     }
 
@@ -92,7 +92,27 @@ internal struct EgoThreadPresentationTests {
         )
 
         #expect(
-            rows.suffix(2) == [.notice("Opens in Purchases"), .notice("That link is not valid")])
+            rows.suffix(2) == [
+                .notice(index: 0, message: "Opens in Purchases"),
+                .notice(index: 1, message: "That link is not valid"),
+            ])
+    }
+
+    @Test("repeated text and notice rows keep unique identifiers")
+    func repeatedRowsHaveUniqueIDs() {
+        let message = makeMessage(
+            "message-1",
+            [.text("A"), .entity(sampleEntity()), .text("A")])
+        let rows = EgoThreadRow.rows(
+            messages: [message],
+            turn: nil,
+            notices: ["Same notice", "Same notice"]
+        )
+
+        #expect(rows.count == 5)
+        #expect(Set(rows.map(\.id)).count == rows.count)
+        #expect(rows[0].id != rows[2].id)
+        #expect(rows[3].id != rows[4].id)
     }
 
     @Test("entity row ids include their message id")

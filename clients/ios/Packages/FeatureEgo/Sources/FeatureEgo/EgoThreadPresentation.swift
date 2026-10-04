@@ -2,18 +2,18 @@ import AppCore
 
 /// One stable row in the transcript, independent of its SwiftUI renderer.
 internal enum EgoThreadRow: Hashable, Identifiable {
-    case text(messageId: String, role: EgoRole, text: String)
+    case text(messageId: String, index: Int, role: EgoRole, text: String)
     case entity(messageId: String, index: Int, part: EgoEntityPart)
     case actions(messageId: String, index: Int, part: EgoActionsPart)
     case tool(EgoToolActivity)
     case streaming(text: String)
     case failure(message: String, retryable: Bool)
-    case notice(String)
+    case notice(index: Int, message: String)
 
     internal var id: String {
         switch self {
-        case .text(let messageId, let role, let text):
-            "message:\(messageId):text:\(role.rawValue):\(text)"
+        case .text(let messageId, let index, _, _):
+            "message:\(messageId):text:\(index)"
         case .entity(let messageId, let index, _):
             "message:\(messageId):entity:\(index)"
         case .actions(let messageId, let index, _):
@@ -24,8 +24,8 @@ internal enum EgoThreadRow: Hashable, Identifiable {
             "streaming"
         case .failure:
             "failure"
-        case .notice(let notice):
-            "notice:\(notice)"
+        case .notice(let index, _):
+            "notice:\(index)"
         }
     }
 
@@ -37,23 +37,34 @@ internal enum EgoThreadRow: Hashable, Identifiable {
     ) -> [EgoThreadRow] {
         var rows = messages.flatMap(messageRows)
         rows.append(contentsOf: turnRows(turn))
-        rows.append(contentsOf: notices.map(EgoThreadRow.notice))
+        rows.append(
+            contentsOf: notices.enumerated().map {
+                .notice(index: $0.offset, message: $0.element)
+            })
         return rows
     }
 
     private static func messageRows(_ message: EgoMessage) -> [EgoThreadRow] {
         var rows: [EgoThreadRow] = []
         var textParts: [String] = []
+        var textStartIndex: Int?
 
         func flushText() {
-            guard !textParts.isEmpty else { return }
-            rows.append(.text(messageId: message.id, role: message.role, text: textParts.joined()))
+            guard !textParts.isEmpty, let startIndex = textStartIndex else { return }
+            rows.append(
+                .text(
+                    messageId: message.id,
+                    index: startIndex,
+                    role: message.role,
+                    text: textParts.joined()))
             textParts.removeAll(keepingCapacity: true)
+            textStartIndex = nil
         }
 
         for (index, part) in message.parts.enumerated() {
             switch part {
             case .text(let text):
+                if textStartIndex == nil { textStartIndex = index }
                 textParts.append(text)
             case .entity(let entity):
                 flushText()
@@ -101,7 +112,12 @@ internal enum EgoThreadRow: Hashable, Identifiable {
     ) -> [EgoThreadRow] {
         var rows: [EgoThreadRow] = []
         if !turn.streamedText.isEmpty {
-            rows.append(.text(messageId: "failed-turn", role: .assistant, text: turn.streamedText))
+            rows.append(
+                .text(
+                    messageId: "failed-turn",
+                    index: 0,
+                    role: .assistant,
+                    text: turn.streamedText))
         }
         rows.append(.failure(message: message, retryable: retryable))
         return rows
