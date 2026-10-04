@@ -20,79 +20,23 @@ import { Router, type Router as ExpressRouter, type Request, type Response } fro
 
 import { PopsError } from '@pops/pillar-express';
 
-import { egoChatBodySchema } from '../../contract/rest-ego-schemas.js';
+import { egoStreamBodySchema } from '../../contract/rest-ego-stream.js';
 import { EgoActionStore } from '../modules/ego/actions-store.js';
 import {
   persistAssistantError,
-  persistStreamResults,
   persistUserTurn,
   resolveConversation,
 } from '../modules/ego/chat-helpers.js';
 import { ConversationPersistence } from '../modules/ego/persistence.js';
 import { buildEgoEngine } from './ego-engine.js';
 import { setSseHeaders, streamError, writeSseEvent } from './ego-stream-frames.js';
+import { pipeStreamEvents } from './ego-stream-pipe.js';
+import { handleResumeStreamRequest } from './ego-stream-resume.js';
 
+import type { EgoChatBodyWire } from '../../contract/rest-ego-schemas.js';
 import type { Conversation, Message } from '../modules/ego/persistence.js';
-import type { AppContext, ChatStreamPreparation } from '../modules/ego/types.js';
+import type { AppContext } from '../modules/ego/types.js';
 import type { EgoHandlerDeps } from './ego-engine.js';
-
-interface PipeStreamParams {
-  req: Request;
-  res: Response;
-  persistence: ConversationPersistence;
-  actions: EgoActionStore;
-  preparation: ChatStreamPreparation;
-  conversation: Conversation;
-}
-
-async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
-  const { req, res, persistence, actions, preparation, conversation } = params;
-  let clientDisconnected = false;
-  req.on('close', () => {
-    clientDisconnected = true;
-  });
-
-  for await (const event of preparation.stream) {
-    if (clientDisconnected) break;
-
-    if (event.type === 'token') {
-      writeSseEvent(res, { type: 'token', text: event.text });
-    } else if (event.type === 'tool') {
-      writeSseEvent(res, { type: 'tool', name: event.name, status: event.status });
-    } else if (event.type === 'part') {
-      writeSseEvent(res, { type: 'part', part: event.part });
-    } else if (event.type === 'navigate') {
-      writeSseEvent(res, { type: 'navigate', uri: event.uri });
-    } else if (event.type === 'done') {
-      const assistantMsg = persistStreamResults({
-        persistence,
-        actions,
-        conversationId: conversation.id,
-        content: event.content,
-        citations: event.citations,
-        tokensIn: event.tokensIn,
-        tokensOut: event.tokensOut,
-        parts: event.parts,
-        batch: event.batch,
-        autoExecuted: event.autoExecuted,
-        retrievedEngrams: preparation.retrievedEngrams,
-        scopeNegotiation: preparation.scopeNegotiation,
-      });
-
-      writeSseEvent(res, {
-        type: 'done',
-        conversationId: conversation.id,
-        messageId: assistantMsg.id,
-        parts: event.parts,
-        citations: event.citations,
-        tokensIn: event.tokensIn,
-        tokensOut: event.tokensOut,
-        retrievedEngrams: preparation.retrievedEngrams,
-        scopeNegotiation: preparation.scopeNegotiation,
-      });
-    }
-  }
-}
 
 interface ResolvedTurn {
   conversation: Conversation;
@@ -109,7 +53,7 @@ interface ResolveTurnParams {
   deps: EgoHandlerDeps;
   persistence: ConversationPersistence;
   res: Response;
-  input: ReturnType<typeof egoChatBodySchema.parse>;
+  input: EgoChatBodyWire;
   requestId: string | undefined;
 }
 
@@ -147,7 +91,7 @@ async function handleStreamRequest(
   res: Response,
   next: (error: unknown) => void
 ): Promise<void> {
-  const parsed = egoChatBodySchema.safeParse(req.body);
+  const parsed = egoStreamBodySchema.safeParse(req.body);
   if (!parsed.success) {
     next(
       new PopsError({
@@ -166,6 +110,32 @@ async function handleStreamRequest(
 
   const persistence = new ConversationPersistence({ db: deps.db });
   const actions = new EgoActionStore({ db: deps.db });
+  if ('resumeBatchId' in input) {
+    await handleResumeStreamRequest({ deps, req, res, persistence, actions, input });
+    return;
+  }
+
+  await handleNewMessageStreamRequest({
+    deps,
+    req,
+    res,
+    persistence,
+    actions,
+    input,
+  });
+}
+
+interface NewMessageStreamParams {
+  deps: EgoHandlerDeps;
+  req: Request;
+  res: Response;
+  persistence: ConversationPersistence;
+  actions: EgoActionStore;
+  input: EgoChatBodyWire;
+}
+
+async function handleNewMessageStreamRequest(params: NewMessageStreamParams): Promise<void> {
+  const { deps, req, res, persistence, actions, input } = params;
   const resolved = resolveAndPersistUserTurn({
     deps,
     persistence,
