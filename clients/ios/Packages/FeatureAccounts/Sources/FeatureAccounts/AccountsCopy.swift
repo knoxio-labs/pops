@@ -58,6 +58,8 @@ internal enum AccountsCopy {
             return "Too many requests. Wait before trying again."
         case .contractMismatch:
             return "This version of Pops cannot read what the server sent. Update the app."
+        case .requestRejected:
+            return "This version of Pops sent a request the server cannot accept. Update the app."
         case .conflict:
             return "That change conflicts with something already saved."
         case .transport:

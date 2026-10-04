@@ -23,6 +23,15 @@ internal struct PurchaseReviewCopyTests {
         #expect(PurchaseReviewCopy.cancelTitle(count: 4) == "Discard all 4 purchases?")
     }
 
+    @Test("a rejected save request does not read as a connection failure")
+    func rejectedSaveRequestCopy() {
+        let rejected = PurchaseReviewCopy.saveFailure(.requestRejected)
+        let offline = PurchaseReviewCopy.saveFailure(.transport("offline"))
+
+        #expect(rejected == "This version of Pops can't save this purchase. Update the app.")
+        #expect(rejected != offline)
+    }
+
     @Test("saving subtitle never counts beyond the batch")
     func savingSubtitleClamps() {
         #expect(

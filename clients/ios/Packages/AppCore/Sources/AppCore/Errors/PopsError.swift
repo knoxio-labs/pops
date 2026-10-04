@@ -74,6 +74,10 @@ extension PopsError {
             self.init(
                 code: "ios.contract.mismatch", message: fallbackMessage,
                 retryable: false, kind: .client)
+        case .requestRejected:
+            self.init(
+                code: "ios.contract.request_rejected", message: fallbackMessage,
+                retryable: false, kind: .client)
         case .conflict:
             self.init(
                 code: "ios.repository.conflict", message: fallbackMessage,

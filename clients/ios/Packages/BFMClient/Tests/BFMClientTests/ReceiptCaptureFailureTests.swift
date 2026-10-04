@@ -86,6 +86,19 @@ internal struct ReceiptCaptureFailureTests {
         #expect(manualFailure == .conflict("upstream_conflict"))
     }
 
+    @Test("a rejected request from either receipt write is not a transport failure")
+    func rejectedWriteRequests() async {
+        let draftFailure = await writeFailure {
+            try await saveDraft(.badRequest, json: ReceiptCaptureWire.badRequest)
+        }
+        let manualFailure = await writeFailure {
+            try await createManualPurchase(.badRequest, json: ReceiptCaptureWire.badRequest)
+        }
+
+        #expect(draftFailure == .requestRejected)
+        #expect(manualFailure == .requestRejected)
+    }
+
     @Test("a successful response outside the outcome union is a contract mismatch")
     func successfulResponseOutsideOutcomeUnion() async {
         let actual = await error(

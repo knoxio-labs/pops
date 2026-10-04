@@ -144,6 +144,11 @@ internal enum ReceiptCaptureWire {
         """
     }
 
+    internal static let badRequest = """
+        {"code":"bfm.request.invalid","message":"The request is invalid",\
+        "requestId":"request-test","retryable":false}
+        """
+
     internal static func payloadTooLarge(
         maxBytes: Int = 20_000_000, message: String = "too big"
     ) -> String {

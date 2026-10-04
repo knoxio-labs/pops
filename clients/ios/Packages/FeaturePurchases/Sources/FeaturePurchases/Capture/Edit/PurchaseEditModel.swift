@@ -21,7 +21,8 @@ internal enum PurchaseEditFailure: Hashable, Sendable {
         case .conflict("purchase_locked"): self = .purchaseLocked
         case .conflict("purchase_stale"): self = .purchaseStale
         case .unauthorized: self = .unauthorized
-        case .contractMismatch, .conflict, .dependencyNotBound: self = .contractMismatch
+        case .contractMismatch, .requestRejected, .conflict, .dependencyNotBound:
+            self = .contractMismatch
         case .transport, .rateLimited, .unavailable, nil: self = .unavailable
         }
     }
