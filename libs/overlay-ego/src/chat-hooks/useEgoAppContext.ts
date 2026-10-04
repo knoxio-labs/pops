@@ -13,8 +13,9 @@ const ENTITY_URI = /^pops:[^/]+\/[^/]+\/(.+)$/;
  * Maps the shell's active app, route and viewed entity onto the ego chat wire
  * shape. Returns `undefined` when no app is active (root or unmatched paths),
  * so callers omit `appContext` rather than send an empty one. `entityId` is the
- * id segment of the entity's `pops:{app}/{type}/{id}` URI; an entity whose URI
- * does not parse contributes no entity fields.
+ * id segment of the entity's `pops:{app}/{type}/{id}` URI; a parsed entity
+ * also carries its original URI. An entity whose URI does not parse contributes
+ * no entity fields, including no URI.
  */
 export function useEgoAppContext(): EgoAppContext | undefined {
   const { app } = useAppContext();
@@ -29,6 +30,7 @@ export function useEgoAppContext(): EgoAppContext | undefined {
   return {
     app,
     route: pathname,
+    uri: entity.uri,
     entityType: entity.type,
     entityId,
     entityTitle: entity.title,
