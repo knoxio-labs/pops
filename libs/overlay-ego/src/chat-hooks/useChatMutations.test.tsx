@@ -9,6 +9,8 @@ import { useChatMutations } from './useChatMutations';
 
 import type { ReactNode } from 'react';
 
+import type { ChatMessage } from './types';
+
 const streaming = vi.hoisted(() => ({
   stream: vi.fn(),
   isStreaming: false,
@@ -70,13 +72,14 @@ function deferredValue<T>() {
   return { promise, resolve };
 }
 
-function renderMutations() {
+function renderMutations(messages: ChatMessage[] = []) {
   return renderHook(
     () =>
       useChatMutations({
         selectedConversationId: 'conversation-1',
         setSelectedConversationId,
         inputValue: '  hello  ',
+        messages,
         setInputValue,
       }),
     { wrapper: Wrapper }
@@ -200,6 +203,115 @@ describe('useChatMutations streamed view-model data', () => {
     const resumeCall = streaming.stream.mock.calls[0];
     expect(resumeCall?.[0]).toEqual({ conversationId: 'conversation-1', resumeBatchId: 'b1' });
     expect(resumeCall?.[1]).toBe(messageCallbacks);
+  });
+
+  it('continues a final decided batch with the shared stream callbacks', () => {
+    const messages: ChatMessage[] = [
+      {
+        id: 'message-1',
+        conversationId: 'conversation-1',
+        role: 'assistant',
+        content: '',
+        citations: null,
+        parts: [
+          {
+            type: 'actions',
+            batchId: 'b1',
+            actions: [
+              { actionId: 'a1', tool: 'inventory.search', summary: 'Search', status: 'confirmed' },
+              { actionId: 'a2', tool: 'inventory.search', summary: 'Search', status: 'rejected' },
+            ],
+          },
+        ],
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ];
+    const { result } = renderMutations(messages);
+
+    act(() => result.current.sendMessage());
+    const sharedCallbacks = streaming.stream.mock.calls[0]?.[1];
+    streaming.stream.mockClear();
+
+    const batchDecisions = result.current.batchDecisions;
+    expect(batchDecisions?.continuableBatchId).toBe('b1');
+    act(() => batchDecisions?.continueBatch?.('b1'));
+
+    expect(streaming.stream).toHaveBeenCalledOnce();
+    expect(streaming.stream.mock.calls[0]?.[0]).toEqual({
+      conversationId: 'conversation-1',
+      resumeBatchId: 'b1',
+    });
+    expect(streaming.stream.mock.calls[0]?.[1]).toBe(sharedCallbacks);
+  });
+
+  it('ignores a different batch id and hides continuation while streaming', () => {
+    const messages: ChatMessage[] = [
+      {
+        id: 'message-1',
+        conversationId: 'conversation-1',
+        role: 'assistant',
+        content: '',
+        citations: null,
+        parts: [
+          {
+            type: 'actions',
+            batchId: 'b1',
+            actions: [
+              { actionId: 'a1', tool: 'inventory.search', summary: 'Search', status: 'confirmed' },
+            ],
+          },
+        ],
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ];
+    const { result, rerender } = renderMutations(messages);
+    act(() => result.current.batchDecisions?.continueBatch?.('other'));
+    expect(streaming.stream).not.toHaveBeenCalled();
+
+    streaming.isStreaming = true;
+    rerender();
+    expect(result.current.batchDecisions).toBeNull();
+    expect(streaming.stream).not.toHaveBeenCalled();
+    streaming.isStreaming = false;
+  });
+
+  it('exposes no continuable batch while a decision is in flight', async () => {
+    const request = deferredValue<{ data: object }>();
+    api.egoDecideActionBatch.mockReturnValueOnce(request.promise);
+    const messages: ChatMessage[] = [
+      {
+        id: 'message-1',
+        conversationId: 'conversation-1',
+        role: 'assistant',
+        content: '',
+        citations: null,
+        parts: [
+          {
+            type: 'actions',
+            batchId: 'b1',
+            actions: [
+              { actionId: 'a1', tool: 'inventory.search', summary: 'Search', status: 'confirmed' },
+            ],
+          },
+        ],
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ];
+    const { result } = renderMutations(messages);
+    const batchDecisions = result.current.batchDecisions;
+    let decisionPromise: Promise<void> = Promise.resolve();
+
+    act(() => {
+      decisionPromise = batchDecisions?.decide('b1', decision) ?? Promise.resolve();
+    });
+    expect(result.current.batchDecisions?.continuableBatchId).toBeNull();
+    act(() => result.current.batchDecisions?.continueBatch?.('b1'));
+    expect(streaming.stream).not.toHaveBeenCalled();
+
+    await act(async () => {
+      request.resolve({ data: {} });
+      await decisionPromise;
+    });
   });
 
   it('does not start a resume when the batch decision fails', async () => {

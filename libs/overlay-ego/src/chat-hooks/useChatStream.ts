@@ -1,11 +1,12 @@
 import { useCallback, useMemo } from 'react';
 
+import { findContinuableBatchId } from './continuableBatch';
 import { useBatchDecision } from './useBatchDecision';
 
 import type { QueryClient } from '@tanstack/react-query';
 
 import type { EgoGetConversationResponses } from '../ego-api/types.gen';
-import type { RetrievedEngram } from './types';
+import type { ChatMessage, RetrievedEngram } from './types';
 import type { UseStreamingChatReturn } from './useStreamingChat';
 
 type ConversationDetail = EgoGetConversationResponses[200];
@@ -45,11 +46,21 @@ export function useStreamCallbacks({
 }
 
 /** Record a decision, then continue its conversation through the shared stream. */
-export function useBatchDecisionStream(
-  conversationId: string | null,
-  stream: Stream,
-  callbacks: StreamCallbacks
-) {
+interface BatchDecisionStreamParams {
+  conversationId: string | null;
+  stream: Stream;
+  callbacks: StreamCallbacks;
+  messages: ChatMessage[];
+  isStreaming: boolean;
+}
+
+export function useBatchDecisionStream({
+  conversationId,
+  stream,
+  callbacks,
+  messages,
+  isStreaming,
+}: BatchDecisionStreamParams) {
   const onDecided = useCallback(
     (batchId: string) => {
       if (conversationId !== null) {
@@ -58,7 +69,32 @@ export function useBatchDecisionStream(
     },
     [callbacks, conversationId, stream]
   );
-  return useBatchDecision(conversationId, onDecided);
+  const batchDecision = useBatchDecision(conversationId, onDecided);
+  const continuableBatchId =
+    batchDecision.decidingBatchId === null ? findContinuableBatchId(messages) : null;
+  const continueBatch = useCallback(
+    (batchId: string) => {
+      if (
+        conversationId === null ||
+        isStreaming ||
+        batchDecision.decidingBatchId !== null ||
+        batchId !== continuableBatchId
+      ) {
+        return;
+      }
+      stream({ conversationId, resumeBatchId: batchId }, callbacks);
+    },
+    [
+      batchDecision.decidingBatchId,
+      callbacks,
+      continuableBatchId,
+      conversationId,
+      isStreaming,
+      stream,
+    ]
+  );
+
+  return { ...batchDecision, continuableBatchId, continueBatch };
 }
 
 interface SendMessageParams {
