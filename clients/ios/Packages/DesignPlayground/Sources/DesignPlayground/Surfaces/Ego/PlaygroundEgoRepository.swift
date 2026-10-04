@@ -115,7 +115,7 @@ internal struct PlaygroundEgoRepository: EgoRepository {
                     for event in events {
                         try Task.checkCancellation()
                         continuation.yield(event)
-                        await Task.yield()
+                        try await Task.sleep(for: .milliseconds(1))
                     }
                     if shouldStall {
                         try await Task.sleep(for: .seconds(3_600))
