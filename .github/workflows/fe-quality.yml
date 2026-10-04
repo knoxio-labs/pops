@@ -112,6 +112,10 @@ jobs:
         if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: pnpm --filter "@pops/shell^..." --filter "!./pillars/*/app" build
 
+      - name: Build app dependencies for Storybook
+        if: ${{ inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.storybook == 'true' }}
+        run: pnpm --filter "@pops/app-*^..." build
+
       - name: Build Storybook
         if: ${{ inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.storybook == 'true' }}
         run: pnpm --filter @pops/ui build-storybook
