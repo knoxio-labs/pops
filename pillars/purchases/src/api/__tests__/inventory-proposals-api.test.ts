@@ -104,6 +104,37 @@ it('records a decline and stops offering that unit', async () => {
   expect(declined.body.unit.inventoryItemUri).toBeNull();
 });
 
+it('records an accept on a line no pass has classified, which the projection never offers', async () => {
+  // Nothing classifies a line at ingest, so a caller that already filed the
+  // item in inventory has to be able to link it without waiting for a kind.
+  const unclassifiedOrder = createPurchase(
+    opened.db,
+    amazonOrder({
+      sourceOrderId: 'unclassified-order',
+      checksum: 'amazon:unclassified-order',
+      items: [{ name: 'Bookends', quantity: 1, unitPriceCents: 3995, lineTotalCents: 3995 }],
+    })
+  );
+  const line = getPurchase(opened.db, unclassifiedOrder)?.items[0];
+  if (line === undefined) throw new Error('the seeded order has no line');
+  expect(line.item.kind).toBeNull();
+
+  const offers = await requestOn(app)
+    .get(`/purchases/${unclassifiedOrder}/inventory-proposals`)
+    .expect(200);
+  expect(offers.body.proposals).toEqual([]);
+
+  const accepted = await requestOn(app)
+    .post(`/purchases/${unclassifiedOrder}/items/${line.item.id}/inventory-proposal`)
+    .send({ decision: 'accepted', inventoryItemUri: INVENTORY_URI })
+    .expect(200);
+
+  expect(accepted.body.unit).toMatchObject({ inventoryItemUri: INVENTORY_URI });
+  const after = getPurchase(opened.db, unclassifiedOrder)?.items[0];
+  expect(after?.units.map((unit) => unit.inventoryItemUri)).toEqual([INVENTORY_URI]);
+  expect(after?.item.kind).toBeNull();
+});
+
 it('refuses a third answer to a two-unit line rather than minting a third asset', async () => {
   await decide({ decision: 'declined' }).expect(200);
   await decide({ decision: 'accepted', inventoryItemUri: INVENTORY_URI }).expect(200);

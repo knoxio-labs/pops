@@ -96,6 +96,11 @@ function findNamedUnit(
  * caller holding a line id but not its order is guessing, and answering
  * the guess would let a mistyped order id decide for someone else's line.
  *
+ * The line's kind is not consulted. The projection offers only `durable`
+ * lines, but a caller that already holds the asset is not answering an
+ * offer: it is stating a fact about a line, and a line nothing has
+ * classified yet is the common case, not the exception.
+ *
  * An answer that names no `unitId` is an answer to a slot that has no unit
  * row, so it mints one; it never lands on an existing row. The projection
  * offers a slot with a row and a slot without as two separate proposals,

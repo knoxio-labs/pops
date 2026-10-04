@@ -45,7 +45,7 @@ function inventory(): PillarHandle<InventoryShape> {
 const proposalsList: ToolDef = {
   name: 'purchases.inventoryProposals.list',
   description:
-    "List an order's unanswered inventory offers: one per unit of each durable line that is not yet linked to an inventory item. Each carries the order line's itemId and, when the unit already has a row, the unitId that inventoryProposals.accept must send back. Empty for an order with no durable lines, with every unit answered, or that does not exist.",
+    "List an order's unanswered inventory offers: one per unit of each line classified as durable that is not yet linked to an inventory item. Lines are unclassified until a classification pass runs, so an empty list does not mean nothing can be linked; inventoryProposals.accept takes any line of the order. Also empty for an order that does not exist.",
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -73,16 +73,16 @@ async function missingInventoryItem(inventoryItemId: string): Promise<CallToolRe
 const proposalsAccept: ToolDef = {
   name: 'purchases.inventoryProposals.accept',
   description:
-    "Link an existing inventory item to the order line unit it came from. Read purchases.inventoryProposals.list first and send the proposal's itemId, plus its unitId when it has one. The inventory item must already exist; this creates nothing. The link is permanent: it cannot be changed or removed afterwards, so only call it when the user has said which item came from which order line.",
+    "Link an existing inventory item to the order line unit it came from. Take orderId and the line's itemId from purchases.orders.get or purchases.search. It works on any line of the order, whether or not purchases.inventoryProposals.list offers it: that list only covers lines already classified as durable, and most lines are unclassified. Send unitId only when the line already has an unanswered unit row, as orders.get shows it. The inventory item must already exist; this creates nothing. The link is permanent: it cannot be changed or removed afterwards, so only call it when the user has said which item came from which order line.",
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
       orderId: { type: 'string', description: 'Order id' },
-      itemId: { type: 'string', description: "The order line's item id, from the proposal" },
+      itemId: { type: 'string', description: "The order line's item id" },
       unitId: {
         type: 'string',
-        description: "The proposal's unitId. Omit only when the proposal's unitId is null.",
+        description: "Id of the line's unanswered unit row, when it has one. Omit otherwise.",
       },
       inventoryItemId: { type: 'string', description: 'Id of the existing inventory item' },
     },

@@ -73,7 +73,11 @@ though nothing enforces it mechanically.
   distinction `kindConfirmedAt` exists to hold.
 - `purchases.inventoryProposals.accept` is the exception. It records that an
   inventory item which already exists is the asset an order line's unit
-  became: a link the user asked for, not a judgement. It checks the item
+  became: a link the user asked for, not a judgement. It takes any line of
+  the order, not only one `inventoryProposals.list` offers: that projection
+  covers lines classified `durable`, and nothing classifies a line at ingest
+  (POPS-3974), while the accept route itself never looks at the kind. It
+  checks the item
   exists in inventory first, because purchases stores the URI unchecked and a
   decision cannot be retracted. Declining an offer and creating the asset
   through purchases are not exposed. The link lives in purchases, so
