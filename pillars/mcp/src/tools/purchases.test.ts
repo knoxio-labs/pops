@@ -38,14 +38,29 @@ beforeEach(() => {
 });
 
 describe('the tool set', () => {
-  it('is read-only — no tool reaches a write route', () => {
+  it('writes nothing but an inventory-proposal accept', () => {
     // Confirming a line's kind is where a machine proposal becomes a human
     // assertion. A tool that could do it would erase the only thing that
-    // tells the two apart.
+    // tells the two apart. Declining an offer is the same kind of judgement.
     const names = purchasesTools.map((t) => t.name);
-    for (const forbidden of ['create', 'delete', 'patch', 'confirm', 'upload', 'sweep', 'unlink']) {
+    for (const forbidden of [
+      'create',
+      'delete',
+      'patch',
+      'confirm',
+      'upload',
+      'sweep',
+      'unlink',
+      'decline',
+      'decide',
+    ]) {
       expect(names.some((name) => name.toLowerCase().includes(forbidden))).toBe(false);
     }
+    expect(
+      names.filter(
+        (name) => !/\.(list|get|search|byTag|merchantSpend|productLeaderboard)$/.test(name)
+      )
+    ).toEqual(['purchases.inventoryProposals.accept']);
   });
 
   it('names every tool under the purchases namespace', () => {

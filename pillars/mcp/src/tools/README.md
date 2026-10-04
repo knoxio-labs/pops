@@ -65,16 +65,23 @@ though nothing enforces it mechanically.
   endpoint returns every breakdown for a window in one response, so splitting
   it per axis would be several calls for data already fetched, and would make
   the mcp package mirror the response shape it currently never has to know.
-- The `purchases.*` family is read-only for a sharper reason, asserted the same
-  way in `purchases.test.ts`. Every write on that pillar is an ingest (which
+- The `purchases.*` family is read-only with one exception, asserted in
+  `purchases.test.ts`. Every other write on that pillar is an ingest (which
   needs a checksum only an adapter can compute) or a classification decision —
   and `PATCH /purchases/:id/items/:itemId` is the single place a machine
   proposal becomes a human assertion. A tool that could call it would erase the
   distinction `kindConfirmedAt` exists to hold.
+- `purchases.inventoryProposals.accept` is the exception. It records that an
+  inventory item which already exists is the asset an order line's unit
+  became: a link the user asked for, not a judgement. It checks the item
+  exists in inventory first, because purchases stores the URI unchecked and a
+  decision cannot be retracted. Declining an offer and creating the asset
+  through purchases are not exposed. The link lives in purchases, so
+  `inventory.items.get` does not show an item's order (POPS-5755).
 - `purchases.*` needs a grant. That pillar admits an uncredentialled caller but
   holds a caller presenting an `X-API-Key` to that key's scopes, and MCP always
   presents one. Without `purchases.purchase`, `purchases.analytics` and
-  `purchases.search` on the MCP service account, all five tools return `403`.
+  `purchases.search` on the MCP service account, every tool returns `403`.
 - `inventory.catalogue.*` completes the persisted type-catalogue authoring
   workflow without database access. The MCP service account needs
   `inventory.types.read` for catalogue and audit reads, and
@@ -100,8 +107,8 @@ though nothing enforces it mechanically.
   `provenance` on create and update is the shape `items.get` returns, written
   through the producer's legacy purchase columns (`inventory-item-provenance.ts`).
   `transactionUri` accepts only `pops://finance/transaction/<id>`, the one URI
-  inventory can store. An item cannot be linked to a purchases order
-  (POPS-5752).
+  inventory can store. An item's purchases order is linked from the purchases
+  side, through `purchases.inventoryProposals.accept`.
 - `inventory.items.validate` calls the producer's authoritative value validator
   without writing item values, audit rows or sync changes. Read the catalogue
   definition first, send its exact revision and source-tagged values, and use
