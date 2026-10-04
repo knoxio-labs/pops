@@ -23,7 +23,7 @@ internal struct InventoryRecentActivityTests {
                 Fixture.event(
                     2, .moved, on: "kettle", after: ["placement": .link("kitchen")]),
                 Fixture.event(3, .created, on: "kitchen", entityKind: .location),
-                Fixture.event(4, .accessChanged, on: "box", after: ["access": .choice("open")]),
+                Fixture.event(4, .opened, on: "box"),
                 Fixture.event(5, .created, on: "old", undoable: false),
                 Fixture.event(6, .created, on: "nowhere"),
             ])

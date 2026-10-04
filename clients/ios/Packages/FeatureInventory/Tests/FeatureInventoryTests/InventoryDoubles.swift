@@ -69,10 +69,11 @@ internal enum InventoryFixture {
     static func event(
         _ seq: Int, _ kind: InventoryEventKind, on entityId: String,
         entityKind: InventoryEntityKind = .item,
-        after: [String: InventoryFieldValue] = [:], undoable: Bool = true
+        fields: [String] = [], after: [String: InventoryFieldValue] = [:],
+        undoable: Bool = true
     ) -> InventoryEvent {
         InventoryEvent(
-            seq: seq, entityKind: entityKind, entityId: entityId, kind: kind, fields: [],
+            seq: seq, entityKind: entityKind, entityId: entityId, kind: kind, fields: fields,
             before: [:], after: after, reason: nil, actor: .web, clientTime: nil,
             serverTime: epoch.addingTimeInterval(TimeInterval(seq)), compensatesSeq: nil,
             undoable: undoable)

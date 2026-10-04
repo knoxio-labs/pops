@@ -33,22 +33,12 @@ internal enum InventoryActivityLine {
         return nil
     }
 
-    /// The past-tense verb. Access, fullness and lifecycle read the value the event
-    /// recorded, falling back to the item's current one; a kind this build
-    /// has never heard of shows its own wire word rather than a guess.
+    /// The past-tense verb. Edited location fields and fullness use the values
+    /// recorded on the event; unknown kinds show their wire word.
     internal static func verb(for event: InventoryEvent, current: InventoryItem?) -> String {
         switch event.kind {
-        case .accessChanged:
-            let access =
-                recorded(event, "access").map(InventoryAccess.init(wire:))
-                ?? current?.containment?.access
-            return access == .closed ? "closed" : "opened"
-        case .fullnessChanged:
-            let recordedFull: InventoryFieldValue? = event.after["isFull"]
-            if case .flag(let isFull) = recordedFull {
-                return isFull ? "marked full" : "no longer full"
-            }
-            return current?.containment?.isFull == false ? "no longer full" : "marked full"
+        case .edited:
+            return editedVerb(for: event)
         case .lifecycleChanged:
             let lifecycle =
                 recorded(event, "lifecycle").map(InventoryLifecycle.init(wire:))
@@ -59,6 +49,17 @@ internal enum InventoryActivityLine {
         default:
             return verbs[event.kind] ?? "changed"
         }
+    }
+
+    private static func editedVerb(for event: InventoryEvent) -> String {
+        if event.entityKind == .location {
+            if event.fields.contains("parentId") { return "moved" }
+            if event.fields.contains("name") { return "renamed" }
+        }
+        if case .flag(let isFull)? = event.after["isFull"] {
+            return isFull ? "marked full" : "no longer full"
+        }
+        return "edited"
     }
 
     internal static func symbol(for kind: InventoryEventKind) -> String {
@@ -90,32 +91,41 @@ internal enum InventoryActivityLine {
         .created: "added",
         .edited: "edited",
         .typeChanged: "given a type",
+        .fieldValuesChanged: "edited",
+        .overrideSet: "set an override",
+        .overrideCleared: "cleared an override",
+        .codeSet: "labelled",
         .moved: "moved",
+        .pickedUp: "picked up",
+        .putBack: "put back",
+        .stored: "stored",
+        .opened: "opened",
+        .closed: "closed",
+        .sealed: "sealed",
+        .unpacked: "unpacked",
         .quantityChanged: "recounted",
-        .split: "split",
-        .codeChanged: "labelled",
-        .photoAttached: "photographed",
+        .splitFrom: "split",
+        .splitInto: "split",
+        .photoAdded: "photographed",
         .photoRemoved: "photo removed",
-        .photosReordered: "photos reordered",
         .deleted: "deleted",
         .restored: "restored",
-        .locationCreated: "added",
-        .locationRenamed: "renamed",
-        .locationMoved: "moved",
-        .locationDeleted: "deleted",
         .reverted: "undone",
         .migrated: "imported",
     ]
 
     private static let symbols: [InventoryEventKind: String] = [
         .created: "plus",
-        .locationCreated: "plus",
         .moved: "arrow.right",
-        .locationMoved: "arrow.right",
-        .accessChanged: "shippingbox.fill",
+        .pickedUp: "arrow.right",
+        .putBack: "arrow.right",
+        .stored: "arrow.right",
+        .opened: "shippingbox.fill",
+        .closed: "shippingbox.fill",
+        .sealed: "shippingbox.fill",
+        .unpacked: "shippingbox.fill",
         .lifecycleChanged: "archivebox",
         .deleted: "trash",
-        .locationDeleted: "trash",
         .reverted: "arrow.uturn.backward",
     ]
 }

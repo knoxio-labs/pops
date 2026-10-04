@@ -72,7 +72,7 @@ if (process.env['PLEX_SCHEDULER_ENABLED'] === 'true') {
 // the persisted `rotation_enabled` flag. The controller is a module-level
 // singleton so the REST toggle/run-now handlers drive the same timer.
 if (process.env['MEDIA_ROTATION_SCHEDULER_ENABLED'] === 'true') {
-  rotationScheduler.start({ db: mediaDb.db });
+  rotationScheduler.start({ db: mediaDb.db, firstRun: 'when-due' });
 } else {
   rotationScheduler.resumeIfEnabled(mediaDb.db);
 }

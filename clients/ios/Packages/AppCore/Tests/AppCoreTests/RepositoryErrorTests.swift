@@ -28,4 +28,17 @@ internal struct RepositoryErrorTests {
         #expect(payload.popsError == source)
         #expect(payload.diagnostic == source.code)
     }
+
+    @Test("rate limits remain retryable when converted to structured diagnostics")
+    func rateLimitedDiagnostic() {
+        let error = PopsError(
+            repositoryError: .rateLimited(retryAfterSeconds: 30),
+            fallbackMessage: "Finance asked this device to wait."
+        )
+
+        #expect(error.code == "ios.http.429")
+        #expect(error.message == "Finance asked this device to wait.")
+        #expect(error.retryable)
+        #expect(error.kind == .client)
+    }
 }

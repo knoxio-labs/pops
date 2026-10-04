@@ -203,6 +203,48 @@ describe('findPairForTransaction', () => {
     });
   });
 
+  describe('ING receipt numbers break an otherwise exact tie', () => {
+    const everyday = tx({
+      id: 'EVERYDAY',
+      amount: 2000000,
+      accountId: 'ING Everyday',
+      date: '2026-01-10',
+      description: 'From account 0201960144 - Internal Transfer - Receipt 565046 ING Personal Loan',
+    });
+    const redraw = tx({
+      id: 'REDRAW',
+      amount: -2000000,
+      accountId: 'ING Loan Jan 2026',
+      date: '2026-01-10',
+      description: 'Redraw - Receipt No 565046Transfer to 923100 319386153',
+    });
+    const advance = tx({
+      id: 'ADVANCE',
+      amount: -2000000,
+      accountId: 'ING Loan Jan 2026',
+      date: '2026-01-10',
+      description: 'Advance - Receipt No 564042',
+    });
+
+    it('pairs the redraw receipt and leaves the same-day advance unmatched', () => {
+      expect(findPairForTransaction(everyday, [advance, redraw], 3)).toEqual({
+        kind: 'match',
+        id: 'REDRAW',
+      });
+    });
+
+    it('keeps tied candidates ambiguous when neither shares the target receipt', () => {
+      const otherRedraw = tx({
+        ...redraw,
+        description: 'Redraw - Receipt No 202450Transfer to 923100 319386153',
+      });
+      const otherAdvance = tx({ ...advance, description: 'Advance - Receipt No 882733' });
+      expect(findPairForTransaction(everyday, [otherRedraw, otherAdvance], 3).kind).toBe(
+        'ambiguous'
+      );
+    });
+  });
+
   describe('both legs must already be typed transfer (POPS-3940)', () => {
     const amazon = tx({
       id: 'AMAZON',

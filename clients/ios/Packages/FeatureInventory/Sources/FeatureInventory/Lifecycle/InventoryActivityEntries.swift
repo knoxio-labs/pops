@@ -34,17 +34,16 @@ internal struct InventoryActivityEntries {
 
     private func describe(_ event: InventoryEvent) -> Line {
         switch event.kind {
-        case .moved: moved(event)
+        case .moved, .pickedUp, .putBack, .stored: moved(event)
         case .lifecycleChanged: lifecycle(event)
-        case .accessChanged:
-            Line(verb: Self.text(event.after["access"]) == "closed" ? "Closed" : "Opened")
-        case .fullnessChanged:
-            Line(verb: event.after["isFull"] == .flag(false) ? "No longer full" : "Marked full")
+        case .opened, .closed, .sealed, .unpacked:
+            Line(verb: Self.containerVerbs[event.kind] ?? "Changed")
+        case .edited: edited(event)
         case .typeChanged:
             Line(verb: "Typed as", subject: typeName(event.after["typeKey"]))
         case .quantityChanged:
             Line(verb: "Recounted to", subject: Self.text(event.after["quantity"]) ?? "")
-        case .codeChanged:
+        case .codeSet:
             Line(verb: "Labelled", subject: Self.text(event.after["code"]) ?? "", symbol: .label)
         case .deleted, .restored:
             Line(
@@ -57,6 +56,17 @@ internal struct InventoryActivityEntries {
         }
     }
 
+    private func edited(_ event: InventoryEvent) -> Line {
+        if event.entityKind == .location {
+            if event.fields.contains("parentId") { return Line(verb: "Moved", kind: .move) }
+            if event.fields.contains("name") { return Line(verb: "Renamed") }
+        }
+        if case .flag(let isFull)? = event.after["isFull"] {
+            return Line(verb: isFull ? "Marked full" : "No longer full")
+        }
+        return Line(verb: "Edited")
+    }
+
     private func moved(_ event: InventoryEvent) -> Line {
         let from = InventoryEventPlacement(event.before["placement"], source: source)
         let to = InventoryEventPlacement(event.after["placement"], source: source)
@@ -65,8 +75,14 @@ internal struct InventoryActivityEntries {
             return Line(
                 verb: "Picked up", kind: .move, symbol: .inHand, from: from.words, to: to.words)
         case .named(let name):
+            let verb: String
+            switch event.kind {
+            case .putBack: verb = "Put back in"
+            case .stored: verb = "Stored in"
+            default: verb = "Moved to"
+            }
             return Line(
-                verb: "Moved to", subject: name, kind: .move, symbol: .move, from: from.words,
+                verb: verb, subject: name, kind: .move, symbol: .move, from: from.words,
                 to: name)
         case .unknown:
             return Line(verb: "Moved", kind: .move, symbol: .move, from: from.words)
@@ -114,12 +130,21 @@ internal struct InventoryActivityEntries {
     /// for the reason `InventoryActivityLine` gives for its own.
     private static let plain: [InventoryEventKind: Line] = [
         .created: Line(verb: "Logged", symbol: .addNew),
-        .edited: Line(verb: "Edited"),
-        .split: Line(verb: "Split", symbol: .split),
-        .photoAttached: Line(verb: "Added a photo", symbol: .photo),
+        .fieldValuesChanged: Line(verb: "Edited"),
+        .overrideSet: Line(verb: "Set an override"),
+        .overrideCleared: Line(verb: "Cleared an override"),
+        .splitFrom: Line(verb: "Split", symbol: .split),
+        .splitInto: Line(verb: "Split", symbol: .split),
+        .photoAdded: Line(verb: "Added a photo", symbol: .photo),
         .photoRemoved: Line(verb: "Removed a photo", symbol: .photo),
-        .photosReordered: Line(verb: "Reordered the photos", symbol: .photo),
         .reverted: Line(verb: "Undid a change", symbol: .restore),
         .migrated: Line(verb: "Imported"),
+    ]
+
+    private static let containerVerbs: [InventoryEventKind: String] = [
+        .opened: "Opened",
+        .closed: "Closed",
+        .sealed: "Sealed",
+        .unpacked: "Unpacked",
     ]
 }

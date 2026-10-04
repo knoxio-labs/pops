@@ -52,16 +52,24 @@ public struct TransactionDetailView: View {
             // not change.
             EmptyStateView(message: TransactionsCopy.detailNotFound)
         case .failed(let error):
+            failureState(for: error)
+        case .seeded(let transaction):
+            record(presentation.content(transaction))
+        case .loaded(let detail):
+            record(presentation.content(detail))
+        }
+    }
+
+    @ViewBuilder private func failureState(for error: RepositoryError) -> some View {
+        if TransactionsCopy.offersRetry(for: error) {
             ErrorStateView(
                 message: TransactionsCopy.message(for: error),
                 retryTitle: TransactionsCopy.retry
             ) {
                 Task { await model.load() }
             }
-        case .seeded(let transaction):
-            record(presentation.content(transaction))
-        case .loaded(let detail):
-            record(presentation.content(detail))
+        } else {
+            NonRetryableErrorStateView(message: TransactionsCopy.message(for: error))
         }
     }
 }

@@ -82,22 +82,25 @@ internal struct InventoryDashboardMappingTests {
         #expect(dashboard.openContainers.map(\.place) == [nil, nil])
     }
 
-    @Test("verbs read the recorded value first, then the current state, then the wire word")
+    @Test("verbs use server event kinds and the fields recorded by edits")
     func activityVerbs() {
         let closedBox = Fixture.item("box", "Box", at: .hand, access: .closed)
-        let recordedOpen = Fixture.event(
-            1, .accessChanged, on: "box", after: ["access": .text("open")])
-        let unrecorded = Fixture.event(2, .accessChanged, on: "box")
+        let opened = Fixture.event(1, .opened, on: "box")
+        let closed = Fixture.event(2, .closed, on: "box")
         let discarded = Fixture.event(
             3, .lifecycleChanged, on: "box", after: ["lifecycle": .choice("discarded")])
-        let emptied = Fixture.event(4, .fullnessChanged, on: "box", after: ["isFull": .flag(false)])
-        let unknown = Fixture.event(5, .unrecognised("split_into"), on: "box")
+        let emptied = Fixture.event(
+            4, .edited, on: "box", fields: ["isFull"], after: ["isFull": .flag(false)])
+        let renamed = Fixture.event(
+            5, .edited, on: "office", entityKind: .location, fields: ["name"])
+        let unknown = Fixture.event(6, .unrecognised("renamed_by_ai"), on: "box")
 
-        #expect(InventoryActivityLine.verb(for: recordedOpen, current: closedBox) == "opened")
-        #expect(InventoryActivityLine.verb(for: unrecorded, current: closedBox) == "closed")
+        #expect(InventoryActivityLine.verb(for: opened, current: closedBox) == "opened")
+        #expect(InventoryActivityLine.verb(for: closed, current: nil) == "closed")
         #expect(InventoryActivityLine.verb(for: discarded, current: closedBox) == "discarded")
         #expect(InventoryActivityLine.verb(for: emptied, current: nil) == "no longer full")
-        #expect(InventoryActivityLine.verb(for: unknown, current: nil) == "split into")
+        #expect(InventoryActivityLine.verb(for: renamed, current: nil) == "renamed")
+        #expect(InventoryActivityLine.verb(for: unknown, current: nil) == "renamed by ai")
     }
 
     @Test("an in-hand row's second line names the place, or why there is none")

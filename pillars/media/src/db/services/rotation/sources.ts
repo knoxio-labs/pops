@@ -12,6 +12,12 @@ import { rotationCandidates, rotationSources } from '../../schema.js';
 
 import type { MediaDb } from '../internal.js';
 
+/**
+ * The singleton queue movies are added to by hand. It has no upstream to fetch
+ * from, so it is never synced and has no source adapter.
+ */
+export const MANUAL_SOURCE_TYPE = 'manual';
+
 export type RotationSourceRow = typeof rotationSources.$inferSelect;
 
 /** A source row decorated with the count of its candidates. */
@@ -115,7 +121,7 @@ export function updateSource(db: MediaDb, id: number, input: UpdateSourceInput):
 export function deleteSource(db: MediaDb, id: number): void {
   const source = getSource(db, id);
   if (!source) throw new RotationSourceNotFoundError(id);
-  if (source.type === 'manual') throw new RotationManualSourceProtectedError();
+  if (source.type === MANUAL_SOURCE_TYPE) throw new RotationManualSourceProtectedError();
 
   db.transaction((tx) => {
     tx.delete(rotationCandidates).where(eq(rotationCandidates.sourceId, id)).run();

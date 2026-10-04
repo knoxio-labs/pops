@@ -55,6 +55,19 @@ internal struct PrimitiveRenderingTests {
             ErrorStateView(message: "Could not reach the server.") {}, named: "ErrorStateView")
     }
 
+    @Test("NonRetryableErrorStateView renders without an accessory", .requiresCompiledColorCatalog)
+    func nonRetryableErrorStateHasNoAccessory() throws {
+        let actual = NonRetryableErrorStateView(message: "Update the app.")
+        let expected = StateView(message: "Update the app.", messageColor: .popsDestructive) {
+            EmptyView()
+        }
+
+        let actualRender = try #require(Self.render(actual, in: .light))
+        let expectedRender = try #require(Self.render(expected, in: .light))
+
+        #expect(actualRender == expectedRender)
+    }
+
     /// A different retry title is a different-width button, and a button
     /// changes width whether or not its label had a colour to be drawn in —
     /// which is why this one runs on the host lane rather than disabling
