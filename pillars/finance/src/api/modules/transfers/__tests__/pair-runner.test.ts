@@ -108,28 +108,31 @@ describe('predictPairOutcome', () => {
   it('links an ING redraw by receipt number and leaves the same-day advance unlinked', () => {
     const db = freshDb();
     createAccount(db, { name: 'ING Everyday', kind: 'checking', currency: 'AUD' });
-    createAccount(db, { name: 'ING Personal Loan', kind: 'checking', currency: 'AUD' });
-    createAccount(db, { name: 'ING Savings Maximiser', kind: 'checking', currency: 'AUD' });
+    createAccount(db, { name: 'ING Loan Jan 2026', kind: 'checking', currency: 'AUD' });
 
-    const loanLeg = seed(db, 'ING Personal Loan', {
-      amountCents: -250000,
+    const everyday = seed(db, 'ING Everyday', {
+      amountCents: 2000000,
       date: '2026-01-10',
-      description: 'From account Everyday - Internal Transfer - Receipt 565046 ING Personal Loan',
+      description: 'From account 0201960144 - Internal Transfer - Receipt 565046 ING Personal Loan',
     });
-    const redraw = seed(db, 'ING Everyday', {
-      amountCents: 250000,
+    const redraw = seed(db, 'ING Loan Jan 2026', {
+      amountCents: -2000000,
       date: '2026-01-10',
-      description: 'Redraw - Receipt No 565046Transfer to account 123456',
+      description: 'Redraw - Receipt No 565046Transfer to 923100 319386153',
     });
-    const advance = seed(db, 'ING Savings Maximiser', {
-      amountCents: 250000,
+    const advance = seed(db, 'ING Loan Jan 2026', {
+      amountCents: -2000000,
       date: '2026-01-10',
-      description: 'Advance - Receipt No 839201Transfer to account 654321',
+      description: 'Advance - Receipt No 564042',
     });
 
-    expect(attemptPairForRow(db, loanLeg, 3)).toBe('linked');
+    expect(attemptPairForRow(db, everyday, 3)).toBe('linked');
 
-    const linkedLoan = db.select().from(transactions).where(eq(transactions.id, loanLeg.id)).get();
+    const linkedEveryday = db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, everyday.id))
+      .get();
     const linkedRedraw = db.select().from(transactions).where(eq(transactions.id, redraw.id)).get();
     const unlinkedAdvance = db
       .select()
@@ -137,8 +140,8 @@ describe('predictPairOutcome', () => {
       .where(eq(transactions.id, advance.id))
       .get();
 
-    expect(linkedLoan?.relatedTransactionId).toBe(redraw.id);
-    expect(linkedRedraw?.relatedTransactionId).toBe(loanLeg.id);
+    expect(linkedEveryday?.relatedTransactionId).toBe(redraw.id);
+    expect(linkedRedraw?.relatedTransactionId).toBe(everyday.id);
     expect(unlinkedAdvance?.relatedTransactionId).toBeNull();
   });
 
