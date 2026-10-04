@@ -767,6 +767,7 @@ services:
       - cerebrum-engrams-data:/data/cerebrum/engrams
     secrets:
       - claude_api_key
+      - mcp_inbound_token
     environment:
       NODE_ENV: production
       PORT: '3007'
@@ -775,6 +776,10 @@ services:
       CEREBRUM_SQLITE_PATH: /data/sqlite/cerebrum.db
       CEREBRUM_ENGRAMS_DIR: /data/cerebrum/engrams
       CEREBRUM_SELF_BASE_URL: http://cerebrum-api:3007
+      # Empty URL keeps the optional gateway client disabled. Both peers read
+      # the same host-provisioned inbound bearer from a mounted Docker secret.
+      CEREBRUM_EGO_MCP_URL: ${CEREBRUM_EGO_MCP_URL:-}
+      CEREBRUM_EGO_MCP_TOKEN_FILE: /run/secrets/mcp_inbound_token
       POPS_REGISTRY_ENABLED: 'true'
       # AI telemetry sink — read FIRST so it never collides with the
       # self-pointing POPS_API_URL cerebrum sets elsewhere.
@@ -1551,7 +1556,7 @@ services:
   # ── MCP HTTP SERVER ──────────────────────────────────────────────
   # Exposes pops data as an MCP server over HTTP (port 3011), reachable on the
   # local network and (optionally) via Cloudflare Tunnel. The access control is
-  # the MCP_INBOUND_TOKEN bearer check below, NOT network placement — every
+  # the MCP_INBOUND_TOKEN_FILE bearer check below, NOT network placement — every
   # POST /mcp must present it. The host port stays published: the shell nginx has
   # no /mcp route yet (it becomes registry-driven in feat/dynamic-nginx-registry),
   # so unpublishing here would make the gateway unreachable. Moving MCP behind the
@@ -1571,6 +1576,8 @@ services:
     secrets:
       - source: pops_mcp_api_key
         mode: 0444
+      - source: mcp_inbound_token
+        mode: 0444
     environment:
       NODE_ENV: production
       # pops-mcp now reaches every pillar through the REST pillar SDK
@@ -1578,10 +1585,9 @@ services:
       # legacy single POPS_API_URL tRPC client was removed in the 02 decommission.
       POPS_API_KEY_FILE: /run/secrets/pops_mcp_api_key
       MCP_PORT: '3011'
-      # Inbound shared secret. When set, every POST /mcp must send
-      # `Authorization: Bearer <token>`; unset leaves the route open and logs a
-      # loud warning. Provision before onboarding clients (see MCP PRD).
-      MCP_INBOUND_TOKEN: ${MCP_INBOUND_TOKEN:-}
+      # Inbound bearer secret shared with Cerebrum. Keep this separate from the
+      # outbound pops_mcp_api_key service-account credential above.
+      MCP_INBOUND_TOKEN_FILE: /run/secrets/mcp_inbound_token
     ports:
       - '${MCP_BIND_ADDR:-0.0.0.0}:3011:3011'
     depends_on:
@@ -1725,6 +1731,10 @@ secrets:
   # pairing-code issuance can be revoked without changing the bot.
   pops_mcp_api_key:
     file: ../secrets/pops_mcp_api_key
+  # Shared inbound bearer between the Cerebrum Ego client and the MCP server;
+  # this is distinct from pops_mcp_api_key, which authorizes MCP's outbound calls.
+  mcp_inbound_token:
+    file: ../secrets/mcp_inbound_token
   # bfm's own service account, deliberately NOT the shared pops_api_key:
   # separate accounts are what make revocation and the audit trail
   # per-consumer. Mounted by `bfm-api`.
