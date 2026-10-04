@@ -14,13 +14,19 @@ public struct EgoFlowView: View {
         dependencies: AppDependencies,
         context: @escaping @MainActor () -> EgoAppContext?,
         entityRouter: any EntityRouter,
-        onClose: @escaping () -> Void
+        onClose: @escaping () -> Void,
+        initialConversationId: String? = nil,
+        initialPrompt: String? = nil,
+        continueBatchId: String? = nil
     ) {
         _flow = State(
             wrappedValue: EgoFlow(
                 dependencies: dependencies,
                 context: context,
-                entityRouter: entityRouter
+                entityRouter: entityRouter,
+                initialConversationId: initialConversationId,
+                initialPrompt: initialPrompt,
+                continueBatchId: continueBatchId
             )
         )
         self.onClose = onClose
@@ -60,6 +66,9 @@ public struct EgoFlowView: View {
                     }
                 }
         }
+        .task(id: ObjectIdentifier(flow.thread)) {
+            await flow.stageInitialState()
+        }
     }
 }
 
@@ -75,27 +84,68 @@ internal final class EgoFlow {
 
     @ObservationIgnored private let dependencies: AppDependencies
     @ObservationIgnored private let context: @MainActor () -> EgoAppContext?
+    @ObservationIgnored private var initialConversationId: String?
+    @ObservationIgnored private var initialPrompt: String?
+    @ObservationIgnored private var continueBatchId: String?
 
     internal init(
         dependencies: AppDependencies,
         context: @escaping @MainActor () -> EgoAppContext?,
-        entityRouter: any EntityRouter
+        entityRouter: any EntityRouter,
+        initialConversationId: String? = nil,
+        initialPrompt: String? = nil,
+        continueBatchId: String? = nil
     ) {
         self.dependencies = dependencies
         self.context = context
         self.entityRouter = entityRouter
-        thread = EgoThreadModel(repository: dependencies.ego, context: context)
+        self.initialConversationId = initialConversationId
+        self.initialPrompt = initialPrompt
+        self.continueBatchId = continueBatchId
+        let threadModel = EgoThreadModel(
+            repository: dependencies.ego,
+            context: context,
+            conversationId: initialConversationId
+        )
+        threadModel.draft = initialPrompt ?? ""
+        thread = threadModel
         conversations = EgoConversationListModel(repository: dependencies.ego)
+    }
+
+    internal func stageInitialState() async {
+        let conversationId = initialConversationId
+        let prompt = initialPrompt
+        let batchId = continueBatchId
+        initialConversationId = nil
+        initialPrompt = nil
+        continueBatchId = nil
+
+        if conversationId != nil || batchId != nil {
+            await thread.load()
+        }
+        if let prompt {
+            thread.draft = prompt
+            thread.send()
+        }
+        if let batchId {
+            await thread.continueBatch(batchId)
+        }
     }
 
     internal func startNew() {
         thread.cancel()
+        initialConversationId = nil
+        initialPrompt = nil
+        continueBatchId = nil
         thread = EgoThreadModel(repository: dependencies.ego, context: context)
         isShowingConversations = false
     }
 
     internal func open(_ conversation: EgoConversation) {
         thread.cancel()
+        initialConversationId = nil
+        initialPrompt = nil
+        continueBatchId = nil
         thread = EgoThreadModel(
             repository: dependencies.ego,
             context: context,

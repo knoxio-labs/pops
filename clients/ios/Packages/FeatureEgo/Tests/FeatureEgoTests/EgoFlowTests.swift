@@ -79,6 +79,52 @@ internal struct EgoFlowTests {
         #expect(await repository.contexts == [expected])
     }
 
+    @Test("stages an initial prompt through the normal thread send path")
+    func stagesInitialPrompt() async {
+        let repository = FlowTestRepository()
+        let flow = EgoFlow(
+            dependencies: .fake(ego: repository),
+            context: { nil },
+            entityRouter: EntityRouterRegistry(),
+            initialPrompt: "Show a sample answer"
+        )
+
+        await flow.stageInitialState()
+        await repository.waitForStreamCount(1)
+        await flow.stageInitialState()
+
+        #expect(await repository.streamCount == 1)
+    }
+
+    @Test("stages a saved conversation and resumes its decided batch")
+    func stagesSavedContinuation() async {
+        let batch = EgoThreadModelFixtures.actions(
+            batchID: "batch-1", statuses: [.confirmed, .rejected])
+        let thread = EgoThreadModelFixtures.thread(
+            messages: [
+                EgoThreadModelFixtures.message(id: "assistant-1", parts: [.actions(batch)])
+            ])
+        let repository = ControlledEgoRepository(
+            reads: [.success(thread)], streamControl: EgoThreadModelStreamControl())
+        let flow = EgoFlow(
+            dependencies: .fake(ego: repository),
+            context: { nil },
+            entityRouter: EntityRouterRegistry(),
+            initialConversationId: "conversation-1",
+            continueBatchId: "batch-1"
+        )
+
+        await flow.stageInitialState()
+        await repository.waitForResumeCallCount(1)
+
+        #expect(
+            await repository.resumeCalls == [
+                ScriptedEgoResumeChatCall(
+                    conversationId: "conversation-1", batchId: "batch-1")
+            ])
+        #expect(await repository.decisionIDs.isEmpty)
+    }
+
     private func makeFlow(repository: any EgoRepository = ScriptedEgoRepository()) -> EgoFlow {
         EgoFlow(
             dependencies: .fake(ego: repository),
