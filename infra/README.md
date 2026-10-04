@@ -36,15 +36,15 @@ has a matching `mkdir`/`chown` and `ENV` in its pillar image so the path is
 writable with no compose at all (POPS-2737); the volume is what makes it
 survive an image roll.
 
-**Secrets** — 19, each `file: ../secrets/<name>`, resolved from `infra/` (so the
+**Secrets** — 20, each `file: ../secrets/<name>`, resolved from `infra/` (so the
 gitignored repo-root `secrets/`): `bfm_jwt_signing_key`, `claude_api_key`,
 `finance_api_key`, `instagram_cookies`, `notion_api_token`,
 `paperless_admin_password`, `paperless_secret_key`,
-`pops_api_key`, `pops_bfm_api_key`, `pops_finance_api_key`,
+`mcp_inbound_token`, `pops_api_key`, `pops_bfm_api_key`, `pops_finance_api_key`,
 `pops_inventory_api_key`, `pops_mcp_api_key`, `pops_orchestrator_api_key`,
 `pops_purchases_api_key`,
 `telegram_bot_token`, `thetvdb_api_key`, `tmdb_api_key`, `up_bank_token`,
-`up_webhook_secret`. Fifteen are mounted across eleven services
+`up_webhook_secret`. Sixteen are mounted across eleven services
 (`bfm-api`, `cerebrum-api`, `finance-api`, `inventory-api`, `moltbot`,
 `moltbot-validator`, `paperless-ngx`, `pops-mcp`, `pops-orchestrator`,
 `pops-worker-food`, `purchases-api`); the other 4 are declared and mounted nowhere.
@@ -54,10 +54,20 @@ release that starts reading it.
 
 **Host env vars** — `POPS_IMAGE_TAG`, `POPS_IMAGE_OWNER`, `POPS_MOLTBOT_DIR`,
 `POPS_DOMAIN`, `POPS_REGISTRY_URL`,
-`BUILD_VERSION`, `MCP_BIND_ADDR`, `MCP_INBOUND_TOKEN`, `PAPERLESS_BASE_URL`,
+`BUILD_VERSION`, `MCP_BIND_ADDR`, `CEREBRUM_EGO_MCP_URL`, `PAPERLESS_BASE_URL`,
 `PAPERLESS_API_TOKEN`, `ANTHROPIC_API_KEY`, the `EMBEDDING_*` / `FOOD_*` /
 `*_LITESTREAM_REPLICA_URL` sets, `DOCKER_CONFIG_DIR`, `DOCKER_API_VERSION`, `TZ`.
 Each pillar's `*_SQLITE_PATH` and `*_SELF_BASE_URL` are inline, not host env.
+
+**Ego MCP gateway auth** — `CEREBRUM_EGO_MCP_URL` defaults to empty, leaving
+Ego's optional gateway client disabled until the `mcp` profile is running and
+the URL is configured. The host-provisioned `secrets/mcp_inbound_token` file is
+mounted read-only at `/run/secrets/mcp_inbound_token` into both `cerebrum-api`
+and `pops-mcp`; Compose passes only the file path, never the bearer value in an
+environment variable. Provision that file out of band before starting either
+stack because `cerebrum-api` mounts it even when the gateway URL is empty. This
+inbound machine credential is separate from `pops_mcp_api_key`, the MCP
+service-account key for outbound pillar calls.
 
 **Host bind mounts** — the `moltbot` profile is the only part of the stack
 served from files instead of an image. Its four mounts resolve through
