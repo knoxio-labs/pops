@@ -55,6 +55,7 @@ jobs:
     if: github.event_name == 'pull_request'
     outputs:
       relevant: ${{ steps.filter.outputs.shell }}
+      storybook: ${{ steps.filter.outputs.storybook }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -75,6 +76,10 @@ jobs:
               - 'libs/ui/**'
               - '.github/workflows/fe-quality.yml'
               - '.github/actions/**'
+            storybook:
+              - 'libs/ui/**'
+              - 'pillars/*/app/**'
+              - '.github/workflows/fe-quality.yml'
 
   quality:
     name: Quality Checks
@@ -106,6 +111,10 @@ jobs:
       - name: Build shared packages
         if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: pnpm --filter "@pops/shell^..." --filter "!./pillars/*/app" build
+
+      - name: Build Storybook
+        if: ${{ inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.storybook == 'true' }}
+        run: pnpm --filter @pops/ui build-storybook
 
       - name: Type check
         if: inputs.full-validation || github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
