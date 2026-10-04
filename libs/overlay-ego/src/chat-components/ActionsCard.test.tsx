@@ -13,6 +13,11 @@ const pendingActions: BatchAction[] = [
   { actionId: 'a3', tool: 'inventory.items.move', summary: 'Move wrench', status: 'pending' },
 ];
 
+const decidedActions: BatchAction[] = [
+  { actionId: 'c1', tool: 'tool.confirmed', summary: 'Confirm action', status: 'confirmed' },
+  { actionId: 'r1', tool: 'tool.rejected', summary: 'Reject action', status: 'rejected' },
+];
+
 function part(actions: BatchAction[] = pendingActions): ActionsPart {
   return { type: 'actions', batchId: 'batch-1', actions };
 }
@@ -105,6 +110,68 @@ describe('ActionsCard', () => {
       reject: ['a1', 'a2', 'a3'],
       alwaysAllow: [],
     });
+  });
+
+  it('shows Continue for a matching decided batch and starts continuation', async () => {
+    const user = userEvent.setup();
+    const continueBatch = vi.fn();
+    const decisionApi = decisions({ continuableBatchId: 'batch-1', continueBatch });
+    render(<ActionsCard part={part(decidedActions)} decisions={decisionApi} />);
+
+    expect(
+      screen.getByText('This decision was recorded but the actions have not finished.')
+    ).toBeInTheDocument();
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    expect(continueButton).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /Approve/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reject all' })).not.toBeInTheDocument();
+
+    await user.click(continueButton);
+
+    expect(continueBatch).toHaveBeenCalledExactlyOnceWith('batch-1');
+  });
+
+  it.each([
+    ['different batch ID', { continuableBatchId: 'another-batch', continueBatch: vi.fn() }],
+    ['null batch ID', { continuableBatchId: null, continueBatch: vi.fn() }],
+    ['missing continuation callback', { continuableBatchId: 'batch-1' }],
+  ] as const)('hides Continue for a %s', (_case, overrides) => {
+    const decisionApi = decisions(overrides);
+    render(<ActionsCard part={part(decidedActions)} decisions={decisionApi} />);
+
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+  });
+
+  it('never shows Continue for pending actions, even when the batch IDs match', () => {
+    const decisionApi = decisions({
+      continuableBatchId: 'batch-1',
+      continueBatch: vi.fn(),
+    });
+    render(<ActionsCard part={part()} decisions={decisionApi} />);
+
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+  });
+
+  it('does not show Continue when decisions are unavailable', () => {
+    render(<ActionsCard part={part(decidedActions)} decisions={null} />);
+
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+  });
+
+  it('disables Continue while this batch is being decided', async () => {
+    const user = userEvent.setup();
+    const continueBatch = vi.fn();
+    const decisionApi = decisions({
+      continuableBatchId: 'batch-1',
+      continueBatch,
+      decidingBatchId: 'batch-1',
+    });
+    render(<ActionsCard part={part(decidedActions)} decisions={decisionApi} />);
+
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    expect(continueButton).toBeDisabled();
+    await user.click(continueButton);
+    expect(continueBatch).not.toHaveBeenCalled();
   });
 
   it('shows pending actions as awaiting a decision when no decision API is available', () => {
