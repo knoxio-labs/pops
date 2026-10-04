@@ -18,6 +18,7 @@ import {
 } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
 import { fakeToolbox, scriptedLlm } from '../modules/ego/__tests__/fakes.js';
+import { resetBuildEgoToolsWarningForTests } from '../modules/ego/gateway/build-ego-tools.js';
 import { ConversationPersistence } from '../modules/ego/persistence.js';
 import { makeCerebrumApiDeps, makeClient } from './test-utils.js';
 
@@ -35,6 +36,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   cerebrumDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
 });
@@ -203,11 +205,16 @@ describe('Ego tool persistence over REST', () => {
     ).toMatchObject([{ id: part.batchId, status: 'auto' }]);
   });
 
-  it('stores one text part and no action rows when tools are absent', async () => {
-    const { llm } = scriptedLlm([{ text: 'Plain answer.' }]);
+  it('serves chat without tools when gateway configuration is missing', async () => {
+    vi.stubEnv('CEREBRUM_EGO_MCP_URL', '');
+    vi.stubEnv('CEREBRUM_EGO_MCP_TOKEN_FILE', '');
+    vi.stubEnv('CEREBRUM_EGO_MCP_TOKEN', '');
+    resetBuildEgoToolsWarningForTests();
+    const { llm, requests } = scriptedLlm([{ text: 'Plain answer.' }]);
     const c = client(llm);
     const result = await c.ego.chat({ message: 'Say hello.' });
 
+    expect(requests[0]?.tools ?? []).toEqual([]);
     expect(result.response.parts).toEqual([{ type: 'text', text: 'Plain answer.' }]);
     expect(
       egoActionBatchesService.listBatchesForConversation(cerebrumDb.db, result.conversationId)
