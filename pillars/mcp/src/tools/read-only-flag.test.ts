@@ -34,6 +34,7 @@ const expectedWrites = [
   'inventory.locations.create',
   'inventory.locations.update',
   'inventory.locations.delete',
+  'media.watchlist.add',
 ];
 
 describe('ToolDef.readOnly', () => {
@@ -44,9 +45,8 @@ describe('ToolDef.readOnly', () => {
     expect(unset).toEqual([]);
   });
 
-  it('flags exactly the inventory and bfm writes as not read-only', () => {
+  it('flags exactly the inventory, bfm, and media writes as not read-only', () => {
     const writes = allTools
-      .filter((tool) => tool.name.startsWith('inventory.') || tool.name.startsWith('bfm.'))
       .filter((tool) => tool.readOnly === false)
       .map((tool) => tool.name)
       .toSorted();
@@ -55,6 +55,10 @@ describe('ToolDef.readOnly', () => {
 
   it('marks the pairing-code tool as a write', () => {
     expect(byName.get('bfm.devicePairing.issueCode')?.readOnly).toBe(false);
+  });
+
+  it('marks media.watchlist.add as a write', () => {
+    expect(byName.get('media.watchlist.add')?.readOnly).toBe(false);
   });
 
   it.each([

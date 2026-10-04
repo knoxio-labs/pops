@@ -52,6 +52,27 @@ describe('mapCallResult', () => {
       isError: true,
     });
   });
+
+  it('names the scoped tool producer in an authorization refusal', () => {
+    const result = mapCallResult(
+      {
+        kind: 'unauthorized',
+        pillar: 'media',
+        message: 'This service account is not authorised for this operation.',
+      },
+      'media.watchlist.add'
+    );
+
+    expect(result).toEqual({
+      content: [
+        {
+          type: 'text',
+          text: "This service account is not authorised for this operation.\nThis tool requires service-account scope 'media.watchlist.add'. Ask an operator to grant it to the credential this MCP server presents to 'media' (MCP does not mint or widen scopes itself).",
+        },
+      ],
+      isError: true,
+    });
+  });
 });
 
 describe('reqStr', () => {
