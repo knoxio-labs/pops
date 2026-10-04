@@ -66,6 +66,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
+    "tailwindcss": "4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "vite": "^8.3.0",
