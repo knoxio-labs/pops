@@ -24,6 +24,7 @@ import { ConversationPersistence } from '../modules/ego/persistence.js';
 import { NotFoundError } from '../shared/errors.js';
 import { makeEgoActionHandlers } from './ego-action-handlers.js';
 import { buildEgoEngine } from './ego-engine.js';
+import { settleForMessage } from './ego-settle.js';
 import { runHttp } from './error-mapping.js';
 
 import type { AppContext } from '../modules/ego/types.js';
@@ -33,6 +34,13 @@ export type { EgoHandlerDeps } from './ego-engine.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
+async function settleIfConversationProvided(
+  deps: EgoHandlerDeps,
+  conversationId: string | undefined
+) {
+  return conversationId ? settleForMessage(deps, conversationId) : undefined;
+}
+
 export function makeEgoHandlers(
   deps: EgoHandlerDeps
 ): ReturnType<typeof server.router<typeof cerebrumEgoContract>> {
@@ -41,6 +49,7 @@ export function makeEgoHandlers(
   return server.router(cerebrumEgoContract, {
     ...makeEgoActionHandlers(deps),
     chat: async ({ body }) => {
+      const settled = await settleIfConversationProvided(deps, body.conversationId);
       const store = persistence();
       const actions = new EgoActionStore({ db: deps.db });
       const scopes = body.scopes ?? [];
@@ -75,6 +84,7 @@ export function makeEgoHandlers(
           channel: body.channel ?? 'shell',
           knownScopes: body.knownScopes,
           allowedTools: store.getAllowedTools(conversation.id),
+          settled: settled?.actions,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

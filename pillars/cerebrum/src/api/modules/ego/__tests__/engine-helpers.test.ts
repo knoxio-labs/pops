@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildLlmMessages, renderMessageForModel } from '../engine-helpers.js';
+import {
+  buildLlmMessages,
+  renderMessageForModel,
+  renderSettledResults,
+} from '../engine-helpers.js';
 
 import type { EgoMessagePart } from '../../../../contract/rest-ego-parts.js';
+import type { SettledAction } from '../batch-settle.js';
 import type { Message } from '../types.js';
 
 function message(overrides: Partial<Message> = {}): Message {
@@ -85,7 +90,7 @@ describe('buildLlmMessages', () => {
       message({ id: 'msg_actions', content: '', parts: [pendingActions] }),
     ];
 
-    expect(buildLlmMessages(history, 'Current turn.', '', 20)).toEqual([
+    expect(buildLlmMessages(history, 'Current turn.', '', { maxHistoryMessages: 20 })).toEqual([
       { role: 'user', content: 'First turn.' },
       {
         role: 'assistant',
@@ -104,7 +109,7 @@ describe('buildLlmMessages', () => {
       message({ id: 'msg_reply', role: 'assistant', content: 'Assistant reply.' }),
     ];
 
-    expect(buildLlmMessages(history, 'Current turn.', '', 20)).toEqual([
+    expect(buildLlmMessages(history, 'Current turn.', '', { maxHistoryMessages: 20 })).toEqual([
       { role: 'user', content: 'User turn.' },
       { role: 'assistant', content: 'Assistant reply.' },
       { role: 'user', content: 'Current turn.' },
@@ -119,7 +124,7 @@ describe('buildLlmMessages', () => {
       message({ id: 'msg_kept_reply', role: 'assistant', content: 'Kept reply.' }),
     ];
 
-    expect(buildLlmMessages(history, 'Current turn.', '', 3)).toEqual([
+    expect(buildLlmMessages(history, 'Current turn.', '', { maxHistoryMessages: 3 })).toEqual([
       { role: 'user', content: 'Kept user turn.' },
       { role: 'assistant', content: 'Kept reply.' },
       { role: 'user', content: 'Current turn.' },
@@ -133,9 +138,84 @@ describe('buildLlmMessages', () => {
       parts: [{ type: 'entity', uri: 'pops:inventory/item/drill_1', title: 'Drill' }],
     });
 
-    expect(buildLlmMessages([userMessage], 'Current turn.', 'Retrieved item.', 20)).toEqual([
+    expect(
+      buildLlmMessages([userMessage], 'Current turn.', 'Retrieved item.', {
+        maxHistoryMessages: 20,
+      })
+    ).toEqual([
       { role: 'user', content: '  literal user text  ' },
       { role: 'user', content: 'Current turn.\n\n---\nRetrieved knowledge:\nRetrieved item.' },
     ]);
+  });
+
+  it('prefixes settled outcomes before the current text while retaining retrieved context', () => {
+    const settled: SettledAction[] = [
+      {
+        batchId: 'batch_1',
+        actionId: 'action_1',
+        tool: 'inventory.move',
+        summary: 'Move the drill',
+        content: 'This action was superseded.',
+        isError: false,
+      },
+      {
+        batchId: 'batch_2',
+        actionId: 'action_2',
+        tool: 'finance.transactions.addTags',
+        summary: 'Tag the transaction',
+        content: 'This action was interrupted.',
+        isError: true,
+      },
+    ];
+
+    expect(
+      buildLlmMessages([], 'Never mind.', 'Retrieved item.', {
+        maxHistoryMessages: 20,
+        settled,
+      })
+    ).toEqual([
+      {
+        role: 'user',
+        content:
+          '[action inventory.move "Move the drill": This action was superseded.]\n' +
+          '[action finance.transactions.addTags "Tag the transaction": This action was interrupted.]\n\n' +
+          'Never mind.\n\n---\nRetrieved knowledge:\nRetrieved item.',
+      },
+    ]);
+    expect(
+      buildLlmMessages([], 'Never mind.', 'Retrieved item.', {
+        maxHistoryMessages: 20,
+        settled: [],
+      })
+    ).toEqual(buildLlmMessages([], 'Never mind.', 'Retrieved item.', { maxHistoryMessages: 20 }));
+  });
+});
+
+describe('renderSettledResults', () => {
+  it('renders one action line per entry in order', () => {
+    const settled: SettledAction[] = [
+      {
+        batchId: 'batch_1',
+        actionId: 'action_1',
+        tool: 'inventory.move',
+        summary: 'Move the drill',
+        content: 'This action was superseded.',
+        isError: false,
+      },
+      {
+        batchId: 'batch_2',
+        actionId: 'action_2',
+        tool: 'finance.transactions.addTags',
+        summary: 'Tag the transaction',
+        content: 'This action was interrupted.',
+        isError: true,
+      },
+    ];
+
+    expect(renderSettledResults(settled)).toBe(
+      '[action inventory.move "Move the drill": This action was superseded.]\n' +
+        '[action finance.transactions.addTags "Tag the transaction": This action was interrupted.]'
+    );
+    expect(renderSettledResults([])).toBe('');
   });
 });

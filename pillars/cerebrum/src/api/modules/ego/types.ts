@@ -7,6 +7,7 @@
  * negotiation) the engine traffics in.
  */
 import type { EgoMessagePart } from '../../../contract/rest-ego-parts.js';
+import type { SettledAction } from './batch-settle.js';
 import type { Message } from './persistence.js';
 import type { AutoExecutedGroup, ProposedBatch } from './tool-loop.js';
 
@@ -114,6 +115,8 @@ export interface ChatParams {
   knownScopes?: string[];
   /** Gateway dotted tool names allowed to execute writes in this conversation. */
   allowedTools?: readonly string[];
+  /** Outcomes for action batches settled before this new message. */
+  settled?: readonly SettledAction[];
 }
 
 /** Configuration for the conversation engine. */
