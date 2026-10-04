@@ -112,19 +112,43 @@ slowest gated workflow has an opinion, and the failure would land after the
 merge. Hence `in_progress` until nothing is pending.
 
 **A stack can report `blocked` after every required context succeeds.** During
-POPS-2750, three stacked PRs reported `mergeable_state: "blocked"` even though
-all seven required contexts, including `CI Gate` from its pinned app, succeeded.
-The stack merge refusal misleadingly named `CI Gate`. A cancelled, non-required
-`Review` run correlated with each blocked PR, but rerunning the cancelled runs,
-rewriting a PR body, and waiting did not clear the state. In one recorded case,
-amending a commit without changing its tree gave #4402 a new head SHA and it
-became clean; restacking later PRs onto `main` gave them fresh SHAs and cleared
-those blocks too. Merging the largest clean prefix and restacking worked, but
-reran CI for each remaining PR. This is an observed mitigation, not an explanation
-of the cause or a guarantee that a new SHA will always clear the state. If this
-recurs, inspect each stack member's complete `statusCheckRollup` and
-`mergeable_state`; a green `gh pr checks` summary or an error naming `CI Gate`
-may not identify the blocked member. The cause remains unresolved (POPS-2913).
+POPS-2750, three PRs in native stack #4404 reported `mergeable_state: "blocked"`
+even though all seven required contexts, including `CI Gate` from its pinned
+app, succeeded. They occupied positions 2, 5 and 10; the stack later merged. A
+cancelled, non-required `Review` run correlated with each blocked PR, but
+rerunning the cancelled runs, rewriting a PR body, and waiting did not clear the
+state. The cancelled run alone is not a sufficient explanation.
+
+The immediate `base.ref` does not show the complete rule path for a stacked PR.
+GitHub applies the stack's base-branch rules to every PR in that stack, including
+PRs based on an intermediate branch, and stack merges include the lower PRs up
+to the selected target. See [GitHub's stacked pull request
+documentation](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs).
+In one recorded case, amending a commit without changing its tree gave #4402 a
+new head SHA and it became clean; restacking later PRs onto `main` gave those
+fresh SHAs and cleared the blocks too. Merging the largest clean prefix and
+restacking worked, but reran CI for each remaining PR. These are observed
+mitigations, not a guarantee that a new SHA or base retarget will always clear
+stale state.
+
+A current example shows why the whole stack matters: in stack #5327, PR #5267
+has all six required contexts successful and its PR Review comment says `No open
+findings`, yet the API reports `mergeable: true` and
+`mergeable_state: "blocked"`. Its preceding member, #5261, currently reports
+`mergeable: false` and `mergeable_state: "dirty"`. This is consistent with a
+predecessor conflict blocking progress through the stack; the target PR's own
+checks do not establish that its stack is mergeable. The old #4404 PRs have
+since merged, so GitHub no longer exposes the transient mergeability snapshots
+needed to prove which condition produced their earlier `blocked` values. The
+exact cause of that historical incident remains unconfirmed.
+
+When this recurs, inspect the stack membership and every member's merge state
+and complete check rollup. The PR API exposes stack id, position and size at
+`.stack`; `gh stack view --json` gives the local stack view. Resolve a predecessor
+conflict and restack descendants as needed, then use `gh stack merge <target>
+--yes`; `gh pr merge` does not merge a stack. A green `gh pr checks` summary or
+an error naming `CI Gate` is not enough to identify a stack-level blocker
+(POPS-2913).
 
 **A guard must be exercised against the condition it exists to detect, not
 against a healthy tree.** Everything above shares one shape — a check that
