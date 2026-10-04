@@ -8,6 +8,7 @@ public struct EgoThreadView: View {
     @State private var model: EgoThreadModel
     @State private var notices: [String] = []
     @State private var isLoadingConversation = false
+    @State private var transcriptPosition = ScrollPosition(edge: .bottom)
 
     private let entityRouter: any EntityRouter
 
@@ -71,25 +72,22 @@ public struct EgoThreadView: View {
     }
 
     private var transcript: some View {
-        ScrollViewReader { scrollProxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                    ForEach(rows) { row in
-                        rowView(row)
-                            .id(row.id)
-                    }
-                }
-                .padding(PopsSpacing.lg)
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .accessibilityIdentifier("ego-thread-transcript")
-            .onChange(of: rows) { _, _ in
-                guard let lastID = rows.last?.id else { return }
-                Task { @MainActor in
-                    await Task.yield()
-                    withAnimation { scrollProxy.scrollTo(lastID, anchor: .bottom) }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                ForEach(rows) { row in
+                    rowView(row)
+                        .id(row.id)
                 }
             }
+            .scrollTargetLayout()
+            .padding(PopsSpacing.lg)
+        }
+        .scrollPosition($transcriptPosition)
+        .scrollDismissesKeyboard(.interactively)
+        .accessibilityIdentifier("ego-thread-transcript")
+        .onChange(of: rows) { _, incomingRows in
+            guard !incomingRows.isEmpty else { return }
+            withAnimation { transcriptPosition.scrollTo(edge: .bottom) }
         }
     }
 
