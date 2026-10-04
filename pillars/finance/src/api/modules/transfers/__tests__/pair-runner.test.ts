@@ -20,7 +20,7 @@ import {
   type CreateTransactionInput,
   type TransactionRow,
 } from '../../../../db/services/transactions.js';
-import { predictPairOutcome } from '../pair-runner.js';
+import { attemptPairForRow, predictPairOutcome } from '../pair-runner.js';
 
 import type { FinanceDb } from '../../../../db/services/internal.js';
 
@@ -103,6 +103,43 @@ describe('predictPairOutcome', () => {
     // The deposit's only candidate is the Everyday debit, but that debit's
     // unique best is the card — so the pairing is not mutual and must not link.
     expect(predictPairOutcome(db, payId, 3).kind).not.toBe('match');
+  });
+
+  it('links an ING redraw by receipt number and leaves the same-day advance unlinked', () => {
+    const db = freshDb();
+    createAccount(db, { name: 'ING Everyday', kind: 'checking', currency: 'AUD' });
+    createAccount(db, { name: 'ING Personal Loan', kind: 'checking', currency: 'AUD' });
+    createAccount(db, { name: 'ING Savings Maximiser', kind: 'checking', currency: 'AUD' });
+
+    const loanLeg = seed(db, 'ING Personal Loan', {
+      amountCents: -250000,
+      date: '2026-01-10',
+      description: 'From account Everyday - Internal Transfer - Receipt 565046 ING Personal Loan',
+    });
+    const redraw = seed(db, 'ING Everyday', {
+      amountCents: 250000,
+      date: '2026-01-10',
+      description: 'Redraw - Receipt No 565046Transfer to account 123456',
+    });
+    const advance = seed(db, 'ING Savings Maximiser', {
+      amountCents: 250000,
+      date: '2026-01-10',
+      description: 'Advance - Receipt No 839201Transfer to account 654321',
+    });
+
+    expect(attemptPairForRow(db, loanLeg, 3)).toBe('linked');
+
+    const linkedLoan = db.select().from(transactions).where(eq(transactions.id, loanLeg.id)).get();
+    const linkedRedraw = db.select().from(transactions).where(eq(transactions.id, redraw.id)).get();
+    const unlinkedAdvance = db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, advance.id))
+      .get();
+
+    expect(linkedLoan?.relatedTransactionId).toBe(redraw.id);
+    expect(linkedRedraw?.relatedTransactionId).toBe(loanLeg.id);
+    expect(unlinkedAdvance?.relatedTransactionId).toBeNull();
   });
 
   it('does not pair a card purchase with a same-day reimbursement, whatever the reimbursement is typed (POPS-3940)', () => {
