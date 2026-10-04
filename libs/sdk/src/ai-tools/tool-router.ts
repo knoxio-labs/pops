@@ -18,9 +18,11 @@
  *   taking too long.
  */
 import { pillar } from '../client/index.js';
+import { RegistryUnreachableError } from '../discovery/index.js';
+import { buildToolList } from './build-tool-list.js';
 
 import type { CallResult, PillarClientOptions } from '../client/index.js';
-import type { InvokeToolOptions, ToolResult } from './types.js';
+import type { InvokeToolOptions, Tool, ToolResult } from './types.js';
 
 export const DEFAULT_TOOL_TIMEOUT_MS = 30_000;
 
@@ -29,16 +31,21 @@ type PillarFactory = (id: string, options?: PillarClientOptions) => unknown;
 type Internals = {
   pillarFactory: PillarFactory;
   clientOptions: PillarClientOptions;
+  toolList: typeof buildToolList;
 };
 
 const internals: Internals = {
   pillarFactory: pillar,
   clientOptions: {},
+  toolList: buildToolList,
 };
 
 /**
- * Invoke an AI tool by its fully-qualified name. Always resolves —
- * failure is encoded in the `ToolResult.kind` discriminant.
+ * Invoke a tool only when the memoized registry tool list advertises its
+ * fully-qualified name. Unadvertised names return `unknown-tool`; advertised
+ * tools on unhealthy pillars return `pillar-unavailable` without dispatch.
+ * Registry unavailability also returns `pillar-unavailable` because the
+ * caller cannot safely distinguish a missing tool from an unreachable registry.
  */
 export async function invokeTool(
   toolName: string,
@@ -47,6 +54,24 @@ export async function invokeTool(
 ): Promise<ToolResult> {
   const parsed = parseToolName(toolName);
   if (parsed === null) return { kind: 'unknown-tool', toolName };
+
+  let tools: readonly Tool[];
+  try {
+    tools = await internals.toolList({ includeUnavailable: true });
+  } catch (error) {
+    if (error instanceof RegistryUnreachableError) {
+      return { kind: 'pillar-unavailable', pillar: parsed.pillarId };
+    }
+    throw error;
+  }
+
+  const advertisedTool = tools.find(
+    (tool) => tool.pillar === parsed.pillarId && tool.name === parsed.toolName
+  );
+  if (advertisedTool === undefined) return { kind: 'unknown-tool', toolName };
+  if (advertisedTool.pillarStatus !== 'healthy') {
+    return { kind: 'pillar-unavailable', pillar: parsed.pillarId };
+  }
 
   const timeoutMs = options.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS;
   const clientOptions: PillarClientOptions = {
@@ -155,15 +180,17 @@ function toError(cause: unknown): Error {
 }
 
 /**
- * Test hook — swap the underlying `pillar()` factory and/or per-call
- * client options. Production callers never touch this.
+ * Test hook — swap the underlying `pillar()` factory, tool-list source,
+ * and/or per-call client options. Production callers never touch this.
  */
 export function __setInvokeToolInternals(overrides: Partial<Internals>): void {
   if (overrides.pillarFactory !== undefined) internals.pillarFactory = overrides.pillarFactory;
   if (overrides.clientOptions !== undefined) internals.clientOptions = overrides.clientOptions;
+  if (overrides.toolList !== undefined) internals.toolList = overrides.toolList;
 }
 
 export function __resetInvokeToolInternals(): void {
   internals.pillarFactory = pillar;
   internals.clientOptions = {};
+  internals.toolList = buildToolList;
 }
