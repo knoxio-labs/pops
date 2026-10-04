@@ -57,6 +57,10 @@ function toolNamesFromSource(source) {
     const name = match[2];
     if (name !== undefined) names.add(name);
   }
+  for (const match of source.matchAll(/['"](tags\.assignments\.(?:attach|detach))['"]/g)) {
+    const name = match[1];
+    if (name !== undefined) names.add(name);
+  }
   return names;
 }
 
@@ -129,6 +133,10 @@ export function checkPurchasesMcpCoverage() {
     repositoryRoot,
     'pillars/mcp/src/tools/purchases-analytics.ts'
   );
+  const tagAssignmentToolsPath = resolve(
+    repositoryRoot,
+    'pillars/mcp/src/tools/tags-assignments.ts'
+  );
   /** @type {unknown} */
   const document = JSON.parse(readFileSync(contractPath, 'utf8'));
   /** @type {unknown} */
@@ -142,6 +150,7 @@ export function checkPurchasesMcpCoverage() {
     availableToolNames: new Set([
       ...toolNamesFromSource(readFileSync(toolsPath, 'utf8')),
       ...toolNamesFromSource(readFileSync(analyticsToolsPath, 'utf8')),
+      ...toolNamesFromSource(readFileSync(tagAssignmentToolsPath, 'utf8')),
     ]),
   });
 }
