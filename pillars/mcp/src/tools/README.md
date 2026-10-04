@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 77 tools; a new adapter that breaks one is a bug even
+These hold across all 78 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -51,6 +51,9 @@ though nothing enforces it mechanically.
 
 - `finance.entities.list` dispatches to the **`contacts`** pillar, which owns
   the entity table. Finance only owns the transaction usage rollup.
+- `tags.things.list` calls the orchestrator's `tagged.query` route. Inspect its
+  response's `pillars` status list before treating the returned sections as
+  complete; unavailable or unauthorized carrier statuses can mean partial results.
 - `finance.accounts.checkpoints` calls the finance pillar's `checkpoints.list`
   operation (`GET /accounts/:id/checkpoints`), not `accounts.*` — checkpoints
   and accounts are separate contract sub-routers even though the tool name
@@ -111,7 +114,7 @@ though nothing enforces it mechanically.
 
 ## Not here
 
-No tools exist for `ai`, `food`, `lists`, `registry`, `orchestrator`, or
-`documents` — those pillars are unreachable through MCP until an adapter is
-added. There is also no cross-pillar orchestration: one tool call is one
-pillar call, and nothing is retained between calls.
+No tools exist for `ai`, `food`, `lists`, `registry`, or `documents` — those
+pillars are unreachable through MCP until an adapter is added. The one
+cross-pillar query, `tags.things.list`, makes a single call to the orchestrator,
+which fans out to registered tag carriers and reports each carrier's status.

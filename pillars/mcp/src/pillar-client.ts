@@ -38,6 +38,7 @@ const PILLAR_API_URL_ENV_VARS: Readonly<Record<string, string>> = {
   contacts: 'POPS_CONTACTS_API_URL',
   purchases: 'POPS_PURCHASES_API_URL',
   tags: 'POPS_TAGS_API_URL',
+  orchestrator: 'POPS_ORCHESTRATOR_API_URL',
 };
 
 /**
