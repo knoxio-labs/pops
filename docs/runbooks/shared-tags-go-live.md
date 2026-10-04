@@ -48,20 +48,20 @@ Do not proceed if a carrier manifest is rejected, absent, or malformed. Resolve 
 
 ## 4. Grant only the required scopes
 
-Append the following scopes to the existing service accounts, preserving all existing scopes:
+The following are the shared-tags operation grants from the integration source. They are proposed grants, not production approval:
 
-| Service account | Scopes required for shared tags                                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------------ |
-| Orchestrator    | `contacts.search.search`, `purchases.search.search`, `tags.tags`, `finance.tagged`, `purchases.tagged` |
-| MCP gateway     | `tags.tags`, `finance.tagged`, `purchases.tagged`                                                      |
-| Finance         | `tags.tags`                                                                                            |
-| Purchases       | `tags.tags`                                                                                            |
+| Consumer           | Shared-tags grants                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| Orchestrator (new) | `contacts.search.search`, `purchases.search.search`, `tags.tags`, `finance.tagged`, `purchases.tagged` |
+| MCP gateway        | `tags.tags`, `finance.tagged`, `purchases.tagged`                                                      |
+| Finance            | `tags.tags`                                                                                            |
+| Purchases          | `tags.tags`                                                                                            |
 
-The orchestrator list is pinned in [`service-account.ts`](../../pillars/orchestrator/src/service-account.ts). Finance and Purchases need `tags.tags` for their vocabulary calls. MCP's vocabulary tools also declare `tags.tags`; its assignment tools use `finance.tagged` and `purchases.tagged`.
+The Orchestrator's full grant set is pinned in [`service-account.ts`](../../pillars/orchestrator/src/service-account.ts). Finance and Purchases also pin their outbound grant arrays in their [Finance](../../pillars/finance/src/api/pillars/service-account.ts) and [Purchases](../../pillars/purchases/src/api/pillars/service-account.ts) service-account modules. MCP's tag vocabulary and assignment tools declare the required scopes in [`tags-shape.ts`](../../pillars/mcp/src/tools/tags-shape.ts) and [`tags-assignments.ts`](../../pillars/mcp/src/tools/tags-assignments.ts). Exact mounted secret references for all four consumers are in the [service-account rotation runbook](shared-tags-service-account-rotation.md).
 
-**Scope discrepancy to resolve before production:** POPS-5417 currently names the parent scope `tags` for the MCP gateway. Scope matching accepts a dotted prefix, so `tags` authorizes every `tags.*` operation, while `tags.tags` is sufficient for the vocabulary tools. Use the narrower `tags.tags` grant unless the ticket owner explicitly approves and records a broader need. Do not silently grant the parent scope or a wildcard.
+Every added scope needs explicit owner approval before production use. The narrow `tags.tags` scope covers vocabulary operations; the parent `tags` scope authorizes every `tags.*` operation because scopes match by dotted prefix. Do not silently grant the parent scope or a wildcard.
 
-POPS-5417 notes that the registry has no scope-update route. If the approved procedure therefore requires an append-only change to the registry database, first take and verify a backup, preserve the existing scope arrays, and use the operator-approved database procedure. Stop if the backup or preservation of existing scopes cannot be confirmed. Never guess account IDs, overwrite an existing scope list, or put key material in the change record.
+The Registry admin API has only list, create, and revoke operations; it cannot update an account's scopes in place. Use the [replacement-account rotation workflow](shared-tags-service-account-rotation.md): preserve the full existing scope list, add only approved grants, install and verify the replacement secret while the old account remains active, then revoke the old account only after the consumer is healthy. Never append scopes by editing Registry SQLite or by an undocumented database procedure.
 
 ## 5. Verify vocabulary and carrier data
 
