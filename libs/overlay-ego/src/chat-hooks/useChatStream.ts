@@ -45,7 +45,6 @@ export function useStreamCallbacks({
   );
 }
 
-/** Record a decision, then continue its conversation through the shared stream. */
 interface BatchDecisionStreamParams {
   conversationId: string | null;
   stream: Stream;
@@ -54,6 +53,7 @@ interface BatchDecisionStreamParams {
   isStreaming: boolean;
 }
 
+/** Record a decision, then continue its conversation through the shared stream. */
 export function useBatchDecisionStream({
   conversationId,
   stream,
