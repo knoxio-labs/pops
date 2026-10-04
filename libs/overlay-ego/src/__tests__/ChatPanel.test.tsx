@@ -26,6 +26,7 @@ const sdk = vi.hoisted(() => ({
   egoListConversations: vi.fn(),
   egoGetConversation: vi.fn(),
   egoDeleteConversation: vi.fn(),
+  egoDecideActionBatch: vi.fn(),
 }));
 
 vi.mock('../ego-api', () => sdk);

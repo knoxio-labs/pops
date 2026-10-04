@@ -44,6 +44,7 @@ function ThreadArea({ model }: { model: ChatPageModel }) {
           streamParts={model.streamParts}
           streamingContent={model.streamingContent}
           toolActivity={model.toolActivity}
+          decisions={model.batchDecisions}
         />
       )}
 
