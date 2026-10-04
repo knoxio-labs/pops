@@ -62,6 +62,7 @@ internal final class AppComposition {
     internal let pairingDependencies: AppDependencies
 
     internal let credentialStore: DeviceCredentialStore
+    internal let streamAuthorizer: any BFMStreamAuthorizer
     internal let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient
     internal let openInventoryReplica: (PairedDevice) throws -> InventoryReplica
     internal let backgroundRefresh: BackgroundRefresh
@@ -143,6 +144,7 @@ internal final class AppComposition {
 
         self.session = session
         self.credentialStore = credentialStore
+        self.streamAuthorizer = refresher
         self.authenticated = authenticated
         self.openInventoryReplica = openInventoryReplica
         self.firstUnlock = firstUnlock
@@ -217,7 +219,11 @@ internal final class AppComposition {
             inventory: inventoryStore(
                 for: device, transport: inventoryTransport, storageFull: &storageFull),
             codeSuggestions: inventoryTransport,
-            barcodeLookup: inventoryTransport
+            barcodeLookup: inventoryTransport,
+            ego: BFMEgoRepository(
+                client: authenticated(device),
+                baseURL: device.baseURL,
+                authorizer: streamAuthorizer)
         )
         bound = BoundDevice(device: device, dependencies: dependencies, storageFull: storageFull)
         return dependencies
