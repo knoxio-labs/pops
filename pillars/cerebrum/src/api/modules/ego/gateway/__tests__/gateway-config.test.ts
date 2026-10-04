@@ -24,6 +24,35 @@ describe('readGatewayConfig', () => {
     expect(readGatewayConfig({ CEREBRUM_EGO_MCP_URL: 'http://gw/mcp' })).toBeNull();
   });
 
+  it('leaves the gateway disabled when the configured mounted token file is missing', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const file = join(dir, 'missing-token');
+
+    expect(
+      readGatewayConfig({
+        CEREBRUM_EGO_MCP_URL: 'http://gw/mcp',
+        CEREBRUM_EGO_MCP_TOKEN_FILE: file,
+      })
+    ).toBeNull();
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    const message = String(warn.mock.calls[0]?.[0]);
+    expect(message).toContain(file);
+    expect(message).not.toContain('secret-token-value');
+  });
+
+  it('leaves the gateway disabled when the configured mounted token file is empty', () => {
+    const file = join(dir, 'empty-token');
+    writeFileSync(file, '  \n');
+
+    expect(
+      readGatewayConfig({
+        CEREBRUM_EGO_MCP_URL: 'http://gw/mcp',
+        CEREBRUM_EGO_MCP_TOKEN_FILE: file,
+      })
+    ).toBeNull();
+  });
+
   it('trims the token read from the file', () => {
     const file = join(dir, 'token');
     writeFileSync(file, '  file-token\n');
