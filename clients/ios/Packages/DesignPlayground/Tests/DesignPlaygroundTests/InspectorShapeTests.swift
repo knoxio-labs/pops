@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import SwiftUI
 import Testing
+import ViewInspector
 
 @testable import DesignPlayground
 
@@ -29,20 +30,28 @@ internal struct InspectorShapeTests {
         ]
     }
 
-    @Test("the lift drag shares touches with the inspector buttons")
-    func liftGestureDoesNotConsumeInspectorButtonTaps() throws {
-        let packageRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let inspector = packageRoot.appending(
-            path: "Sources/DesignPlayground/UI/InspectorView.swift"
+    @Test("Inspector buttons invoke their actions when tapped in the view hierarchy")
+    @MainActor
+    func inspectorButtonsInvokeTheirActions() throws {
+        let surface = try #require(Catalog.surfaces.first)
+        let openingState = try #require(surface.openingState)
+        var settings = StageSettings(stateID: openingState.id, chrome: surface.chrome)
+        var expanded = false
+        var lift: CGFloat = 0
+        var closeCount = 0
+        let view = InspectorView(
+            surface: surface,
+            settings: Binding(get: { settings }, set: { settings = $0 }),
+            expanded: Binding(get: { expanded }, set: { expanded = $0 }),
+            lift: Binding(get: { lift }, set: { lift = $0 }),
+            onClose: { closeCount += 1 }
         )
-        let source = try String(contentsOf: inspector, encoding: .utf8)
+        let inspector = try view.inspect()
 
-        #expect(source.contains(".simultaneousGesture(liftGesture)"))
-        #expect(source.contains(".contentShape(Rectangle())"))
-        #expect(!source.contains(".gesture(liftGesture)"))
+        try inspector.find(viewWithAccessibilityLabel: "Close").button().tap()
+        #expect(closeCount == 1)
+        try inspector.find(viewWithAccessibilityLabel: "Show conditions").button().tap()
+        #expect(expanded)
     }
 
     @Test("the panel's glass reaches every corner of the box its content sits in")
