@@ -6,15 +6,33 @@ import express from 'express';
 import type { Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
+import type {
+  CallToolResult as McpCallToolResult,
+  Tool as McpTool,
+} from '@modelcontextprotocol/sdk/types.js';
+
 const TOKEN = 'gateway-test-token';
 const inputSchema = { type: 'object' as const, properties: {} };
 
-function buildGateway(): Server {
+export interface GatewayTestCall {
+  name: string;
+  args: Record<string, unknown>;
+}
+
+export interface GatewayTestServerOptions {
+  /** Override the default paginated catalogue with a focused tool fixture. */
+  tools?: readonly McpTool[];
+  /** Return MCP text results for calls while the helper records each invocation. */
+  onCall?: (call: GatewayTestCall) => Promise<McpCallToolResult> | McpCallToolResult;
+}
+
+function buildGateway(options: GatewayTestServerOptions, calls: GatewayTestCall[]): Server {
   const gateway = new Server(
     { name: 'test-gateway', version: '1.0.0' },
     { capabilities: { tools: {} } }
   );
   gateway.setRequestHandler(ListToolsRequestSchema, async (request) => {
+    if (options.tools !== undefined) return { tools: [...options.tools] };
     if (request.params?.cursor === 'page-2') {
       return { tools: [{ name: 'hang', description: 'never resolves', inputSchema }] };
     }
@@ -32,11 +50,17 @@ function buildGateway(): Server {
     };
   });
   gateway.setRequestHandler(CallToolRequestSchema, async (request) => {
-    if (request.params.name === 'hang') return new Promise<never>(() => {});
-    if (request.params.name === 'plain_thing') {
+    const call = {
+      name: request.params.name,
+      args: request.params.arguments ?? {},
+    };
+    calls.push(call);
+    if (options.onCall !== undefined) return options.onCall(call);
+    if (call.name === 'hang') return new Promise<never>(() => {});
+    if (call.name === 'plain_thing') {
       return { content: [{ type: 'text' as const, text: 'it broke' }], isError: true };
     }
-    const echoed = String(request.params.arguments?.['value'] ?? '');
+    const echoed = String(call.args['value'] ?? '');
     return {
       content: [
         { type: 'text' as const, text: `got ${echoed}` },
@@ -48,11 +72,13 @@ function buildGateway(): Server {
 }
 
 /** Start an offline, authenticated Streamable HTTP gateway for Ego API tests. */
-export async function startGatewayTestServer(): Promise<{
+export async function startGatewayTestServer(options: GatewayTestServerOptions = {}): Promise<{
   url: string;
   token: string;
+  calls: GatewayTestCall[];
   close(): Promise<void>;
 }> {
+  const calls: GatewayTestCall[] = [];
   const app = express();
   app.use(express.json());
   app.post('/mcp', async (req, res) => {
@@ -60,7 +86,7 @@ export async function startGatewayTestServer(): Promise<{
       res.status(401).json({ error: 'unauthorized' });
       return;
     }
-    const gateway = buildGateway();
+    const gateway = buildGateway(options, calls);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on('close', () => {
       void transport.close();
@@ -85,6 +111,7 @@ export async function startGatewayTestServer(): Promise<{
   return {
     url: `http://127.0.0.1:${(address as AddressInfo).port}/mcp`,
     token: TOKEN,
+    calls,
     async close() {
       server.closeAllConnections();
       await new Promise<void>((resolve, reject) => {
