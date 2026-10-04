@@ -9,6 +9,8 @@
 # playground the same way.
 
 FROM node:24-alpine AS builder
+# pnpm compiles the workspace SQLite Node-API binding during install.
+RUN apk add --no-cache python3 make g++
 WORKDIR /app
 
 # The app's workspace closure reaches @pops/ui and the compiled libs beneath
