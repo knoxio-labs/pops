@@ -23,6 +23,20 @@ describe('Purchases OpenAPI and MCP tool coverage', () => {
     ]);
   });
 
+  it('allows the shared-tag assignment tools to cover Purchases carrier routes', () => {
+    expect(
+      findPurchasesMcpCoverageProblems({
+        operationIds: ['tagged.attach', 'tagged.detach'],
+        toolRoutes: {
+          'tagged.attach': 'tags.assignments.attach',
+          'tagged.detach': 'tags.assignments.detach',
+        },
+        omissionReasons: {},
+        availableToolNames: new Set(['tags.assignments.attach', 'tags.assignments.detach']),
+      })
+    ).toEqual([]);
+  });
+
   it('rejects stale route entries, missing tools, and duplicate operation IDs', () => {
     expect(
       findPurchasesMcpCoverageProblems({

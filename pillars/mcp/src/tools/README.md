@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 78 tools; a new adapter that breaks one is a bug even
+These hold across all 80 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -60,6 +60,8 @@ though nothing enforces it mechanically.
   groups them under `accounts` for discoverability.
 - The `finance.*` family is read-only on purpose: no create/update/delete tool
   is wired, and `finance.test.ts` asserts no mutation-shaped name ever appears.
+  The separate `tags.assignments.attach` and `.detach` tools change only shared
+  tag assignments on Finance transactions, under the `finance.tagged` scope.
 - `finance.summary.get` is the tool to reach for on any "where did the money
   go" question. It is one call to an aggregation the finance pillar already
   did, and the alternative — paging `finance.transactions.list` and adding it
@@ -69,11 +71,13 @@ though nothing enforces it mechanically.
   it per axis would be several calls for data already fetched, and would make
   the mcp package mirror the response shape it currently never has to know.
 - The `purchases.*` family is read-only for a sharper reason, asserted the same
-  way in `purchases.test.ts`. Every write on that pillar is an ingest (which
-  needs a checksum only an adapter can compute) or a classification decision —
+  way in `purchases.test.ts`. Its ordinary purchase writes are ingestion
+  (which needs a checksum only an adapter can compute) or classification decisions —
   and `PATCH /purchases/:id/items/:itemId` is the single place a machine
   proposal becomes a human assertion. A tool that could call it would erase the
-  distinction `kindConfirmedAt` exists to hold.
+  distinction `kindConfirmedAt` exists to hold. The separate
+  `tags.assignments.attach` and `.detach` tools change only shared tag
+  assignments on Purchases line items, under the `purchases.tagged` scope.
 - `purchases.*` needs a grant. That pillar admits an uncredentialled caller but
   holds a caller presenting an `X-API-Key` to that key's scopes, and MCP always
   presents one. Without `purchases.purchase`, `purchases.analytics` and
@@ -81,6 +85,10 @@ though nothing enforces it mechanically.
 - `tags.tags.*` manages the shared tag vocabulary under the
   `tags.tags` service-account scope. These tools do not attach or detach
   tags on Finance or Purchases records.
+- `tags.assignments.attach` and `.detach` attach or detach one shared tag on a
+  Finance transaction or Purchases line item. The selected `pillar` determines
+  the required `<pillar>.tagged` scope; these tools do not change the tag
+  vocabulary or any other carrier fields.
 - `inventory.catalogue.*` completes the persisted type-catalogue authoring
   workflow without database access. The MCP service account needs
   `inventory.types.read` for catalogue and audit reads, and
