@@ -24,7 +24,8 @@ export type BuildToolListOptions = {
   /**
    * Include tools from pillars whose registry-side status is `unavailable`
    * or `unknown`. Off by default so the AI never sees a tool it can't call.
-   * Mostly useful for diagnostics and tests.
+   * `invokeTool` enables it to distinguish an unavailable advertised tool
+   * from a name no pillar advertises.
    */
   includeUnavailable?: boolean;
 };
@@ -35,16 +36,10 @@ export type BuildToolListOptions = {
  * The orchestrator branches on `kind` to either thread the tool's output
  * back into the model loop (`ok`), surface a graceful "tool unavailable"
  * message to the AI (`pillar-unavailable`), report a tool-level failure
- * (`tool-error`), or fail closed when the AI emits a malformed tool name
- * that does not match `<pillar>.<tool>` (`unknown-tool`).
- *
- * Note: a syntactically valid name pointing at a non-existent tool does
- * not yield `unknown-tool` today — it lands as `tool-error` (either via
- * the local "tool not exposed" guard or via a `contract-mismatch` from
- * the pillar) because the orchestrator cannot prove non-existence
- * without consulting the registry. Extending detection to real
- * non-existent tools requires a registry lookup and is tracked under
- * PRD-201 (dynamic tool list).
+ * (`tool-error`), or fail closed when the AI emits a malformed or
+ * unadvertised tool name (`unknown-tool`). An advertised tool whose pillar
+ * is unavailable, or a tool whose registry snapshot cannot be read, remains
+ * distinguishable as `pillar-unavailable`.
  */
 export type ToolResult =
   | { kind: 'ok'; output: unknown }

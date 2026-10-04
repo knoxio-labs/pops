@@ -50,6 +50,11 @@ const internals: Internals = {
   fetchSnapshot: pillarRegistry,
 };
 
+/**
+ * Build the memoized AI-callable tool list from the current registry snapshot.
+ * Use `includeUnavailable` when validating an invocation so known unhealthy
+ * tools stay distinct from names that no pillar advertises.
+ */
 export async function buildToolList(opts: BuildToolListOptions = {}): Promise<readonly Tool[]> {
   const snapshot = await internals.fetchSnapshot();
   const key = makeCacheKey(snapshot.fetchedAt, opts);
