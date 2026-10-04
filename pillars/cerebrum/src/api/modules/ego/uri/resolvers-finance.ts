@@ -1,6 +1,6 @@
 import { readPath, type UriTypeResolver } from './resolver.js';
 
-/** Resolves finance transaction and budget object URIs. */
+/** Resolves finance transaction, account, and budget object URIs. */
 export const financeUriResolvers: readonly UriTypeResolver[] = [
   {
     key: 'finance/transaction',
@@ -15,6 +15,26 @@ export const financeUriResolvers: readonly UriTypeResolver[] = [
       const subtitle =
         typeof date === 'string' && typeof amount === 'number' && Number.isFinite(amount)
           ? date + ' · ' + amount.toFixed(2)
+          : undefined;
+      return { title, ...(subtitle === undefined ? {} : { subtitle }) };
+    },
+  },
+  {
+    key: 'finance/account',
+    tool: 'finance.accounts.get',
+    args: (id) => (id.length === 0 ? null : { id }),
+    describe: (payload) => {
+      const title = readPath(payload, 'data', 'name');
+      if (typeof title !== 'string') return null;
+
+      const kind = readPath(payload, 'data', 'kind');
+      const currency = readPath(payload, 'data', 'currency');
+      const subtitle =
+        typeof kind === 'string' &&
+        kind.trim().length > 0 &&
+        typeof currency === 'string' &&
+        currency.trim().length > 0
+          ? kind + ' · ' + currency
           : undefined;
       return { title, ...(subtitle === undefined ? {} : { subtitle }) };
     },
