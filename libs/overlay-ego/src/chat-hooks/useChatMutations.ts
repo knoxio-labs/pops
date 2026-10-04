@@ -9,6 +9,7 @@ import { useCallback, useState } from 'react';
 
 import { egoDeleteConversation } from '../ego-api';
 import { unwrap } from '../ego-api-helpers';
+import { useFrameNavigation } from './useFrameNavigation';
 import { useStreamingChat } from './useStreamingChat';
 
 import type { EgoGetConversationResponses } from '../ego-api/types.gen';
@@ -68,6 +69,7 @@ export function useChatMutations({
   const [retrievedEngrams, setRetrievedEngrams] = useState<RetrievedEngram[]>([]);
   const queryClient = useQueryClient();
   const streaming = useStreamingChat();
+  const onNavigate = useFrameNavigation();
   const { deleteConversation, isDeleting } = useDeleteConversation(
     selectedConversationId,
     setSelectedConversationId,
@@ -91,6 +93,7 @@ export function useChatMutations({
       {
         onConversation: setSelectedConversationId,
         onEngrams: setRetrievedEngrams,
+        onNavigate,
         onInvalidate: async (conversationId) => {
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ['ego', 'conversations', 'list'] }),
@@ -101,7 +104,7 @@ export function useChatMutations({
         },
       }
     );
-  }, [inputValue, selectedConversationId, streaming, setInputValue, setSelectedConversationId, queryClient]); // prettier-ignore
+  }, [inputValue, selectedConversationId, streaming, setInputValue, setSelectedConversationId, queryClient, onNavigate]); // prettier-ignore
 
   const clearEngrams = useCallback(() => setRetrievedEngrams([]), []);
 
