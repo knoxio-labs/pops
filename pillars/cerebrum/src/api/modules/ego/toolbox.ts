@@ -30,6 +30,24 @@ export interface EgoToolbox {
   dispatch(name: string, input: Record<string, unknown>): Promise<ToolOutcome>;
 }
 
+/** Expose only read tools and reject dispatches for tools outside that list. */
+export function readOnlyToolbox(box: EgoToolbox): EgoToolbox {
+  const readOnly: EgoToolbox = {
+    async definitions() {
+      return (await box.definitions()).filter((definition) => definition.write !== true);
+    },
+
+    async dispatch(name, input) {
+      const definitions = await readOnly.definitions();
+      if (!definitions.some((definition) => definition.name === name)) {
+        return { kind: 'result', text: 'Unknown tool: ' + name, isError: true };
+      }
+      return box.dispatch(name, input);
+    },
+  };
+  return readOnly;
+}
+
 /** The toolbox and gateway client provided to the Ego HTTP layer. */
 export interface EgoTools {
   toolbox: EgoToolbox;

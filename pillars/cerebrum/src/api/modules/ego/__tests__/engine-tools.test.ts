@@ -109,6 +109,55 @@ function writeToolbox() {
 }
 
 describe('ConversationEngine tool loop', () => {
+  it('offers read tools only to chat and blocks a model-invented write', async () => {
+    const read = 'finance.transactions.get';
+    const write = 'finance.transactions.create';
+    const { toolbox, calls } = fakeToolbox(
+      {
+        [read]: () => ({ kind: 'result', text: 'Found it.', isError: false }),
+        [write]: (args) => ({
+          kind: 'write',
+          tool: write,
+          args,
+          summary: 'Create transaction',
+        }),
+      },
+      { writes: [write] }
+    );
+    const scripted = scriptedLlm([
+      { toolUses: [{ id: 'invented-write', name: write, input: { amount: 42 } }] },
+      { text: 'I cannot make that change here.' },
+    ]);
+    const result = await makeEngine(scripted.llm, { toolbox }).chat(chatParams());
+
+    expect(scripted.requests[0]?.tools?.map(({ name }) => name)).toEqual([read]);
+    expect(calls).toEqual([]);
+    expect(result.response.parts.every((part) => part.type !== 'actions')).toBe(true);
+    expect(result.response.batch).toBeNull();
+  });
+
+  it('keeps write tools available to prepareStream', async () => {
+    const write = 'finance.transactions.create';
+    const { toolbox } = fakeToolbox(
+      {
+        [write]: (args) => ({
+          kind: 'write',
+          tool: write,
+          args,
+          summary: 'Create transaction',
+        }),
+      },
+      { writes: [write] }
+    );
+    const scripted = scriptedLlm([
+      { toolUses: [{ id: 'write-1', name: write, input: { amount: 42 } }] },
+    ]);
+    const { events } = await collectStream(makeEngine(scripted.llm, { toolbox }));
+
+    expect(scripted.requests[0]?.tools?.map(({ name }) => name)).toContain(write);
+    expect(done(events).batch).not.toBeNull();
+  });
+
   it('forwards read tool events and returns entity parts from chat and streaming', async () => {
     const entity: EgoEntityPart = {
       type: 'entity',
