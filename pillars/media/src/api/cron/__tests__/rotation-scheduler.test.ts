@@ -307,6 +307,81 @@ describe('rotationScheduler — controller toggle', () => {
   });
 });
 
+function logCount(): number {
+  return rotationLogService.listRotationLog(opened.db, 100, 0).total;
+}
+
+describe('rotationScheduler — boot resume', () => {
+  it('arms without running a cycle when the last occurrence was already served', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0));
+    try {
+      rotationSettingsService.set(opened.db, 'rotation_enabled', 'true');
+      rotationSettingsService.set(opened.db, 'rotation_cron_expression', '0 3 * * *');
+      await rotationScheduler.runOnce(opened.db);
+      expect(logCount()).toBe(1);
+
+      vi.setSystemTime(new Date(2026, 7, 28, 14, 0));
+      const status = rotationScheduler.resumeIfEnabled(opened.db);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(status?.isRunning).toBe(true);
+      expect(logCount()).toBe(1);
+      const next = new Date(rotationScheduler.status(opened.db).nextRunAt ?? '');
+      expect(next.getDate()).toBe(29);
+      expect(next.getHours()).toBe(3);
+
+      await vi.advanceTimersByTimeAsync(13 * 60 * 60 * 1000);
+      expect(logCount()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('catches up with one cycle when an occurrence passed while it was down', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 22, 0));
+    try {
+      rotationSettingsService.set(opened.db, 'rotation_enabled', 'true');
+      rotationSettingsService.set(opened.db, 'rotation_cron_expression', '0 3 * * *');
+      await rotationScheduler.runOnce(opened.db);
+
+      vi.setSystemTime(new Date(2026, 7, 28, 10, 0));
+      rotationScheduler.resumeIfEnabled(opened.db);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(logCount()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('runs a first cycle when rotation is enabled but nothing has ever run', async () => {
+    vi.useFakeTimers();
+    try {
+      rotationSettingsService.set(opened.db, 'rotation_enabled', 'true');
+      rotationScheduler.resumeIfEnabled(opened.db);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(logCount()).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('an operator start still runs immediately, however recent the last cycle', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0));
+    try {
+      await rotationScheduler.runOnce(opened.db);
+      rotationScheduler.start({ db: opened.db, cronExpression: '0 3 * * *' });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(logCount()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('rotation scheduler — REST', () => {
   it('toggle on reports isRunning, toggle off clears it', async () => {
     vi.useFakeTimers();

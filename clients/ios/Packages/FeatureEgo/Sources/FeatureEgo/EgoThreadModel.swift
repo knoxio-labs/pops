@@ -228,6 +228,11 @@ extension EgoThreadModel {
             return ("Ego is unavailable. Try again.", true)
         case .unauthorized:
             return ("Your session needs attention before Ego can continue.", false)
+        case .rateLimited(let retryAfterSeconds):
+            return (
+                "Too many requests. Wait \(Self.waitDuration(retryAfterSeconds)) before trying again.",
+                true
+            )
         case .contractMismatch:
             return ("Ego returned a response this app can't read.", false)
         case .conflict:
@@ -240,5 +245,12 @@ extension EgoThreadModel {
         case .dependencyNotBound:
             return ("Ego isn't available in this app.", false)
         }
+    }
+
+    private static func waitDuration(_ retryAfterSeconds: Int?) -> String {
+        guard let retryAfterSeconds else { return "a minute" }
+        let seconds = max(1, retryAfterSeconds)
+        let unit = seconds == 1 ? "second" : "seconds"
+        return "\(seconds) \(unit)"
     }
 }

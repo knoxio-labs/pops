@@ -57,7 +57,7 @@ async function evaluate(
     action?: string;
     files?: string[];
     prs?: PullRequest[];
-    failFiles?: boolean;
+    failFileAttempts?: number;
     cancelFails?: boolean;
     registered?: Run;
     associated?: PullRequest[];
@@ -76,6 +76,7 @@ async function evaluate(
   const listRuns = Symbol('runs');
   const listWorkflows = Symbol('workflows');
   const listCandidates = Symbol('candidates');
+  let fileCalls = 0;
   await execute(
     {
       rest: {
@@ -110,7 +111,8 @@ async function evaluate(
           );
         if (endpoint === listAssociated) return Promise.resolve(options.associated ?? []);
         if (endpoint === listFiles) {
-          if (options.failFiles) throw new Error('unavailable');
+          fileCalls += 1;
+          if (fileCalls <= (options.failFileAttempts ?? 0)) throw new Error('unavailable');
           return Promise.resolve(
             (options.files ?? ['README.md']).map((filename) => ({ filename }))
           );
@@ -129,7 +131,7 @@ async function evaluate(
     { env: { HEAD_SHA: trigger.head_sha } },
     options.cancellationOnly ?? parseGatedArray(script, 'cancellationOnly')
   );
-  return { create, cancel, setFailed };
+  return { create, cancel, setFailed, fileCalls };
 }
 
 describe('CI Gate convergence', () => {
@@ -193,13 +195,45 @@ describe('CI Gate convergence', () => {
     expect(result.create.mock.calls[0]?.[0]).not.toHaveProperty('conclusion');
   });
 
-  it('waits when files cannot be read or their API result is truncated', async () => {
-    for (const options of [{ failFiles: true }, { files: Array<string>(3000).fill('README.md') }]) {
-      const result = await evaluate(options);
-      expect(result.create).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'in_progress' })
-      );
-    }
+  it('retries a transient changed-file API error before evaluating the diff', async () => {
+    const result = await evaluate({ failFileAttempts: 1 });
+
+    expect(result.fileCalls).toBe(2);
+    expect(result.create).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'completed', conclusion: 'success' })
+    );
+  });
+
+  it('fails with a retry instruction when changed files remain unavailable', async () => {
+    const result = await evaluate({ failFileAttempts: 3 });
+
+    expect(result.fileCalls).toBe(3);
+    expect(result.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'completed',
+        conclusion: 'failure',
+        output: expect.objectContaining({
+          title: expect.stringMatching(/could not be read.*re-run.*required workflow/iu),
+        }),
+      })
+    );
+    expect(result.setFailed).toHaveBeenCalled();
+  });
+
+  it('does not publish a diff failure after the PR head changes during retries', async () => {
+    const result = await evaluate({
+      failFileAttempts: 3,
+      prs: [pullRequest, { ...pullRequest, head: { ...pullRequest.head, sha: 'newer-head' } }],
+    });
+
+    expect(result.create).not.toHaveBeenCalled();
+    expect(result.setFailed).not.toHaveBeenCalled();
+  });
+
+  it('waits when the changed-file API result is truncated', async () => {
+    const result = await evaluate({ files: Array<string>(3000).fill('README.md') });
+
+    expect(result.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'in_progress' }));
   });
 
   it('requires every workflow in a merge group even for a docs-only diff', async () => {

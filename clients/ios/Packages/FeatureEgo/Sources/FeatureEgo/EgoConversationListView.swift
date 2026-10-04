@@ -49,7 +49,7 @@ public struct EgoConversationListView: View {
                 EmptyStateView(message: "No conversations yet.")
             case .failed(let error):
                 ErrorStateView(
-                    message: EgoConversationListAccessibility.failureMessage(for: error),
+                    message: EgoConversationListPresentation.failureMessage(for: error),
                     retryAccessibilityIdentifier: EgoConversationListAccessibility.retry
                 ) {
                     Task { await model.load() }
@@ -76,22 +76,5 @@ private enum EgoConversationListAccessibility {
 
     static func row(_ id: String) -> String {
         "ego.conversation-list.row.\(id)"
-    }
-
-    static func failureMessage(for error: RepositoryError) -> String {
-        return switch error {
-        case .unavailable:
-            "Ego is unavailable. Try again."
-        case .unauthorized:
-            "Your session needs attention before Ego can continue."
-        case .contractMismatch:
-            "Ego returned a response this app can’t read."
-        case .conflict:
-            "This conversation changed. Reload it before trying again."
-        case .transport:
-            "Ego couldn’t complete the request. Try again."
-        case .dependencyNotBound:
-            "Ego isn’t available in this app."
-        }
     }
 }

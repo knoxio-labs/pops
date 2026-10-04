@@ -34,7 +34,7 @@ function stubClient(state: Stub): ListsClient {
       state.created.push(name);
       return Promise.resolve(42);
     },
-    upsertByRef: () => Promise.resolve({ outcome: 'inserted' as const, itemId: 1 }),
+    upsertByRef: () => Promise.resolve({ outcome: 'inserted' as const, itemId: 1, position: 0 }),
     addItem: () => {
       state.items += 1;
       return Promise.resolve();

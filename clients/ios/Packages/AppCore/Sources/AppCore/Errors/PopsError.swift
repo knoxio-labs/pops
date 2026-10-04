@@ -62,6 +62,10 @@ extension PopsError {
             self.init(
                 code: "ios.repository.unavailable", message: fallbackMessage,
                 retryable: true, kind: .server)
+        case .rateLimited:
+            self.init(
+                code: "ios.http.429", message: fallbackMessage,
+                retryable: true, kind: .client)
         case .unauthorized:
             self.init(
                 code: "ios.auth.unauthorized", message: fallbackMessage,

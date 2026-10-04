@@ -19,6 +19,7 @@ extension AccountsSurfaces {
             synopsis:
                 "Choosing the account a transaction is filed against, over the transaction itself.",
             chrome: .sheet,
+            sheetDetents: .adjustable,
             states: [
                 DesignState.standard {
                     AccountPickerView(

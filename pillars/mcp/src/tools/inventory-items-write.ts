@@ -12,6 +12,7 @@ import {
   parseUpdateItemMutationInput,
 } from './inventory-item-mutation-input.js';
 import { itemMutationResult } from './inventory-item-mutation-result.js';
+import { createProvenanceSchema, updateProvenanceSchema } from './inventory-item-provenance.js';
 import { sendItemMutation } from './inventory-sync-client.js';
 import { reqStr, toolError } from './utils.js';
 
@@ -29,7 +30,7 @@ const itemsCreate: ToolDef = {
   name: 'inventory.items.create',
   readOnly: false,
   description:
-    'Create a protocol-2 item. Read inventory.catalogue.get first, then send its current revision, stable type ID and complete stable field-value set. To create the item already overriding a computed field whose allowOverride is true, add that field with source "override" and exactly one value; any other field sent as an override is refused. Reuse mutationId and entityId together when retrying an uncertain call.',
+    'Create a protocol-2 item. Read inventory.catalogue.get first, then send its current revision, stable type ID and complete stable field-value set. To create the item already overriding a computed field whose allowOverride is true, add that field with source "override" and exactly one value; any other field sent as an override is refused. Reuse mutationId and entityId together when retrying an uncertain call. provenance records the purchase the item came from.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -52,6 +53,7 @@ const itemsCreate: ToolDef = {
       },
       fieldValues: { type: 'array', items: createFieldValueSchema },
       note: { type: ['string', 'null'], description: 'Optional note' },
+      provenance: createProvenanceSchema,
       ...retryIdentityProperties,
     },
     required: ['itemName', 'catalogueRevision', 'typeId', 'fieldValues'],
@@ -71,6 +73,7 @@ const itemsCreate: ToolDef = {
           values: input.value.fieldValues,
           ...(input.value.note === undefined ? {} : { note: input.value.note }),
         },
+        ...(input.value.provenance === undefined ? {} : { legacy: input.value.provenance }),
       },
       baseRevision: null,
       catalogueRevision: input.value.catalogueRevision,
@@ -84,7 +87,7 @@ const itemsUpdate: ToolDef = {
   name: 'inventory.items.update',
   readOnly: false,
   description:
-    'Edit an item at an observed item revision using the current catalogue revision. Read inventory.items.get and inventory.catalogue.get first. fieldValues is a stable field-ID patch; null clears an optional value. externalIds replaces the identifier list.',
+    'Edit an item at an observed item revision using the current catalogue revision. Read inventory.items.get and inventory.catalogue.get first. fieldValues is a stable field-ID patch; null clears an optional value. externalIds replaces the identifier list. provenance patches the purchase facts; null clears them all.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -113,6 +116,7 @@ const itemsUpdate: ToolDef = {
         description:
           "Replaces the item's whole external-identifier list; read the current list with inventory.items.get first and send it back with your change. [] clears it.",
       },
+      provenance: updateProvenanceSchema,
       ...retryIdentityProperties,
     },
     required: ['id', 'revision', 'catalogueRevision'],
@@ -128,6 +132,7 @@ const itemsUpdate: ToolDef = {
         ...(input.value.note === undefined ? {} : { note: input.value.note }),
         ...(input.value.fieldValues === undefined ? {} : { values: input.value.fieldValues }),
         ...(input.value.externalIds === undefined ? {} : { externalIds: input.value.externalIds }),
+        ...(input.value.provenance === undefined ? {} : { legacy: input.value.provenance }),
       },
       baseRevision: input.value.itemRevision,
       catalogueRevision: input.value.catalogueRevision,

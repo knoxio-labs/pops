@@ -143,7 +143,7 @@ export const purchasesProductContract = c.router({
     method: 'GET',
     path: '/products',
     query: ListProductsQuerySchema,
-    responses: { 200: ProductListSchema },
+    responses: { 200: ProductListSchema, 400: ErrorBodySchema },
     summary:
       'The learned product dictionary: products and the printed wordings that resolve to them',
   },
@@ -151,7 +151,7 @@ export const purchasesProductContract = c.router({
     method: 'POST',
     path: '/products/proposals',
     body: z.object({}).optional(),
-    responses: { 200: ProposalOutcomeSchema },
+    responses: { 200: ProposalOutcomeSchema, 400: ErrorBodySchema },
     summary:
       'Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints',
   },
@@ -160,7 +160,7 @@ export const purchasesProductContract = c.router({
     path: '/products/:productId',
     pathParams: z.object({ productId: z.string() }),
     body: RenameProductBodySchema,
-    responses: { 200: ProductSchema, 404: ErrorBodySchema },
+    responses: { 200: ProductSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Rename a product without touching the wordings that resolve to it',
   },
   delete: {
@@ -168,7 +168,7 @@ export const purchasesProductContract = c.router({
     path: '/products/:productId',
     pathParams: z.object({ productId: z.string() }),
     body: z.object({}).optional(),
-    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    responses: { 200: OkSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Forget a product and every wording that resolved to it',
   },
   updateAlias: {
@@ -189,7 +189,7 @@ export const purchasesProductContract = c.router({
     path: '/products/aliases/:aliasId',
     pathParams: z.object({ aliasId: z.string() }),
     body: z.object({}).optional(),
-    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    responses: { 200: OkSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Forget one printed wording, returning its lines to the on-the-fly grouping',
   },
 });

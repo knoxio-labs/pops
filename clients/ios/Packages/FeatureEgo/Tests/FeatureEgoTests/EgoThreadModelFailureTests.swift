@@ -21,6 +21,12 @@ private enum EgoThreadModelFailureFixtures {
             error: .unauthorized,
             message: "Your session needs attention before Ego can continue.", retryable: false),
         ExpectedEgoThreadFailure(
+            error: .rateLimited(retryAfterSeconds: 30),
+            message: "Too many requests. Wait 30 seconds before trying again.", retryable: true),
+        ExpectedEgoThreadFailure(
+            error: .rateLimited(retryAfterSeconds: nil),
+            message: "Too many requests. Wait a minute before trying again.", retryable: true),
+        ExpectedEgoThreadFailure(
             error: .contractMismatch,
             message: "Ego returned a response this app can't read.", retryable: false),
         ExpectedEgoThreadFailure(

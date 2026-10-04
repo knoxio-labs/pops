@@ -24,6 +24,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { ErrorBodySchema } from './rest-schemas.js';
 import { FinanceTransactionUriSchema } from './schemas/purchase.js';
 
 const c = initContract();
@@ -85,7 +86,7 @@ export const purchasesReconcileBatchContract = c.router({
     method: 'POST',
     path: '/reconcile/links/batch',
     body: TransactionLinksBatchBodySchema,
-    responses: { 200: TransactionLinksBatchSchema },
+    responses: { 200: TransactionLinksBatchSchema, 400: ErrorBodySchema },
     summary: 'Which of these finance transactions an order explains, confirmed or derived',
   },
 });

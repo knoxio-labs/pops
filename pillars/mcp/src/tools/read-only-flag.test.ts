@@ -35,6 +35,7 @@ const expectedWrites = [
   'inventory.locations.update',
   'inventory.locations.delete',
   'media.watchlist.add',
+  'purchases.inventoryProposals.accept',
 ];
 
 describe('ToolDef.readOnly', () => {
@@ -45,7 +46,7 @@ describe('ToolDef.readOnly', () => {
     expect(unset).toEqual([]);
   });
 
-  it('flags exactly the inventory, bfm, and media writes as not read-only', () => {
+  it('flags exactly the declared writes as not read-only', () => {
     const writes = allTools
       .filter((tool) => tool.readOnly === false)
       .map((tool) => tool.name)
@@ -67,6 +68,7 @@ describe('ToolDef.readOnly', () => {
     'media.library.list',
     'cerebrum.search',
     'purchases.search',
+    'purchases.inventoryProposals.list',
   ])('marks %s as read-only', (name) => {
     expect(byName.get(name)?.readOnly).toBe(true);
   });

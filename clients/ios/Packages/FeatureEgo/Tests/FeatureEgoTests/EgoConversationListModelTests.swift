@@ -73,6 +73,33 @@ internal struct EgoConversationListModelTests {
         #expect(model.state == .failed(.unauthorized))
     }
 
+    @Test("repository failures use safe conversation-list copy")
+    func failureMessages() {
+        let cases: [(RepositoryError, String)] = [
+            (.unavailable, "Ego is unavailable. Try again."),
+            (.unauthorized, "Your session needs attention before Ego can continue."),
+            (
+                .rateLimited(retryAfterSeconds: 30),
+                "Too many requests. Wait 30 seconds before trying again."
+            ),
+            (
+                .rateLimited(retryAfterSeconds: nil),
+                "Too many requests. Wait a minute before trying again."
+            ),
+            (.contractMismatch, "Ego returned a response this app can’t read."),
+            (
+                .conflict("duplicate"),
+                "This conversation changed. Reload it before trying again."
+            ),
+            (.transport("network"), "Ego couldn’t complete the request. Try again."),
+            (.dependencyNotBound, "Ego isn’t available in this app."),
+        ]
+
+        for (error, expected) in cases {
+            #expect(EgoConversationListPresentation.failureMessage(for: error) == expected)
+        }
+    }
+
     @Test("a failed refresh preserves its last good rows")
     func failedRefreshPreservesRows() async {
         let conversations = [conversation("first")]

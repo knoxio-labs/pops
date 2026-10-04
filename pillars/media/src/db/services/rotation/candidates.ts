@@ -10,6 +10,7 @@ import { and, count, desc, eq, like } from 'drizzle-orm';
 
 import { RotationMovieExcludedError } from '../../errors.js';
 import { rotationCandidates, rotationExclusions, rotationSources } from '../../schema.js';
+import { MANUAL_SOURCE_TYPE } from './sources.js';
 
 import type { MediaDb } from '../internal.js';
 
@@ -65,12 +66,12 @@ function ensureManualSource(db: MediaDb): typeof rotationSources.$inferSelect {
   const existing = db
     .select()
     .from(rotationSources)
-    .where(eq(rotationSources.type, 'manual'))
+    .where(eq(rotationSources.type, MANUAL_SOURCE_TYPE))
     .get();
   if (existing) return existing;
   return db
     .insert(rotationSources)
-    .values({ type: 'manual', name: 'Manual Queue', priority: 5, enabled: 1 })
+    .values({ type: MANUAL_SOURCE_TYPE, name: 'Manual Queue', priority: 5, enabled: 1 })
     .returning()
     .get();
 }
