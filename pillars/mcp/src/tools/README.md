@@ -97,6 +97,11 @@ though nothing enforces it mechanically.
   and delete also require the observed item revision. A caller may retain and
   resend `mutationId` after an uncertain response, so retries converge on the
   producer's idempotency boundary instead of creating a second command.
+  `provenance` on create and update is the shape `items.get` returns, written
+  through the producer's legacy purchase columns (`inventory-item-provenance.ts`).
+  `transactionUri` accepts only `pops://finance/transaction/<id>`, the one URI
+  inventory can store. An item cannot be linked to a purchases order
+  (POPS-5752).
 - `inventory.items.validate` calls the producer's authoritative value validator
   without writing item values, audit rows or sync changes. Read the catalogue
   definition first, send its exact revision and source-tagged values, and use
