@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { RegistryUnreachableError } from '@pops/pillar-sdk/discovery';
 import { ErrorBodySchema } from '@pops/types';
 
 import { createOrchestratorApp } from '../app.js';
+import { createTagFederation } from '../tags/federation.js';
 import { createTestTransport } from './test-http.js';
 
 import type { TagFederationRequest, TagFederationResponse } from '../tags/federation.js';
@@ -102,6 +104,51 @@ describe('orchestrator shared-tag query', () => {
     expect(ErrorBodySchema.safeParse(response.body).success).toBe(true);
     expect(response.body.code).toBe('orchestrator.tagged.unavailable');
     expect(JSON.stringify(response.body)).not.toContain('downstream details');
+  });
+
+  it('returns an unavailable error when the registry snapshot cannot be read', async () => {
+    const invoke = vi.fn();
+    const taggedQuerySource = createTagFederation({
+      expand: async ({ ids }) => ({ kind: 'ok', value: { ids, unknownIds: [] } }),
+      invoke,
+      snapshotReader: async () => {
+        throw new RegistryUnreachableError('registry offline', { attempts: 1 });
+      },
+      onWarn: vi.fn(),
+    });
+
+    const response = await requestOn(appFor(taggedQuerySource))
+      .post('/tagged/query')
+      .send({ tagIds: ['trip-id'] })
+      .expect(503);
+
+    expect(ErrorBodySchema.safeParse(response.body).success).toBe(true);
+    expect(response.body.code).toBe('orchestrator.tagged.unavailable');
+    expect(JSON.stringify(response.body)).not.toContain('registry offline');
+    expect(JSON.stringify(response.body)).not.toContain('finance');
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('returns empty sections only when a healthy registry has no tag carriers', async () => {
+    const invoke = vi.fn();
+    const taggedQuerySource = createTagFederation({
+      expand: async ({ ids }) => ({ kind: 'ok', value: { ids, unknownIds: [] } }),
+      invoke,
+      snapshotReader: async () => [],
+      onWarn: vi.fn(),
+    });
+
+    const response = await requestOn(appFor(taggedQuerySource))
+      .post('/tagged/query')
+      .send({ tagIds: ['trip-id'] })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      expandedTagIds: ['trip-id'],
+      sections: [],
+      pillars: [],
+    });
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it('serves the committed contract with operation id tagged.query', async () => {
