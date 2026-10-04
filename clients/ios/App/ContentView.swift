@@ -193,7 +193,9 @@ internal struct ContentView: View {
                 }
             }
             .tint(Self.tabTint(for: selection.wrappedValue))
-            .tabViewBottomAccessory {
+            .tabViewBottomAccessory(
+                isEnabled: Self.showsEgoEntry(available: surface.available)
+            ) {
                 EgoEntryView(
                     isAvailable: Self.showsEgoEntry(available: surface.available),
                     placement: .tabAccessory,

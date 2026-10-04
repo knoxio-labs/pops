@@ -20,8 +20,8 @@ internal struct EgoPlacementTests {
         #expect(ContentView.tabFeatures(for: withEgo) == existing)
     }
 
-    @Test("the sheet entry is gated only by Ego availability")
-    func entryFollowsAvailability() {
+    @Test("the sheet entry and tab accessory follow Ego availability")
+    func entryAndAccessoryFollowAvailability() {
         #expect(ContentView.showsEgoEntry(available: [FeatureEgo.feature]))
         #expect(
             !ContentView.showsEgoEntry(available: [FeatureTransactions.feature]))
