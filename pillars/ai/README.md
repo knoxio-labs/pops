@@ -92,7 +92,7 @@ proxies it, and it 403s any request that does not carry a valid per-caller
 `x-pops-internal-credential` (`name.secret`) held by an accepted caller with
 the `ai.usage.record` scope. The pricing read
 `GET /ai-pricing/:provider/:model` stays open so callers can shape cost before
-recording.
+recording. It returns 404 when the provider/model pair has no configured price.
 
 The accepted callers are compiled in — `ACCEPTED_CALLERS` in `src/api/app.ts`
 — one row per AI-calling pillar (`finance`, `cerebrum`, `food-worker`,

@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
+  it('registers purchases inventory proposal tools', () => {
+    const names = new Set(allTools.map((tool) => tool.name));
+    expect(names.has('purchases.inventoryProposals.list')).toBe(true);
+    expect(names.has('purchases.inventoryProposals.accept')).toBe(true);
+  });
+
   it('registers the purchases product leaderboard', () => {
     expect(allTools.some((tool) => tool.name === 'purchases.analytics.productLeaderboard')).toBe(
       true

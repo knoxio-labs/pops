@@ -249,6 +249,8 @@ internal enum ReceiptResultCopy {
                 + "Nothing was recorded — try again in a moment."
         case .unauthorized:
             return "This device is no longer signed in."
+        case .rateLimited:
+            return "Too many requests. Wait before trying again."
         case .contractMismatch:
             return "This version of Pops cannot read what the server sent. Update the app."
         case .conflict:

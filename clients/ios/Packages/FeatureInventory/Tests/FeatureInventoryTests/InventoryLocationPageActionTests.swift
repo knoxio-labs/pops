@@ -36,6 +36,20 @@ internal struct InventoryLocationPageActionTests {
         #expect(InventoryStoreHereStep.existing.detents == [.large])
     }
 
+    @Test("opened on the scanner, Store here is full height and cannot shrink to the choice")
+    func scanStepIsLargeOnly() {
+        #expect(InventoryStoreHereStep.scan.detent == .large)
+        #expect(InventoryStoreHereStep.scan.detents == [.large])
+    }
+
+    @Test("Store here's choice offers the scanner beside New item and Existing item")
+    func choiceOffersScan() {
+        #expect(Self.storeHereSheet.contains("show(.scan)"))
+        #expect(
+            Self.storeHereSheet.contains(
+                "InventoryStoreScanModel(target: target, runner: runner)"))
+    }
+
     @Test("opened on the choice, Store here is short and can grow to the list")
     func choiceStepGrowsToTheList() {
         let short = PresentationDetent.height(InventoryChoiceStep.sheetHeight)

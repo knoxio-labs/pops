@@ -26,6 +26,12 @@ Two conventions to know before reading the route files:
   by the db service (`AddItemInput` / `UpdateItemInput` in
   `../db/services/list-items.ts`), so no REST call can set it.
 
+`POST /lists/:listId/items/upsert-by-ref` returns the cumulative quantity for a
+merged row. Callers can pass `labelFromQty` to build the merged label from that
+quantity in the same transaction. `notesMerge` sets a separator and maximum
+Unicode code-point length; when the limit is exceeded, the oldest text is
+dropped first and marked with `…`.
+
 ## The vestigial entity surface
 
 `types/` and `schemas/` describe four entities — `ListItem`, `AgendaItem`,

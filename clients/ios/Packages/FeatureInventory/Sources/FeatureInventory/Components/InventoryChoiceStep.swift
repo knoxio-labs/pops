@@ -39,6 +39,8 @@ internal struct InventoryChoiceStep: View {
                 Text(option.title)
                     .font(.popsHeadline)
                     .foregroundStyle(Color.popsForeground)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, PopsSpacing.lg)

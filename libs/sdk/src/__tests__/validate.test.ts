@@ -5,6 +5,7 @@ import {
   checkContractPackageMatchesPillar,
   checkContractTagMatchesVersion,
   checkSearchAdapterProceduresAreDeclared,
+  checkTagCarrierProceduresAreDeclared,
   checkUiPillarDeclaresStylesheet,
   pathToDotted,
   validateManifestPayload,
@@ -291,6 +292,68 @@ describe('checkSearchAdapterProceduresAreDeclared', () => {
       'search.adapters[0].procedurePath',
       'search.adapters[1].procedurePath',
     ]);
+  });
+});
+
+describe('checkTagCarrierProceduresAreDeclared', () => {
+  it('does not require tag operations when a manifest has no tags block', () => {
+    expect(checkTagCarrierProceduresAreDeclared(validManifest())).toEqual([]);
+  });
+
+  it('requires the fixed query and mutation operation ids for a tag carrier', () => {
+    const m = validManifest();
+    m.tags = { carriers: [{ entityType: 'transaction' }] };
+
+    const issues = checkTagCarrierProceduresAreDeclared(m);
+    expect(issues.map((issue) => issue.field)).toEqual([
+      'routes.queries',
+      'routes.mutations',
+      'routes.mutations',
+    ]);
+    expect(issues.map((issue) => issue.reason)).toEqual([
+      "must include 'finance.tagged.list' when tags is declared",
+      "must include 'finance.tagged.attach' when tags is declared",
+      "must include 'finance.tagged.detach' when tags is declared",
+    ]);
+  });
+
+  it('accepts the operations only in their fixed route groups', () => {
+    const m = validManifest();
+    m.tags = { carriers: [{ entityType: 'transaction' }] };
+    m.routes.queries.push('finance.tagged.list');
+    m.routes.mutations.push('finance.tagged.attach', 'finance.tagged.detach');
+
+    expect(checkTagCarrierProceduresAreDeclared(m)).toEqual([]);
+  });
+
+  it('rejects a valid operation id declared in the wrong route group', () => {
+    const m = validManifest();
+    m.tags = { carriers: [{ entityType: 'transaction' }] };
+    m.routes.mutations.push('finance.tagged.list');
+    m.routes.queries.push('finance.tagged.attach', 'finance.tagged.detach');
+
+    expect(checkTagCarrierProceduresAreDeclared(m).map((issue) => issue.field)).toEqual([
+      'routes.queries',
+      'routes.mutations',
+      'routes.mutations',
+    ]);
+  });
+});
+
+describe('validateManifestPayload — tag carrier cross-field rules', () => {
+  it('rejects a tag carrier manifest until all three operations are declared', () => {
+    const m = validManifest();
+    m.tags = { carriers: [{ entityType: 'transaction' }] };
+
+    const result = validateManifestPayload(m);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues.map((issue) => issue.field)).toEqual([
+        'routes.queries',
+        'routes.mutations',
+        'routes.mutations',
+      ]);
+    }
   });
 });
 

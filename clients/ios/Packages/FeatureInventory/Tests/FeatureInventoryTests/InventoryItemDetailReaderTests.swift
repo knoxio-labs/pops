@@ -199,3 +199,51 @@ internal struct InventoryItemDetailReaderTests {
         #expect(await Self.read(item) == nil)
     }
 }
+
+@Suite("Inventory history event copy")
+internal struct InventoryHistoryEventCopyTests {
+    private typealias Fixture = InventoryFixture
+
+    @Test("history uses server placement, container, location and fullness event copy")
+    func serverEventCopy() async {
+        let now = Fixture.epoch
+        let store = InMemoryInventoryStore(
+            items: [
+                Fixture.item("machine", "Espresso machine", at: .location("kitchen")),
+                Fixture.item("box", "Toolbox", at: .location("kitchen"), access: .closed),
+            ],
+            locations: [Fixture.location("kitchen", "Kitchen")])
+        let events = [
+            Fixture.event(1, .putBack, on: "machine", after: ["placement": .link("kitchen")]),
+            Fixture.event(2, .stored, on: "machine", after: ["placement": .link("box")]),
+            Fixture.event(3, .sealed, on: "machine"),
+            Fixture.event(4, .unpacked, on: "machine"),
+            Fixture.event(5, .edited, on: "kitchen", entityKind: .location, fields: ["name"]),
+            Fixture.event(
+                6, .edited, on: "kitchen", entityKind: .location, fields: ["parentId"]),
+            Fixture.event(
+                7, .edited, on: "machine", fields: ["isFull"], after: ["isFull": .flag(false)]),
+            Fixture.event(8, .opened, on: "machine"),
+            Fixture.event(9, .closed, on: "machine"),
+        ]
+        let query = InventoryQuery { source in
+            InventoryActivityEntries(source: source, now: now, calendar: .current)
+                .entries(for: events)
+        }
+        var entries: [InventoryActivityEntry] = []
+        for await answer in store.observe(query) {
+            entries = answer
+            break
+        }
+
+        #expect(entries.first { $0.seq == 1 }?.title == "Put back in Kitchen")
+        #expect(entries.first { $0.seq == 2 }?.title == "Stored in Toolbox")
+        #expect(entries.first { $0.seq == 3 }?.title == "Sealed")
+        #expect(entries.first { $0.seq == 4 }?.title == "Unpacked")
+        #expect(entries.first { $0.seq == 5 }?.title == "Renamed")
+        #expect(entries.first { $0.seq == 6 }?.title == "Moved")
+        #expect(entries.first { $0.seq == 7 }?.title == "No longer full")
+        #expect(entries.first { $0.seq == 8 }?.title == "Opened")
+        #expect(entries.first { $0.seq == 9 }?.title == "Closed")
+    }
+}

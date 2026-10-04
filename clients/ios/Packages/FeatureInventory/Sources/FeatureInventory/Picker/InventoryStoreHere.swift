@@ -19,6 +19,11 @@ internal enum InventoryStoreTarget: Equatable, Sendable {
         case .location(let id, _): .location(id)
         }
     }
+
+    /// What the Undo capsule says once `count` items have been stored here.
+    internal func storedMessage(count: Int) -> String {
+        count == 1 ? "Stored in \(name)" : "Stored \(count) in \(name)"
+    }
 }
 
 /// An item Store here can offer, as its pick row draws it.
@@ -57,7 +62,7 @@ internal struct InventoryStoreCandidate: Identifiable, Hashable, Sendable {
     }
 
     /// The target container and every container it sits inside.
-    private static func refusedIds(
+    internal static func refusedIds(
         for target: InventoryStoreTarget, source: any InventoryQuerySource
     ) -> Set<InventoryItem.ID> {
         guard case .container(let id, _) = target else { return [] }
@@ -187,11 +192,9 @@ internal final class InventoryStoreHereModel {
     internal func store() async -> Bool {
         let ids = selected.sorted()
         guard !ids.isEmpty else { return false }
-        let message =
-            ids.count == 1 ? "Stored in \(target.name)" : "Stored \(ids.count) in \(target.name)"
         let landed = await runner.perform(
             ids.map { .moveItem(id: $0, to: target.placement, verb: .store) },
-            announcing: message, symbol: .storeHere)
+            announcing: target.storedMessage(count: ids.count), symbol: .storeHere)
         if landed { selected = [] }
         return landed
     }

@@ -1,11 +1,10 @@
-import { composeLabel } from './compose-label.js';
-import { buildCanonicalItem, buildUnconvertedItem, formatQty } from './label.js';
+import { buildCanonicalItem, buildUnconvertedItem } from './label.js';
 
 /**
  * Bridges the aggregate output into the row-shaped `SendItem` structures the
- * send loop iterates over. Carries the ingredient + variant names alongside
- * the wire-shape `PreviewItem` so the merge step can regenerate the label
- * after summing without re-querying.
+ * send loop iterates over. Carries ingredient + variant names alongside the
+ * preview so the merge step can supply the lists pillar with an item-specific
+ * suffix for the cumulative-quantity label without re-querying.
  */
 import type { AggregateResult, UnconvertedAggregate } from './aggregate.js';
 import type { AggregatedCanonical, PreviewItem } from './types.js';
@@ -17,11 +16,11 @@ export interface SendItem {
   refKind: SendItemRefKind;
   /** Null when `refKind='free'`. */
   refId: number | null;
-  /** Ingredient name for label regeneration after merge. */
+  /** Ingredient name used to format the merged label. */
   ingredientName: string;
-  /** Variant name for label regeneration after merge. May be null. */
+  /** Variant name used to format the merged label. May be null. */
   variantName: string | null;
-  /** Joined prep-state label (e.g. "diced, sliced") for label regeneration. */
+  /** Joined prep-state label (e.g. "diced, sliced") for the merged label. */
   prepLabel: string | null;
   /** Canonical items can merge; unconverted lines always insert fresh. */
   mergeable: boolean;
@@ -56,18 +55,4 @@ function unconvertedToSendItem(row: UnconvertedAggregate): SendItem {
     prepLabel: row.prepStateName,
     mergeable: false,
   };
-}
-
-/**
- * Rebuild a list-item label after a merge bumps the qty, reusing the shared
- * `composeLabel` so the regenerated label matches the preview format.
- */
-export function relabelAfterMerge(item: SendItem, newQty: number): string {
-  return composeLabel({
-    qty: formatQty(newQty),
-    unit: item.preview.unit ?? '',
-    ingredientName: item.ingredientName,
-    variantName: item.variantName,
-    prepLabel: item.prepLabel,
-  });
 }

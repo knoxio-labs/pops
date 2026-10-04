@@ -4,7 +4,7 @@
  * Ported from the monolith `sync-source.ts` `syncAllSources` (the data-plane
  * slice deferred batching + interval gating to this scheduler slice). Syncs
  * every enabled source whose `sync_interval_hours` has elapsed since its last
- * sync; each source is independent so one failure never blocks the others. A
+ * sync, except the manual queue, which has no upstream to fetch from; each source is independent so one failure never blocks the others. A
  * module-level guard prevents concurrent syncs of the same source.
  */
 import { type MediaDb, rotationSourcesService } from '../../db/index.js';
@@ -33,7 +33,9 @@ function intervalElapsed(lastSyncedAt: string | null, intervalHours: number): bo
  * collected per source rather than thrown.
  */
 export async function syncAllSources(db: MediaDb): Promise<SyncAllResult> {
-  const sources = rotationSourcesService.listSources(db).filter((s) => s.enabled === 1);
+  const sources = rotationSourcesService
+    .listSources(db)
+    .filter((s) => s.enabled === 1 && s.type !== rotationSourcesService.MANUAL_SOURCE_TYPE);
 
   const synced: SyncSourceResult[] = [];
   const errors: SyncAllResult['errors'] = [];

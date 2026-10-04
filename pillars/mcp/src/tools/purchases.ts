@@ -1,11 +1,12 @@
 /**
  * Purchases tools — the assistant's read path onto line-item spend.
  *
- * Read-only, deliberately. Every write on this pillar is an ingest or a
- * classification decision: `POST /purchases` takes a checksum only an adapter
- * can compute, and `PATCH .../items/:itemId` is the one place a machine
- * proposal becomes a human assertion. A tool that let a model confirm a kind
- * would erase the distinction `kindConfirmedAt` exists to hold.
+ * Read-only, with one exception. Every other write on this pillar is an
+ * ingest or a classification decision: `POST /purchases` takes a checksum
+ * only an adapter can compute, and `PATCH .../items/:itemId` is the one place
+ * a machine proposal becomes a human assertion. A tool that let a model
+ * confirm a kind would erase the distinction `kindConfirmedAt` exists to
+ * hold. The exception is in `purchases-inventory-proposals.ts`.
  *
  * The pillar SDK addresses a route by its OpenAPI `operationId`
  * (`<domain>.<proc>`), so {@link PurchasesShape} mirrors `purchasesContract`'s
@@ -21,6 +22,7 @@ import { getPillar } from '../pillar-client.js';
 import { PURCHASE_SCOPE_PROPERTIES, purchaseScopeDateError } from './purchase-scope.js';
 import { searchFiltersFrom } from './purchase-search-filters.js';
 import { merchantSpend, productLeaderboard, scopeFrom } from './purchases-analytics.js';
+import { inventoryProposalTools } from './purchases-inventory-proposals.js';
 import { mapRows, objectUri, withUri } from './uri.js';
 import { mapCallResult, optNum, reqStr, toolError } from './utils.js';
 
@@ -185,4 +187,5 @@ export const purchasesTools: readonly ToolDef[] = [
   itemsByTag,
   merchantSpend,
   productLeaderboard,
+  ...inventoryProposalTools,
 ];

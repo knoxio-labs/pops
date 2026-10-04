@@ -40,9 +40,13 @@ Generated sources are the one exclusion. A generator makes none of these choices
 
 ## Copy
 
-`LoadingStateView`, `EmptyStateView` and `ErrorStateView` take their user-facing text — `message`, and `ErrorStateView`'s `retryTitle` — from the caller, not from a string this package owns. A blank or whitespace-only string falls back to a plain English default (`fallbackMessage`, `fallbackRetryTitle`); `LoadingStateView.message` and `ErrorStateView.retryTitle` also default to that fallback when the caller omits them, since both parameters carry a default value — `EmptyStateView.message` and `ErrorStateView.message` are required, so a blank string is the only route to the fallback there. Those defaults are `String`, not `LocalizedStringKey`, on purpose.
+`LoadingStateView`, `EmptyStateView`, `ErrorStateView` and `NonRetryableErrorStateView` take their user-facing text — `message`, and `ErrorStateView`'s `retryTitle` — from the caller, not from a string this package owns. A blank or whitespace-only string falls back to a plain English default (`fallbackMessage`, `fallbackRetryTitle`); `LoadingStateView.message` and `ErrorStateView.retryTitle` also default to that fallback when the caller omits them, since both parameters carry a default value — `EmptyStateView.message`, `ErrorStateView.message` and `NonRetryableErrorStateView.message` are required, so a blank string is the only route to the fallback there. Those defaults are `String`, not `LocalizedStringKey`, on purpose.
 
 That is a module-boundary decision, not an oversight. This package renders whatever text a caller hands it and has no way to know what locale that text should be in — deciding that belongs to the feature that owns the data behind the message, not to the primitive that displays it. Translation is out of scope for this package by design: no feature module localises anything, so a `.xcstrings` catalogue here would be infrastructure with no consumer to exercise it. A feature that needs translated copy supplies its own localized string to these parameters exactly as it supplies any other message — whether the app localises at all is a decision for the app as a whole, and this package does not make it on the app's behalf.
+
+## Errors without an action
+
+`ErrorStateView` still requires a retry closure: when retry is possible, omitting the action is a screen decision that should stay visible in the call site. Some failures cannot change when the same request runs again, such as a response this app version cannot decode or a dependency the composition root never bound. `NonRetryableErrorStateView` gives those failures the same destructive message treatment without rendering a no-op Retry button. Keeping it as a separate primitive preserves the required-action contract of `ErrorStateView` while making the no-action decision explicit.
 
 ## The one colour that does not come from the catalogue
 

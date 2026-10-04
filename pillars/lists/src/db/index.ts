@@ -39,6 +39,8 @@ export {
 export { searchListItems, type SearchListItemsFilter } from './services/list-items-search.js';
 export {
   upsertItemByRef,
+  type LabelFromQtyOptions,
+  type NotesMergeOptions,
   type UpsertConflictMode,
   type UpsertItemByRefInput,
   type UpsertOutcome,
