@@ -25,6 +25,12 @@ const ERROR_DEFINITIONS = {
     message: 'The purchase payload is inconsistent.',
     retryable: false,
   },
+  unknown_shared_tag: {
+    area: 'shared_tag',
+    status: 400,
+    message: 'The shared tag id is not in the Purchases vocabulary cache.',
+    retryable: false,
+  },
   already_attached: {
     area: 'document',
     status: 409,

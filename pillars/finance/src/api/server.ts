@@ -28,11 +28,13 @@ import { startReconcileContactsOutboxWorker } from './cron/reconcile-contacts-ou
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
 import { startReconcileEntityOrphansWorker } from './cron/reconcile-entity-orphans.js';
 import { startReconcilePairedTransfersWorker } from './cron/reconcile-paired-transfers.js';
+import { startSyncSharedTagsWorker } from './cron/sync-shared-tags.js';
 import { startUpSyncScheduler } from './cron/up-sync-scheduler.js';
 import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
 import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
 import { failInterruptedImportSessions, flushAllProgress } from './modules/imports/index.js';
 import { configureFinanceServerSdk } from './pillars/sdk-config.js';
+import { createTagsClient } from './tags/client.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -78,12 +80,6 @@ if (interrupted.length > 0) {
 }
 
 const contacts = createContactsClient();
-const app = createFinanceApiApp({
-  financeDb,
-  version,
-  selfBaseUrl,
-  contacts,
-});
 
 const reconcileLogger = {
   info: (msg: string, meta?: Record<string, unknown>) =>
@@ -129,6 +125,23 @@ const reconcilePairedTransfersHandle = startReconcilePairedTransfersWorker({
   logger: reconcileLogger,
 });
 
+// Keep Finance's trip, hobby, and project values linked to the shared tags
+// vocabulary. This is idempotent and leaves local tag strings and usage counts
+// unchanged; it also retries automatically when the tags pillar is unavailable.
+const sharedTagSyncHandle = startSyncSharedTagsWorker({
+  db: financeDb.db,
+  client: createTagsClient(),
+  logger: reconcileLogger,
+});
+
+const app = createFinanceApiApp({
+  financeDb,
+  version,
+  selfBaseUrl,
+  contacts,
+  syncSharedTagsOnce: sharedTagSyncHandle.runOnce,
+});
+
 // Scheduled Up Bank sync (POPS-2921). Governed by the `finance.upSync.*`
 // settings, off by default; armed unconditionally so flipping the toggle
 // needs no restart. Stopped LAST on shutdown, and awaited, so a pass in
@@ -167,11 +180,13 @@ function shutdown(signal: NodeJS.Signals): void {
   reconcileEntityOrphansHandle.stop();
   reconcilePairedTransfersHandle.stop();
   importSessionSweeperHandle.stop();
+  const sharedTagSyncStop = sharedTagSyncHandle.stop();
   void shutdownPillar({
     label: 'finance-api',
     steps: [
       { name: 'deregister', run: () => pillarHandle?.stop() },
       { name: 'up-sync', run: () => upSyncHandle.stop() },
+      { name: 'shared-tag-sync', run: () => sharedTagSyncStop },
       { name: 'import-sessions', run: () => flushAllProgress(financeDb.db) },
     ],
     server,

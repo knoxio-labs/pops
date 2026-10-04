@@ -3,8 +3,8 @@
  * finance makes carries its service-account key (POPS-2021).
  *
  * `@pops/pillar-sdk` exports two `pillar()` functions with the same name and
- * the same shape. The `/client` one is unauthenticated, and both of this
- * pillar's cross-pillar clients used to import it — so the natural way to
+ * the same shape. The `/client` one is unauthenticated, and this pillar's
+ * cross-pillar clients used to import it — so the natural way to
  * write this code is the wrong one, it compiles, it runs, and the only
  * visible symptom is a header that is silently not sent. Nothing but a
  * wire-level assertion catches that, which is why this drives a real HTTP
@@ -29,6 +29,7 @@ import { __resetServerPillarCache, __resetServerSdkConfig } from '@pops/pillar-s
 
 import { createContactsClient, type ContactsRouter } from '../../contacts/client.js';
 import { createPillarOwnerUriLookup } from '../../cron/pillar-lookup.js';
+import { createTagsClient } from '../../tags/client.js';
 import { __resetOutboundCredentialReports } from '../outbound.js';
 import { configureFinanceServerSdk } from '../sdk-config.js';
 import { SERVICE_ACCOUNT_KEY_ENV, SERVICE_ACCOUNT_KEY_FILE_ENV } from '../service-account.js';
@@ -36,7 +37,7 @@ import { SERVICE_ACCOUNT_KEY_ENV, SERVICE_ACCOUNT_KEY_FILE_ENV } from '../servic
 const SERVICE_ACCOUNT_KEY = 'pops_sa_TESTTEST.testsecret_not_a_real_key_000000';
 
 /** Every pillar finance calls, all answered by the one test server. */
-const CALLEES = ['contacts', 'registry'] as const;
+const CALLEES = ['contacts', 'registry', 'tags'] as const;
 
 const URI = 'pops://core/user/alice@example.com';
 
@@ -55,6 +56,18 @@ const OPENAPI = {
       get: {
         operationId: 'entities.list',
         parameters: ['search', 'type', 'limit', 'offset'].map((name) => ({
+          name,
+          in: 'query',
+          required: false,
+          schema: { type: 'string' },
+        })),
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+    '/tags': {
+      get: {
+        operationId: 'tags.list',
+        parameters: ['facet', 'includeArchived', 'updatedSince'].map((name) => ({
           name,
           in: 'query',
           required: false,
@@ -132,6 +145,7 @@ function routes(req: IncomingMessage, res: ServerResponse): void {
 function okBody(pathname: string): unknown {
   if (pathname === '/entities')
     return { data: [], pagination: { total: 0, limit: 200, offset: 0, hasMore: false } };
+  if (pathname === '/tags') return { tags: [] };
   return { data: { uri: URI } };
 }
 
@@ -184,7 +198,7 @@ function configure(): void {
   expect(configureFinanceServerSdk({ POPS_INTERNAL_API_KEY: SERVICE_ACCOUNT_KEY })).toBe(true);
 }
 
-/** The two legs, each named by the pillar it calls and the path it hits. */
+/** Each leg, named by the pillar it calls and the path it hits. */
 const LEGS: readonly {
   readonly label: string;
   readonly path: string;
@@ -199,6 +213,11 @@ const LEGS: readonly {
     label: 'the owner-URI cron asking registry whether a URI resolves',
     path: '/users',
     call: () => createPillarOwnerUriLookup()(URI),
+  },
+  {
+    label: 'the tags client listing the shared vocabulary',
+    path: '/tags',
+    call: () => createTagsClient().list(),
   },
 ];
 
@@ -282,6 +301,13 @@ describe('a callee that rejects the credential', () => {
       reason: 'unauthorized',
     });
   });
+
+  it('surfaces on the tags client as unauthorized', async () => {
+    await expect(createTagsClient().list()).resolves.toMatchObject({
+      kind: 'unauthorized',
+      pillar: 'tags',
+    });
+  });
 });
 
 /**
@@ -311,6 +337,13 @@ describe('a process with no service-account key', () => {
   it('reports no-credential from the registry cron leg', async () => {
     await expect(createPillarOwnerUriLookup()(URI)).resolves.toEqual({
       kind: 'unauthorized',
+      reason: 'no-credential',
+    });
+  });
+
+  it('reports no-credential from the tags client instead of an empty vocabulary', async () => {
+    await expect(createTagsClient().list()).resolves.toEqual({
+      kind: 'no-credential',
       reason: 'no-credential',
     });
   });

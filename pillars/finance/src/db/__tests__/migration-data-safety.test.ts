@@ -413,4 +413,88 @@ describe('applying the rest of the journal to a populated finance database', () 
     expect(byId.get('t-groceries')).toBe('e-woolworths');
     expect(byId.get('t-salary')).toBeNull();
   });
+
+  it('adds the shared tag reference safely to a populated vocabulary', () => {
+    const populatedDir = mkdtempSync(join(tmpdir(), 'finance-shared-tag-migration-'));
+    const populatedDbPath = join(populatedDir, 'finance.db');
+    const stagedMigrations = stageMigrationsThrough({
+      migrationsFolder: MIGRATIONS_DIR,
+      through: '0121_fast_food_replaces_food',
+      targetFolder: join(populatedDir, 'staged-migrations'),
+    });
+    let beforeMigration: Database.Database | undefined = new Database(populatedDbPath);
+    let migrated: OpenedFinanceDb | undefined;
+
+    try {
+      beforeMigration.pragma('foreign_keys = ON');
+      registerFinanceSqlFunctions(beforeMigration);
+      migrate(drizzle(beforeMigration), { migrationsFolder: stagedMigrations });
+
+      const tag = 'project:pops-5395-migration-fixture';
+      beforeMigration
+        .prepare(
+          `INSERT INTO tag_vocabulary
+             (tag, facet, description, kind, source, is_active, usage_count, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          tag,
+          'project',
+          'Pre-migration vocabulary row',
+          'open',
+          'user',
+          1,
+          7,
+          '2026-10-03T00:00:00Z'
+        );
+      const before = beforeMigration
+        .prepare(
+          `SELECT tag, facet, description, kind, source, is_active, usage_count, created_at
+           FROM tag_vocabulary WHERE tag = ?`
+        )
+        .get(tag) as {
+        tag: string;
+        facet: string | null;
+        description: string | null;
+        kind: string;
+        source: string;
+        is_active: number;
+        usage_count: number;
+        created_at: string;
+      };
+      beforeMigration.close();
+      beforeMigration = undefined;
+
+      migrated = openFinanceDb(populatedDbPath);
+      const after = migrated.raw
+        .prepare(
+          `SELECT tag, facet, description, kind, source, is_active, usage_count, created_at,
+                  shared_tag_id
+           FROM tag_vocabulary WHERE tag = ?`
+        )
+        .get(tag) as typeof before & { shared_tag_id: string | null };
+      expect(after).toEqual({ ...before, shared_tag_id: null });
+
+      const sharedTagIndex = (
+        migrated.raw.prepare(`PRAGMA index_list('tag_vocabulary')`).all() as {
+          name: string;
+          unique: number;
+          partial: number;
+        }[]
+      ).find((index) => index.name === 'idx_tag_vocabulary_shared_tag_id');
+      expect(sharedTagIndex).toMatchObject({ unique: 1, partial: 1 });
+
+      const insert = migrated.raw.prepare(
+        'INSERT INTO tag_vocabulary (tag, shared_tag_id) VALUES (?, ?)'
+      );
+      insert.run('project:pops-5395-shared-one', 'shared-id-1');
+      expect(() => insert.run('hobby:pops-5395-shared-two', 'shared-id-1')).toThrow(
+        /UNIQUE constraint failed/
+      );
+    } finally {
+      beforeMigration?.close();
+      migrated?.raw.close();
+      rmSync(populatedDir, { recursive: true, force: true });
+    }
+  });
 });

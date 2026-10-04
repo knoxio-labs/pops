@@ -5,12 +5,14 @@ The **orchestrator** pillar — a stateless, cross-pillar aggregator. It owns
 fan out to other pillars over `@pops/pillar-sdk` (REST transport). It listens on
 port **3009**.
 
-| Surface         | What it does                                                                                                                                                                                                 |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `POST /search`  | Federated search: fans one query out to every registered, healthy, search-capable pillar's `/search` in parallel, then merges + ranks the results. A down pillar is dropped, never failing the whole search. |
-| `GET /ai/tools` | AI-tool registry: projects each registered, healthy pillar's `ai.tools` manifest slot into a single flat tool list.                                                                                          |
-| `GET /pillars`  | Registry-first view of the fleet (live snapshot leads, `POPS_PILLARS` seed backfills), prepended with the synthetic `orchestrator` self-entry.                                                               |
-| `GET /health`   | Liveness shape (`{ ok, status, service, version, ts }`). No DB round-trip — there is no DB.                                                                                                                  |
+| Surface              | What it does                                                                                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /search`       | Federated search: fans one query out to every registered, healthy, search-capable pillar's `/search` in parallel, then merges + ranks the results. A down pillar is dropped, never failing the whole search. |
+| `POST /tagged/query` | Expands shared tag ids, then returns matching items from each registered tag carrier and the status of every carrier queried.                                                                                |
+| `GET /ai/tools`      | AI-tool registry: projects each registered, healthy pillar's `ai.tools` manifest slot into a single flat tool list.                                                                                          |
+| `GET /pillars`       | Registry-first view of the fleet (live snapshot leads, `POPS_PILLARS` seed backfills), prepended with the synthetic `orchestrator` self-entry.                                                               |
+| `GET /openapi`       | The committed OpenAPI projection used by pillar clients to resolve operation ids.                                                                                                                            |
+| `GET /health`        | Liveness shape (`{ ok, status, pillar, version, ts }`). Matches the shared pillar health contract. No DB round-trip — there is no DB.                                                                        |
 
 Membership is resolved **per request** from the `registry` pillar via the SDK
 discovery client (TTL-cached) — there is no static, compiled pillar list. The
@@ -19,8 +21,19 @@ search fan-out, ranking and partial-failure handling are implemented here, in
 
 Like every pillar, it self-registers with the `registry` pillar on boot (opt-in
 via `POPS_REGISTRY_ENABLED`, using `bootstrapPillar` from `@pops/pillar-sdk`).
-Its own manifest declares **empty** `routes`, `search`, `ai`, and `uri`
-dimensions — it is an aggregator, not a domain owner.
+Its manifest declares `orchestrator.tagged.query` as a query; its `search`,
+`ai`, and `uri` dimensions remain empty because it is an aggregator, not a
+domain owner.
+
+## Shared-tag lookup
+
+`POST /tagged/query` accepts `tagIds` and an optional `limit`. It expands the
+requested ids through the tags pillar once, then queries every healthy
+registered carrier. The response includes `expandedTagIds`, one section per
+carrier, and a `pillars` status list so callers can tell when a carrier was
+unavailable or unauthorized. A failed tag expansion returns a registered
+503 error; an individual carrier failure remains visible in the status list
+without discarding successful sections.
 
 ## Search request and response
 

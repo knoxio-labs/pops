@@ -132,6 +132,15 @@ import type {
   SourceUpsertData,
   SourceUpsertErrors,
   SourceUpsertResponses,
+  TaggedAttachData,
+  TaggedAttachErrors,
+  TaggedAttachResponses,
+  TaggedDetachData,
+  TaggedDetachErrors,
+  TaggedDetachResponses,
+  TaggedListData,
+  TaggedListErrors,
+  TaggedListResponses,
 } from './types.gen';
 
 export type Options<
@@ -806,4 +815,41 @@ export const sourceUpsert = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * List purchase line items carrying any requested shared tag ids
+ */
+export const taggedList = <ThrowOnError extends boolean = false>(
+  options?: Options<TaggedListData, ThrowOnError>
+): RequestResult<TaggedListResponses, TaggedListErrors, ThrowOnError> =>
+  (options?.client ?? client).post<TaggedListResponses, TaggedListErrors, ThrowOnError>({
+    url: '/tagged/query',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Detach a shared tag from a purchase line item
+ */
+export const taggedDetach = <ThrowOnError extends boolean = false>(
+  options: Options<TaggedDetachData, ThrowOnError>
+): RequestResult<TaggedDetachResponses, TaggedDetachErrors, ThrowOnError> =>
+  (options.client ?? client).delete<TaggedDetachResponses, TaggedDetachErrors, ThrowOnError>({
+    url: '/tagged/{entityType}/{entityId}/tags/{tagId}',
+    ...options,
+  });
+
+/**
+ * Attach a shared tag to a purchase line item
+ */
+export const taggedAttach = <ThrowOnError extends boolean = false>(
+  options: Options<TaggedAttachData, ThrowOnError>
+): RequestResult<TaggedAttachResponses, TaggedAttachErrors, ThrowOnError> =>
+  (options.client ?? client).put<TaggedAttachResponses, TaggedAttachErrors, ThrowOnError>({
+    url: '/tagged/{entityType}/{entityId}/tags/{tagId}',
+    ...options,
   });

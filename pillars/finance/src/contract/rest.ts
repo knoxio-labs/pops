@@ -29,6 +29,7 @@ import { financeSearchContract } from './rest-search.js';
 import { financeSettingsContract } from './rest-settings.js';
 import { financeSummaryContract } from './rest-summary.js';
 import { financeTagRulesContract } from './rest-tag-rules.js';
+import { financeTaggedContract } from './rest-tagged.js';
 import { financeTransactionsContract } from './rest-transactions.js';
 import { financeWishlistContract } from './rest-wishlist.js';
 
@@ -45,6 +46,7 @@ export const financeContract = c.router(
     giftCardDetails: financeGiftCardDetailsContract,
     loan: financeLoanContract,
     transactions: financeTransactionsContract,
+    tagged: financeTaggedContract,
     tagRules: financeTagRulesContract,
     corrections: financeCorrectionsContract,
     entityUsage: financeEntityUsageContract,

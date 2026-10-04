@@ -9,14 +9,12 @@
  * indistinguishable outage (POPS-2021). Both legs here build their handle
  * from the `/server` one, wrapped in {@link credentialled}.
  *
- * Neither of finance's two producers enforces a service-account gate on the
- * routes it calls today — `registry`'s `users.get` handler reads no
- * principal at all, and the `contacts` pillar (Rust) has no auth middleware
- * whatsoever. So switching these legs from `/client` to `/server` changes
- * nothing about whether a call succeeds right now. It changes what happens
- * the day either producer starts enforcing: an unauthenticated call would go
- * from "succeeds" to "401, silently folded into `unavailable`" — exactly the
- * failure this file exists to make loud instead.
+ * The registry and contacts routes this wrapper originally served do not
+ * enforce a service-account gate today — `registry`'s `users.get` handler
+ * reads no principal at all, and the Rust `contacts` pillar has no auth
+ * middleware. The tags API does enforce its `tags.tags` scope. Every leg uses
+ * this wrapper so calls carry the key, and missing credentials stay distinct
+ * from an unreachable peer.
  *
  * The wrapper takes a thunk rather than a pillar id, so the `pillar()` call
  * stays at the leg with its literal id and its router type. That is not

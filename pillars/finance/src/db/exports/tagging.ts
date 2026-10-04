@@ -10,6 +10,9 @@ export * as tagVocabularyService from '../services/tag-vocabulary.js';
 
 export { type TagVocabularyRow, type TagVocabularySource } from '../services/tag-vocabulary.js';
 
+export * as sharedTagLinksService from '../services/shared-tag-links.js';
+export type { SharedTagVocabularyRow, SharedTagLinkResult } from '../services/shared-tag-links.js';
+
 export * as aiTagSuggestionOutcomesService from '../services/ai-tag-suggestion-outcomes.js';
 
 export type {
