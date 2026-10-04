@@ -17,7 +17,10 @@ internal enum EgoSurfaces {
                 flow(repository: PlaygroundEgoRepository())
             },
             DesignState("text-only", "Text-only answer") {
-                flow(repository: repository(with: "text"), conversationId: "text")
+                flow(
+                    repository: EgoSurfaceFixtureRepository.make(with: "text"),
+                    conversationId: "text"
+                )
             },
             DesignState("streaming-tools", "Streaming with tool lines") {
                 flow(
@@ -32,29 +35,45 @@ internal enum EgoSurfaces {
                 )
             },
             DesignState("cards", "Answer with cards") {
-                flow(repository: repository(with: "cards"), conversationId: "cards")
+                flow(
+                    repository: EgoSurfaceFixtureRepository.make(with: "cards"),
+                    conversationId: "cards"
+                )
             },
             DesignState("pending", "Pending batch") {
-                flow(repository: repository(with: "pending"), conversationId: "pending")
+                flow(
+                    repository: EgoSurfaceFixtureRepository.make(with: "pending"),
+                    conversationId: "pending"
+                )
             },
             DesignState("executed", "Executed batch") {
-                flow(repository: repository(with: "executed"), conversationId: "executed")
+                flow(
+                    repository: EgoSurfaceFixtureRepository.make(with: "executed"),
+                    conversationId: "executed"
+                )
             },
             DesignState("rejected", "Rejected batch") {
-                flow(repository: repository(with: "rejected"), conversationId: "rejected")
+                flow(
+                    repository: EgoSurfaceFixtureRepository.make(with: "rejected"),
+                    conversationId: "rejected"
+                )
             },
             DesignState("failed-write", "Batch with failed write") {
-                flow(repository: repository(with: "failed-write"), conversationId: "failed-write")
+                flow(
+                    repository: EgoSurfaceFixtureRepository.make(with: "failed-write"),
+                    conversationId: "failed-write"
+                )
             },
             DesignState("decision-failure", "Decision that can be retried") {
                 flow(
-                    repository: repository(with: "decision-failure", decisionFails: true),
+                    repository: EgoSurfaceFixtureRepository.make(
+                        with: "decision-failure", decisionFails: true),
                     conversationId: "decision-failure"
                 )
             },
             DesignState("resumed-stream", "Resumed turn streaming") {
                 flow(
-                    repository: repository(
+                    repository: EgoSurfaceFixtureRepository.make(
                         with: "resumed-stream",
                         resume: .eventsThenStall([
                             .tool(name: "finance.tag", status: .started),
@@ -68,7 +87,7 @@ internal enum EgoSurfaces {
             },
             DesignState("decided-waiting", "Decided batch waiting to continue") {
                 flow(
-                    repository: repository(with: "decided-waiting"),
+                    repository: EgoSurfaceFixtureRepository.make(with: "decided-waiting"),
                     conversationId: "decided-waiting"
                 )
             },
@@ -80,7 +99,8 @@ internal enum EgoSurfaces {
             },
             DesignState("load-failure", "Conversation that failed to load") {
                 flow(
-                    repository: repository(with: "load-failure", readFails: true),
+                    repository: EgoSurfaceFixtureRepository.make(
+                        with: "load-failure", readFails: true),
                     conversationId: "load-failure"
                 )
             },
@@ -131,77 +151,7 @@ internal enum EgoSurfaces {
     }
 
     private static func conversationList(repository: PlaygroundEgoRepository) -> some View {
-        EgoConversationListView(
-            model: EgoConversationListModel(repository: repository),
-            onSelect: { _ in }
-        )
-    }
-
-    private static func repository(
-        with id: String,
-        readFails: Bool = false,
-        decisionFails: Bool = false,
-        resume: PlaygroundEgoStreamOutcome = .events([])
-    ) -> PlaygroundEgoRepository {
-        let actions: EgoActionsPart
-        let parts: [EgoMessagePart]
-        switch id {
-        case "text":
-            actions = EgoFixtures.actions
-            parts = [.text("A quiet walk by the harbour, then dinner nearby.")]
-        case "cards":
-            actions = EgoFixtures.actions
-            parts = [
-                .text("Here are a few records that might help."),
-                .entity(EgoFixtures.cards[0]), .entity(EgoFixtures.cards[1]),
-                .entity(EgoFixtures.cards[2]), .entity(EgoFixtures.cards[3]),
-                .entity(EgoFixtures.cards[4]),
-            ]
-        case "pending", "decision-failure":
-            actions = EgoFixtures.actions
-            parts = [
-                .text("I can make these changes. Review them before they run."),
-                .actions(actions),
-            ]
-        case "executed":
-            actions = EgoFixtures.actionPart(
-                id: "batch-executed", statuses: [.executed, .executed, .executed])
-            parts = [.text("These approved actions finished."), .actions(actions)]
-        case "rejected":
-            actions = EgoFixtures.actionPart(
-                id: "batch-rejected", statuses: [.rejected, .rejected, .rejected])
-            parts = [.text("No changes were made."), .actions(actions)]
-        case "failed-write":
-            actions = EgoFixtures.actionPart(
-                id: "batch-failed", statuses: [.executed, .failed, .executed])
-            parts = [.text("One action could not be completed."), .actions(actions)]
-        case "resumed-stream", "decided-waiting":
-            actions = EgoFixtures.actionPart(
-                id: "batch-\(id)", statuses: [.confirmed, .rejected, .confirmed])
-            parts = [
-                .text("The decision was saved. The approved actions are waiting to run."),
-                .actions(actions),
-            ]
-        default:
-            actions = EgoFixtures.actions
-            parts = [.text("A sample assistant answer.")]
-        }
-
-        let thread: PlaygroundEgoThreadOutcome =
-            readFails
-            ? .failure(.unavailable)
-            : .thread(
-                EgoFixtures.thread(
-                    id: id,
-                    title: "A sample conversation",
-                    assistantParts: parts
-                ))
-        return PlaygroundEgoRepository(
-            threads: [id: thread],
-            chat: .failure(.unavailable),
-            resume: resume,
-            decision: decisionFails ? .fails(.unavailable) : .succeeds
-        )
+        EgoConversationListSurface(repository: repository)
     }
 
     private static func dependencies(ego: any EgoRepository) -> AppDependencies {
