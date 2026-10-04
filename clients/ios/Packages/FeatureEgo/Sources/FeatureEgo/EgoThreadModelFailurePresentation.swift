@@ -25,6 +25,8 @@ internal enum EgoThreadModelFailurePresentation {
             )
         case .dependencyNotBound:
             return ("Ego isn't available in this app.", false)
+        @unknown default:
+            return ("Ego couldn't complete the request. Try again.", true)
         }
     }
 }
