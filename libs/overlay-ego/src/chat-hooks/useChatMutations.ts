@@ -13,12 +13,14 @@ import { useBatchDecisionStream, useSendMessage, useStreamCallbacks } from './us
 import { useFrameNavigation } from './useFrameNavigation';
 import { useStreamingChat } from './useStreamingChat';
 
-import type { RetrievedEngram } from './types';
+import type { ChatMessage, RetrievedEngram } from './types';
 
 interface UseChatMutationsParams {
   selectedConversationId: string | null;
   setSelectedConversationId: (id: string | null) => void;
   inputValue: string;
+  /** Current messages for the selected conversation, used to find a resumable batch. */
+  messages: ChatMessage[];
   setInputValue: (value: string) => void;
 }
 
@@ -47,6 +49,7 @@ export function useChatMutations({
   selectedConversationId,
   setSelectedConversationId,
   inputValue,
+  messages,
   setInputValue,
 }: UseChatMutationsParams) {
   const [retrievedEngrams, setRetrievedEngrams] = useState<RetrievedEngram[]>([]);
@@ -59,11 +62,13 @@ export function useChatMutations({
     setRetrievedEngrams,
     setSelectedConversationId,
   });
-  const batchDecisions = useBatchDecisionStream(
-    selectedConversationId,
-    streaming.stream,
-    streamCallbacks
-  );
+  const batchDecisions = useBatchDecisionStream({
+    conversationId: selectedConversationId,
+    stream: streaming.stream,
+    callbacks: streamCallbacks,
+    messages,
+    isStreaming: streaming.isStreaming,
+  });
   const { deleteConversation, isDeleting } = useDeleteConversation(
     selectedConversationId,
     setSelectedConversationId,

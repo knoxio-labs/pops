@@ -21,6 +21,7 @@ export function useChatPageModel(): ChatPageModel {
     selectedConversationId,
     setSelectedConversationId,
     inputValue,
+    messages: detail.messages,
     setInputValue,
   });
 
