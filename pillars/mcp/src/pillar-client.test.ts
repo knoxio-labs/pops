@@ -94,6 +94,7 @@ describe('getPillar — base-URL resolution', () => {
     'POPS_CEREBRUM_API_URL',
     'POPS_CONTACTS_API_URL',
     'POPS_TAGS_API_URL',
+    'POPS_ORCHESTRATOR_API_URL',
   ] as const;
 
   beforeEach(() => {
@@ -132,6 +133,18 @@ describe('getPillar — base-URL resolution', () => {
 
     expect(configureServerSdk).toHaveBeenCalledWith(
       expect.objectContaining({ internalBaseUrls: { tags: 'http://localhost:4017' } })
+    );
+  });
+
+  it('resolves the orchestrator API URL override', () => {
+    process.env['POPS_ORCHESTRATOR_API_URL'] = 'http://localhost:4009';
+
+    getPillar('orchestrator');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.objectContaining({
+        internalBaseUrls: { orchestrator: 'http://localhost:4009' },
+      })
     );
   });
 
