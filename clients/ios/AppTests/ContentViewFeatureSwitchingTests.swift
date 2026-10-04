@@ -348,6 +348,22 @@ internal struct ContentViewFeatureSwitchingWiringTests {
         #expect(!Self.contentViewSource.isEmpty, "App/ContentView.swift is empty or missing")
     }
 
+    /// ContentView+Screens.swift is the extracted screen builder.
+    internal static let contentViewScreensSource: String = {
+        let path = URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "App/ContentView+Screens.swift")
+        return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
+    }()
+
+    @Test("the extracted screen builder is present")
+    func scanReadsExtractedScreenBuilder() {
+        #expect(
+            !Self.contentViewScreensSource.isEmpty,
+            "App/ContentView+Screens.swift is empty or missing")
+    }
+
     @Test("every screen in the switcher still goes through screen(for:)")
     func theSwitcherStillNamesTheOneScreenTable() {
         // `screen(for:)` is the one place a feature id becomes a view. A
@@ -360,7 +376,9 @@ internal struct ContentViewFeatureSwitchingWiringTests {
 
     @Test("Purchases threads capture availability through its own flow")
     func purchasesThreadsCaptureAvailability() {
-        #expect(Self.contentViewSource.contains("captureAvailable: surface.captureAvailable"))
+        #expect(
+            Self.contentViewScreensSource.contains(
+                "captureAvailable: surface.captureAvailable"))
     }
 
     @Test("the retired Receipts tab has no case of its own left to route through")
