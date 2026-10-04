@@ -1,6 +1,7 @@
 import { getPillar } from '../pillar-client.js';
 import { mediaReadTools } from './media-read.js';
 import { watchlistMediaUri } from './media-uri.js';
+import { watchlistAdd } from './media-watchlist-write.js';
 import { mapRows, withUri } from './uri.js';
 import { mapCallResult } from './utils.js';
 
@@ -108,4 +109,9 @@ const watchlistList: ToolDef = {
   },
 };
 
-export const mediaTools: readonly ToolDef[] = [...mediaReadTools, libraryList, watchlistList];
+export const mediaTools: readonly ToolDef[] = [
+  ...mediaReadTools,
+  libraryList,
+  watchlistList,
+  watchlistAdd,
+];
