@@ -14,6 +14,8 @@ vi.mock('../chat-hooks/useStreamingChat', () => ({
     isStreaming: false,
     error: null,
     streamingContent: null,
+    toolActivity: [],
+    streamParts: [],
     abort: vi.fn(),
   }),
 }));
