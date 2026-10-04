@@ -41,6 +41,7 @@ internal struct InspectorShapeTests {
         let source = try String(contentsOf: inspector, encoding: .utf8)
 
         #expect(source.contains(".simultaneousGesture(liftGesture)"))
+        #expect(source.contains(".contentShape(Rectangle())"))
         #expect(!source.contains(".gesture(liftGesture)"))
     }
 

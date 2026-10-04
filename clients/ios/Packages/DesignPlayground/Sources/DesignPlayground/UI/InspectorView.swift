@@ -115,6 +115,7 @@ internal struct InspectorView: View {
                     width: InspectorShape.elementHeight,
                     height: InspectorShape.elementHeight
                 )
+                .contentShape(Rectangle())
         }
         .playgroundGlass(in: InspectorShape.action)
         .accessibilityLabel(label)
