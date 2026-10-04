@@ -29,10 +29,12 @@ import { createPurchasesApiApp } from './app.js';
 import { createDocumentLookup, createInventoryItemLookup } from './cron/pillar-lookup.js';
 import { startReceiptRetentionSweepWorker } from './cron/receipt-retention-sweep.js';
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
+import { startSharedTagCacheRefreshWorker } from './cron/refresh-shared-tags.js';
 import { createFinanceClient } from './finance/client.js';
 import { buildPurchasesManifest } from './manifest.js';
 import { configurePurchasesServerSdk } from './pillars/sdk-config.js';
 import { resolvePurchasesSqlitePath } from './purchases-sqlite-path.js';
+import { createTagsClient } from './tags/client.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -143,6 +145,21 @@ const receiptRetentionSweepWorker = startReceiptRetentionSweepWorker({
   },
 });
 
+/** Keep the shared vocabulary local so line-item checks need no tags request. */
+const sharedTagCacheRefreshWorker = startSharedTagCacheRefreshWorker({
+  db: purchasesDb.db,
+  client: createTagsClient(),
+  intervalMs: optionalIntervalMs('PURCHASES_SHARED_TAG_REFRESH_INTERVAL_MS'),
+  logger: {
+    info: (message, context) => {
+      console.warn(`[purchases-api] ${message}`, context ?? {});
+    },
+    warn: (message, context) => {
+      console.error(`[purchases-api] ${message}`, context ?? {});
+    },
+  },
+});
+
 const app = createPurchasesApiApp({
   purchasesDb,
   version,
@@ -179,7 +196,7 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[purchases-api] Shutting down (${signal})`);
-  // Cancel the timers, then WAIT for both triggers to settle before the
+  // Cancel the timers, then WAIT for every trigger to settle before the
   // database closes underneath them. The sweep needs this so its
   // finance-then-write sequence never fails mid-transaction on the way out;
   // the URI cron needs it for a native-handle reason rather than a SQL one —
@@ -193,6 +210,7 @@ function shutdown(signal: NodeJS.Signals): void {
   // between two nightly ticks anyway, so draining costs nothing here.
   reconcileUriWorker.stop();
   receiptRetentionSweepWorker.stop();
+  sharedTagCacheRefreshWorker.stop();
   sweepRunner.stop();
   void shutdownPillar({
     label: 'purchases-api',
@@ -204,6 +222,7 @@ function shutdown(signal: NodeJS.Signals): void {
             sweepRunner.drain(),
             reconcileUriWorker.drain(),
             receiptRetentionSweepWorker.drain(),
+            sharedTagCacheRefreshWorker.drain(),
           ]),
       },
       { name: 'deregister', run: () => pillarHandle?.stop() },

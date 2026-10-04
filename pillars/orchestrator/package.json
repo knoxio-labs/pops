@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts",
     "dev": "tsx watch --clear-screen=false src/server.ts",
+    "generate:openapi": "tsx scripts/generate-openapi.ts",
     "start": "node dist/server.js",
     "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit",
     "test": "node ../../scripts/require-built-graph.mjs && vitest run",
@@ -15,10 +16,13 @@
     "@pops/pillar-express": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/types": "workspace:*",
+    "@ts-rest/core": "3.53.0-rc.1",
+    "@ts-rest/express": "3.53.0-rc.1",
     "express": "^5.1.0",
     "zod": "^4.6.2"
   },
   "devDependencies": {
+    "@pops/contract-openapi": "workspace:*",
     "@types/express": "^5.0.4",
     "@types/node": "^24.13.4",
     "@types/supertest": "^7.2.1",

@@ -232,6 +232,9 @@ describe('the control plane', () => {
       substitutions: 0,
       refreshes: 0,
       lastDeviceId: null,
+      bootstrapFailures: 0,
+      bootstrapFailureArmed: false,
+      bootstrapOutage: false,
       financeOutage: false,
       financeOpenApiUnreachable: false,
       financeContractMismatch: false,
@@ -296,6 +299,45 @@ describe('the control plane', () => {
     );
   });
 
+  it('fails exactly the next bootstrap request without forwarding it', async () => {
+    const armed = await call('/__e2e/bootstrap/fail-next', { method: 'POST' });
+    expect(armed.status).toBe(200);
+    expect(await armed.json()).toEqual(expect.objectContaining({ bootstrapFailureArmed: true }));
+
+    const failed = await call('/mobile/bootstrap');
+    expect(failed.status).toBe(503);
+    expect(await failed.json()).toEqual({ message: 'ios-e2e bootstrap failure' });
+    expect(seen).toEqual([]);
+
+    const forwarded = await call('/mobile/bootstrap');
+    expect(forwarded.status).toBe(201);
+    expect(seen).toHaveLength(1);
+    expect(await (await call('/__e2e/state')).json()).toEqual(
+      expect.objectContaining({ bootstrapFailures: 1, bootstrapFailureArmed: false })
+    );
+  });
+
+  it('holds bootstrap unavailable until the outage is cleared', async () => {
+    const outage = await call('/__e2e/bootstrap/down', { method: 'POST' });
+    expect(outage.status).toBe(200);
+    expect(await outage.json()).toEqual(expect.objectContaining({ bootstrapOutage: true }));
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const failed = await call('/mobile/bootstrap');
+      expect(failed.status).toBe(503);
+      expect(await failed.json()).toEqual({ message: 'ios-e2e bootstrap failure' });
+    }
+    expect(seen).toEqual([]);
+
+    const recovery = await call('/__e2e/bootstrap/up', { method: 'POST' });
+    expect(await recovery.json()).toEqual(expect.objectContaining({ bootstrapOutage: false }));
+    expect((await call('/mobile/bootstrap')).status).toBe(201);
+    expect(seen).toHaveLength(1);
+    expect(await (await call('/__e2e/state')).json()).toEqual(
+      expect.objectContaining({ bootstrapFailures: 2, bootstrapOutage: false })
+    );
+  });
+
   it('puts everything back on reset, including the switch a failed flow left thrown', async () => {
     // The lane calls this between flows. Without the finance half, a flow that
     // died mid-outage would hand the next one a pillar that refuses
@@ -307,6 +349,10 @@ describe('the control plane', () => {
     await call('/__e2e/purchases/search-down', { method: 'POST' });
     await call('/__e2e/inventory/up', { method: 'POST' });
     await call('/__e2e/inventory/sync-down', { method: 'POST' });
+    await call('/__e2e/bootstrap/down', { method: 'POST' });
+    await call('/__e2e/bootstrap/fail-next', { method: 'POST' });
+    await call('/mobile/bootstrap');
+    await call('/__e2e/bootstrap/fail-next', { method: 'POST' });
     await arm();
     await call('/mobile/bootstrap', { headers: { authorization: bearer('device-1') } });
     await call('/devices/refresh', { method: 'POST', body: '{}' });
@@ -316,6 +362,9 @@ describe('the control plane', () => {
       substitutions: 0,
       refreshes: 0,
       lastDeviceId: null,
+      bootstrapFailures: 0,
+      bootstrapFailureArmed: false,
+      bootstrapOutage: false,
       financeOutage: false,
       financeOpenApiUnreachable: false,
       financeContractMismatch: false,

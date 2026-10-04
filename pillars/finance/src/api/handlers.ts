@@ -47,6 +47,8 @@ export interface FinanceApiDeps {
    * registry.
    */
   serviceAccountVerifier?: ServiceAccountVerifier;
+  /** Coalesced one-pass shared-tag vocabulary sync used by carrier handlers. */
+  syncSharedTagsOnce?: () => Promise<unknown>;
 }
 
 export interface HealthResponse {

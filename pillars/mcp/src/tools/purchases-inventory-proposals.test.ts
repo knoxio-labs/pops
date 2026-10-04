@@ -94,6 +94,24 @@ describe('purchases.inventoryProposals.accept', () => {
     });
   });
 
+  it('tells the model an accept does not depend on a listed offer', () => {
+    // The list is empty for every unclassified line, which is most of them.
+    // A description that sent the model there first made the tool unusable.
+    const description = tool('purchases.inventoryProposals.accept').description;
+    expect(description).toContain('works on any line');
+    expect(description).not.toMatch(/list first/i);
+    expect(tool('purchases.inventoryProposals.list').description).toContain(
+      'does not mean nothing can be linked'
+    );
+  });
+
+  it('accepts without ever reading the proposal list', async () => {
+    await accept({ orderId: ORDER_ID, itemId: LINE_ID, inventoryItemId: ITEM_ID });
+
+    expect(purchase.listInventoryProposals).not.toHaveBeenCalled();
+    expect(purchase.decideInventoryProposal).toHaveBeenCalledTimes(1);
+  });
+
   it('sends the unit id when the proposal carries one', async () => {
     await accept({
       orderId: ORDER_ID,

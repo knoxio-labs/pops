@@ -31,7 +31,7 @@ export function mapCallResult<T>(result: CallResult<T>, scope?: string): CallToo
   const producer = scope.split('.')[0] ?? scope;
   return toolError(
     `${formatFailureReason(result)}\nThis tool requires service-account scope '${scope}'. ` +
-      `Ask an operator to grant it to the credential this MCP server presents to '${producer}' ` +
+      `Ask an operator to grant it to the service-account credential this MCP server presents to '${producer}' ` +
       '(MCP does not mint or widen scopes itself).'
   );
 }

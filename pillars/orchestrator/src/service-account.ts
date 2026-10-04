@@ -3,10 +3,13 @@ import { readFileSync } from 'node:fs';
 /** Registry account name used by the orchestrator's outbound calls. */
 export const ORCHESTRATOR_SERVICE_ACCOUNT_NAME = 'orchestrator';
 
-/** Exact operation scopes needed by the current search-capable pillars. */
+/** Exact operation scopes needed by orchestrator's federated search and facets. */
 export const ORCHESTRATOR_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'contacts.search.search',
   'purchases.search.search',
+  'tags.tags',
+  'finance.tagged',
+  'purchases.tagged',
 ];
 
 /** Environment variable containing the local-development credential. */

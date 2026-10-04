@@ -25,6 +25,12 @@ Deterministic first, AI never. Matching is arithmetic, and a model asked to part
 
 Stage 4 runs between combined and partial, which is why the table is out of numerical order.
 
+Stage 0 enforces both the finance cash-direction sign and the settlement role. The finance
+adapter inverts signed dollars before the solver: a purchase capture is positive here, and a
+refund is negative. Captures, authorizations and adjustments accept only `purchase` transactions;
+refunds accept `refund` or `reversal`. Transfers, rebates and fees never settle merchant charges,
+and unknown Finance transaction types are rejected.
+
 ## Two amounts are only comparable in one currency
 
 A receipt photographed in Brazil is priced in BRL. The card charge for it lands in AUD, at a rate nobody recorded, plus a conversion fee. Every amount stage used to compare those two integers directly, so a foreign receipt could never match — and, worse, a foreign one whose number happened to coincide with an AUD transaction's could match by accident. Nothing refused the pairing; the numbers simply usually differed (POPS-3569).

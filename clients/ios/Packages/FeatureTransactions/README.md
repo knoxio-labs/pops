@@ -50,6 +50,8 @@ The cursor is the server's, opaque, and never derived here. Offsets are the alte
 
 The subtler failure is a response landing _after_ the list it was requested for has been thrown away. Pull-to-refresh resets the cursor while a page fetch may still be in flight; when that fetch completes it would append rows from a list that no longer exists. `TransactionsListViewModel` carries a generation counter for exactly this — a fetch captures it before awaiting and discards its own result if it moved underneath — and `TransactionsListRaceTests` drives the race deterministically rather than with a sleep, through a repository that parks mid-call until the test lets it go.
 
+When the server rejects a cursor, the BFM repository fetches the first page and marks it as a restart. The model replaces the old rows and cursor history with that page, so a restart does not append the already-read pages again.
+
 The third is duplicate work: a footer that appears, provokes a fetch, and provokes another on the next layout pass. The footer task is keyed to each successful page, so a short or duplicate-only page can advance again while the boundary remains visible; the model's loading state still coalesces repeated appearances. Repeated cursors fail closed. Every test that touches paging asserts the repository's call count, because a list that fetches the same page twice renders correctly either way and bills the difference to somebody's cellular plan.
 
 ## A failure never takes the content away

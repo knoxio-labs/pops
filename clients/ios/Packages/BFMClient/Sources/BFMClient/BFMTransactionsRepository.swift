@@ -31,15 +31,13 @@ public struct BFMTransactionsRepository: TransactionsRepository {
         self.timeZone = timeZone
     }
 
-    /// One page, and a restart when the server disowns the cursor it is given.
+    /// One page, restarting from the first page when the server disowns its cursor.
     ///
     /// `invalid_cursor` is not a failure to report. It says the token this app
     /// is holding is not one this server issued — a cursor encoding that
     /// changed under a running app — and the server's own instruction is to
-    /// start the list again. Doing that here rather than surfacing an error
-    /// keeps the rows already on screen: the caller merges by id, so a first
-    /// page it has already seen adds nothing and paging resumes against a
-    /// cursor that works.
+    /// start the list again. The returned page is marked as a restart so the
+    /// caller replaces rows and paging state that belonged to the old list.
     ///
     /// The restart cannot recurse. It passes no cursor, and the BFM only ever
     /// rejects one it was given.
@@ -52,7 +50,11 @@ public struct BFMTransactionsRepository: TransactionsRepository {
             guard case .page(let page) = try await fetch(after: nil) else {
                 throw RepositoryError.contractMismatch
             }
-            return page
+            return TransactionPage(
+                transactions: page.transactions,
+                nextCursor: page.nextCursor,
+                restarted: true
+            )
         }
     }
 
