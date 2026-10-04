@@ -7,6 +7,7 @@ internal enum InventoryStoreHereStep: Equatable {
     case choice
     case newItem
     case existing
+    case scan
 }
 
 /// Where Store here puts things: into a container, or directly in a place.
@@ -56,23 +57,26 @@ internal enum InventoryStoreTarget {
 }
 
 /// Store here: a new item placed in this container or place, or an existing
-/// one put into it. Neither needs a container open.
+/// one put into it, picked from a list or scanned. None needs a container open.
 internal struct InventoryStoreHereSheet: View {
     internal let target: InventoryStoreTarget
     @State private var step: InventoryStoreHereStep
     @State private var detent: PresentationDetent
     private let query: String
     private let selected: Set<String>
+    private let scan: InventoryStoreScanPhase
 
     internal init(
         target: InventoryStoreTarget,
         step: InventoryStoreHereStep = .choice,
         query: String = "",
-        selected: Set<String> = []
+        selected: Set<String> = [],
+        scan: InventoryStoreScanPhase = .scanning
     ) {
         self.target = target
         self.query = query
         self.selected = selected
+        self.scan = scan
         _step = State(initialValue: step)
         _detent = State(initialValue: step == .choice ? .height(Self.choiceHeight) : .large)
     }
@@ -93,6 +97,8 @@ internal struct InventoryStoreHereSheet: View {
                 case .existing:
                     InventoryStoreExistingPicker(
                         target: target, query: query, selected: selected)
+                case .scan:
+                    InventoryStoreScanView(targetName: target.name, phase: scan)
                 }
             }
             .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -109,7 +115,7 @@ internal struct InventoryStoreHereSheet: View {
     }
 }
 
-/// The two ways in, side by side.
+/// The three ways in, side by side.
 internal struct InventoryStoreHereChoice: View {
     internal let targetName: String
     internal let onChoose: (InventoryStoreHereStep) -> Void
@@ -119,6 +125,7 @@ internal struct InventoryStoreHereChoice: View {
         HStack(spacing: PopsSpacing.md) {
             option("New item", symbol: InventorySymbol.addNew.system, step: .newItem)
             option("Existing item", symbol: InventorySymbol.search.system, step: .existing)
+            option("Scan item", symbol: InventorySymbol.scan.system, step: .scan)
         }
         .padding(.horizontal, PopsSpacing.lg)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -141,6 +148,8 @@ internal struct InventoryStoreHereChoice: View {
                 Text(title)
                     .font(.popsHeadline)
                     .foregroundStyle(Color.popsForeground)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, PopsSpacing.lg)

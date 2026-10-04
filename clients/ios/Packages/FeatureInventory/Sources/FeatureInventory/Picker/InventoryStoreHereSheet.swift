@@ -3,34 +3,36 @@ import SwiftUI
 
 /// Which part of Store here is showing. The sheet swaps its root rather than
 /// pushing, so there is no screen between the choice and the existing-item
-/// search. New item does not swap the root: it opens the real create form as
-/// a sheet of its own, nested inside this one.
+/// search or the scanner. New item does not swap the root: it opens the real
+/// create form as a sheet of its own, nested inside this one.
 @MainActor internal enum InventoryStoreHereStep: Equatable {
     case choice
     case existing
+    case scan
 
     /// The height the sheet opens at on this step.
     internal var detent: PresentationDetent {
         switch self {
         case .choice: .height(InventoryChoiceStep.sheetHeight)
-        case .existing: .large
+        case .existing, .scan: .large
         }
     }
 
     /// The heights a sheet opened on this step can take. Opened on the
-    /// choice it grows to the list; opened on the list there is no choice to
-    /// shrink back to.
+    /// choice it grows to the list or the scanner; opened on either of those
+    /// there is no choice to shrink back to.
     internal var detents: Set<PresentationDetent> {
         switch self {
         case .choice: [Self.choice.detent, Self.existing.detent]
-        case .existing: [Self.existing.detent]
+        case .existing, .scan: [detent]
         }
     }
 }
 
 /// Store here: a new item placed in this container or place, or an existing
-/// one put into it. Neither needs a container open. A caller whose screen
-/// already offers New item elsewhere opens it `startingAt: .existing`.
+/// one put into it, picked from a list or scanned. None needs a container
+/// open. A caller whose screen already offers New item elsewhere opens it
+/// `startingAt: .existing`.
 ///
 /// New item installs its own `inventoryItemFormPresentation`, scoped to this
 /// sheet's own `NavigationStack`, so the form opens as a sheet nested inside
@@ -97,17 +99,27 @@ private struct InventoryStoreHereRoot: View {
                             itemForm?(.create(placement: target.placement))
                         },
                         InventoryChoiceOption(title: "Existing item", symbol: .search) {
-                            step = .existing
-                            detent = InventoryStoreHereStep.existing.detent
+                            show(.existing)
+                        },
+                        InventoryChoiceOption(title: "Scan item", symbol: .scan) {
+                            show(.scan)
                         },
                     ])
             case .existing:
                 InventoryStoreExistingPicker(
                     model: InventoryStoreHereModel(target: target, runner: runner))
+            case .scan:
+                InventoryStoreScanStep(
+                    model: InventoryStoreScanModel(target: target, runner: runner))
             }
         }
         .transition(.opacity.combined(with: .move(edge: .trailing)))
         .popsMotion(PopsMotion.smooth, value: step)
+    }
+
+    private func show(_ next: InventoryStoreHereStep) {
+        step = next
+        detent = next.detent
     }
 }
 
