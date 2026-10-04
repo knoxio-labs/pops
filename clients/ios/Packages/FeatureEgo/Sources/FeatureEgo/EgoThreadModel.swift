@@ -24,6 +24,8 @@ public final class EgoThreadModel {
     @ObservationIgnored private let now: @Sendable () -> Date
     @ObservationIgnored private var streamTask: Task<Void, Never>?
     @ObservationIgnored private var activeStreamID: UUID?
+    @ObservationIgnored private var activeTurnRetryable = true
+    private var isBatchDecisionInFlight = false
 
     /// Creates a thread model backed by an Ego repository.
     ///
@@ -46,10 +48,25 @@ public final class EgoThreadModel {
 }
 
 extension EgoThreadModel {
+    /// Whether a batch decision can start without colliding with another turn or decision.
+    public var canDecideBatch: Bool {
+        guard !isBatchDecisionInFlight else { return false }
+        guard let turn else { return true }
+        if case .failed = turn.phase { return true }
+        return false
+    }
+
+    /// The last assistant batch that the server can continue without a new decision.
+    public var continuableBatchId: String? {
+        guard canDecideBatch else { return nil }
+        return EgoThreadModelBatchState.continuableBatchId(in: messages)
+    }
+
     /// Sends the non-empty draft unless a turn is already streaming.
     public func send() {
         let message = draft
         guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !isBatchDecisionInFlight else { return }
         if let turn, case .streaming = turn.phase { return }
 
         messages.append(
@@ -62,6 +79,7 @@ extension EgoThreadModel {
 
     /// Retries the last user message after a failed turn without duplicating it.
     public func retry() {
+        guard !isBatchDecisionInFlight else { return }
         guard let turn, case .failed(_, retryable: true) = turn.phase,
             let message = messages.last(where: { $0.role == .user })?.plainText
         else { return }
@@ -73,11 +91,51 @@ extension EgoThreadModel {
     /// Stops the active stream while preserving its partial output.
     public func cancel() {
         guard var turn, case .streaming = turn.phase else { return }
+        let retryable = activeTurnRetryable
         streamTask?.cancel()
         streamTask = nil
         activeStreamID = nil
-        turn.phase = .failed(message: "Stopped", retryable: true)
+        turn.phase = .failed(message: "Stopped", retryable: retryable)
         self.turn = turn
+        activeTurnRetryable = true
+    }
+
+    /// Records a batch decision, reloads its persisted statuses, then resumes the turn.
+    ///
+    /// The decision stays in flight through the reload so a send cannot take the turn
+    /// before the approved writes begin. A conflict means the batch was already decided;
+    /// the latest transcript is loaded and no second resume is started.
+    public func decideBatch(_ batchId: String, _ decision: EgoBatchDecision) async throws {
+        guard canDecideBatch, let conversationId else { return }
+        isBatchDecisionInFlight = true
+        defer { isBatchDecisionInFlight = false }
+
+        do {
+            try await repository.decideBatch(id: batchId, decision: decision)
+        } catch let error as RepositoryError {
+            if case .conflict = error {
+                await reload()
+                return
+            }
+            throw error
+        } catch {
+            throw error
+        }
+
+        await reload()
+        startResumedTurn(conversationId: conversationId, batchId: batchId)
+    }
+
+    /// Continues the eligible last assistant batch without recording another decision.
+    public func continueBatch(_ batchId: String) async {
+        guard canDecideBatch,
+            batchId == continuableBatchId,
+            let conversationId
+        else {
+            return
+        }
+
+        startResumedTurn(conversationId: conversationId, batchId: batchId)
     }
 
     /// Loads the current conversation, if one is selected.
@@ -99,14 +157,27 @@ extension EgoThreadModel {
 
 extension EgoThreadModel {
     private func startTurn(message: String) {
-        streamTask?.cancel()
-        let streamID = UUID()
-        activeStreamID = streamID
-        turn = .initial
         let stream = repository.streamChat(
             message: message,
             conversationId: conversationId,
             context: context())
+        startTurn(stream: stream, retryable: true)
+    }
+
+    private func startResumedTurn(conversationId: String, batchId: String) {
+        let stream = repository.resumeChat(conversationId: conversationId, batchId: batchId)
+        startTurn(stream: stream, retryable: false)
+    }
+
+    private func startTurn(
+        stream: AsyncThrowingStream<EgoStreamEvent, any Error>,
+        retryable: Bool
+    ) {
+        streamTask?.cancel()
+        let streamID = UUID()
+        activeStreamID = streamID
+        activeTurnRetryable = retryable
+        turn = .initial
         streamTask = Task { [weak self] in
             await self?.consume(stream, streamID: streamID)
         }
@@ -131,10 +202,11 @@ extension EgoThreadModel {
                     continue
                 }
             }
-            let failure = Self.failureCopy(for: RepositoryError.unavailable)
+            let failure = EgoThreadModelFailurePresentation.failureCopy(
+                for: RepositoryError.unavailable)
             failTurn(failure, streamID: streamID)
         } catch {
-            failTurn(Self.failureCopy(for: error), streamID: streamID)
+            failTurn(EgoThreadModelFailurePresentation.failureCopy(for: error), streamID: streamID)
         }
     }
 
@@ -142,7 +214,13 @@ extension EgoThreadModel {
         guard let turn else { return }
         if case .part(.actions(let part)) = event, applyBatchUpdate(part) { return }
 
-        self.turn = EgoTurnReducer.reduce(turn, applying: event)
+        let reducedEvent: EgoStreamEvent
+        if case .failed(let message, _) = event, !activeTurnRetryable {
+            reducedEvent = .failed(message: message, retryable: false)
+        } else {
+            reducedEvent = event
+        }
+        self.turn = EgoTurnReducer.reduce(turn, applying: reducedEvent)
         switch event {
         case .navigate(let uri):
             navigationTarget = uri
@@ -160,6 +238,7 @@ extension EgoThreadModel {
         activeStreamID = nil
         streamTask = nil
         if clearTurn { turn = nil }
+        activeTurnRetryable = true
     }
 
     private func failTurn(
@@ -167,7 +246,9 @@ extension EgoThreadModel {
         streamID: UUID
     ) {
         guard activeStreamID == streamID, var turn else { return }
-        turn.phase = .failed(message: failure.message, retryable: failure.retryable)
+        turn.phase = .failed(
+            message: failure.message,
+            retryable: activeTurnRetryable && failure.retryable)
         self.turn = turn
         endStream(streamID, clearTurn: false)
     }
@@ -187,7 +268,7 @@ extension EgoThreadModel {
             conversationId = thread.conversation.id
             messages = thread.messages
         } catch {
-            loadFailure = Self.repositoryFailure(for: error)
+            loadFailure = EgoThreadModelFailurePresentation.repositoryFailure(for: error)
         }
     }
 
@@ -213,44 +294,5 @@ extension EgoThreadModel {
             return true
         }
         return false
-    }
-
-    private static func repositoryFailure(for error: any Error) -> RepositoryError {
-        (error as? RepositoryError) ?? .unavailable
-    }
-
-    private static func failureCopy(for error: any Error) -> (message: String, retryable: Bool) {
-        guard let error = error as? RepositoryError else {
-            return ("Ego couldn't complete the request. Try again.", true)
-        }
-        switch error {
-        case .unavailable:
-            return ("Ego is unavailable. Try again.", true)
-        case .unauthorized:
-            return ("Your session needs attention before Ego can continue.", false)
-        case .rateLimited(let retryAfterSeconds):
-            return (
-                "Too many requests. Wait \(Self.waitDuration(retryAfterSeconds)) before trying again.",
-                true
-            )
-        case .contractMismatch:
-            return ("Ego returned a response this app can't read.", false)
-        case .conflict:
-            return ("This conversation changed. Reload it before trying again.", false)
-        case .transport(let failure):
-            return (
-                "Ego couldn't complete the request. Try again.",
-                failure.popsError?.retryable ?? true
-            )
-        case .dependencyNotBound:
-            return ("Ego isn't available in this app.", false)
-        }
-    }
-
-    private static func waitDuration(_ retryAfterSeconds: Int?) -> String {
-        guard let retryAfterSeconds else { return "a minute" }
-        let seconds = max(1, retryAfterSeconds)
-        let unit = seconds == 1 ? "second" : "seconds"
-        return "\(seconds) \(unit)"
     }
 }

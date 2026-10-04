@@ -45,6 +45,18 @@ internal enum EgoThreadModelFixtures {
             })
     }
 
+    static func actions(batchID: String, statuses: [EgoActionStatus]) -> EgoActionsPart {
+        EgoActionsPart(
+            batchId: batchID,
+            actions: statuses.enumerated().map { index, status in
+                EgoBatchAction(
+                    actionId: "action-\(index + 1)",
+                    tool: "finance.create",
+                    summary: "Action \(index + 1)",
+                    status: status)
+            })
+    }
+
     static func script(doneID: String, parts: [EgoMessagePart] = []) -> ScriptedEgoChatScript {
         ScriptedEgoChatScript(
             events: [
@@ -82,6 +94,9 @@ internal final class EgoThreadModelContextBox {
 internal actor ControlledEgoRepository: EgoRepository {
     nonisolated let streamControl: EgoThreadModelStreamControl
     private var reads: [Result<EgoThread?, RepositoryError>]
+    private(set) var decisionIDs: [String] = []
+    private(set) var resumeCalls: [ScriptedEgoResumeChatCall] = []
+    private var resumeCallWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
 
     init(
         reads: [Result<EgoThread?, RepositoryError>] = [],
@@ -108,13 +123,35 @@ internal actor ControlledEgoRepository: EgoRepository {
         return try reads.removeFirst().get()
     }
 
-    func decideBatch(id: String, decision: EgoBatchDecision) async throws {}
+    func decideBatch(id: String, decision: EgoBatchDecision) async throws {
+        decisionIDs.append(id)
+    }
 
     nonisolated func resumeChat(
         conversationId: String,
         batchId: String
     ) -> AsyncThrowingStream<EgoStreamEvent, any Error> {
-        streamControl.stream
+        Task {
+            await recordResumeCall(conversationId: conversationId, batchId: batchId)
+        }
+        return streamControl.stream
+    }
+
+    private func recordResumeCall(conversationId: String, batchId: String) {
+        resumeCalls.append(
+            ScriptedEgoResumeChatCall(conversationId: conversationId, batchId: batchId))
+        let ready = resumeCallWaiters.filter { $0.0 <= resumeCalls.count }
+        resumeCallWaiters.removeAll { $0.0 <= resumeCalls.count }
+        for (_, continuation) in ready {
+            continuation.resume()
+        }
+    }
+
+    func waitForResumeCallCount(_ count: Int) async {
+        guard resumeCalls.count < count else { return }
+        await withCheckedContinuation { continuation in
+            resumeCallWaiters.append((count, continuation))
+        }
     }
 }
 
