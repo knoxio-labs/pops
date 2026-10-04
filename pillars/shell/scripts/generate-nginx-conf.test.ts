@@ -18,6 +18,7 @@ import {
   resolveUpstreamForEntry,
   type PillarUpstream,
 } from './generate-nginx-conf.js';
+import { EGO_STREAM_LOCATION, renderPillarRestBlockFromUpstream } from './nginx-pillar-blocks.js';
 import { resolveRegistryUrl } from './registry-url-env.js';
 
 import type { DiscoveredPillar, DiscoveryTransport } from '@pops/pillar-sdk/client';
@@ -220,6 +221,44 @@ describe('generate-nginx-conf', () => {
       expect(rendered).toMatch(
         /location ~ \^\/registry\/subscribe\/\?\$ \{[\s\S]*?proxy_buffering off;/
       );
+    });
+
+    it('renders one exact Cerebrum SSE location with long timeouts and no shared snippet', () => {
+      const locations = rendered.match(/location = \/cerebrum-api\/ego\/chat\/stream \{/g);
+      expect(locations).toHaveLength(1);
+
+      const block = rendered.match(
+        /location = \/cerebrum-api\/ego\/chat\/stream \{([\s\S]*?)\n    \}/
+      )?.[1];
+      expect(block).toBeDefined();
+      expect(block).toContain('set $cerebrum_ego_stream_upstream http://cerebrum-api:3007;');
+      expect(block).toContain('proxy_buffering off;');
+      expect(block).toContain('proxy_read_timeout 300s;');
+      expect(block).toContain('proxy_send_timeout 300s;');
+      expect(block).not.toContain('_pillar-proxy.conf');
+      expect(block!.indexOf('set $cerebrum_ego_stream_upstream')).toBeLessThan(
+        block!.indexOf('rewrite ^/cerebrum-api/')
+      );
+      expect(rendered.match(/proxy_buffering off;/g)).toHaveLength(2);
+    });
+
+    it('leaves every non-Cerebrum REST block byte-identical to the generic block', () => {
+      for (const pillarId of PILLARS.filter((id) => id !== 'cerebrum')) {
+        const { host, port } = PILLAR_UPSTREAMS[pillarId];
+        expect(
+          renderPillarRestBlockFromUpstream({ pillarId, host, port }),
+          `${pillarId} REST block`
+        ).toBe(
+          [
+            `    location /${pillarId}-api/ {`,
+            `        set $${pillarId}_api_upstream http://${host}:${port};`,
+            `        rewrite ^/${pillarId}-api/(.*)$ /$1 break;`,
+            `        proxy_pass $${pillarId}_api_upstream;`,
+            `        include /etc/nginx/snippets/_pillar-proxy.conf;`,
+            `    }`,
+          ].join('\n')
+        );
+      }
     });
 
     it('keeps /pillars on registry-api and moves /pillars/health onto registry-api too', () => {
@@ -538,6 +577,19 @@ describe('generate-nginx-conf', () => {
       expect(rendered).toContain('set $plugin_fitness_api_upstream http://fitness-api:4200;');
       expect(rendered).toContain('proxy_pass $plugin_fitness_api_upstream;');
       expect(rendered).not.toContain('trpc');
+    });
+
+    it('adds the exact stream route only for a Cerebrum upstream', () => {
+      const cerebrum = renderNginxConfFromUpstreams([
+        { pillarId: 'cerebrum', host: 'cerebrum-test', port: 4307 },
+      ]);
+      expect(cerebrum).toContain(`location = ${EGO_STREAM_LOCATION} {`);
+      expect(cerebrum).toContain('set $cerebrum_ego_stream_upstream http://cerebrum-test:4307;');
+
+      const finance = renderNginxConfFromUpstreams([
+        { pillarId: 'finance', host: 'finance-test', port: 4304 },
+      ]);
+      expect(finance).not.toContain(EGO_STREAM_LOCATION);
     });
 
     it('emits zero pillar REST blocks for an empty registry but keeps the orchestrator block', () => {
