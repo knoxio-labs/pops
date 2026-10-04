@@ -3419,6 +3419,522 @@
         "tags": ["mobileFinance"]
       }
     },
+    "/mobile/finance/summary": {
+      "get": {
+        "operationId": "mobileFinance.getSummary",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "window",
+            "schema": {
+              "enum": ["30d", "90d", "month", "year", "all"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "topLimit",
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 50,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "costOfCredit": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "byAccount": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "accountName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "archived": {
+                                "type": "boolean"
+                              },
+                              "currency": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "fees": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "cents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "transactionCount": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["cents", "transactionCount"],
+                                "type": "object"
+                              },
+                              "shareOfTotal": {
+                                "nullable": true,
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "accountId",
+                              "accountName",
+                              "currency",
+                              "archived",
+                              "fees",
+                              "shareOfTotal"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "byMonth": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "byAccount": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "accountId": {
+                                      "type": "string"
+                                    },
+                                    "fees": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "cents": {
+                                          "maximum": 9007199254740991,
+                                          "minimum": -9007199254740991,
+                                          "type": "integer"
+                                        },
+                                        "transactionCount": {
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": ["cents", "transactionCount"],
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": ["accountId", "fees"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "fees": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "cents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "transactionCount": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["cents", "transactionCount"],
+                                "type": "object"
+                              },
+                              "month": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["month", "fees", "byAccount"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "byTag": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "fees": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "cents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "transactionCount": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["cents", "transactionCount"],
+                                "type": "object"
+                              },
+                              "shareOfTotal": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "tag": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["tag", "fees", "shareOfTotal"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "deltaCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "deltaRatio": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "previousTotal": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "cents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
+                            "transactionCount": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["cents", "transactionCount"],
+                          "type": "object"
+                        },
+                        "total": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "cents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
+                            "transactionCount": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["cents", "transactionCount"],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "previousTotal",
+                        "deltaCents",
+                        "deltaRatio",
+                        "byAccount",
+                        "byMonth",
+                        "byTag"
+                      ],
+                      "type": "object"
+                    },
+                    "window": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "end": {
+                          "type": "string"
+                        },
+                        "key": {
+                          "enum": ["30d", "90d", "month", "year", "all"],
+                          "type": "string"
+                        },
+                        "previous": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "end": {
+                              "type": "string"
+                            },
+                            "start": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["start", "end"],
+                          "type": "object"
+                        },
+                        "start": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["key", "start", "end", "previous"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["window", "costOfCredit"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "bfm.request.invalid"],
+                      "type": "string"
+                    },
+                    "details": {},
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["bfm.auth.invalid_token"],
+                      "type": "string"
+                    },
+                    "details": {},
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["bfm.auth.device_revoked"],
+                          "type": "string"
+                        },
+                        "details": {},
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["code", "message", "requestId", "retryable"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Finance cost of credit for a window and the period before it",
+        "tags": ["mobileFinance"]
+      }
+    },
     "/mobile/finance/transactions": {
       "get": {
         "operationId": "mobileFinance.listTransactions",
