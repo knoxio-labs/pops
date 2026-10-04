@@ -220,11 +220,21 @@ export async function startControlPlane({
   host = '127.0.0.1',
 }) {
   /**
-   * @type {{ armed: boolean, substitutions: number, refreshes: number, lastDeviceId: string | null }}
+   * @type {{ armed: boolean, substitutions: number, refreshes: number, lastDeviceId: string | null, bootstrapFailures: number }}
    */
-  const counters = { armed: false, substitutions: 0, refreshes: 0, lastDeviceId: null };
+  const counters = {
+    armed: false,
+    substitutions: 0,
+    refreshes: 0,
+    lastDeviceId: null,
+    bootstrapFailures: 0,
+  };
+  let bootstrapFailureArmed = false;
+  let bootstrapOutage = false;
   const state = () => ({
     ...counters,
+    bootstrapFailureArmed,
+    bootstrapOutage,
     financeOutage: upstream.isFinanceOutage(),
     financeOpenApiUnreachable: upstream.isFinanceOpenApiUnreachable(),
     financeContractMismatch: upstream.isFinanceContractMismatch(),
@@ -249,6 +259,9 @@ export async function startControlPlane({
       counters.substitutions = 0;
       counters.refreshes = 0;
       counters.lastDeviceId = null;
+      counters.bootstrapFailures = 0;
+      bootstrapFailureArmed = false;
+      bootstrapOutage = false;
       upstream.setFinanceOutage(false);
       upstream.setFinanceOpenApiUnreachable(false);
       upstream.setFinanceContractMismatch(false);
@@ -260,6 +273,18 @@ export async function startControlPlane({
       purchases.resetHistory();
       inventory.setReachable(false);
       inventory.setSyncOutage(false);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/bootstrap/fail-next') {
+      bootstrapFailureArmed = true;
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/bootstrap/down') {
+      bootstrapOutage = true;
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/bootstrap/up') {
+      bootstrapOutage = false;
       return { status: 200, body: state() };
     }
     if (method === 'POST' && pathname === '/__e2e/finance/down') {
@@ -339,6 +364,9 @@ export async function startControlPlane({
         message: `ios-e2e control plane serves no ${method} ${pathname}`,
         routes: [
           'POST /__e2e/access-token/expire-next',
+          'POST /__e2e/bootstrap/fail-next',
+          'POST /__e2e/bootstrap/down',
+          'POST /__e2e/bootstrap/up',
           'POST /__e2e/finance/down',
           'POST /__e2e/finance/up',
           'POST /__e2e/finance/openapi-unreachable',
@@ -382,6 +410,19 @@ export async function startControlPlane({
       }
     }
     if (request.method === 'POST' && target.pathname === REFRESH_PATH) counters.refreshes += 1;
+
+    if (
+      request.method === 'GET' &&
+      target.pathname === '/mobile/bootstrap' &&
+      (bootstrapOutage || bootstrapFailureArmed)
+    ) {
+      if (bootstrapFailureArmed) bootstrapFailureArmed = false;
+      counters.bootstrapFailures += 1;
+      return new Response(JSON.stringify({ message: 'ios-e2e bootstrap failure' }), {
+        status: 503,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
 
     const buffered =
       request.method === 'GET' || request.method === 'HEAD' ? undefined : await readBody(request);
