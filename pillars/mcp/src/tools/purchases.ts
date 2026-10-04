@@ -21,6 +21,7 @@ import { getPillar } from '../pillar-client.js';
 import { PURCHASE_SCOPE_PROPERTIES, purchaseScopeDateError } from './purchase-scope.js';
 import { searchFiltersFrom } from './purchase-search-filters.js';
 import { merchantSpend, productLeaderboard, scopeFrom } from './purchases-analytics.js';
+import { mapRows, objectUri, withUri } from './uri.js';
 import { mapCallResult, optNum, reqStr, toolError } from './utils.js';
 
 /** The order lifecycle vocabulary advertised by the purchases tools. */
@@ -31,6 +32,7 @@ import type { PillarHandle } from '@pops/pillar-sdk/client';
 import type { PurchaseSearchFilter } from './purchase-search-filters.js';
 import type { MerchantSpendInput, ProductLeaderboardInput } from './purchases-analytics.js';
 import type { ToolDef } from './tool-def.js';
+import type { Row } from './uri.js';
 
 type ListPurchasesInput = {
   sources?: string[];
@@ -64,6 +66,20 @@ function purchases(): PillarHandle<PurchasesShape> {
   return getPillar<PurchasesShape>('purchases');
 }
 
+function withPurchaseUri(row: Row): Row {
+  const item = row['item'];
+  if (!isRecord(item)) return row;
+
+  const purchaseId = item['purchaseId'];
+  if (typeof purchaseId !== 'string' || purchaseId.length === 0) return row;
+
+  return { ...row, purchaseUri: objectUri('purchases/purchase', purchaseId) };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 const ordersList: ToolDef = {
   name: 'purchases.orders.list',
   readOnly: true,
@@ -86,7 +102,8 @@ const ordersList: ToolDef = {
     if (limit !== undefined) input.limit = limit;
     const offset = optNum(args, 'offset');
     if (offset !== undefined) input.offset = offset;
-    return mapCallResult(await purchases().purchase.list(input));
+    const result = await purchases().purchase.list(input);
+    return mapCallResult(mapRows(result, 'items', withUri('purchases/purchase')));
   },
 };
 
@@ -103,7 +120,8 @@ const ordersGet: ToolDef = {
   handler: async (args) => {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
-    return mapCallResult(await purchases().purchase.get({ id }));
+    const result = await purchases().purchase.get({ id });
+    return mapCallResult(mapRows(result, 'purchase', withUri('purchases/purchase')));
   },
 };
 
@@ -155,7 +173,8 @@ const itemsByTag: ToolDef = {
     if (limit !== undefined) input.limit = limit;
     const offset = optNum(args, 'offset');
     if (offset !== undefined) input.offset = offset;
-    return mapCallResult(await purchases().purchase.itemsByTag(input));
+    const result = await purchases().purchase.itemsByTag(input);
+    return mapCallResult(mapRows(result, 'items', withPurchaseUri));
   },
 };
 
