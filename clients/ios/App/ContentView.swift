@@ -88,6 +88,14 @@ internal struct ContentView: View {
             .onChange(of: surface.bootstrap) { _, phase in
                 if !phase.isDegraded { bannerVisibility.reset() }
             }
+            .onChange(of: displayedTab, initial: true) { _, tab in
+                composition.egoScreenContext.selectedTab = tab
+            }
+            .onChange(
+                of: composition.entityPresentation.presentedObjectURI, initial: true
+            ) { _, uri in
+                composition.egoScreenContext.presentedObjectURI = uri
+            }
     }
 
     /// Identifies the app-wide search tab in the switcher below. Not a
@@ -139,10 +147,12 @@ internal struct ContentView: View {
                 if !Self.moreFeatures(for: surface.available).isEmpty {
                     Tab(RootCopy.more, systemImage: "ellipsis", value: Self.moreTab) {
                         MoreFeaturesView(
-                            features: Self.moreFeatures(for: surface.available)
-                        ) { feature in
-                            screen(for: feature)
-                        }
+                            features: Self.moreFeatures(for: surface.available),
+                            onSelectionChange: {
+                                composition.egoScreenContext.moreSelection = $0
+                            },
+                            destination: { feature in screen(for: feature) }
+                        )
                     }
                     .accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)
                 }
@@ -306,5 +316,16 @@ internal struct ContentView: View {
             return composition.pairingDependencies
         }
         return composition.dependencies(for: device)
+    }
+}
+
+extension ContentView {
+    /// The feature actually on screen, including the single-feature layout
+    /// which has no tab control and the synthetic More and search tabs.
+    fileprivate var displayedTab: MobileFeature? {
+        guard !surface.available.isEmpty else { return nil }
+        if surface.available.count == 1, !hasSearch { return surface.available[0] }
+        return Self.shownFeature(
+            chosen: chosenFeature, available: Self.tabs(for: surface.available))
     }
 }

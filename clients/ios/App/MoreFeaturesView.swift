@@ -3,8 +3,19 @@ import SwiftUI
 
 internal struct MoreFeaturesView<Destination: View>: View {
     internal let features: [MobileFeature]
+    internal let onSelectionChange: (MobileFeature?) -> Void
     @ViewBuilder internal let destination: (MobileFeature) -> Destination
     @State private var selected: MobileFeature?
+
+    internal init(
+        features: [MobileFeature],
+        onSelectionChange: @escaping (MobileFeature?) -> Void,
+        @ViewBuilder destination: @escaping (MobileFeature) -> Destination
+    ) {
+        self.features = features
+        self.onSelectionChange = onSelectionChange
+        self.destination = destination
+    }
 
     internal var body: some View {
         NavigationStack {
@@ -34,6 +45,9 @@ internal struct MoreFeaturesView<Destination: View>: View {
         }
         .onChange(of: features) {
             if let selected, !features.contains(selected) { self.selected = nil }
+        }
+        .onChange(of: selected, initial: true) { _, selection in
+            onSelectionChange(selection)
         }
     }
 }
