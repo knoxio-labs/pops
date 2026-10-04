@@ -67,7 +67,11 @@ and `pops-mcp`; Compose passes only the file path, never the bearer value in an
 environment variable. Provision that file out of band before starting either
 stack because `cerebrum-api` mounts it even when the gateway URL is empty. This
 inbound machine credential is separate from `pops_mcp_api_key`, the MCP
-service-account key for outbound pillar calls.
+service-account key for outbound pillar calls. Hosts that previously supplied
+`MCP_INBOUND_TOKEN` to Compose must provision that credential into this file
+before updating the stack; Compose no longer forwards token environment values.
+The MCP process still accepts `MCP_INBOUND_TOKEN` for direct runs and test
+harnesses outside these Compose files.
 
 **Host bind mounts** — the `moltbot` profile is the only part of the stack
 served from files instead of an image. Its four mounts resolve through
