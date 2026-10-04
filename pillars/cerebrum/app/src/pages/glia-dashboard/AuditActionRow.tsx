@@ -1,6 +1,16 @@
 import { useTranslation } from 'react-i18next';
 
-import { Badge, TableCell, TableRow, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
+import {
+  Badge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  TableCell,
+  TableRow,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@pops/ui';
 
 import { type GliaAction, type GliaActionStatus } from '../../glia/types';
 import { formatTimestamp } from '../../utils/format';
@@ -30,21 +40,28 @@ function AffectedIdsCell({ ids }: { ids: readonly string[] }) {
   }
   return (
     <TableCell className="text-xs">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="relative cursor-help bg-transparent p-0 text-left underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 before:absolute before:-inset-3 before:content-['']"
-            data-testid="glia-audit-affected-more"
-          >
-            {visible}
-            {t('glia.audit.affectedMore', { count: overflow })}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <span className="break-all">{ids.join(', ')}</span>
-        </TooltipContent>
-      </Tooltip>
+      <Popover>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="min-h-11 min-w-11 cursor-help bg-transparent px-1 text-left underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                data-testid="glia-audit-affected-more"
+              >
+                {visible}
+                {t('glia.audit.affectedMore', { count: overflow })}
+              </button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="break-all">{ids.join(', ')}</span>
+          </TooltipContent>
+        </Tooltip>
+        <PopoverContent align="start" className="w-72">
+          <span className="break-all text-xs">{ids.join(', ')}</span>
+        </PopoverContent>
+      </Popover>
     </TableCell>
   );
 }

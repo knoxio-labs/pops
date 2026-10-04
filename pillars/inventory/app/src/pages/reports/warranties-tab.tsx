@@ -1,5 +1,6 @@
 import { ShieldCheck } from 'lucide-react';
 import { type ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { Button, EmptyState, Tabs, TabsList, TabsTrigger, cn } from '@pops/ui';
@@ -9,10 +10,11 @@ import { StateBanner } from '../../foundation/feedback/state-banner.js';
 import { ColumnHeader, PAPERLESS_DOWN_REASON, ReceiptLink } from './insurance-rows.js';
 import { formatDollars } from './report-model.js';
 import { ReportPanel, ReportSkeletonRows } from './reports-parts.js';
+import { WarrantiesFailedBody } from './warranties-failed-body.js';
 import {
   WARRANTY_TIERS,
   WARRANTY_TIER_EMPTY as TIER_EMPTY,
-  WARRANTY_TIER_LABELS as TIER_LABELS,
+  WARRANTY_TIER_LABEL_KEYS as TIER_LABEL_KEYS,
   daysLabel,
   tierCounts,
   warrantyRows,
@@ -34,21 +36,6 @@ export interface WarrantiesTabProps {
   paperlessState: PaperlessState | null;
   onTierChange: (tier: WarrantyTier) => void;
   onRetry: () => void;
-}
-
-function FailedBody({ onRetry }: { onRetry: () => void }): ReactElement {
-  return (
-    <div
-      role="alert"
-      className="flex min-h-48 flex-col items-center justify-center gap-3 p-6 text-center"
-    >
-      <h2 className="font-semibold">Warranties did not load</h2>
-      <p className="text-sm text-muted-foreground">The inventory service did not answer.</p>
-      <Button variant="outline" onClick={onRetry}>
-        Retry
-      </Button>
-    </div>
-  );
 }
 
 function Row({ row, paperlessState }: { row: WarrantyRow; paperlessState: PaperlessState | null }) {
@@ -112,6 +99,8 @@ function TierTabs({
   counts: Record<WarrantyTier, number>;
   onChange: (tier: WarrantyTier) => void;
 }) {
+  const { t } = useTranslation('inventory');
+
   return (
     <Tabs
       value={tier}
@@ -123,7 +112,7 @@ function TierTabs({
       <TabsList aria-label="When the warranty ends">
         {WARRANTY_TIERS.map((entry) => (
           <TabsTrigger key={entry} value={entry} className="flex-none gap-1.5 px-3">
-            {TIER_LABELS[entry]}
+            {t(TIER_LABEL_KEYS[entry])}
             <span className="text-xs tabular-nums text-muted-foreground">{counts[entry]}</span>
           </TabsTrigger>
         ))}
@@ -174,7 +163,7 @@ export function WarrantiesTab(props: WarrantiesTabProps): ReactElement {
   if (props.status === 'error') {
     return (
       <ReportPanel title="Warranties">
-        <FailedBody onRetry={props.onRetry} />
+        <WarrantiesFailedBody onRetry={props.onRetry} />
       </ReportPanel>
     );
   }

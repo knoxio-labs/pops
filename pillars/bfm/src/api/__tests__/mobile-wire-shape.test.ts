@@ -15,6 +15,8 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { MobileTransactionSchema } from '../../contract/transaction.js';
+import { FinanceTransactionRowSchema } from '../finance/wire.js';
 import { createTestApp, type TestApp } from './harness.js';
 import { requestOn } from './test-http.js';
 
@@ -25,6 +27,7 @@ const BOOTSTRAP_PATH = '/mobile/bootstrap';
 interface JsonSchema {
   type?: string;
   enum?: unknown[];
+  pattern?: string;
   nullable?: boolean;
   required?: string[];
   properties?: Record<string, JsonSchema>;
@@ -81,7 +84,7 @@ function fieldNames(schema: JsonSchema): string[] {
 }
 
 const LIST_ROW_FIELDS = [
-  'amount',
+  'amountMinorUnits',
   'currency',
   'date',
   'description',
@@ -129,6 +132,17 @@ describe('the list row', () => {
     expect(schema.properties?.['data']?.items?.required?.toSorted()).toEqual(LIST_ROW_FIELDS);
   });
 
+  it('publishes and shares the date-only rule enforced on finance rows', () => {
+    const date = okSchema(LIST_PATH).properties?.['data']?.items?.properties?.['date'];
+    const timestamp = '2026-03-01T00:00:00.000Z';
+
+    expect(date?.type).toBe('string');
+    expect(date?.pattern).toBe('^\\d{4}-\\d{2}-\\d{2}$');
+    expect(FinanceTransactionRowSchema.shape.date.safeParse(timestamp).success).toBe(false);
+    expect(MobileTransactionSchema.shape.date).toBe(FinanceTransactionRowSchema.shape.date);
+    expect(MobileTransactionSchema.shape.date.safeParse(timestamp).success).toBe(false);
+  });
+
   it('leaves the currency an open string, so a second currency still renders', () => {
     // Not a `type`/`literal` pin: this field sits inside every array element
     // of a page a build already on a phone still calls. An `enum` here
@@ -150,11 +164,11 @@ describe('the list row', () => {
     expect(type?.enum).toBeUndefined();
   });
 
-  it('declares amount a plain number — decimal dollars, signed, as finance publishes it', () => {
+  it('declares amountMinorUnits as a signed integer', () => {
     const schema = okSchema(LIST_PATH);
 
-    const amount = schema.properties?.['data']?.items?.properties?.['amount'];
-    expect(amount?.type).toBe('number');
+    const amount = schema.properties?.['data']?.items?.properties?.['amountMinorUnits'];
+    expect(amount?.type).toBe('integer');
     expect(amount?.nullable).toBeUndefined();
   });
 });

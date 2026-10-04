@@ -131,6 +131,40 @@ describe('blocking', () => {
     expect(review[0]?.reason).toBe('no-candidate');
   });
 
+  it('anchors a charge with a known shipment to the shipment date', () => {
+    const { links, review } = run({
+      charges: [
+        charge({
+          orderedAt: '2026-06-24T00:00:00Z',
+          shippedAt: '2026-07-10T00:00:00Z',
+          settlementWindowDays: 10,
+        }),
+      ],
+      transactions: [txn({ date: '2026-07-15' })],
+      defaultWindowDays: 10,
+    });
+
+    expect(links).toHaveLength(1);
+    expect(review).toHaveLength(0);
+  });
+
+  it('falls back to the order date when no shipment date is known', () => {
+    const { links, review } = run({
+      charges: [
+        charge({
+          orderedAt: '2026-06-24T00:00:00Z',
+          shippedAt: null,
+          settlementWindowDays: 10,
+        }),
+      ],
+      transactions: [txn({ date: '2026-07-15' })],
+      defaultWindowDays: 10,
+    });
+
+    expect(links).toHaveLength(0);
+    expect(review[0]?.reason).toBe('no-candidate');
+  });
+
   it('honours a per-source window override', () => {
     const near = { transactions: [txn({ date: '2026-03-20' })] };
     expect(
@@ -196,7 +230,7 @@ describe('refunds', () => {
   it('matches a refund against a negative transaction', () => {
     const { links } = run({
       charges: [charge({ amountCents: -1179, role: 'refund' })],
-      transactions: [txn({ amountCents: -1179 })],
+      transactions: [txn({ amountCents: -1179, type: 'refund' })],
     });
     expect(links[0]?.linkType).toBe('exact');
     expect(links[0]?.amountCents).toBe(-1179);

@@ -19,7 +19,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
 
 import {
   ANTHROPIC_PROVIDER,
@@ -164,7 +164,7 @@ async function runContradictionLlm(
             client.messages.create({
               model,
               max_tokens: 500,
-              temperature: 0,
+              ...samplingParams(model, 0),
               system: SYSTEM_PROMPT,
               messages: [{ role: 'user', content: prompt.userMessage }],
             }),
@@ -181,8 +181,7 @@ async function runContradictionLlm(
     },
     cerebrumTelemetryDeps()
   );
-  const first = response.content[0];
-  return first?.type === 'text' ? first.text : '';
+  return messageText(response.content);
 }
 
 /** Anthropic-backed contradiction analyzer that returns per-side excerpts. */

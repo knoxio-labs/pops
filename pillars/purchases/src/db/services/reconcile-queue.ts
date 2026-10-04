@@ -15,7 +15,13 @@
  */
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
-import { purchaseChargeLinks, purchaseCharges, purchases, purchaseSources } from '../schema.js';
+import {
+  purchaseChargeLinks,
+  purchaseCharges,
+  purchaseMatchRules,
+  purchases,
+  purchaseSources,
+} from '../schema.js';
 
 import type { SQL } from 'drizzle-orm';
 
@@ -35,6 +41,10 @@ export interface QueuedLink {
   readonly amountCents: number;
   readonly linkType: LinkType;
   readonly confidence: number;
+  readonly matchRuleId: string | null;
+  readonly matchRulePattern: string | null;
+  readonly matchRuleSource: string | null;
+  readonly matchRuleIsActive: boolean | null;
 }
 
 export interface QueueEntry {
@@ -215,8 +225,13 @@ function proposalsFor(db: PurchasesDb, chargeId: string): QueuedLink[] {
       amountCents: purchaseChargeLinks.amountCents,
       linkType: purchaseChargeLinks.linkType,
       confidence: purchaseChargeLinks.confidence,
+      matchRuleId: purchaseChargeLinks.matchRuleId,
+      matchRulePattern: purchaseMatchRules.descriptionPattern,
+      matchRuleSource: purchaseMatchRules.source,
+      matchRuleIsActive: purchaseMatchRules.isActive,
     })
     .from(purchaseChargeLinks)
+    .leftJoin(purchaseMatchRules, eq(purchaseChargeLinks.matchRuleId, purchaseMatchRules.id))
     .where(and(eq(purchaseChargeLinks.chargeId, chargeId), isNull(purchaseChargeLinks.confirmedAt)))
     .orderBy(asc(purchaseChargeLinks.transactionUri))
     .all();

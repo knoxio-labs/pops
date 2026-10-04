@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { readAmazonInvoice } from '../invoice-pdf.js';
 import {
@@ -28,6 +28,17 @@ const DIGITAL = 'D01-9651602-7705054';
 const DOCUMENT = '12484342-INV-AU-2021-26473870';
 const DOCUMENT_A = '12484342-INV-AU-2021-00000001';
 const DOCUMENT_B = '12484342-INV-AU-2021-00000002';
+const TEST_TMP_ROOT = fileURLToPath(new URL('../../../../../../tmp/purchases/', import.meta.url));
+const forcedDirectoryListings = vi.hoisted(() => new Map<string, readonly string[]>());
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    readdirSync: (path: Parameters<typeof actual.readdirSync>[0]) =>
+      forcedDirectoryListings.get(String(path)) ?? actual.readdirSync(path),
+  };
+});
 
 function scan(path: string, pdf: Buffer): ScannedInvoicePdf {
   return { path, bytes: pdf, read: readAmazonInvoice(pdf) };
@@ -187,7 +198,8 @@ describe('attaching', () => {
 
 describe('reading the bundle', () => {
   function bundleWith(files: Readonly<Record<string, Buffer>>): string {
-    const root = mkdtempSync(join(tmpdir(), 'amazon-bundle-'));
+    mkdirSync(TEST_TMP_ROOT, { recursive: true });
+    const root = mkdtempSync(join(TEST_TMP_ROOT, 'amazon-bundle-'));
     for (const [relative, bytes] of Object.entries(files)) {
       const path = join(root, INVOICE_BUNDLE_DIRECTORY, relative);
       mkdirSync(join(path, '..'), { recursive: true });
@@ -254,6 +266,45 @@ describe('reading the bundle', () => {
     ]);
   });
 
+  it('sorts directory entries even when the filesystem returns them in reverse order', () => {
+    const root = bundleWith({
+      'Retail.TransactionalInvoicing.3.1/Retail.TransactionalInvoicing.1.pdf': pdfWithRuns(
+        legacyInvoice(RETAIL, DOCUMENT_A)
+      ),
+      'Retail.TransactionalInvoicing.3.2/Retail.TransactionalInvoicing.1.pdf': pdfWithRuns(
+        legacyInvoice(OTHER_RETAIL, DOCUMENT_B)
+      ),
+    });
+    const dataDirectory = join(root, INVOICE_BUNDLE_DIRECTORY);
+    forcedDirectoryListings.set(dataDirectory, [
+      'Retail.TransactionalInvoicing.3.2',
+      'Retail.TransactionalInvoicing.3.1',
+    ]);
+    forcedDirectoryListings.set(join(dataDirectory, 'Retail.TransactionalInvoicing.3.1'), [
+      'Retail.TransactionalInvoicing.1.pdf',
+    ]);
+    forcedDirectoryListings.set(join(dataDirectory, 'Retail.TransactionalInvoicing.3.2'), [
+      'Retail.TransactionalInvoicing.1.pdf',
+    ]);
+
+    try {
+      expect(readAmazonInvoiceBundle(root).map((one) => one.path)).toEqual([
+        join(
+          INVOICE_BUNDLE_DIRECTORY,
+          'Retail.TransactionalInvoicing.3.1',
+          'Retail.TransactionalInvoicing.1.pdf'
+        ),
+        join(
+          INVOICE_BUNDLE_DIRECTORY,
+          'Retail.TransactionalInvoicing.3.2',
+          'Retail.TransactionalInvoicing.1.pdf'
+        ),
+      ]);
+    } finally {
+      forcedDirectoryListings.clear();
+    }
+  });
+
   it('ignores the bundle files that are not invoices', () => {
     const root = bundleWith({
       'Retail.TransactionalInvoicing.3.1/Retail.TransactionalInvoicing.1.pdf': pdfWithRuns(
@@ -277,7 +328,7 @@ describe('reading the bundle', () => {
   });
 
   it('treats an "Additional Data" that is a file as holding no invoices', () => {
-    const root = mkdtempSync(join(tmpdir(), 'amazon-bundle-'));
+    const root = bundleWith({});
     writeFileSync(join(root, INVOICE_BUNDLE_DIRECTORY), 'not a directory');
 
     expect(readAmazonInvoiceBundle(root)).toEqual([]);
@@ -287,6 +338,6 @@ describe('reading the bundle', () => {
     // An account that was never sent a tax invoice simply has no such
     // directory, the same way one that never returned anything has no
     // `Refund Details.csv`.
-    expect(readAmazonInvoiceBundle(mkdtempSync(join(tmpdir(), 'empty-bundle-')))).toEqual([]);
+    expect(readAmazonInvoiceBundle(bundleWith({}))).toEqual([]);
   });
 });

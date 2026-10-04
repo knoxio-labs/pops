@@ -15,7 +15,11 @@ afterEach(() => {
   for (const path of temps.splice(0)) rmSync(path, { recursive: true, force: true });
 });
 
-function fixture(summary = 'Found 0 violations, 0 serious in 5 files.', status = '0') {
+function fixture(
+  summary = 'Found 0 violations, 0 serious in 5 files.',
+  status = '0',
+  xcodeBuild: '27A266a' | '27A5209h' = '27A266a'
+) {
   mkdirSync(join(repo, 'tmp'), { recursive: true });
   const cwd = mkdtempSync(join(repo, 'tmp/ios-analyzer-test-'));
   temps.push(cwd);
@@ -36,6 +40,10 @@ function fixture(summary = 'Found 0 violations, 0 serious in 5 files.', status =
   const bin = join(cwd, 'bin');
   mkdirSync(bin);
   writeFileSync(
+    join(bin, 'xcodebuild'),
+    `#!/usr/bin/env bash\nprintf 'Xcode 27.0\\nBuild version ${xcodeBuild}\\n'\n`
+  );
+  writeFileSync(
     join(bin, 'swiftlint'),
     `#!/usr/bin/env bash
 set -eu
@@ -47,6 +55,7 @@ printf '%s\\n' "$POPS_TEST_SUMMARY"
 exit "$POPS_TEST_STATUS"
 `
   );
+  chmodSync(join(bin, 'xcodebuild'), 0o755);
   chmodSync(join(bin, 'swiftlint'), 0o755);
   const compilerLog = join(cwd, 'compiler.log');
   writeFileSync(compilerLog, 'compile evidence\n');
@@ -60,6 +69,8 @@ exit "$POPS_TEST_STATUS"
       PATH: `${bin}:${process.env.PATH ?? ''}`,
       POPS_IOS_COMPILER_LOG: compilerLog,
       POPS_IOS_ANALYZER_ARTIFACTS: artifacts,
+      POPS_XCODE_VERSION: '27.0',
+      POPS_XCODE_BUILD: '27A266a',
       POPS_TEST_ARGUMENTS: join(cwd, 'arguments'),
       POPS_TEST_SUMMARY: summary,
       POPS_TEST_STATUS: status,
@@ -67,8 +78,8 @@ exit "$POPS_TEST_STATUS"
   };
 }
 
-function run(summary?: string, status?: string) {
-  const setup = fixture(summary, status);
+function run(summary?: string, status?: string, xcodeBuild?: '27A266a' | '27A5209h') {
+  const setup = fixture(summary, status, xcodeBuild);
   const result = spawnSync('bash', [lane], { ...setup, encoding: 'utf8', timeout: 5000 });
   return { ...setup, result };
 }
@@ -90,6 +101,14 @@ describe('the iOS analyzer lane', () => {
       '--config',
       '.swiftlint.yml',
     ]);
+  }, 15000);
+
+  it('marks a clean off-pin analyzer result advisory and inconclusive', () => {
+    const { result } = run(undefined, undefined, '27A5209h');
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('Local findings are advisory off-pin');
+    expect(result.stderr).toContain('NOT A CLEAN RUN');
+    expect(result.stdout).toContain('Found 0 violations');
   }, 15000);
 
   it.each([

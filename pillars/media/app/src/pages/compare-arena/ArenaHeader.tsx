@@ -23,9 +23,16 @@ export function ArenaHeader({ sessionCount }: ArenaHeaderProps) {
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button asChild variant="ghost" size="icon" aria-label="Comparison history">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              aria-label="Comparison history"
+              className="h-11 w-auto gap-1 px-2 sm:w-11 sm:gap-0 sm:px-0"
+            >
               <Link to="/media/compare/history">
                 <History className="h-4.5 w-4.5" />
+                <span className="text-sm sm:hidden">History</span>
               </Link>
             </Button>
           </TooltipTrigger>

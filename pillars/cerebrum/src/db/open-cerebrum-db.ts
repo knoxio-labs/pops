@@ -21,6 +21,7 @@ import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
 import {
   ensureEmbeddingsVecTable,
+  resolveEmbeddingDimensions,
   tryLoadVecExtension,
   type VecLoaderLogger,
 } from './vec-loader.js';
@@ -46,6 +47,12 @@ export interface OpenCerebrumDbOptions {
    * boot fast and avoid sqlite-vec install requirements in CI sandboxes.
    */
   loadVec?: boolean;
+  /**
+   * Width of the `embeddings_vec` vectors. Defaults to
+   * `EMBEDDING_DIMENSIONS` (1536 when unset), the same value the embedding
+   * clients request, and is only read when sqlite-vec loaded.
+   */
+  embeddingDimensions?: number;
   /** Optional logger forwarded to the vec loader. */
   logger?: VecLoaderLogger;
 }
@@ -120,13 +127,19 @@ export function openCerebrumDb(
     throw err;
   }
 
-  const vecAvailable = vecLoaded && ensureAndProbeEmbeddingsVec(raw, options.logger);
+  const vecAvailable =
+    vecLoaded &&
+    ensureAndProbeEmbeddingsVec(
+      raw,
+      options.embeddingDimensions ?? resolveEmbeddingDimensions(),
+      options.logger
+    );
 
   return { db, raw, vecAvailable };
 }
 
 /**
- * Create the `embeddings_vec` virtual table and probe it with a no-op
+ * Create the `embeddings_vec` virtual table at `dimensions` wide and probe it with a no-op
  * query to confirm the vec0 module is actually usable on this
  * connection. Returns `true` only when both the create and the probe
  * succeed — covers the case where the extension loads but the virtual
@@ -135,10 +148,19 @@ export function openCerebrumDb(
  */
 function ensureAndProbeEmbeddingsVec(
   raw: Database.Database,
+  dimensions: number,
   logger: VecLoaderLogger | undefined
 ): boolean {
-  if (!ensureEmbeddingsVecTable(raw)) {
-    logger?.warn?.({}, '[cerebrum-db] embeddings_vec ensure failed — vector features disabled');
+  const ensured = ensureEmbeddingsVecTable(raw, dimensions);
+  if (!ensured.ok) {
+    if (ensured.reason === 'dimension-mismatch') {
+      logger?.warn?.(
+        { existing: ensured.existing, requested: ensured.requested },
+        '[cerebrum-db] embeddings_vec holds vectors of a different width — vector features disabled until the corpus is re-embedded'
+      );
+    } else {
+      logger?.warn?.({}, '[cerebrum-db] embeddings_vec ensure failed — vector features disabled');
+    }
     return false;
   }
   try {

@@ -25,6 +25,8 @@ import type {
   PurchaseItemsByTagResponses,
   ReconcileConfirmResponses,
   ReconcileLinksBatchResponses,
+  ReconcileManualCandidatesResponses,
+  ReconcileManualResponses,
   ReconcileSweepResponses,
 } from '../../purchases-api/types.gen';
 
@@ -61,11 +63,14 @@ const acknowledged: MockHandler = () => ({ body: { ok: true } });
 export const handlers: MockHandlers = {
   // ── Reconcile ────────────────────────────────────────────────────────────
   'GET /reconcile/queue': ok(RECONCILE_QUEUE),
+  'GET /reconcile/manual-candidates': ok<ReconcileManualCandidatesResponses[200]>({ items: [] }),
   'GET /reconcile/links': reconcileLinks,
   'POST /reconcile/links/batch': ok<ReconcileLinksBatchResponses[200]>({ transactions: [] }),
   'POST /reconcile/confirm': ok<ReconcileConfirmResponses[200]>({ ok: true, matchRuleId: null }),
+  'POST /reconcile/manual': ok<ReconcileManualResponses[200]>({ ok: true }),
   'POST /reconcile/unlink': acknowledged,
   'POST /reconcile/reject': acknowledged,
+  'POST /reconcile/rules/{ruleId}/deactivate': acknowledged,
   'POST /reconcile/sweep': ok<ReconcileSweepResponses[200]>({
     kind: 'swept',
     chargesConsidered: RECONCILE_QUEUE.items.length,

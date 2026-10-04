@@ -1,19 +1,20 @@
 import { buildBaseRecord, errorMessageOf, makeFire, noopWarn } from './internal.js';
+import { isMissingPricing } from './pricing.js';
 import { createEnvReportSink } from './report-sink.js';
 
 import type { CallWithLoggingDeps, CallWithLoggingOpts, PricingEntry } from './types.js';
 
 /**
  * Computes the USD cost of a call from per-million-token pricing. Returns
- * `missing: true` (and `costUsd: 0`) when pricing is unknown so the caller can
- * distinguish "free" from "unpriced".
+ * `missing: true` (and `costUsd: 0`) when pricing is unknown or both rates are
+ * zero so the caller can distinguish "free" from "unpriced".
  */
 export function computeCostUsd(
   inputTokens: number,
   outputTokens: number,
   pricing: PricingEntry | null
 ): { costUsd: number; missing: boolean } {
-  if (!pricing) return { costUsd: 0, missing: true };
+  if (!pricing || isMissingPricing(pricing)) return { costUsd: 0, missing: true };
   const costUsd =
     (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
   return { costUsd, missing: false };

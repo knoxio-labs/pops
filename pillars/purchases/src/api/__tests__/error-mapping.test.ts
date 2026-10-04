@@ -23,6 +23,7 @@ import {
 } from '../../db/index.js';
 import { tryMapServiceError } from '../rest/error-mapping.js';
 import {
+  isBusyError,
   isCheckConstraintError,
   isForeignKeyConstraintError,
   isUniqueConstraintError,
@@ -80,6 +81,15 @@ describe('tryMapServiceError', () => {
     expect(tryMapServiceError('a string')).toBeNull();
     expect(tryMapServiceError(null)).toBeNull();
     expect(tryMapServiceError({ code: 42 })).toBeNull();
+  });
+});
+
+describe('isBusyError', () => {
+  it('recognizes SQLITE_BUSY and its extended codes without classifying SQLITE_LOCKED', () => {
+    expect(isBusyError(sqliteError('SQLITE_BUSY'))).toBe(true);
+    expect(isBusyError(sqliteError('SQLITE_BUSY_SNAPSHOT'))).toBe(true);
+    expect(isBusyError(sqliteError('SQLITE_LOCKED'))).toBe(false);
+    expect(isBusyError({ code: 42 })).toBe(false);
   });
 });
 

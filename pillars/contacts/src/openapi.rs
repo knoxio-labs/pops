@@ -33,10 +33,9 @@ use crate::search::routes::{
     MatchType, SearchHit, SearchHitData, SearchQuery, SearchRequest, SearchResponse,
 };
 
-/// The contacts OpenAPI surface. Documents `/health`, the stub root, the
-/// entities CRUD + bulk-lookup routes (DOTTED `entities.*` operationIds), and
-/// the search slice (`search.search`). The registry/uri/settings paths join in
-/// later nodes.
+/// The contacts OpenAPI surface. Documents `/openapi`, `/health`, the stub
+/// root, the entities CRUD + bulk-lookup routes, and the search slice. Dotted
+/// operation IDs drive the service-account scope map.
 ///
 /// Path handlers are referenced fully-qualified so the `OpenApi` derive
 /// resolves the `__path_*` items `#[utoipa::path]` generates in their defining
@@ -48,6 +47,7 @@ use crate::search::routes::{
         description = "Contacts pillar — authoritative entities store (first Rust pillar)."
     ),
     paths(
+        crate::app::openapi_document,
         crate::health::health,
         crate::health::root,
         crate::entities::routes::list,

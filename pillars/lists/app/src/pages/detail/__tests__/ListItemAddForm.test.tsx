@@ -36,6 +36,13 @@ async function renderExpanded() {
 }
 
 describe('ListItemAddForm', () => {
+  it('uses 16px input text on narrow screens while retaining desktop sizing', async () => {
+    await renderExpanded();
+    expect(screen.getByLabelText('Add item — press Enter')).toHaveClass('text-base', 'md:text-sm');
+    expect(screen.getByLabelText('Qty')).toHaveClass('text-base', 'md:text-xs');
+    expect(screen.getByLabelText('Unit')).toHaveClass('text-base', 'md:text-xs');
+  });
+
   it('submits the optional qty and unit', async () => {
     const { onAdd } = await renderExpanded();
     await userEvent.type(screen.getByLabelText('Qty'), '2');

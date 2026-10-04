@@ -8,7 +8,10 @@ import {
   PrimitiveWireValueSchema,
 } from './rest-catalogue-expression-schema.js';
 import { CatalogueTypePresentationSchema } from './rest-catalogue-presentation-schemas.js';
-import { ErrorBodySchema } from './rest-schemas.js';
+export {
+  CatalogueErrorBodySchema,
+  CataloguePreviewErrorBodySchema,
+} from './rest-catalogue-error-schemas.js';
 
 const AnyJson = z.unknown();
 export { CatalogueIconTokenSchema } from './rest-catalogue-presentation-schemas.js';
@@ -200,9 +203,5 @@ export const CatalogueDraftOperationSchema = z.discriminatedUnion('kind', [
  * `409 catalogue_draft_conflict` with `currentDraftVersion`.
  */
 export const ExpectedDraftVersionSchema = z.number().int().positive();
-
-export const CatalogueErrorBodySchema = ErrorBodySchema;
-
-export const CataloguePreviewErrorBodySchema = ErrorBodySchema;
 
 export const CatalogueReadHeaders = z.object({ 'if-none-match': z.string().optional() });

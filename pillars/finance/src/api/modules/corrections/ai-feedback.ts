@@ -12,7 +12,7 @@ import {
 } from '../../../contract/settings/ai-settings-keys.js';
 import { type FinanceDb, transactionCorrectionsService } from '../../../db/index.js';
 import { extractJsonFromReply } from '../ai-json.js';
-import { resolveAiMaxTokens, resolveAiString } from '../ai-settings-resolver.js';
+import { resolveAiMaxTokens, resolveAiModel } from '../ai-settings-resolver.js';
 import {
   ClaudeCompletionError,
   CORRECTIONS_DEFAULT_MODEL,
@@ -177,16 +177,14 @@ export async function interpretRejectionFeedback(
         rejectedChangeSet,
         feedback.trim().slice(0, 500)
       ),
-      model: resolveAiString(
+      model: resolveAiModel(
         db,
         RULE_GEN_MODEL_KEY,
         'FINANCE_CORRECTIONS_AI_MODEL',
         CORRECTIONS_DEFAULT_MODEL
       ),
-      maxTokens: resolveAiMaxTokens(
-        db,
-        RULE_GEN_MAX_TOKENS_KEY,
-        undefined,
+      maxTokens: Math.min(
+        resolveAiMaxTokens(db, RULE_GEN_MAX_TOKENS_KEY, undefined, INTERPRET_MAX_TOKENS_DEFAULT),
         INTERPRET_MAX_TOKENS_DEFAULT
       ),
       operation: 'rejection-interpret',

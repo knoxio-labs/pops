@@ -17,6 +17,7 @@ use contacts::registry::{
     coerce_manifest_version, lifecycle::LifecycleConfig, spawn_lifecycle, HttpRegistryTransport,
     LifecycleHandle,
 };
+use contacts::service_account_scope::ServiceAccountScopeVerifier;
 
 const PILLAR_ID: &str = "contacts";
 
@@ -36,6 +37,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         pool,
         version: config.version.clone(),
+        service_account_scope_verifier: ServiceAccountScopeVerifier::new(
+            config.registry_url.clone(),
+        )?,
     };
     let router = build_router(state);
 

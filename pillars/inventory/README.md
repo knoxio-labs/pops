@@ -160,8 +160,9 @@ Archived enum selections and stale references remain readable when unchanged;
 reference reads add `resolved`, `deleted` or `missing` without discarding the
 target ID. Publication compatibility distinguishes additive, protocol-gated,
 migration-required and forbidden changes. A new type is judged by its fields:
-one whose primitive kind the base catalogue never used is protocol-gated, as
-adding that field to an existing type is. Required rewrites use only the named
+one whose primitive kind the base catalogue never used requires protocol 2,
+as adding that field to an existing type does; it is protocol-gated only until
+the active minimum reaches protocol 2. Required rewrites use only the named
 `copy`, `set_default`, `map_enum`, `convert_decimal`, `replace_reference` and
 `drop_value` operations. The server derives the exact affected type and field
 sets from the base-to-draft compatibility diff; a submitted migration cannot
@@ -391,14 +392,14 @@ merely admitted alongside everything else — and is gated on
 deployment can never reach it.
 
 **This gate must not deploy before the registry grants below are in place.**
-bfm's service account needs its grant widened to `inventory.sync`,
-`inventory.types`, `inventory.codes` and `inventory.media`, and the MCP
+bfm's service account needs `inventory.sync`, `inventory.types.catalogue`,
+`inventory.types.read`, `inventory.codes` and `inventory.media`, and the MCP
 service account's grant must include `inventory` (ADR-048's mobile
 capabilities and the MCP tools both reach this pillar with a key). Until
 those grants exist, every one of those callers starts answering `403` the
 moment this ships — precisely what POPS-1878 did to purchases when its own
-gate landed ahead of the MCP grant. Minting or widening a grant is a row in
-the registry DB, an operator step rather than a repo change.
+gate landed ahead of the MCP grant. Minting, widening or narrowing a grant is
+a row in the registry DB, an operator step rather than a repo change.
 
 ## Sync protocol
 
@@ -406,8 +407,8 @@ the registry DB, an operator step rather than a repo change.
 `/mobile/inventory/*` (Inventory ADR-002, D9 and D10), in three sub-routers so
 the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
 `GET /sync/changes`, `GET /sync/items/:id/events`, `POST /sync/mutations`),
-`inventory.types` (`GET /types`) and `inventory.codes`
-(`POST /codes/suggest`).
+`inventory.types.catalogue` (`GET /types`; the handler also checks
+`inventory.types.read`) and `inventory.codes` (`POST /codes/suggest`).
 
 - Every one of those routes needs `Pops-Inventory-Protocol: <n>`; missing or
   below `sync_meta.min_protocol` is `426 inventory.sync.client_too_old`, checked by
@@ -576,9 +577,10 @@ entry for `inventory -> ai (codes.rank)` and this slice's PR description for
 what an operator needs to provision before that call can succeed.
 
 `src/api/pillars/service-account.ts`'s `INVENTORY_SERVICE_ACCOUNT_SCOPES`
-lists only `ai.codes.rank` — the reconciliation worker's `finance` call is
-pre-existing, opaque (`callDynamic`, no operation to scope) and outside this
-slice, so it is deliberately not added here.
+grants `ai.codes.rank` for code suggestions and `finance.transactions.get`
+for the purchase-transaction URI reconciliation worker. The owner URI leg is
+dormant: no current write path populates it, so the account is not granted a
+registry users scope until that leg has an operation to call.
 
 ## Commands
 

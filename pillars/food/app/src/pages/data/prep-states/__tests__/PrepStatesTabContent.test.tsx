@@ -34,7 +34,6 @@ vi.mock('../../../../food-api/index.js', () => ({
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-import { elementAt } from '../../../../test-utils';
 import { PrepStatesTabContent } from '../PrepStatesTabContent';
 
 function renderTab(): void {
@@ -79,15 +78,16 @@ describe('PrepStatesTabContent', () => {
     expect(slugs).toEqual(['diced', 'grated', 'sliced']);
   });
 
-  it('marks every row Delete button as aria-disabled with an explanatory tooltip', async () => {
+  it('shows and describes why row deletion is disabled', async () => {
     ensure().items = [{ id: 1, slug: 'diced', name: 'Diced' }];
     renderTab();
-    const del = elementAt(await screen.findAllByRole('button', { name: /delete disabled/i }), 0);
-    // The button stays focusable (`aria-disabled`, not HTML `disabled`) so the
-    // explanatory tooltip can appear on focus; click is no-op'd via onClick.
+    const row = await screen.findByTestId('prep-state-row-1');
+    const del = within(row).getByRole('button', { name: /^delete$/i });
     expect(del.getAttribute('aria-disabled')).toBe('true');
     expect(del).not.toBeDisabled();
-    expect(screen.getByLabelText(/delete disabled — see tooltip/i)).toBeInTheDocument();
+    const reason = within(row).getByText(/deletion isn't available in v1/i);
+    expect(reason).toBeVisible();
+    expect(del).toHaveAttribute('aria-describedby', reason.id);
   });
 
   it('renders the empty state when no rows', async () => {

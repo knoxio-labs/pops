@@ -90,6 +90,8 @@
     "item": {
       "checkbox": "Toggle done for {{label}}",
       "editLabel": "Edit item label",
+      "showMore": "Show full note",
+      "showLess": "Show less",
       "dragHandle": "Drag to reorder",
       "unnamed": "(unnamed)",
       "ref": {
@@ -152,6 +154,8 @@
     "item": {
       "checkbox": "Toggle done for {{label}}",
       "editLabel": "Edit item label",
+      "showMore": "Show full note",
+      "showLess": "Show less",
       "dragHandle": "Drag to reorder",
       "dragDisabled": "Switch to Manual sort to reorder",
       "swipe": {

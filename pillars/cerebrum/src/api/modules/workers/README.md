@@ -48,8 +48,11 @@ inbound links alone.
 
 `../engrams` (`EngramService`) for the corpus and `../retrieval`
 (`HybridSearchService`) for similarity — the consolidator and linker are only as
-good as the semantic leg. The auditor additionally takes an injected LLM
-contradiction detector; a failed comparison yields an action with
-`status: 'error'` rather than aborting the run. Thresholds are the
-`DEFAULT_*_CONFIG` constants in `types.ts` plus module-private constants in
+good as the semantic leg. The auditor scores quality and coverage gaps
+deterministically and makes no LLM call: its contradiction pass goes through the
+`ContradictionDetector` port, which defaults to a noop. A detector is injectable,
+and a failed comparison yields an action with `status: 'error'` rather than
+aborting the run. Thresholds are the
+`DEFAULT_*_CONFIG` constants in `types.ts` (a `similarityThreshold` is a
+minimum cosine, per `../retrieval/README.md`) plus module-private constants in
 `pruner-helpers.ts` and `auditor-helpers.ts`.

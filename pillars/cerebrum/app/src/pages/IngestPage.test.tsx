@@ -110,15 +110,17 @@ vi.mock('@pops/ui', async () => {
       onKeyDown,
       placeholder,
       rows,
-      ...rest
-    }: Record<string, unknown>) =>
+      className,
+      'aria-label': ariaLabel,
+    }: React.ComponentProps<'textarea'>) =>
       React.createElement('textarea', {
-        value: value as string,
-        onChange: onChange as () => void,
-        onKeyDown: onKeyDown as () => void,
-        placeholder: placeholder as string,
-        rows: rows as number,
-        'aria-label': rest['aria-label'] as string,
+        value,
+        onChange,
+        onKeyDown,
+        placeholder,
+        rows,
+        className,
+        'aria-label': ariaLabel,
       }),
     Button: ({ children, onClick, disabled, prefix }: Record<string, unknown>) =>
       React.createElement(
@@ -253,6 +255,11 @@ describe('IngestPage — capture-first surface', () => {
     expect(screen.getByLabelText('Body')).toBeInTheDocument();
     expect(screen.getByLabelText('Title')).toBeInTheDocument();
     expect(screen.getByLabelText('Scope input')).toBeInTheDocument();
+  });
+
+  it('keeps the body editor at 16px until the desktop breakpoint', () => {
+    renderPage();
+    expect(screen.getByLabelText('Body')).toHaveClass('text-base', 'md:text-sm');
   });
 
   it('hides type selector behind the Advanced disclosure', async () => {

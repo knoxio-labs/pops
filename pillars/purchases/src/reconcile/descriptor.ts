@@ -22,6 +22,7 @@
  */
 
 const LIKE_SPECIAL = /[%_]/u;
+const ALTERNATIVE_PATTERNS_PREFIX = 'any-of:';
 
 /** Characters that must not be interpreted as regex syntax. */
 const REGEX_SPECIAL = /[.*+?^${}()|[\]\\]/gu;
@@ -44,6 +45,26 @@ const MATCH_EVERYTHING: DescriptorMatcher = () => true;
 
 export type DescriptorMatcher = (descriptor: string) => boolean;
 
+function isNonEmptyPatternList(value: unknown): value is string[] {
+  if (!Array.isArray(value)) return false;
+  const patterns: readonly unknown[] = value;
+  return (
+    patterns.length > 0 &&
+    patterns.every((pattern) => typeof pattern === 'string' && pattern.trim() !== '')
+  );
+}
+
+function descriptorPatternsFor(pattern: string): readonly string[] {
+  if (!pattern.startsWith(ALTERNATIVE_PATTERNS_PREFIX)) return [pattern];
+
+  try {
+    const alternatives: unknown = JSON.parse(pattern.slice(ALTERNATIVE_PATTERNS_PREFIX.length));
+    return isNonEmptyPatternList(alternatives) ? alternatives : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Compile a source's pattern once, for reuse across a charge's candidates.
  *
@@ -55,11 +76,14 @@ export type DescriptorMatcher = (descriptor: string) => boolean;
  *
  * A null or empty pattern blocks nothing. The source has simply not
  * declared one, which is different from declaring one that matches nothing.
+ * A plain value is one LIKE pattern. `any-of:` followed by a JSON array of
+ * non-empty LIKE patterns admits a descriptor when any alternative matches.
+ * A malformed or empty alternatives list admits no descriptors.
  */
 export function descriptorMatcherFor(pattern: string | null): DescriptorMatcher {
   if (pattern === null || pattern.trim() === '') return MATCH_EVERYTHING;
-  const compiled = compileDescriptorPattern(pattern);
-  return (descriptor) => compiled.test(descriptor);
+  const compiled = descriptorPatternsFor(pattern).map(compileDescriptorPattern);
+  return (descriptor) => compiled.some((candidate) => candidate.test(descriptor));
 }
 
 /** One-shot convenience over {@link descriptorMatcherFor}. */

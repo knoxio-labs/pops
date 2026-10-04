@@ -28,10 +28,17 @@ import {
   type PillarBootstrapHandle,
 } from '@pops/pillar-sdk/bootstrap';
 import { setRegistryUrl } from '@pops/pillar-sdk/discovery';
-import { parseBareOrigin, resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
+import {
+  assertSecretFilesReadable,
+  parseBareOrigin,
+  resolveSelfBaseUrl,
+} from '@pops/pillar-sdk/pillar-env';
 
 import { createOrchestratorApp } from './app.js';
 import { buildOrchestratorManifest } from './manifest.js';
+import { configureOrchestratorServerSdk } from './sdk-config.js';
+
+assertSecretFilesReadable();
 
 const DEFAULT_PORT = 3009;
 
@@ -53,6 +60,8 @@ const selfBaseUrl = resolveSelfBaseUrl({
   port,
   processLabel: 'orchestrator',
 });
+
+configureOrchestratorServerSdk();
 
 // Point the SDK discovery client (the `GET /pillars` registry-first source) at
 // the registry pillar. When unset, the SDK keeps its `http://registry-api:3001`

@@ -143,6 +143,7 @@ export interface PrunerConfig {
 
 /** Configuration for the consolidator worker. */
 export interface ConsolidatorConfig {
+  /** Minimum cosine similarity for two engrams to be joined in a cluster. */
   similarityThreshold: number;
   maxClusterSize: number;
 }
@@ -150,6 +151,7 @@ export interface ConsolidatorConfig {
 /** Configuration for the linker worker. */
 export interface LinkerConfig {
   minLinkThreshold: number;
+  /** Minimum cosine similarity for a link to be proposed. */
   similarityThreshold: number;
   maxProposalsPerEngram: number;
 }

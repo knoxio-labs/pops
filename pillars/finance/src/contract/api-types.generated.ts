@@ -1479,6 +1479,8 @@ export interface operations {
                 /** @enum {string} */
                 basis: 'checkpoint' | 'transactions';
                 inconsistent: boolean;
+                /** @enum {string} */
+                reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
               };
               createdAt: string;
               currency: string;
@@ -1591,6 +1593,8 @@ export interface operations {
                 /** @enum {string} */
                 basis: 'checkpoint' | 'transactions';
                 inconsistent: boolean;
+                /** @enum {string} */
+                reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
               };
               createdAt: string;
               currency: string;
@@ -1766,6 +1770,8 @@ export interface operations {
                 /** @enum {string} */
                 basis: 'checkpoint' | 'transactions';
                 inconsistent: boolean;
+                /** @enum {string} */
+                reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
               };
               createdAt: string;
               currency: string;
@@ -1924,6 +1930,8 @@ export interface operations {
                 /** @enum {string} */
                 basis: 'checkpoint' | 'transactions';
                 inconsistent: boolean;
+                /** @enum {string} */
+                reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
               };
               createdAt: string;
               currency: string;
@@ -2086,6 +2094,8 @@ export interface operations {
                 /** @enum {string} */
                 basis: 'checkpoint' | 'transactions';
                 inconsistent: boolean;
+                /** @enum {string} */
+                reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
               };
               createdAt: string;
               currency: string;
@@ -2268,6 +2278,8 @@ export interface operations {
                 /** @enum {string} */
                 basis: 'checkpoint' | 'transactions';
                 inconsistent: boolean;
+                /** @enum {string} */
+                reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
               };
               createdAt: string;
               currency: string;
@@ -2435,6 +2447,8 @@ export interface operations {
               /** @enum {string} */
               basis: 'checkpoint' | 'transactions';
               inconsistent: boolean;
+              /** @enum {string} */
+              reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
             };
           };
         };
@@ -4529,6 +4543,8 @@ export interface operations {
                 /** @enum {string} */
                 basis: 'checkpoint' | 'transactions';
                 inconsistent: boolean;
+                /** @enum {string} */
+                reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
               };
               createdAt: string;
               currency: string;
@@ -4707,6 +4723,8 @@ export interface operations {
                   /** @enum {string} */
                   basis: 'checkpoint' | 'transactions';
                   inconsistent: boolean;
+                  /** @enum {string} */
+                  reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
                 };
                 createdAt: string;
                 currency: string;
@@ -4769,6 +4787,8 @@ export interface operations {
                   /** @enum {string} */
                   basis: 'checkpoint' | 'transactions';
                   inconsistent: boolean;
+                  /** @enum {string} */
+                  reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
                 };
                 createdAt: string;
                 currency: string;
@@ -9038,6 +9058,15 @@ export interface operations {
                   href: string;
                   /** @enum {string} */
                   kind: 'checkpoint-inconsistency';
+                }
+              | {
+                  accountId: string;
+                  accountName: string;
+                  href: string;
+                  /** @enum {string} */
+                  kind: 'unmeasured-account';
+                  /** @enum {string} */
+                  reason: 'no-checkpoint' | 'anchor-only';
                 }
               | {
                   accountId: string;

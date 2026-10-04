@@ -12,6 +12,7 @@ import {
   purchaseCharges,
   purchaseLinkRejections,
   purchases,
+  purchaseShipments,
   purchaseSources,
 } from '../schema.js';
 import { orderedAtWindow } from './ordered-at.js';
@@ -57,6 +58,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
       currency: purchaseCharges.currency,
       role: purchaseCharges.role,
       orderedAt: purchases.orderedAt,
+      shippedAt: purchaseShipments.shippedAt,
       descriptorPattern: purchaseSources.descriptorPattern,
       settlementWindowDays: purchaseSources.settlementWindowDays,
       paymentHint: purchases.paymentHint,
@@ -64,6 +66,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
     .from(purchaseCharges)
     .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
     .leftJoin(purchaseSources, eq(purchases.source, purchaseSources.id))
+    .leftJoin(purchaseShipments, eq(purchaseCharges.shipmentId, purchaseShipments.id))
     .where(
       and(
         ne(purchases.settlementMode, 'cash'),
@@ -83,6 +86,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
     currency: row.currency,
     role: row.role,
     orderedAt: row.orderedAt,
+    shippedAt: row.shippedAt,
     descriptorPattern: row.descriptorPattern,
     settlementWindowDays: row.settlementWindowDays,
     paymentHint: row.paymentHint,

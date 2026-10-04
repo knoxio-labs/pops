@@ -10,8 +10,10 @@ import {
   DialogTrigger,
 } from '../primitives/dialog';
 import { Skeleton } from '../primitives/skeleton';
+import { Button } from './Button';
 import { TextInput } from './TextInput';
 
+/** Props for a modal that searches a bounded set of selectable results. */
 export interface SearchPickerDialogProps<T> {
   trigger: React.ReactElement;
   open: boolean;
@@ -27,35 +29,43 @@ export interface SearchPickerDialogProps<T> {
   getResultKey: (item: T) => string | number;
   trailing?: React.ReactNode;
   minChars?: number;
+  /** Localized guidance shown until the search reaches `minChars`. */
+  minCharsMessage?: string;
   maxResultsHeight?: string;
   emptyMessage?: string;
+  /** Message shown when the current query fails instead of reporting no results. */
+  errorMessage?: string;
+  /** Retries the current query after an error. */
+  onRetry?: () => void;
 }
 
 interface ResultsBodyProps<T> {
   search: string;
   minChars: number;
+  minCharsMessage: string;
   isLoading: boolean;
   results: T[];
   renderResult: (item: T) => React.ReactNode;
   getResultKey: (item: T) => string | number;
   emptyMessage: string;
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
 function ResultsBody<T>({
   search,
   minChars,
+  minCharsMessage,
   isLoading,
   results,
   renderResult,
   getResultKey,
   emptyMessage,
+  errorMessage,
+  onRetry,
 }: ResultsBodyProps<T>) {
   if (search.length < minChars) {
-    return (
-      <p className="text-sm text-muted-foreground py-4 text-center">
-        Type at least {minChars} characters to search
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground py-4 text-center">{minCharsMessage}</p>;
   }
   if (isLoading) {
     return (
@@ -63,6 +73,18 @@ function ResultsBody<T>({
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
+  if (errorMessage) {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-3 py-4 text-center">
+        <p className="text-sm text-destructive">{errorMessage}</p>
+        {onRetry && (
+          <Button type="button" variant="outline" className="min-h-11" onClick={onRetry}>
+            Try again
+          </Button>
+        )}
       </div>
     );
   }
@@ -78,6 +100,7 @@ function ResultsBody<T>({
   );
 }
 
+/** Renders a searchable dialog with localized loading, guidance and empty states. */
 export function SearchPickerDialog<T>({
   trigger,
   open,
@@ -93,8 +116,11 @@ export function SearchPickerDialog<T>({
   getResultKey,
   trailing,
   minChars = 2,
+  minCharsMessage = `Type at least ${String(minChars)} characters to search`,
   maxResultsHeight = 'max-h-64',
   emptyMessage = 'No results found',
+  errorMessage,
+  onRetry,
 }: SearchPickerDialogProps<T>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -121,11 +147,14 @@ export function SearchPickerDialog<T>({
           <ResultsBody
             search={search}
             minChars={minChars}
+            minCharsMessage={minCharsMessage}
             isLoading={isLoading}
             results={results}
             renderResult={renderResult}
             getResultKey={getResultKey}
             emptyMessage={emptyMessage}
+            errorMessage={errorMessage}
+            onRetry={onRetry}
           />
         </div>
       </DialogContent>

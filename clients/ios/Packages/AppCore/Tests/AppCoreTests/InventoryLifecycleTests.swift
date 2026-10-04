@@ -82,17 +82,42 @@ internal struct InventoryWireDecodingTests {
         "every event kind the pillar publishes maps to a case",
         arguments: [
             ("created", InventoryEventKind.created),
+            ("edited", .edited),
+            ("type_changed", .typeChanged),
+            ("field_values_changed", .fieldValuesChanged),
+            ("override_set", .overrideSet),
+            ("override_cleared", .overrideCleared),
+            ("code_set", .codeSet),
             ("moved", .moved),
+            ("picked_up", .pickedUp),
+            ("put_back", .putBack),
+            ("stored", .stored),
+            ("opened", .opened),
+            ("closed", .closed),
+            ("sealed", .sealed),
+            ("unpacked", .unpacked),
             ("lifecycle_changed", .lifecycleChanged),
+            ("quantity_changed", .quantityChanged),
+            ("split_from", .splitFrom),
+            ("split_into", .splitInto),
+            ("photo_added", .photoAdded),
+            ("photo_removed", .photoRemoved),
+            ("deleted", .deleted),
+            ("restored", .restored),
+            ("reverted", .reverted),
+            ("migrated", .migrated),
         ]
     )
     func knownEventKindsMap(wire: String, expected: InventoryEventKind) {
         #expect(InventoryEventKind(wire: wire) == expected)
     }
 
-    @Test("an unknown event kind is kept, not discarded")
-    func unknownEventKindIsKept() {
-        #expect(InventoryEventKind(wire: "renamed_by_ai") == .unrecognised("renamed_by_ai"))
+    @Test(
+        "unknown event kinds stay raw instead of becoming an approximate known case",
+        arguments: ["renamed_by_ai", "access_changed", "fullness_changed", "location_renamed"]
+    )
+    func unknownEventKindIsKept(wire: String) {
+        #expect(InventoryEventKind(wire: wire) == .unrecognised(wire))
     }
 
     @Test(

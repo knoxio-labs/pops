@@ -9,6 +9,8 @@ import type {
   PurchaseCreateResponses,
   PurchaseGetResponses,
   PurchaseListResponses,
+  ReconcileManualCandidatesResponses,
+  ReconcileManualResponses,
   ReceiptExtractResponses,
   ReceiptUploadResponses,
   ReconcileLinksBatchResponses,
@@ -70,7 +72,12 @@ const linksFor: MockHandler = ({ query }) => {
  * creates a purchase and has no richer fixture to hand back.
  */
 function orderOf(row: PurchaseListResponses[200]['items'][number]): PurchaseGetResponses[200] {
-  const { itemCount: _itemCount, receiptUri: _receiptUri, ...purchase } = row;
+  const {
+    itemCount: _itemCount,
+    receiptUri: _receiptUri,
+    ruleLinks: _ruleLinks,
+    ...purchase
+  } = row;
   return {
     accounting: {
       awaitingImportCents: 0,
@@ -144,9 +151,12 @@ export const purchasesHandlers: MockHandlers = {
   'GET /items/tags': ok({ tags: [] }),
 
   'GET /reconcile/queue': ok({ items: [] }),
+  'GET /reconcile/manual-candidates': ok<ReconcileManualCandidatesResponses[200]>({ items: [] }),
   'GET /reconcile/links': linksFor,
   'POST /reconcile/links/batch': linkSummaries,
+  'POST /reconcile/manual': ok<ReconcileManualResponses[200]>({ ok: true }),
   'POST /reconcile/confirm': ok({ ok: true, matchRuleId: null }),
+  'POST /reconcile/rules/{ruleId}/deactivate': acknowledged,
   'POST /reconcile/unlink': acknowledged,
   'POST /reconcile/reject': acknowledged,
   'POST /reconcile/sweep': ok<ReconcileSweepResponses[200]>({

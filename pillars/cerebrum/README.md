@@ -29,8 +29,9 @@ polyglot + FE consumers. The contract (`src/contract/rest.ts`, zod) is the
 single source of truth; OpenAPI and api-types are generated projections,
 drift-checked in CI.
 
-`ego` is co-located here (it has no contract of its own); its settings nest
-under cerebrum, so the pillar exports both `cerebrumManifest` and `egoManifest`.
+`ego` is co-located here (it has no contract of its own), so the pillar exports
+both `cerebrumManifest` and `egoManifest`. Ego declares no settings: its model
+is `CEREBRUM_EGO_MODEL` and its tuning is constants in `src/api/modules/ego`.
 
 All REST failures use the ADR-054 envelope from `@pops/types`:
 `{ code, message, requestId, retryable, details? }`. Codes are dotted lowercase
@@ -64,7 +65,10 @@ On boot, when `POPS_REGISTRY_ENABLED=true`, the server registers via
 `registry` pillar) and deregisters on `SIGTERM`. The heartbeat reports the live
 `cerebrum.vectorSearch` capability (whether sqlite-vec loaded on this
 connection) and advertises the pillar's federated `/settings/*` surface. There
-is no per-request auth.
+is an inbound service-account scope gate on the REST contract routes. Presented
+`X-API-Key` credentials must have the scope derived for that route; callers
+without a key remain governed by the docker-network perimeter. Raw health,
+pillar, OpenAPI, and streaming routes are outside the contract scope map.
 
 ## Vector storage invariants
 

@@ -1493,9 +1493,47 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "labelFromQty": {
+                    "additionalProperties": false,
+                    "description": "When merging additively, formats the cumulative quantity into the label in the same transaction.",
+                    "properties": {
+                      "maxFractionDigits": {
+                        "maximum": 10,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "prefix": {
+                        "type": "string"
+                      },
+                      "suffix": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["prefix", "suffix", "maxFractionDigits"],
+                    "type": "object"
+                  },
                   "notes": {
                     "nullable": true,
                     "type": "string"
+                  },
+                  "notesMerge": {
+                    "additionalProperties": false,
+                    "description": "Optional note formatting and size limit for this upsert.",
+                    "properties": {
+                      "maxLength": {
+                        "description": "Maximum number of Unicode code points retained in the merged notes.",
+                        "exclusiveMinimum": true,
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "separator": {
+                        "description": "Text between adjacent note fragments; defaults to a newline when omitted.",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["separator", "maxLength"],
+                    "type": "object"
                   },
                   "onConflict": {
                     "enum": ["merge-additive", "replace", "skip"],
@@ -1567,9 +1605,14 @@
                         "outcome": {
                           "enum": ["merged"],
                           "type": "string"
+                        },
+                        "qty": {
+                          "description": "Quantity stored on the merged row after this upsert.",
+                          "nullable": true,
+                          "type": "number"
                         }
                       },
-                      "required": ["outcome", "itemId"],
+                      "required": ["outcome", "itemId", "qty"],
                       "type": "object"
                     },
                     {
@@ -1634,9 +1677,14 @@
                         "outcome": {
                           "enum": ["merged"],
                           "type": "string"
+                        },
+                        "qty": {
+                          "description": "Quantity stored on the merged row after this upsert.",
+                          "nullable": true,
+                          "type": "number"
                         }
                       },
-                      "required": ["outcome", "itemId"],
+                      "required": ["outcome", "itemId", "qty"],
                       "type": "object"
                     },
                     {

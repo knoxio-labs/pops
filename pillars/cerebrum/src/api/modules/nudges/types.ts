@@ -26,7 +26,7 @@ export type {
 
 /** Configurable thresholds for nudge detection. */
 export interface NudgeThresholds {
-  /** Minimum embedding similarity to propose consolidation. */
+  /** Minimum cosine similarity between a seed engram and a neighbour to cluster them. */
   consolidationSimilarity: number;
   /** Minimum cluster size to trigger a consolidation nudge. */
   consolidationMinCluster: number;

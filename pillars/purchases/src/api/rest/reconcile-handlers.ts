@@ -4,6 +4,7 @@
 import { FINANCE_TRANSACTION_URI } from '../../contract/schemas/scalars.js';
 import {
   confirmLink,
+  deactivateMatchRule,
   listPurchasesForTransaction,
   listReconcileQueue,
   rejectLink,
@@ -12,6 +13,7 @@ import {
 } from '../../db/index.js';
 import { nowIso } from '../../db/services/internal.js';
 import { purchaseErrorBody } from '../errors.js';
+import { makeManualReconcileHandlers } from './manual-reconcile-handlers.js';
 import { toPurchaseChargeLinkBody } from './serializers.js';
 
 import type { z } from 'zod';
@@ -23,7 +25,7 @@ import type {
 } from '../../contract/rest-reconcile.js';
 import type { LinkedPurchase, PurchasesDb, QueueEntry } from '../../db/index.js';
 import type { SweepOutcome } from '../../reconcile/sweep.js';
-import type { FinanceTransactionLookup } from '../finance/client.js';
+import type { FinanceTransactionLookup, FinanceTransactionSearch } from '../finance/client.js';
 import type { CandidateTransaction } from '../finance/wire.js';
 
 type QueueQuery = z.infer<typeof ReconcileQueueQuerySchema>;
@@ -101,10 +103,12 @@ function toWireLinkedPurchases(entries: readonly LinkedPurchase[]) {
 }
 
 /** Builds reconciliation routes and optionally decorates queue proposals with Finance details. */
+/** Builds the reconciliation routes and the optional Finance-backed manual-link routes. */
 export function makeReconcileHandlers(
   db: PurchasesDb,
   sweep?: SweepTrigger,
-  financeTransactionLookup?: FinanceTransactionLookup
+  financeTransactionLookup?: FinanceTransactionLookup,
+  financeTransactionSearch?: FinanceTransactionSearch
 ) {
   return {
     queue: async ({ query }: { query: QueueQuery }) => {
@@ -126,6 +130,8 @@ export function makeReconcileHandlers(
         },
       };
     },
+
+    ...makeManualReconcileHandlers(db, financeTransactionLookup, financeTransactionSearch),
 
     links: async ({ query }: { query: TransactionLinksQuery }) => ({
       status: 200 as const,
@@ -166,6 +172,19 @@ export function makeReconcileHandlers(
     reject: async ({ body }: { body: Decision }) => {
       const rejected = rejectLink(db, body.chargeId, body.transactionUri, nowIso());
       if (!rejected) return missingLink(body);
+      return { status: 200 as const, body: { ok: true as const } };
+    },
+
+    deactivateRule: async ({ params }: { params: { ruleId: string } }) => {
+      const deactivated = deactivateMatchRule(db, params.ruleId);
+      if (!deactivated) {
+        return {
+          status: 404 as const,
+          body: purchaseErrorBody('not_found', {
+            message: `Match rule ${params.ruleId} not found`,
+          }),
+        };
+      }
       return { status: 200 as const, body: { ok: true as const } };
     },
 

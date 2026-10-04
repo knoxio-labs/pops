@@ -58,55 +58,58 @@ export type {
  * can never block on.
  */
 export function createPurchase(db: PurchasesDb, input: CreatePurchaseInput): string {
-  return db.transaction((tx) => {
-    if (getSource(tx, input.source) === undefined) {
-      throw new PurchaseSourceNotFoundError(input.source);
-    }
-    assertNotAlreadyImported(tx, input);
+  return db.transaction(
+    (tx) => {
+      if (getSource(tx, input.source) === undefined) {
+        throw new PurchaseSourceNotFoundError(input.source);
+      }
+      assertNotAlreadyImported(tx, input);
 
-    // One timestamp for the whole transaction. Calling nowIso() twice can
-    // put the order row a millisecond ahead of its own children, which
-    // makes an atomically-written graph look like it arrived in pieces.
-    const now = nowIso();
-    const ctx: IngestContext = {
-      tx,
-      purchase: insertOrder(tx, input, now),
-      shipmentIds: new Map(),
-      shipmentSourceRefs: new Set(),
-      itemIds: new Map(),
-      now,
-    };
+      // One timestamp for the whole transaction. Calling nowIso() twice can
+      // put the order row a millisecond ahead of its own children, which
+      // makes an atomically-written graph look like it arrived in pieces.
+      const now = nowIso();
+      const ctx: IngestContext = {
+        tx,
+        purchase: insertOrder(tx, input, now),
+        shipmentIds: new Map(),
+        shipmentSourceRefs: new Set(),
+        itemIds: new Map(),
+        now,
+      };
 
-    // A Set so a caller that repeats a tag does not trip the
-    // (purchase_id, tag) primary key.
-    for (const tag of new Set(input.tags ?? [])) {
-      tx.insert(purchaseTags).values({ purchaseId: ctx.purchase.id, tag, createdAt: now }).run();
-    }
+      // A Set so a caller that repeats a tag does not trip the
+      // (purchase_id, tag) primary key.
+      for (const tag of new Set(input.tags ?? [])) {
+        tx.insert(purchaseTags).values({ purchaseId: ctx.purchase.id, tag, createdAt: now }).run();
+      }
 
-    for (const [position, shipment] of (input.shipments ?? []).entries()) {
-      insertShipment(ctx, shipment, position);
-    }
-    for (const [position, item] of (input.items ?? []).entries()) {
-      insertItem(ctx, item, position);
-    }
-    for (const [position, charge] of (input.charges ?? []).entries()) {
-      insertCharge(ctx, charge, position);
-    }
-    for (const document of input.documents ?? []) {
-      insertDocument(ctx, document);
-    }
-    insertCapture(ctx, input.capture);
+      for (const [position, shipment] of (input.shipments ?? []).entries()) {
+        insertShipment(ctx, shipment, position);
+      }
+      for (const [position, item] of (input.items ?? []).entries()) {
+        insertItem(ctx, item, position);
+      }
+      for (const [position, charge] of (input.charges ?? []).entries()) {
+        insertCharge(ctx, charge, position);
+      }
+      for (const document of input.documents ?? []) {
+        insertDocument(ctx, document);
+      }
+      insertCapture(ctx, input.capture);
 
-    // The row above was written with the terminal-cash-or-awaiting default
-    // before any charge existed to derive from. A zero-total order (free,
-    // or cancelled before any charge) needs `nothing_to_settle` from the
-    // moment it exists — see `purchase-status.ts` — and this is the one
-    // place that has both the final charge set and a still-open
-    // transaction to write it in.
-    recomputePurchaseStatuses(tx, [ctx.purchase.id]);
+      // The row above was written with the terminal-cash-or-awaiting default
+      // before any charge existed to derive from. A zero-total order (free,
+      // or cancelled before any charge) needs `nothing_to_settle` from the
+      // moment it exists — see `purchase-status.ts` — and this is the one
+      // place that has both the final charge set and a still-open
+      // transaction to write it in.
+      recomputePurchaseStatuses(tx, [ctx.purchase.id]);
 
-    return ctx.purchase.id;
-  });
+      return ctx.purchase.id;
+    },
+    { behavior: 'immediate' }
+  );
 }
 
 /**

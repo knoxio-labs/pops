@@ -21,6 +21,10 @@ though nothing enforces it mechanically.
   round-trip.
 - **Pillar responses go through `mapCallResult`.** Every SDK failure kind
   becomes `isError: true` with a reason the model can read and act on.
+- **A non-applied inventory mutation is an error.** Every inventory tool that
+  sends a sync mutation returns its outcome through `itemMutationResult`:
+  `applied` is a normal result, while `rejected`, `conflict` and `deferred` set
+  `isError: true` and include the whole outcome in the text.
 - **Constrained args coerce, they do not reject.** An unrecognised `type`,
   `mode`, `period`, `active`, or `matchType` falls back to the documented
   default (or is dropped) rather than forwarding an unknown value downstream.
@@ -61,16 +65,27 @@ though nothing enforces it mechanically.
   endpoint returns every breakdown for a window in one response, so splitting
   it per axis would be several calls for data already fetched, and would make
   the mcp package mirror the response shape it currently never has to know.
-- The `purchases.*` family is read-only for a sharper reason, asserted the same
-  way in `purchases.test.ts`. Every write on that pillar is an ingest (which
+- The `purchases.*` family is read-only with one exception, asserted in
+  `purchases.test.ts`. Every other write on that pillar is an ingest (which
   needs a checksum only an adapter can compute) or a classification decision —
   and `PATCH /purchases/:id/items/:itemId` is the single place a machine
   proposal becomes a human assertion. A tool that could call it would erase the
   distinction `kindConfirmedAt` exists to hold.
+- `purchases.inventoryProposals.accept` is the exception. It records that an
+  inventory item which already exists is the asset an order line's unit
+  became: a link the user asked for, not a judgement. It takes any line of
+  the order, not only one `inventoryProposals.list` offers: that projection
+  covers lines classified `durable`, and nothing classifies a line at ingest
+  (POPS-3974), while the accept route itself never looks at the kind. It
+  checks the item
+  exists in inventory first, because purchases stores the URI unchecked and a
+  decision cannot be retracted. Declining an offer and creating the asset
+  through purchases are not exposed. The link lives in purchases, so
+  `inventory.items.get` does not show an item's order (POPS-5755).
 - `purchases.*` needs a grant. That pillar admits an uncredentialled caller but
   holds a caller presenting an `X-API-Key` to that key's scopes, and MCP always
   presents one. Without `purchases.purchase`, `purchases.analytics` and
-  `purchases.search` on the MCP service account, all five tools return `403`.
+  `purchases.search` on the MCP service account, every tool returns `403`.
 - `inventory.catalogue.*` completes the persisted type-catalogue authoring
   workflow without database access. The MCP service account needs
   `inventory.types.read` for catalogue and audit reads, and
@@ -81,17 +96,23 @@ though nothing enforces it mechanically.
   full v1 computed-field grammar (literal, same-item or bounded reference
   `read`, unary/binary ops, `if`) mirrored from
   `pillars/inventory/src/catalogue/expression-types.ts`, checked for drift by
-  `inventory-contract-fidelity.test.ts` — not an unconstrained blob. A subtype's
-  items take its ancestors' fields and capabilities. Create the parent, read its
-  id from `.draft.types[]` in the response, then create the child in a second
-  patch: ids are server-minted. Changing the parent of a published type is
-  refused.
+  `inventory-contract-fidelity.test.ts` — not an unconstrained blob. Write tools
+  return revision metadata and changed definition IDs by default; pass
+  `include: "catalogue"` to receive the full response. A subtype's items take
+  its ancestors' fields and capabilities. Create the parent, read its id from
+  `changed`, then create the child in a second patch: ids are server-minted.
+  Changing the parent of a published type is refused.
 - `inventory.items.*` uses the protocol-2 generic item contract. Reads expose
   stable `typeId`, `catalogueRevision` and field IDs. Create, edit and type
   changes require the caller's observed catalogue revision; edit, type change
   and delete also require the observed item revision. A caller may retain and
   resend `mutationId` after an uncertain response, so retries converge on the
   producer's idempotency boundary instead of creating a second command.
+  `provenance` on create and update is the shape `items.get` returns, written
+  through the producer's legacy purchase columns (`inventory-item-provenance.ts`).
+  `transactionUri` accepts only `pops://finance/transaction/<id>`, the one URI
+  inventory can store. An item's purchases order is linked from the purchases
+  side, through `purchases.inventoryProposals.accept`.
 - `inventory.items.validate` calls the producer's authoritative value validator
   without writing item values, audit rows or sync changes. Read the catalogue
   definition first, send its exact revision and source-tagged values, and use

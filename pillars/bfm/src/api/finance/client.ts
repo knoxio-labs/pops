@@ -14,7 +14,12 @@ import { FALLBACK_MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
  * somebody is mid-scroll cannot shift the window under them. The cursor the
  * app carries is that anchor, opaque — see `cursor.ts`.
  */
-import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
+import {
+  isGatewayOk,
+  type GatewayFailure,
+  type GatewayOutcome,
+  type PillarGateway,
+} from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import { getAccountDetail, resolveAccount, resolveAccountCurrencies } from './accounts-client.js';
 import { listAccounts, type ListAccountsRequest } from './accounts-list-client.js';
@@ -108,7 +113,9 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
         gateway,
         page.value.data.map((row) => row.accountId)
       );
-      return { kind: 'ok', value: toPage(page.value.data, request.limit, currencies) };
+      const mobilePage = toPage(page.value.data, request.limit, currencies);
+      if (mobilePage === null) return amountContractMismatch();
+      return { kind: 'ok', value: mobilePage };
     },
 
     async getTransaction(id: string) {
@@ -126,9 +133,15 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
       if (!isGatewayOk(record)) return record;
 
       const account = await resolveAccount(gateway, record.value.data.accountId);
+      const transaction = toMobileTransactionDetail(
+        record.value.data,
+        account.name,
+        account.currency
+      );
+      if (transaction === null) return amountContractMismatch();
       return {
         kind: 'ok',
-        value: toMobileTransactionDetail(record.value.data, account.name, account.currency),
+        value: transaction,
       };
     },
 
@@ -156,16 +169,34 @@ function toPage(
   rows: FinanceListRows,
   limit: number,
   currencies: ReadonlyMap<string, string>
-): MobileTransactionsPage {
+): MobileTransactionsPage | null {
   const hasMore = rows.length > limit;
   const served = hasMore ? rows.slice(0, limit) : rows;
   const last = served.at(-1);
+  const data: MobileTransactionsPage['data'] = [];
+
+  for (const row of served) {
+    const transaction = toMobileTransaction(
+      row,
+      currencies.get(row.accountId) ?? FALLBACK_MOBILE_CURRENCY
+    );
+    if (transaction === null) return null;
+    data.push(transaction);
+  }
 
   return {
-    data: served.map((row) =>
-      toMobileTransaction(row, currencies.get(row.accountId) ?? FALLBACK_MOBILE_CURRENCY)
-    ),
+    data,
     nextCursor:
       hasMore && last !== undefined ? encodePageCursor({ d: last.date, i: last.id }) : null,
+  };
+}
+
+function amountContractMismatch(): GatewayFailure {
+  return {
+    kind: 'contract-mismatch',
+    pillar: FINANCE_PILLAR_ID,
+    status: 502,
+    detail:
+      'Finance returned a transaction amount that cannot be represented in its account currency',
   };
 }

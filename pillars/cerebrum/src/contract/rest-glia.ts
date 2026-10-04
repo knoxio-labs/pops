@@ -4,7 +4,7 @@
  * Glia is the autonomous-curation trust/action router: a proposal queue, the
  * decide/execute/revert lifecycle, per-action-type trust state, and an
  * audit-trail digest. Non-identity domain — served on the docker-network trust
- * boundary with no per-request auth (parity with templates / reflex / engrams).
+ * boundary, with presented keys checked by the API scope gate (parity with templates / reflex / engrams).
  *
  * Typed/array/filter inputs ride in POST bodies rather than the query string
  * (mirrors the reflex `history` + engrams `search` precedent):

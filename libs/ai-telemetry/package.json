@@ -37,6 +37,10 @@
       "types": "./dist/pricing-http.d.ts",
       "default": "./dist/pricing-http.js"
     },
+    "./model-params": {
+      "types": "./dist/model-params.d.ts",
+      "default": "./dist/model-params.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

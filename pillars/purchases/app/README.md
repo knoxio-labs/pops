@@ -141,6 +141,10 @@ the posting date and payee. It keeps the description stored with the proposal,
 so the row remains useful when Finance is unavailable; missing live details
 show as unavailable rather than failing the queue.
 
+A stage-4 proposal is labelled as a rule and shows the stored descriptor
+pattern and source that admitted it. The decision bar can deactivate that
+rule; the link keeps its attribution, while later sweeps stop using the rule.
+
 **It is keyboard-driven, and that is the feature.** The queue arrives focused,
 so `j`/`k` move the cursor, `enter` accepts and `x` rejects without a click
 first. Arrow keys do what `j`/`k` do, because the queue is one `role="listbox"`
@@ -163,6 +167,7 @@ rather than implying otherwise.
 | ----------------- | ------------------------- | ------------------------------------------------------------------ |
 | Accept            | `POST /reconcile/confirm` | pins the link, and writes the merchant rule the pin was made under |
 | Reject            | `POST /reconcile/unlink`  | deletes the link, and remembers nothing                            |
+| Link manually     | `POST /reconcile/manual`  | writes and confirms the operator-selected transaction in one step  |
 
 **The view has not caught up with the server.** `POST /reconcile/reject` now
 exists and is the durable decision — it records the pairing so no later sweep
@@ -175,9 +180,14 @@ That is also why the cursor is keyed by charge id and parks on the successor
 before the refetch lands, instead of counting indexes: an unlinked charge comes
 back as unexplained rather than leaving the queue.
 
-An unexplained charge (no proposals) has nothing to confirm or delete, so both
-keys refuse rather than firing a request that would 404. Nothing can link it by
-hand yet either — POPS-1900.
+An unexplained charge (no proposals) has nothing to confirm or delete, so the
+accept and reject actions stay disabled. The toolbar offers **Link transaction**
+for that row. It searches Finance by transaction description through
+`GET /reconcile/manual-candidates`, then `POST /reconcile/manual` re-fetches the
+selected transaction before creating a `manual`, confidence-1 link with
+`confirmedAt` set in the same transaction. The link uses the full charge amount
+and remains pinned through later sweeps. Finance outages leave the charge
+unlinked and return a retryable error.
 
 ### Paging
 
@@ -210,11 +220,22 @@ bearing rather than stylistic:
   says what each costs. A label total presented as an entity total is the
   same class of error as a dropped residual, one dimension over.
 
+The period is shareable URL state: `?period=YYYY` selects one of the five
+latest UTC years offered by the picker, and omitting `period` means all time.
+Malformed or unavailable years fall back to all time. Choosing all time removes
+only `period`, preserving other query parameters. The reconcile queue's `kind`
+and `includeAuto` filters stay local because they control a transient triage
+view rather than the merchant totals named by this URL.
+
 ### Opening a row
 
 A row discloses the orders it was totalled from, each linking to
 `/purchases/:purchaseId`. Naming $151.20 as unexplained and leaving no way to
 ask which orders it is in was a weaker version of hiding it.
+
+Each order row also carries the readable patterns and source scopes behind its
+stage-4 links. The operator can deactivate a rule from the expanded list, and
+the row keeps showing the rule as inactive while its historical links remain.
 
 **The request carries the row's own identity, not its label.** The roll-up
 groups three ways and `GET /purchases` takes the same three:

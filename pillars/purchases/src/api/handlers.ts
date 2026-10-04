@@ -12,7 +12,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 import type { OpenedPurchasesDb } from '../db/index.js';
 import type { ReceiptVision } from '../ingest/receipt/vision.js';
 import type { MerchantResolver } from './contacts/merchant.js';
-import type { FinanceTransactionLookup } from './finance/client.js';
+import type { FinanceTransactionLookup, FinanceTransactionSearch } from './finance/client.js';
 import type { InventoryAssetCreator, InventoryLinkClearer } from './inventory/client.js';
 import type { SweepTrigger } from './rest/reconcile-handlers.js';
 
@@ -32,6 +32,8 @@ export interface PurchasesApiDeps {
   sweep?: SweepTrigger;
   /** Adds live posting dates and payees to queued proposals when Finance responds. */
   financeTransactionLookup?: FinanceTransactionLookup;
+  /** Searches Finance transactions for the queue's manual-link action. */
+  financeTransactionSearch?: FinanceTransactionSearch;
   /**
    * Reads photographed receipts. Null declines every upload with a 503 —
    * the drop-zone is optional, and a pillar without an API key should say

@@ -17,14 +17,16 @@ import { openFinanceDb, today, type OpenedFinanceDb } from '../../db/index.js';
 import { insertBatch } from '../../db/services/import-batches.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
+import { archiveFinanceSeedAccounts } from './data-quality-test-utils.js';
 import { makeClient } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
 
-beforeEach(() => {
+beforeEach(async () => {
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-data-quality-stale-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
+  await archiveFinanceSeedAccounts(client());
 });
 
 afterEach(() => {
@@ -159,8 +161,12 @@ describe('GET /data-quality/nudges — stale accounts', () => {
     await client().checkpoints.create(inconsistent, { balanceCents: -12_000, asOf: '2026-02-28' });
 
     const mildly = await anAccount('Mildly stale');
+    await client().checkpoints.create(mildly, { balanceCents: 0, asOf: daysAgo(100) });
+    await client().checkpoints.create(mildly, { balanceCents: 0, asOf: daysAgo(99) });
     await transactionOn(mildly, daysAgo(50));
     const very = await anAccount('Very stale');
+    await client().checkpoints.create(very, { balanceCents: 0, asOf: daysAgo(100) });
+    await client().checkpoints.create(very, { balanceCents: 0, asOf: daysAgo(99) });
     await transactionOn(very, daysAgo(40));
     for (const days of [40, 50, 60]) batchDaysAgo(very, days);
 

@@ -32,6 +32,7 @@ import {
 } from './account-checkpoints.js';
 
 import type { CheckpointSource } from '../../contract/checkpoint.js';
+import type { AccountReconciliation } from '../../contract/rest-checkpoints-schemas.js';
 import type { AccountCheckpointRow } from './account-checkpoints.js';
 import type { FinanceDb } from './internal.js';
 
@@ -56,11 +57,14 @@ export interface AccountBalance {
   /** Null only when the account has no checkpoint at all. */
   anchor: BalanceAnchor | null;
   /**
-   * True when the account's LATEST checkpoint disagrees with what the ledger
-   * predicted for it. Only the latest counts: an older flagged checkpoint
-   * followed by a consistent newer one has been re-anchored, and the account
-   * is no longer in question. Independent of the date asked for — it is a
-   * statement about the account's data, not about this reading.
+   * `unmeasured` without two checkpoints; otherwise whether the ledger agrees
+   * with the latest checkpoint.
+   */
+  reconciliation: AccountReconciliation;
+  /**
+   * A derived convenience that is true exactly when `reconciliation` is
+   * `disagrees`. It stays false for `unmeasured`. Only the latest checkpoint
+   * counts: a consistent newer one re-anchors an older disagreement.
    */
   inconsistent: boolean;
 }

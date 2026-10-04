@@ -109,10 +109,11 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 # stopped being compiled — the app-does-not-compile signal now comes from the
 # step below, about a minute later than it used to.
 
-# NO `push` TRIGGER, and that is a decision (POPS-4152). Relevant ordinary pull
-# requests run the native lane before merge, while a frozen promotion can call
-# the full lane below against current main — suite, analyzer, Release check and
-# UI flow. Promotion and integration pull requests skip the native invocation
+# NO `push` TRIGGER, and that is a decision (POPS-4152). Relevant pull requests
+# run an iOS build before merge: the full native lane on the default branch, or
+# `build-for-testing` on a non-default base. A frozen promotion can call the
+# full lane below against current main — suite, analyzer, Release check and UI
+# flow. Promotion and integration pull requests skip the native invocation
 # because their reusable full-validation call includes that suite and more; a
 # second macOS allocation only consumes the scarce runner without adding a
 # verdict.
@@ -219,6 +220,32 @@ jobs:
             --workflow .github/workflows/ios-quality.yml \
             --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF"
 
+  stacked-build:
+    name: build-for-testing (non-default base)
+    if: >-
+      ${{ !cancelled() &&
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.base.ref != github.event.repository.default_branch
+      }}
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      MISE_DISABLE_TOOLS: rust
+    defaults:
+      run:
+        working-directory: clients/ios
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/select-xcode
+
+      - uses: ./.github/actions/setup-mise
+        with:
+          working_directory: clients/ios
+
+      - name: Build the app and test targets
+        run: mise run build:for-testing
+
   quality:
     name: build + test + lint + UI flow
     needs: [scope]
@@ -232,13 +259,12 @@ jobs:
     # that FAILED leaves the output empty, so this stays skipped and the workflow
     # goes red on the scope job — never green over an unbuilt tree.
     #
-    # An ordinary pull request runs it only when its base is the default branch.
-    # A PR stacked on another branch skips it: a stack of eight iOS PRs otherwise
-    # starts eight macOS jobs on every rebase and holds the whole five-runner
-    # pool for an hour (POPS-4150). It gets the lane once it is rebased onto
-    # main, and the merge queue runs it regardless, so nothing reaches main
-    # uncompiled. Retargeting triggers a fresh run through the edited event;
-    # CI Gate accepts only runs associated with the current base branch.
+    # The full simulator, analyzer, Release and UI lane runs only for a PR based
+    # on the default branch. A stacked PR gets the app and test-target compile
+    # above; reserving the full lane for the default branch and frozen merge
+    # group keeps simulator and UI work to one candidate validation (POPS-4150).
+    # Retargeting triggers a fresh run through the edited event; CI Gate accepts
+    # only runs associated with the current base branch.
     if: >-
       ${{ !cancelled() && (
         inputs['full-validation'] == true ||
@@ -253,7 +279,7 @@ jobs:
     # 66m47s for 1,584 in the current promotion run.
     # The full job limit also covers host/simulator tests and Release/UI validation;
     # these measurements are not a duration guarantee.
-    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 150 || 100 }}
+    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 165 || 100 }}
     defaults:
       run:
         working-directory: clients/ios

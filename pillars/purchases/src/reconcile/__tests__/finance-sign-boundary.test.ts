@@ -10,10 +10,6 @@
  * converted here can be fed straight into `solve` and prove the whole
  * boundary, not just the arithmetic.
  *
- * POPS-4611: an unmodified pass-through left every card charge (finance
- * negative) unable to match its capture (purchases positive) — blocking in
- * `stages.ts` rejects on mismatched sign, so production wrote 5 links out
- * of 841 charges.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -39,6 +35,27 @@ function financeTransaction(
   return toCandidateTransaction({ ...BASE_WIRE, amount: 0, type: 'purchase', ...overrides });
 }
 
+function purchaseCharge(
+  id: string,
+  role: SolvableCharge['role'],
+  amountCents: number
+): SolvableCharge {
+  return {
+    id,
+    purchaseId: 'ord-1',
+    source: 'good-guys',
+    position: 0,
+    amountCents,
+    currency: 'AUD',
+    role,
+    orderedAt: '2026-03-04T00:00:00Z',
+    shippedAt: null,
+    descriptorPattern: null,
+    settlementWindowDays: null,
+    paymentHint: null,
+  };
+}
+
 function run(charges: readonly SolvableCharge[], transactions: readonly SolvableTransaction[]) {
   const input: SolverInput = {
     charges,
@@ -54,23 +71,7 @@ function run(charges: readonly SolvableCharge[], transactions: readonly Solvable
 
 describe('the finance sign boundary end to end', () => {
   it('links a negative finance card charge to its positive purchase capture', () => {
-    const capture: SolvableCharge = {
-      id: 'chg-capture',
-      purchaseId: 'ord-1',
-      source: 'amazon',
-      position: 0,
-      amountCents: 10_699,
-      currency: 'AUD',
-      role: 'capture',
-      orderedAt: '2026-03-04T00:00:00Z',
-      descriptorPattern: null,
-      settlementWindowDays: null,
-      paymentHint: null,
-    };
-
-    // Finance publishes the Amazon card charge as -106.99 (money leaving
-    // the account). Today's code passes that sign straight through, so it
-    // never matches the +$106.99 capture above.
+    const capture = purchaseCharge('chg-capture', 'capture', 10_699);
     const cardCharge = financeTransaction({ id: 'txn-card', amount: -106.99, date: '2026-03-06' });
 
     const { links, review } = run([capture], [cardCharge]);
@@ -86,37 +87,14 @@ describe('the finance sign boundary end to end', () => {
   });
 
   it('links a positive finance credit to a purchase refund, and never to a capture in the same window', () => {
-    const capture: SolvableCharge = {
-      id: 'chg-capture',
-      purchaseId: 'ord-2',
-      source: 'amazon',
-      position: 0,
-      amountCents: 2_495,
-      currency: 'AUD',
-      role: 'capture',
-      orderedAt: '2026-03-04T00:00:00Z',
-      descriptorPattern: null,
-      settlementWindowDays: null,
-      paymentHint: null,
-    };
-    const refund: SolvableCharge = {
-      id: 'chg-refund',
-      purchaseId: 'ord-2',
-      source: 'amazon',
-      position: 1,
-      amountCents: -2_495,
-      currency: 'AUD',
-      role: 'refund',
-      orderedAt: '2026-03-04T00:00:00Z',
-      descriptorPattern: null,
-      settlementWindowDays: null,
-      paymentHint: null,
-    };
-
-    // Finance publishes the refund as +24.95 (a credit). Unflipped, that
-    // is a positive candidate that could only ever be mistaken for the
-    // capture, never matched to the refund it actually settles.
-    const credit = financeTransaction({ id: 'txn-credit', amount: 24.95, date: '2026-03-08' });
+    const capture = purchaseCharge('chg-capture', 'capture', 2_495);
+    const refund = purchaseCharge('chg-refund', 'refund', -2_495);
+    const credit = financeTransaction({
+      id: 'txn-credit',
+      amount: 24.95,
+      type: 'refund',
+      date: '2026-03-08',
+    });
 
     const { links, review } = run([capture, refund], [credit]);
 
@@ -132,6 +110,52 @@ describe('the finance sign boundary end to end', () => {
     // from ever being considered for a capture.
     expect(review).toEqual([
       expect.objectContaining({ chargeId: 'chg-capture', reason: 'no-candidate' }),
+    ]);
+  });
+
+  it.each(['transfer', 'rebate', 'fee'] as const)(
+    'does not settle a purchase capture with a %s outflow',
+    (type) => {
+      const capture = purchaseCharge('chg-capture', 'capture', 337);
+      const transaction = financeTransaction({ id: `txn-${type}`, amount: -3.37, type });
+
+      const { links, review } = run([capture], [transaction]);
+
+      expect(links).toEqual([]);
+      expect(review).toEqual([
+        expect.objectContaining({ chargeId: capture.id, reason: 'no-candidate' }),
+      ]);
+    }
+  );
+
+  it.each(['transfer', 'rebate', 'fee'] as const)(
+    'does not settle a purchase refund with a %s inflow',
+    (type) => {
+      const refund = purchaseCharge('chg-refund', 'refund', -337);
+      const transaction = financeTransaction({ id: `txn-${type}`, amount: 3.37, type });
+
+      const { links, review } = run([refund], [transaction]);
+
+      expect(links).toEqual([]);
+      expect(review).toEqual([
+        expect.objectContaining({ chargeId: refund.id, reason: 'no-candidate' }),
+      ]);
+    }
+  );
+
+  it('does not settle a charge with an unfamiliar finance transaction type', () => {
+    const capture = purchaseCharge('chg-capture', 'capture', 337);
+    const transaction = financeTransaction({
+      id: 'txn-future-type',
+      amount: -3.37,
+      type: 'chargeback',
+    });
+
+    const { links, review } = run([capture], [transaction]);
+
+    expect(links).toEqual([]);
+    expect(review).toEqual([
+      expect.objectContaining({ chargeId: capture.id, reason: 'no-candidate' }),
     ]);
   });
 });

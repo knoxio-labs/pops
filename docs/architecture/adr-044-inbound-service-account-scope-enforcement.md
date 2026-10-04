@@ -45,6 +45,7 @@ Three sub-decisions carry the weight.
 
 ## Consequences
 
+- The Rust contacts pillar mirrors the producer-side decision because it cannot import the TypeScript SDK; its README identifies the hand-maintained scope and verifier implementation.
 - The `bfm` grant is now a control rather than a declaration, on the one leg bfm uses. Widening the mobile surface to a second finance module requires widening `BFM_SERVICE_ACCOUNT_SCOPES` in the same change, or the call gets a `403`.
 - Revoking a service account now takes effect against `finance` within the verifier's cache TTL, not never.
 - **Adoption is per pillar.** Each pillar's README must state its own posture — enforced (with the scope table and fail-closed behaviour) or trusting the docker network — rather than implying fleet-wide enforcement that isn't there. `purchases` adopted second, and the Express binding both adopters share was lifted out to `@pops/pillar-express` at that point — the SDK keeps the decision and no web-framework dependency, and each further adoption supplies a contract, a root scope and a log prefix rather than another copy of the plumbing.

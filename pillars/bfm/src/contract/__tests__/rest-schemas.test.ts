@@ -19,7 +19,7 @@ import {
 const row = {
   id: 'txn-1',
   description: 'Coffee',
-  amount: -4.5,
+  amountMinorUnits: -450,
   currency: FALLBACK_MOBILE_CURRENCY,
   date: '2026-03-05',
   type: 'purchase',
@@ -59,6 +59,17 @@ describe('MobileTransactionDetailSchema.shape.currency', () => {
 
     expect(result.success).toBe(true);
     expect(result.data?.currency).toBe('USD');
+  });
+});
+
+describe('MobileTransactionSchema.shape.amountMinorUnits', () => {
+  it('requires a whole number of minor units', () => {
+    expect(MobileTransactionSchema.safeParse({ ...row, amountMinorUnits: 1999 }).success).toBe(
+      true
+    );
+    expect(MobileTransactionSchema.safeParse({ ...row, amountMinorUnits: 1999.5 }).success).toBe(
+      false
+    );
   });
 });
 

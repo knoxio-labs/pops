@@ -50,6 +50,8 @@ import type {
   EntitiesUploadPosterResponses,
   HealthGetData,
   HealthGetResponses,
+  OpenapiGetData,
+  OpenapiGetResponses,
   RootGetData,
   RootGetResponses,
   SearchSearchData,
@@ -280,6 +282,17 @@ export const healthGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<HealthGetResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<HealthGetResponses, unknown, ThrowOnError>({
     url: '/health',
+    ...options,
+  });
+
+/**
+ * `GET /openapi` — serve the pinned 3.0.3 OpenAPI document.
+ */
+export const openapiGet = <ThrowOnError extends boolean = false>(
+  options?: Options<OpenapiGetData, ThrowOnError>
+): RequestResult<OpenapiGetResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<OpenapiGetResponses, unknown, ThrowOnError>({
+    url: '/openapi',
     ...options,
   });
 

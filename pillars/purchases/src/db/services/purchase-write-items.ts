@@ -73,6 +73,7 @@ function itemRow(ctx: IngestContext, input: CreateItemInput, position: number): 
     url: input.url ?? null,
     imageUrl: input.imageUrl ?? null,
     quantity: input.quantity ?? 1,
+    pricedByMeasure: input.pricedByMeasure ?? false,
     unitPriceCents: input.unitPriceCents,
     lineTotalCents: input.lineTotalCents,
     allocatedShippingCents: input.allocatedShippingCents ?? 0,

@@ -1,7 +1,10 @@
 import { defineErrors } from '@pops/pillar-express';
-import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 
-import type { ErrorBody } from '@pops/types';
+import { createErrorBodyBuilder } from './error-body-builder.js';
+import {
+  RECONCILIATION_ERROR_DEFINITIONS,
+  reconciliationErrors,
+} from './reconciliation-error-definitions.js';
 
 const ERROR_DEFINITIONS = {
   not_found: {
@@ -69,6 +72,12 @@ const ERROR_DEFINITIONS = {
     status: 400,
     message: 'The request contains a value purchases cannot accept.',
     retryable: false,
+  },
+  database_busy: {
+    area: 'storage',
+    status: 503,
+    message: 'Purchase storage is busy. Retry this request shortly.',
+    retryable: true,
   },
   keyset_anchor_incomplete: {
     area: 'request',
@@ -142,18 +151,6 @@ const ERROR_DEFINITIONS = {
     message: 'The uploaded bytes do not match the stated media type.',
     retryable: false,
   },
-  link_not_found: {
-    area: 'reconciliation',
-    status: 404,
-    message: 'The requested transaction link was not found.',
-    retryable: false,
-  },
-  sweep_unavailable: {
-    area: 'reconciliation',
-    status: 503,
-    message: 'Purchase reconciliation is unavailable.',
-    retryable: false,
-  },
   unauthorized: {
     area: 'inventory',
     status: 502,
@@ -180,25 +177,21 @@ const ERROR_DEFINITIONS = {
   },
 } as const;
 
-export type PurchaseErrorReason = keyof typeof ERROR_DEFINITIONS;
+const ALL_ERROR_DEFINITIONS = {
+  ...ERROR_DEFINITIONS,
+  ...RECONCILIATION_ERROR_DEFINITIONS,
+};
+
+export type PurchaseErrorReason = keyof typeof ALL_ERROR_DEFINITIONS;
 
 /** Typed throwing helpers for every purchases-owned error code. */
-export const purchaseErrors = defineErrors('purchases', ERROR_DEFINITIONS);
+export const purchaseErrors = {
+  ...defineErrors('purchases', ERROR_DEFINITIONS),
+  ...reconciliationErrors,
+};
 
 /**
  * Build an ADR-054 response for contract handlers that return declared error statuses.
  * Request middleware establishes the id; the fallback only supports isolated unit calls.
  */
-export function purchaseErrorBody(
-  reason: PurchaseErrorReason,
-  options: { readonly message?: string; readonly details?: unknown } = {}
-): ErrorBody {
-  const definition = ERROR_DEFINITIONS[reason];
-  return {
-    code: `purchases.${definition.area}.${reason}`,
-    message: options.message ?? definition.message,
-    requestId: getRequestId() ?? mintRequestId(),
-    retryable: definition.retryable,
-    ...(options.details === undefined ? {} : { details: options.details }),
-  };
-}
+export const purchaseErrorBody = createErrorBodyBuilder('purchases', ALL_ERROR_DEFINITIONS);

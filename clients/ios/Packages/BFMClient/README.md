@@ -52,7 +52,7 @@ Three things hold it, because the failure is silent — flipping that line produ
 
 ## The façade
 
-`BFMHTTPClient` takes a base URL and a transport. The public initialiser supplies `URLSessionTransport`; the internal one takes any `ClientTransport`, which is why no test here stubs `URLProtocol` — a `URLProtocol` subclass is process-global mutable state that survives a test that failed before tearing it down.
+`BFMHTTPClient` takes a base URL and a transport. The public initialiser supplies `URLSessionTransport` with response caching disabled; the internal one takes any `ClientTransport`, which is why no test here stubs `URLProtocol` — a `URLProtocol` subclass is process-global mutable state that survives a test that failed before tearing it down.
 
 Two things it does that the generated client does not:
 
@@ -89,10 +89,10 @@ The response's `pillars` list is read and discarded. It is the federation's own 
 
 The mapping from wire to domain is the whole of it, and each leg is somewhere a wrong answer is silent:
 
-- **Money.** The contract carries `amount` as a JSON `number`, so the generator emits a `Double`, and `MoneyAmount` holds integer minor units. The conversion goes through the shortest decimal string that round-trips the value — `Decimal(19.99)` is `19.989999999999998976` and scaling that yields 1998 cents, while `Decimal(string: "19.99")` is exact. A value with more precision than the currency has is refused rather than rounded: this app does not get to invent a rounding rule for money the finance pillar owns.
+- **Money.** The contract carries `amountMinorUnits` as an integer, which maps directly to `MoneyAmount.minorUnits`. BFM converts finance's decimal amount using the transaction currency before sending it, so the phone does no floating-point arithmetic on money.
 - **Dates.** `date` is typed as a bare string with no `format`, so what it means is a decision the contract does not state. It is read as `YYYY-MM-DD` and nothing else — parsed, then formatted back and compared, because a date-only `ISO8601FormatStyle` parses a leading date and ignores whatever follows it. The day is anchored at midnight in the reader's own zone, which is the zone the row is later formatted in; anchoring it in UTC renders the 5th as the 4th for everybody west of Greenwich.
 - **Types.** `type` reaches `TransactionType` as a raw value, never through a Swift enum. It is the field the finance pillar is free to add to, and this build is on a phone somebody else owns.
-- **Failures.** `unavailable` and `contractMismatch` do not converge. The BFM separates `gateway.upstream_unavailable` from `gateway.upstream_contract_mismatch` deliberately — "not answering" against "answered something this build cannot read" — and the list renders a different sentence and a different next action for each.
+- **Failures.** `unavailable`, `contractMismatch` and `rateLimited` do not converge. The BFM separates `gateway.upstream_unavailable` from `gateway.upstream_contract_mismatch` deliberately — "not answering" against "answered something this build cannot read" — and a `429` retains its optional `retryAfterSeconds` instead of becoming a transport failure.
 - **A stale cursor is not a failure.** `400 invalid_cursor` says the token this app holds is not one this server issued, and the server's own instruction is to start the list again. The repository does that rather than reporting it, which keeps the rows already on screen. It cannot recurse: the restart sends no cursor, and only a cursor that was sent can be rejected.
 
 ### Purchase browsing

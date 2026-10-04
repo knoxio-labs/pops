@@ -4,8 +4,9 @@
  *
  * The retrieval services are STATELESS: scope/type/status filtering rides in
  * the request body (`RetrievalFilters`), never derived from a caller identity.
- * The domain is therefore served on the docker-network trust boundary with no
- * per-request auth, like the other domains.
+ * The domain is therefore served on the docker-network trust boundary, like
+ * the other domains; the API checks a presented service-account key against
+ * each route's scope.
  *
  * `search` / `context` / `similar` are POST-with-body (they carry the filter
  * object and/or arrays that don't round-trip cleanly through a query string —
@@ -26,12 +27,19 @@ import { errorBodySchema } from './rest-schemas.js';
 
 const c = initContract();
 
+const minCosineSchema = z
+  .number()
+  .min(0)
+  .max(1)
+  .optional()
+  .describe('Minimum cosine similarity a semantic hit must reach. Omit for the server default.');
+
 const searchBody = z.object({
   query: z.string().optional(),
   mode: retrievalModeSchema.default('hybrid'),
   filters: retrievalFiltersSchema.optional(),
   limit: z.number().int().positive().max(100).default(20),
-  threshold: z.number().min(0).max(2).default(0.8),
+  threshold: minCosineSchema,
   offset: z.number().int().min(0).default(0),
 });
 
@@ -46,7 +54,7 @@ const contextBody = z.object({
 const similarBody = z.object({
   engramId: z.string(),
   limit: z.number().int().positive().max(100).default(20),
-  threshold: z.number().min(0).max(2).default(0.8),
+  threshold: minCosineSchema,
   filters: retrievalFiltersSchema.optional(),
 });
 

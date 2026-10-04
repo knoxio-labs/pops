@@ -3,8 +3,8 @@
  *
  * Engrams are Markdown documents on disk indexed into SQLite. This sub-router
  * is the CRUD + link surface. Non-identity domain — served on the
- * docker-network trust boundary with no per-request auth (parity with
- * templates / plexus).
+ * docker-network trust boundary, with presented keys checked by the API scope
+ * gate (parity with templates / plexus).
  *
  * Typed/array inputs (`create`, `update`, `list`) ride in POST/PATCH bodies
  * rather than the query string (mirrors the food + plexus precedent). `get` /

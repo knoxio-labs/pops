@@ -118,6 +118,8 @@ services:
       # image roll.
       - inventory-images-data:/data/inventory/images
       - inventory-documents-data:/data/inventory/documents
+    secrets:
+      - pops_inventory_api_key
     environment:
       NODE_ENV: production
       PORT: '3002'
@@ -125,6 +127,7 @@ services:
       INVENTORY_SELF_BASE_URL: http://inventory-api:3002
       INVENTORY_IMAGES_DIR: /data/inventory/images
       INVENTORY_DOCUMENTS_DIR: /data/inventory/documents
+      POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_inventory_api_key
       CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
       CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
       POPS_REGISTRY_ENABLED: 'true'
@@ -1122,11 +1125,14 @@ services:
     networks:
       - frontend
       - backend
+    secrets:
+      - pops_orchestrator_api_key
     environment:
       NODE_ENV: production
       PORT: '3009'
       ORCHESTRATOR_SELF_BASE_URL: http://pops-orchestrator:3009
       POPS_REGISTRY_ENABLED: 'true'
+      POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_orchestrator_api_key
     expose:
       - '3009'
     depends_on:
@@ -1736,6 +1742,12 @@ secrets:
   # `finance-api`.
   pops_finance_api_key:
     file: ../secrets/pops_finance_api_key
+  # inventory's account is separate from every other caller; it needs the
+  # finance transaction read used by its URI reconciliation worker.
+  pops_inventory_api_key:
+    file: ../secrets/pops_inventory_api_key
+  pops_orchestrator_api_key:
+    file: ../secrets/pops_orchestrator_api_key
   # The HS256 key bfm signs mobile access tokens with, and verifies every
   # `/mobile/*` request against. Mounted by `bfm-api`, which refuses to boot
   # without it. Rotating the value invalidates every live access token, which

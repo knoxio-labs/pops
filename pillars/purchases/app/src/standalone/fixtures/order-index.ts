@@ -21,6 +21,7 @@ export const ORDER_INDEX_ROW: PurchaseListResponses[200]['items'][number] = {
   paymentHint: PURCHASE.paymentHint,
   rawRef: PURCHASE.rawRef,
   receiptUri: null,
+  ruleLinks: [],
   settlementMode: PURCHASE.settlementMode,
   shippingCents: PURCHASE.shippingCents,
   shippingIncluded: PURCHASE.shippingIncluded,

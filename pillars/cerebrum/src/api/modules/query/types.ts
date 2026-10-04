@@ -4,13 +4,22 @@
 
 export type QueryDomain = 'engrams' | 'transactions' | 'media' | 'inventory';
 
-/** Supported query domains mapped to retrieval sourceType values. */
-export const DOMAIN_SOURCE_TYPE_MAP: Record<QueryDomain, string> = {
-  engrams: 'engram',
-  transactions: 'transaction',
-  media: 'media',
-  inventory: 'inventory',
+/**
+ * Query domains mapped to the `source_type` values their embeddings are stored
+ * under. A domain can span several: media vectors are written as `movie` and
+ * `tv_show`, never `media`.
+ */
+export const DOMAIN_SOURCE_TYPES: Record<QueryDomain, readonly string[]> = {
+  engrams: ['engram'],
+  transactions: ['transaction'],
+  media: ['movie', 'tv_show'],
+  inventory: ['inventory'],
 };
+
+/** Flatten query domains into the retrieval `sourceTypes` filter they select. */
+export function sourceTypesForDomains(domains: readonly QueryDomain[]): string[] {
+  return domains.flatMap((domain) => DOMAIN_SOURCE_TYPES[domain]);
+}
 
 export const ALL_QUERY_DOMAINS: QueryDomain[] = ['engrams', 'transactions', 'media', 'inventory'];
 

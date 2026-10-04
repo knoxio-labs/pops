@@ -25,6 +25,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { AMAZON_DESCRIPTOR_PATTERN } from '../../ingest/amazon/index.js';
+
 const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -258,7 +260,7 @@ describe('reconciliation across a real socket', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         label: 'Smoke',
-        descriptorPattern: 'AMAZON%',
+        descriptorPattern: AMAZON_DESCRIPTOR_PATTERN,
         settlementWindowDays: 21,
         autoLinkPolicy: 'review',
       }),

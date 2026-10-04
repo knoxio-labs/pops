@@ -10,8 +10,8 @@ export const containerVariants = cva(
         underline: 'border-0 border-b border-border',
       },
       size: {
-        sm: 'h-9 px-3 py-1 text-xs',
-        default: 'h-11 px-3 py-2 text-sm',
+        sm: 'h-9 px-3 py-1 text-base md:text-xs',
+        default: 'h-11 px-3 py-2 text-base md:text-sm',
         lg: 'h-12 px-4 py-2 text-base',
       },
       shape: { default: 'rounded-md', pill: 'rounded-full' },
@@ -25,7 +25,7 @@ export const selectVariants = cva(
   'flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 disabled:cursor-not-allowed appearance-none pr-8 cursor-pointer',
   {
     variants: {
-      size: { sm: 'text-xs', default: 'text-sm', lg: 'text-base' },
+      size: { sm: 'text-base md:text-xs', default: 'text-base md:text-sm', lg: 'text-base' },
       centered: { true: 'text-center', false: '' },
     },
     defaultVariants: { size: 'default', centered: false },

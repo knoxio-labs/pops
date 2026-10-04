@@ -54,6 +54,10 @@ export const QueuedLinkSchema = z.object({
   amountCents: CentsSchema,
   linkType: LinkTypeSchema,
   confidence: z.number().min(0).max(1),
+  matchRuleId: z.string().nullable(),
+  matchRulePattern: z.string().nullable(),
+  matchRuleSource: z.string().nullable(),
+  matchRuleIsActive: z.boolean().nullable(),
 });
 
 export const QueueEntrySchema = z.object({
@@ -87,6 +91,22 @@ export const ReconcileQueueQuerySchema = z.object({
   includeAuto: QueryBoolSchema.optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+});
+
+/** Filters for finding a Finance transaction to link to an unexplained charge. */
+export const ManualTransactionSearchQuerySchema = z.object({
+  search: z.string().trim().min(2).max(120),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+});
+
+/** The Finance details shown while an operator chooses a manual link. */
+export const ManualTransactionCandidateSchema = z.object({
+  transactionUri: FinanceTransactionUriSchema,
+  description: z.string(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
+  payee: z.string().nullable(),
+  amountCents: CentsSchema,
+  settlementCurrency: CurrencySchema,
 });
 
 export const TransactionLinksQuerySchema = z.object({
@@ -170,8 +190,32 @@ export const purchasesReconcileContract = c.router({
     method: 'GET',
     path: '/reconcile/queue',
     query: ReconcileQueueQuerySchema,
-    responses: { 200: z.object({ items: z.array(QueueEntrySchema) }) },
+    responses: { 200: z.object({ items: z.array(QueueEntrySchema) }), 400: ErrorBodySchema },
     summary: 'Charges awaiting a decision, newest order first',
+  },
+  manualCandidates: {
+    method: 'GET',
+    path: '/reconcile/manual-candidates',
+    query: ManualTransactionSearchQuerySchema,
+    responses: {
+      200: z.object({ items: z.array(ManualTransactionCandidateSchema) }),
+      400: ErrorBodySchema,
+      503: ErrorBodySchema,
+    },
+    summary: 'Search Finance transactions for a manual reconciliation link',
+  },
+  manual: {
+    method: 'POST',
+    path: '/reconcile/manual',
+    body: LinkDecisionBodySchema,
+    responses: {
+      200: OkSchema,
+      400: ErrorBodySchema,
+      404: ErrorBodySchema,
+      409: ErrorBodySchema,
+      503: ErrorBodySchema,
+    },
+    summary: 'Create and confirm a manually selected charge link',
   },
   /**
    * The direction a person actually arrives from: a finance transaction in
@@ -197,35 +241,43 @@ export const purchasesReconcileContract = c.router({
     method: 'GET',
     path: '/reconcile/links',
     query: TransactionLinksQuerySchema,
-    responses: { 200: TransactionLinksSchema },
+    responses: { 200: TransactionLinksSchema, 400: ErrorBodySchema },
     summary: 'Orders linked to one finance transaction, confirmed or derived',
   },
   confirm: {
     method: 'POST',
     path: '/reconcile/confirm',
     body: LinkDecisionBodySchema,
-    responses: { 200: ConfirmResultSchema, 404: ErrorBodySchema },
+    responses: { 200: ConfirmResultSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Pin a link and learn the merchant descriptor behind it',
   },
   unlink: {
     method: 'POST',
     path: '/reconcile/unlink',
     body: LinkDecisionBodySchema,
-    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    responses: { 200: OkSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Remove a link without recording a decision. A later sweep may re-derive it',
   },
   reject: {
     method: 'POST',
     path: '/reconcile/reject',
     body: LinkDecisionBodySchema,
-    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    responses: { 200: OkSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
     summary: 'Rule a pairing out for good, so no later sweep proposes it again',
+  },
+  deactivateRule: {
+    method: 'POST',
+    path: '/reconcile/rules/:ruleId/deactivate',
+    pathParams: z.object({ ruleId: z.string().min(1) }),
+    body: z.object({}).optional(),
+    responses: { 200: OkSchema, 400: ErrorBodySchema, 404: ErrorBodySchema },
+    summary: 'Deactivate a learned match rule without removing its attribution history',
   },
   sweep: {
     method: 'POST',
     path: '/reconcile/sweep',
     body: z.object({ source: z.string().optional() }).optional(),
-    responses: { 200: SweepOutcomeSchema, 503: ErrorBodySchema },
+    responses: { 200: SweepOutcomeSchema, 400: ErrorBodySchema, 503: ErrorBodySchema },
     summary: 'Run a reconciliation sweep now',
   },
 });

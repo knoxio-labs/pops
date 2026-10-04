@@ -156,8 +156,10 @@ extension BFMTransactionsRepository {
         // the time this runs — and the screen says the same thing about each.
         case .unauthorized, .forbidden:
             throw RepositoryError.unauthorized
-        case .tooManyRequests:
-            throw RepositoryError.transport("\(ListTransactions.id): rate limited")
+        case .tooManyRequests(let limited):
+            throw RepositoryError.rateLimited(
+                retryAfterSeconds: try limited.body.json.retryAfterSeconds
+            )
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code, operation: ListTransactions.id)
@@ -176,7 +178,11 @@ extension BFMTransactionsRepository {
     /// body — so it stays a transport failure rather than triggering a
     /// restart this app cannot justify.
     private static func failure(_ error: ClientError, operation: String) -> RepositoryError {
-        BFMRepositoryFailure.failure(error, operation: operation)
+        let runtime = PopsError.runtimeFailureDetails(from: error)
+        if runtime?.statusCode == 429 || error.response?.status.code == 429 {
+            return .rateLimited(retryAfterSeconds: runtime?.retryAfterSeconds)
+        }
+        return BFMRepositoryFailure.failure(error, operation: operation)
     }
 }
 
@@ -205,15 +211,13 @@ extension BFMTransactionsRepository {
     /// reason.
     private func row(from wire: ListTransactionRow) throws -> Transaction {
         guard
-            let majorUnits = Self.majorUnits(of: wire.amount),
-            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency),
             let date = Self.day(from: wire.date, in: timeZone())
         else { throw RepositoryError.contractMismatch }
 
         return Transaction(
             id: wire.id,
             description: wire.description,
-            amount: amount,
+            amount: MoneyAmount(minorUnits: wire.amountMinorUnits, currencyCode: wire.currency),
             date: date,
             type: TransactionType(rawValue: wire._type),
             entityName: wire.entityName,
@@ -227,15 +231,8 @@ extension BFMTransactionsRepository {
         ISO8601Day.parse(raw, in: timeZone)
     }
 
-    /// The wire carries money as a JSON number, so the generator hands over a
-    /// `Double` and this conversion exists only because of that choice.
-    ///
-    /// It goes through the shortest decimal string that round-trips the value,
-    /// never through arithmetic on the `Double` itself.
-    /// `19.99` is not a binary float; `Decimal(19.99)` is
-    /// `19.989999999999998976` and scaling that yields `1998` cents. Its
-    /// `description` is `"19.99"`, which is exactly what the server serialised
-    /// and what `Decimal(string:)` reads back without loss.
+    /// Preserves the JSON number's shortest decimal spelling before parsing it
+    /// as Decimal, avoiding arithmetic on its binary floating-point value.
     static func majorUnits(of amount: Double) -> Decimal? {
         guard amount.isFinite else { return nil }
         return Decimal(string: String(amount))
@@ -255,8 +252,10 @@ extension BFMTransactionsRepository {
             throw RepositoryError.transport("\(GetTransaction.id): invalid request")
         case .unauthorized, .forbidden:
             throw RepositoryError.unauthorized
-        case .tooManyRequests:
-            throw RepositoryError.transport("\(GetTransaction.id): rate limited")
+        case .tooManyRequests(let limited):
+            throw RepositoryError.rateLimited(
+                retryAfterSeconds: try limited.body.json.retryAfterSeconds
+            )
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code, operation: GetTransaction.id)
@@ -277,8 +276,6 @@ extension BFMTransactionsRepository {
     /// the record.
     private func detail(from wire: DetailPayload) throws -> TransactionDetail {
         guard
-            let majorUnits = Self.majorUnits(of: wire.amount),
-            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency),
             let date = Self.day(from: wire.date, in: timeZone()),
             let lastEditedAt = Self.instant(from: wire.lastEditedTime)
         else { throw RepositoryError.contractMismatch }
@@ -286,7 +283,7 @@ extension BFMTransactionsRepository {
         return TransactionDetail(
             id: wire.id,
             description: wire.description,
-            amount: amount,
+            amount: MoneyAmount(minorUnits: wire.amountMinorUnits, currencyCode: wire.currency),
             date: date,
             type: TransactionType(rawValue: wire._type),
             account: wire.account,

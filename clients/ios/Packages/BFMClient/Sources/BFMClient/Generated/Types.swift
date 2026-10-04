@@ -11111,6 +11111,14 @@ internal enum Operations {
                                 internal var basis: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.BasisPayload
                                 /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/AccountsPayload/balance/inconsistent`.
                                 internal var inconsistent: Swift.Bool
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/AccountsPayload/balance/reconciliation`.
+                                internal enum ReconciliationPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case unmeasured = "unmeasured"
+                                    case agreed = "agreed"
+                                    case disagrees = "disagrees"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/AccountsPayload/balance/reconciliation`.
+                                internal var reconciliation: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.ReconciliationPayload
                                 /// Creates a new `BalancePayload`.
                                 ///
                                 /// - Parameters:
@@ -11118,22 +11126,26 @@ internal enum Operations {
                                 ///   - balanceCents:
                                 ///   - basis:
                                 ///   - inconsistent:
+                                ///   - reconciliation:
                                 internal init(
                                     asOf: Swift.String,
                                     balanceCents: Swift.Int,
                                     basis: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.BasisPayload,
-                                    inconsistent: Swift.Bool
+                                    inconsistent: Swift.Bool,
+                                    reconciliation: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.ReconciliationPayload
                                 ) {
                                     self.asOf = asOf
                                     self.balanceCents = balanceCents
                                     self.basis = basis
                                     self.inconsistent = inconsistent
+                                    self.reconciliation = reconciliation
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case asOf
                                     case balanceCents
                                     case basis
                                     case inconsistent
+                                    case reconciliation
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -11153,11 +11165,16 @@ internal enum Operations {
                                         Swift.Bool.self,
                                         forKey: .inconsistent
                                     )
+                                    self.reconciliation = try container.decode(
+                                        Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload.ReconciliationPayload.self,
+                                        forKey: .reconciliation
+                                    )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "asOf",
                                         "balanceCents",
                                         "basis",
-                                        "inconsistent"
+                                        "inconsistent",
+                                        "reconciliation"
                                     ])
                                 }
                             }
@@ -12452,6 +12469,14 @@ internal enum Operations {
                                 internal var basis: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.BasisPayload
                                 /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/balance/inconsistent`.
                                 internal var inconsistent: Swift.Bool
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/balance/reconciliation`.
+                                internal enum ReconciliationPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case unmeasured = "unmeasured"
+                                    case agreed = "agreed"
+                                    case disagrees = "disagrees"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/balance/reconciliation`.
+                                internal var reconciliation: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.ReconciliationPayload
                                 /// Creates a new `BalancePayload`.
                                 ///
                                 /// - Parameters:
@@ -12459,22 +12484,26 @@ internal enum Operations {
                                 ///   - balanceCents:
                                 ///   - basis:
                                 ///   - inconsistent:
+                                ///   - reconciliation:
                                 internal init(
                                     asOf: Swift.String,
                                     balanceCents: Swift.Int,
                                     basis: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.BasisPayload,
-                                    inconsistent: Swift.Bool
+                                    inconsistent: Swift.Bool,
+                                    reconciliation: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.ReconciliationPayload
                                 ) {
                                     self.asOf = asOf
                                     self.balanceCents = balanceCents
                                     self.basis = basis
                                     self.inconsistent = inconsistent
+                                    self.reconciliation = reconciliation
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case asOf
                                     case balanceCents
                                     case basis
                                     case inconsistent
+                                    case reconciliation
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -12494,11 +12523,16 @@ internal enum Operations {
                                         Swift.Bool.self,
                                         forKey: .inconsistent
                                     )
+                                    self.reconciliation = try container.decode(
+                                        Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload.ReconciliationPayload.self,
+                                        forKey: .reconciliation
+                                    )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "asOf",
                                         "balanceCents",
                                         "basis",
-                                        "inconsistent"
+                                        "inconsistent",
+                                        "reconciliation"
                                     ])
                                 }
                             }
@@ -14015,8 +14049,8 @@ internal enum Operations {
                     internal struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload`.
                         internal struct DataPayloadPayload: Codable, Hashable, Sendable {
-                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/amount`.
-                            internal var amount: Swift.Double
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/amountMinorUnits`.
+                            internal var amountMinorUnits: Swift.Int
                             /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/currency`.
                             internal var currency: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/date`.
@@ -14034,7 +14068,7 @@ internal enum Operations {
                             /// Creates a new `DataPayloadPayload`.
                             ///
                             /// - Parameters:
-                            ///   - amount:
+                            ///   - amountMinorUnits:
                             ///   - currency:
                             ///   - date:
                             ///   - description:
@@ -14043,7 +14077,7 @@ internal enum Operations {
                             ///   - tags:
                             ///   - _type:
                             internal init(
-                                amount: Swift.Double,
+                                amountMinorUnits: Swift.Int,
                                 currency: Swift.String,
                                 date: Swift.String,
                                 description: Swift.String,
@@ -14052,7 +14086,7 @@ internal enum Operations {
                                 tags: [Swift.String],
                                 _type: Swift.String
                             ) {
-                                self.amount = amount
+                                self.amountMinorUnits = amountMinorUnits
                                 self.currency = currency
                                 self.date = date
                                 self.description = description
@@ -14062,7 +14096,7 @@ internal enum Operations {
                                 self._type = _type
                             }
                             internal enum CodingKeys: String, CodingKey {
-                                case amount
+                                case amountMinorUnits
                                 case currency
                                 case date
                                 case description
@@ -14073,9 +14107,9 @@ internal enum Operations {
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
-                                self.amount = try container.decode(
-                                    Swift.Double.self,
-                                    forKey: .amount
+                                self.amountMinorUnits = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .amountMinorUnits
                                 )
                                 self.currency = try container.decode(
                                     Swift.String.self,
@@ -14106,7 +14140,7 @@ internal enum Operations {
                                     forKey: ._type
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                    "amount",
+                                    "amountMinorUnits",
                                     "currency",
                                     "date",
                                     "description",
@@ -15258,8 +15292,8 @@ internal enum Operations {
                     internal struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/account`.
                         internal var account: Swift.String
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/amount`.
-                        internal var amount: Swift.Double
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/amountMinorUnits`.
+                        internal var amountMinorUnits: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/country`.
                         internal var country: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/currency`.
@@ -15290,7 +15324,7 @@ internal enum Operations {
                         ///
                         /// - Parameters:
                         ///   - account:
-                        ///   - amount:
+                        ///   - amountMinorUnits:
                         ///   - country:
                         ///   - currency:
                         ///   - date:
@@ -15306,7 +15340,7 @@ internal enum Operations {
                         ///   - _type:
                         internal init(
                             account: Swift.String,
-                            amount: Swift.Double,
+                            amountMinorUnits: Swift.Int,
                             country: Swift.String? = nil,
                             currency: Swift.String,
                             date: Swift.String,
@@ -15322,7 +15356,7 @@ internal enum Operations {
                             _type: Swift.String
                         ) {
                             self.account = account
-                            self.amount = amount
+                            self.amountMinorUnits = amountMinorUnits
                             self.country = country
                             self.currency = currency
                             self.date = date
@@ -15339,7 +15373,7 @@ internal enum Operations {
                         }
                         internal enum CodingKeys: String, CodingKey {
                             case account
-                            case amount
+                            case amountMinorUnits
                             case country
                             case currency
                             case date
@@ -15360,9 +15394,9 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .account
                             )
-                            self.amount = try container.decode(
-                                Swift.Double.self,
-                                forKey: .amount
+                            self.amountMinorUnits = try container.decode(
+                                Swift.Int.self,
+                                forKey: .amountMinorUnits
                             )
                             self.country = try container.decodeIfPresent(
                                 Swift.String.self,
@@ -15418,7 +15452,7 @@ internal enum Operations {
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "account",
-                                "amount",
+                                "amountMinorUnits",
                                 "country",
                                 "currency",
                                 "date",

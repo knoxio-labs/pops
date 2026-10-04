@@ -84,7 +84,7 @@ describe('a foreign receipt and its card charge', () => {
     // would fail the sign guard and never match.
     const { links } = run({
       charges: [brlCharge({ amountCents: -BRL_TOTAL, role: 'refund' })],
-      transactions: [brlSettlement({ amountCents: -3471 })],
+      transactions: [brlSettlement({ amountCents: -3471, type: 'refund' })],
     });
 
     expect(links).toHaveLength(1);

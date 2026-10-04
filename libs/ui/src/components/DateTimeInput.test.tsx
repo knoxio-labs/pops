@@ -45,6 +45,26 @@ describe('DateTimeInput', () => {
   });
 });
 
+describe.each([
+  ['DateInput', DateInput],
+  ['TimeInput', TimeInput],
+  ['DateTimeInput', DateTimeInput],
+])('%s touch typography', (_name, Control) => {
+  it.each([
+    ['sm', 'md:text-xs'],
+    ['default', 'md:text-sm'],
+    ['lg', null],
+  ] satisfies ['sm' | 'default' | 'lg', string | null][])(
+    'keeps the %s input at 16px before desktop sizing',
+    (size, desktopClass) => {
+      render(<Control aria-label="When" size={size} />);
+      const input = screen.getByLabelText('When');
+      expect(input).toHaveClass('text-base');
+      if (desktopClass) expect(input).toHaveClass(desktopClass);
+    }
+  );
+});
+
 /**
  * Where the message renders, which is the whole of POPS-3247.
  *

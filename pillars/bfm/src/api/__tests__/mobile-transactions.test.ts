@@ -5,8 +5,8 @@
  * Three things are being defended here, and each has a failure mode that is
  * silent rather than loud:
  *
- *   - **The money.** Sign and scale are finance's, mirrored. A flipped sign
- *     shows a refund as a purchase on a phone and nothing anywhere fails.
+ *   - **The money.** Finance's sign is preserved and its amount is converted
+ *     to currency minor units before it reaches the phone.
  *   - **The paging.** A cursor walk must be stable while the list mutates
  *     underneath it, or an infinite scroll quietly repeats and skips rows.
  *   - **The degradation.** Finance being down must never render as an empty
@@ -97,7 +97,7 @@ describe('the list row is mobile-shaped', () => {
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).toSorted()).toEqual(['data', 'nextCursor']);
     expect(Object.keys(res.body.data[0]).toSorted()).toEqual([
-      'amount',
+      'amountMinorUnits',
       'currency',
       'date',
       'description',
@@ -119,21 +119,84 @@ describe('the list row is mobile-shaped', () => {
     expect(row['location']).toBeUndefined();
   });
 
-  it("mirrors finance's amount sign and scale rather than reinterpreting it", async () => {
+  it('converts finance amounts to signed currency minor units', async () => {
     const { app, token } = openWithRows([
       financeRow({ id: 'spend', amount: -42.5 }),
       financeRow({ id: 'earn', amount: 1234.56, date: '2026-02-01', type: 'income' }),
+      financeRow({ id: 'fractional-cent', amount: 0.07, date: '2026-01-30' }),
+      financeRow({ id: 'large-negative', amount: -98765.43, date: '2026-01-29' }),
     ]);
 
     const res = await get(app, token, LIST_PATH);
 
-    const byId = new Map<string, { amount: number; currency: string; type: string }>(
-      res.body.data.map((row: { id: string }) => [row.id, row])
+    const byId = new Map<string, { amountMinorUnits: number; currency: string; type: string }>(
+      res.body.data.map(
+        (row: { id: string; amountMinorUnits: number; currency: string; type: string }) => [
+          row.id,
+          row,
+        ]
+      )
     );
-    expect(byId.get('spend')?.amount).toBe(-42.5);
-    expect(byId.get('earn')?.amount).toBe(1234.56);
+    expect(byId.get('spend')?.amountMinorUnits).toBe(-4250);
+    expect(byId.get('earn')?.amountMinorUnits).toBe(123456);
+    expect(byId.get('fractional-cent')?.amountMinorUnits).toBe(7);
+    expect(byId.get('large-negative')?.amountMinorUnits).toBe(-9876543);
     // `type` is a semantic label and never the direction — the sign is.
     expect(byId.get('earn')?.type).toBe('income');
+  });
+
+  it('uses the account currency to choose the minor-unit scale', async () => {
+    const fake = createFinanceFake(
+      [financeRow({ id: 'txn-jpy', amount: -42, accountId: 'acc-jpy' })],
+      undefined,
+      [financeAccountRow({ id: 'acc-jpy', currency: 'JPY' })]
+    );
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.body.data[0]).toMatchObject({ amountMinorUnits: -42, currency: 'JPY' });
+  });
+
+  it('rejects more precision than the currency rather than rounding it', async () => {
+    const fake = createFinanceFake(
+      [
+        financeRow({ id: 'txn-jpy', amount: 42.5, accountId: 'acc-jpy' }),
+        financeRow({ id: 'txn-aud', amount: 1.005, accountId: 'acc-aud' }),
+      ],
+      undefined,
+      [
+        financeAccountRow({ id: 'acc-jpy', currency: 'JPY' }),
+        financeAccountRow({ id: 'acc-aud', currency: 'AUD' }),
+      ]
+    );
+    const { app, token } = openWith(fake.factory);
+
+    for (const accountId of ['acc-jpy', 'acc-aud']) {
+      const res = await get(app, token, `${LIST_PATH}?accountId=${accountId}`);
+
+      expect(res.status).toBe(502);
+      expect(res.body.code).toBe('bfm.upstream.contract_mismatch');
+    }
+
+    const detail = await get(app, token, `${LIST_PATH}/txn-jpy`);
+
+    expect(detail.status).toBe(502);
+    expect(detail.body.code).toBe('bfm.upstream.contract_mismatch');
+  });
+
+  it('uses two minor digits for a malformed currency', async () => {
+    const fake = createFinanceFake(
+      [financeRow({ id: 'txn-malformed-currency', amount: -42.5, accountId: 'acc-malformed' })],
+      undefined,
+      [financeAccountRow({ id: 'acc-malformed', currency: 'AU' })]
+    );
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0]).toMatchObject({ amountMinorUnits: -4250, currency: 'AU' });
   });
 
   it("emits the transaction's own account currency, not a fleet-wide assumption (POPS-3571)", async () => {
@@ -395,7 +458,7 @@ describe('the detail record', () => {
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).toSorted()).toEqual([
       'account',
-      'amount',
+      'amountMinorUnits',
       'country',
       'currency',
       'date',
@@ -410,6 +473,7 @@ describe('the detail record', () => {
       'tags',
       'type',
     ]);
+    expect(res.body.amountMinorUnits).toBe(-4250);
     expect(res.body.notes).toBe('split with Sam');
   });
 

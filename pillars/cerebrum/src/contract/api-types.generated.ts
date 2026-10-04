@@ -2030,6 +2030,7 @@ export interface operations {
           appContext?: {
             app: string;
             entityId?: string;
+            entityTitle?: string;
             entityType?: string;
             route?: string;
           };
@@ -2457,6 +2458,7 @@ export interface operations {
                 } | null;
                 /** @enum {string} */
                 mode: 'report' | 'summary' | 'timeline';
+                outputTruncated: boolean;
                 scopeCoverage: string[];
                 sourceCount: number;
                 truncated: boolean;
@@ -2591,6 +2593,7 @@ export interface operations {
                 } | null;
                 /** @enum {string} */
                 mode: 'report' | 'summary' | 'timeline';
+                outputTruncated: boolean;
                 scopeCoverage: string[];
                 sourceCount: number;
                 truncated: boolean;
@@ -2667,6 +2670,7 @@ export interface operations {
                 } | null;
                 /** @enum {string} */
                 mode: 'report' | 'summary' | 'timeline';
+                outputTruncated: boolean;
                 scopeCoverage: string[];
                 sourceCount: number;
                 truncated: boolean;
@@ -2745,6 +2749,7 @@ export interface operations {
                 } | null;
                 /** @enum {string} */
                 mode: 'report' | 'summary' | 'timeline';
+                outputTruncated: boolean;
                 scopeCoverage: string[];
                 sourceCount: number;
                 truncated: boolean;
@@ -6044,8 +6049,8 @@ export interface operations {
           /** @default 0 */
           offset: number;
           query?: string;
-          /** @default 0.8 */
-          threshold: number;
+          /** @description Minimum cosine similarity a semantic hit must reach. Omit for the server default. */
+          threshold?: number;
         };
       };
     };
@@ -6066,7 +6071,7 @@ export interface operations {
               contentPreview: string;
               distance?: number;
               /** @enum {string} */
-              matchType: 'semantic' | 'structured' | 'both';
+              matchType: 'semantic' | 'lexical' | 'structured' | 'both';
               metadata: {
                 [key: string]: unknown;
               };
@@ -6118,8 +6123,8 @@ export interface operations {
           };
           /** @default 20 */
           limit: number;
-          /** @default 0.8 */
-          threshold: number;
+          /** @description Minimum cosine similarity a semantic hit must reach. Omit for the server default. */
+          threshold?: number;
         };
       };
     };
@@ -6135,7 +6140,7 @@ export interface operations {
               contentPreview: string;
               distance?: number;
               /** @enum {string} */
-              matchType: 'semantic' | 'structured' | 'both';
+              matchType: 'semantic' | 'lexical' | 'structured' | 'both';
               metadata: {
                 [key: string]: unknown;
               };
@@ -6667,16 +6672,7 @@ export interface operations {
           | 'cerebrum.glia.demotionWindowDays'
           | 'cerebrum.mcp.queryMaxSources'
           | 'cerebrum.mcp.searchSnippetLength'
-          | 'cerebrum.mcp.searchDefaultLimit'
-          | 'ego.defaultModel'
-          | 'ego.maxHistory'
-          | 'ego.maxRetrieval'
-          | 'ego.tokenBudget'
-          | 'ego.relevanceThreshold'
-          | 'ego.chat.maxTokens'
-          | 'ego.chat.temperature'
-          | 'ego.summary.maxTokens'
-          | 'ego.summary.temperature';
+          | 'cerebrum.mcp.searchDefaultLimit';
       };
       cookie?: never;
     };
@@ -6767,16 +6763,7 @@ export interface operations {
           | 'cerebrum.glia.demotionWindowDays'
           | 'cerebrum.mcp.queryMaxSources'
           | 'cerebrum.mcp.searchSnippetLength'
-          | 'cerebrum.mcp.searchDefaultLimit'
-          | 'ego.defaultModel'
-          | 'ego.maxHistory'
-          | 'ego.maxRetrieval'
-          | 'ego.tokenBudget'
-          | 'ego.relevanceThreshold'
-          | 'ego.chat.maxTokens'
-          | 'ego.chat.temperature'
-          | 'ego.summary.maxTokens'
-          | 'ego.summary.temperature';
+          | 'cerebrum.mcp.searchDefaultLimit';
       };
       cookie?: never;
     };
@@ -6875,16 +6862,7 @@ export interface operations {
           | 'cerebrum.glia.demotionWindowDays'
           | 'cerebrum.mcp.queryMaxSources'
           | 'cerebrum.mcp.searchSnippetLength'
-          | 'cerebrum.mcp.searchDefaultLimit'
-          | 'ego.defaultModel'
-          | 'ego.maxHistory'
-          | 'ego.maxRetrieval'
-          | 'ego.tokenBudget'
-          | 'ego.relevanceThreshold'
-          | 'ego.chat.maxTokens'
-          | 'ego.chat.temperature'
-          | 'ego.summary.maxTokens'
-          | 'ego.summary.temperature';
+          | 'cerebrum.mcp.searchDefaultLimit';
       };
       cookie?: never;
     };
@@ -6982,16 +6960,7 @@ export interface operations {
           | 'cerebrum.glia.demotionWindowDays'
           | 'cerebrum.mcp.queryMaxSources'
           | 'cerebrum.mcp.searchSnippetLength'
-          | 'cerebrum.mcp.searchDefaultLimit'
-          | 'ego.defaultModel'
-          | 'ego.maxHistory'
-          | 'ego.maxRetrieval'
-          | 'ego.tokenBudget'
-          | 'ego.relevanceThreshold'
-          | 'ego.chat.maxTokens'
-          | 'ego.chat.temperature'
-          | 'ego.summary.maxTokens'
-          | 'ego.summary.temperature';
+          | 'cerebrum.mcp.searchDefaultLimit';
       };
       cookie?: never;
     };

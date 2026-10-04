@@ -3,6 +3,16 @@
     "design-feedback": {
       "command": "node",
       "args": ["scripts/design-feedback-mcp.mjs"]
+    },
+    "huly-agents-knoxiolabs": {
+      "type": "http",
+      "url": "https://projects-mcp.knoxiolabs.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${HULY_MCP_BEARER:-unset}",
+        "x-huly-url": "https://projects.knoxiolabs.com",
+        "x-huly-workspace": "knoxiolabs",
+        "x-huly-token": "${HULY_AGENTS_TOKEN:-unset}"
+      }
     }
   }
 }

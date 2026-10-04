@@ -4,6 +4,8 @@
 //! full request → handler → serialization path is covered (not just the
 //! handler functions in isolation).
 
+mod common;
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
@@ -20,6 +22,7 @@ async fn test_app() -> axum::Router {
     build_router(AppState {
         pool,
         version: "1.2.3-test".to_string(),
+        service_account_scope_verifier: common::service_account_scope_verifier(),
     })
 }
 

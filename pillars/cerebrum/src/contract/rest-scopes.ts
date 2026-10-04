@@ -9,8 +9,8 @@
  * Array inputs ride in POST bodies (they don't round-trip cleanly through a
  * query string); `remove` is a POST sub-action rather than DELETE because a
  * DELETE can't carry a scope array body cleanly. `list` keeps the optional
- * `prefix` in the query string. Non-identity domain — docker-net trust, no
- * per-request auth.
+ * `prefix` in the query string. Non-identity domain — docker-network trust
+ * when no key is presented; keyed requests are scope-checked at the API boundary.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';

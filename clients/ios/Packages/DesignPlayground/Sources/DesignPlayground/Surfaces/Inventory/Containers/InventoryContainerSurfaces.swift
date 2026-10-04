@@ -99,7 +99,7 @@ internal enum InventoryContainerSurfaces {
                 "existing-selected", "Two picked", step: .existing,
                 selected: ["television", "tape"]),
             storeState("existing-none", "No matches", step: .existing, query: "piano"),
-        ]
+        ] + InventoryStoreScanStates.all
     )
 
     internal static let surfaces: [DesignSurface] = [page, browser, openContainers, storeHere]
@@ -129,15 +129,9 @@ internal enum InventoryContainerSurfaces {
         _ id: String, _ title: String, step: InventoryStoreHereStep, query: String = "",
         selected: Set<String> = []
     ) -> DesignState {
-        DesignState(id, title) {
-            NavigationStack {
-                InventoryContainerPage(profile: Fixtures.few)
-                    .sheet(isPresented: .constant(true)) {
-                        InventoryStoreHereSheet(
-                            target: .container(Fixtures.few), step: step, query: query,
-                            selected: selected)
-                    }
-            }
+        InventoryStoreScanStates.sheetState(id, title) {
+            InventoryStoreHereSheet(
+                target: .container(Fixtures.few), step: step, query: query, selected: selected)
         }
     }
 }

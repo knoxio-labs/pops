@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router';
 
 import { PageHeader, formatDate } from '@pops/ui';
 
 import { AbsentDrillDown } from './merchant-lens/AbsentDrillDown.js';
 import { AttributionLegend } from './merchant-lens/AttributionLegend.js';
 import { CurrencyGroupSection } from './merchant-lens/CurrencyGroupSection.js';
-import { ALL_TIME, type PeriodSelection } from './merchant-lens/period.js';
+import { ALL_TIME, parsePeriodSelection, type PeriodSelection } from './merchant-lens/period.js';
 import { PeriodPicker } from './merchant-lens/PeriodPicker.js';
 import {
   useMerchantLensModel,
@@ -30,14 +31,24 @@ import type { SpendPeriod } from './merchant-lens/types.js';
 export function MerchantLensPage(): ReactElement {
   const { t } = useTranslation('purchases');
   const [now] = useState(() => new Date());
-  const [selection, setSelection] = useState<PeriodSelection>(ALL_TIME);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selection = parsePeriodSelection(searchParams.get('period') ?? ALL_TIME, now);
   const model = useMerchantLensModel(selection);
+
+  const handlePeriodChange = (next: PeriodSelection): void => {
+    setSearchParams((current) => {
+      const updated = new URLSearchParams(current);
+      if (next === ALL_TIME) updated.delete('period');
+      else updated.set('period', next);
+      return updated;
+    });
+  };
 
   return (
     <div className="space-y-6 p-6">
       <PageHeader title={t('merchants.title')} description={t('merchants.intro')} />
 
-      <PeriodPicker value={selection} onChange={setSelection} now={now} />
+      <PeriodPicker value={selection} onChange={handlePeriodChange} now={now} />
 
       <MerchantLensBody model={model} />
 

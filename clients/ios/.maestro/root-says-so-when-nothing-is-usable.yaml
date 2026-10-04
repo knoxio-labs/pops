@@ -56,6 +56,7 @@ name: The root screen says why nothing is usable, and Try again leaves it
 # Try again has to leave the unavailable state on its own, which is what
 # proves the sentence above was reporting a condition rather than describing a
 # corner the app cannot leave.
+- assertVisible: 'Try again'
 - runScript: scripts/openapi-comes-back.js
 - assertTrue: ${output.recovery.state.financeOpenApiUnreachable == false}
 

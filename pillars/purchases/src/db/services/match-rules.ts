@@ -142,3 +142,15 @@ export function listActiveMatchRules(db: PurchasesDb): SolvableRule[] {
     .orderBy(asc(purchaseMatchRules.priority), asc(purchaseMatchRules.id))
     .all();
 }
+
+/** Deactivate a learned rule while preserving links that already cite it. */
+export function deactivateMatchRule(db: PurchasesDb, id: string): boolean {
+  return (
+    db
+      .update(purchaseMatchRules)
+      .set({ isActive: false })
+      .where(eq(purchaseMatchRules.id, id))
+      .returning({ id: purchaseMatchRules.id })
+      .all().length > 0
+  );
+}

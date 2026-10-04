@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 
 import { Button, formatCents, formatDate } from '@pops/ui';
 
+import { MatchRuleAttribution } from '../MatchRuleAttribution.js';
 import { merchantLabel } from './merchant-label.js';
 import { MERCHANT_ORDERS_LIMIT } from './merchant-orders-query.js';
 import { orderCountAgreement } from './order-count-agreement.js';
@@ -114,22 +115,38 @@ function OrderRow({ order }: { order: MerchantOrder }): ReactElement {
   const { t } = useTranslation('purchases');
 
   return (
-    <Link
-      to={`/purchases/${order.id}`}
-      className="hover:bg-muted/50 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-3 py-2"
-    >
-      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
-        <span>{formatDate(order.orderedAt)}</span>
-        <span className="text-muted-foreground text-xs">
-          {order.sourceOrderId ?? t('merchants.drilldown.noReference')}
+    <div className="px-3 py-2">
+      <Link
+        to={`/purchases/${order.id}`}
+        className="hover:bg-muted/50 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+      >
+        <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+          <span>{formatDate(order.orderedAt)}</span>
+          <span className="text-muted-foreground text-xs">
+            {order.sourceOrderId ?? t('merchants.drilldown.noReference')}
+          </span>
+          <span className="text-muted-foreground text-xs">
+            {t(`purchase.status.${order.status}`)}
+          </span>
         </span>
-        <span className="text-muted-foreground text-xs">
-          {t(`purchase.status.${order.status}`)}
+        <span className="text-sm font-medium tabular-nums">
+          {formatCents(order.totalCents, order.currency)}
         </span>
-      </span>
-      <span className="text-sm font-medium tabular-nums">
-        {formatCents(order.totalCents, order.currency)}
-      </span>
-    </Link>
+      </Link>
+      {order.ruleLinks.length > 0 && (
+        <ul className="mt-2 space-y-2 border-l pl-3" aria-label={t('reconcile.rule.listLabel')}>
+          {order.ruleLinks.map((rule) => (
+            <li key={rule.id}>
+              <MatchRuleAttribution
+                id={rule.id}
+                pattern={rule.descriptionPattern}
+                source={rule.source}
+                isActive={rule.isActive}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

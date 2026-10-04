@@ -95,6 +95,8 @@ export const purchaseItems = sqliteTable(
     imageUrl: text('image_url'),
 
     quantity: integer('quantity').notNull().default(1),
+    /** Whether the source priced this line by weight or volume. */
+    pricedByMeasure: integer('priced_by_measure', { mode: 'boolean' }).notNull().default(false),
     unitPriceCents: integer('unit_price_cents').notNull(),
     /** What the merchant says this line cost, however it applies tax and discount. */
     lineTotalCents: integer('line_total_cents').notNull(),

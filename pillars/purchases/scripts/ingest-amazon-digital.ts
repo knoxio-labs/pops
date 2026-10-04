@@ -1,6 +1,6 @@
 /**
- * Backfill the digital half of an Amazon DSAR bundle through
- * `POST /purchases`.
+ * Backfill digital Amazon orders and their tax invoices through the purchases
+ * API.
  *
  *   POPS_INTERNAL_API_KEY=<key> pnpm ingest:amazon-digital -- "<bundle-root>" [--dry-run]
  *
@@ -24,10 +24,14 @@ import {
   parseAmazonDigitalOrders,
 } from '../src/ingest/amazon-digital/index.js';
 import {
+  matchAmazonInvoices,
+  readAmazonInvoiceBundle,
+  type RejectedInvoice,
+} from '../src/ingest/amazon/index.js';
+import { postWithInvoices, reportInvoiceMatches } from './amazon-invoice-backfill.js';
+import {
   createIngestClient,
-  postPurchases,
   readBundlePath,
-  reportOutcome,
   runCli,
   summariseAnomalies,
   upsertSource,
@@ -88,6 +92,20 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   );
   if (anomalies.length > 0) console.warn(`anomalies: ${summariseAnomalies(anomalies)}`);
 
+  const knownOrderIds = new Set<string>();
+  for (const order of orders) {
+    if (order.sourceOrderId !== null && order.sourceOrderId !== undefined) {
+      knownOrderIds.add(order.sourceOrderId);
+    }
+  }
+
+  const scanned = readAmazonInvoiceBundle(bundlePath);
+  const { matched, rejected: unmatched } = matchAmazonInvoices(scanned, knownOrderIds);
+  const rejected = unmatched.map((invoice): RejectedInvoice =>
+    invoice.kind === 'digital-order' ? { ...invoice, kind: 'unknown-order' } : invoice
+  );
+  reportInvoiceMatches(scanned.length, matched, rejected);
+
   if (client === undefined) {
     console.warn('--dry-run: nothing was written');
     return;
@@ -108,7 +126,13 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     ingestAdapter: 'amazon-dsar-digital',
   });
 
-  reportOutcome(await postPurchases(client, orders));
+  await postWithInvoices(client, {
+    source: AMAZON_DIGITAL_SOURCE_ID,
+    sourceLabel: 'Amazon Digital',
+    orders,
+    matched,
+    attachExisting: true,
+  });
 }
 
 if (isCliEntrypoint(import.meta.url)) {

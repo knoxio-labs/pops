@@ -55,8 +55,10 @@ export interface SolvableCharge {
    */
   readonly currency: string;
   readonly role: SettlementRole;
-  /** The parent order's `orderedAt`, which anchors the settlement window. */
+  /** The parent order's `orderedAt`, used when no shipment date is known. */
   readonly orderedAt: string;
+  /** The linked shipment's `shippedAt`, or null when the charge has no known shipment. */
+  readonly shippedAt: string | null;
   /**
    * Descriptor pattern from the order's `purchase_sources` row, for stage-0
    * blocking. Null when the source declares none, which blocks nothing.
@@ -80,6 +82,8 @@ export interface SolvableTransaction {
   readonly description: string;
   /** The finance account the transaction was posted to. */
   readonly accountId: string;
+  /** Finance's semantic type; unfamiliar values cannot settle a purchase charge. */
+  readonly type: string;
   /** Signed, integer cents, in {@link settlementCurrency}. */
   readonly amountCents: number;
   /** ISO-4217 the account settled in — what {@link amountCents} is stated in. */

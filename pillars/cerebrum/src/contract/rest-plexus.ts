@@ -3,8 +3,7 @@
  *
  * Plexus is the external-adapter registry: adapter CRUD + per-adapter
  * ingestion-filter management. Non-identity domain — served on the
- * docker-network trust boundary with no per-request auth (parity with
- * templates).
+ * docker-network trust boundary (parity with templates).
  *
  * The two queries that take typed input (`adapters.get`, `filters.list`)
  * carry their input in the path; `filters.set` and the lifecycle mutations

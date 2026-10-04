@@ -6,6 +6,9 @@ import { merchantOrdersQuery } from './merchant-orders-query.js';
 
 import type { MerchantOrder, MerchantSpend, SpendPeriod } from './types.js';
 
+/** Cache prefix shared by every expanded merchant order list. */
+export const MERCHANT_ORDERS_QUERY_KEY = ['purchases', 'merchantOrders'] as const;
+
 export type MerchantOrdersModel =
   | { state: 'loading' }
   | { state: 'failed'; failure: Error; refetch: () => void }
@@ -34,7 +37,7 @@ export function useMerchantOrders(
 ): MerchantOrdersModel {
   const query = merchantOrdersQuery(merchant, period);
   const request = useQuery({
-    queryKey: ['purchases', 'merchantOrders', query],
+    queryKey: [...MERCHANT_ORDERS_QUERY_KEY, query],
     queryFn: async () => unwrap(await purchaseList({ query })),
     retry: false,
   });

@@ -14,14 +14,14 @@ Links are **re-derived from scratch on every sweep, never patched**, so identica
 
 Deterministic first, AI never. Matching is arithmetic, and a model asked to partition a set of amounts produces a plausible partition that is wrong.
 
-| stage | what                                                                                                      | link type |
-| ----- | --------------------------------------------------------------------------------------------------------- | --------- |
-| 0     | block: unclaimed, not rejected, in window, descriptor match, same sign, comparable currency, card account | —         |
-| 1     | exactly one transaction for the charge amount                                                             | `exact`   |
-| 2     | subset-sum over the remaining candidates                                                                  | `split`   |
-| 4     | a learned merchant descriptor, at exactly the charge amount                                               | `rule`    |
-| 3     | one candidate smaller than the charge — a part-payment                                                    | `partial` |
-| 5     | anything ambiguous or unmatched                                                                           | review    |
+| stage | what                                                                                                                                 | link type |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| 0     | block: unclaimed, not rejected, in window, descriptor match, compatible transaction type and sign, comparable currency, card account | —         |
+| 1     | exactly one transaction for the charge amount                                                                                        | `exact`   |
+| 2     | subset-sum over the remaining candidates                                                                                             | `split`   |
+| 4     | a learned merchant descriptor, at exactly the charge amount                                                                          | `rule`    |
+| 3     | one candidate smaller than the charge — a part-payment                                                                               | `partial` |
+| 5     | anything ambiguous or unmatched                                                                                                      | review    |
 
 Stage 4 runs between combined and partial, which is why the table is out of numerical order.
 
@@ -68,6 +68,8 @@ So a stage-4 miss costs nothing: a rule that admits no candidate at the charge a
 
 Every other blocking test still applies — window, sign, non-zero, and the rejection set. A rule can therefore never resurrect a pairing a human ruled out, which is where the negative signal lives: rejections are stored as pairings, not as negative rules (see below).
 
+An operator can deactivate a learned rule with `POST /reconcile/rules/:ruleId/deactivate`. This sets `isActive` to false without deleting the rule or the links that cite it. Later sweeps no longer consider it; the queue and merchant order list keep showing its pattern and inactive state so historical attribution remains readable.
+
 **A rule's own confidence caps the link's, and the stage caps that.** The rule inherits the confidence of the link that taught it, so one learned from a part-payment stays weaker than one learned from an exact match, and both sit below a plain `exact`. A rule below `MIN_MATCH_CONFIDENCE` never fires at all.
 
 **The sweep does not touch `timesApplied` or `lastUsedAt`.** Those record attributions a rule has earned — one per human decision, never revised downward — and unconfirmed links are re-derived from scratch on a timer, so counting an auto-link would add one every fifteen minutes for a link that never changed. The count happens when a stage-4 link is confirmed, which is also when the descriptor is re-recorded against the same rule row.
@@ -109,7 +111,7 @@ Every boundary carries a reason, and every one has a test that fails if the phas
 
 A phase-ordering test is only a test if BOTH phases can settle the charge it contests. One built on a world where the later phase has nothing to say is green with the phases swapped and green with the phase deleted — so each of the stage-4 boundary tests is paired with the run that shows the rule firing on the same charge when nothing competes for it.
 
-A charge only joins a combination if the transaction is eligible for it on its own terms — inside _its_ window, matching _its_ source descriptor, same sign. Amounts adding up is not a reason to link across merchants or across years.
+A charge only joins a combination if the transaction is eligible for it on its own terms — inside _its_ window, matching _its_ source descriptor, and typed for its settlement role with the matching sign. Amounts adding up is not a reason to link across merchants or across years.
 
 ## Ambiguity is a signal, not a coin flip
 
@@ -131,11 +133,13 @@ Every stage that could pick between equally-good candidates routes to review ins
 
 It is **LIKE**, matching what the stored data already assumed: `%` is any run of characters, `_` is exactly one, the pattern is anchored and matching is case-insensitive. A pattern with no wildcard is therefore an equality test — which is why the CLI was corrected to write `AMAZON%`.
 
+`descriptorPattern` can hold one LIKE pattern or several alternatives encoded as `any-of:` followed by a JSON array of LIKE patterns. Alternatives are joined with OR. The Amazon source uses `any-of:["AMAZON%AU%","AMAZON%AMZN.COM/BILL%"]` to admit its AU and US-billed retail descriptors without admitting `AMAZON WEB SERVICES`. A malformed or empty alternatives list matches no descriptors.
+
 Patterns are compiled with regex metacharacters escaped first, because `PAYPAL *MERCHANT` is a real bank descriptor and an unescaped `*` would be read as a quantifier.
 
 ## The window
 
-`purchases.orderedAt` is a full ISO instant; a finance transaction carries a date-only `YYYY-MM-DD`. The rule is **UTC calendar dates, inclusive at both ends** — see `window.ts`. Truncating to UTC rather than local keeps the boundary stable regardless of where the process runs, because a container's timezone is not a property of the purchase.
+The settlement anchor is a linked shipment's `shippedAt` when known, falling back to `purchases.orderedAt`. Both are full ISO instants; a finance transaction carries a date-only `YYYY-MM-DD`. The rule is **UTC calendar dates, inclusive at both ends** — see `window.ts`. Truncating to UTC rather than local keeps the boundary stable regardless of where the process runs, because a container's timezone is not a property of the purchase.
 
 The window is symmetric: a card is normally charged after the order, but a pre-authorisation lands before it and a till receipt can be dated a day ahead of the statement entry that settles it.
 
@@ -145,7 +149,7 @@ It stays narrow, set per source (Amazon 10 days, Amazon Digital 3, the 21-day de
 
 Amazon bills every card under the same descriptor, so a window holds each card's same-amount charges at once and stage 1 reads them as ambiguous. The order's `paymentHint` (`Visa - 7373`) names the card, but finance accounts carry no card number, so the two are joined through the links that already exist: a hint maps to an account when every linked charge of an order with that hint landed on that one account (`card-accounts.ts`). A mapped hint admits only that account's transactions at stage 0. A hint whose links disagree, or that has none, maps to nothing and blocks nothing — which is also what a wrong auto-link on another account does to it, so the failure is the old behaviour rather than a blocked settlement.
 
-Unconfirmed links count as evidence because nearly every link is one. They are read before teardown, and the sweep resolves their accounts from the transactions it fetched, so a link outside the fetched window is no evidence either way. That makes a sweep depend on the previous sweep's output, which the invariant above otherwise rules out; it is safe because the dependence is a fixed point — under a mapping every link of that hint lands on the mapped account, so the next sweep learns the same mapping. The mapping is not a table: it would be a second record of what the links already say, and the one nobody updates.
+Unconfirmed links count as evidence because nearly every link is one. They are read before teardown. Transactions already in the candidate window provide their account directly; the sweep resolves any other linked Finance transaction IDs in one batched lookup. If either Finance read is unavailable, the sweep makes no writes. This lets a scoped sweep use links from outside its candidate window and keeps the mapping consistent with a full sweep. The mapping depends on previous sweep output, which the invariant above otherwise rules out; it is safe because it is a fixed point — under a mapping every link of that hint lands on the mapped account, so the next sweep learns the same mapping. The mapping is not a table: it would be a second record of what the links already say, and the one nobody updates.
 
 ## Confirmed links are constraints, not suggestions
 

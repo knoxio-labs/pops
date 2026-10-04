@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
  * nothing, even though a shorter prefix happens to subsequence-match into an
  * unrelated word.
  */
-function normalizeForSearch(value: string): string {
+export function normalizeForSearch(value: string): string {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -50,7 +50,7 @@ function endsWordAt(haystack: string, index: number): boolean {
  * substring anywhere, then a scattered subsequence — the last keeps cmdk's
  * typo tolerance alive under diacritic normalization.
  */
-function defaultFilter(value: string, search: string): number {
+export function defaultFilter(value: string, search: string): number {
   const normalizedValue = normalizeForSearch(value);
   const normalizedSearch = normalizeForSearch(search);
   if (!normalizedSearch) return 1;
@@ -122,7 +122,7 @@ function CommandInput({
       <CommandPrimitive.Input
         data-slot="command-input"
         className={cn(
-          'placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
+          'placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-base md:text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
           className
         )}
         {...props}

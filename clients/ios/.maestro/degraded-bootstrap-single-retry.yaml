@@ -1,0 +1,56 @@
+appId: com.knoxiolabs.pops.local
+name: A degraded bootstrap and failed transactions load present one recovery action
+---
+- clearState
+- clearKeychain
+- launchApp
+- runScript: scripts/receipts-become-available.js
+- assertTrue: ${output.receipts.status == 200}
+- assertTrue: ${output.receipts.state.purchasesReachable == true}
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+- runFlow: subflows/open-transactions.yaml
+- assertVisible:
+    id: 'transaction-row-e2e-groceries'
+
+- runScript: scripts/bootstrap-stops-answering.js
+- assertTrue: ${output.armed.status == 200}
+- assertTrue: ${output.armed.state.bootstrapOutage == true}
+
+# Keep bootstrap unavailable across launch and foreground refresh. Finance fails
+# separately after the shell has displayed its degraded state.
+- stopApp
+- launchApp
+
+- assertVisible: 'Some of Pops could not be reached, so this may be out of date.'
+- assertNotVisible: 'Try again'
+
+- runScript: scripts/finance-stops-answering.js
+- assertTrue: ${output.outage.state.financeOutage == true}
+- runFlow: subflows/select-transactions.yaml
+
+- assertVisible: 'Your transactions are temporarily unreachable. Nothing is lost — try again in a moment.'
+- assertVisible: 'Retry'
+- assertNotVisible: 'Try again'
+
+- runScript: scripts/read-harness-state.js
+- assertTrue: ${output.harness.bootstrapFailures >= 1}
+- assertTrue: ${output.harness.bootstrapOutage == true}
+- assertTrue: ${output.harness.financeOutage == true}
+
+- runScript: scripts/bootstrap-answers-again.js
+- assertTrue: ${output.recovery.status == 200}
+- assertTrue: ${output.recovery.state.bootstrapOutage == false}
+- runScript: scripts/finance-answers-again.js
+- assertTrue: ${output.recovery.state.financeOutage == false}
+- tapOn: 'Retry'
+- assertVisible:
+    id: 'transaction-row-e2e-groceries'
+- assertNotVisible: 'Your transactions are temporarily unreachable. Nothing is lost — try again in a moment.'

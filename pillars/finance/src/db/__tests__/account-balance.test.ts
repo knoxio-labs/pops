@@ -58,6 +58,7 @@ describe('balanceAsOf without a checkpoint', () => {
       asOf: '2026-03-01',
       basis: 'transactions',
       anchor: null,
+      reconciliation: 'unmeasured',
       inconsistent: false,
     });
   });
@@ -206,6 +207,7 @@ describe('checkpointDelta', () => {
       deltaCents: 0,
     });
     expect(isAccountInconsistent(db, accountId)).toBe(false);
+    expect(balanceAsOf(db, accountId, '2026-03-01').reconciliation).toBe('agreed');
   });
 
   it('is non-zero when a transaction between the two is missing, and clears when it is added', () => {
@@ -223,6 +225,7 @@ describe('checkpointDelta', () => {
     });
     expect(isAccountInconsistent(db, accountId)).toBe(true);
     expect(balanceAsOf(db, accountId, '2026-03-01').inconsistent).toBe(true);
+    expect(balanceAsOf(db, accountId, '2026-03-01').reconciliation).toBe('disagrees');
 
     // The missing row arrives. Nothing is written to either checkpoint.
     tx('2026-02-10', -2_500);
@@ -251,6 +254,18 @@ describe('checkpointDelta', () => {
     expect(checkpointDelta(db, second)).toEqual({
       expectedBalanceCents: -100_000,
       deltaCents: -50_000,
+    });
+  });
+});
+
+describe('balance reconciliation state', () => {
+  it('marks an account with only its anchor checkpoint as unmeasured', () => {
+    checkpoint('2026-01-31', 0);
+    tx('2026-02-10', 1_000);
+
+    expect(balanceAsOf(db, accountId, '2026-03-01')).toMatchObject({
+      reconciliation: 'unmeasured',
+      inconsistent: false,
     });
   });
 });

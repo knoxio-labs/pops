@@ -17,6 +17,21 @@ It listens on port **3012**.
 When `POPS_REGISTRY_ENABLED=true` it self-registers with the `registry` pillar
 on boot, using `bootstrapPillar` from `@pops/pillar-sdk/bootstrap`.
 
+## Authentication
+
+Contract and thumbnail routes validate a presented `X-API-Key` against the
+registry and scopes projected from the documents contract and raw thumbnail
+route. Unknown or revoked keys receive 401, insufficient grants receive 403,
+and an unreachable registry receives 503. Requests without a key continue to
+rely on the Docker network perimeter. `/health`, `/pillars`, and `/openapi`
+stay outside the scope gate.
+
+Inventory continues to call this bridge through the unauthenticated
+`@pops/pillar-sdk/client` path, so those requests rely on the network perimeter
+and do not use the scoped path. This preserves ADR-044's default: requests
+without an API key pass, while callers that present one must hold the matching
+documents scope.
+
 ## Layout
 
 ```

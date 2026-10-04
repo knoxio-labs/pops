@@ -125,11 +125,19 @@ export function runDbClear(options: DbClearOptions): DbClearResult {
   const db = new DatabaseSync(dbPath);
   try {
     db.exec('PRAGMA busy_timeout = 5000');
-    const cleared = clearPillarTables(db);
+    const cleared = clearPillarTables(db, {
+      beforeCommit: pillarId === 'inventory' ? resetInventorySyncMetadata : undefined,
+    });
     const rows = cleared.reduce((total, entry) => total + entry.deleted, 0);
     log(`✔ ${pillarId}: cleared ${rows} row(s) across ${cleared.length} table(s) in ${dbPath}`);
     return { pillarId, dbPath, skipped: false, cleared };
   } finally {
     db.close();
   }
+}
+
+function resetInventorySyncMetadata(db: DatabaseSync): void {
+  db.prepare(
+    'INSERT INTO sync_meta ("key", value) VALUES (?, lower(hex(randomblob(16)))), (?, ?)'
+  ).run('epoch', 'min_protocol', '1');
 }

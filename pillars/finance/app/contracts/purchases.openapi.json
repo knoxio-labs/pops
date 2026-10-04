@@ -1421,6 +1421,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Page through lines carrying an item tag, newest first",
@@ -1607,6 +1617,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "The learned product dictionary: products and the printed wordings that resolve to them",
@@ -1656,6 +1676,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -1837,6 +1867,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints",
@@ -1886,6 +1926,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -2003,6 +2053,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -2226,6 +2286,29 @@
                             "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                             "type": "string"
                           },
+                          "ruleLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "descriptionPattern": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "source": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "descriptionPattern", "source", "isActive"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "settlementMode": {
                             "enum": ["card", "cash", "unknown"],
                             "type": "string"
@@ -2320,7 +2403,8 @@
                           "createdAt",
                           "updatedAt",
                           "itemCount",
-                          "receiptUri"
+                          "receiptUri",
+                          "ruleLinks"
                         ],
                         "type": "object"
                       },
@@ -3671,6 +3755,16 @@
               }
             },
             "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "Create an order with its deliveries, lines, charges and documents",
@@ -5029,6 +5123,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -5889,6 +5993,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -6927,6 +7041,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -7045,6 +7169,16 @@
               }
             },
             "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -7170,6 +7304,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Unanswered inventory offers derived from an order's durable lines",
@@ -8907,6 +9051,10 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "cause": {
+                          "enum": ["truncated", "refused", "rejected"],
+                          "type": "string"
+                        },
                         "kind": {
                           "enum": ["unreadable"],
                           "type": "string"
@@ -10869,6 +11017,10 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "cause": {
+                          "enum": ["truncated", "refused", "rejected"],
+                          "type": "string"
+                        },
                         "kind": {
                           "enum": ["unreadable"],
                           "type": "string"
@@ -11143,6 +11295,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -11517,6 +11679,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Orders linked to one finance transaction, confirmed or derived",
@@ -11598,9 +11770,214 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Which of these finance transactions an order explains, confirmed or derived",
+        "tags": ["reconcile"]
+      }
+    },
+    "/reconcile/manual": {
+      "post": {
+        "operationId": "reconcile.manual",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "chargeId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "transactionUri": {
+                    "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                    "type": "string"
+                  }
+                },
+                "required": ["chargeId", "transactionUri"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Create and confirm a manually selected charge link",
+        "tags": ["reconcile"]
+      }
+    },
+    "/reconcile/manual-candidates": {
+      "get": {
+        "operationId": "reconcile.manualCandidates",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "minLength": 2,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "date": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "payee": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "settlementCurrency": {
+                            "pattern": "^[A-Z]{3}$",
+                            "type": "string"
+                          },
+                          "transactionUri": {
+                            "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "transactionUri",
+                          "description",
+                          "date",
+                          "payee",
+                          "amountCents",
+                          "settlementCurrency"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["items"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Search Finance transactions for a manual reconciliation link",
         "tags": ["reconcile"]
       }
     },
@@ -11710,6 +12087,22 @@
                                   ],
                                   "type": "string"
                                 },
+                                "matchRuleId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "matchRuleIsActive": {
+                                  "nullable": true,
+                                  "type": "boolean"
+                                },
+                                "matchRulePattern": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "matchRuleSource": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
                                 "transactionDate": {
                                   "nullable": true,
                                   "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
@@ -11735,7 +12128,11 @@
                                 "transactionPayee",
                                 "amountCents",
                                 "linkType",
-                                "confidence"
+                                "confidence",
+                                "matchRuleId",
+                                "matchRulePattern",
+                                "matchRuleSource",
+                                "matchRuleIsActive"
                               ],
                               "type": "object"
                             },
@@ -11775,6 +12172,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Charges awaiting a decision, newest order first",
@@ -11826,6 +12233,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -11838,6 +12255,76 @@
           }
         },
         "summary": "Rule a pairing out for good, so no later sweep proposes it again",
+        "tags": ["reconcile"]
+      }
+    },
+    "/reconcile/rules/{ruleId}/deactivate": {
+      "post": {
+        "operationId": "reconcile.deactivateRule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ruleId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Deactivate a learned match rule without removing its attribution history",
         "tags": ["reconcile"]
       }
     },
@@ -11930,6 +12417,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -11989,6 +12486,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {
@@ -12283,6 +12790,16 @@
             },
             "description": "200"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -12368,6 +12885,16 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
           },
           "404": {
             "content": {

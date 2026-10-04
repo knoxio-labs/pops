@@ -144,7 +144,6 @@ export function makeFakeEgoLlm(reply = 'Canned ego reply.'): EgoLlm {
   return {
     model: () => 'fake-sonnet',
     chat: () => Promise.resolve({ content: reply, tokensIn: 7, tokensOut: 11 }),
-    summarise: () => Promise.resolve('Canned summary.'),
     async *stream(): AsyncGenerator<EgoStreamEvent> {
       const words = reply.split(' ');
       for (const word of words) {
@@ -194,7 +193,12 @@ export function makeFakeGenerationLlm(
   responder: (systemPrompt: string, userMessage: string) => string = () => '# Generated\n\nbody'
 ): GenerationLlm {
   return {
-    generate: (systemPrompt, userMessage) => Promise.resolve(responder(systemPrompt, userMessage)),
+    generate: (systemPrompt, userMessage) =>
+      Promise.resolve({
+        kind: 'text',
+        text: responder(systemPrompt, userMessage),
+        outputTruncated: false,
+      }),
   };
 }
 

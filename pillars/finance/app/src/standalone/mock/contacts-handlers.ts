@@ -51,6 +51,7 @@ const addressCreated: MockHandler = ({ params }) => {
 
 export const contactsHandlers: MockHandlers = {
   'GET /': ok('contacts'),
+  'GET /openapi': ok({}),
   'GET /health': ok<HealthResponse>({
     ok: true,
     pillar: 'contacts',

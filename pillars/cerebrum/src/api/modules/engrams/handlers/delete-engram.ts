@@ -11,7 +11,12 @@ import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 
 import { eq } from 'drizzle-orm';
 
-import { engramIndex, engramLinks, type CerebrumDb } from '../../../../db/index.js';
+import {
+  deleteEngramSearchDoc,
+  engramIndex,
+  engramLinks,
+  type CerebrumDb,
+} from '../../../../db/index.js';
 import { parseEngramFile, serializeEngram } from '../file.js';
 import { absolutePath, parseCustomFields, writeFileAtomic } from './fs-helpers.js';
 import { findIndexRow, upsertIndex } from './upsert-index.js';
@@ -63,6 +68,7 @@ export function deleteEngram(deps: DeleteDeps, id: string): DeleteResult {
       tx.delete(engramLinks).where(eq(engramLinks.targetId, id)).run();
       // Outbound links + scopes + tags cascade on engram_index.id delete.
       tx.delete(engramIndex).where(eq(engramIndex.id, id)).run();
+      deleteEngramSearchDoc(tx, id);
     });
     indexRemoved = true;
   } else {

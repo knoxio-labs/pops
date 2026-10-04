@@ -157,6 +157,22 @@ describe('PlanPage', () => {
     expect(screen.getByTestId('plan-week-grid')).toBeTruthy();
     expect(screen.getByTestId('servings-badge-1')).toBeTruthy();
     expect(screen.getByTestId('cooked-chip-2')).toBeTruthy();
+    await userEvent.setup().click(screen.getByTestId('cooked-chip-2'));
+    expect(await screen.findByText('Cooked entries cannot be moved')).toBeVisible();
+  });
+
+  it('reveals the full recipe title when a truncated plan title is tapped', async () => {
+    const fullTitle = 'Baked potatoes with rosemary and sea salt';
+    planWeekViewMock.mockResolvedValueOnce({
+      data: {
+        ...weekViewData,
+        entries: [{ ...weekViewData.entries[0], recipeTitle: fullTitle }],
+      },
+    });
+    renderPage();
+    const title = await screen.findByRole('button', { name: fullTitle });
+    await userEvent.setup().click(title);
+    expect(screen.getByText(fullTitle)).toBeVisible();
   });
 
   it.each([
@@ -178,6 +194,7 @@ describe('PlanPage', () => {
     renderPage();
     await screen.findByText('Pancakes');
     expect(screen.getByTestId('week-date-picker')).toHaveAttribute('lang', 'en-AU');
+    expect(screen.getByTestId('week-date-picker')).toHaveClass('text-base', 'md:text-xs');
   });
 
   it('opens the add modal pre-filled with (date, slot) and submits', async () => {
@@ -213,6 +230,11 @@ describe('PlanPage', () => {
     expect(within(drawer).getByTestId('slot-row-breakfast')).toBeTruthy();
     expect(within(drawer).getByTestId('slot-default-dinner')).toBeTruthy();
     expect(within(drawer).getByTestId('slot-delete-late-night')).toBeTruthy();
+    await user.click(within(drawer).getByTestId('slot-rename-btn-late-night'));
+    expect(within(drawer).getByTestId('slot-rename-late-night')).toHaveClass(
+      'text-base',
+      'md:text-sm'
+    );
   });
 
   it('rejects invalid slug input in the add-slot form before calling the API', async () => {

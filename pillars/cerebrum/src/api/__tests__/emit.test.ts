@@ -2,10 +2,11 @@
  * Integration tests for `cerebrum.emit.*` over REST.
  *
  * Boots the app against a per-test temp cerebrum.db seeded with engram-index +
- * embeddings rows (so the structured/BM25 retrieval leg returns sources without
- * any embedding provider), an injected offline {@link makeFakeGenerationLlm}
- * (no real Anthropic call), and empty peer clients. The fake LLM echoes a
- * citation so the citation-parser path is exercised end-to-end.
+ * embeddings rows, real sqlite-vec vectors at a chosen cosine to the request's
+ * topic (a fake embedding client embeds every topic to the anchor vector), an
+ * injected offline {@link makeFakeGenerationLlm} (no real Anthropic call), and
+ * empty peer clients. The fake LLM echoes a citation so the citation-parser
+ * path is exercised end-to-end.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -22,6 +23,7 @@ import {
   makeReflexService,
   makeTemplateRegistry,
 } from './test-utils.js';
+import { anchorEmbeddingClient, seedEngramVector, unitVectorAtCosine } from './vector-fixtures.js';
 
 import type { GenerationLlm } from '../modules/emit/llm.js';
 
@@ -32,7 +34,8 @@ let cerebrumDb: OpenedCerebrumDb;
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'cerebrum-api-emit-test-'));
   engramRoot = mkdtempSync(join(tmpdir(), 'cerebrum-api-emit-root-'));
-  cerebrumDb = openCerebrumDb(join(tmpDir, 'cerebrum.db'), { loadVec: false });
+  cerebrumDb = openCerebrumDb(join(tmpDir, 'cerebrum.db'), { loadVec: true });
+  nextOffAxis = 1;
 });
 
 afterEach(() => {
@@ -49,7 +52,11 @@ interface SeedEngramArgs {
   tags?: string[];
   preview?: string;
   createdAt?: string;
+  /** Cosine of the engram's vector to every topic. Defaults to 0.5. */
+  cosine?: number;
 }
+
+let nextOffAxis = 1;
 
 function seedEngram(db: OpenedCerebrumDb, args: SeedEngramArgs): void {
   const raw = db.raw;
@@ -83,9 +90,11 @@ function seedEngram(db: OpenedCerebrumDb, args: SeedEngramArgs): void {
        VALUES ('engram', ?, 0, ?, ?, 'm', 1536, ?)`
     )
     .run(args.id, `hash-${args.id}`, args.preview ?? `preview ${args.title}`, createdAt);
+  seedEngramVector(db, args.id, unitVectorAtCosine(args.cosine ?? 0.5, nextOffAxis));
+  nextOffAxis += 1;
 }
 
-function client(llm: GenerationLlm = makeFakeGenerationLlm()) {
+function client(llm: GenerationLlm = makeFakeGenerationLlm(), withEmbeddings = true) {
   return makeClient(
     createCerebrumApiApp({
       cerebrumDb,
@@ -95,6 +104,7 @@ function client(llm: GenerationLlm = makeFakeGenerationLlm()) {
       version: '0.0.1-test',
       selfBaseUrl: 'http://localhost:3007',
       peerClients: makeEmptyPeerClients(),
+      embeddingClient: withEmbeddings ? anchorEmbeddingClient() : undefined,
       emitLlm: llm,
     })
   );
@@ -142,6 +152,35 @@ describe('POST /emit/report', () => {
     expect(result.document).toBeNull();
     expect(result.notice).toMatch(/insufficient/i);
   });
+
+  it('uses sources at cosine 0.4 to the topic and leaves out one at 0.32', async () => {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0001_a', title: 'A', cosine: 0.4 });
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0002_b', title: 'B', cosine: 0.4 });
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0003_c', title: 'C', cosine: 0.32 });
+
+    const { document } = await client(
+      makeFakeGenerationLlm(
+        () => '# Report\n\n[eng_20260101_0001_a] [eng_20260101_0002_b] [eng_20260101_0003_c]'
+      )
+    ).emit.generateReport({ query: 'architecture' });
+
+    expect(document?.sources.map((s) => s.id).toSorted()).toEqual([
+      'eng_20260101_0001_a',
+      'eng_20260101_0002_b',
+    ]);
+  });
+
+  it('reports no relevant engrams, rather than the newest ones, without an embedding client', async () => {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0001_a', title: 'A', cosine: 0.9 });
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0002_b', title: 'B', cosine: 0.9 });
+
+    const result = await client(makeFakeGenerationLlm(), false).emit.generateReport({
+      query: 'architecture',
+    });
+
+    expect(result.document).toBeNull();
+    expect(result.notice).toBe('No relevant engrams found for this query');
+  });
 });
 
 describe('POST /emit/summary', () => {
@@ -158,6 +197,52 @@ describe('POST /emit/summary', () => {
     expect(document).not.toBeNull();
     expect(document?.mode).toBe('summary');
     expect(document?.metadata.sourceCount).toBe(0);
+  });
+
+  it('digests every engram in the date range when no topic is given, embeddings or not', async () => {
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260110_0001_in',
+      title: 'In range',
+      createdAt: '2026-01-10T00:00:00.000Z',
+      cosine: 0,
+    });
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260301_0002_out',
+      title: 'Out of range',
+      createdAt: '2026-03-01T00:00:00.000Z',
+      cosine: 0,
+    });
+
+    const { document } = await client(
+      makeFakeGenerationLlm(() => '# Digest\n\nbody'),
+      false
+    ).emit.generateSummary({ dateRange: { from: '2026-01-01', to: '2026-01-31' } });
+
+    expect(document?.sources.map((s) => s.id)).toEqual(['eng_20260110_0001_in']);
+  });
+
+  it('ranks against the topic when one is given, dropping engrams unrelated to it', async () => {
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260110_0001_related',
+      title: 'Related',
+      createdAt: '2026-01-10T00:00:00.000Z',
+      cosine: 0.6,
+    });
+    seedEngram(cerebrumDb, {
+      id: 'eng_20260111_0002_unrelated',
+      title: 'Unrelated',
+      createdAt: '2026-01-11T00:00:00.000Z',
+      cosine: 0.1,
+    });
+
+    const { document } = await client(
+      makeFakeGenerationLlm(() => '# Digest\n\nbody')
+    ).emit.generateSummary({
+      query: 'databases',
+      dateRange: { from: '2026-01-01', to: '2026-01-31' },
+    });
+
+    expect(document?.sources.map((s) => s.id)).toEqual(['eng_20260110_0001_related']);
   });
 });
 
@@ -180,6 +265,18 @@ describe('POST /emit/timeline', () => {
 
     expect(document?.mode).toBe('timeline');
     expect(document?.metadata.sourceCount).toBe(2);
+  });
+
+  it('lists the engrams the filters select when no topic is given', async () => {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0001_a', title: 'Kept', tags: ['trip'], cosine: 0 });
+    seedEngram(cerebrumDb, { id: 'eng_20260301_0002_b', title: 'Dropped', cosine: 0 });
+
+    const { document } = await client(
+      makeFakeGenerationLlm(() => '# Timeline\n\nentries'),
+      false
+    ).emit.generateTimeline({ tags: ['trip'] });
+
+    expect(document?.sources.map((s) => s.id)).toEqual(['eng_20260101_0001_a']);
   });
 });
 
@@ -208,6 +305,55 @@ describe('POST /emit/generate', () => {
       status: 400,
       body: { message: 'Date range is required for summary mode' },
     });
+  });
+});
+
+describe('emit model outcomes', () => {
+  const refusingLlm: GenerationLlm = { generate: () => Promise.resolve({ kind: 'refused' }) };
+  const cutOffLlm: GenerationLlm = {
+    generate: () =>
+      Promise.resolve({ kind: 'text', text: '# Cut off\n\nhalf a sent', outputTruncated: true }),
+  };
+
+  function seedTwo(): void {
+    seedEngram(cerebrumDb, { id: 'eng_20260101_0001_x', title: 'X', scopes: ['work'] });
+    seedEngram(cerebrumDb, { id: 'eng_20260102_0002_y', title: 'Y', scopes: ['work'] });
+  }
+
+  it('returns a refusal as a notice with no document, for every mode', async () => {
+    seedTwo();
+    const emit = client(refusingLlm).emit;
+    const dateRange = { from: '2026-01-01', to: '2026-12-31' };
+
+    const results = [
+      await emit.generateReport({ query: 'topic' }),
+      await emit.generateSummary({ dateRange }),
+      await emit.generateTimeline({ query: 'topic' }),
+    ];
+    for (const result of results) {
+      expect(result.document).toBeNull();
+      expect(result.notice).toBe('The model declined to generate this document');
+    }
+  });
+
+  it('says so in the outline when the model refuses a preview', async () => {
+    seedTwo();
+    const result = await client(refusingLlm).emit.preview({ mode: 'report', query: 'topic' });
+    expect(result.sources.length).toBe(2);
+    expect(result.outline).toBe('The model declined to generate an outline for these sources.');
+  });
+
+  it('surfaces an output cut off at the token cap as metadata.outputTruncated', async () => {
+    seedTwo();
+    const { document } = await client(cutOffLlm).emit.generateReport({ query: 'topic' });
+    expect(document?.metadata.outputTruncated).toBe(true);
+    expect(document?.metadata.truncated).toBe(false);
+  });
+
+  it('leaves metadata.outputTruncated false for a complete document', async () => {
+    seedTwo();
+    const { document } = await client().emit.generateReport({ query: 'topic' });
+    expect(document?.metadata.outputTruncated).toBe(false);
   });
 });
 

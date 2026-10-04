@@ -77,11 +77,18 @@ internal struct TransactionsFailureTests {
         if !isTransport(expected) { #expect(actual == expected) }
     }
 
-    @Test("being told to slow down is not something this screen can act on")
+    @Test("a rate limit stays distinct and carries its wait")
     func rateLimited() async {
         let actual = await error(status: .tooManyRequests, json: TransactionsWire.rateLimited)
 
-        #expect(isTransport(actual))
+        #expect(actual == .rateLimited(retryAfterSeconds: 30))
+    }
+
+    @Test("an unreadable rate-limit response keeps its status without inventing a wait")
+    func unreadableRateLimited() async {
+        let actual = await error(status: .tooManyRequests, json: "<html>slow down</html>")
+
+        #expect(actual == .rateLimited(retryAfterSeconds: nil))
     }
 
     @Test("a malformed request is a defect in this build, not a dead pillar")
@@ -107,9 +114,8 @@ internal struct TransactionsFailureTests {
     @Test(
         "a value this build cannot represent is a contract mismatch",
         arguments: [
-            TransactionsWire.row(amount: "1.005"),
-            TransactionsWire.row(amount: "1", date: "2026-03-05T00:00:00Z"),
-            TransactionsWire.row(amount: "1", date: "5 March 2026"),
+            TransactionsWire.row(amountMinorUnits: 100, date: "2026-03-05T00:00:00Z"),
+            TransactionsWire.row(amountMinorUnits: 100, date: "5 March 2026"),
         ]
     )
     func unrepresentableRow(json: String) async {
@@ -120,6 +126,22 @@ internal struct TransactionsFailureTests {
         }
 
         #expect(actual == .contractMismatch)
+    }
+
+    @Test("fractional minor units fail the generated integer decoder")
+    func fractionalMinorUnitsFailDecoding() async {
+        let row = """
+            {"id":"txn-1","description":"Coffee","amountMinorUnits":1.5,"currency":"AUD",\
+            "date":"2026-03-05","type":"purchase","entityName":"Cafe","tags":[]}
+            """
+        let actual = await failure {
+            try await BFMTransactionsRepository
+                .stubbed(StubTransport(status: .ok, json: TransactionsWire.page(row)))
+                .transactions(after: nil)
+        }
+
+        #expect(isTransport(actual))
+        #expect(actual != .contractMismatch)
     }
 
     private func isTransport(_ error: RepositoryError?) -> Bool {

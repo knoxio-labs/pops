@@ -3,7 +3,8 @@
  *
  * Routed under `/glia/workers/*` + `/glia/scores/*` + `/glia/orphans` so paths
  * never collide with the merged glia trust router. Non-identity domain — served
- * on the docker-network trust boundary with no per-request auth. The auditor's
+ * on the docker-network trust boundary. The API checks a presented service-account
+ * key against each route's scope. The auditor's
  * contradiction check is LLM-backed (injectable; fake in tests); pruner /
  * consolidator / linker are pure scoring + proposal logic.
  */

@@ -9,12 +9,16 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { FINANCE_UNAVAILABLE, financeReturning } from '../../api/finance/__tests__/fixtures.js';
+import {
+  FINANCE_UNAVAILABLE,
+  financeReturning,
+  type CandidateOverrides,
+} from '../../api/finance/__tests__/fixtures.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { confirmLink, createPurchase, getPurchase, listConfirmedLinks } from '../../db/index.js';
 import { runSweep } from '../sweep.js';
 
-import type { FinanceClient } from '../../api/finance/client.js';
+import type { FinanceSweepClient } from '../../api/finance/client.js';
 import type { CreateChargeInput, OpenedPurchasesDb } from '../../db/index.js';
 import type { PurchasesDb } from '../../db/index.js';
 
@@ -47,7 +51,7 @@ function anAmazonOrder(totalCents: number, checksum: string, charges: CreateChar
   });
 }
 
-const deps = (finance: FinanceClient) => ({ db, finance, defaultWindowDays: 21 });
+const deps = (finance: FinanceSweepClient) => ({ db, finance, defaultWindowDays: 21 });
 
 /** Link rows as they actually exist, so assertions check state not counters. */
 function linkRows(): { chargeId: string; uri: string; confirmedAt: string | null }[] {
@@ -98,6 +102,51 @@ describe('derived charges', () => {
     expect(result.kind).toBe('swept');
     if (result.kind !== 'swept') return;
     expect(result.linksWritten).toBe(1);
+  });
+});
+
+describe('shipment settlement windows', () => {
+  it('fetches and matches a charge using its linked shipment date', async () => {
+    createPurchase(db, {
+      source: 'amazon',
+      sourceOrderId: 'shipment-window',
+      ingestMethod: 'export',
+      orderedAt: '2026-06-24T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 4128,
+      checksum: 'amazon:shipment-window',
+      shipments: [{ ref: 'shipment', shippedAt: '2026-07-10T00:00:00Z' }],
+      charges: [{ amountCents: 4128, shipmentRef: 'shipment' }],
+    });
+
+    const finance = financeReturning({
+      id: 'shipment-capture',
+      amountCents: 4128,
+      date: '2026-07-15',
+    });
+    const windowedFinance: FinanceSweepClient = {
+      ...finance,
+      fetchCandidates: async (query) => {
+        const result = await finance.fetchCandidates(query);
+        if (result.kind !== 'ok') return result;
+        return {
+          ...result,
+          transactions: result.transactions.filter(
+            (transaction) =>
+              transaction.date >= query.startDate && transaction.date <= query.endDate
+          ),
+        };
+      },
+    };
+
+    const result = await runSweep(deps(windowedFinance));
+
+    expect(result.kind).toBe('swept');
+    if (result.kind !== 'swept') return;
+    expect(result.linksWritten).toBe(1);
+    expect(linkRows().map((row) => row.uri)).toEqual([
+      'pops://finance/transaction/shipment-capture',
+    ]);
   });
 });
 
@@ -330,17 +379,40 @@ describe('confirmed links are never torn down', () => {
 });
 
 describe('the card filter', () => {
-  function aCardOrder(totalCents: number, checksum: string, paymentHint: string) {
+  function aCardOrder(
+    totalCents: number,
+    checksum: string,
+    paymentHint: string,
+    orderedAt = '2026-03-04T00:00:00Z'
+  ) {
     return createPurchase(db, {
       source: 'amazon',
       sourceOrderId: checksum,
       ingestMethod: 'export',
-      orderedAt: '2026-03-04T00:00:00Z',
+      orderedAt,
       currency: 'AUD',
       totalCents,
       paymentHint,
       checksum,
     });
+  }
+
+  function financeWithWindowedCandidates(...candidates: CandidateOverrides[]) {
+    const allFinance = financeReturning(...candidates);
+    return {
+      ...allFinance,
+      fetchCandidates: async (query: Parameters<typeof allFinance.fetchCandidates>[0]) => {
+        const result = await allFinance.fetchCandidates(query);
+        if (result.kind !== 'ok') return result;
+        return {
+          ...result,
+          transactions: result.transactions.filter(
+            (transaction) =>
+              transaction.date >= query.startDate && transaction.date <= query.endDate
+          ),
+        };
+      },
+    };
   }
 
   const finance = financeReturning(
@@ -373,5 +445,77 @@ describe('the card filter', () => {
     const second = await runSweep(deps(finance));
 
     expect(second.kind === 'swept' && second.review.map((r) => r.reason)).toEqual(['ambiguous']);
+  });
+
+  it('learns from linked transactions outside the scoped candidate window', async () => {
+    const allFinance = financeWithWindowedCandidates(
+      { id: 'history-on-anz', accountId: 'anz', amountCents: 4128, date: '2026-01-06' },
+      { id: 'second-on-anz', accountId: 'anz', amountCents: 2500, date: '2026-03-07' },
+      { id: 'second-on-amex', accountId: 'amex', amountCents: 2500, date: '2026-03-08' }
+    );
+    const lookupBatches: string[][] = [];
+    const finance = {
+      ...allFinance,
+      fetchTransactionsByIds: (ids: readonly string[]) => {
+        lookupBatches.push([...ids]);
+        return allFinance.fetchTransactionsByIds(ids);
+      },
+    };
+    aCardOrder(4128, 'history', 'Visa - 7373', '2026-01-04T00:00:00Z');
+    aCardOrder(2500, 'current', 'Visa - 7373');
+
+    const history = await runSweep(deps(finance), {
+      from: '2026-01-01T00:00:00Z',
+      to: '2026-01-31T23:59:59Z',
+    });
+    expect(history.kind === 'swept' && history.review).toEqual([]);
+
+    const scoped = await runSweep(deps(finance), {
+      from: '2026-03-01T00:00:00Z',
+      to: '2026-03-31T23:59:59Z',
+    });
+
+    expect(scoped.kind === 'swept' && scoped.review).toEqual([]);
+    expect(linkRows().map((row) => row.uri)).toEqual([
+      'pops://finance/transaction/history-on-anz',
+      'pops://finance/transaction/second-on-anz',
+    ]);
+    expect(lookupBatches).toEqual([['history-on-anz']]);
+  });
+
+  it('does not write when a linked transaction lookup is unavailable', async () => {
+    const finance = financeWithWindowedCandidates(
+      { id: 'history-on-anz', accountId: 'anz', amountCents: 4128, date: '2026-01-06' },
+      { id: 'second-on-anz', accountId: 'anz', amountCents: 2500, date: '2026-03-07' },
+      { id: 'second-on-amex', accountId: 'amex', amountCents: 2500, date: '2026-03-08' }
+    );
+    aCardOrder(4128, 'history', 'Visa - 7373', '2026-01-04T00:00:00Z');
+    aCardOrder(2500, 'current', 'Visa - 7373');
+    await runSweep(deps(finance), {
+      from: '2026-01-01T00:00:00Z',
+      to: '2026-01-31T23:59:59Z',
+    });
+
+    const linksBefore = linkRows();
+    const chargesBefore = opened.raw
+      .prepare('SELECT COUNT(*) as n FROM purchase_charges')
+      .get() as {
+      n: number;
+    };
+    const unavailableLookup = {
+      ...finance,
+      fetchTransactionsByIds: () =>
+        Promise.resolve({ kind: 'unavailable' as const, reason: 'unavailable' }),
+    };
+    const skipped = await runSweep(deps(unavailableLookup), {
+      from: '2026-03-01T00:00:00Z',
+      to: '2026-03-31T23:59:59Z',
+    });
+
+    expect(skipped).toEqual({ kind: 'skipped', reason: 'unavailable' });
+    expect(linkRows()).toEqual(linksBefore);
+    expect(opened.raw.prepare('SELECT COUNT(*) as n FROM purchase_charges').get()).toEqual(
+      chargesBefore
+    );
   });
 });

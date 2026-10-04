@@ -25,17 +25,27 @@ export const BalanceAnchorSchema = z.object({
   source: z.enum(CHECKPOINT_SOURCES),
 });
 
+/** Whether the latest checkpoint has been measured against an earlier one. */
+export const AccountReconciliationSchema = z.enum(['unmeasured', 'agreed', 'disagrees']);
+
+/** `unmeasured` without a comparison; otherwise the latest comparison result. */
+export type AccountReconciliation = z.infer<typeof AccountReconciliationSchema>;
+
 /**
  * An account's balance at a date. `basis: 'transactions'` means no checkpoint
  * exists and the number is the sum of whatever was imported — net flow, not a
  * balance — which is why the field is on the wire rather than inferred from a
- * null anchor by every consumer separately.
+ * null anchor by every consumer separately. `reconciliation` stays
+ * `unmeasured` until two checkpoints allow the latest one to be compared with
+ * the ledger.
  */
 export const AccountBalanceSchema = z.object({
   balanceCents: z.number().int(),
   asOf: z.string(),
   basis: z.enum(['checkpoint', 'transactions']),
   anchor: BalanceAnchorSchema.nullable(),
+  reconciliation: AccountReconciliationSchema,
+  /** True only when reconciliation is `disagrees`; false does not imply a measurement. */
   inconsistent: z.boolean(),
 });
 

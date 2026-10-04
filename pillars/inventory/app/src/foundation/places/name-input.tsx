@@ -53,7 +53,7 @@ export function NameInput({
             onCancel();
           }
         }}
-        className="h-8 px-2 text-sm"
+        className="h-8 px-2 text-base md:text-sm"
       />
       {problem ? (
         <p

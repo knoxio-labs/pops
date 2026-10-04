@@ -17,14 +17,16 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
+import { archiveFinanceSeedAccounts } from './data-quality-test-utils.js';
 import { makeClient } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
 
-beforeEach(() => {
+beforeEach(async () => {
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-data-quality-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
+  await archiveFinanceSeedAccounts(client());
 });
 
 afterEach(() => {
@@ -53,12 +55,35 @@ describe('GET /data-quality/nudges', () => {
     expect((await client().dataQuality.nudges()).data).toEqual([]);
   });
 
-  it('is empty for an account with no checkpoints, or one whose latest agrees', async () => {
-    await anAccount('No checkpoints');
-    const consistent = await anAccount('Consistent');
-    await client().checkpoints.create(consistent, { balanceCents: 100_000, asOf: '2026-01-31' });
+  it('reports accounts with no comparison and leaves a measured agreement out', async () => {
+    const noCheckpoint = await anAccount('No checkpoint');
+    const anchorOnly = await anAccount('Anchor only');
+    await client().checkpoints.create(anchorOnly, { balanceCents: 100_000, asOf: '2026-01-31' });
+    const agreed = await anAccount('Agreed');
+    await client().checkpoints.create(agreed, { balanceCents: 100_000, asOf: '2026-01-31' });
+    await client().checkpoints.create(agreed, { balanceCents: 100_000, asOf: '2026-02-28' });
 
-    expect((await client().dataQuality.nudges()).data).toEqual([]);
+    const { data } = await client().dataQuality.nudges();
+
+    expect(data).toHaveLength(2);
+    expect(data).toEqual(
+      expect.arrayContaining([
+        {
+          kind: 'unmeasured-account',
+          accountId: noCheckpoint,
+          accountName: 'No checkpoint',
+          reason: 'no-checkpoint',
+          href: `/accounts/${noCheckpoint}/checkpoints`,
+        },
+        {
+          kind: 'unmeasured-account',
+          accountId: anchorOnly,
+          accountName: 'Anchor only',
+          reason: 'anchor-only',
+          href: `/accounts/${anchorOnly}/checkpoints`,
+        },
+      ])
+    );
   });
 
   it('flags an account whose latest checkpoint disagrees with the ledger', async () => {

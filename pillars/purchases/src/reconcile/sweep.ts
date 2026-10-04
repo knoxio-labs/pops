@@ -1,3 +1,4 @@
+import { financeTransactionId } from '../api/finance/wire.js';
 /**
  * The sweep: load a snapshot, re-solve it, write the result.
  *
@@ -23,7 +24,8 @@ import { learnCardAccounts } from './card-accounts.js';
 import { solve } from './solve.js';
 import { settlementWindowFor, unionOfWindows, type SettlementWindow } from './window.js';
 
-import type { FinanceClient } from '../api/finance/client.js';
+import type { FinanceSweepClient } from '../api/finance/client.js';
+import type { CandidateTransaction } from '../api/finance/wire.js';
 import type { PurchasesDb } from '../db/index.js';
 import type { ChargeForReview, SolvableCharge } from './types.js';
 
@@ -60,9 +62,10 @@ export type SweepOutcome =
    */
   | { readonly kind: 'skipped'; readonly reason: string };
 
+/** The database and Finance reads required to reconcile one scope. */
 export interface SweepDeps {
   readonly db: PurchasesDb;
-  readonly finance: FinanceClient;
+  readonly finance: FinanceSweepClient;
   readonly defaultWindowDays: number;
 }
 
@@ -102,6 +105,11 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
     return { kind: 'skipped', reason: fetched.reason };
   }
 
+  const accountResolution = await resolveCardAccounts(db, finance, fetched.transactions);
+  if (accountResolution.kind !== 'ok') {
+    return { kind: 'skipped', reason: accountResolution.reason };
+  }
+
   const confirmed = listConfirmedLinks(db);
 
   // One transaction for every write the sweep makes. Minting reads its own
@@ -122,10 +130,7 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
         charges.map((charge) => charge.id)
       ),
       rules: listActiveMatchRules(tx),
-      cardAccounts: learnCardAccounts(
-        listLinkedPaymentHints(tx),
-        new Map(fetched.transactions.map((transaction) => [transaction.uri, transaction.accountId]))
-      ),
+      cardAccounts: accountResolution.cardAccounts,
       defaultWindowDays,
     });
 
@@ -156,13 +161,57 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
   return result ?? emptySweep();
 }
 
+type CardAccountResolution =
+  | { readonly kind: 'ok'; readonly cardAccounts: ReadonlyMap<string, string> }
+  | { readonly kind: 'unavailable'; readonly reason: string };
+
+async function resolveCardAccounts(
+  db: PurchasesDb,
+  finance: FinanceSweepClient,
+  candidates: readonly CandidateTransaction[]
+): Promise<CardAccountResolution> {
+  const linkedPaymentHints = listLinkedPaymentHints(db);
+  const fetchedUris = new Set(candidates.map((transaction) => transaction.uri));
+  const linkedTransactionIds = [
+    ...new Set(
+      linkedPaymentHints.flatMap(({ transactionUri }) => {
+        const id = financeTransactionId(transactionUri);
+        return id === null || fetchedUris.has(transactionUri) ? [] : [id];
+      })
+    ),
+  ];
+  const linkedFetch =
+    linkedTransactionIds.length === 0
+      ? { kind: 'ok' as const, transactions: [] }
+      : await finance.fetchTransactionsByIds(linkedTransactionIds);
+  if (linkedFetch.kind !== 'ok') return linkedFetch;
+
+  const accountByUri = new Map(
+    [...candidates, ...linkedFetch.transactions].map((transaction) => [
+      transaction.uri,
+      transaction.accountId,
+    ])
+  );
+  return {
+    kind: 'ok',
+    cardAccounts: learnCardAccounts(linkedPaymentHints, accountByUri),
+  };
+}
+
 /** The settlement window each row contributes to the candidate fetch. */
 function windowsFor(
-  rows: readonly { orderedAt: string; settlementWindowDays?: number | null }[],
+  rows: readonly {
+    orderedAt: string;
+    shippedAt?: string | null;
+    settlementWindowDays?: number | null;
+  }[],
   defaultWindowDays: number
 ): SettlementWindow[] {
   return rows.flatMap((row) => {
-    const each = settlementWindowFor(row.orderedAt, row.settlementWindowDays ?? defaultWindowDays);
+    const each = settlementWindowFor(
+      row.shippedAt ?? row.orderedAt,
+      row.settlementWindowDays ?? defaultWindowDays
+    );
     return each === null ? [] : [each];
   });
 }

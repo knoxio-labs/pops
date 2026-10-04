@@ -19,8 +19,8 @@ export interface LinkedHint {
  * A hint whose links span two accounts maps to nothing: the evidence
  * disagrees, and narrowing on it would block the charge's real settlement.
  * A link whose transaction is not in `accountOf` is no evidence either
- * way — the sweep only knows the accounts of the transactions it fetched —
- * so it is skipped rather than counted as a disagreement.
+ * way, so it is skipped rather than counted as a disagreement. Sweeps
+ * resolve linked transactions outside the candidate window by id.
  */
 export function learnCardAccounts(
   links: readonly LinkedHint[],

@@ -38,14 +38,14 @@ export interface PairCandidate {
 
 /**
  * The phrases after which a bank writes the reference both legs of one transfer
- * carry: `ANZ M-BANKING FUNDS TFER TRANSFER 964110  TO 4564XXXXXXXX7373` on the
- * sending account, `PAYMENT THANKYOU 964110` on the receiving card.
+ * carry: ANZ's `FUNDS TFER TRANSFER 964110` and `PAYMENT THANKYOU 964110`, or
+ * ING's `Receipt 565046` and `Receipt No 565046Transfer`.
  *
  * Anchored on the phrase, never on "a run of digits": the sending descriptor
- * also carries a masked card number, and a same-day deposit can carry any
+ * can also carry a masked card number, and a same-day deposit can carry any
  * number at all. A reference means something only where the bank put one.
  */
-const TRANSFER_REFERENCE = /\b(?:FUNDS TFER TRANSFER|PAYMENT THANKYOU)\s+(\d+)\b/u;
+const TRANSFER_REFERENCE = /\b(?:FUNDS TFER TRANSFER|PAYMENT THANKYOU|RECEIPT(?:\s+NO)?)\s+(\d+)/iu;
 
 /** The bank-assigned transfer reference in a descriptor, or `null` when it has none. */
 function transferReference(description: string): string | null {

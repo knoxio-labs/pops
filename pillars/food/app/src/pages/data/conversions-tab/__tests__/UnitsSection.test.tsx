@@ -63,7 +63,7 @@ describe('UnitsSection', () => {
     ]);
     render(withClient(<UnitsSection />));
     const cupRow = await screen.findByTestId('unit-row-1');
-    expect(within(cupRow).getByText(/seeded/i)).toBeInTheDocument();
+    expect(within(cupRow).getByLabelText('Seeded')).toBeInTheDocument();
     const ozRow = screen.getByTestId('unit-row-2');
     expect(within(ozRow).queryByText(/seeded/i)).not.toBeInTheDocument();
   });
@@ -72,8 +72,11 @@ describe('UnitsSection', () => {
     seedList([row({ id: 1, seeded: true })]);
     render(withClient(<UnitsSection />));
     const cupRow = await screen.findByTestId('unit-row-1');
-    const deleteBtn = within(cupRow).getByRole('button', { name: /reseed to restore/i });
+    const deleteBtn = within(cupRow).getByRole('button', { name: /^delete$/i });
     expect(deleteBtn).toBeDisabled();
+    const reason = within(cupRow).getByText(/seeded conversion; reseed to restore/i);
+    expect(reason).toBeVisible();
+    expect(deleteBtn).toHaveAttribute('aria-describedby', reason.id);
   });
 
   it('passes the search text into the query input', async () => {

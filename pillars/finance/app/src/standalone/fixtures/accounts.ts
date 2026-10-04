@@ -46,6 +46,7 @@ export const ACCOUNTS: Account[] = [
       asOf: '2026-09-04',
       balanceCents: 318_420,
       basis: 'checkpoint',
+      reconciliation: 'agreed',
       inconsistent: false,
     },
     importStatus: {
@@ -79,6 +80,7 @@ export const ACCOUNTS: Account[] = [
       asOf: '2026-08-31',
       balanceCents: -124_550,
       basis: 'checkpoint',
+      reconciliation: 'disagrees',
       inconsistent: true,
     },
     importStatus: {

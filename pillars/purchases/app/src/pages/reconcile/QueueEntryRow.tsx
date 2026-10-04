@@ -128,6 +128,12 @@ function ProposalLine({ link, currency }: ProposalLineProps): ReactElement {
       <p className="truncate font-medium">
         {link.transactionDescription ?? t('reconcile.entry.transactionDescriptionUnavailable')}
       </p>
+      {link.linkType === 'rule' && (
+        <p className="text-xs">
+          <span className="font-medium">{t('reconcile.rule.patternLabel')}:</span>{' '}
+          {link.matchRulePattern ?? t('reconcile.rule.patternUnavailable')}
+        </p>
+      )}
       <div className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
         {link.transactionDate === null ? (
           <span>{t('reconcile.entry.transactionDateUnavailable')}</span>

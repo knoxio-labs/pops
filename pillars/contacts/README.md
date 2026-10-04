@@ -61,6 +61,22 @@ does exactly this — its vendored copy lives at
 canonical file by a repo-level drift gate
 (`scripts/ci/check-vendored-contracts.mjs`).
 
+## Service-account scopes
+
+Requests without an X-API-Key continue through to the existing perimeter.
+Credentialled requests resolve that key through the registry's
+GET /service-accounts/self endpoint. The scope map uses the operation IDs in
+the contacts OpenAPI document with contacts as its root, so new contract
+operations acquire a required scope when they are added.
+
+Unknown or revoked keys receive 401, a live account without the required
+dotted-prefix scope receives 403, and an unavailable registry receives 503.
+The verifier caches successful lookups for 30 seconds and rejected keys for
+5 seconds; registry failures are not cached. The Rust gate is a hand-maintained
+mirror of the TypeScript rules in
+[service-account-scope.ts](../../libs/sdk/src/server/service-account-scope.ts)
+and [service-account-verifier.ts](../../libs/sdk/src/server/service-account-verifier.ts).
+
 ## Blob storage
 
 `avatarAssetId` and `posterAssetId` on an entity point at rows in a `blobs`

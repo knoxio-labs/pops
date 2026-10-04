@@ -4,8 +4,8 @@
  * The engram-index maintenance surface: watcher health (`status`), full
  * fs→index reindex (`reindex`), cross-source re-embedding over peer pillars
  * (`reindexSources`), and disk↔index reconciliation (`reconcile`). Non-identity
- * domain — served on the docker-network trust boundary with no per-request
- * auth (parity with engrams / ingest). The mutations are queue- and peer-heavy;
+ * domain — served on the docker-network trust boundary, with presented keys
+ * checked by the API scope gate (parity with engrams / ingest). The mutations are queue- and peer-heavy;
  * the container injects the embeddings-queue accessor + peer clients in
  * `server.ts` and fakes/no-Redis in tests.
  *

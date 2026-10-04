@@ -128,7 +128,7 @@ The rule is `identifyProduct` in `src/db/services/product-identity.ts`, shared w
 Three counts qualify it, each a fact off a column rather than an inference:
 
 - `promotionalLineCount` / `ordinaryLineCount` / `unstatedPromotionLineCount` — the `^` marker, three-way on the rule the residual follows. Only the Woolworths receipt states it either way, so folding "nobody said" into "ordinary" would assert a price the merchant never characterised.
-- `measuredLineCount` — lines priced by measure (`0.202 kg NET @ $2.90/kg`), which fruit, veg and the deli counter all are. Such a line carries a quantity of 1 and a unit price equal to what that weight cost, so 0.5 kg of bananas against 1.2 kg reads as a 140% rise with nothing else on the row to say otherwise. It is recognised from the merchant prose the adapters store verbatim (`src/ingest/measure-notes.ts`, shared with the Woolworths grouper that writes it), which is best-effort and wrong in both directions — a wording it has not met is read as a count, and a genuine per-each price (`1 ea @ $5.00`) is read as a measure. Neither moves a figure: nothing derives a price from the answer, so a miss leaves the caveat unstated and a false positive states one that was not needed. A structured flag on the line, set at ingest, is POPS-2389.
+- `measuredLineCount` — lines priced by weight or volume (`0.202 kg NET @ $2.90/kg`), which fruit, veg and the deli counter all are. Such a line carries a quantity of 1 and a unit price equal to what that weight cost, so 0.5 kg of bananas against 1.2 kg reads as a 140% rise with nothing else on the row to say otherwise. `purchase_items.priced_by_measure` is set during receipt ingestion from the unit-price note; per-each prices are not measures. Existing rows remain unflagged rather than being inferred from prose, and leaderboard reads no longer scan the note table.
 
 Everything a group says about its own ends — both dates, the label it wears, the merchant it is attributed to, both ends of the price series — is ordered by the **parsed instant** rather than by the timestamp text, so an order stamped `2026-01-02T00:00:00+10:00` correctly precedes one stamped `2026-01-01T20:00:00Z`. Text ordering puts those two the wrong way round and leaves a row whose endpoints disagree with its own cadence. `src/db/services/order-rank.ts` is the one notion of that ordering, shared with the merchant roll-up's label ranking, the dictionary's printed name and search's recency tie-break rather than restated beside each of them. The `from` / `to` window that decides which orders are in scope at all is a text comparison in SQL, made against the same canonical form the column now holds — see **`ordered_at` holds one spelling of an instant** below.
 
@@ -294,14 +294,14 @@ This is not a weaker gate, and it is no longer untested. The whole mechanism is 
 
 The mirror of the section above, and the half with a production failure mode. purchases makes six outbound cross-pillar calls, all through `pillar()` from `@pops/pillar-sdk/server`, which attaches the pillar's service-account key as `X-API-Key`:
 
-| Leg                            | Call                | Scope needed           | Where                           |
-| ------------------------------ | ------------------- | ---------------------- | ------------------------------- |
-| reconciliation candidate fetch | `transactions.list` | `finance.transactions` | `src/api/finance/client.ts`     |
-| soft-URI check, inventory      | `items.get`         | `inventory.items`      | `src/api/cron/pillar-lookup.ts` |
-| soft-URI check, documents      | `paperless.get`     | `documents.paperless`  | `src/api/cron/pillar-lookup.ts` |
-| receipt merchant resolution    | `entities.list`     | `contacts.entities`    | `src/api/contacts/merchant.ts`  |
-| accepted proposal → asset      | `items.create`      | `inventory.items`      | `src/api/inventory/client.ts`   |
-| edit removes a linked line     | `items.update`      | `inventory.items`      | `src/api/inventory/client.ts`   |
+| Leg                                       | Call                | Scope needed           | Where                           |
+| ----------------------------------------- | ------------------- | ---------------------- | ------------------------------- |
+| reconciliation candidates + manual search | `transactions.list` | `finance.transactions` | `src/api/finance/client.ts`     |
+| soft-URI check, inventory                 | `items.get`         | `inventory.items`      | `src/api/cron/pillar-lookup.ts` |
+| soft-URI check, documents                 | `paperless.get`     | `documents.paperless`  | `src/api/cron/pillar-lookup.ts` |
+| receipt merchant resolution               | `entities.list`     | `contacts.entities`    | `src/api/contacts/merchant.ts`  |
+| accepted proposal → asset                 | `items.create`      | `inventory.items`      | `src/api/inventory/client.ts`   |
+| edit removes a linked line                | `items.update`      | `inventory.items`      | `src/api/inventory/client.ts`   |
 
 **Four of those six read. The other two write**, and they are the only calls in this pillar that change data another pillar owns — see [the fan-out](#the-inventory-fan-out) for why the first sits here rather than in the browser, and what that costs. Note what the Scope column shows: neither needs a scope the cron's `items.get` did not already carry, because prefix matching cannot separate reading an item from creating or updating one. The list below therefore did not grow when either leg landed, which is exactly why they are documented in three places instead.
 

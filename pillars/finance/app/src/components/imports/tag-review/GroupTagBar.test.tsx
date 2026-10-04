@@ -32,6 +32,12 @@ function openPicker() {
 }
 
 describe('GroupTagBar', () => {
+  it('keeps the tag picker input at 16px on narrow screens', () => {
+    renderBar();
+
+    expect(screen.getByPlaceholderText('+ Add tag…')).toHaveClass('text-base', 'md:text-xs');
+  });
+
   it('renders staged tags as bare values under their facet colour', () => {
     renderBar({ stagedTags: ['venue:bar'] });
 

@@ -30,18 +30,29 @@
  * prose that merely mentions a weight (`Sand Washed 20kg` is a product
  * name). `ea` is here because a till prices loose produce by the each.
  */
-const MEASURE_NOTE_PATTERN = /^[\d.,]+\s*(kg|g|ml|l|ea)\b.*@/iu;
+const UNIT_PRICE_NOTE_PATTERN = /^[\d.,]+\s*(kg|g|ml|l|ea)\b.*@/iu;
+
+function unitForPriceNote(note: string): string | null {
+  const unit = UNIT_PRICE_NOTE_PATTERN.exec(note)?.[1];
+  return unit?.toLowerCase() ?? null;
+}
 
 /**
- * Whether a note prices its line by measure rather than by count.
+ * Whether receipt prose has the standalone magnitude/unit/rate shape of a
+ * row that modifies the preceding product, including a per-each rate.
+ */
+export function isUnitPriceRow(note: string): boolean {
+  return unitForPriceNote(note) !== null;
+}
+
+/**
+ * Whether a note prices its line by weight or volume rather than by count.
  *
- * Best-effort, and wrong in both directions: a wording this pattern has not
- * met is read as a count, and `1 ea @ $5.00` — a genuine per-each price — is
- * read as a measure. Neither moves a figure. Nothing derives a price from
- * this answer; it only says whether the unit prices in a series are
- * comparable, so a miss leaves a caveat unstated and a false positive states
- * one that was not needed.
+ * This is best-effort recognition at ingest. A per-each rate remains a
+ * receipt continuation note but does not make the line's unit price depend
+ * on the weighed amount.
  */
 export function isMeasureNote(note: string): boolean {
-  return MEASURE_NOTE_PATTERN.test(note);
+  const unit = unitForPriceNote(note);
+  return unit !== null && unit !== 'ea';
 }

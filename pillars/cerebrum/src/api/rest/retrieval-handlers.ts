@@ -5,7 +5,8 @@ import { initServer } from '@ts-rest/express';
  * Each handler builds a request-scoped {@link HybridSearchService} bound to the
  * pillar db (drizzle + raw + vec availability), the injected peer clients, and
  * the optional embedding client. The services are stateless — all filtering
- * rides in the request body — so there is no per-request auth.
+ * rides in the request body — while the API boundary checks any presented
+ * service-account key against the route's scope.
  *
  * `stats` reads coverage counts straight off the pillar drizzle handle. The
  * search/context query-required + structured filter-required guards map to 400
@@ -147,7 +148,7 @@ export function makeRetrievalHandlers(
         const assembler = new ContextAssemblyService();
         const filters: RetrievalFilters = body.filters ?? {};
 
-        const results = await svc.hybrid(body.query, filters, body.maxResults, 0.8);
+        const results = await svc.hybrid(body.query, filters, body.maxResults);
         const output = assembler.assemble({
           query: body.query,
           results,

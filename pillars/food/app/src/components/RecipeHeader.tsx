@@ -1,7 +1,7 @@
-import { Clock, Flame, Utensils } from 'lucide-react';
+import { ChevronDown, Clock, Flame, Utensils } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@pops/ui';
+import { Badge, Button, Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
 import { buildYieldLabel, formatQty } from './RecipeRenderer.helpers';
 
@@ -48,9 +48,25 @@ function TitleRow({ data }: { data: RecipeVersionWithCompiledData }) {
   return (
     <div className="flex items-baseline gap-3">
       <h1 className="text-3xl font-bold tracking-tight">{version.title}</h1>
-      <Badge variant="secondary" title={versionTooltip} data-testid="recipe-version-chip">
-        {t('renderer.versionLabel', { versionNo: version.versionNo })}
-      </Badge>
+      <Collapsible className="inline-flex flex-col">
+        <CollapsibleTrigger asChild>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="min-h-11 gap-1 px-1"
+            title={versionTooltip}
+          >
+            <Badge variant="secondary" data-testid="recipe-version-chip">
+              {t('renderer.versionLabel', { versionNo: version.versionNo })}
+            </Badge>
+            <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <p className="max-w-56 text-xs text-muted-foreground">{versionTooltip}</p>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

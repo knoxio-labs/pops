@@ -85,8 +85,15 @@ the layer cache warm across both roles.
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the API server registers via
 `bootstrapPillar` from `@pops/pillar-sdk/bootstrap` (`/registry/register` on the
-`registry` pillar) and deregisters on `SIGTERM`. There is no per-request auth:
-the pillar trusts the docker network and the gateway in front authenticates.
+`registry` pillar) and deregisters on `SIGTERM`. Contract and binary media
+routes rely on the network perimeter for requests without `X-API-Key`. When a
+key is presented, the registry resolves its service account and scopes derived
+from `foodContract` and the raw media route declarations authorize the request:
+unknown or revoked keys receive 401, insufficient grants receive 403, and an
+unreachable registry receives 503. The
+`POST /ingest/worker-complete` callback is independently gated by its
+per-caller `x-pops-internal-credential`. `/health`, `/pillars`, and `/openapi`
+remain outside the scope gate.
 
 ## Commands
 

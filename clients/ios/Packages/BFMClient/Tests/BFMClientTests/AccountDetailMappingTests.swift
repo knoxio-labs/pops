@@ -64,8 +64,8 @@ internal struct AccountDetailMappingTests {
         let repository = try Self.repository(
             detail: AccountsWire.detail(),
             transactions: TransactionsWire.page(
-                TransactionsWire.row(id: "txn-a", amount: "19.99"),
-                TransactionsWire.row(id: "txn-b", amount: "5.00")))
+                TransactionsWire.row(id: "txn-a", amountMinorUnits: 1999),
+                TransactionsWire.row(id: "txn-b", amountMinorUnits: 500)))
 
         let detail = try #require(try await repository.accountDetail(id: "acc-1"))
 

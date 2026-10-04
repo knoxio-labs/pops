@@ -1,6 +1,6 @@
 /**
- * Migration 0018 against a database the ingest CLI already registered the
- * Amazon source in (POPS-4647, POPS-4650).
+ * Amazon source migrations against a database the ingest CLI already
+ * registered the source in (POPS-4647, POPS-4650, POPS-4658).
  */
 import { afterEach, describe, expect, it } from 'vitest';
 

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { computeCostUsd } from '../call-with-logging.js';
 import { httpLookupPricing } from '../pricing-http.js';
 
 type FetchImpl = typeof fetch;
@@ -44,9 +45,48 @@ describe('httpLookupPricing', () => {
     expect(await lookup('anthropic', 'claude-haiku-4-5')).toEqual({ input: 0.8, output: 4 });
   });
 
+  it('treats a zero/zero provider fallback row as missing pricing', async () => {
+    const fetchImpl = vi.fn<FetchImpl>((input) => {
+      if (String(input).includes('/ai-pricing/'))
+        return Promise.resolve(new Response(null, { status: 404 }));
+      return Promise.resolve(
+        json([
+          {
+            id: 'anthropic',
+            models: [{ model: 'unpriced-model', inputCostPerMtok: 0, outputCostPerMtok: 0 }],
+          },
+        ])
+      );
+    });
+    const pricing = await httpLookupPricing('http://ai-api:3008', fetchImpl)(
+      'anthropic',
+      'unpriced-model'
+    );
+
+    expect(computeCostUsd(10, 10, pricing)).toEqual({ costUsd: 0, missing: true });
+  });
+
   it('returns null when neither route resolves', async () => {
     const fetchImpl = vi.fn<FetchImpl>(() => Promise.resolve(new Response(null, { status: 404 })));
     expect(await httpLookupPricing('http://ai-api:3008', fetchImpl)('x', 'y')).toBeNull();
+  });
+
+  it('returns null when the legacy provider route has no price for the missing model', async () => {
+    const fetchImpl = vi.fn<FetchImpl>((input) => {
+      if (String(input).includes('/ai-pricing/'))
+        return Promise.resolve(new Response(null, { status: 404 }));
+      return Promise.resolve(
+        json([
+          {
+            id: 'anthropic',
+            models: [{ modelId: 'known-model', inputCostPerMtok: 1, outputCostPerMtok: 5 }],
+          },
+        ])
+      );
+    });
+    const lookup = httpLookupPricing('http://ai-api:3008', fetchImpl);
+
+    expect(await lookup('anthropic', 'unknown-model')).toBeNull();
   });
 
   it('returns null and never throws on a network error', async () => {

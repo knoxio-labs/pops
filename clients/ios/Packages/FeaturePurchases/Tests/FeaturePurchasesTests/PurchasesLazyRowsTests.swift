@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 
-@testable import FeaturePurchases
-
 @Suite("Purchases lazy rows")
 internal struct PurchasesLazyRowsTests {
     private static let packageRoot = URL(filePath: #filePath)

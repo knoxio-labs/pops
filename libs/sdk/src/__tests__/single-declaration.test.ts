@@ -22,6 +22,7 @@ import {
   FeatureDescriptorSchema,
   ModuleCaptureOverlayConfigSchema,
   SettingsManifestSchema,
+  TagCarrierManifestSchema,
   TopBarWidgetDescriptorSchema,
   type SettingsGroup,
 } from '@pops/types';
@@ -64,6 +65,7 @@ describe('the wire schema has no second declaration', () => {
     expect(shape.captureOverlay.unwrap()).toBe(ModuleCaptureOverlayConfigSchema);
     expect(shape.topBarWidgets.unwrap().element).toBe(TopBarWidgetDescriptorSchema);
     expect(shape.features.unwrap().element).toBe(FeatureDescriptorSchema);
+    expect(shape.tags.unwrap()).toBe(TagCarrierManifestSchema);
   });
 
   it('validates stylesheetUrl with the one URL rule assetsBaseUrl uses, not a copy of it', () => {

@@ -80,11 +80,13 @@ describe('ComparisonMovieCard', () => {
     it('shows "Add to watchlist" label when not on watchlist', () => {
       renderCard({ onToggleWatchlist: vi.fn(), isOnWatchlist: false });
       expect(screen.getByLabelText('Add The Dark Knight to watchlist')).toBeInTheDocument();
+      expect(screen.getByText('Add to watchlist')).toHaveClass('sm:hidden');
     });
 
     it('shows "Remove from watchlist" label when on watchlist', () => {
       renderCard({ onToggleWatchlist: vi.fn(), isOnWatchlist: true });
       expect(screen.getByLabelText('Remove The Dark Knight from watchlist')).toBeInTheDocument();
+      expect(screen.getByText('Remove from watchlist')).toHaveClass('sm:hidden');
     });
 
     it('calls onToggleWatchlist when clicked', async () => {
@@ -122,6 +124,32 @@ describe('ComparisonMovieCard', () => {
     it('renders N/A button with correct test id', () => {
       renderCard({ onNA: vi.fn() });
       expect(screen.getByTestId('na-button-42')).toBeInTheDocument();
+    });
+
+    it('opens a tap menu with action meanings and performs the selected action', async () => {
+      const onNA = vi.fn();
+      const onPick = vi.fn();
+      const user = userEvent.setup();
+      renderCard({
+        onPick,
+        onNA,
+        onMarkStale: vi.fn(),
+        onBlacklist: vi.fn(),
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Actions for The Dark Knight' }));
+
+      expect(
+        screen.getByRole('button', { name: 'N/A — exclude from this dimension' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Stale — reduce score weight' })
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Not watched' })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'N/A — exclude from this dimension' }));
+      expect(onNA).toHaveBeenCalledTimes(1);
+      expect(onPick).not.toHaveBeenCalled();
     });
 
     it('calls onNA when clicked', async () => {

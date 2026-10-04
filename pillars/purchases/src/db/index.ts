@@ -54,7 +54,11 @@ export {
   type TagVocabularyPageOptions,
 } from './services/purchase-item-tags.js';
 
-export { listPurchaseRows, type PurchaseListRow } from './services/purchase-list-rows.js';
+export {
+  listPurchaseRows,
+  type PurchaseListRow,
+  type PurchaseRuleLink,
+} from './services/purchase-list-rows.js';
 
 export {
   confirmItemClassification,
@@ -223,8 +227,11 @@ export {
   type ConfirmOutcome,
 } from './services/reconcile-writes.js';
 
+export { linkChargeManually, type ManualLinkOutcome } from './services/reconcile-manual-write.js';
+
 export {
   listActiveMatchRules,
+  deactivateMatchRule,
   recordMatchRule,
   type MatchRuleEvidence,
 } from './services/match-rules.js';

@@ -46,6 +46,7 @@ const NO_BALANCE: AccountBalance = {
   asOf: '',
   basis: 'transactions',
   anchor: null,
+  reconciliation: 'unmeasured',
   inconsistent: false,
 };
 

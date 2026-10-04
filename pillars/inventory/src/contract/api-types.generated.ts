@@ -1350,6 +1350,44 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    CatalogueErrorBody: {
+      code: string;
+      details?: {
+        currentDraftVersion?: number;
+        issues?: {
+          code: string;
+          definitionId: string | null;
+          message: string;
+          path: string;
+        }[];
+        preview?: {
+          baseRevision: number;
+          compatibility: {
+            affectedIds: string[];
+            affectedItems: number;
+            changes: {
+              /** @enum {string} */
+              classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+              code: string;
+              definitionId: string;
+            }[];
+            /** @enum {string} */
+            classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+            discardedOverrides: {
+              /** Format: uuid */
+              fieldId: string;
+              items: number;
+            }[];
+          };
+          draftRevision: number;
+        };
+      } & {
+        [key: string]: unknown;
+      };
+      message: string;
+      requestId: string;
+      retryable: boolean;
+    };
     ErrorBody: {
       code: string;
       details?: unknown;
@@ -6189,7 +6227,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -6198,7 +6236,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -6253,7 +6291,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -6411,7 +6449,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 401 */
@@ -6420,7 +6458,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 409 */
@@ -6429,7 +6467,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -6580,7 +6618,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -6589,7 +6627,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -6891,7 +6929,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 401 */
@@ -6900,7 +6938,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -6909,7 +6947,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 409 */
@@ -6918,7 +6956,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -7079,7 +7117,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -7088,7 +7126,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 409 */
@@ -7097,7 +7135,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -7323,7 +7361,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 401 */
@@ -7332,7 +7370,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -7341,7 +7379,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 409 */
@@ -7350,7 +7388,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -7531,7 +7569,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 401 */
@@ -7540,7 +7578,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -7549,7 +7587,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 409 */
@@ -7558,7 +7596,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -7790,7 +7828,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 401 */
@@ -7799,7 +7837,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -7808,7 +7846,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 409 */
@@ -7817,7 +7855,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -7876,7 +7914,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 401 */
@@ -7885,7 +7923,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -7918,7 +7956,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -7959,7 +7997,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 401 */
@@ -7968,7 +8006,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 409 */
@@ -7977,7 +8015,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -8200,7 +8238,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 401 */
@@ -8209,7 +8247,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -8218,7 +8256,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 409 */
@@ -8227,7 +8265,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };
@@ -8391,7 +8429,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
       /** @description 404 */
@@ -8400,7 +8438,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ErrorBody'];
+          'application/json': components['schemas']['CatalogueErrorBody'];
         };
       };
     };

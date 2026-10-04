@@ -121,6 +121,7 @@ internal enum PurchasesHomeFailure: String, CaseIterable, Identifiable, Sendable
     internal init(_ error: Error) {
         switch error as? RepositoryError {
         case .unavailable: self = .unavailable
+        case .rateLimited: self = .transport
         case .unauthorized: self = .unauthorized
         case .contractMismatch: self = .contractMismatch
         case .conflict: self = .conflict

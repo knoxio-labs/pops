@@ -450,6 +450,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/reconcile/manual': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create and confirm a manually selected charge link */
+    post: operations['reconcile.manual'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/reconcile/manual-candidates': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search Finance transactions for a manual reconciliation link */
+    get: operations['reconcile.manualCandidates'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/reconcile/queue': {
     parameters: {
       query?: never;
@@ -478,6 +512,23 @@ export interface paths {
     put?: never;
     /** Rule a pairing out for good, so no later sweep proposes it again */
     post: operations['reconcile.reject'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/reconcile/rules/{ruleId}/deactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Deactivate a learned match rule without removing its attribution history */
+    post: operations['reconcile.deactivateRule'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1001,6 +1052,15 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
     };
   };
   'purchase.tagVocabulary': {
@@ -1078,6 +1138,15 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
     };
   };
   'product.deleteAlias': {
@@ -1106,6 +1175,15 @@ export interface operations {
             /** @enum {boolean} */
             ok: true;
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1204,6 +1282,15 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
     };
   };
   'product.delete': {
@@ -1232,6 +1319,15 @@ export interface operations {
             /** @enum {boolean} */
             ok: true;
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1284,6 +1380,15 @@ export interface operations {
             label: string;
             labelConfirmedAt: string | null;
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -1356,6 +1461,12 @@ export interface operations {
               paymentHint: string | null;
               rawRef: string | null;
               receiptUri: string | null;
+              ruleLinks: {
+                descriptionPattern: string;
+                id: string;
+                isActive: boolean;
+                source: string | null;
+              }[];
               /** @enum {string} */
               settlementMode: 'card' | 'cash' | 'unknown';
               shippingCents: number;
@@ -1718,6 +1829,15 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
         headers: {
           [name: string]: unknown;
         };
@@ -2264,6 +2384,15 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
       /** @description 404 */
       404: {
         headers: {
@@ -2301,6 +2430,15 @@ export interface operations {
             /** @enum {boolean} */
             ok: true;
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2609,6 +2747,15 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
       /** @description 404 */
       404: {
         headers: {
@@ -2658,6 +2805,15 @@ export interface operations {
               shipmentId: string | null;
             };
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -2713,6 +2869,15 @@ export interface operations {
               unitId: string | null;
             }[];
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -3249,6 +3414,8 @@ export interface operations {
               }
             | {
                 /** @enum {string} */
+                cause?: 'truncated' | 'refused' | 'rejected';
+                /** @enum {string} */
                 kind: 'unreadable';
                 reason: string;
                 receiptUris: string[];
@@ -3783,6 +3950,8 @@ export interface operations {
               }
             | {
                 /** @enum {string} */
+                cause?: 'truncated' | 'refused' | 'rejected';
+                /** @enum {string} */
                 kind: 'unreadable';
                 reason: string;
                 receiptUris: string[];
@@ -3961,6 +4130,15 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
       /** @description 404 */
       404: {
         headers: {
@@ -4068,6 +4246,15 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
     };
   };
   'reconcile.linksBatch': {
@@ -4100,6 +4287,132 @@ export interface operations {
               transactionUri: string;
             }[];
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'reconcile.manual': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          chargeId: string;
+          transactionUri: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'reconcile.manualCandidates': {
+    parameters: {
+      query: {
+        search: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            items: {
+              amountCents: number;
+              date: string;
+              description: string;
+              payee: string | null;
+              settlementCurrency: string;
+              transactionUri: string;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4138,6 +4451,10 @@ export interface operations {
                 confidence: number;
                 /** @enum {string} */
                 linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                matchRuleId: string | null;
+                matchRuleIsActive: boolean | null;
+                matchRulePattern: string | null;
+                matchRuleSource: string | null;
                 transactionDate: string | null;
                 transactionDescription: string | null;
                 transactionPayee: string | null;
@@ -4148,6 +4465,15 @@ export interface operations {
               sourceOrderId: string | null;
             }[];
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
@@ -4179,6 +4505,63 @@ export interface operations {
             /** @enum {boolean} */
             ok: true;
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'reconcile.deactivateRule': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ruleId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4231,6 +4614,15 @@ export interface operations {
               };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
       /** @description 503 */
       503: {
         headers: {
@@ -4269,6 +4661,15 @@ export interface operations {
             /** @enum {boolean} */
             ok: true;
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */
@@ -4416,6 +4817,15 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
       /** @description 404 */
       404: {
         headers: {
@@ -4505,6 +4915,15 @@ export interface operations {
             /** @enum {boolean} */
             ok: true;
           };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
       /** @description 404 */

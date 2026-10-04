@@ -5,7 +5,7 @@
  * `reflexes.toml`; the pillar exposes management reads, enable/disable toggles
  * (which rewrite the TOML), a dry-run test, and the append-only execution
  * history. Non-identity domain: served on the docker-network trust boundary,
- * no per-request auth (parity with templates).
+ * with presented service-account keys checked at the API boundary (parity with templates).
  *
  * `history` is POST-with-body rather than GET because its typed enum filters
  * (`triggerType` / `status`) don't round-trip cleanly through a query string —

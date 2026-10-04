@@ -1083,6 +1083,7 @@ export type MobileFinanceListAccountsResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       contact: string | null;
       currency: string;
@@ -1220,6 +1221,7 @@ export type MobileFinanceGetAccountResponses = {
         balanceCents: number;
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
+        reconciliation: 'unmeasured' | 'agreed' | 'disagrees';
       };
       contact: string | null;
       currency: string;
@@ -1339,7 +1341,7 @@ export type MobileFinanceListTransactionsResponses = {
    */
   200: {
     data: Array<{
-      amount: number;
+      amountMinorUnits: number;
       currency: string;
       date: string;
       description: string;
@@ -1468,7 +1470,7 @@ export type MobileFinanceGetTransactionResponses = {
    */
   200: {
     account: string;
-    amount: number;
+    amountMinorUnits: number;
     country: string | null;
     currency: string;
     date: string;

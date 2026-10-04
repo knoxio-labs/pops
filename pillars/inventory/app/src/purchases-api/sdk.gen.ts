@@ -20,8 +20,10 @@ import type {
   ProductDeleteErrors,
   ProductDeleteResponses,
   ProductListData,
+  ProductListErrors,
   ProductListResponses,
   ProductProposeData,
+  ProductProposeErrors,
   ProductProposeResponses,
   ProductRenameData,
   ProductRenameErrors,
@@ -54,10 +56,12 @@ import type {
   PurchaseGetErrors,
   PurchaseGetResponses,
   PurchaseItemsByTagData,
+  PurchaseItemsByTagErrors,
   PurchaseItemsByTagResponses,
   PurchaseListData,
   PurchaseListErrors,
   PurchaseListInventoryProposalsData,
+  PurchaseListInventoryProposalsErrors,
   PurchaseListInventoryProposalsResponses,
   PurchaseListResponses,
   PurchasePatchItemData,
@@ -87,11 +91,23 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileDeactivateRuleData,
+  ReconcileDeactivateRuleErrors,
+  ReconcileDeactivateRuleResponses,
   ReconcileLinksBatchData,
+  ReconcileLinksBatchErrors,
   ReconcileLinksBatchResponses,
   ReconcileLinksData,
+  ReconcileLinksErrors,
   ReconcileLinksResponses,
+  ReconcileManualCandidatesData,
+  ReconcileManualCandidatesErrors,
+  ReconcileManualCandidatesResponses,
+  ReconcileManualData,
+  ReconcileManualErrors,
+  ReconcileManualResponses,
   ReconcileQueueData,
+  ReconcileQueueErrors,
   ReconcileQueueResponses,
   ReconcileRejectData,
   ReconcileRejectErrors,
@@ -181,11 +197,12 @@ export const analyticsProductLeaderboard = <ThrowOnError extends boolean = false
  */
 export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
   options: Options<PurchaseItemsByTagData, ThrowOnError>
-): RequestResult<PurchaseItemsByTagResponses, unknown, ThrowOnError> =>
-  (options.client ?? client).get<PurchaseItemsByTagResponses, unknown, ThrowOnError>({
-    url: '/items',
-    ...options,
-  });
+): RequestResult<PurchaseItemsByTagResponses, PurchaseItemsByTagErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    PurchaseItemsByTagResponses,
+    PurchaseItemsByTagErrors,
+    ThrowOnError
+  >({ url: '/items', ...options });
 
 /**
  * List the distinct item tags in use with their counts, most-used first
@@ -204,8 +221,8 @@ export const purchaseTagVocabulary = <ThrowOnError extends boolean = false>(
  */
 export const productList = <ThrowOnError extends boolean = false>(
   options?: Options<ProductListData, ThrowOnError>
-): RequestResult<ProductListResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<ProductListResponses, unknown, ThrowOnError>({
+): RequestResult<ProductListResponses, ProductListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<ProductListResponses, ProductListErrors, ThrowOnError>({
     url: '/products',
     ...options,
   });
@@ -253,8 +270,8 @@ export const productUpdateAlias = <ThrowOnError extends boolean = false>(
  */
 export const productPropose = <ThrowOnError extends boolean = false>(
   options?: Options<ProductProposeData, ThrowOnError>
-): RequestResult<ProductProposeResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).post<ProductProposeResponses, unknown, ThrowOnError>({
+): RequestResult<ProductProposeResponses, ProductProposeErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ProductProposeResponses, ProductProposeErrors, ThrowOnError>({
     url: '/products/proposals',
     ...options,
     headers: {
@@ -426,11 +443,16 @@ export const purchaseAttachDocument = <ThrowOnError extends boolean = false>(
  */
 export const purchaseListInventoryProposals = <ThrowOnError extends boolean = false>(
   options: Options<PurchaseListInventoryProposalsData, ThrowOnError>
-): RequestResult<PurchaseListInventoryProposalsResponses, unknown, ThrowOnError> =>
-  (options.client ?? client).get<PurchaseListInventoryProposalsResponses, unknown, ThrowOnError>({
-    url: '/purchases/{id}/inventory-proposals',
-    ...options,
-  });
+): RequestResult<
+  PurchaseListInventoryProposalsResponses,
+  PurchaseListInventoryProposalsErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    PurchaseListInventoryProposalsResponses,
+    PurchaseListInventoryProposalsErrors,
+    ThrowOnError
+  >({ url: '/purchases/{id}/inventory-proposals', ...options });
 
 /**
  * Confirm a line's kind and item tags
@@ -588,8 +610,8 @@ export const reconcileConfirm = <ThrowOnError extends boolean = false>(
  */
 export const reconcileLinks = <ThrowOnError extends boolean = false>(
   options: Options<ReconcileLinksData, ThrowOnError>
-): RequestResult<ReconcileLinksResponses, unknown, ThrowOnError> =>
-  (options.client ?? client).get<ReconcileLinksResponses, unknown, ThrowOnError>({
+): RequestResult<ReconcileLinksResponses, ReconcileLinksErrors, ThrowOnError> =>
+  (options.client ?? client).get<ReconcileLinksResponses, ReconcileLinksErrors, ThrowOnError>({
     url: '/reconcile/links',
     ...options,
   });
@@ -599,8 +621,12 @@ export const reconcileLinks = <ThrowOnError extends boolean = false>(
  */
 export const reconcileLinksBatch = <ThrowOnError extends boolean = false>(
   options?: Options<ReconcileLinksBatchData, ThrowOnError>
-): RequestResult<ReconcileLinksBatchResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).post<ReconcileLinksBatchResponses, unknown, ThrowOnError>({
+): RequestResult<ReconcileLinksBatchResponses, ReconcileLinksBatchErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    ReconcileLinksBatchResponses,
+    ReconcileLinksBatchErrors,
+    ThrowOnError
+  >({
     url: '/reconcile/links/batch',
     ...options,
     headers: {
@@ -610,12 +636,43 @@ export const reconcileLinksBatch = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Create and confirm a manually selected charge link
+ */
+export const reconcileManual = <ThrowOnError extends boolean = false>(
+  options?: Options<ReconcileManualData, ThrowOnError>
+): RequestResult<ReconcileManualResponses, ReconcileManualErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ReconcileManualResponses, ReconcileManualErrors, ThrowOnError>({
+    url: '/reconcile/manual',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Search Finance transactions for a manual reconciliation link
+ */
+export const reconcileManualCandidates = <ThrowOnError extends boolean = false>(
+  options: Options<ReconcileManualCandidatesData, ThrowOnError>
+): RequestResult<
+  ReconcileManualCandidatesResponses,
+  ReconcileManualCandidatesErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ReconcileManualCandidatesResponses,
+    ReconcileManualCandidatesErrors,
+    ThrowOnError
+  >({ url: '/reconcile/manual-candidates', ...options });
+
+/**
  * Charges awaiting a decision, newest order first
  */
 export const reconcileQueue = <ThrowOnError extends boolean = false>(
   options?: Options<ReconcileQueueData, ThrowOnError>
-): RequestResult<ReconcileQueueResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<ReconcileQueueResponses, unknown, ThrowOnError>({
+): RequestResult<ReconcileQueueResponses, ReconcileQueueErrors, ThrowOnError> =>
+  (options?.client ?? client).get<ReconcileQueueResponses, ReconcileQueueErrors, ThrowOnError>({
     url: '/reconcile/queue',
     ...options,
   });
@@ -632,6 +689,25 @@ export const reconcileReject = <ThrowOnError extends boolean = false>(
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
+    },
+  });
+
+/**
+ * Deactivate a learned match rule without removing its attribution history
+ */
+export const reconcileDeactivateRule = <ThrowOnError extends boolean = false>(
+  options: Options<ReconcileDeactivateRuleData, ThrowOnError>
+): RequestResult<ReconcileDeactivateRuleResponses, ReconcileDeactivateRuleErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    ReconcileDeactivateRuleResponses,
+    ReconcileDeactivateRuleErrors,
+    ThrowOnError
+  >({
+    url: '/reconcile/rules/{ruleId}/deactivate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
     },
   });
 

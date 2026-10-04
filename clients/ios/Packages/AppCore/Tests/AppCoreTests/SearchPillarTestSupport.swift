@@ -1,6 +1,5 @@
 import AppCore
 import AppCoreFakes
-import Foundation
 
 internal struct SearchPillarTestHit: Identifiable, Sendable, Equatable {
     let id: Int

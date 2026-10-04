@@ -324,6 +324,155 @@ describe('protocol-2 inventory writes', () => {
     });
   });
 
+  it('forwards provenance on create as the legacy purchase columns', async () => {
+    await tool('inventory.items.create').handler({
+      itemName: 'Bookends',
+      catalogueRevision: 1,
+      typeId: TYPE_ID,
+      fieldValues: [],
+      provenance: {
+        merchant: 'Amazon',
+        price: 39.95,
+        purchasedOn: '2026-09-20',
+        warrantyExpires: '2027-09-20',
+        transactionUri: 'pops://finance/transaction/txn-1',
+      },
+    });
+
+    expect(inventory.sync.mutations.mock.calls[0]?.[0].mutations[0]).toMatchObject({
+      op: 'item.create',
+      args: {
+        legacy: {
+          purchasedFromName: 'Amazon',
+          purchasePrice: 39.95,
+          purchaseDate: '2026-09-20',
+          warrantyExpires: '2027-09-20',
+          purchaseTransactionId: 'txn-1',
+        },
+      },
+    });
+  });
+
+  it('sends no legacy patch on create or update when provenance is absent', async () => {
+    await tool('inventory.items.create').handler({
+      itemName: 'Found on the street',
+      catalogueRevision: 1,
+      typeId: TYPE_ID,
+      fieldValues: [],
+    });
+    await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      itemName: 'Renamed',
+    });
+
+    for (const call of inventory.sync.mutations.mock.calls) {
+      expect(call[0].mutations[0].args).not.toHaveProperty('legacy');
+    }
+  });
+
+  it('accepts an update carrying only provenance and patches just the named facts', async () => {
+    await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      provenance: { transactionUri: 'pops://finance/transaction/txn-2', price: null },
+    });
+
+    expect(inventory.sync.mutations.mock.calls[0]?.[0].mutations[0]).toMatchObject({
+      op: 'item.edit',
+      baseRevision: 7,
+    });
+    expect(inventory.sync.mutations.mock.calls[0]?.[0].mutations[0].args).toEqual({
+      legacy: { purchaseTransactionId: 'txn-2', purchasePrice: null },
+    });
+  });
+
+  it('clears every purchase fact when an update sends provenance null', async () => {
+    await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      provenance: null,
+    });
+
+    expect(inventory.sync.mutations.mock.calls[0]?.[0].mutations[0].args).toEqual({
+      legacy: {
+        purchasedFromName: null,
+        purchasePrice: null,
+        purchaseDate: null,
+        warrantyExpires: null,
+        purchaseTransactionId: null,
+      },
+    });
+  });
+
+  it.each([
+    ['not an object', 'txn-1', 'provenance must be an object or null'],
+    ['an array', [], 'provenance must be an object or null'],
+    ['no facts', {}, 'provenance must set at least one of'],
+    [
+      'a transaction URI with no id',
+      { transactionUri: 'pops://finance/transaction/' },
+      'provenance.transactionUri is missing its transaction id',
+    ],
+    [
+      'a bare transaction id',
+      { transactionUri: 'txn-1' },
+      'provenance.transactionUri must be pops://finance/transaction/<id> or null',
+    ],
+    [
+      "another pillar's URI",
+      { transactionUri: 'pops://purchases/order/f2fe4fac' },
+      'provenance.transactionUri must be pops://finance/transaction/<id> or null',
+    ],
+    [
+      'a nested transaction path',
+      { transactionUri: 'pops://finance/transaction/a/b' },
+      'provenance.transactionUri is missing its transaction id',
+    ],
+    ['an empty merchant', { merchant: '' }, 'provenance.merchant must be a non-empty string'],
+    ['a text price', { price: '39.95' }, 'provenance.price must be a non-negative number'],
+    ['a negative price', { price: -1 }, 'provenance.price must be a non-negative number'],
+    ['a numeric date', { purchasedOn: 20260920 }, 'provenance.purchasedOn must be a non-empty'],
+    ['an unknown key', { orderId: 'f2fe4fac' }, 'provenance.orderId is not allowed'],
+  ])('rejects malformed provenance on update: %s', async (_case, provenance, error) => {
+    const result = await tool('inventory.items.update').handler({
+      id: ITEM_ID,
+      revision: 7,
+      catalogueRevision: 2,
+      itemName: 'Still valid on its own',
+      provenance,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]).toMatchObject({ type: 'text' });
+    expect(JSON.stringify(result.content[0])).toContain(error);
+    expect(inventory.sync.mutations).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['null, which a create has nothing to clear', null, 'provenance must be an object'],
+    [
+      'a missing transaction id',
+      { merchant: 'Amazon', transactionUri: 'pops://finance/transaction/' },
+      'provenance.transactionUri is missing its transaction id',
+    ],
+  ])('rejects malformed provenance on create: %s', async (_case, provenance, error) => {
+    const result = await tool('inventory.items.create').handler({
+      itemName: 'Bookends',
+      catalogueRevision: 1,
+      typeId: TYPE_ID,
+      fieldValues: [],
+      provenance,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content[0])).toContain(error);
+    expect(inventory.sync.mutations).not.toHaveBeenCalled();
+  });
+
   it('rejects an update with no changes using the complete error', async () => {
     const result = await tool('inventory.items.update').handler({
       id: ITEM_ID,
@@ -334,7 +483,7 @@ describe('protocol-2 inventory writes', () => {
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({
       type: 'text',
-      text: 'At least one of itemName, note, fieldValues, or externalIds is required',
+      text: 'At least one of itemName, note, fieldValues, externalIds, or provenance is required',
     });
     expect(inventory.sync.mutations).not.toHaveBeenCalled();
   });

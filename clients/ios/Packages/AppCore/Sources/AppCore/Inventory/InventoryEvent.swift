@@ -1,28 +1,31 @@
 import Foundation
 
-/// What kind of change an event records. Sent as an open string, like
-/// `InventoryLifecycle` (D10), because a new mutation op can ship an event
-/// kind the app has never rendered a history line for.
+/// What kind of change an event records. Server event names map one-to-one to
+/// cases; unknown names stay available for forward-compatible rendering.
 public enum InventoryEventKind: Hashable, Sendable {
     case created
     case edited
     case typeChanged
+    case fieldValuesChanged
+    case overrideSet
+    case overrideCleared
+    case codeSet
     case moved
-    case accessChanged
-    case fullnessChanged
+    case pickedUp
+    case putBack
+    case stored
+    case opened
+    case closed
+    case sealed
+    case unpacked
     case lifecycleChanged
     case quantityChanged
-    case split
-    case codeChanged
-    case photoAttached
+    case splitFrom
+    case splitInto
+    case photoAdded
     case photoRemoved
-    case photosReordered
     case deleted
     case restored
-    case locationCreated
-    case locationRenamed
-    case locationMoved
-    case locationDeleted
     case reverted
     case migrated
     /// An event kind this build has never heard of, kept verbatim.
@@ -40,22 +43,26 @@ public enum InventoryEventKind: Hashable, Sendable {
         "created": .created,
         "edited": .edited,
         "type_changed": .typeChanged,
+        "field_values_changed": .fieldValuesChanged,
+        "override_set": .overrideSet,
+        "override_cleared": .overrideCleared,
+        "code_set": .codeSet,
         "moved": .moved,
-        "access_changed": .accessChanged,
-        "fullness_changed": .fullnessChanged,
+        "picked_up": .pickedUp,
+        "put_back": .putBack,
+        "stored": .stored,
+        "opened": .opened,
+        "closed": .closed,
+        "sealed": .sealed,
+        "unpacked": .unpacked,
         "lifecycle_changed": .lifecycleChanged,
         "quantity_changed": .quantityChanged,
-        "split": .split,
-        "code_changed": .codeChanged,
-        "photo_attached": .photoAttached,
+        "split_from": .splitFrom,
+        "split_into": .splitInto,
+        "photo_added": .photoAdded,
         "photo_removed": .photoRemoved,
-        "photos_reordered": .photosReordered,
         "deleted": .deleted,
         "restored": .restored,
-        "location_created": .locationCreated,
-        "location_renamed": .locationRenamed,
-        "location_moved": .locationMoved,
-        "location_deleted": .locationDeleted,
         "reverted": .reverted,
         "migrated": .migrated,
     ]

@@ -109,6 +109,7 @@ services:
       INVENTORY_SELF_BASE_URL: http://inventory-api:3002
       INVENTORY_IMAGES_DIR: /data/inventory/images
       INVENTORY_DOCUMENTS_DIR: /data/inventory/documents
+      POPS_INTERNAL_API_KEY: ${POPS_INTERNAL_API_KEY:-}
       # Cross-pillar registry. Includes registry-api by default so /pillars
       # surfaces both host pillars on the synthetic-entry list.
       POPS_PILLARS: ${POPS_PILLARS:-registry:http://registry-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006}
@@ -585,6 +586,7 @@ services:
       NODE_ENV: production
       PORT: '3009'
       ORCHESTRATOR_SELF_BASE_URL: http://pops-orchestrator:3009
+      POPS_INTERNAL_API_KEY: ${POPS_ORCHESTRATOR_API_KEY:-}
       POPS_PILLARS: ${POPS_PILLARS:-registry:http://registry-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006}
     expose:
       - '3009'
