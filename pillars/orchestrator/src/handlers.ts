@@ -12,7 +12,7 @@ import {
   type RegistrySnapshotReader,
 } from './pillars/registry.js';
 
-import type { PillarRegistryEntry } from '@pops/types';
+import type { PillarHealth, PillarRegistryEntry } from '@pops/types';
 
 export interface OrchestratorDeps {
   /** Semver of the build, surfaced on the health response. */
@@ -32,12 +32,9 @@ export interface OrchestratorDeps {
   snapshotReader?: RegistrySnapshotReader;
 }
 
-export interface HealthResponse {
-  ok: true;
-  status: 'ok';
-  service: typeof ORCHESTRATOR_PILLAR_ID;
-  version: string;
-  ts: string;
+export interface HealthResponse extends PillarHealth {
+  readonly status: 'ok';
+  readonly ts: string;
 }
 
 export interface PillarsResponse {
@@ -53,7 +50,7 @@ export function makeRequestHandler(deps: OrchestratorDeps): {
       return {
         ok: true,
         status: 'ok',
-        service: ORCHESTRATOR_PILLAR_ID,
+        pillar: ORCHESTRATOR_PILLAR_ID,
         version: deps.version,
         ts: new Date().toISOString(),
       };
