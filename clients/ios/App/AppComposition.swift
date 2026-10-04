@@ -52,6 +52,11 @@ internal final class AppComposition {
     /// What a routed reference asked to open, for `ContentView` to present.
     internal let entityPresentation = EntityPresentation()
 
+    /// The app and object currently visible to an Ego conversation.
+    internal lazy var egoScreenContext = EgoScreenContextProvider { [weak self] feature in
+        self?.router(for: feature).path ?? []
+    }
+
     /// The pairing screen's dependencies. Everything that speaks to a BFM is
     /// left unbound rather than pointed at a client: the base URL arrives with
     /// the pairing code, so there is nothing to point one at yet, and a screen

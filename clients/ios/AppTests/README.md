@@ -45,6 +45,7 @@ The difference is what is being asserted on. `TabView` is bridged to a real `UIT
 - **`DataProtectionKeychainTests`** — that the data-protection keychain is reachable from this target. It asserts the _environment_, not `KeychainTokenStore`, and it is what keeps a red `KeychainTokenStoreTests` pointing at the code rather than at the harness.
 - **`KeychainTokenStoreTests`** — `KeychainTokenStore` against a real Keychain: the accessibility class the item is actually written with, whether anything it writes is synchronizable, the `SecItemUpdate`-then-`SecItemAdd` branch in `save(_:)`, and whether `wipe()` removes what its documentation says it removes. Attributes are read back out of the Keychain rather than off the source, because a downgrade there has no symptom — an item written `AfterFirstUnlock`, or written synchronizable, stores and loads exactly as well as a correct one and is only wrong on a locked phone and on somebody else's hardware.
 - **`SecureEnclaveKeyStoreTests`** — `SecureEnclaveKeyStore` against a real Secure Enclave. See below, because this one used to be impossible.
+- **`EgoScreenContextTests`** — that the selected app tab, More selection, feature router path, and presented object URI produce the current Ego context.
 
 ## The Secure Enclave suite, and why it is no longer gated
 
