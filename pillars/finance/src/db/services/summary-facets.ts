@@ -12,12 +12,11 @@ import { desc, sql } from 'drizzle-orm';
 
 import { transactions } from '../schema.js';
 import {
+  COST_OF_CREDIT,
   ROW_COUNT,
   SPEND,
-  SPEND_CENTS,
   measureWithinRange,
   shareOfTotal,
-  spendWithinRange,
   toMeasure,
   type LedgerMeasure,
   type SpendMeasure,
@@ -35,6 +34,17 @@ export interface TagSpend extends LabelledSpend {
   tag: string;
 }
 
+interface TagAmount {
+  tag: string;
+  amount: SpendMeasure;
+  shareOfTotal: number | null;
+}
+
+/** A cost-of-credit breakdown row for one `fee:*` transaction tag. */
+export interface TagCostOfCredit extends Omit<TagAmount, 'amount'> {
+  fees: SpendMeasure;
+}
+
 export interface EntitySpend extends LabelledSpend {
   /** `null` is the unattributed bucket — rows no entity was resolved for. */
   entityId: string | null;
@@ -47,31 +57,68 @@ interface TagRow {
   transactionCount: number | null;
 }
 
+interface TagMeasureQuery {
+  measure: LedgerMeasure;
+  range: SummaryRange;
+  totalCents: number;
+  limit: number;
+  tagPrefix?: string;
+}
+
 /**
  * Spend per tag. A transaction carrying three tags contributes its full
  * amount to each, so these never sum to the window total — a tag total
  * answers "how much spend touched this tag", not "how was the total split".
  */
+function measureByTag(
+  db: FinanceDb,
+  { measure, range, totalCents, limit, tagPrefix }: TagMeasureQuery
+): TagAmount[] {
+  const prefixFilter =
+    tagPrefix === undefined
+      ? sql``
+      : sql`AND substr(je.value, 1, length(${tagPrefix})) = ${tagPrefix} AND length(je.value) > length(${tagPrefix})`;
+  const rows = db.all<TagRow>(sql`
+    SELECT je.value AS tag, ${measure.cents} AS cents, ${ROW_COUNT} AS transactionCount
+    FROM ${transactions}, json_each(${transactions.tags}) AS je
+    WHERE ${measureWithinRange(measure, range)} ${prefixFilter}
+    GROUP BY je.value
+    ORDER BY ${desc(measure.cents)}, je.value
+    LIMIT ${limit}
+  `);
+
+  return rows.map((row) => ({
+    tag: row.tag,
+    amount: toMeasure(row),
+    shareOfTotal: shareOfTotal(row.cents ?? 0, totalCents),
+  }));
+}
+
 export function spendByTag(
   db: FinanceDb,
   range: SummaryRange,
   totalCents: number,
   limit: number
 ): TagSpend[] {
-  const rows = db.all<TagRow>(sql`
-    SELECT je.value AS tag, ${SPEND_CENTS} AS cents, ${ROW_COUNT} AS transactionCount
-    FROM ${transactions}, json_each(${transactions.tags}) AS je
-    WHERE ${spendWithinRange(range)}
-    GROUP BY je.value
-    ORDER BY ${desc(SPEND_CENTS)}, je.value
-    LIMIT ${limit}
-  `);
+  return measureByTag(db, { measure: SPEND, range, totalCents, limit }).map(
+    ({ amount, ...tag }) => ({ ...tag, spend: amount })
+  );
+}
 
-  return rows.map((row) => ({
-    tag: row.tag,
-    spend: toMeasure(row),
-    shareOfTotal: shareOfTotal(row.cents ?? 0, totalCents),
-  }));
+/** Group transaction fees by the closed `fee:*` tag namespace. */
+export function costOfCreditByTag(
+  db: FinanceDb,
+  range: SummaryRange,
+  totalCents: number,
+  limit: number
+): TagCostOfCredit[] {
+  return measureByTag(db, {
+    measure: COST_OF_CREDIT,
+    range,
+    totalCents,
+    limit,
+    tagPrefix: 'fee:',
+  }).map(({ amount, ...tag }) => ({ ...tag, fees: amount }));
 }
 
 export interface EntityAmount {

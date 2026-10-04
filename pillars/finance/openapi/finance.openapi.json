@@ -25589,6 +25589,212 @@
                           },
                           "type": "array"
                         },
+                        "costOfCredit": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "byAccount": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "accountId": {
+                                    "type": "string"
+                                  },
+                                  "accountName": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "archived": {
+                                    "type": "boolean"
+                                  },
+                                  "currency": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "fees": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "cents": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": -9007199254740991,
+                                        "type": "integer"
+                                      },
+                                      "transactionCount": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": ["cents", "transactionCount"],
+                                    "type": "object"
+                                  },
+                                  "shareOfTotal": {
+                                    "nullable": true,
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "accountId",
+                                  "accountName",
+                                  "currency",
+                                  "archived",
+                                  "shareOfTotal",
+                                  "fees"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "byMonth": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "byAccount": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "accountId": {
+                                          "type": "string"
+                                        },
+                                        "fees": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "cents": {
+                                              "maximum": 9007199254740991,
+                                              "minimum": -9007199254740991,
+                                              "type": "integer"
+                                            },
+                                            "transactionCount": {
+                                              "maximum": 9007199254740991,
+                                              "minimum": 0,
+                                              "type": "integer"
+                                            }
+                                          },
+                                          "required": ["cents", "transactionCount"],
+                                          "type": "object"
+                                        }
+                                      },
+                                      "required": ["accountId", "fees"],
+                                      "type": "object"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "fees": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "cents": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": -9007199254740991,
+                                        "type": "integer"
+                                      },
+                                      "transactionCount": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": ["cents", "transactionCount"],
+                                    "type": "object"
+                                  },
+                                  "month": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["month", "fees", "byAccount"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "byTag": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fees": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "cents": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": -9007199254740991,
+                                        "type": "integer"
+                                      },
+                                      "transactionCount": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": ["cents", "transactionCount"],
+                                    "type": "object"
+                                  },
+                                  "shareOfTotal": {
+                                    "nullable": true,
+                                    "type": "number"
+                                  },
+                                  "tag": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["tag", "fees", "shareOfTotal"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "deltaCents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "deltaRatio": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "previousTotal": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "cents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "transactionCount": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": ["cents", "transactionCount"],
+                              "type": "object"
+                            },
+                            "total": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "cents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "transactionCount": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": ["cents", "transactionCount"],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "previousTotal",
+                            "deltaCents",
+                            "deltaRatio",
+                            "byAccount",
+                            "byMonth",
+                            "byTag"
+                          ],
+                          "type": "object"
+                        },
                         "currencies": {
                           "items": {
                             "type": "string"
@@ -26124,6 +26330,7 @@
                         "byTag",
                         "byEntity",
                         "income",
+                        "costOfCredit",
                         "net",
                         "inference"
                       ],
@@ -26218,7 +26425,7 @@
             "description": "503"
           }
         },
-        "summary": "Spend for a window and the period before it, broken down by account, month, tag and entity, with the largest charge, concentration, subscriptions and foreign spend",
+        "summary": "Spend for a window and the period before it, broken down by account, month, tag and entity, plus income, cost of credit, net, the largest charge, concentration, subscriptions and foreign spend",
         "tags": ["summary"]
       }
     },

@@ -298,6 +298,15 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'finance',
+    operationId: 'summary.get',
+    path: '/summary',
+    method: 'get',
+    query: ['window', 'topLimit'],
+    usedBy: 'pillars/bfm/src/api/finance/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
     operationId: 'checkpoints.history',
     path: '/accounts/{id}/balance-history',
     method: 'get',
@@ -3070,9 +3079,9 @@ function selfTest() {
   // made is about resolution, not about file layout.
   const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
   assert(
-    bfmFinanceSites.length === 7,
+    bfmFinanceSites.length === 8,
     "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
-      'pillar() token — these seven calls resolve their producer through gateway.call, not pillar()'
+      'pillar() token — these eight calls resolve their producer through gateway.call, not pillar()'
   );
   assert(
     new Set(bfmFinanceSites.map((s) => s.file)).size === 4,

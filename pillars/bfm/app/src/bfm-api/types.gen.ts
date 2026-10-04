@@ -1242,6 +1242,163 @@ export type MobileFinanceGetAccountResponses = {
 export type MobileFinanceGetAccountResponse =
   MobileFinanceGetAccountResponses[keyof MobileFinanceGetAccountResponses];
 
+export type MobileFinanceGetSummaryData = {
+  body?: never;
+  path?: never;
+  query?: {
+    window?: '30d' | '90d' | 'month' | 'year' | 'all';
+    topLimit?: number;
+  };
+  url: '/mobile/finance/summary';
+};
+
+export type MobileFinanceGetSummaryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceGetSummaryError =
+  MobileFinanceGetSummaryErrors[keyof MobileFinanceGetSummaryErrors];
+
+export type MobileFinanceGetSummaryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    costOfCredit: {
+      byAccount: Array<{
+        accountId: string;
+        accountName: string | null;
+        archived: boolean;
+        currency: string | null;
+        fees: {
+          cents: number;
+          transactionCount: number;
+        };
+        shareOfTotal: number | null;
+      }>;
+      byMonth: Array<{
+        byAccount: Array<{
+          accountId: string;
+          fees: {
+            cents: number;
+            transactionCount: number;
+          };
+        }>;
+        fees: {
+          cents: number;
+          transactionCount: number;
+        };
+        month: string;
+      }>;
+      byTag: Array<{
+        fees: {
+          cents: number;
+          transactionCount: number;
+        };
+        shareOfTotal: number | null;
+        tag: string;
+      }>;
+      deltaCents: number | null;
+      deltaRatio: number | null;
+      previousTotal: {
+        cents: number;
+        transactionCount: number;
+      } | null;
+      total: {
+        cents: number;
+        transactionCount: number;
+      };
+    };
+    window: {
+      end: string;
+      key: '30d' | '90d' | 'month' | 'year' | 'all';
+      previous: {
+        end: string;
+        start: string;
+      } | null;
+      start: string | null;
+    };
+  };
+};
+
+export type MobileFinanceGetSummaryResponse =
+  MobileFinanceGetSummaryResponses[keyof MobileFinanceGetSummaryResponses];
+
 export type MobileFinanceListTransactionsData = {
   body?: never;
   path?: never;

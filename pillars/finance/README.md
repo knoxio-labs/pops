@@ -138,19 +138,19 @@ provisioning remains an operator step.
 
 The contract (`src/contract/rest.ts`) composes these sub-routers:
 
-| Domain         | Surface                                                                      |
-| -------------- | ---------------------------------------------------------------------------- |
-| `transactions` | `/transactions`, `/transactions/:id`, `/transactions/restore`                |
-| `tagged`       | `POST /tagged/query`, `PUT/DELETE /tagged/transaction/:entityId/tags/:tagId` |
-| `budgets`      | `/budgets`, `/budgets/:id`                                                   |
-| `wishlist`     | `/wishlist`, `/wishlist/:id`                                                 |
-| `imports`      | CSV / Up Bank import + atomic commit                                         |
-| `tagRules`     | tag rules + suggester                                                        |
-| `corrections`  | AI-assisted correction proposals                                             |
-| `entityUsage`  | read-only usage counts for `contacts` entities                               |
-| `search`       | cross-domain search                                                          |
-| `settings`     | per-pillar settings                                                          |
-| `summary`      | `/summary` — spend for a window + the period before it                       |
+| Domain         | Surface                                                                           |
+| -------------- | --------------------------------------------------------------------------------- |
+| `transactions` | `/transactions`, `/transactions/:id`, `/transactions/restore`                     |
+| `tagged`       | `POST /tagged/query`, `PUT/DELETE /tagged/transaction/:entityId/tags/:tagId`      |
+| `budgets`      | `/budgets`, `/budgets/:id`                                                        |
+| `wishlist`     | `/wishlist`, `/wishlist/:id`                                                      |
+| `imports`      | CSV / Up Bank import + atomic commit                                              |
+| `tagRules`     | tag rules + suggester                                                             |
+| `corrections`  | AI-assisted correction proposals                                                  |
+| `entityUsage`  | read-only usage counts for `contacts` entities                                    |
+| `search`       | cross-domain search                                                               |
+| `settings`     | per-pillar settings                                                               |
+| `summary`      | `/summary` — spend, income and cost of credit for a window + the period before it |
 
 ## Layout
 
