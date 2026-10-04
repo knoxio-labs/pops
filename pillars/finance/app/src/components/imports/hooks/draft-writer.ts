@@ -35,16 +35,16 @@ function isOwnedElsewhere(error: unknown): boolean {
   return error instanceof FinanceApiError && error.code === 'DraftOwnedElsewhere';
 }
 
-function releaseDraft(keepalive: boolean): Promise<void> {
+function releaseDraft(keepalive: boolean): Promise<boolean> {
   const { draftId } = useImportStore.getState();
-  if (draftId === null) return Promise.resolve();
+  if (draftId === null) return Promise.resolve(false);
   return importDraftsRelease({
     path: { id: draftId },
     body: { ownerToken: ownerToken() },
     keepalive,
   }).then(
-    () => undefined,
-    () => undefined
+    (result) => result.error === undefined,
+    () => false
   );
 }
 
@@ -64,15 +64,18 @@ async function createDraft(state: ImportStore, accountId: string): Promise<void>
   useImportStore.getState().setDraftId(unwrap(result).data.id);
 }
 
+/** Observers for write-through failures and changes to the pending-import list. */
 export interface WriteThroughCallbacks {
   onOwnedElsewhere: () => void;
   onSaveFailed: () => void;
-  onDraftCreated: () => void;
+  /** Called after a successful create, step write, or release; payload writes and heartbeats do not call it. */
+  onDraftListChanged: () => void;
 }
 
 interface WriteOptions {
   release: boolean;
   keepalive?: boolean;
+  stepChanged?: boolean;
 }
 
 /** The requests behind {@link startDraftWriteThrough}, with the debounce and the lease-lost latch. */
@@ -134,7 +137,7 @@ export class DraftWriter {
     this.beat = null;
   }
 
-  write({ release, keepalive = false }: WriteOptions): Promise<void> {
+  write({ release, keepalive = false, stepChanged = false }: WriteOptions): Promise<void> {
     this.clearTimer();
     const state = useImportStore.getState();
     if (this.lost || state.draftId === null) return Promise.resolve();
@@ -146,6 +149,7 @@ export class DraftWriter {
     })
       .then((result) => {
         unwrap(result);
+        if (release || stepChanged) this.callbacks.onDraftListChanged();
       })
       .catch(this.failed);
     return this.inFlight;
@@ -154,7 +158,7 @@ export class DraftWriter {
   schedule(immediate: boolean): void {
     this.dirty = true;
     if (immediate) {
-      void this.write({ release: false });
+      void this.write({ release: false, stepChanged: true });
       return;
     }
     this.timer ??= setTimeout(() => void this.write({ release: false }), DRAFT_WRITE_DEBOUNCE_MS);
@@ -165,10 +169,14 @@ export class DraftWriter {
     this.creating = true;
     this.inFlight = createDraft(state, state.accountId)
       .then(() => {
-        this.callbacks.onDraftCreated();
+        this.callbacks.onDraftListChanged();
         this.startHeartbeat();
-        if (draftPayloadChanged(useImportStore.getState(), state)) {
-          void this.write({ release: false });
+        const current = useImportStore.getState();
+        if (draftPayloadChanged(current, state)) {
+          void this.write({
+            release: false,
+            stepChanged: current.currentStep !== state.currentStep,
+          });
         }
       })
       .catch(this.failed)
@@ -178,6 +186,10 @@ export class DraftWriter {
   }
 
   release(keepalive: boolean): Promise<void> {
-    return this.lost ? Promise.resolve() : releaseDraft(keepalive);
+    return this.lost
+      ? Promise.resolve()
+      : releaseDraft(keepalive).then((released) => {
+          if (released) this.callbacks.onDraftListChanged();
+        });
   }
 }
