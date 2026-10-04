@@ -83,6 +83,8 @@ export const mockPillarPurchases = {
       list: vi.fn().mockResolvedValue(callOk({ items: [] })),
       get: vi.fn().mockResolvedValue(callOk(null)),
       itemsByTag: vi.fn().mockResolvedValue(callOk({ items: [] })),
+      listInventoryProposals: vi.fn().mockResolvedValue(callOk({ proposals: [] })),
+      decideInventoryProposal: vi.fn().mockResolvedValue(callOk({ unit: null })),
     },
     analytics: {
       merchantSpend: vi
