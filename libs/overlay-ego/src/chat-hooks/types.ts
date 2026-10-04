@@ -2,6 +2,7 @@
  * Types for the chat page view model and components.
  */
 import type { MessagePart } from './message-parts';
+import type { BatchDecisionApi } from './useBatchDecision';
 
 /** A conversation summary as displayed in the sidebar list. */
 export interface ConversationSummary {
@@ -57,6 +58,8 @@ export interface ChatPageModel {
   setInputValue: (value: string) => void;
   /** Send the current message. */
   sendMessage: () => void;
+  /** Approve or reject a write batch; null while streaming or when no batch can be decided. */
+  batchDecisions: BatchDecisionApi | null;
   /** Whether a message is currently being sent. */
   isSending: boolean;
   /** Error from the last send attempt. */

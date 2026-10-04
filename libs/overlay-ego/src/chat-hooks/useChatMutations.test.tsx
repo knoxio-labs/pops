@@ -18,12 +18,24 @@ const streaming = vi.hoisted(() => ({
   streamParts: [{ type: 'text', text: 'A streamed response' }],
 }));
 
+const api = vi.hoisted(() => ({ egoDecideActionBatch: vi.fn(), egoDeleteConversation: vi.fn() }));
+
 vi.mock('./useStreamingChat', () => ({
   useStreamingChat: () => streaming,
 }));
 
+vi.mock('../ego-api', () => api);
+
 let queryClient: ReturnType<typeof createTestQueryClient>;
 let currentPath = '';
+const setSelectedConversationId = vi.fn();
+const setInputValue = vi.fn();
+
+const decision = {
+  approve: ['a1', 'a3'],
+  reject: ['a2'],
+  alwaysAllow: ['inventory.items.move'],
+};
 
 function LocationProbe() {
   const pathname = useLocation().pathname;
@@ -50,14 +62,22 @@ function deferred() {
   return { promise, resolve: resolvePromise };
 }
 
+function deferredValue<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 function renderMutations() {
   return renderHook(
     () =>
       useChatMutations({
         selectedConversationId: 'conversation-1',
-        setSelectedConversationId: vi.fn(),
+        setSelectedConversationId,
         inputValue: '  hello  ',
-        setInputValue: vi.fn(),
+        setInputValue,
       }),
     { wrapper: Wrapper }
   );
@@ -67,6 +87,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   queryClient = createTestQueryClient();
   currentPath = '';
+  api.egoDecideActionBatch.mockReset().mockResolvedValue({ data: {} });
 });
 
 describe('useChatMutations streamed view-model data', () => {
@@ -147,5 +168,90 @@ describe('useChatMutations streamed view-model data', () => {
     secondInvalidation.resolve();
     await invalidationPromise;
     expect(settled).toBe(true);
+  });
+
+  it('resumes after a successful decision with the same stream callbacks as messages', async () => {
+    const { result } = renderMutations();
+
+    act(() => result.current.sendMessage());
+    const messageCall = streaming.stream.mock.calls[0];
+    const messageCallbacks = messageCall?.[1] as Record<string, unknown> | undefined;
+    expect(messageCall?.[0]).toEqual({ conversationId: 'conversation-1', message: 'hello' });
+    expect(messageCallbacks).toEqual({
+      onConversation: expect.any(Function),
+      onEngrams: expect.any(Function),
+      onInvalidate: expect.any(Function),
+      onNavigate: expect.any(Function),
+    });
+
+    streaming.stream.mockClear();
+    const batchDecisions = result.current.batchDecisions;
+    expect(batchDecisions).not.toBeNull();
+    await act(async () => {
+      await batchDecisions?.decide('b1', decision);
+    });
+
+    expect(api.egoDecideActionBatch).toHaveBeenCalledOnce();
+    expect(api.egoDecideActionBatch).toHaveBeenCalledWith({
+      path: { batchId: 'b1' },
+      body: decision,
+    });
+    expect(streaming.stream).toHaveBeenCalledOnce();
+    const resumeCall = streaming.stream.mock.calls[0];
+    expect(resumeCall?.[0]).toEqual({ conversationId: 'conversation-1', resumeBatchId: 'b1' });
+    expect(resumeCall?.[1]).toBe(messageCallbacks);
+  });
+
+  it('does not start a resume when the batch decision fails', async () => {
+    api.egoDecideActionBatch.mockResolvedValueOnce({ error: { message: 'gateway down' } });
+    const { result } = renderMutations();
+    const batchDecisions = result.current.batchDecisions;
+
+    await act(async () => {
+      await batchDecisions?.decide('b1', decision);
+    });
+
+    expect(streaming.stream).not.toHaveBeenCalled();
+    expect(result.current.batchDecisions?.error).toBe('gateway down');
+  });
+
+  it('hides batch decisions while a stream holds the shared hook', () => {
+    const { result, rerender } = renderMutations();
+    expect(result.current.batchDecisions).not.toBeNull();
+
+    streaming.isStreaming = true;
+    rerender();
+    expect(result.current.batchDecisions).toBeNull();
+
+    streaming.isStreaming = false;
+    rerender();
+    expect(result.current.batchDecisions?.decide).toBeTypeOf('function');
+  });
+
+  it('blocks messages during a decision and starts only the resumed stream after success', async () => {
+    const request = deferredValue<{ data: object }>();
+    api.egoDecideActionBatch.mockReturnValueOnce(request.promise);
+    const { result } = renderMutations();
+    const batchDecisions = result.current.batchDecisions;
+    let decisionPromise: Promise<void> = Promise.resolve();
+
+    act(() => {
+      decisionPromise = batchDecisions?.decide('b1', decision) ?? Promise.resolve();
+    });
+    expect(result.current.batchDecisions?.decidingBatchId).toBe('b1');
+
+    act(() => result.current.sendMessage());
+    expect(streaming.stream).not.toHaveBeenCalled();
+
+    await act(async () => {
+      request.resolve({ data: {} });
+      await decisionPromise;
+    });
+
+    expect(streaming.stream).toHaveBeenCalledOnce();
+    expect(streaming.stream.mock.calls[0]?.[0]).toEqual({
+      conversationId: 'conversation-1',
+      resumeBatchId: 'b1',
+    });
   });
 });
