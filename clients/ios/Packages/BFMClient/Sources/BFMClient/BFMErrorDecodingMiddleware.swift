@@ -116,6 +116,8 @@ internal struct BFMRuntimeFailure: Sendable {
 }
 
 extension PopsError {
+    internal static let decodeFailureCode = "ios.decode.failed"
+
     internal static func kind(forHTTPStatus status: Int) -> Kind {
         status >= 500 ? .server : .client
     }
@@ -180,7 +182,7 @@ extension PopsError {
 
     private static func decodeFailure(requestID: String?) -> PopsError {
         PopsError(
-            code: "ios.decode.failed",
+            code: decodeFailureCode,
             message: "The server returned a response this version could not read",
             requestID: requestID,
             retryable: false,

@@ -86,6 +86,40 @@ internal struct ReceiptCaptureFailureTests {
         #expect(manualFailure == .conflict("upstream_conflict"))
     }
 
+    @Test("a successful response outside the outcome union is a contract mismatch")
+    func successfulResponseOutsideOutcomeUnion() async {
+        let actual = await error(
+            status: .ok,
+            json: #"{"kind":"queued","jobId":"j1"}"#
+        )
+
+        #expect(actual == .contractMismatch)
+    }
+
+    @Test("an invalid upstream request on either receipt write is a contract mismatch")
+    func invalidUpstreamRequestOnWrites() async {
+        let json = ReceiptCaptureWire.upstream(code: "upstream_invalid_request")
+        let draftFailure = await writeFailure { try await saveDraft(.badGateway, json: json) }
+        let manualFailure = await writeFailure {
+            try await createManualPurchase(.badGateway, json: json)
+        }
+
+        #expect(draftFailure == .contractMismatch)
+        #expect(manualFailure == .contractMismatch)
+    }
+
+    @Test("an upstream not-found on either receipt write is a contract mismatch")
+    func upstreamNotFoundOnWrites() async {
+        let json = ReceiptCaptureWire.upstream(code: "not_found")
+        let draftFailure = await writeFailure { try await saveDraft(.badGateway, json: json) }
+        let manualFailure = await writeFailure {
+            try await createManualPurchase(.badGateway, json: json)
+        }
+
+        #expect(draftFailure == .contractMismatch)
+        #expect(manualFailure == .contractMismatch)
+    }
+
     @Test("being told to slow down is not something this screen can act on")
     func rateLimited() async {
         let actual = await error(status: .tooManyRequests, json: ReceiptCaptureWire.rateLimited)
