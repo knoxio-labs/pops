@@ -23,7 +23,7 @@ public struct EgoThreadView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: PopsSpacing.zero) {
             if let failure = model.loadFailure {
                 loadFailureView(failure)
             } else if isLoadingConversation {
@@ -36,7 +36,7 @@ public struct EgoThreadView: View {
             }
         }
         .background(Color.popsBackground)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .safeAreaInset(edge: .bottom, spacing: PopsSpacing.zero) {
             EgoComposerView(
                 model: model,
                 isSendAvailable: model.loadFailure == nil && !isLoadingConversation
@@ -144,13 +144,16 @@ private struct EgoBatchCardHost: View {
 
     init(part: EgoActionsPart, threadModel: EgoThreadModel) {
         self.part = part
+        let batchId = part.batchId
         _model = State(
             wrappedValue: EgoBatchModel(
                 part: part,
                 decide: { batchID, decision in
                     try await threadModel.decideBatch(batchID, decision)
                 },
-                isEnabled: { threadModel.canDecideBatch }
+                isEnabled: { threadModel.canDecideBatch },
+                resume: { await threadModel.continueBatch($0) },
+                isContinuable: { threadModel.continuableBatchId == batchId }
             )
         )
     }

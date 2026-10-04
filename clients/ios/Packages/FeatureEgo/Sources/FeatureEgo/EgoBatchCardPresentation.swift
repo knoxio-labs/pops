@@ -27,9 +27,11 @@ internal struct EgoBatchCardPresentation: Hashable {
     internal let rows: [Row]
     internal let toolOptions: [ToolOption]
     internal let approveTitle: String
+    internal let continueTitle: String
     internal let approveEnabled: Bool
     internal let rejectEnabled: Bool
     internal let showsButtons: Bool
+    internal let showsContinue: Bool
     internal let usesDestructiveRole: Bool
     internal let failureMessage: String?
 
@@ -38,13 +40,14 @@ internal struct EgoBatchCardPresentation: Hashable {
         ticked: Set<String>,
         alwaysAllow: Set<String>,
         phase: EgoBatchPhase,
-        canDecide: Bool
+        canDecide: Bool,
+        canContinue: Bool = false
     ) {
         rows = batch.actions.map { action in
-            Self.row(for: action, ticked: ticked, canDecide: canDecide)
+            Self.row(for: action, ticked: ticked, canDecide: canDecide && !canContinue)
         }
         toolOptions =
-            canDecide
+            canDecide && !canContinue
             ? Self.distinctTools(in: batch.actions).map { tool in
                 ToolOption(
                     tool: tool,
@@ -56,9 +59,11 @@ internal struct EgoBatchCardPresentation: Hashable {
 
         let selectedRows = rows.filter(\.isTicked)
         approveTitle = "Approve \(selectedRows.count)"
-        approveEnabled = canDecide && phase != .working && !selectedRows.isEmpty
-        rejectEnabled = canDecide && phase != .working
-        showsButtons = canDecide
+        continueTitle = "Continue"
+        approveEnabled = canDecide && !canContinue && phase != .working && !selectedRows.isEmpty
+        rejectEnabled = canDecide && !canContinue && phase != .working
+        showsButtons = canDecide && !canContinue
+        showsContinue = canContinue
         usesDestructiveRole = selectedRows.contains(where: \.isDestructive)
         if case .failed(let message) = phase {
             failureMessage = message
