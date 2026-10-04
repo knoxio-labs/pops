@@ -10,7 +10,7 @@ internal struct InventoryCodeSuggestionFailureTests {
     @Test(arguments: [
         (RepositoryError.unavailable, InventoryCodeSuggestionFailure.unavailable),
         (.unauthorized, .unauthorized), (.contractMismatch, .contractMismatch),
-        (.requestRejected, .clientTooOld),
+        (RepositoryError.requestRejected, .clientTooOld),
         (.conflict("private diagnostic"), .conflict),
         (.transport("private diagnostic"), .transport), (.dependencyNotBound, .dependencyNotBound),
     ])
