@@ -1,3 +1,5 @@
+import { retryOnce } from './retry.js';
+
 /**
  * How bfm decides what to tell the phone about one member of the federation.
  *
@@ -12,14 +14,15 @@
  *    then fails on, which is worse than no answer at all.
  *
  * 2. **What the pillar says right now.** Everything the registry has not
- *    vetoed gets one live `GET ${baseUrl}/openapi`.
+ *    vetoed gets a live `GET ${baseUrl}/openapi`, retried once after a network
+ *    failure.
  *
  * `/openapi` rather than `/health` is deliberate. `/health` proves a process
  * is up; `/openapi` proves the thing a cross-pillar call actually needs, since
  * the SDK builds its route map from that document and a pillar serving none is
- * uncallable however alive it is. One request answers both questions:
+ * uncallable however alive it is. A completed request answers both questions:
  *
- * - the request never completed (refused, DNS, timeout) → nobody answered →
+ * - both requests fail (refused, DNS, timeout) → nobody answered →
  *   `unavailable`;
  * - it completed with anything other than 2xx JSON → answering, but not with a
  *   contract → `contract-mismatch`. That arm covers the fleet's own history: a
@@ -35,7 +38,7 @@ import type { PillarSnapshot } from '@pops/pillar-sdk/discovery';
 import type { BootstrapPillar, Reachability } from '../../contract/rest-schemas.js';
 
 /**
- * Per-pillar deadline. Short because it is spent while a phone waits on a
+ * Per-request deadline. Short because it is spent while a phone waits on a
  * splash screen, and a pillar that cannot answer a static document from inside
  * the same network in this long is not one the app should be told to render.
  */
@@ -43,7 +46,7 @@ export const DEFAULT_PROBE_TIMEOUT_MS = 2_000;
 
 export interface ReachabilityProbeDeps {
   fetchImpl: typeof fetch;
-  /** Applies to each pillar independently, never to the fan-out as a whole. */
+  /** Applies to each request independently, including the one retry. */
   timeoutMs: number;
   /**
    * `pillarId → baseUrl`, applied before probing. The same map
@@ -114,11 +117,15 @@ async function probeContractRoute(
 ): Promise<Reachability> {
   let response: Response;
   try {
-    response = await deps.fetchImpl(`${baseUrl.replace(/\/$/, '')}/openapi`, {
-      method: 'GET',
-      headers: { accept: 'application/json' },
-      signal: AbortSignal.timeout(deps.timeoutMs),
-    });
+    response = await retryOnce(
+      () =>
+        deps.fetchImpl(`${baseUrl.replace(/\/$/, '')}/openapi`, {
+          method: 'GET',
+          headers: { accept: 'application/json' },
+          signal: AbortSignal.timeout(deps.timeoutMs),
+        }),
+      () => true
+    );
   } catch {
     // Includes the timeout. The distinction between "refused" and "too slow"
     // is real but not one the phone can act on differently, and inventing a

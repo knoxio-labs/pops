@@ -296,7 +296,7 @@ describe('a registry serving something less than the truth', () => {
     );
 
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0]?.[0])).toContain('3 attempt');
+    expect(String(warn.mock.calls[0]?.[0])).toContain('3 fetch attempt');
   });
 
   it('lets a fault that is not an outage propagate rather than dressing it up', async () => {
