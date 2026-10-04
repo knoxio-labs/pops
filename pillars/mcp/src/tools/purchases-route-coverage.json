@@ -7,7 +7,9 @@
     "purchase.itemsByTag": "purchases.items.byTag",
     "purchase.list": "purchases.orders.list",
     "purchase.listInventoryProposals": "purchases.inventoryProposals.list",
-    "search.search": "purchases.search"
+    "search.search": "purchases.search",
+    "tagged.attach": "tags.assignments.attach",
+    "tagged.detach": "tags.assignments.detach"
   },
   "omitted": {
     "analytics.monthSummary": "MCP exposes caller-selected date ranges through the spend and product rollups; the calendar-month snapshot remains a home-screen query.",
@@ -44,6 +46,7 @@
     "source.delete": "Deleting connector configuration is an operator administration action; MCP is read-only.",
     "source.get": "Connector configuration is operator administration data, not a purchase-answer surface.",
     "source.list": "Connector configuration is operator administration data, not a purchase-answer surface.",
-    "source.upsert": "Connector configuration writes remain in operator administration; MCP is read-only."
+    "source.upsert": "Connector configuration writes remain in operator administration; MCP is read-only.",
+    "tagged.list": "Shared-tag carrier lookup is managed through the shared-tag REST API and is not exposed as an MCP tool."
   }
 }

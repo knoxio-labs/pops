@@ -2,7 +2,7 @@
 
 > Audience: whoever is putting real data into a pillar for the first time, and whoever is on the other end of a migration that went wrong.
 > Frequency: once per pillar, plus the recovery half whenever a deploy goes sideways.
-> Related: [`infra/README.md`](../../infra/README.md) (compose + Litestream wiring), [`docs/runbooks/cut-release.md`](cut-release.md) (how images reach the host).
+> Related: [`infra/README.md`](../../infra/README.md) (compose + Litestream wiring), [`docs/runbooks/cut-release.md`](cut-release.md) (how images reach the host), and [`shared-tags-go-live.md`](shared-tags-go-live.md) (the shared-tags fleet-compatibility gate and Brazil-trip verification).
 
 Everything here is **per pillar**. There is no fleet-wide database step, no shared `pops.db`, and no global init or seed: each pillar owns one SQLite file, creates and migrates it itself on boot, and streams it through its own Litestream sidecar. Running this for `finance` says nothing about `media`.
 
