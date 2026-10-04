@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { callOk, extractText } from './test-helpers.js';
+import { callOk, callUnavailable, extractText } from './test-helpers.js';
 
 const { getPillarMock, query } = vi.hoisted(() => {
   const query = vi.fn();
@@ -65,6 +65,16 @@ describe('tags.things.list', () => {
     expect(result.isError).toBeUndefined();
     expect(extractText(result)).toContain('"status":"unavailable"');
     expect(extractText(result)).toContain('"id":"finance"');
+  });
+
+  it('surfaces an unavailable orchestrator response as a tool error', async () => {
+    query.mockResolvedValueOnce(callUnavailable('orchestrator'));
+
+    const result = await thingsList().handler({ tagIds: ['trip-1'] });
+
+    expect(result.isError).toBe(true);
+    expect(extractText(result).toLowerCase()).toContain('unavailable');
+    expect(extractText(result)).not.toContain('"sections":[]');
   });
 
   it('rejects an invalid limit before calling the orchestrator', async () => {

@@ -122,11 +122,11 @@ async function resolveTagCarriers(
     return selectTagCarriers(await reader(), onWarn);
   } catch (error) {
     if (error instanceof RegistryUnreachableError) {
-      onWarn('[orchestrator] registry unreachable; serving empty tag-carrier set', error);
+      onWarn('[orchestrator] registry unreachable; shared-tag query unavailable', error);
     } else {
-      onWarn('[orchestrator] registry read failed; serving empty tag-carrier set', error);
+      onWarn('[orchestrator] registry read failed; shared-tag query unavailable', error);
     }
-    return [];
+    throw error;
   }
 }
 

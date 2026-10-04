@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { RegistryUnreachableError } from '@pops/pillar-sdk/discovery';
+
 import {
   createTagFederation,
   type TagExpansionInvoker,
@@ -179,6 +181,44 @@ describe('createTagFederation', () => {
       result: { kind: 'unavailable', pillar: 'tags' },
     });
     expect(snapshotReader).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('fails the whole request when the registry snapshot cannot be read', async () => {
+    const registryError = new RegistryUnreachableError('registry offline', { attempts: 1 });
+    const invoke = vi.fn<TaggedListInvoker>();
+    const onWarn = vi.fn();
+    const source = createTagFederation({
+      expand: async () => expanded(),
+      invoke,
+      snapshotReader: async () => {
+        throw registryError;
+      },
+      onWarn,
+    });
+
+    await expect(source({ tagIds: REQUESTED_TAG_IDS })).rejects.toBe(registryError);
+    expect(invoke).not.toHaveBeenCalled();
+    expect(onWarn).toHaveBeenCalledWith(
+      '[orchestrator] registry unreachable; shared-tag query unavailable',
+      registryError
+    );
+  });
+
+  it('returns an explicit empty result when a healthy registry has no tag carriers', async () => {
+    const invoke = vi.fn<TaggedListInvoker>();
+    const source = createTagFederation({
+      expand: async () => expanded(),
+      invoke,
+      snapshotReader: async () => [],
+      onWarn: vi.fn(),
+    });
+
+    await expect(source({ tagIds: REQUESTED_TAG_IDS })).resolves.toEqual({
+      expandedTagIds: EXPANDED_TAG_IDS,
+      sections: [],
+      pillars: [],
+    });
     expect(invoke).not.toHaveBeenCalled();
   });
 
