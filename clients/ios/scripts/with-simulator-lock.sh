@@ -2,12 +2,12 @@
 set -euo pipefail
 
 pops_ios_simulator_lock_release() {
-  local current_token script_path
+  local script_path
   [ -n "${POPS_IOS_SIMULATOR_LOCK_ACTIVE_PATH:-}" ] || return 0
   script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
   pops_ios_simulator_lock_gate "$POPS_IOS_SIMULATOR_LOCK_ACTIVE_PATH" "$script_path" \
     --release-under-gate "$POPS_IOS_SIMULATOR_LOCK_ACTIVE_PATH" \
-    "$POPS_IOS_SIMULATOR_LOCK_ACTIVE_TOKEN" || true
+    "$POPS_IOS_SIMULATOR_LOCK_ACTIVE_TOKEN"
   POPS_IOS_SIMULATOR_LOCK_ACTIVE_PATH=''
   POPS_IOS_SIMULATOR_LOCK_ACTIVE_TOKEN=''
 }
@@ -15,20 +15,25 @@ pops_ios_simulator_lock_release() {
 pops_ios_simulator_lock_gate() {
   local path=$1 script_path=$2
   shift 2
-  lockf -k -t 1 "${path}.gate" /bin/bash "$script_path" "$@"
+  lockf -k "${path}.gate" /bin/bash "$script_path" "$@"
 }
 
-pops_ios_simulator_lock_recover() {
+pops_ios_simulator_lock_recover_under_gate() {
   local path=$1
   local local_host=$2
-  local owner_pid owner_host stale_path
+  local owner_pid owner_host owner_token stale_path
   owner_pid=$(sed -n '1p' "$path/owner" 2>/dev/null || true)
   owner_host=$(sed -n '2p' "$path/owner" 2>/dev/null || true)
+  owner_token=$(sed -n '4p' "$path/owner" 2>/dev/null || true)
   case "$owner_pid" in
     ''|*[!0-9]*) return 1 ;;
   esac
   [ "$owner_pid" -gt 0 ] || return 1
   [ "$owner_host" = "$local_host" ] || return 1
+  [ -n "$owner_token" ] || return 1
+  [ "$(sed -n '1p' "$path/owner" 2>/dev/null || true)" = "$owner_pid" ] || return 1
+  [ "$(sed -n '2p' "$path/owner" 2>/dev/null || true)" = "$owner_host" ] || return 1
+  [ "$(sed -n '4p' "$path/owner" 2>/dev/null || true)" = "$owner_token" ] || return 1
   kill -0 "$owner_pid" 2>/dev/null && return 1
   stale_path="${path}.stale.$$.$RANDOM"
   if mv "$path" "$stale_path" 2>/dev/null; then
@@ -43,7 +48,7 @@ pops_ios_simulator_lock_acquire_under_gate() {
   local path=$1 local_host=$2 owner_pid=$3 owner_label=$4 token=$5 worktree=$6
   local owner_tmp
   if [ -e "$path" ]; then
-    pops_ios_simulator_lock_recover "$path" "$local_host" || return 10
+    pops_ios_simulator_lock_recover_under_gate "$path" "$local_host" || return 10
   fi
   mkdir "$path" 2>/dev/null || return 10
   owner_tmp="$path/owner.$$.$RANDOM"
@@ -103,7 +108,7 @@ pops_ios_simulator_lock_acquire() {
     else
       gate_status=$?
     fi
-    if [ "$gate_status" -ne 10 ] && [ "$gate_status" -ne 75 ]; then
+    if [ "$gate_status" -ne 10 ]; then
       printf 'simulator-lock: could not update lock state at %s (status %s).\n' \
         "$path" "$gate_status" >&2
       return "$gate_status"
@@ -166,7 +171,8 @@ pops_ios_simulator_lock_test_cleanup() {
 
 pops_ios_simulator_lock_self_test() {
   local script_path repo_root lock_path marker sentinel output stale_marker active_guard collision
-  local worker_pid worker_number status
+  local foreign_host foreign_marker sourced_marker signal_marker signal_status expected_status
+  local worker_pid worker_number status test_signal
   script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
   repo_root=$(git rev-parse --show-toplevel)
   mkdir -p "$repo_root/tmp"
@@ -234,6 +240,65 @@ pops_ios_simulator_lock_self_test() {
     printf 'simulator-lock self-test: stale lock recovery or release failed.\n' >&2
     return 1
   fi
+
+  foreign_host="$(hostname)-different"
+  foreign_marker="$POPS_IOS_SIMULATOR_LOCK_TEST_DIR/foreign-host-acquired"
+  mkdir "$lock_path"
+  printf '%s\n%s\n%s\n%s\n%s\n' 99999999 "$foreign_host" \
+    'self-test foreign owner' 'foreign-token' "$repo_root" > "$lock_path/owner"
+  if output=$(env POPS_IOS_SIMULATOR_LOCK_PATH="$lock_path" \
+    POPS_IOS_SIMULATOR_LOCK_TIMEOUT_SECONDS=0 \
+    bash "$script_path" -- sh -c 'touch "$1"' sh "$foreign_marker" 2>&1); then
+    printf 'simulator-lock self-test: a foreign-host lock was recovered.\n' >&2
+    return 1
+  fi
+  case "$output" in
+    *"on $foreign_host"*) ;;
+    *)
+      printf 'simulator-lock self-test: foreign-host refusal did not identify the owner.\n' >&2
+      return 1
+      ;;
+  esac
+  if [ ! -d "$lock_path" ] || [ -e "$foreign_marker" ]; then
+    printf 'simulator-lock self-test: foreign-host refusal changed the lock.\n' >&2
+    return 1
+  fi
+  rm -f "$lock_path/owner"
+  rmdir "$lock_path"
+
+  sourced_marker="$POPS_IOS_SIMULATOR_LOCK_TEST_DIR/sourced-mode"
+  if ! env POPS_IOS_SIMULATOR_LOCK_PATH="$lock_path" \
+    bash -c 'source "$1"; touch "$2"; sleep 0.05' \
+    bash "$script_path" "$sourced_marker"; then
+    printf 'simulator-lock self-test: sourced mode did not run its command.\n' >&2
+    return 1
+  fi
+  if [ ! -f "$sourced_marker" ] || [ -d "$lock_path" ]; then
+    printf 'simulator-lock self-test: sourced mode did not release its lock.\n' >&2
+    return 1
+  fi
+
+  for test_signal in INT TERM; do
+    signal_marker="$POPS_IOS_SIMULATOR_LOCK_TEST_DIR/signal-$test_signal"
+    case "$test_signal" in
+      INT) expected_status=130 ;;
+      TERM) expected_status=143 ;;
+    esac
+    signal_status=0
+    if env POPS_IOS_SIMULATOR_LOCK_PATH="$lock_path" \
+      bash "$script_path" -- sh -c \
+      'touch "$1"; kill -s "$2" "$PPID"' sh "$signal_marker" "$test_signal"; then
+      signal_status=0
+    else
+      signal_status=$?
+    fi
+    if [ "$signal_status" -ne "$expected_status" ] ||
+      [ ! -f "$signal_marker" ] || [ -d "$lock_path" ]; then
+      printf 'simulator-lock self-test: %s did not release the lock with status %s.\n' \
+        "$test_signal" "$expected_status" >&2
+      return 1
+    fi
+  done
 
   active_guard="$POPS_IOS_SIMULATOR_LOCK_TEST_DIR/active"
   collision="$POPS_IOS_SIMULATOR_LOCK_TEST_DIR/collision"
