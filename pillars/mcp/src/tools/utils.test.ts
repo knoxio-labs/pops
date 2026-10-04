@@ -67,7 +67,7 @@ describe('mapCallResult', () => {
       content: [
         {
           type: 'text',
-          text: "This service account is not authorised for this operation.\nThis tool requires service-account scope 'media.watchlist.add'. Ask an operator to grant it to the credential this MCP server presents to 'media' (MCP does not mint or widen scopes itself).",
+          text: "This service account is not authorised for this operation.\nThis tool requires service-account scope 'media.watchlist.add'. Ask an operator to grant it to the service-account credential this MCP server presents to 'media' (MCP does not mint or widen scopes itself).",
         },
       ],
       isError: true,

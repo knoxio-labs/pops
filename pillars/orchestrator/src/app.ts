@@ -4,21 +4,39 @@
  * Precursor C2 (ADR-029, epics 06+07) stands up the foundation: the
  * minimal `/health` liveness probe plus the federated `/pillars` view
  * (registry-first via the SDK discovery client, `POPS_PILLARS` seed
- * fallback). The cross-pillar aggregators — federated search (epic 06), the
- * AI-tool registry (epic 07), and possibly the cross-pillar embeddings
- * pipeline — mount here in follow-up increments.
+ * fallback). Federated search, the AI-tool registry, and shared-tag lookup
+ * mount here alongside the health and registry views.
  *
  * Kept as a factory so the test suite can spin up an in-process
  * `supertest` instance without binding a real port.
  */
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { createExpressEndpoints, initServer } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { z } from 'zod';
 
 import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
 
 import { type BuildToolList, createAiToolsHandler } from './ai-tools/index.js';
+import { orchestratorContract } from './contract/rest.js';
 import { type OrchestratorDeps, makeRequestHandler } from './handlers.js';
 import { runSearch, type SearchSource } from './search/index.js';
+import {
+  createTagFederation,
+  type TagFederationRequest,
+  type TagFederationResponse,
+} from './tags/federation.js';
+
+const server: ReturnType<typeof initServer> = initServer();
+const openapiDocument: unknown = JSON.parse(
+  readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', 'openapi', 'orchestrator.openapi.json'),
+    'utf8'
+  )
+);
 
 const JSON_BODY_LIMIT = '512kb';
 
@@ -33,6 +51,12 @@ const orchestratorErrors = defineErrors('orchestrator', {
     area: 'search',
     status: 500,
     message: 'Search could not be completed.',
+    retryable: true,
+  },
+  unavailable: {
+    area: 'tagged',
+    status: 503,
+    message: 'The shared-tag query could not be completed.',
     retryable: true,
   },
 });
@@ -75,6 +99,35 @@ export interface CreateOrchestratorAppOptions {
    * registry round-trip.
    */
   readonly buildToolList?: BuildToolList;
+  /** Shared-tag query override. Production uses the live tag federation. */
+  readonly taggedQuerySource?: (request: TagFederationRequest) => Promise<TagFederationResponse>;
+}
+
+function createTaggedQueryHandlers(
+  taggedQuery: (request: TagFederationRequest) => Promise<TagFederationResponse>
+): ReturnType<typeof server.router<typeof orchestratorContract>> {
+  return server.router(orchestratorContract, {
+    tagged: {
+      query: async ({ body }) => {
+        try {
+          const result = await taggedQuery(body);
+          return {
+            status: 200 as const,
+            body: {
+              expandedTagIds: result.expandedTagIds,
+              sections: result.sections.map(({ pillarId, ...section }) => ({
+                pillar: pillarId,
+                ...section,
+              })),
+              pillars: result.pillars.map(({ pillarId, status }) => ({ id: pillarId, status })),
+            },
+          };
+        } catch {
+          return orchestratorErrors.unavailable();
+        }
+      },
+    },
+  });
 }
 
 export function createOrchestratorApp(
@@ -92,9 +145,15 @@ export function createOrchestratorApp(
   const aiTools = createAiToolsHandler(
     options.buildToolList !== undefined ? { buildToolList: options.buildToolList } : {}
   );
+  const taggedQuery = options.taggedQuerySource ?? createTagFederation();
+  const taggedQueryHandlers = createTaggedQueryHandlers(taggedQuery);
 
   app.get('/health', (_req: Request, res: Response) => {
     res.json(handlers.health());
+  });
+
+  app.get('/openapi', (_req: Request, res: Response) => {
+    res.json(openapiDocument);
   });
 
   app.get('/pillars', (_req: Request, res: Response, next: NextFunction) => {
@@ -112,6 +171,10 @@ export function createOrchestratorApp(
     void aiTools()
       .then((payload) => res.json(payload))
       .catch(next);
+  });
+
+  createExpressEndpoints(orchestratorContract, taggedQueryHandlers, app, {
+    requestValidationErrorHandler: errors.validation,
   });
 
   app.use(errors.notFound);

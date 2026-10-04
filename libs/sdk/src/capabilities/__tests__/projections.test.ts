@@ -209,6 +209,7 @@ describe('KnownPillarId', () => {
         'bfm',
         'barcode',
         'design',
+        'tags',
       ]
     >();
   });

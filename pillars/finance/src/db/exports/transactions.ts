@@ -7,6 +7,13 @@
  * why the barrel is split rather than flat.
  */
 export * as transactionsService from '../services/transactions.js';
+export * as transactionSharedTagsService from '../services/transaction-shared-tags.js';
+export type {
+  TransactionSharedTagCursor,
+  SharedTaggedTransaction,
+  SharedTaggedTransactionsPage,
+  SharedTagMutationResult,
+} from '../services/transaction-shared-tags.js';
 
 export {
   type CreateTransactionInput,

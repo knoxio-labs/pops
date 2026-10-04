@@ -93,6 +93,25 @@ export const BOOT_PLACEHOLDER_SECRETS = {
 };
 
 /**
+ * Placeholders supplied to one image smoke. The orchestrator's credential is
+ * optional: its smoke deliberately boots without a key to guard degraded mode.
+ * @param {string} dockerfilePath
+ * @returns {Record<string, string>}
+ */
+export function bootPlaceholdersForDockerfile(dockerfilePath) {
+  const placeholders = { ...BOOT_PLACEHOLDER_SECRETS };
+  if (
+    basename(dirname(dockerfilePath)) === 'orchestrator' &&
+    basename(dockerfilePath) === 'Dockerfile'
+  ) {
+    return Object.fromEntries(
+      Object.entries(placeholders).filter(([name]) => name !== 'POPS_INTERNAL_API_KEY')
+    );
+  }
+  return placeholders;
+}
+
+/**
  * Whether a short-form volume's source names a path on the host rather than a
  * Docker volume.
  *
@@ -873,10 +892,9 @@ async function main() {
           ...volumePlan.flatMap(({ name, path }) => ['--volume', `${name}:${path}`]),
           '--env',
           `PORT=${port}`,
-          ...Object.entries(BOOT_PLACEHOLDER_SECRETS).flatMap(([name, value]) => [
-            '--env',
-            `${name}=${value}`,
-          ]),
+          ...Object.entries(bootPlaceholdersForDockerfile(dockerfilePath)).flatMap(
+            ([name, value]) => ['--env', `${name}=${value}`]
+          ),
           image,
         ]),
       remove: () => dockerBestEffort(['rm', '--force', containerName]),

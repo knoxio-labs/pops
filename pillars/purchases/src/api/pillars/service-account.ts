@@ -2,7 +2,7 @@
  * The `purchases` service-account credential: what it is granted, and where
  * the process finds it.
  *
- * purchases reaches four siblings, on five legs, through `pillar()` from
+ * purchases reaches five siblings, on seven legs, through `pillar()` from
  * `@pops/pillar-sdk/server`, which sends this key as `X-API-Key` on every
  * outbound call. The account is minted once by an operator against the
  * registry pillar's admin surface — runbook in the pillar README — and never
@@ -43,6 +43,8 @@ export const PURCHASES_SERVICE_ACCOUNT_NAME = 'purchases';
  *   outbound table and this paragraph are.
  * - `contacts.entities` — receipt ingest's merchant resolution
  *   (`entities.list`), `src/api/contacts/merchant.ts`.
+ * - `tags.tags` — the scheduled shared-vocabulary cache refresh
+ *   (`tags.list`), `src/api/tags/client.ts`.
  *
  * Each callee derives its own scope table from its contract, so a fifth leg
  * added without widening this list gets a `403` from the pillar it calls the
@@ -53,6 +55,7 @@ export const PURCHASES_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'documents.paperless',
   'finance.transactions',
   'inventory.items',
+  'tags.tags',
 ];
 
 /** Local-dev source: the key inline in the environment. */

@@ -54,6 +54,8 @@ export {
   type TagVocabularyPageOptions,
 } from './services/purchase-item-tags.js';
 
+export * from './services/purchase-item-shared-tags.js';
+
 export {
   listPurchaseRows,
   type PurchaseListRow,

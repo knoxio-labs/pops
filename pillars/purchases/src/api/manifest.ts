@@ -159,7 +159,12 @@ export function buildPurchasesManifest(version: string): ManifestPayload {
       version,
       tag: `contract-purchases@v${version}`,
     },
-    routes: { queries: ['purchases.search.search'], mutations: [], subscriptions: [] },
+    tags: { carriers: [{ entityType: 'purchase-item' }] },
+    routes: {
+      queries: ['purchases.search.search', 'purchases.tagged.list'],
+      mutations: ['purchases.tagged.attach', 'purchases.tagged.detach'],
+      subscriptions: [],
+    },
     search: { adapters: [...PURCHASES_SEARCH_ADAPTERS] },
     ai: { tools: [] },
     uri: { types: [...PURCHASES_URI_TYPES] },

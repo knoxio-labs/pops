@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 import type { TagFacetKind } from '../tag-facets.js';
 
@@ -20,6 +20,8 @@ export const tagVocabulary = sqliteTable(
      * so the column costs nothing where it is empty.
      */
     description: text('description'),
+    /** Cached ID from the shared tags vocabulary; deliberately no cross-pillar FK. */
+    sharedTagId: text('shared_tag_id'),
     /** Who may mint a value on this facet — see `src/db/tag-facets.ts`. */
     kind: text('kind', { enum: ['closed', 'open', 'marker'] })
       .notNull()
@@ -38,5 +40,8 @@ export const tagVocabulary = sqliteTable(
   (table) => [
     index('idx_tag_vocabulary_active').on(table.isActive),
     index('idx_tag_vocabulary_kind').on(table.kind, table.usageCount),
+    uniqueIndex('idx_tag_vocabulary_shared_tag_id')
+      .on(table.sharedTagId)
+      .where(sql`${table.sharedTagId} IS NOT NULL`),
   ]
 );

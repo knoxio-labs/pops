@@ -343,6 +343,18 @@ describe('buildPurchasesManifest', () => {
     expect(buildPurchasesManifest('0.1.0').ai.tools).toEqual([]);
   });
 
+  it('declares the purchase-item carrier and the three tagged procedures', () => {
+    const manifest = buildPurchasesManifest('0.1.0');
+
+    expect(manifest.tags).toEqual({ carriers: [{ entityType: 'purchase-item' }] });
+    expect(manifest.routes.queries).toContain('purchases.tagged.list');
+    expect(manifest.routes.mutations).toEqual([
+      'purchases.tagged.attach',
+      'purchases.tagged.detach',
+    ]);
+    expect(manifest.search.adapters.every(({ queryShape }) => !queryShape.supportsTags)).toBe(true);
+  });
+
   it('points the healthcheck at the route app.ts actually serves', () => {
     expect(buildPurchasesManifest('0.1.0').healthcheck).toEqual({ path: '/health' });
   });

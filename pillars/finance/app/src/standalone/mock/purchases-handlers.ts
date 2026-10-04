@@ -17,6 +17,9 @@ import type {
   ReconcileLinksResponses,
   ReconcileSweepResponses,
   SourceUpsertResponses,
+  TaggedAttachResponses,
+  TaggedDetachResponses,
+  TaggedListResponses,
 } from '../../purchases-api/types.gen';
 
 /**
@@ -149,6 +152,13 @@ export const purchasesHandlers: MockHandlers = {
     notFound('purchase', 'purchases.resource.not_found'),
   'GET /items': ok({ items: [], pagination: { total: 0, limit: 50, offset: 0, hasMore: false } }),
   'GET /items/tags': ok({ tags: [] }),
+  'POST /tagged/query': ok<TaggedListResponses[200]>({ items: [], nextCursor: null }),
+  'PUT /tagged/{entityType}/{entityId}/tags/{tagId}': ok<TaggedAttachResponses[200]>({
+    tagIds: [],
+  }),
+  'DELETE /tagged/{entityType}/{entityId}/tags/{tagId}': ok<TaggedDetachResponses[200]>({
+    tagIds: [],
+  }),
 
   'GET /reconcile/queue': ok({ items: [] }),
   'GET /reconcile/manual-candidates': ok<ReconcileManualCandidatesResponses[200]>({ items: [] }),

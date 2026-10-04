@@ -47,6 +47,8 @@ import type { AddressInfo } from 'node:net';
 
 import type { Express } from 'express';
 
+import type { TagAssignmentResponse, TaggedQueryResponse } from '@pops/types';
+
 import type { UpSyncJob } from '../../contract/rest-account-sync-schemas.js';
 import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
 import type { FinanceSummaryBody } from '../../contract/rest-summary-schemas.js';
@@ -601,6 +603,18 @@ export function makeClient(app: Express) {
           total: number;
           truncated: boolean;
         }>((r) => r.get('/transactions/descriptions-preview').query(query)),
+    },
+    tagged: {
+      list: (body: { tagIds: string[]; limit?: number; cursor?: string }) =>
+        call<TaggedQueryResponse>((r) => r.post('/tagged/query').send(body)),
+      attach: (entityId: string, tagId: string) =>
+        call<TagAssignmentResponse>((r) =>
+          r.put(`/tagged/transaction/${entityId}/tags/${tagId}`).send({})
+        ),
+      detach: (entityId: string, tagId: string) =>
+        call<TagAssignmentResponse>((r) =>
+          r.delete(`/tagged/transaction/${entityId}/tags/${tagId}`).send({})
+        ),
     },
     tagRules: {
       list: (query: TagRuleListQuery = {}) =>

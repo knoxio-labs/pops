@@ -20,6 +20,7 @@
     { "path": "pillars/inventory/tsconfig.build.json" },
     { "path": "pillars/lists/tsconfig.build.json" },
     { "path": "pillars/media/tsconfig.build.json" },
-    { "path": "pillars/purchases/tsconfig.build.json" }
+    { "path": "pillars/purchases/tsconfig.build.json" },
+    { "path": "pillars/tags/tsconfig.build.json" }
   ]
 }

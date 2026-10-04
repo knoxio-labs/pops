@@ -64,6 +64,10 @@ import type {
   purchaseTags as purchaseTagsTable,
 } from './schema/purchases.js';
 import type { purchaseMatchRules as purchaseMatchRulesTable } from './schema/rules.js';
+import type {
+  purchaseItemSharedTags as purchaseItemSharedTagsTable,
+  sharedTagCache as sharedTagCacheTable,
+} from './schema/shared-tags.js';
 import type { purchaseSources as purchaseSourcesTable } from './schema/sources.js';
 
 export {
@@ -81,6 +85,7 @@ export {
   purchaseItemTags,
   purchaseItemUnits,
 } from './schema/items.js';
+export { purchaseItemSharedTags, sharedTagCache } from './schema/shared-tags.js';
 export { purchaseProductAliases, purchaseProducts } from './schema/products.js';
 export { purchases, purchaseShipments, purchaseTags } from './schema/purchases.js';
 export { purchaseMatchRules } from './schema/rules.js';
@@ -95,6 +100,10 @@ export type PurchaseItemInsert = InferInsertModel<typeof purchaseItemsTable>;
 export type PurchaseItemUnitRow = InferSelectModel<typeof purchaseItemUnitsTable>;
 export type PurchaseItemUnitInsert = InferInsertModel<typeof purchaseItemUnitsTable>;
 export type PurchaseItemTagRow = InferSelectModel<typeof purchaseItemTagsTable>;
+export type PurchaseItemSharedTagRow = InferSelectModel<typeof purchaseItemSharedTagsTable>;
+export type PurchaseItemSharedTagInsert = InferInsertModel<typeof purchaseItemSharedTagsTable>;
+export type SharedTagCacheRow = InferSelectModel<typeof sharedTagCacheTable>;
+export type SharedTagCacheInsert = InferInsertModel<typeof sharedTagCacheTable>;
 export type PurchaseItemNoteRow = InferSelectModel<typeof purchaseItemNotesTable>;
 export type PurchaseTagRow = InferSelectModel<typeof purchaseTagsTable>;
 export type PurchaseChargeRow = InferSelectModel<typeof purchaseChargesTable>;

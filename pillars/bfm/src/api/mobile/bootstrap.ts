@@ -33,6 +33,7 @@ import { touchDevice } from '../../db/index.js';
 import { BFM_PILLAR_ID } from '../manifest.js';
 import { deriveFeatures } from './features.js';
 import { defaultProbeDeps, probeFederation, type ReachabilityProbeDeps } from './reachability.js';
+import { retryOnce } from './retry.js';
 
 import type { PillarSnapshot, RegistrySnapshot } from '@pops/pillar-sdk/discovery';
 
@@ -112,7 +113,7 @@ async function readRegistry(read: () => Promise<RegistrySnapshot>): Promise<{
   pillars: readonly PillarSnapshot[];
 }> {
   try {
-    const snapshot = await read();
+    const snapshot = await retryOnce(read, (error) => error instanceof RegistryUnreachableError);
     return { source: snapshot.source, pillars: snapshot.pillars };
   } catch (error) {
     if (!(error instanceof RegistryUnreachableError)) throw error;
@@ -120,7 +121,7 @@ async function readRegistry(read: () => Promise<RegistrySnapshot>): Promise<{
     // an unauthenticated caller cannot provoke the line, and a federation the
     // phone cannot see is exactly what an operator wants told.
     console.warn(
-      `[bfm-api] bootstrap served with no registry snapshot after ${error.attempts} attempt(s): ${error.message}`
+      `[bfm-api] bootstrap served with no registry snapshot after two failed reads (last SDK read: ${error.attempts} fetch attempt(s)): ${error.message}`
     );
     return { source: 'unavailable', pillars: [] };
   }
