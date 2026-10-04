@@ -10,7 +10,7 @@ internal enum PlaygroundEgoThreadOutcome: Sendable {
 /// A fixed answer for a chat or resumed-chat stream.
 internal enum PlaygroundEgoStreamOutcome: Sendable {
     case events([EgoStreamEvent])
-    case eventsThenStall([EgoStreamEvent])
+    case eventsThenStall([EgoStreamEvent], interval: Duration = .milliseconds(1))
     case stalls
     case failure(RepositoryError)
 }
@@ -97,16 +97,20 @@ internal struct PlaygroundEgoRepository: EgoRepository {
                 do {
                     let events: [EgoStreamEvent]
                     let shouldStall: Bool
+                    let interval: Duration
                     switch outcome {
                     case .events(let fixedEvents):
                         events = fixedEvents
                         shouldStall = false
-                    case .eventsThenStall(let fixedEvents):
+                        interval = .milliseconds(1)
+                    case .eventsThenStall(let fixedEvents, let configuredInterval):
                         events = fixedEvents
                         shouldStall = true
+                        interval = configuredInterval
                     case .stalls:
                         events = []
                         shouldStall = true
+                        interval = .milliseconds(1)
                     case .failure(let error):
                         continuation.finish(throwing: error)
                         return
@@ -115,7 +119,7 @@ internal struct PlaygroundEgoRepository: EgoRepository {
                     for event in events {
                         try Task.checkCancellation()
                         continuation.yield(event)
-                        try await Task.sleep(for: .milliseconds(1))
+                        try await Task.sleep(for: interval)
                     }
                     if shouldStall {
                         try await Task.sleep(for: .seconds(3_600))

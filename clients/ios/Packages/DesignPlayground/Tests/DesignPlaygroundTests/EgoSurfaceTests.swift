@@ -81,6 +81,62 @@ internal struct EgoSurfaceTests {
         #expect(await finished.value)
     }
 
+    @Test("a staged stream emits its events and stays open until cancelled")
+    func chatEventsThenStallsUntilCancelled() async {
+        let events: [EgoStreamEvent] = [
+            .tool(name: "finance.search", status: .started),
+            .token("The fixture response is ready."),
+        ]
+        let repository = PlaygroundEgoRepository(chat: .eventsThenStall(events))
+        let observation = EgoRepositoryStreamObservation()
+        let consumer = Task {
+            do {
+                for try await _ in repository.streamChat(
+                    message: "sample", conversationId: nil, context: nil
+                ) {
+                    await observation.recordEvent()
+                }
+            } catch {}
+            await observation.markFinished()
+        }
+
+        await observation.waitForEventCount(events.count)
+        #expect(!(await observation.didFinish))
+        consumer.cancel()
+        await consumer.value
+        #expect(await observation.didFinish)
+    }
+
+    @Test("a fixture stream suspends between events and can be cancelled during the pause")
+    func chatPausesBetweenFixtureEvents() async {
+        let repository = PlaygroundEgoRepository(
+            chat: .eventsThenStall(
+                [
+                    .tool(name: "finance.search", status: .started),
+                    .token("The fixture response is ready."),
+                ],
+                interval: .seconds(30)
+            ))
+        let observation = EgoRepositoryStreamObservation()
+        let consumer = Task {
+            do {
+                for try await _ in repository.streamChat(
+                    message: "sample", conversationId: nil, context: nil
+                ) {
+                    await observation.recordEvent()
+                }
+            } catch {}
+            await observation.markFinished()
+        }
+
+        await observation.waitForEventCount(1)
+        #expect(await observation.eventCount == 1)
+        consumer.cancel()
+        await consumer.value
+        #expect(await observation.eventCount == 1)
+        #expect(await observation.didFinish)
+    }
+
     @Test("a failed batch decision surfaces the configured repository error")
     func decisionCanFail() async {
         let repository = PlaygroundEgoRepository(decision: .fails(.unavailable))
@@ -116,5 +172,31 @@ private actor EgoRepositoryStreamFinished {
 
     func mark() {
         value = true
+    }
+}
+
+private actor EgoRepositoryStreamObservation {
+    private(set) var eventCount = 0
+    private(set) var didFinish = false
+    private var eventWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
+
+    func recordEvent() {
+        eventCount += 1
+        let ready = eventWaiters.filter { $0.0 <= eventCount }
+        eventWaiters.removeAll { $0.0 <= eventCount }
+        for (_, waiter) in ready {
+            waiter.resume()
+        }
+    }
+
+    func markFinished() {
+        didFinish = true
+    }
+
+    func waitForEventCount(_ count: Int) async {
+        guard eventCount < count else { return }
+        await withCheckedContinuation { continuation in
+            eventWaiters.append((count, continuation))
+        }
     }
 }
