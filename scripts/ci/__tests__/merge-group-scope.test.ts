@@ -237,9 +237,9 @@ describe('the scope job is wired to the workflow it scopes', () => {
   it.each([
     ['pull_request', undefined, 100],
     ['pull_request', false, 100],
-    ['pull_request', true, 150],
-    ['merge_group', undefined, 150],
-    ['merge_group', false, 150],
+    ['pull_request', true, 165],
+    ['merge_group', undefined, 165],
+    ['merge_group', false, 165],
   ])('budgets the %s full=%s iOS job at %s minutes', (event, full, expected) => {
     const expression = jobsOf('ios-quality.yml').get('quality')?.['timeout-minutes'];
     if (typeof expression !== 'string') throw new Error('Missing lane-specific timeout expression');

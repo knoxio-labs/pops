@@ -3,7 +3,11 @@
  * MODULE-LEVEL singleton controller, mirroring `plex-scheduler.ts`. The
  * `server.ts` boot path and the REST `/rotation/scheduler/{toggle,run-now}`
  * handlers all drive the SAME timer, and the next tick is armed only AFTER the
- * current cycle resolves (no pile-up). One immediate tick fires on `start`.
+ * current cycle resolves (no pile-up). An operator `start` fires one cycle
+ * immediately; a boot start fires one only when a scheduled occurrence was
+ * missed while the process was down, because the container restarts on every
+ * deploy and a cycle per restart runs removals many times a day at arbitrary
+ * hours.
  *
  * `rotation_cron_expression` drives the timer: each arm parses it and waits
  * until the next occurrence in the process's local timezone. The fixed
@@ -21,7 +25,7 @@ import { type MediaDb, rotationLogService, rotationSettingsService } from '../..
 import { getRotationCyclePolicy } from '../modules/rotation-cycle-policy.js';
 import { emptyResult } from '../modules/rotation-cycle-types.js';
 import { executeRotationCycle } from '../modules/rotation-cycle.js';
-import { resolveArmDelayMs, type ScheduledRun, scheduleAt } from './cron-timer.js';
+import { isRunOverdue, resolveArmDelayMs, type ScheduledRun, scheduleAt } from './cron-timer.js';
 import { waitForSettled } from './drain.js';
 
 const ENABLED_KEY = 'rotation_enabled';
@@ -151,17 +155,29 @@ async function tick(): Promise<void> {
   arm();
 }
 
+function isCatchUpDue(current: SchedulerState): boolean {
+  const lastRun = rotationLogService.lastCycleLog(current.db);
+  const lastRunMs = lastRun === null ? null : Date.parse(lastRun.executedAt);
+  return isRunOverdue(current.cronExpression, current.intervalMs, lastRunMs);
+}
+
 export interface RotationSchedulerStartOptions {
   db: MediaDb;
   intervalMs?: number;
   cronExpression?: string;
+  /**
+   * `now` (default) fires a cycle immediately. `when-due` fires one only if a
+   * scheduled occurrence has passed since the last logged cycle, and otherwise
+   * just arms the timer — the boot path, where a restart is not a reason to run.
+   */
+  firstRun?: 'now' | 'when-due';
 }
 
 export const rotationScheduler = {
   /**
-   * Arm the recursive timer + fire one cycle immediately. Idempotent: a second
-   * `start` clears the prior timer and re-arms with the new options. Persists
-   * the enabled flag + cron expression to `rotation_settings`.
+   * Arm the recursive timer, firing a first cycle per `firstRun`. Idempotent: a
+   * second `start` clears the prior timer and re-arms with the new options.
+   * Persists the enabled flag + cron expression to `rotation_settings`.
    */
   start(options: RotationSchedulerStartOptions): RotationSchedulerStatus {
     state?.timer?.cancel();
@@ -173,7 +189,11 @@ export const rotationScheduler = {
       timer: undefined,
     };
     persistEnabled(options.db, cronExpression);
-    void tick();
+    if (options.firstRun === 'when-due' && !isCatchUpDue(state)) {
+      arm();
+    } else {
+      void tick();
+    }
     return rotationScheduler.status(options.db);
   },
 
@@ -212,10 +232,17 @@ export const rotationScheduler = {
     return waitForSettled(currentCycle, timeoutMs);
   },
 
-  /** Start with the persisted cron if `rotation_enabled` is `'true'`. */
+  /**
+   * Start with the persisted cron if `rotation_enabled` is `'true'`, running a
+   * cycle straight away only to catch up on a missed occurrence.
+   */
   resumeIfEnabled(db: MediaDb): RotationSchedulerStatus | null {
     if (rotationSettingsService.get(db, ENABLED_KEY) !== 'true') return null;
-    return rotationScheduler.start({ db, cronExpression: resolveCronExpression(db) });
+    return rotationScheduler.start({
+      db,
+      cronExpression: resolveCronExpression(db),
+      firstRun: 'when-due',
+    });
   },
 
   status(db: MediaDb): RotationSchedulerStatus {

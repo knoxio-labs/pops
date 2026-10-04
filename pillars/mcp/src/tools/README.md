@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 80 tools; a new adapter that breaks one is a bug even
+These hold across all 82 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -72,16 +72,27 @@ though nothing enforces it mechanically.
   the mcp package mirror the response shape it currently never has to know.
 - The `purchases.*` family is read-only for a sharper reason, asserted the same
   way in `purchases.test.ts`. Its ordinary purchase writes are ingestion
-  (which needs a checksum only an adapter can compute) or classification decisions —
+  (which needs a checksum only an adapter can compute) or classification
+  decisions —
   and `PATCH /purchases/:id/items/:itemId` is the single place a machine
   proposal becomes a human assertion. A tool that could call it would erase the
-  distinction `kindConfirmedAt` exists to hold. The separate
-  `tags.assignments.attach` and `.detach` tools change only shared tag
-  assignments on Purchases line items, under the `purchases.tagged` scope.
+  distinction `kindConfirmedAt` exists to hold.
+- `purchases.inventoryProposals.accept` is the exception. It records that an
+  inventory item which already exists is the asset an order line's unit
+  became: a link the user asked for, not a judgement. It takes any line of
+  the order, not only one `inventoryProposals.list` offers: that projection
+  covers lines classified `durable`, and nothing classifies a line at ingest
+  (POPS-3974), while the accept route itself never looks at the kind. It
+  checks the item
+  exists in inventory first, because purchases stores the URI unchecked and a
+  decision cannot be retracted. Declining an offer and creating the asset
+  through purchases are not exposed. The link lives in purchases, so
+  `inventory.items.get` does not show an item's order (POPS-5755).
 - `purchases.*` needs a grant. That pillar admits an uncredentialled caller but
   holds a caller presenting an `X-API-Key` to that key's scopes, and MCP always
   presents one. Without `purchases.purchase`, `purchases.analytics` and
-  `purchases.search` on the MCP service account, all five tools return `403`.
+  `purchases.search` on the MCP service account, every tool in the family
+  returns `403`.
 - `tags.tags.*` manages the shared tag vocabulary under the
   `tags.tags` service-account scope. These tools do not attach or detach
   tags on Finance or Purchases records.
@@ -111,6 +122,11 @@ though nothing enforces it mechanically.
   and delete also require the observed item revision. A caller may retain and
   resend `mutationId` after an uncertain response, so retries converge on the
   producer's idempotency boundary instead of creating a second command.
+  `provenance` on create and update is the shape `items.get` returns, written
+  through the producer's legacy purchase columns (`inventory-item-provenance.ts`).
+  `transactionUri` accepts only `pops://finance/transaction/<id>`, the one URI
+  inventory can store. An item's purchases order is linked from the purchases
+  side, through `purchases.inventoryProposals.accept`.
 - `inventory.items.validate` calls the producer's authoritative value validator
   without writing item values, audit rows or sync changes. Read the catalogue
   definition first, send its exact revision and source-tagged values, and use

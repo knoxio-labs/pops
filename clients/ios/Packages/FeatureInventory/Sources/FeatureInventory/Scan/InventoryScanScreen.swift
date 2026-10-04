@@ -32,7 +32,7 @@ internal struct InventoryScanScreen: View {
         ZStack {
             if model.phase == .denied {
                 Color.popsBackground.ignoresSafeArea()
-                denied
+                InventoryScanDenied()
             } else {
                 viewfinder
                 VStack(spacing: PopsSpacing.xl) {
@@ -114,22 +114,6 @@ internal struct InventoryScanScreen: View {
         .padding(.horizontal, PopsSpacing.lg)
     }
 
-    private var denied: some View {
-        VStack(spacing: PopsSpacing.lg) {
-            InventoryScanCentredLine(text: InventoryCopy.cameraAccessOff)
-            Button("Settings") { openSettings() }
-                .popsProminentGlassButton()
-        }
-        .padding(.horizontal, PopsSpacing.lg)
-    }
-
-    private func openSettings() {
-        #if canImport(UIKit)
-            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-            UIApplication.shared.open(url)
-        #endif
-    }
-
     @ViewBuilder private var card: some View {
         switch model.phase {
         case .scanning, .denied:
@@ -139,7 +123,15 @@ internal struct InventoryScanScreen: View {
         case .found(let record):
             InventoryScanFoundCard(record: record, loadPhoto: { await model.thumbnail($0) })
         case .matches(let records):
-            InventoryScanMatchesCard(records: records, loadPhoto: { await model.thumbnail($0) })
+            InventoryScanMatchesCard(records: records) { record in
+                NavigationLink(
+                    value: InventoryRoute.record(id: record.id, isContainer: record.isContainer)
+                ) {
+                    InventorySearchHitRow(
+                        hit: .record(record), loadPhoto: { await model.thumbnail($0) })
+                }
+                .buttonStyle(.plain)
+            }
         case .unsupported(let pillar):
             InventoryScanLineCard(
                 symbol: InventorySymbol.appUpdate.system,
@@ -151,38 +143,6 @@ internal struct InventoryScanScreen: View {
             InventoryScanLineCard(
                 symbol: InventorySymbol.lost.system, text: InventoryCopy.noItemHasThisCode)
         }
-    }
-}
-
-/// One line under the reticle when the camera is off: a sentence with
-/// nothing to look at behind it.
-private struct InventoryScanCentredLine: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.popsHeadline)
-            .foregroundStyle(Color.popsForeground)
-            .multilineTextAlignment(.center)
-    }
-}
-
-/// The skeleton while a code's lookup is in flight.
-private struct InventoryScanLoadingCard: View {
-    var body: some View {
-        HStack(spacing: PopsSpacing.md) {
-            RoundedRectangle(cornerRadius: PopsRadius.control)
-                .fill(Color.popsSurface)
-                .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-            RoundedRectangle(cornerRadius: PopsRadius.control)
-                .fill(Color.popsSurface)
-                .frame(height: PopsSize.touchTarget * 0.4)
-        }
-        .popsShimmer()
-        .padding(PopsSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
-        .popsGlass(in: InventoryScanCard.shape)
     }
 }
 
@@ -202,80 +162,6 @@ private struct InventoryScanFoundCard: View {
             }
             .popsProminentGlassButton()
         }
-        .padding(PopsSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
-        .popsGlass(in: InventoryScanCard.shape)
-    }
-}
-
-/// Every item carrying a scanned barcode, each opening its own page. The
-/// rows scroll only once there are more than fit under the reticle.
-private struct InventoryScanMatchesCard: View {
-    let records: [InventoryRecord]
-    let loadPhoto: @MainActor (String) async -> Data?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            Text(InventoryCopy.itemsHaveThisCode(records.count))
-                .font(.popsHeadline)
-                .foregroundStyle(Color.popsForeground)
-            ViewThatFits(in: .vertical) {
-                rows
-                ScrollView { rows }.scrollBounceBehavior(.basedOnSize, axes: .vertical)
-            }
-            .frame(maxHeight: PopsSize.touchTarget * 5)
-        }
-        .padding(PopsSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
-        .popsGlass(in: InventoryScanCard.shape)
-    }
-
-    private var rows: some View {
-        VStack(spacing: PopsSpacing.zero) {
-            ForEach(records) { record in
-                NavigationLink(
-                    value: InventoryRoute.record(id: record.id, isContainer: record.isContainer)
-                ) {
-                    InventorySearchHitRow(hit: .record(record), loadPhoto: loadPhoto)
-                }
-                .buttonStyle(.plain)
-                if record.id != records.last?.id {
-                    PopsDivider().padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
-                }
-            }
-        }
-    }
-}
-
-/// A one-line answer with no action to take: a hand-off, a bad code, or a
-/// code with nothing behind it.
-private struct InventoryScanLineCard: View {
-    let symbol: String
-    let text: String
-
-    var body: some View {
-        HStack(spacing: PopsSpacing.md) {
-            Image(systemName: symbol)
-                .font(.popsHeadline)
-                .foregroundStyle(Color.popsMutedForeground)
-            Text(text)
-                .font(.popsHeadline)
-                .foregroundStyle(Color.popsForeground)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: PopsSpacing.sm)
-        }
-        .frame(minHeight: PopsSize.touchTarget)
-        .padding(PopsSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
-        .popsGlass(in: InventoryScanCard.shape)
-    }
-}
-
-private enum InventoryScanCard {
-    static var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: PopsRadius.card * 2, style: .continuous)
+        .inventoryScanCard()
     }
 }

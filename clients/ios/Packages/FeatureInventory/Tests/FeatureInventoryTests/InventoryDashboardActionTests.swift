@@ -98,7 +98,10 @@ internal struct InventoryDashboardActionTests {
         let store = RecordingInventoryStore(
             InMemoryInventoryStore(
                 locations: [Fixture.location("kitchen", "Kitchen")],
-                events: [Fixture.event(4, .locationRenamed, on: "kitchen", entityKind: .location)]))
+                events: [
+                    Fixture.event(
+                        4, .edited, on: "kitchen", entityKind: .location, fields: ["name"])
+                ]))
         let model = InventoryDashboardViewModel(store: store)
         let (task, loaded) = await model.startAndAwaitFirstAnswer()
         defer { task.cancel() }

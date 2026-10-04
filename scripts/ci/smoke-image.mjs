@@ -66,6 +66,8 @@ const COMPOSE_PATH = join(repoRoot, 'infra', 'docker-compose.yml');
 
 const HEALTH_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 1_000;
+const DOCKER_RUN_ATTEMPTS = 3;
+const DOCKER_RUN_RETRY_DELAY_MS = 2_000;
 
 /** The container-side prefix under which pillars keep persistent state. */
 const DATA_ROOT = '/data';
@@ -599,6 +601,62 @@ export function collectStreams(err) {
 }
 
 /**
+ * Start the smoke container with a bounded retry for Docker's userland-proxy
+ * startup timeout. Other Docker errors remain terminal.
+ *
+ * @param {object} args
+ * @param {() => Promise<string>} args.start
+ * @param {() => Promise<unknown>} args.remove
+ * @param {(delayMs: number) => Promise<unknown>} [args.wait]
+ * @param {(message: string) => void} [args.report]
+ * @returns {Promise<string>} The started container ID.
+ * @throws {Error} When Docker reports a non-networking failure or the bounded
+ *   retries are exhausted.
+ */
+export async function startDockerContainerWithRetry({
+  start,
+  remove,
+  wait = sleep,
+  report = console.log,
+}) {
+  let retries = 0;
+  for (let attempt = 1; attempt <= DOCKER_RUN_ATTEMPTS; attempt += 1) {
+    try {
+      const containerId = await start();
+      if (retries > 0) {
+        report(
+          `INFO — runner networking, retried Docker start (${retries} ${retries === 1 ? 'retry' : 'retries'}).`
+        );
+      }
+      return containerId;
+    } catch (err) {
+      const output = collectStreams(err);
+      const retryable =
+        /failed to set up container networking/iu.test(output) &&
+        /(?:timed out starting|failed to start) the userland proxy/iu.test(output);
+      if (!retryable) throw err;
+
+      await remove();
+      if (attempt === DOCKER_RUN_ATTEMPTS) {
+        const detail = output.trim();
+        throw new Error(
+          `runner networking failure: Docker start failed after ${DOCKER_RUN_ATTEMPTS} attempts` +
+            (detail === '' ? '' : `\n${detail}`),
+          { cause: err }
+        );
+      }
+
+      retries += 1;
+      report(
+        `RETRY — runner networking failure; retrying Docker start (${attempt + 1}/${DOCKER_RUN_ATTEMPTS}).`
+      );
+      await wait(DOCKER_RUN_RETRY_DELAY_MS);
+    }
+  }
+  throw new Error('Docker start retry loop ended without a result');
+}
+
+/**
  * Resolve the ephemeral host port Docker bound the container port to.
  *
  * @param {string} containerId
@@ -821,20 +879,26 @@ async function main() {
     // Deliberately NOT `--rm`: a container that dies on its first import is
     // exactly the failure this exists to catch, and its logs are the evidence.
     // `--rm` would delete them the instant it exited.
-    const containerId = await docker([
-      'run',
-      '--detach',
-      '--publish',
-      `127.0.0.1::${port}`,
-      ...volumePlan.flatMap(({ name, path }) => ['--volume', `${name}:${path}`]),
-      '--env',
-      `PORT=${port}`,
-      ...Object.entries(bootPlaceholdersForDockerfile(dockerfilePath)).flatMap(([name, value]) => [
-        '--env',
-        `${name}=${value}`,
-      ]),
-      image,
-    ]);
+    const containerName = `pops-smoke-${randomUUID()}`;
+    const containerId = await startDockerContainerWithRetry({
+      start: () =>
+        docker([
+          'run',
+          '--detach',
+          '--name',
+          containerName,
+          '--publish',
+          `127.0.0.1::${port}`,
+          ...volumePlan.flatMap(({ name, path }) => ['--volume', `${name}:${path}`]),
+          '--env',
+          `PORT=${port}`,
+          ...Object.entries(bootPlaceholdersForDockerfile(dockerfilePath)).flatMap(
+            ([name, value]) => ['--env', `${name}=${value}`]
+          ),
+          image,
+        ]),
+      remove: () => dockerBestEffort(['rm', '--force', containerName]),
+    });
 
     try {
       // An image that dies on its first import is gone before `docker port`

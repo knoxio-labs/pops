@@ -13,6 +13,20 @@ internal enum TransactionsCopy {
     internal static let empty = "No transactions yet."
     internal static let retry = "Retry"
 
+    internal static func retryTitle(for error: RepositoryError) -> String {
+        guard case .rateLimited(let retryAfterSeconds) = error else { return retry }
+        return "Wait \(waitDuration(retryAfterSeconds)), then retry"
+    }
+
+    internal static func offersRetry(for error: RepositoryError) -> Bool {
+        switch error {
+        case .contractMismatch, .dependencyNotBound:
+            false
+        case .unavailable, .unauthorized, .rateLimited, .conflict, .transport:
+            true
+        }
+    }
+
     internal static let loadingDetail = "Loading transaction…"
 
     /// What the detail screen says about a transaction finance no longer has.
@@ -65,6 +79,8 @@ internal enum TransactionsCopy {
                 + "Nothing is lost — try again in a moment."
         case .unauthorized:
             return "This device is no longer signed in."
+        case .rateLimited(let retryAfterSeconds):
+            return "Too many requests. Wait \(waitDuration(retryAfterSeconds)) before trying again."
         case .contractMismatch:
             // Deliberately not "try again". The server sent something this
             // build cannot read, and no amount of retrying changes which build
@@ -82,6 +98,13 @@ internal enum TransactionsCopy {
         case .dependencyNotBound:
             return "Pops is not set up correctly on this device."
         }
+    }
+
+    private static func waitDuration(_ retryAfterSeconds: Int?) -> String {
+        guard let retryAfterSeconds else { return "a minute" }
+        let seconds = max(1, retryAfterSeconds)
+        let unit = seconds == 1 ? "second" : "seconds"
+        return "\(seconds) \(unit)"
     }
 
     /// The failure and its reason as one sentence pair, for the tail of a list

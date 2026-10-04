@@ -137,6 +137,10 @@ export function checkPurchasesMcpCoverage() {
     repositoryRoot,
     'pillars/mcp/src/tools/tags-assignments.ts'
   );
+  const inventoryProposalToolsPath = resolve(
+    repositoryRoot,
+    'pillars/mcp/src/tools/purchases-inventory-proposals.ts'
+  );
   /** @type {unknown} */
   const document = JSON.parse(readFileSync(contractPath, 'utf8'));
   /** @type {unknown} */
@@ -151,6 +155,7 @@ export function checkPurchasesMcpCoverage() {
       ...toolNamesFromSource(readFileSync(toolsPath, 'utf8')),
       ...toolNamesFromSource(readFileSync(analyticsToolsPath, 'utf8')),
       ...toolNamesFromSource(readFileSync(tagAssignmentToolsPath, 'utf8')),
+      ...toolNamesFromSource(readFileSync(inventoryProposalToolsPath, 'utf8')),
     ]),
   });
 }

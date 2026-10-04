@@ -77,11 +77,18 @@ internal struct TransactionsFailureTests {
         if !isTransport(expected) { #expect(actual == expected) }
     }
 
-    @Test("being told to slow down is not something this screen can act on")
+    @Test("a rate limit stays distinct and carries its wait")
     func rateLimited() async {
         let actual = await error(status: .tooManyRequests, json: TransactionsWire.rateLimited)
 
-        #expect(isTransport(actual))
+        #expect(actual == .rateLimited(retryAfterSeconds: 30))
+    }
+
+    @Test("an unreadable rate-limit response keeps its status without inventing a wait")
+    func unreadableRateLimited() async {
+        let actual = await error(status: .tooManyRequests, json: "<html>slow down</html>")
+
+        #expect(actual == .rateLimited(retryAfterSeconds: nil))
     }
 
     @Test("a malformed request is a defect in this build, not a dead pillar")

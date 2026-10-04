@@ -23,6 +23,22 @@ export interface ListHeader {
 export type UpsertRefKind = 'ingredient' | 'variant' | 'recipe' | 'custom';
 export type UpsertConflictMode = 'merge-additive' | 'replace' | 'skip';
 
+/** Controls note formatting and the maximum Unicode code-point length on upsert. */
+export interface NotesMergeOptions {
+  /** Text between note fragments. */
+  separator: string;
+  /** Maximum number of Unicode code points retained, including the truncation marker. */
+  maxLength: number;
+}
+
+/** Formats the cumulative quantity into an upserted item's label. */
+export interface LabelFromQtyOptions {
+  prefix: string;
+  suffix: string;
+  maxFractionDigits: number;
+}
+
+/** Request shape for atomic upsert-by-reference operations in the lists pillar. */
 export interface UpsertByRefBody {
   refKind: UpsertRefKind;
   refId: number;
@@ -31,12 +47,16 @@ export interface UpsertByRefBody {
   unit?: string | null;
   notes?: string | null;
   onConflict?: UpsertConflictMode;
+  labelFromQty?: LabelFromQtyOptions;
+  /** Formatting policy applied to notes when this upsert writes the row. */
+  notesMerge?: NotesMergeOptions;
 }
 
-export interface UpsertByRefResult {
-  outcome: 'inserted' | 'merged' | 'skipped';
-  itemId: number;
-}
+/** Result shape returned by the lists pillar after an upsert-by-reference operation. */
+export type UpsertByRefResult =
+  | { outcome: 'inserted'; itemId: number; position: number }
+  | { outcome: 'merged'; itemId: number; qty: number | null }
+  | { outcome: 'skipped'; itemId: number };
 
 export interface AddItemBody {
   label: string;
@@ -47,6 +67,7 @@ export interface AddItemBody {
   notes?: string | null;
 }
 
+/** Food's cross-pillar client for the lists operations used by shopping flows. */
 export interface ListsClient {
   getList(id: number): Promise<ListHeader | null>;
   createShoppingList(name: string): Promise<number>;

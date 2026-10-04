@@ -11,6 +11,8 @@ internal enum PurchaseReviewCopy {
             "This receipt is already a purchase. Discard it to save the rest."
         case .unavailable:
             "The purchases service didn't answer."
+        case .rateLimited:
+            "Too many requests. Wait before trying again."
         case .transport:
             "No connection, so nothing was saved."
         case .unauthorized, .contractMismatch, .dependencyNotBound:

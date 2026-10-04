@@ -158,7 +158,7 @@ describe('createListsClient.upsertByRef', () => {
       stubHandle({
         upsertByRef: async (input) => {
           seen.push(input);
-          return ok({ outcome: 'merged' as const, itemId: 3 });
+          return ok({ outcome: 'merged' as const, itemId: 3, qty: 10 });
         },
       })
     );
@@ -171,8 +171,9 @@ describe('createListsClient.upsertByRef', () => {
         qty: 6,
         unit: 'ea',
         onConflict: 'merge-additive',
+        labelFromQty: { prefix: '', suffix: ' count Eggs', maxFractionDigits: 2 },
       })
-    ).resolves.toEqual({ outcome: 'merged', itemId: 3 });
+    ).resolves.toEqual({ outcome: 'merged', itemId: 3, qty: 10 });
     expect(seen).toEqual([
       {
         listId: 7,
@@ -182,6 +183,7 @@ describe('createListsClient.upsertByRef', () => {
         qty: 6,
         unit: 'ea',
         onConflict: 'merge-additive',
+        labelFromQty: { prefix: '', suffix: ' count Eggs', maxFractionDigits: 2 },
       },
     ]);
   });

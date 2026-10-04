@@ -49,6 +49,22 @@ internal struct StatePrimitiveTests {
         #expect(view.resolvedRetryTitle == "Réessayer")
     }
 
+    @MainActor
+    @Test("NonRetryableErrorStateView falls back for blank copy", arguments: ["", "   ", "\n\t"])
+    func nonRetryableErrorFallsBack(blank: String) {
+        let view = NonRetryableErrorStateView(message: blank)
+
+        #expect(view.resolvedMessage == NonRetryableErrorStateView.fallbackMessage)
+    }
+
+    @MainActor
+    @Test("NonRetryableErrorStateView keeps the copy it was handed")
+    func nonRetryableErrorKeepsCopy() {
+        let view = NonRetryableErrorStateView(message: "Update the app.")
+
+        #expect(view.resolvedMessage == "Update the app.")
+    }
+
     // `View` conformance makes `ErrorStateView` main-actor isolated, so its
     // stored closure can only be built and called from there.
     @MainActor

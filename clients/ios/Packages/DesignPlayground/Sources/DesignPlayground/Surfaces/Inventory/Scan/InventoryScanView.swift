@@ -12,15 +12,13 @@ internal struct InventoryScanView: View {
     @State private var torchOn = false
     @State private var shown = false
 
-    private static let feed = SamplePhoto.data("moving-box")
-
     internal var body: some View {
         ZStack {
             if phase == .denied {
                 Color.popsBackground.ignoresSafeArea()
-                denied
+                InventoryScanDenied()
             } else {
-                viewfinder
+                InventoryScanViewfinder()
                 VStack(spacing: PopsSpacing.xl) {
                     InventoryScanReticle(found: isFound)
                     if shown, let card {
@@ -42,19 +40,6 @@ internal struct InventoryScanView: View {
         return false
     }
 
-    private var viewfinder: some View {
-        Color.popsBackground
-            .overlay {
-                InventoryItemDetailPicture(
-                    photo: InventoryPhoto(caption: "", isBroken: false, imageData: Self.feed),
-                    symbol: InventorySymbol.camera.system)
-            }
-            .overlay { Color.popsBackground.opacity(0.45) }
-            .clipped()
-            .ignoresSafeArea()
-            .accessibilityHidden(true)
-    }
-
     private var controls: some View {
         PlaygroundGlassGroup(spacing: PopsSpacing.sm) {
             HStack(spacing: PopsSpacing.sm) {
@@ -74,15 +59,6 @@ internal struct InventoryScanView: View {
         .padding(.horizontal, PopsSpacing.lg)
     }
 
-    private var denied: some View {
-        VStack(spacing: PopsSpacing.lg) {
-            InventoryCentredLine(text: "Camera access is off")
-            Button("Settings") {}
-                .playgroundProminentGlassButton()
-        }
-        .padding(.horizontal, PopsSpacing.lg)
-    }
-
     private var card: InventoryScanCard? {
         switch phase {
         case .scanning, .denied: nil
@@ -96,22 +72,56 @@ internal struct InventoryScanView: View {
     }
 }
 
+/// A still photograph standing in for the camera feed.
+internal struct InventoryScanViewfinder: View {
+    private static let feed = SamplePhoto.data("moving-box")
+
+    internal var body: some View {
+        Color.popsBackground
+            .overlay {
+                InventoryItemDetailPicture(
+                    photo: InventoryPhoto(caption: "", isBroken: false, imageData: Self.feed),
+                    symbol: InventorySymbol.camera.system)
+            }
+            .overlay { Color.popsBackground.opacity(0.45) }
+            .clipped()
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+    }
+}
+
+/// What a scanner shows in place of the camera once access is refused.
+internal struct InventoryScanDenied: View {
+    internal var body: some View {
+        VStack(spacing: PopsSpacing.lg) {
+            InventoryCentredLine(text: "Camera access is off")
+            Button("Settings") {}
+                .playgroundProminentGlassButton()
+        }
+        .padding(.horizontal, PopsSpacing.lg)
+    }
+}
+
+extension View {
+    /// The glass card every answer under the reticle sits in.
+    internal func inventoryScanCard() -> some View {
+        let shape = RoundedRectangle(cornerRadius: PopsRadius.card * 2, style: .continuous)
+        return
+            padding(PopsSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.popsBackground.opacity(0.6), in: shape)
+            .playgroundGlass(in: shape)
+    }
+}
+
 /// The card under the reticle.
 internal enum InventoryScanCard: View {
     case loading
     case found(InventoryScanTarget)
     case line(String, String, String?)
 
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: PopsRadius.card * 2, style: .continuous)
-    }
-
     internal var body: some View {
-        content
-            .padding(PopsSpacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.popsBackground.opacity(0.6), in: shape)
-            .playgroundGlass(in: shape)
+        content.inventoryScanCard()
     }
 
     @ViewBuilder private var content: some View {

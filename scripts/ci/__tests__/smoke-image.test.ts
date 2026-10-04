@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   BOOT_PLACEHOLDER_SECRETS,
@@ -17,6 +17,7 @@ import {
   reachedTheBuild,
   representativeByExtension,
   smokeLabel,
+  startDockerContainerWithRetry,
   mountSlug,
   normalizeVolumeEntry,
   parseExposedPort,
@@ -666,6 +667,65 @@ describe('collectStreams', () => {
     expect(collectStreams(Object.assign(new Error('x'), { stdout: 42, stderr: undefined }))).toBe(
       ''
     );
+  });
+});
+
+describe('startDockerContainerWithRetry', () => {
+  const proxyTimeout = () =>
+    Object.assign(new Error('Command failed: docker run'), {
+      stderr:
+        'Error response from daemon: failed to set up container networking: driver failed programming external connectivity; failed to start userland proxy for port mapping: timed out starting the userland proxy',
+    });
+
+  it('retries a userland-proxy startup timeout and reports the successful retry', async () => {
+    const start = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(proxyTimeout())
+      .mockResolvedValueOnce('container-id');
+    const remove = vi.fn(async () => '');
+    const wait = vi.fn(async () => {});
+    const report = vi.fn();
+
+    await expect(startDockerContainerWithRetry({ start, remove, wait, report })).resolves.toBe(
+      'container-id'
+    );
+
+    expect(start).toHaveBeenCalledTimes(2);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(wait).toHaveBeenCalledWith(2_000);
+    expect(report).toHaveBeenCalledWith(expect.stringMatching(/runner networking, retried/u));
+  });
+
+  it('does not retry a real container startup failure', async () => {
+    const start = vi.fn(async () => {
+      throw Object.assign(new Error('docker run failed'), { stderr: 'application exited at boot' });
+    });
+    const remove = vi.fn(async () => '');
+    const wait = vi.fn(async () => {});
+
+    await expect(startDockerContainerWithRetry({ start, remove, wait })).rejects.toThrow(
+      'docker run failed'
+    );
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(remove).not.toHaveBeenCalled();
+    expect(wait).not.toHaveBeenCalled();
+  });
+
+  it('cleans up partial containers and fails after the initial run plus two retries', async () => {
+    const start = vi.fn<() => Promise<string>>().mockRejectedValue(proxyTimeout());
+    const remove = vi.fn(async () => '');
+    const wait = vi.fn(async () => {});
+    const report = vi.fn();
+
+    await expect(startDockerContainerWithRetry({ start, remove, wait, report })).rejects.toThrow(
+      /runner networking failure: Docker start failed after 3 attempts/u
+    );
+
+    expect(start).toHaveBeenCalledTimes(3);
+    expect(remove).toHaveBeenCalledTimes(3);
+    expect(wait).toHaveBeenCalledTimes(2);
+    expect(report).toHaveBeenCalledTimes(2);
   });
 });
 

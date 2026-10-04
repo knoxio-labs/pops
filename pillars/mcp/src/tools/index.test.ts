@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 80 tools', () => {
-    expect(allTools).toHaveLength(80);
+  it('exports exactly 82 tools', () => {
+    expect(allTools).toHaveLength(82);
   });
 
   it('registers cross-pillar shared tag lookup', () => {
