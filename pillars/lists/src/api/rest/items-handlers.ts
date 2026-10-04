@@ -21,7 +21,7 @@ import { tryMapServiceError } from './error-mapping.js';
 
 import type { ErrorBody } from '@pops/types';
 
-import type { ListsDb, UpsertConflictMode, UpsertRefKind } from '../../db/index.js';
+import type { ListsDb, UpsertItemByRefInput } from '../../db/index.js';
 
 type RefKind = 'free' | 'ingredient' | 'variant' | 'recipe' | 'custom';
 
@@ -73,15 +73,7 @@ export function makeItemsHandlers(db: ListsDb) {
       body,
     }: {
       params: { listId: number };
-      body: {
-        refKind: UpsertRefKind;
-        refId: number;
-        label: string;
-        qty?: number | null;
-        unit?: string | null;
-        notes?: string | null;
-        onConflict?: UpsertConflictMode;
-      };
+      body: Omit<UpsertItemByRefInput, 'listId'>;
     }) => {
       try {
         const result = upsertItemByRef(db, { listId: params.listId, ...body });
