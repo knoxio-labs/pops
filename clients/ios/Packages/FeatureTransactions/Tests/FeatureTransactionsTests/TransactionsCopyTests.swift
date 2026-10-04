@@ -62,6 +62,22 @@ internal struct TransactionsCopyTests {
                 == "Wait a minute, then retry")
     }
 
+    @Test("failures that require a code or dependency change offer no retry")
+    func nonRetryableFailuresHaveNoRetry() {
+        let contractMismatch = RepositoryError.contractMismatch
+
+        #expect(TransactionsCopy.message(for: contractMismatch).contains("Update the app."))
+        #expect(!TransactionsCopy.offersRetry(for: contractMismatch))
+        #expect(!TransactionsCopy.offersRetry(for: .dependencyNotBound))
+    }
+
+    @Test("temporary failures retain their retry action")
+    func temporaryFailuresOfferRetry() {
+        #expect(TransactionsCopy.offersRetry(for: .unavailable))
+        #expect(TransactionsCopy.offersRetry(for: .rateLimited(retryAfterSeconds: 30)))
+        #expect(TransactionsCopy.offersRetry(for: .transport("network unavailable")))
+    }
+
     @Test("a structured gateway outage keeps the transaction outage explanation")
     func structuredGatewayOutage() {
         let error = PopsError(

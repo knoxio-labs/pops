@@ -66,6 +66,15 @@ public struct TransactionsListView: View {
             TransactionsListSkeleton()
                 .transition(PopsMotion.row)
         case .failed(let error):
+            failureState(for: error)
+                .transition(PopsMotion.row)
+        case .empty, .loaded:
+            scrollingContent.transition(PopsMotion.row)
+        }
+    }
+
+    @ViewBuilder private func failureState(for error: RepositoryError) -> some View {
+        if TransactionsCopy.offersRetry(for: error) {
             ErrorStateView(
                 message: TransactionsCopy.message(for: error),
                 retryTitle: TransactionsCopy.retryTitle(for: error)
@@ -73,9 +82,8 @@ public struct TransactionsListView: View {
                 scheduleRetry(after: error) { await model.loadFirstPage() }
             }
             .disabled(pendingRetry != nil)
-            .transition(PopsMotion.row)
-        case .empty, .loaded:
-            scrollingContent.transition(PopsMotion.row)
+        } else {
+            NonRetryableErrorStateView(message: TransactionsCopy.message(for: error))
         }
     }
 
