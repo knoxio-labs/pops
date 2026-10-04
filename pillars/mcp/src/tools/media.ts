@@ -1,9 +1,13 @@
 import { getPillar } from '../pillar-client.js';
+import { mediaReadTools } from './media-read.js';
+import { watchlistMediaUri } from './media-uri.js';
+import { mapRows, withUri } from './uri.js';
 import { mapCallResult } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
 import type { ToolDef } from './index.js';
+import type { Row } from './uri.js';
 
 type LibraryListInput = {
   type: 'all' | 'movie' | 'tv';
@@ -30,6 +34,13 @@ type MediaShape = {
 
 function media(): PillarHandle<MediaShape> {
   return getPillar<MediaShape>('media');
+}
+
+/** Add an addressable URI to library rows whose type maps to a media page. */
+function libraryMediaUri(row: Row): Row {
+  if (row['type'] === 'movie') return withUri('media/movie')(row);
+  if (row['type'] === 'tv') return withUri('media/tv-show')(row);
+  return row;
 }
 
 const libraryList: ToolDef = {
@@ -65,7 +76,7 @@ const libraryList: ToolDef = {
     if (typeof args['page'] === 'number') input.page = args['page'];
     if (typeof args['pageSize'] === 'number') input.pageSize = args['pageSize'];
 
-    return mapCallResult(await media().library.list(input));
+    return mapCallResult(mapRows(await media().library.list(input), 'data', libraryMediaUri));
   },
 };
 
@@ -93,8 +104,8 @@ const watchlistList: ToolDef = {
     if (typeof args['limit'] === 'number') input.limit = args['limit'];
     if (typeof args['offset'] === 'number') input.offset = args['offset'];
 
-    return mapCallResult(await media().watchlist.list(input));
+    return mapCallResult(mapRows(await media().watchlist.list(input), 'data', watchlistMediaUri));
   },
 };
 
-export const mediaTools: readonly ToolDef[] = [libraryList, watchlistList];
+export const mediaTools: readonly ToolDef[] = [...mediaReadTools, libraryList, watchlistList];
