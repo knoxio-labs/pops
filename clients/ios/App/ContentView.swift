@@ -289,9 +289,6 @@ internal struct ContentView: View {
                         }
                         .accessibilityLabel(RootCopy.dismissDegraded)
                     }
-                    if case .failed = surface.bootstrap {
-                        PopsButton(RootCopy.retry) { Task { await shell.reloadBootstrap() } }
-                    }
                 }
             }
             .padding([.horizontal, .top], PopsSpacing.lg)
