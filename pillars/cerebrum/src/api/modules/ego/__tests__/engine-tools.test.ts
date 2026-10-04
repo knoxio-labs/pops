@@ -125,9 +125,11 @@ describe('ConversationEngine tool loop', () => {
       }),
     });
     const turns = [{ toolUses: [toolUse] }, { text: 'The coffee purchase was recorded.' }];
-    const { events } = await collectStream(makeEngine(scriptedLlm(turns).llm, { toolbox }));
+    const scripted = scriptedLlm(turns);
+    const { events } = await collectStream(makeEngine(scripted.llm, { toolbox }));
     const streamDone = done(events);
 
+    expect(scripted.requests[0]?.system).toContain('ego_show_entities');
     expect(events.map((event) => event.type)).toEqual(['tool', 'tool', 'part', 'token', 'done']);
     expect(events.slice(0, 2)).toEqual([
       { type: 'tool', name: 'lookup', status: 'started' },
@@ -273,6 +275,7 @@ describe('ConversationEngine tool loop', () => {
     const result = done(events);
 
     expect(requests[0]).not.toHaveProperty('tools');
+    expect(requests[0]?.system).not.toContain('ego_show_entities');
     expect(result.parts).toEqual([{ type: 'text', text: 'A plain reply.' }]);
     expect(result.batch).toBeNull();
     expect(result.autoExecuted).toEqual([]);
