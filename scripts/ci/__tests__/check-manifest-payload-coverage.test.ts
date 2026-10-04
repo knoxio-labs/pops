@@ -70,6 +70,7 @@ const EXPECTED_BUILDERS = [
   'orchestrator:buildOrchestratorManifest',
   'purchases:buildPurchasesManifest',
   'registry:buildRegistryManifest',
+  'tags:buildTagsManifest',
   'shell:buildShellManifest',
 ];
 

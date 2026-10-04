@@ -5,9 +5,8 @@
  * `/health` + `/pillars` surface so the new container can be wired into
  * the federation. The orchestrator is a cross-pillar aggregator: it owns
  * no domain DB and federates over pillars via `@pops/pillar-sdk` (which
- * defaults to REST). Federated search (epic 06), the AI-tool registry
- * (epic 07), and the cross-pillar embeddings pipeline land in follow-up
- * increments.
+ * defaults to REST). Federated search, the AI-tool registry, and shared-tag
+ * lookup are served from the same Express app.
  *
  * Port 3009 is the next free slot after the pillars + ha-bridge:
  *   3001 core, 3002 inventory, 3003 media, 3004 finance, 3005 food,

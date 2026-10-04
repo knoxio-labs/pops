@@ -155,6 +155,13 @@
       "when": 1790812800000,
       "tag": "0021_purchase_item_priced_by_measure",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1791010282000,
+      "tag": "0022_purchase_item_shared_tags",
+      "breakpoints": true
     }
   ]
 }

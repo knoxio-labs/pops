@@ -39,6 +39,7 @@ internal struct TransactionsMappingTests {
         )
 
         #expect(page.nextCursor == "eyJkIjoiMjAyNiJ9")
+        #expect(!page.restarted)
     }
 
     @Test("a null cursor is the last page")

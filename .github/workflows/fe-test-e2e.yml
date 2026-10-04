@@ -78,6 +78,13 @@ jobs:
           node-version: "24"
           cache: pnpm
 
+      # pnpm rebuilds the better-sqlite3 Node-API package during the workspace install.
+      - name: Install native build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 make g++
+          rm -rf /var/lib/apt/lists/*
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

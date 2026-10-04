@@ -18,6 +18,9 @@ internal enum BFMRepositoryFailure {
     /// the reading that costs least when it is wrong.
     internal static func failure(_ error: ClientError, operation: String) -> RepositoryError {
         if let runtime = PopsError.runtimeFailureDetails(from: error) {
+            if runtime.popsError.code == PopsError.decodeFailureCode {
+                return .contractMismatch
+            }
             return repositoryError(for: runtime.popsError, statusCode: runtime.statusCode)
         }
         switch error.response?.status.code {
@@ -57,7 +60,8 @@ internal enum BFMRepositoryFailure {
                 "gateway.upstream_misconfigured", "upstream_unavailable", "upstream_degraded",
                 "upstream_misconfigured":
                 return .unavailable
-            case "gateway.upstream_contract_mismatch", "upstream_contract_mismatch":
+            case "gateway.upstream_contract_mismatch", "upstream_contract_mismatch",
+                "upstream_invalid_request", "not_found":
                 return .contractMismatch
             case "gateway.upstream_conflict", "upstream_conflict":
                 return .conflict(popsError.code)
@@ -96,6 +100,11 @@ internal enum BFMRepositoryFailure {
     /// something this build cannot read"; the third is a write collision that
     /// preserves its wire reason because retrying the same input cannot work.
     ///
+    /// `upstream_invalid_request` and `not_found` are contract mismatches too:
+    /// these routes have no successful recovery for a request the producer will
+    /// not accept or a resource it cannot find. `upstream_conflict` remains a
+    /// conflict because retrying the same write cannot resolve it.
+    ///
     /// `gateway.upstream_misconfigured` joins the unavailable side rather than the
     /// mismatch one: a pillar whose configuration is wrong is not serving,
     /// and nothing about the phone's build is implicated. Matched on the raw
@@ -108,7 +117,8 @@ internal enum BFMRepositoryFailure {
             "gateway.upstream_misconfigured", "upstream_unavailable", "upstream_degraded",
             "upstream_misconfigured":
             return .unavailable
-        case "gateway.upstream_contract_mismatch", "upstream_contract_mismatch":
+        case "gateway.upstream_contract_mismatch", "upstream_contract_mismatch",
+            "upstream_invalid_request", "not_found":
             return .contractMismatch
         case "gateway.upstream_conflict", "upstream_conflict":
             return .conflict(code)

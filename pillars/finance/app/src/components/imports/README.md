@@ -59,6 +59,8 @@ Committing a live draft is what puts its rows in the ledger, and the commit does
 
 Two entry points list every draft, whoever started it, and both compose `pending/PendingImportCard.tsx`: the finance dashboard's "Pending imports" section (`../../pages/dashboard/PendingImports.tsx`, capped at five with a count) and the wizard's first step (`upload-step/ContinuePending.tsx`, all of them, above an "or start a new import" divider). Neither renders when nothing is pending. The card's one action follows the server's state: a saved draft resumes, a live one is reviewed, an open one is taken over, an unusable one can only be discarded, and the discard confirmation (`pending/DiscardPendingDialog.tsx`) says what is actually at stake: decisions only for a live draft, decisions and the file for a file draft.
 
+The list refreshes after a draft is created, after the wizard changes steps, and after it releases the draft. Payload writes and heartbeats do not refetch the list.
+
 ## Where things live
 
 | Concern                                                                       | Directory                                            |

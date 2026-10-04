@@ -150,6 +150,31 @@ internal struct TransactionsListPagingTests {
         #expect(rows.map(\.id) == ["txn-1", "txn-2", "txn-3"])
     }
 
+    @Test("a stale cursor replaces seen pages with the restarted first page")
+    func staleCursorRestartsTheVisibleList() async {
+        let restartedRow = Transaction.fake(id: "txn-fresh", description: "Fresh")
+        let repository = ScriptedTransactionsRepository(script: [
+            .page([Transaction.fake(id: "txn-1")], next: "cursor-1"),
+            .page([Transaction.fake(id: "txn-2")], next: "stale-cursor"),
+            .success(
+                TransactionPage(
+                    transactions: [restartedRow],
+                    nextCursor: "cursor-1",
+                    restarted: true
+                )
+            ),
+        ])
+        let model = model(repository)
+
+        await model.loadFirstPage()
+        await model.loadNextPageIfNeeded()
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.state == .loaded([restartedRow]))
+        #expect(model.paging == .idle)
+        #expect(await repository.requestedCursors == [nil, "cursor-1", "stale-cursor"])
+    }
+
     /// Odd, but the contract allows it: a page with no rows and a cursor still
     /// pointing forward. The screen says "nothing yet" and keeps paging rather
     /// than stopping on the first thin answer.
