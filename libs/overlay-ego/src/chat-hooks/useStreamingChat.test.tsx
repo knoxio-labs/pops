@@ -97,6 +97,7 @@ describe('useEgoAppContext', () => {
     expect(result.current).toEqual({
       app: 'inventory',
       route: '/inventory/items/abc',
+      uri: 'pops:inventory/item/abc',
       entityType: 'item',
       entityId: 'abc',
       entityTitle: 'Bosch drill',
@@ -112,6 +113,7 @@ describe('useEgoAppContext', () => {
       }),
     });
     expect(result.current?.entityId).toBe('a/b');
+    expect(result.current?.uri).toBe('pops:inventory/item/a/b');
   });
 
   it('drops the entity when its uri does not parse', () => {
@@ -119,6 +121,7 @@ describe('useEgoAppContext', () => {
       wrapper: wrapperAt('/inventory/items/a', { uri: 'garbage', type: 'item', title: 'T' }),
     });
     expect(result.current).toEqual({ app: 'inventory', route: '/inventory/items/a' });
+    expect(result.current && 'uri' in result.current).toBe(false);
   });
 });
 
@@ -158,6 +161,7 @@ describe('useStreamingChat request body', () => {
       appContext: {
         app: 'inventory',
         route: '/inventory/items/abc',
+        uri: 'pops:inventory/item/abc',
         entityType: 'item',
         entityId: 'abc',
         entityTitle: 'Bosch drill',
@@ -182,6 +186,7 @@ describe('useStreamingChat request body', () => {
       appContext: {
         app: 'purchases',
         route: '/purchases/PO-123',
+        uri: 'pops:purchases/purchase/PO-123',
         entityType: 'purchase',
         entityId: 'PO-123',
         entityTitle: 'January purchase',
